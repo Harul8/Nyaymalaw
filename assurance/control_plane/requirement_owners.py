@@ -1,7 +1,7 @@
-"""Every requirement clause resolves to a registered delivery owner -- or says it does not. LB-43-AC4.
+"""Requirement rows resolve to registered delivery owners, or disclose gaps. LB-43-AC4.
 
     python assurance/control_plane/requirement_owners.py                # the whole population
-    python assurance/control_plane/requirement_owners.py --slice P49    # may this slice start?
+    python assurance/control_plane/requirement_owners.py --slice P49    # row ownership for a slice
 
 WHY THIS EXISTS
 ----------------
@@ -24,7 +24,9 @@ next criterion or item the line names -- that packet must carry it. That last
 rule is what catches a line
 left behind when a criterion moves -- it is how LB-163 was found still pairing
 BK-101-AC1 with P53 an hour after BK-101-AC1 moved to P49. A bare item
-(`BK-98`) must exist. A clause is owned through its row: the sheet does not map
+(`BK-98`) must exist and claims only its registered criteria in the packets
+paired with that item, not every packet mentioned elsewhere in the line.
+A clause is owned through its row: the sheet does not map
 clauses to criteria one by one, and this says so rather than pretending to.
 
 FOUR STATES, and the last two are not failures of the whole plan -- they block
@@ -36,10 +38,14 @@ the scope that selects them:
   unowned     no delivery-owner line at all
 
 A SLICE (`--slice PNN`) selects every row whose line names that packet or a
-criterion it carries. It may start only if every selected row is owned and
+criterion it carries. Its row ownership passes only if every selected row is owned and
 names at least one clause, and every criterion of the packet is claimed by
 some requirement row -- a criterion nothing requires is a foundation nobody
 specified.
+
+THIS IS A ROW-OWNERSHIP CHECK ONLY. It does not assess clause/evidence
+coverage, prerequisite closure or owner decisions. Passing is not permission
+to start a slice; those other obligations remain separately pending.
 """
 from __future__ import annotations
 
@@ -61,7 +67,8 @@ SHEET = _REPO / "docs" / "Nyaymalaw_Implementation_Plan.xlsx"
 STATUS = _REPO / "docs" / "backlog" / "status.yaml"
 PACKETS = _REPO / "docs" / "blueprint" / "packets.json"
 WORKSHEET = "Implementation Plan"
-ID_COLUMN, OWNER_COLUMN, CLAUSE_COLUMN = "ID", "Dependency IDs and required outputs", "Acceptance criteria"
+ID_COLUMN, OWNER_COLUMN, CLAUSE_COLUMN = (
+    "ID", "Dependency IDs and required outputs", "Acceptance criteria")
 
 REQUIREMENT = re.compile(r"^(LB-\d+|OM-[PIQ]\d+)$")
 OWNER_LINE = re.compile(r"Delivery owner[^\n]*")
@@ -111,7 +118,8 @@ def parse_owner(line: str) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str,
     criteria = [c for group, _ in references(line) if group[0].count("-") == 2 for c in group]
     items = [group[0] for group, _ in references(line) if group[0].count("-") == 1]
     packets = [f"P{m[1]}" for m in PACKET.finditer(line)]
-    return tuple(dict.fromkeys(criteria)), tuple(dict.fromkeys(items)), tuple(dict.fromkeys(packets))
+    return (tuple(dict.fromkeys(criteria)), tuple(dict.fromkeys(items)),
+            tuple(dict.fromkeys(packets)))
 
 
 def references(line: str) -> list[tuple[tuple[str, ...], frozenset[str]]]:
@@ -120,7 +128,8 @@ def references(line: str) -> list[tuple[tuple[str, ...], frozenset[str]]]:
     group paired with P46; `reviewed under BK-67-AC3` is paired with nothing."""
     refs = []
     for m in CRITERION.finditer(line):
-        group = (f"BK-{m[1]}-AC{m[2]}", *(f"BK-{m[1]}-AC{n}" for n in re.findall(r"AC(\d+)", m[3] or "")))
+        group = (f"BK-{m[1]}-AC{m[2]}",
+                 *(f"BK-{m[1]}-AC{n}" for n in re.findall(r"AC(\d+)", m[3] or "")))
         refs.append((m.start(), m.end(), group))
     refs += [(m.start(), m.end(), (f"BK-{m[1]}",)) for m in ITEM.finditer(line)]
     refs.sort()
@@ -129,6 +138,35 @@ def references(line: str) -> list[tuple[tuple[str, ...], frozenset[str]]]:
         stop = refs[i + 1][0] if i + 1 < len(refs) else len(line)
         out.append((group, frozenset(f"P{m[1]}" for m in PACKET.finditer(line, end, stop))))
     return out
+
+
+def registered_claims(line: str, registry: Registry) -> dict[str, frozenset[str]]:
+    """Expand explicit criteria and paired bare items through one scoped rule.
+
+    A bare item owns only the criteria its locally paired packets carry. An
+    explicit criterion without a written packet uses its registered carriers.
+    This resolves candidate ownership; a row with a problem or declared state
+    cannot use those candidates to claim a slice.
+    """
+    claimed: dict[str, set[str]] = {}
+    for group, written in references(line):
+        for ref in group:
+            if ref.count("-") == 1:
+                if ref not in registry.items:
+                    continue
+                candidates = {
+                    criterion for packet in written
+                    for criterion in registry.carries.get(packet, ())
+                    if criterion.startswith(f"{ref}-AC")
+                }
+            else:
+                candidates = {ref}
+            for criterion in candidates & registry.criteria:
+                carriers = registry.carried_by.get(criterion, set())
+                for packet in (carriers & written if written else carriers):
+                    if criterion in registry.carries.get(packet, ()):
+                        claimed.setdefault(packet, set()).add(criterion)
+    return {packet: frozenset(criteria) for packet, criteria in claimed.items()}
 
 
 def resolve(requirement: Requirement, registry: Registry) -> Requirement:
@@ -140,7 +178,6 @@ def resolve(requirement: Requirement, registry: Registry) -> Requirement:
     if NO_OWNER.search(line) and not requirement.criteria:
         requirement.state = "declared"
         return requirement
-    named = set(requirement.packets)
     for group, written in references(line):
         for ref in group:
             if ref.count("-") == 1:
@@ -148,7 +185,8 @@ def resolve(requirement: Requirement, registry: Registry) -> Requirement:
                     requirement.problems.append(f"{ref} is not an item in status.yaml")
                 elif written and not any(c.startswith(f"{ref}-AC") for p in written
                                          for c in registry.carries.get(p, ())):
-                    requirement.problems.append(f"{ref} is paired with {', '.join(sorted(written))}, which "
+                    requirement.problems.append(f"{ref} is paired with "
+                                                f"{', '.join(sorted(written))}, which "
                                                 f"carries none of its criteria")
                 continue
             if ref not in registry.criteria:
@@ -164,9 +202,7 @@ def resolve(requirement: Requirement, registry: Registry) -> Requirement:
     for packet in requirement.packets:
         if packet not in registry.carries:
             requirement.problems.append(f"{packet} is not a packet in packets.json")
-    owned = any(c in registry.criteria and registry.carried_by.get(c) for c in requirement.criteria) or any(
-        i in registry.items and any(c.startswith(f"{i}-AC") for p in named for c in registry.carries.get(p, ()))
-        for i in requirement.items)
+    owned = bool(registered_claims(line, registry))
     requirement.state = "problem" if requirement.problems else ("owned" if owned else "declared")
     if requirement.state == "declared" and not NO_OWNER.search(line):
         requirement.problems.append("the line names no registered criterion or packaged item")
@@ -188,7 +224,8 @@ def requirements(sheet: Path = SHEET, registry: Registry | None = None) -> list[
             ident = str(row[at[ID_COLUMN]] or "").strip()
             if not REQUIREMENT.match(ident):
                 continue
-            clauses = tuple(dict.fromkeys(re.findall(rf"{re.escape(ident)}-AC\d+", str(row[at[CLAUSE_COLUMN]] or ""))))
+            clauses = tuple(dict.fromkeys(re.findall(rf"{re.escape(ident)}-AC\d+",
+                str(row[at[CLAUSE_COLUMN]] or ""))))
             lines = OWNER_LINE.findall(str(row[at[OWNER_COLUMN]] or ""))
             found.append(resolve(Requirement(ident, clauses, lines[-1] if lines else ""), registry))
     finally:
@@ -197,7 +234,7 @@ def requirements(sheet: Path = SHEET, registry: Registry | None = None) -> list[
 
 
 def slice_blockers(packet: str, population: list[Requirement], registry: Registry) -> list[str]:
-    """Why the slice a packet delivers may not start. Empty means it may."""
+    """Row-ownership blockers only, not full slice readiness or start permission."""
     if packet not in registry.carries:
         return [f"{packet} is not a packet in packets.json"]
     carried = registry.carries[packet]
@@ -207,18 +244,24 @@ def slice_blockers(packet: str, population: list[Requirement], registry: Registr
         blockers.append(f"no requirement row selects {packet}, so nothing says what it delivers")
     for r in selected:
         if r.state != "owned":
-            blockers.append(f"{r.ident} is {r.state}: {'; '.join(r.problems) or r.line or 'no delivery owner line'}")
+            detail = '; '.join(r.problems) or r.line or 'no delivery owner line'
+            blockers.append(f"{r.ident} is {r.state}: {detail}")
         if not r.clauses:
             blockers.append(f"{r.ident} names no acceptance clause, so nothing could show it done")
-    claimed = {c for r in population for c in r.criteria}
+    claimed = {
+        criterion for r in selected if r.state == "owned"
+        for criterion in registered_claims(r.line, registry).get(packet, ())
+    }
     for criterion in sorted(carried - claimed):
-        blockers.append(f"{criterion} ({packet}) is claimed by no requirement row -- work nobody specified")
+        blockers.append(f"{criterion} ({packet}) is claimed by no requirement row "
+                        "-- work nobody specified")
     return blockers
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--slice", help="a packet id, e.g. P49: may that slice start?")
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--slice", help="a packet id, e.g. P49: check its row ownership only")
     args = parser.parse_args(argv)
     registry = Registry.load()
     population = requirements(registry=registry)
@@ -236,12 +279,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  PROBLEM {r.ident}: {'; '.join(r.problems)}")
     for r in by_state.get("declared", []):
         print(f"  declared {r.ident}: {r.line.split(':', 1)[-1].strip()[:140]}")
-    print("A clause is owned through its row; the sheet does not map clauses to criteria one by one.")
+    print("A clause is owned through its row; the sheet does not map clauses "
+          "to criteria one by one.")
+    print("This is a row-ownership check only; it does not assess clause/evidence "
+          "coverage, prerequisite closure or owner decisions.")
     failed = bool(by_state.get("problem"))
     if args.slice:
         blockers = slice_blockers(args.slice, population, registry)
-        print(f"\n{args.slice}: " + ("may start -- every selected row is owned and names a clause, and every "
-                                     "criterion is claimed" if not blockers else f"{len(blockers)} blocker(s)"))
+        summary = ("row ownership passes -- every selected row is owned and names a clause, "
+                   "and every criterion is claimed" if not blockers
+                   else f"{len(blockers)} row ownership blocker(s)")
+        print(f"\n{args.slice}: {summary}")
         for b in blockers:
             print(f"  - {b}")
         failed = failed or bool(blockers)

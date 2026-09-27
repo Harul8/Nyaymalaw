@@ -74,9 +74,15 @@
       "translation",
       "recording_local_diarisation",
       "user_confirmed_attribution",
-      "evidence_based_legal_assessment"
+      "evidence_based_legal_assessment",
+      "local_document_text_extraction"
     ],
     "attribution_is_authentication": false,
+    "operation_constraints": {
+      "local_document_text_extraction": {
+        "processing_location": "local_only"
+      }
+    },
     "procurement": {
       "scope": "selected_operation_and_configuration",
       "hidden_processing": "verify_absent",

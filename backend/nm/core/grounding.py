@@ -53,6 +53,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from nm.core.matter_support import MatterDocumentSpan
 from nm.core.source_excerpt import capture as capture_source
 from nm.domain.answer import Answer, Element
 from nm.domain.citation import (
@@ -142,7 +143,8 @@ def quoted_spans(text: str) -> list[str]:
 
 @implements("P1")
 def verify_quotes(elements: tuple[Element, ...],
-                  findings: tuple[Finding, ...]) -> list[GroundingViolation]:
+                  findings: tuple[Finding, ...], *,
+                  document_spans: tuple[MatterDocumentSpan, ...] = ()) -> list[GroundingViolation]:
     """G-QUOTE. Every quotation must be findable, verbatim, in a retrieved span.
 
     A quotation that matches NOTHING retrieved on this turn is treated as
@@ -150,6 +152,11 @@ def verify_quotes(elements: tuple[Element, ...],
     be demonstrated is indistinguishable from luck.
     """
     corpus = [_citation_fold(f.span) for f in findings]
+    for span in document_spans:
+        if not isinstance(span, MatterDocumentSpan):
+            raise ValueError("Document quotation support needs an exact typed captured window")
+        span.validate()
+        corpus.append(_citation_fold(span.text))
     out: list[GroundingViolation] = []
     for element in elements:
         for quote in quoted_spans(element.text):
@@ -294,7 +301,9 @@ def unretrieved_authorities(text: str, findings: tuple[Finding, ...]
 
 @implements("P1")
 def verify(answer: Answer, relied_on: tuple[Finding, ...],
-           retrieved: tuple[Finding, ...] = ()) -> GroundingReport:
+           retrieved: tuple[Finding, ...] = (), *,
+           independent_packages=(), independent_records=(),
+           retrieved_documents=()) -> GroundingReport:
     """The gate, run on the assembled answer immediately before emission.
 
     The two arguments are NOT the same set, and conflating them breaks the
@@ -317,9 +326,28 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
         checked_findings=len(relied_on),
     )
     report.checked_quotes = sum(len(quoted_spans(e.text)) for e in answer.elements)
-    report.violations.extend(verify_quotes(answer.elements, quotable))
+    certified, uncovered_claim = _independently_supported(
+        answer, pool, independent_packages, independent_records, retrieved_documents)
+    document_spans = tuple(span for package in independent_packages
+                           for span in (*package.documents, *package.document_contrary)
+                           if span.captured_quote in retrieved_documents)
+    report.violations.extend(verify_quotes(answer.elements, quotable,
+                                          document_spans=document_spans))
     report.violations.extend(verify_citations(answer.elements, quotable))
-    report.violations.extend(verify_findings(relied_on))
+    if uncovered_claim is not None:
+        report.violations.append(GroundingViolation("G-GROUND", uncovered_claim))
+    # A new independent proof is about this exact released claim, not a
+    # rewriting of the earlier candidate's semantic status. Known negative
+    # support is never waived, and source/time/authority constraints remain.
+    for finding in relied_on:
+        if finding.supports is None and finding in certified:
+            reason = finding.source_blocking_reason
+            if reason:
+                gate_id = reason.split(":", 1)[0].strip()
+                gate(gate_id)
+                report.violations.append(GroundingViolation(gate_id, reason))
+        else:
+            report.violations.extend(verify_findings((finding,)))
     # Drawer text is published content too. A correct digest proves identity,
     # not retrieval: require the exact captured Finding, including its namespace.
     captured = tuple(capture_source(f) for f in quotable)
@@ -328,3 +356,51 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
             report.violations.append(GroundingViolation(
                 "G-GROUND", "the saved source excerpt was not retrieved on this turn"))
     return report
+
+
+def _independently_supported(answer, retrieved, packages, records, documents=()):
+    """No source-ID whitelist: exact visible claim AND exact proof are needed."""
+    if not packages or not records:
+        return ((), "The independent final-claim receipt population is incomplete"
+                if packages or records else None)
+    # Local import avoids a module cycle; the verifier itself calls the existing
+    # quotation/citation checks before it can produce an independent record.
+    from nm.core.verifier import EvidencePackage, VerificationRecord, release_verified
+
+    if any(not isinstance(row, EvidencePackage) for row in packages) or any(
+            not isinstance(row, VerificationRecord) for row in records):
+        raise ValueError("Independent grounding needs typed claim verification receipts")
+    released = release_verified(tuple(packages), tuple(records)).released
+    eligible = tuple(package for package in released if all(
+        span.finding in retrieved and span.finding.supports is not False
+        and not span.finding.source_blocking_reason
+        for span in (*package.spans, *package.contrary)) and all(
+            span.captured_quote in documents
+            for span in (*package.documents, *package.document_contrary)))
+    # The visible answer is the subject, not the author's labels or refs. An
+    # extra unreferenced sentence or a sentence marked "disclosure" cannot
+    # piggyback on one correctly verified claim. Genuine engine disclosures
+    # are appended after this exact package boundary, not disguised as claims.
+    matched = []
+    for element in answer.elements:
+        exact = tuple(package for package in eligible if element.text == package.claim
+                      and ({span.finding.locator for span in package.spans}
+                           | {span.locator for span in package.documents}) <= set(element.refs)
+                      and set(element.refs) <= (
+                          {span.finding.locator for span in (*package.spans, *package.contrary)}
+                          | {span.locator for span in (*package.documents,
+                                                      *package.document_contrary)}))
+        if not exact:
+            return (), "The visible answer contains a claim without an exact independent receipt"
+        matched.append((element, exact))
+    certified = []
+    for finding in retrieved:
+        subjects = tuple(exact for element, exact in matched
+                         if finding.locator in element.refs)
+        if not subjects:
+            continue
+        if all(any(any(
+                span.finding == finding for span in package.spans)
+                   for package in exact) for exact in subjects):
+            certified.append(finding)
+    return tuple(certified), None

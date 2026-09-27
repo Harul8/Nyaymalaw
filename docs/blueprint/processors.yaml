@@ -95,6 +95,15 @@ processors:
     data_classes: [operational, client_matter, restricted]
     approval_id: IN-PROCESS-NO-EGRESS
 
+  # Bounded local PDF/DOCX/text reader. It runs in a constrained local worker,
+  # with no network transfer. This entry cannot clear quarantine, supply user
+  # analysis permission, approve OCR, or send raw files to an external model.
+  - processor_id: nm-local-document-text
+    region: in
+    purposes: [media]
+    data_classes: [operational, client_matter, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
 #: Regions outside `in`, each with the legal review that admitted it. Empty is
 #: the correct default: a foreign processor is refused until a review names the
 #: region, and a boolean flag would be a switch somebody sets during an

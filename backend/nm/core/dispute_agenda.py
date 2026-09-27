@@ -14,9 +14,12 @@ def _value(row, name, default=""):
     return row.get(name, default) if isinstance(row, dict) else getattr(row, name, default)
 
 
-def project(matter, *, after_thread_id=None) -> dict:
+def project(matter, *, after_thread_id=None, source_current=None,
+            checklist_projections=None) -> dict:
     """Recompute, never persist a second status or infer completeness from size."""
     ledger = dependency.Ledger.from_stored(matter.dependencies)
+    projections = requirements.checked_file_projections(
+        matter, checklist_projections, source_current=source_current)
     rows = []
     for thread in matter.threads:
         questions = [q for q in matter.asked if q.thread == thread.id and q.open]
@@ -72,7 +75,8 @@ def project(matter, *, after_thread_id=None) -> dict:
         # tells "nothing retrieved for this dispute yet" apart from "retrieved
         # and it needs nothing", which are opposite facts and would otherwise
         # both render as an empty list.
-        checklist = requirements.checklist(thread, matter.facts)
+        projection = projections[thread.id]
+        checklist = projection.rows
         if status == "reviewed" and any(
                 i.state is requirements.State.OUTSTANDING for i in checklist):
             status, reason = "needs_information", "Some relevant information remains outstanding."
@@ -90,8 +94,8 @@ def project(matter, *, after_thread_id=None) -> dict:
                 "requirements": [item.rendered() for item in checklist],
                 "requirements_state": "established" if checklist else "not_established",
                 "outstanding_requirements": sum(1 for item in checklist if item.outstanding),
-                "nothing_to_ask": requirements.nothing_to_ask(thread, matter.facts),
-                "requirements_settled": requirements.settled(thread, matter.facts),
+                "nothing_to_ask": projection.nothing_to_ask,
+                "requirements_settled": projection.settled,
             }
         )
 
@@ -131,8 +135,9 @@ def project(matter, *, after_thread_id=None) -> dict:
     }
 
 
-def context(matter) -> str:
-    agenda = project(matter)
+def context(matter, *, source_current=None, checklist_projections=None) -> str:
+    agenda = project(matter, source_current=source_current,
+                     checklist_projections=checklist_projections)
     return "\n".join(
         f"{r['thread_id']}: {r['label']} — {r['status']}; {r['next_need']}"
         for r in agenda["disputes"]

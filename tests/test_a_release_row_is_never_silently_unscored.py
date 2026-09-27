@@ -45,8 +45,9 @@ def test_every_authored_row_appears_in_the_score(gate):
     score = gate.Score()
     added = gate.unscored(rows, score)
     assert [r["id"] for r in score.rows] == [r["id"] for r in rows] == added
-    for row, scored in zip(rows, score.rows):
-        assert scored["state"] == gate.UNMEASURED and scored["blocking"] == bool(row.get("blocking"))
+    for row, scored in zip(rows, score.rows, strict=True):
+        assert (scored["state"] == gate.UNMEASURED
+                and scored["blocking"] == bool(row.get("blocking")))
 
 
 def test_a_row_already_scored_is_left_as_scored(gate):

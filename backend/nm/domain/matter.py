@@ -21,6 +21,7 @@ from enum import Enum, nonmember
 from typing import Literal
 
 from nm.domain.intake import ReadQuality
+from nm.domain.loop import LoopRecord
 from nm.domain.spoken import Spoken
 from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
@@ -440,6 +441,13 @@ class Thread:
     parties: dict[str, str] = field(default_factory=dict)
     posture: Posture = field(default_factory=Posture)
     chronology: tuple[FactId, ...] = ()
+    event_observations: tuple[object, ...] = ()
+    """Exact source-bound event readings; not confirmed facts or clock triggers.
+
+    A whole advocate contribution may describe several independent dated
+    events. Each observation retains its parent assertion/version and complete
+    account, rather than assigning one date to the whole contribution.
+    """
     deferred_reason: str | None = None
     # `tuple[object, ...]` AND NOT A BARE `tuple`. The store's decoder
     # dispatches on `get_origin`, which is None for a bare tuple, so the
@@ -800,6 +808,8 @@ class Matter:
     title: str
     threads: tuple[Thread, ...] = ()
     facts: tuple[Fact, ...] = ()
+    loop_records: tuple[LoopRecord, ...] = ()
+    """Private ordered work receipts; proposals here have not been released as advice."""
     engagement: "object | None" = None
     """WHO THE CLIENT IS AND WHAT THIS FILE COVERS. Tenet 4.
 

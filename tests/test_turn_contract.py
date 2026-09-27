@@ -206,10 +206,10 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # tests a deployment that does not ship (CLAUDE.md section 8), and the
     # `statutory_notice` row is exactly the kind of difference that would hide
     # here and appear on a served turn.
-    from nm.adapters.knowledge.institution import CuratedPreInstitution
     from nm.adapters.knowledge.filing_requirement import (
         CuratedFilingRequirements,
     )
+    from nm.adapters.knowledge.institution import CuratedPreInstitution
     from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
     from nm.adapters.knowledge.procedural_period import (
         CuratedProceduralPeriods,

@@ -1,0 +1,284 @@
+# HANDOVER — legal-brain implementation, 27 September 2026
+
+Read `CLAUDE.md` first. Continue the current dirty tree; do not discard parallel or
+earlier session changes. Branch `s0-foundations`, starting HEAD
+`b0190a198dbecdb139f7fbba7f410439df2ffa15`. At the stop checkpoint below, nothing
+had been staged, committed or pushed. The owner subsequently requested saving
+and pushing this engineering checkpoint; the commit containing this record
+preserves that work, not legal acceptance. Read Git for its commit/push state.
+
+**STOP CHECKPOINT:** the owner requested completion of the current update and
+then a stop. That update is finished and controlled-tested. No seventh live
+interaction or further paid evaluation was dispatched. The task-owned preview
+server is stopped. Do not automatically resume model work or extend its grant.
+
+## Owner-requested commit preparation
+
+The pending inventory has 230 files: 70 tracked modifications and 160 new
+source, test, plan and dated-record files. They appear coherent with the
+legal-brain work; inherited-edit authorship cannot be reconstructed from a
+per-file baseline. No unrelated file or API-token/private-key pattern was found
+in that inventory. Explicit path staging excludes `.nm/`, `outputs/`, corpus,
+credentials, local configuration, environments, caches and the local graph.
+The saved workbook remains the independently checked record-10 bytes.
+
+Existing hooks remain enabled. The current pre-commit hook maintains the graph
+and does not enforce the full gate (an existing owner decision, not a change
+made for this commit). This operation does not run/promote Class-A, spend the
+evaluation ledger, restart the preview, close BK-85-AC3 or accept the legal brain.
+
+## Approval and boundaries
+
+- One **US$5 total** persistent ledger covers up to **60 fictional matters**.
+- Author: `gpt-4o-mini-2024-07-18`; independent verifier:
+  `gpt-5.1-2025-11-13`, sparingly. The owner approved GPT-5.1 on this date.
+- Live diagnostic requests have now run, using this session's durable ledger.
+  One TLS-failed author request retains an unknown-outcome USD0.03 reservation;
+  Fifteen measured mini requests charge USD0.015896; three measured GPT-5.1
+  communication reviews charge USD0.057061. Charged total is USD0.102957 including
+  that reservation. Read the ledger for the actual current token population.
+  Do not inherit, reset, refund an unknown outcome or enlarge an older allowance.
+- Ordinary client work still uses `TurnEngine`. The new loop is private,
+  controlled evaluation, not an authorised client-path cutover.
+- No qualifications, signed counsel review, live mail permission or production
+  scanner clearance is fabricated. BK-85-AC3 remains open.
+- Owner Chrome is connected and the owner signed in themselves. A fictional file
+  was created through the actual browser: `m_c2984671216c5ca6ed8a8ff50238a6e2`,
+  property, access and rent. Six actual browser interactions are saved. None
+  retrieved law, established disputes or produced a checked response; these are
+  diagnostic failures, not a passed legal-brain journey.
+- The owner expressly approved its separate controlled preview. A finite,
+  installation-owned grant expires at 11:00 UTC on 27 September; restart does
+  not extend it. Current account consent/session is still required. No account
+  identity or consent was manufactured. The server previously ran on 8071; the next
+  tested review-unit/continuity changes were reloaded with serving=tree
+  `3918500095e78077`. The final guide/negative-verdict build was subsequently
+  restarted and verified: `serving=tree=aadacbdbee621594`, code_state current.
+  The owner has signed in again. The fifth request exposed an inaccessible guide
+  identity required by a model tool. That common context-owner fix passed 83
+  focused tests and 89 loop/history regressions; workbook record 9 preserves all
+  requirements. The preview server was restarted with parent 8744 and verified
+  `serving=tree=feb2a9a69017f57d`. The sixth interaction proved the guide fix but
+  stopped at malformed independent quote evidence. Protocol-three evidence roles
+  and known-availability refinements are now implemented and controlled-tested.
+  The ignored operator launch configuration selects protocol three, but no live
+  request has used it. To obey the owner's stop request, only the verified task
+  server processes (parent 8744, Python child 19992) were terminated; other Python
+  processes were not targeted. A later launch must use current code and recheck
+  the finite grant and authenticated session. The next interaction is unproved.
+
+## Final current-update verification
+
+- Joined communication/served/model-owner tests: **169 passed**, including 36
+  new protocol-three role/negative/history/actual-route controls. Exact command:
+  `.venv-arrive/Scripts/python.exe -m pytest tests/test_communication_evidence_roles_are_owned.py tests/test_interaction_review_units_are_server_owned.py tests/test_interaction_words_require_an_independent_exact_review.py tests/test_served_interaction_units_keep_historical_failures_failed.py tests/test_evaluation_models_share_money_not_capability.py -q --tb=short`.
+- Final prompt/discovery/clarification/model-owner regression: **124 passed**;
+  `.nm/legal-brain-current-update-owner-regression-20260927.xml`.
+- Guide/prompt controls: **101 passed**;
+  `.nm/legal-brain-known-availability-not-existence-20260927.xml`.
+- Browser controller: **26 passed**. Layercheck: **272 modules OK**; guide
+  ownership: zero problems; scoped Ruff clean. These test populations overlap;
+  do not report their sum as unique coverage or a canonical full Class-A pass.
+- Protocols one/two stay strict, without redispatch or upgrade. Three requires
+  exact owned response/current-instruction quote roles, still preserves every
+  independent false/null verdict, and still requires separate legal review.
+  The verifier remains JUDGE-only with exact owned schemas and 2048 output tokens.
+- Before Build/Implementation Plan record 10 is published: 25 targeted cells,
+  all 193 requirements and 501 clauses retained; zero unrelated value/style/
+  native-feature changes or cell errors. Workbook SHA256
+  `a71ebd876d4d0282e07ea8cca60b833648efe4a6b38167db9bf477a284931ed6`.
+- Six live diagnostic failures remain saved and failed, with zero live recorded
+  facts/disputes/retrieved law. Charged ledger remains USD0.102957, including the
+  retained unknown USD0.03 reservation. Broader clause ownership, expert quality,
+  semantic calibration, successful live journey and professional acceptance
+  remain open. BK-85-AC3 is not closed. No new staging, commit or push.
+
+## Implemented foundations, with actual callers
+
+- Provider-neutral tool calling, bounded saved loops, replay, current scope and
+  admission, prepared file writes and one journal/CAS writer.
+- Context rebuilt from the checked file, independent unknowns, actual-byte guide
+  and table/source generation checks, automatic bounded compaction.
+- Read-only nested research shares the parent's limits and retains the actual
+  source envelopes. An aggregate source-set digest is not a corpus generation.
+- Exact captured law and locally extracted document quotations reach independent
+  review, final checks and atomic **private** publication. Documents stay distinct
+  from facts and public legal authority; revocation is rechecked.
+- Local PDF/DOCX/text derivative reading is bounded and protected by session/file
+  checks, including raw chunk boundaries. No OCR, audio/video understanding or
+  approved production scanner is claimed.
+- Injected quarantine checkers need an explicit paired processor and the existing
+  MEDIA policy before retention and each dispatch. Default remains unavailable;
+  already-constructed injected objects remain trusted installation inputs.
+- Evaluation models share one ledger. The GPT-5.1 facade permits only the owned
+  legal-review and non-merits communication-review schemas at JUDGE tier, with
+  a 2,048-token output ceiling. It cannot author, call tools or embed.
+  Both models bind the same existing authenticated account permission/session
+  owner, including provider retries.
+- Fresh-file event observations preserve separate events and complete attributed
+  accounts. They do not put a chosen date on the entire brief, confirm a fact,
+  establish a cause of action or start a legal clock.
+
+## Current integration checkpoint
+
+- Checklist answers now use actual sealed distinct-model semantic judgments.
+  Current source/fact projections are captured once per request and shared by
+  board, cover, summary and completion. An exact quotation alone cannot prove HELD.
+- Questions and acknowledgements have a separate exact-subject independent
+  communication check, not a way to bypass merits review. Raw metadata POST and
+  progress still cannot return proposed advice or private questions.
+- A separate finite fictional preview GET shows only checked words. Its empty
+  display acknowledgement binds the actual sealed preview and records no client
+  delivery or human attention. Current source, documents, principles, consent,
+  grant, session and matter are rechecked before rendering/acknowledging.
+- The prior cumulative run was **1427 passed / 22 failed**, 946.82 seconds.
+  All 22 were empty/flat initial tool-context regressions; the common offer
+  correction then passed 83 regression controls. Do not relabel the old run.
+- Workbook build record 3 is saved and independently checked: 69 targeted cell
+  updates, 193 requirements / 501 clauses retained, no unrelated value/style/native
+  feature changes or cell errors. Both requirement and delivery views agree.
+- The independent reviewer and author now use sealed shown-question history,
+  pinned to the initial admitted version. Nine new continuity controls and 108
+  context/research regressions passed. Original user instructions are now saved
+  before dispatch and separately recoverable, never as checked assistant text.
+- Workbook build record 4 is saved: 16 targeted cells, all 193 requirements / 501
+  clauses preserved, no unrelated value/style/native-feature changes or cell errors.
+  It records the actual failed browser interactions, not quality acceptance.
+
+## Latest actual-browser diagnostics
+
+1. `pv_968db420_29ef_4f7b_a701_11fe8fa25133`: TLS failed; no measured usage,
+   no tool work or checked answer. A non-billable comparison isolated the SDK's
+   default CA bundle from the existing OS trust store. Only the trusted fictional
+   launcher now uses the installed OS roots, full certificate/hostname checks,
+   no implicit proxy and no redirects. No CA or bypass was installed, and normal
+   application provider configuration was not changed. Unknown spend stays charged.
+2. `pv_05412575_34ec_47ee_88a6_60b1b57eb854`: two actual GPT-4o mini responses,
+   first `read_matter`, then free prose with no tool selection. No retrieved law
+   or recorded disputes. The loop withheld it as `no_progress`; it did not show
+   ungrounded merits. Typed tool requests now require provider tool selection;
+   plain/structured operations and the free-prose rejecting control are unchanged.
+3. Stopped requests initially appeared to have finished and awaited wording
+   review. The reader now supplies safe closed stopped-state messages. Eighteen
+   joined Python transport/presentation controls and 23 current Node controller
+   controls passed. Chrome reopening showed the interruption, not a fake answer.
+4. History originally lost the visible original input on refresh. Its new typed
+   admission owner saves exact caller input before dispatch and verifies legacy
+   input against the actual first request. Separate reviewed-GET/UI integration
+   is under joined verification. No system prompt, tool output or model prose is
+   offered as fallback input. No new paid call follows a History read.
+5. `pv_0c958ec9_c79a_4ec7_819b_faf740fd5221`: three mini requests read the file,
+   discovered capabilities and proposed a family-membership question. GPT-5.1
+   returned six positive semantic judgments but covered only 164 of the actual
+   173 characters. The strict owner refused it; no question was shown or marked
+   seen. Review protocol v2 now uses one exact server-owned unit and derives
+   boundaries in code; semantics and exact quotes remain independent judgments.
+   Historical v1 remains strict and is never repaired, upgraded or redispatched
+   to manufacture a passing old verdict.
+6. Question-only turns originally did not carry supplied original inputs into
+   the next author context. One shared sealed-input selector now supplies bounded
+   attributed earlier inputs; they remain unconfirmed user data. An explicit
+   strict earlier-input admission capability reuses existing mutation owners and
+   original provenance. Existing six write schemas are unchanged. Pending,
+   future, foreign, child and special-task records cannot stand in for user input.
+7. `pv_3e34adbd_867f_4a00_ad7c_f2e015ef1cd5`: two author calls, `read_matter`
+   then `propose_conversation`. All three earlier original inputs reached the
+   first actual dispatch verbatim. No recording, research or assessment occurred.
+   The author named the supplied disputes, then promised a future assessment;
+   this is not completion of the requested work. No client facts were invented.
+   Exact v2 subject/unit identities and quotations matched. The independent judge
+   rejected faithfulness, and its positive instruction-safety assessment omitted
+   required support from the current `original_instruction` (it cited earlier
+   input instead). The saved false/malformed verdict remains failed. No citation
+   repair or automatic retry can manufacture a positive semantic judgment.
+
+The single guide now distinguishes a premise blocking one conclusion from a
+premise preventing useful work on the whole task; independent/conditional work
+still requires supplied premises, retrieved law and permissions. It forbids a
+terminal promise substituting for available substantive work, and requires an
+actual owned queued task before claiming future work is queued. **155** joined
+guide/prompt/protocol controls passed (75.31 seconds). This proves instruction
+delivery and boundary behavior, not model compliance. The UI negative-versus-
+not-assessed correction passed **43 served controls**, including twelve new
+criterion-by-criterion false/null cases, in 173.96 seconds. Explicit false is
+failed, missing/null pending, fully checked positive eligible only after all
+current owners pass. No paid retry, unchecked paragraph, seen receipt or client
+release is created by the failure. No further paid turn has run at this checkpoint.
+
+Workbook build record 8 is published: **25 targeted cells**, all 193 rows / 501
+clauses retained, zero unrelated values/styles/native features/cell errors. The
+guide refinement and honest three-state review UI are controlled-verified;
+successful complex-matter semantic/browser acceptance remains open.
+
+Workbook build record 7 is published: **30 targeted cells**, all 193 requirements /
+501 clauses retained, zero unrelated values/styles/native features/cell errors.
+It records the fourth failed live interaction and the generalized improvement
+plan. Browser proof: `outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-build-20260927/browser-review-failure-4.png`.
+
+Workbook build record 6 is published: 42 targeted cells, 193 requirements / 501
+clauses preserved, no unrelated value/style/native-feature changes or cell errors.
+Its diagnostics remain failed live runs, not semantic acceptance. Root joined
+served-review/continuity/source/tool controls: **123 passed**, 19.90 seconds.
+Separate scoped populations: **125 review**, **148 continuity**, **86 prompt
+inventory** passed; current controller **26 Node tests passed**. Layercheck:
+272 modules passed; exact-guide owner: zero problems; scoped Ruff clean.
+
+The one new root historic-review test initially expected HTTP 409 from the
+metadata work POST. Inspection showed the established contract deliberately
+returns HTTP 200 metadata with `not_released`; the failed judgment belongs to the
+separate checked GET. The new test now verifies both contracts and saved failure;
+no existing guard or historic malformed-review expectation was weakened. Prompt
+inventory grew from 24 to 25 actual schemas, with explicit v1/v2 membership and
+all existing semantic/negative-wire assertions retained.
+
+The mandatory tool protocol and guidance are not evidence of expert model judgment.
+The fresh complex-matter retest, retrieval/board population and independent review
+are still open. Original failures are kept; do not overwrite or relabel them.
+
+Agent-specific passes are intermediate evidence. Do not describe a cumulative run
+as green while shared files are changing. A transient constructor failure and
+old immediate-checklist-state expectations were caught during integration; final
+results must be recorded after the tree is stable.
+
+## Verification already measured
+
+- 78 combined pricing/shared-budget/account-permission/application controls:
+  passed, 22.29 seconds; `.nm/legal-brain-pair-20260927.xml`.
+- Document/quarantine agent: 107 joined controls passed, 52.44 seconds.
+- Independent document-support agent: 15 document controls passed, 15.02 seconds.
+- Grounded fresh-file agent: 29 controls passed, 4.71 seconds.
+- Scoped Ruff passed on the completed model-binding and composition files.
+
+These are selected controls, not full Class-A or semantic acceptance.
+
+## Not complete — do not hide these
+
+- Whole inventory remains **193 rows / 501 clauses**. Ownership is **48 owned,
+  four declared, 141 unowned**; no clause-wide acceptance follows from module tests.
+- Reviewed applicable-law/accrual/jurisdiction selection is not wired as a complete
+  fresh-file calculation resolver. Interest/rate/fee/calendar gaps remain explicit.
+- Actual on-demand schemas and three private opposition roles are implemented
+  and controlled-tested. Full opposition key-detail threshold, independently
+  verified per-dispute completeness, response streaming, reviewed playbooks and
+  remaining catalogue owners are still open.
+- Exact clickable private source-reader links and a current-owner re-open seam
+  for raw legal windows remain open; they are not fabricated from normal receipts.
+- Legacy unsealed corpus currency is not certified by a manifest/version label.
+- Live quality, held-out comparison, professional evaluation and client cutover
+  remain separate release obligations.
+- The canonical gate attempt was aborted, not passed. Broader tooling Ruff has
+  1,768 measured findings; existing Class-A/browser evidence is stale. Do not
+  promote selected runs into a green gate or use `--no-verify` to conceal this.
+
+## Tools and records
+
+- Python: `.venv-arrive/Scripts/python.exe -B`; set `NM_PARTIAL_RUN=1` for selected
+  tests so they cannot replace full evaluation evidence.
+- Graph search first, then exact source. The graph was built at the starting HEAD;
+  an empty result does not mean an untracked new module is absent.
+- Use the single workbook builder
+  `development_environment/one_off_tools/legal_brain_refinements_20260927.mjs`,
+  with a new progress record, preview first and independent saved-byte preservation
+  checks. Never use a second writer or authored PASS to close the workbook.
+- `docs/BACKLOG.md` contains the active build record and subsequent integration
+  closure table. Append actual final results and qualifications there.

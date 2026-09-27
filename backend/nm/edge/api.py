@@ -41,9 +41,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool
 
 from nm.core import briefing as _briefing
+from nm.core import summary as matter_memory
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import attempts, brief
-from nm.domain import summary as matter_memory
 from nm.domain.advocate import (
     PASSWORD_RESET_MINUTES,
     SESSION_IDLE_MINUTES,
@@ -174,7 +174,7 @@ class _Released(BaseModel):
     briefing: dict = {}
 
 
-def _release(output) -> _Released:
+def _release(output, *, request=None) -> _Released:
     """THE BYTE BOUNDARY. Nothing reaches the transport except through here.
 
     By the time this runs, the core has already asserted its invariants and
@@ -201,6 +201,13 @@ def _release(output) -> _Released:
     receipt = receipts.get(output.turn_id)
     if output.matter is not None and (problems or receipt is None):
         raise HTTPException(status_code=500, detail="released response has no valid saved receipt")
+    if output.matter is not None and request is not None:
+        projections, source_current, require_current = _checked_checklists(output.matter, request)
+        briefing = _briefing.block(output.matter, source_current=source_current,
+                                  checklist_projections=projections)
+        require_current()
+    else:
+        briefing = _briefing.block(output.matter)
     return _Released(
         turn_id=output.turn_id,
         matter_id=output.matter.id if output.matter else None,
@@ -239,7 +246,7 @@ def _release(output) -> _Released:
         else "not_committed" if output.matter else "not_applicable",
         input_admitted=receipt.input_admitted if receipt is not None else False,
         matter_version=output.matter.version if output.matter else None,
-        briefing=_briefing.block(output.matter),
+        briefing=briefing,
     )
 
 
@@ -924,19 +931,72 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     }
 
 
-def _register_of(matter):
+def _register_of(matter, *, source_current=None, checklist_projections=None):
     """One strict deadline read, including integrity and assessment provenance."""
     from nm.core.deadlines import read_matter
 
-    return read_matter(matter)
+    return read_matter(matter, source_current=source_current,
+                       checklist_projections=checklist_projections)
 
 
-def _registers(held) -> dict:
-    return {m.id: _register_of(m) for m in held}
+def _checked_checklists(matter, request):
+    """One request-local proof reconstruction, with a final serving boundary.
+
+    The immutable projection is not a durable currency cache. Every HTTP read
+    rebuilds it from the owned file and actually reopens its supporting law.
+    Board, diary and handover may reuse it only inside this checked request.
+    """
+    from nm.core import requirements
+    from nm.ports.generations import GenerationUnavailable
+
+    installed = application()
+    try:
+        generation = installed.source_generation_guard()
+    except GenerationUnavailable:
+        generation = None
+    source_current = installed.checklist_source_current_for(
+        matter.id, matter.advocate_id, expected_version=matter.version,
+        session_current=lambda: _loop_session_current(request, matter.advocate_id))
+    projections = requirements.file_projections(matter, source_current=source_current)
+
+    def require_current():
+        if not _loop_session_current(request, matter.advocate_id):
+            raise HTTPException(401, "Your session ended. Sign in to see the saved work.")
+        current = installed.store.load(matter.id)
+        if current is None or current.advocate_id != matter.advocate_id:
+            raise HTTPException(404, "no such matter")
+        if current.version != matter.version:
+            raise HTTPException(409, "The file changed. Reopen it before continuing.")
+        # Also refuse same-version edits to the exact captured proof population.
+        try:
+            projections.require_current(current)
+        except ValueError as exc:
+            raise HTTPException(
+                409, "The checked file changed. Reopen it before continuing.") from exc
+        if generation is not None:
+            try:
+                generation.require_current()
+            except GenerationUnavailable as exc:
+                raise HTTPException(409, "The legal sources changed. Reopen this file.") from exc
+
+    return projections, source_current, require_current
+
+
+def _registers(held, *, request=None) -> dict:
+    registers = {}
+    for matter in held:
+        if request is None:
+            registers[matter.id] = _register_of(matter)
+        else:
+            projections, source_current, require_current = _checked_checklists(matter, request)
+            registers[matter.id] = _register_of(matter, source_current=source_current,
+                                               checklist_projections=projections)
+            require_current()
+    return registers
 
 
 @app.get("/api/matters")
-def matters(advocate_id: Advocate) -> dict:
+def matters(advocate_id: Advocate, request: Request) -> dict:
     """THE MATTER LIST. One row per matter, nearest deadline first.
 
     Bounded by MATTER count -- never by threads, turns or facts.
@@ -952,12 +1012,12 @@ def matters(advocate_id: Advocate) -> dict:
     #
     # `not assessed`, `none on this matter`, `upcoming` and `passed` are four
     # different facts and the advocate could only ever see the first.
-    return matter_list_projection(held, registers=_registers(held))
+    return matter_list_projection(held, registers=_registers(held, request=request))
 
 
 @app.get("/api/matters/{matter_id}")
 @implements("A1")
-def matter(matter_id: str, advocate_id: Advocate) -> dict:
+def matter(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     """THE THREAD BOARD. One row per thread, bounded by THREAD count."""
     m = application().store.load(matter_id)
     if m is None or m.advocate_id != advocate_id:
@@ -974,12 +1034,18 @@ def matter(matter_id: str, advocate_id: Advocate) -> dict:
     # ever been advised on.
     from nm.domain.opening import recorded_brief
 
-    return {**board_projection(m, _register_of(m)), "opening_brief": recorded_brief(m)}
+    projections, source_current, require_current = _checked_checklists(m, request)
+    register = _register_of(m, source_current=source_current, checklist_projections=projections)
+    result = {**board_projection(m, register, source_current=source_current,
+                                checklist_projections=projections),
+              "opening_brief": recorded_brief(m)}
+    require_current()
+    return result
 
 
 @app.get("/api/matters/{matter_id}/cover")
 @implements("A1")
-def matter_cover(matter_id: str, advocate_id: Advocate) -> dict:
+def matter_cover(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     """THE COVER. BK-33-AC1.
 
     Separate from the thread board because it answers a different question --
@@ -989,10 +1055,15 @@ def matter_cover(matter_id: str, advocate_id: Advocate) -> dict:
     """
     m = _owned(matter_id, advocate_id)
     from nm.domain.capacity import CapacityPosition
-    return {**cover_projection(m, _register_of(m)),
+    projections, source_current, require_current = _checked_checklists(m, request)
+    register = _register_of(m, source_current=source_current, checklist_projections=projections)
+    result = {**cover_projection(m, register, source_current=source_current,
+                                checklist_projections=projections),
             "capacity_assessment": CapacityPosition.from_stored(
                 m.intake_answers.get("capacity")).as_dict(),
             "capacity_history": list(m.intake_answers.get("capacity_history", ()))}
+    require_current()
+    return result
 
 
 @app.get("/api/matters/{matter_id}/casefile")
@@ -3944,7 +4015,7 @@ def _commission_from(body: dict, previous, recorded_by: str) -> "Commission":
 
 
 @app.get("/api/matters/{matter_id}/summary")
-def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
+def matter_summary(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     """THE FILE. What is established, what was asked, what is still open.
 
     A projection over the matter, exactly like the two boards, holding
@@ -3962,7 +4033,11 @@ def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
         return matter_memory.unbuildable(f"the matter could not be read: {exc}")
     if m is None or m.advocate_id != advocate_id:
         raise HTTPException(status_code=404, detail="no such matter")
-    return matter_memory.build(m).as_dict()
+    projections, source_current, require_current = _checked_checklists(m, request)
+    result = matter_memory.build(m, source_current=source_current,
+                                 checklist_projections=projections).as_dict()
+    require_current()
+    return result
 
 
 @app.post("/api/turn", dependencies=[CsrfProtected])
@@ -4041,7 +4116,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
             "expected_version": getattr(exc, "expected_version", req.expected_version),
             "matter_version": getattr(exc, "matter_version", None),
         }) from exc
-    return _release(output)
+    return _release(output, request=request)
 
 
 @app.get("/api/search")
@@ -5312,6 +5387,41 @@ def draft_key(advocate_id: Advocate, response: Response,
 
 
 # ------------------------------------------------------------------- static ---
+
+def _loop_session_current(request: Request, advocate_id: str) -> bool:
+    """A passive stream must not extend idle life or outlive logout/revocation."""
+    directory = application().directory
+    session = directory.session(
+        request.cookies.get("nm_session", ""),
+        _device(request.cookies.get("nm_device"), request.headers.get("user-agent")), utcnow())
+    return bool(session and session.advocate_id == advocate_id
+                and directory.identity(advocate_id) is not None)
+
+
+from nm.edge.brain_preview import router as brain_preview_router  # noqa: E402
+from nm.edge.document_reading import router as document_reading_router  # noqa: E402
+from nm.edge.loop_progress import router as loop_progress_router  # noqa: E402
+from nm.edge.preview_seen import router as preview_seen_router  # noqa: E402
+from nm.edge.reviewed_preview import router as reviewed_preview_router  # noqa: E402
+
+app.include_router(loop_progress_router(
+    owned=_owned, signed_in=signed_in, session_current=_loop_session_current))
+app.include_router(brain_preview_router(
+    owned=_owned, signed_in=signed_in, session_current=_loop_session_current,
+    csrf_protected=csrf_protected,
+    run=lambda **arguments: application().evaluate_private_work(**arguments)))
+app.include_router(reviewed_preview_router(
+    owned=_owned, signed_in=signed_in, session_current=_loop_session_current,
+    read=lambda **arguments: application().read_reviewed_private_preview(**arguments)))
+app.include_router(preview_seen_router(
+    owned=_owned, signed_in=signed_in, session_current=_loop_session_current,
+    csrf_protected=csrf_protected,
+    record=lambda **arguments: application().record_private_preview_seen(**arguments)))
+app.include_router(document_reading_router(
+    owned=_owned, signed_in=signed_in, session_current=_loop_session_current,
+    csrf_protected=csrf_protected,
+    service_for=lambda **arguments: application().documents_for(**arguments)))
+
 
 class _NeverStale(StaticFiles):
     """Static assets that must not outlive the code they were shipped with.

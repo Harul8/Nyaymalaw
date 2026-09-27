@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from datetime import date
 from enum import Enum
 
@@ -88,10 +89,15 @@ class Outcome:
     at: str
     fact: str = ""
     due: str = ""
+    source_identity: str = ""
+    requires_review: bool = False
 
     def __post_init__(self) -> None:
-        if any(not isinstance(getattr(self, n), str) for n in ("basis", "at", "fact", "due")):
+        if any(not isinstance(getattr(self, n), str)
+               for n in ("basis", "at", "fact", "due", "source_identity")):
             raise ValueError("an answer has typed provenance")
+        if type(self.requires_review) is not bool:
+            raise ValueError("A proposed classification records its independent review requirement")
         if self.due:
             date.fromisoformat(self.due)
         if not isinstance(self.state, State):
@@ -105,7 +111,8 @@ class Outcome:
 
     def stored(self) -> dict:
         return {"state": self.state.value, "basis": self.basis, "at": self.at,
-                "fact": self.fact, "due": self.due}
+                "fact": self.fact, "due": self.due, "source_identity": self.source_identity,
+                "requires_review": self.requires_review}
 
     @classmethod
     def restore(cls, row) -> "Outcome | None":
@@ -114,7 +121,8 @@ class Outcome:
             return None
         try:
             return cls(State(row.get("state")), row.get("basis", ""),
-                       row.get("at", ""), row.get("fact", ""), row.get("due", ""))
+                       row.get("at", ""), row.get("fact", ""), row.get("due", ""),
+                       row.get("source_identity", ""), row.get("requires_review", False))
         except (TypeError, ValueError):
             return None
 
@@ -131,6 +139,32 @@ def key(requirement: Requirement) -> str:
     return hashlib.sha256(f"{requirement.locator}::{requirement.span}".encode("utf-8")).hexdigest()
 
 
+def classification_identity(requirement, outcome, fact) -> str:
+    """Exact relevance subject; changes of status, denial or generation matter."""
+    value = {"requirement": asdict(requirement), "outcome": outcome.stored(), "fact": asdict(fact)}
+    raw = json.dumps(value, sort_keys=True, ensure_ascii=False, allow_nan=False,
+                     default=lambda item: item.isoformat()).encode("utf8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+@dataclass(frozen=True)
+class ClassificationProof:
+    """A trusted reader's independently verified exact subject, never a written tick.
+
+    No model-facing schema accepts this type. The core reader constructs it only
+    after checking the sealed independent-verifier record and exact current subject.
+    """
+    subject_identity: str
+    record_reference: str
+
+    def __post_init__(self):
+        if (not isinstance(self.subject_identity, str) or len(self.subject_identity) != 64
+                or any(char not in "0123456789abcdef" for char in self.subject_identity)
+                or not isinstance(self.record_reference, str) or not self.record_reference.strip()):
+            raise ValueError(
+                "An independent classification proof needs an exact subject and receipt")
+
+
 @dataclass(frozen=True)
 class Item:
     """One row of the checklist, as the board and the conversation both read it."""
@@ -138,6 +172,7 @@ class Item:
     requirement: Requirement
     state: State
     outcome: Outcome | None = None
+    independently_reviewed: bool = False
 
     @property
     def outstanding(self) -> bool:
@@ -149,6 +184,10 @@ class Item:
         return {"key": key(r), "need": r.need, "why": r.why, "force": r.force.value,
                 "source": r.source, "locator": r.locator, "span": r.span,
                 "state": self.state.value,
+                "proposed_state": self.outcome.state.value if self.outcome else "",
+                "review_state": ("independently_reviewed" if self.independently_reviewed
+                    else "not_assessed" if self.outcome and self.outcome.requires_review
+                    else "legacy_structural" if self.outcome else "not_assessed"),
                 "basis": self.outcome.basis if self.outcome else "",
                 "at": self.outcome.at if self.outcome else "",
                 "fact": self.outcome.fact if self.outcome else "",
@@ -161,13 +200,17 @@ def restored(thread) -> tuple[Requirement, ...]:
                  if (r := Requirement.restore(value)) is not None)
 
 
-def checklist(thread, facts=()) -> tuple[Item, ...]:
+def checklist(thread, facts=(), *, classifications=()) -> tuple[Item, ...]:
     """The rows for one dispute, each with the state the record supports."""
     outcomes = getattr(thread, "requirement_outcomes", None) or {}
     rows = []
     scoped = {f.id: f for f in facts if f.id in thread.chronology
               and f.superseded_by is None}
     reads = getattr(thread, "requirement_reads", {}) or {}
+    if (not isinstance(classifications, tuple)
+            or any(not isinstance(row, ClassificationProof) for row in classifications)):
+        raise ValueError("Checklist classifications need typed independent receipt proofs")
+    certified = {row.subject_identity for row in classifications}
     for requirement in restored(thread):
         recorded = Outcome.restore(outcomes.get(key(requirement)))
         fact = scoped.get(recorded.fact) if recorded else None
@@ -178,24 +221,119 @@ def checklist(thread, facts=()) -> tuple[Item, ...]:
         if (requirement.source_identity and current_source
                 and current_source != requirement.source_identity):
             recorded = None
+        if (recorded and current_source
+                and recorded.source_identity != current_source):
+            # Re-reading the same exact clause can change its applicability
+            # context. Preserve the old answer, but do not lend it the new
+            # source generation. Absence of a read is not a currency verdict.
+            recorded = None
+        reviewed = (recorded is not None and (not recorded.requires_review
+            or classification_identity(requirement, recorded, fact) in certified))
         rows.append(Item(requirement,
-                         recorded.state if recorded else State.OUTSTANDING,
-                         recorded))
+                         recorded.state if reviewed else State.OUTSTANDING, recorded,
+                         bool(reviewed and recorded.requires_review)))
     return tuple(rows)
 
 
-def nothing_to_ask(thread, facts=()) -> bool:
+def projection_identity(thread, facts=()) -> str:
+    """All current recorded subject data; never a persisted completion flag."""
+    raw = json.dumps({"thread": asdict(thread), "facts": [asdict(row) for row in facts]},
+        ensure_ascii=False, sort_keys=True, allow_nan=False,
+        default=lambda value: value.isoformat()).encode("utf8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def facts_identity(facts=()) -> str:
+    """Bind the whole factual population even before any dispute exists."""
+    raw = json.dumps([asdict(row) for row in facts], ensure_ascii=False,
+                     sort_keys=True, allow_nan=False,
+                     default=lambda value: value.isoformat()).encode("utf8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+@dataclass(frozen=True)
+class ChecklistProjection:
+    """One request-local derivation, not another stored or model-authored verdict."""
+    rows: tuple[Item, ...]
+    expected_population: int
+    subject_identity: str
+
+    def __post_init__(self):
+        if (not isinstance(self.rows, tuple) or any(not isinstance(row, Item) for row in self.rows)
+                or type(self.expected_population) is not int or self.expected_population < 0
+                or not isinstance(self.subject_identity, str) or len(self.subject_identity) != 64
+                or any(char not in "0123456789abcdef" for char in self.subject_identity)):
+            raise ValueError(
+                "A checklist projection needs typed rows and its exact recorded subject")
+
+    def require_current(self, thread, facts=()):
+        if self.subject_identity != projection_identity(thread, facts):
+            raise ValueError(
+                "The request-local checklist subject changed; rebuild its actual checks")
+
+    @property
+    def complete_population(self):
+        return (bool(self.rows) and len(self.rows) == self.expected_population
+                and len({key(row.requirement) for row in self.rows}) == len(self.rows))
+
+    @property
+    def nothing_to_ask(self):
+        return self.complete_population and not any(row.outstanding for row in self.rows)
+
+    @property
+    def settled(self):
+        return self.complete_population and not any(
+            row.outstanding or row.state is State.PROMISED for row in self.rows)
+
+    def summary(self):
+        return {"state": "established" if self.rows else "not_established",
+                "held": sum(row.state is State.HELD for row in self.rows),
+                "outstanding": sum(row.outstanding for row in self.rows),
+                "promised": sum(row.state is State.PROMISED for row in self.rows),
+                "unavailable": sum(row.state is State.UNAVAILABLE for row in self.rows),
+                "total": len(self.rows)}
+
+    def due_items(self, today: date, *, resumed=False):
+        """A due promise stays promised; time supplies no factual conclusion."""
+        if type(today) is not date or type(resumed) is not bool:
+            raise ValueError("Information follow-up uses a trusted date and explicit resume state")
+        result = []
+        for item in self.rows:
+            if item.state is not State.PROMISED:
+                continue
+            due = item.outcome.due
+            if not due:
+                if resumed:
+                    result.append(item)
+                continue
+            try:
+                when = date.fromisoformat(due)
+            except ValueError:
+                if resumed:
+                    result.append(item)
+            else:
+                if when <= today:
+                    result.append(item)
+        return tuple(result)
+
+
+def project(thread, facts=(), *, classifications=()) -> ChecklistProjection:
+    return ChecklistProjection(checklist(thread, facts, classifications=classifications),
+                               len(getattr(thread, "requirements", ()) or ()),
+                               projection_identity(thread, facts))
+
+
+def nothing_to_ask(thread, facts=(), *, classifications=()) -> bool:
     """No grey left: every requirement has had its answer from the advocate.
 
     THIS IS WHAT STOPS NM ASKING (F-C-13). A requirement the client cannot
     produce, recorded with its reason, is a finished question even though the
     thing itself will never arrive.
     """
-    rows = checklist(thread, facts)
-    return bool(rows) and not any(row.outstanding for row in rows)
+    return project(thread, facts, classifications=classifications).nothing_to_ask
 
 
-def settled(thread, facts=()) -> bool:
+def settled(thread, facts=(), *, classifications=()) -> bool:
     """Nothing left to ask AND nothing left to wait for.
 
     A PROMISE IS NOT AN ARRIVAL, and the first version of this function said it
@@ -205,38 +343,13 @@ def settled(thread, facts=()) -> bool:
     False when there is no checklist at all -- nothing retrieved is not the
     same as nothing needed.
     """
-    rows = checklist(thread, facts)
-    return bool(rows) and not any(
-        row.outstanding or row.state is State.PROMISED for row in rows)
+    return project(thread, facts, classifications=classifications).settled
 
 
-def summary(thread, facts=()) -> dict:
-    rows = checklist(thread, facts)
-    return {"state": "established" if rows else "not_established",
-            "held": sum(r.state is State.HELD for r in rows),
-            "outstanding": sum(r.outstanding for r in rows),
-            "promised": sum(r.state is State.PROMISED for r in rows),
-            "unavailable": sum(r.state is State.UNAVAILABLE for r in rows),
-            "total": len(rows)}
+def summary(thread, facts=(), *, classifications=()) -> dict:
+    return project(thread, facts, classifications=classifications).summary()
 
 
-def due_items(thread, facts, today: date, *, resumed=False) -> tuple[Item, ...]:
+def due_items(thread, facts, today: date, *, resumed=False, classifications=()) -> tuple[Item, ...]:
     """A due promise stays promised, never becomes held or unavailable by time."""
-    result = []
-    for item in checklist(thread, facts):
-        if item.state is not State.PROMISED:
-            continue
-        due = item.outcome.due
-        if not due:
-            if resumed:
-                result.append(item)
-            continue
-        try:
-            when = date.fromisoformat(due)
-        except ValueError:
-            if resumed:
-                result.append(item)
-        else:
-            if when <= today:
-                result.append(item)
-    return tuple(result)
+    return project(thread, facts, classifications=classifications).due_items(today, resumed=resumed)

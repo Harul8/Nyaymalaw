@@ -15,13 +15,13 @@ from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.authority_weight import CuratedAuthorityWeight
+from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.knowledge.filing_requirement import (
     CuratedFilingRequirements,
 )
+from nm.adapters.knowledge.institution import CuratedPreInstitution
 from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
 from nm.adapters.knowledge.procedural_period import CuratedProceduralPeriods
-from nm.adapters.knowledge.elements import CuratedElements
-from nm.adapters.knowledge.institution import CuratedPreInstitution
 from nm.adapters.mail.outbox import FileOutbox
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
@@ -70,6 +70,10 @@ def build_model(config: ModelConfig) -> ModelPort:
     provider = config.for_tier(Tier.ROUTINE).provider
     if provider == "openai":
         return OpenAIModelAdapter(config)
+    if provider == "anthropic":
+        from nm.adapters.model.anthropic_adapter import AnthropicModelAdapter
+
+        return AnthropicModelAdapter(config)
     if provider == "scripted":
         return ScriptedModelAdapter(config, responses={
             "__default__": "Confirm the date of service and file within the window."})
@@ -107,6 +111,8 @@ class Application:
                  store=None, evidence=None, search=None,
                  directory=None, uploads=None, mail=None, transcriber=None,
                  live_dictation=None,
+                 document_text=None, document_derivatives=None, document_quarantine=None,
+                 document_quarantine_processor: str = "",
                  environment: Mapping[str, str] | None = None,
                  audit_root: Path | None = None) -> None:
         # Explicit composition must never read or temporarily replace process
@@ -119,6 +125,9 @@ class Application:
         self.root = root or ROOT
         self.audit_root = Path(audit_root) if audit_root is not None else self.root / ".nm"
         self.config = load(dict(settings))
+        # Only trusted composition may install finite expiring evaluation
+        # grants. Registration, a model call and an HTTP body cannot do so.
+        self.controlled_evaluations = ()
         self.manifest = Manifest.load(self.root / "pipeline" / "manifest.yaml")
 
         key = settings.get("NM_MATTER_KEY") or ""
@@ -360,24 +369,83 @@ class Application:
                                  filing=self.filing,
                                  professional_approval=self.directory.professional_approval)
 
+        self.documents = None
+        from nm.bootstrap.document_permission import build_quarantine
+
+        document_checker = build_quarantine(document_quarantine, document_quarantine_processor,
+                                            self._gate)
+        derivative_adapter = document_derivatives
+        if (derivative_adapter is None and self.uploads is not None
+                and isinstance(self.store.inner, FileMatterStore)):
+            derivative_adapter = self.store.inner.document_storage()
+        if self.uploads is not None and derivative_adapter is not None:
+            from nm.adapters.documents.local import LocalDocumentText
+            from nm.edge.documents import DocumentService
+            from nm.ports.document_text import DOCUMENT_PROCESSOR, DocumentTextPort
+            from nm.ports.matter_documents import DocumentDerivativePort
+
+            parser = PolicedPort(inner=document_text or LocalDocumentText(),
+                gate=self._gate, port=DocumentTextPort, sink=Sink.MEDIA,
+                processor_id=DOCUMENT_PROCESSOR,
+                data_classes=(DataClass.CLIENT_MATTER, DataClass.RESTRICTED),
+                weigh=lambda args, kwargs: len(
+                    kwargs.get("document", args[0] if args else None).data))
+            derivatives = PolicedPort(inner=derivative_adapter, gate=self._gate,
+                port=DocumentDerivativePort, sink=Sink.STORAGE,
+                processor_id=STORAGE_PROCESSOR,
+                data_classes=(DataClass.CLIENT_MATTER, DataClass.RESTRICTED))
+            self.documents = DocumentService(self.uploads, derivatives, parser,
+                                              quarantine=document_checker)
+
+    def documents_for(self, *, session_current):
+        """A request-bound local reader; no missing scanner is treated as clean."""
+        if self.documents is None:
+            return None
+        from nm.edge.documents import DocumentService
+
+        return DocumentService(self.documents.uploads, self.documents.derivatives,
+            self.documents.parser, quarantine=self.documents.quarantine,
+            bounds=self.documents.bounds, session_current=session_current)
+
+    def source_generation_guard(self):
+        """The actual small source/table binding, never a caller-authored label."""
+        from nm.bootstrap.controlled_generations import GenerationGuard
+
+        manifest_path = (self._published_snapshot.member_path("corpus/manifest.yaml")
+                         if self._published_snapshot else self.root / "pipeline" / "manifest.yaml")
+        return GenerationGuard(knowledge_root=Path(__file__).parents[1] / "knowledge",
+            manifest_path=manifest_path, snapshot=self._published_snapshot)
+
+    def checklist_source_current_for(self, matter_id: str, advocate_id: str, *,
+                                     expected_version: int,
+                                     session_current: Callable[[], bool]):
+        """Request-bound cached law; missing source evidence never becomes a tick."""
+        from nm.bootstrap.checklist_sources import bind_source_current
+        from nm.bootstrap.controlled_generations import GenerationUnavailable
+
+        if type(expected_version) is not int or expected_version < 1:
+            raise ValueError("A checklist projection names its exact captured file version")
+
+        def owned_current():
+            matter = self.store.load(matter_id)
+            return bool(matter and matter.advocate_id == advocate_id
+                        and matter.version == expected_version)
+
+        try:
+            guard = self.source_generation_guard()
+        except GenerationUnavailable:
+            # The file remains readable. Only source-current certification is
+            # unavailable, and every dependent candidate remains unresolved.
+            return lambda _source, _generation: False
+        return bind_source_current(self.evidence, guard,
+            owned_current=owned_current, session_current=session_current)
+
     def engine_for(self, advocate_id: str, *,
                    session_current: Callable[[], bool] | None = None) -> TurnEngine:
         """Authenticated turn route; generic tooling remains deny-by-default."""
         if not isinstance(self._model_adapter, OpenAIModelAdapter):
             return self.engine
-        from nm.bootstrap.model_permission import require_permission, text_policy
-        from nm.domain.external_ai import ModelPermissionRefused
-
-        def authorize():
-            if session_current is None or not session_current():
-                raise ModelPermissionRefused(
-                    "Your session no longer permits AI processing. Sign in again to continue.")
-            require_permission(self.directory, advocate_id, self.config)
-
-        authorize()
-        bound = PolicedModel(
-            inner=TracedModel(inner=self._model_adapter.for_matter_text(authorize)),
-            policy=text_policy(), audit=self._egress_audit, authorize=authorize)
+        bound = self._model_for(advocate_id, session_current=session_current)
         return TurnEngine(store=self.store, evidence=self.evidence, model=bound,
                           coverage=self.coverage, elements=self.elements,
                           pre_institution=self.pre_institution,
@@ -386,6 +454,250 @@ class Application:
                           procedural=self.procedural,
                           filing=self.filing,
                           professional_approval=self.directory.professional_approval)
+
+    def _model_for(self, advocate_id: str, *, session_current: Callable[[], bool] | None):
+        """One authenticated external-text dispatch owner for both reasoning paths."""
+        if not isinstance(self._model_adapter, OpenAIModelAdapter):
+            return self.model
+        from nm.bootstrap.model_permission import bind_text_model
+
+        return bind_text_model(self._model_adapter, directory=self.directory,
+            account_id=advocate_id, config=self.config,
+            session_current=session_current, audit=self._egress_audit)
+
+    def controlled_brain_for(self, scope, *, session_current: Callable[[], bool],
+                             cost_ceiling: Callable[[int, int, Tier], float],
+                             source_version: str, table_version: str,
+                             reviewer=None, review_interactions: bool = False,
+                             controlled_model=None, interaction_protocol_version=1):
+        """Trusted bounded evaluation composition; never a client cutover switch.
+
+        A caller must supply its attributed finite scope and exact corpus/table
+        generations. API/model parameters cannot approve their own matter IDs.
+        The same account permission wraps every model dispatch, not just startup.
+        No external filing, settlement, media release or legal approval is a tool.
+        """
+        from nm.adapters.principles_file import FilePrinciples
+        from nm.adapters.store.loop_log import MatterLoopLog
+        from nm.bootstrap.controlled_generations import GenerationUnavailable
+        from nm.core import output_checks, parties, screens
+        from nm.core.brain_assessment import AssessmentService
+        from nm.core.brain_finalization import FinalizationService, SavedCheckReader
+        from nm.core.brain_publication import PrivatePublicationService
+        from nm.core.calculation_tools import calculation_tools
+        from nm.core.checklist_review import ChecklistReviewService
+        from nm.core.controlled_brain import ControlledBrain, EvaluationScope
+        from nm.core.grounded_file_tools import grounded_file_tools
+        from nm.core.interaction_review import (
+            COMMUNICATION_PROTOCOL_VERSIONS,
+            InteractionReviewService,
+        )
+        from nm.core.interaction_subject import InteractionSubjectOwner
+        from nm.core.nested_research import ResearchDispatcher
+        from nm.core.opposition_work import opposition_status_tool
+        from nm.core.source_writes import source_write_tools
+        from nm.core.tool_catalogue import PracticeTables, catalogue_tools
+        from nm.core.tool_discovery import discovery_tools
+        from nm.core.tools import Boundary, DelegationPolicy, foundation_tools
+        from nm.core.write_tools import write_tools
+        from nm.domain.authority import Act, capacity_for, permits
+        from nm.domain.commission import Commission
+
+        if not isinstance(scope, EvaluationScope) or not session_current():
+            raise PermissionError("No current session and trusted controlled scope")
+        if type(review_interactions) is not bool or review_interactions and reviewer is None:
+            raise ValueError("Interaction review needs its trusted independent reviewer")
+        if (type(interaction_protocol_version) is not int
+                or interaction_protocol_version not in COMMUNICATION_PROTOCOL_VERSIONS):
+            raise ValueError("Interaction review uses an explicit owned protocol version")
+        generations = self.source_generation_guard()
+        from nm.bootstrap.checklist_sources import bind_source_current
+
+        def sources_owned():
+            # This callback receives public law, not case material. Exact active
+            # file/version checks remain with the caller; no foreign file may
+            # enter even the installation's finite controlled population.
+            return all((matter := self.store.load(matter_id)) is not None
+                       and matter.advocate_id == scope.advocate_id
+                       for matter_id in scope.matter_ids)
+
+        source_current = bind_source_current(self.evidence, generations,
+            owned_current=sources_owned, session_current=session_current)
+
+        def boundary(context, act):
+            try:
+                generations.require_current()
+            except GenerationUnavailable:
+                return Boundary(False, "The admitted legal sources or practice tables changed.")
+            if not session_current() or context.identity.matter_id not in scope.matter_ids:
+                return Boundary(False,
+                                "The session or controlled matter scope no longer permits work.")
+            matter = self.store.load(context.identity.matter_id)
+            if (matter is None or matter.advocate_id != scope.advocate_id
+                    or context.identity.advocate_id != scope.advocate_id
+                    or matter.version != context.current_version):
+                return Boundary(False,
+                                "The complete checked file is not available at this version.")
+            commission = Commission.from_stored(matter.commission)
+            acting_as = capacity_for(scope.advocate_id, matter.authority_bindings,
+                                     commission.version if commission else 0, utcnow())
+            ruling = permits(scope.advocate_id, acting_as, act)
+            return Boundary(ruling.authorises(), ruling.why)
+
+        def before(name, _arguments, context):
+            return boundary(context, registry.authority_for(name))
+
+        registry = foundation_tools(
+            self.store, self.evidence, manifest=self.manifest, source_version=source_version,
+            before=before, after=lambda receipt, context:
+            boundary(context, registry.authority_for(receipt.tool)))
+        tables = PracticeTables(table_version, self.elements, self.pre_institution,
+                                self.interim_relief, self.procedural, self.filing)
+        registry = registry.extend(catalogue_tools(
+            self.store, self.evidence, source_version=source_version, search=self.search,
+            tables=tables, authority_weight=self.authority_weight,
+            matter_documents=self.documents_for(session_current=session_current),
+            source_current=source_current),
+            versions={"practice_tables": table_version})
+        registry = registry.extend(write_tools(self.store))
+        registry = registry.extend(grounded_file_tools(self.store))
+        registry = registry.extend(source_write_tools(self.store, source_version=source_version))
+        # These tools require reviewed source/accrual bindings. Composition
+        # cannot manufacture those selections from a model's free-text choice.
+        registry = registry.extend(calculation_tools(self.store, source_version=source_version))
+        model = self._model_for(scope.advocate_id, session_current=session_current)
+        if controlled_model is not None:
+            # Only the trusted finite evaluation grant supplies this already
+            # permission-bound author. Ordinary TurnEngine composition is not
+            # changed to consume the evaluation ledger or verifier allowance.
+            model = controlled_model
+        principles = FilePrinciples()
+        document_reader = self.documents_for(session_current=session_current)
+
+        def document_current(matter, span):
+            # Re-open through the owned local service, not metadata equality or
+            # a model's assertion that the uploaded document remains readable.
+            from nm.core.matter_support import REFERENCE_KEYS
+            from nm.ports.matter_documents import DocumentRefused
+            from nm.ports.storage_errors import StoredObjectScopeRefused, StoredObjectUnreadable
+            from nm.ports.upload import UploadRefused
+
+            if document_reader is None:
+                return False
+            try:
+                span.validate()
+                quote = document_reader.quote(matter.id, matter.advocate_id, matter.version,
+                                              **{key: span.source[key] for key in REFERENCE_KEYS})
+            except (DocumentRefused, UploadRefused, StoredObjectScopeRefused,
+                    StoredObjectUnreadable, OSError):
+                return False
+            return quote == span.captured_quote
+
+        if reviewer is not None:
+            # Trusted installation composition supplies the ReviewService; its
+            # document-current owner cannot be selected by model/HTTP data.
+            reviewer.document_current = document_current
+        registry = registry.extend((opposition_status_tool(
+            store=self.store, provider=lambda: model.provider,
+            model=lambda: model.resolved_model(Tier.ROUTINE)),))
+        # A child spends only the lead's already reserved grant. Its small
+        # ceiling is not a new allowance, nor permission to write the file.
+        dispatcher = ResearchDispatcher(store=self.store, model=model,
+            principles=principles, registry=registry, cost_ceiling=cost_ceiling)
+        registry = registry.extend(dispatcher.tools(DelegationPolicy(
+            max_steps=12, max_tokens=24000, max_cost_usd=0.25, max_ms=60000)))
+        registry = registry.extend(discovery_tools(lambda: registry, principles))
+        registry = registry.extend((), versions={"actual_generation_binding": generations.version})
+        log = MatterLoopLog(self.store, advocate_id=scope.advocate_id)
+
+        def current_tools_version():
+            try:
+                generations.require_current()
+            except GenerationUnavailable:
+                return "generation_not_current"
+            return registry.version
+
+        def current_boundaries(matter, _outcome):
+            commission = Commission.from_stored(matter.commission)
+            acting_as = capacity_for(scope.advocate_id, matter.authority_bindings,
+                                     commission.version if commission else 0, utcnow())
+            # Only actual recorded/current owners contribute. A missing duty
+            # assessment is not reconstructed from an intake permission.
+            return output_checks.BoundarySubjects(
+                screens=screens.from_stored(matter.screens),
+                parties=parties.on_file(matter).names,
+                authority=permits(scope.advocate_id, acting_as, Act.ADVISE))
+
+        def current_observers(_matter, _outcome, _review):
+            return output_checks.OutputSubjects(
+                empty_reads=output_checks.observe_reads(model, "empty_decisive"),
+                refused_reads=output_checks.observe_reads(model, "refused_reads"),
+                coverage=output_checks.measured_coverage(self.coverage, FORUM),
+                competence=output_checks.competence_screen(self.coverage, FORUM))
+
+        assessment = AssessmentService(
+            store=self.store, log=log, session_current=session_current,
+            supplement=current_observers, boundaries=current_boundaries,
+            current_tools_version=current_tools_version,
+            current_principles_version=lambda: principles.load().version,
+            document_current=document_current)
+        finalizer = None
+        interaction_review = None
+        if reviewer is not None:
+            from nm.domain.clock import today as forum_today
+
+            def current_authority(matter, _outcome):
+                commission = Commission.from_stored(matter.commission)
+                acting_as = capacity_for(scope.advocate_id, matter.authority_bindings,
+                    commission.version if commission else 0, utcnow())
+                return permits(scope.advocate_id, acting_as, Act.ADVISE)
+
+            finalizer = FinalizationService(reader=SavedCheckReader(
+                store=self.store, log=log, model=model, session_current=session_current,
+                cost_ceiling=cost_ceiling, current_tools_version=current_tools_version,
+                current_principles_version=lambda: principles.load().version,
+                document_current=document_current),
+                today=forum_today, jurisdiction=FORUM, coverage=self.coverage,
+                authority=current_authority)
+            assessment.supplement = finalizer.subjects
+            assessment.boundaries = finalizer.boundaries
+            if review_interactions:
+                interaction_owner = InteractionSubjectOwner(
+                    principles=principles, source_current=source_current)
+                interaction_review = InteractionReviewService(
+                    owner=interaction_owner, protocol_version=interaction_protocol_version,
+                    reader=SavedCheckReader(
+                        store=self.store, log=log, model=reviewer.verifier.model,
+                        session_current=session_current, cost_ceiling=cost_ceiling,
+                        current_tools_version=current_tools_version,
+                        current_principles_version=lambda: principles.load().version,
+                        document_current=document_current,
+                        subject_packages=interaction_owner.packages, max_tokens=2048))
+        publication = (PrivatePublicationService(assessment=assessment, finalizer=finalizer)
+                       if finalizer is not None else None)
+        return ControlledBrain(
+            store=self.store, model=model, principles=principles, log=log,
+            registry=registry, scope=scope, cost_ceiling=cost_ceiling,
+            session_current=session_current, reviewer=reviewer, assessment=assessment,
+            finalizer=finalizer, publication=publication,
+            interaction_review=interaction_review,
+            checklist_review=ChecklistReviewService(reviewer, source_current=source_current)
+                if reviewer is not None else None)
+
+    def evaluate_private_work(self, **arguments):
+        from nm.bootstrap.controlled_evaluations import evaluate
+
+        return evaluate(self, now=utcnow, **arguments)
+
+    def read_reviewed_private_preview(self, **arguments):
+        from nm.bootstrap.controlled_evaluations import reviewed_preview
+
+        return reviewed_preview(self, now=utcnow, **arguments)
+
+    def record_private_preview_seen(self, **arguments):
+        from nm.bootstrap.controlled_evaluations import record_preview_seen
+
+        return record_preview_seen(self, now=utcnow, **arguments)
 
     # ------------------------------------------------------------ P21 ------
 

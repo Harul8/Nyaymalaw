@@ -52,7 +52,8 @@ def _index(tmp_path: Path) -> Path:
             ("indexed_paragraphs", str(len(NUMBERS))), ("attributable_kinds", "ratio")])
         for n in NUMBERS:  # stored in source order
             con.execute("insert into paras values ('c1', 'A v B', 'Supreme Court of India', "
-                        "'1973', 'ratio', ?, ?)", (f"c1_P{n}_C01", f"paragraph {n} of the judgment"))
+                        "'1973', 'ratio', ?, ?)",
+                        (f"c1_P{n}_C01", f"paragraph {n} of the judgment"))
     return path
 
 

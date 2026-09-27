@@ -32,7 +32,6 @@ the harness above through the ledger, and it is not a unit test's to assert.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import step_dependency
 
 pytestmark = pytest.mark.class_a

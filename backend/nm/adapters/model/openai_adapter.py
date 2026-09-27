@@ -13,37 +13,42 @@ lives in the same package.
 from __future__ import annotations
 
 import json
-import random
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from nm.adapters.model._budget import guard_budget
+from nm.adapters.model._budget import guard_budget, guard_tool_budget
+from nm.adapters.model._transport import request_with_retries
 from nm.adapters.model.call_budget import CallBudget
-from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
+from nm.adapters.model.config import (
+    CONTEXT_BUDGET,
+    ModelConfig,
+    TierConfig,
+    require_priced_snapshot,
+)
 from nm.domain.budget import Completion
 from nm.domain.external_ai import ModelPermissionRefused
 from nm.domain.text import blank
 from nm.ports.model import (
     ConfigurationError,
     ContentRefused,
-    ContextOverflow,
     EmbeddingResult,
+    ModelError,
     ModelResult,
     OutputTruncated,
     Prompt,
     ProviderUnavailable,
-    RateLimited,
     SchemaViolation,
     Tier,
+    ToolCall,
+    ToolCallResult,
+    ToolDefinition,
+    ToolMessage,
     Usage,
     on_the_wire,
     require_schema,
+    require_tool_calls,
 )
-
-MAX_RETRIES = 3
-_BACKOFF_BASE = 0.5
-
 
 #: HOW A PROVIDER SAYS IT STOPPED, mapped to what that means for legal work.
 #:
@@ -137,6 +142,102 @@ class OpenAIModelAdapter:
     ) -> ModelResult:
         return self._call(prompt, tier, schema=schema, max_tokens=max_tokens)
 
+    def tool_call(self, prompt: Prompt, tools: tuple[ToolDefinition, ...], tier: Tier, *,
+                  messages: tuple[ToolMessage, ...] = (),
+                  max_tokens: int | None = None) -> ToolCallResult:
+        guard_tool_budget(prompt, tools, tier, messages, max_tokens)
+        cfg = self._cfg(tier)
+        started = time.perf_counter()
+        wire = []
+        if prompt.system:
+            wire.append({"role": "system", "content": prompt.system})
+        wire.append({"role": "user", "content": prompt.user})
+        for message in messages:
+            row: dict[str, Any] = {"role": message.role, "content": message.text}
+            if message.calls:
+                row["tool_calls"] = [{"id": call.call_id, "type": "function",
+                                      "function": {"name": call.name,
+                                                   "arguments": json.dumps(call.arguments,
+                                                                           allow_nan=False)}}
+                                     for call in message.calls]
+            if message.role == "tool":
+                row["tool_call_id"] = message.call_id
+            wire.append(row)
+        kwargs = {"model": cfg.model, "messages": wire, "store": False,
+                  "tools": [{"type": "function", "function": {
+                      "name": tool.name, "description": tool.description,
+                      "parameters": on_the_wire(tool.parameters), "strict": True}}
+                      for tool in tools],
+                  # This port requests a typed next action, not optional prose.
+                  # The returned receipt is still checked independently below.
+                  "tool_choice": "required", "parallel_tool_calls": False}
+        if max_tokens is not None:
+            kwargs["max_completion_tokens"] = max_tokens
+        response, retries = self._retrying_counted(
+            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model)
+        usage = self._usage(response, cfg)
+        elapsed = int((time.perf_counter() - started) * 1000)
+        try:
+            if not getattr(response, "choices", None):
+                raise SchemaViolation("The provider returned no tool response choice")
+            choice = response.choices[0]
+            reason = getattr(choice, "finish_reason", None)
+            completion = self._require_tool_completion(reason)
+            if getattr(choice.message, "refusal", None):
+                raise ContentRefused("The provider refused this tool proposal")
+            calls = []
+            for call in getattr(choice.message, "tool_calls", None) or ():
+                if getattr(call, "type", None) != "function":
+                    raise SchemaViolation("The provider returned an unsupported tool kind")
+                try:
+                    arguments = json.loads(call.function.arguments)
+                except (json.JSONDecodeError, TypeError) as exc:
+                    raise SchemaViolation("Tool arguments were not valid JSON") from exc
+                calls.append(ToolCall(call.id, call.function.name, arguments))
+            if reason == "tool_calls" and not calls:
+                raise SchemaViolation("The provider declared calls but supplied none")
+            if calls and reason != "tool_calls":
+                raise SchemaViolation("Tool proposals lack the provider's completed-call receipt")
+            require_tool_calls(tuple(calls), tools, messages)
+            return ToolCallResult(
+                text=getattr(choice.message, "content", None), calls=tuple(calls),
+                tier=tier, provider=self.provider, model=cfg.model, usage=usage,
+                latency_ms=elapsed, retries=retries, completion=completion)
+        except ModelError as exc:
+            exc.usage, exc.latency_ms, exc.retries = usage, elapsed, retries
+            raise
+
+    @staticmethod
+    def _require_tool_completion(reason) -> Completion:
+        if reason in {"stop", "tool_calls"}:
+            return Completion.COMPLETE
+        if reason == "length":
+            raise OutputTruncated("Tool proposal stopped at the output ceiling")
+        if reason == "content_filter":
+            raise ContentRefused("The provider refused this tool proposal")
+        raise SchemaViolation("The provider did not establish a completed tool proposal")
+
+    @staticmethod
+    def _usage(response, cfg: TierConfig) -> Usage:
+        usage = getattr(response, "usage", None)
+        incoming = getattr(usage, "prompt_tokens", None)
+        outgoing = getattr(usage, "completion_tokens", None)
+        if any(type(value) is not int or value < 0 for value in (incoming, outgoing)):
+            raise ProviderUnavailable(
+                "The provider did not establish request usage; cost is unknown")
+        details = getattr(usage, "prompt_tokens_details", None)
+        cached = getattr(details, "cached_tokens", 0)
+        if type(cached) is not int or not 0 <= cached <= incoming:
+            raise ProviderUnavailable(
+                "The provider returned invalid cached-token accounting",
+                usage=Usage(incoming, outgoing, cfg.cost(incoming, outgoing),
+                            provider_extra={"response_id": str(getattr(response, "id", "")),
+                                            "cache_accounting_invalid": True}))
+        return Usage(incoming, outgoing, cfg.cost(incoming, outgoing),
+                     cached,
+                     {"response_id": str(getattr(response, "id", "")),
+                      "usage_established": usage is not None})
+
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         if self._before_dispatch is not None or self._call_budget is not None:
             raise ModelPermissionRefused("Matter-text permission does not enable embeddings.")
@@ -144,7 +245,9 @@ class OpenAIModelAdapter:
         resp = self._retrying(lambda: self._client.embeddings.create(
             model=cfg.model, input=list(texts)))
         vectors = tuple(tuple(d.embedding) for d in resp.data)
-        t_in = getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0
+        t_in = getattr(getattr(resp, "usage", None), "prompt_tokens", None)
+        if type(t_in) is not int or t_in < 0:
+            raise ProviderUnavailable("The provider did not establish embedding usage")
         return EmbeddingResult(
             vectors=vectors, model=cfg.model, provider=self.provider,
             usage=Usage(tokens_in=t_in, tokens_out=0, cost_usd=cfg.cost(t_in, 0)),
@@ -152,7 +255,7 @@ class OpenAIModelAdapter:
 
     # -------------------------------------------------------- internals ---
     def _cfg(self, tier: Tier) -> TierConfig:
-        return self._config.for_tier(tier)
+        return require_priced_snapshot(self._config.for_tier(tier), provider=self.provider)
 
     def _call(self, prompt: Prompt, tier: Tier, schema, max_tokens) -> ModelResult:
         if self._before_dispatch is not None and (
@@ -201,12 +304,20 @@ class OpenAIModelAdapter:
         resp, retries = self._retrying_counted(
             lambda: self._client.chat.completions.create(**kwargs), model=cfg.model)
 
+        receipt = self._usage(resp, cfg)
+
+        def fail(error):
+            error.usage = receipt
+            error.latency_ms = int((time.perf_counter() - started) * 1000)
+            error.retries = retries
+            return error
+
         choice = resp.choices[0]
         completion = _completion_of(getattr(choice, "finish_reason", None))
         if completion is Completion.FILTERED:
-            raise ContentRefused(
+            raise fail(ContentRefused(
                 "the provider refused on content grounds. This is a provider "
-                "behaviour, not a fact about the matter.")
+                "behaviour, not a fact about the matter."))
         # THE LENGTH STOP WAS NOT CHECKED AT ALL. BK-49-AC1.
         #
         # `content_filter` was, and `length` was not -- so a response cut off
@@ -220,10 +331,10 @@ class OpenAIModelAdapter:
         # every other path, so a caller that wants whatever arrived can see it
         # without this method pretending the answer finished.
         if completion is Completion.LENGTH_LIMITED:
-            raise OutputTruncated(
+            raise fail(OutputTruncated(
                 "the provider stopped at the output limit, so this answer "
                 "ends where the budget did rather than where the reasoning "
-                "did. It is unfinished, not short.")
+                "did. It is unfinished, not short."))
         raw = choice.message.content or ""
 
         data = None
@@ -232,26 +343,21 @@ class OpenAIModelAdapter:
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError as exc:
-                raise SchemaViolation(f"response was not valid JSON: {exc}") from exc
+                raise fail(SchemaViolation(f"response was not valid JSON: {exc}")) from exc
             # THE DECLARED SCHEMA IS ENFORCED HERE, not by the provider.
             # Provider strict output is defence in depth, not a substitute
             # for validating the actual returned bytes. The port owns this
             # check so every adapter applies the same contract.
-            require_schema(data, schema)
+            try:
+                require_schema(data, schema)
+            except SchemaViolation as exc:
+                fail(exc)
+                raise
             text = None
-
-        usage = getattr(resp, "usage", None)
-        t_in = getattr(usage, "prompt_tokens", 0) or 0
-        t_out = getattr(usage, "completion_tokens", 0) or 0
-        cached = 0
-        details = getattr(usage, "prompt_tokens_details", None)
-        if details is not None:
-            cached = getattr(details, "cached_tokens", 0) or 0
 
         return ModelResult(
             text=text, data=data, tier=tier, provider=self.provider, model=cfg.model,
-            usage=Usage(tokens_in=t_in, tokens_out=t_out,
-                        cost_usd=cfg.cost(t_in, t_out), cached_tokens=cached),
+            usage=receipt,
             latency_ms=int((time.perf_counter() - started) * 1000),
             retries=retries,
             completion=completion,
@@ -263,45 +369,5 @@ class OpenAIModelAdapter:
     def _retrying_counted(self, fn, *, model: str = "") -> tuple[Any, int]:
         """Bounded retry with backoff. Retries are COUNTED and returned --
         an invisible retry is an invisible cost."""
-        last: Exception | None = None
-        for attempt in range(MAX_RETRIES):
-            if self._before_dispatch is not None:
-                self._before_dispatch()
-            reservation = self._call_budget.reserve(model) if self._call_budget else None
-            try:
-                response = fn()
-                if reservation:
-                    self._call_budget.settle(reservation, response)
-                return response, attempt
-            except Exception as exc:  # noqa: BLE001 - re-raised as typed below
-                normalised = _normalise(exc)
-                last = normalised
-                if isinstance(normalised, RateLimited) and attempt < MAX_RETRIES - 1:
-                    time.sleep(_BACKOFF_BASE * (2 ** attempt) + random.uniform(0, 0.2))
-                    continue
-                raise normalised from exc
-        raise last  # pragma: no cover - loop always returns or raises
-
-
-def _normalise(exc: Exception) -> Exception:
-    """Map provider-specific failures onto the port's typed errors.
-
-    Matching on the class name rather than importing openai's exception tree
-    keeps this working when the package is absent (the scripted path) and when
-    the SDK reorganises its exceptions.
-    """
-    name = type(exc).__name__
-    msg = str(exc)
-    low = msg.lower()
-    if name in ("RateLimitError",) or "rate limit" in low or "429" in low:
-        return RateLimited(msg)
-    if "context_length_exceeded" in low or "maximum context length" in low:
-        return ContextOverflow(msg)
-    if name in ("APIConnectionError", "APITimeoutError", "InternalServerError") or \
-            "connection" in low or "timeout" in low:
-        return ProviderUnavailable(msg)
-    if "content_filter" in low or "content policy" in low:
-        return ContentRefused(msg)
-    if name in ("AuthenticationError", "PermissionDeniedError"):
-        return ConfigurationError(msg)
-    return ProviderUnavailable(msg)
+        return request_with_retries(fn, model=model, before_dispatch=self._before_dispatch,
+                                    call_budget=self._call_budget)

@@ -11,6 +11,7 @@ from __future__ import annotations
 import codecs
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
 
@@ -308,17 +309,8 @@ class UploadService:
             raise UploadRefused(409, "original is incomplete; resume at observed_size")
         digest, prefix, observed = hashlib.sha256(), b"", 0
         decoder, utf8_text = codecs.getincrementaldecoder("utf-8")(), True
-        for chunk in row["chunks"]:
-            data = self.objects.read(matter_id, chunk["object_id"])
-            if (
-                chunk["offset"] != observed
-                or len(data) != chunk["size"]
-                or hashlib.sha256(data).hexdigest() != chunk["sha256"]
-            ):
-                raise UploadRefused(409, "stored original failed its chunk integrity check")
+        for data in self._verified_chunks(matter_id, row):
             observed += len(data)
-            if observed > MAX_UPLOAD_BYTES:
-                raise UploadRefused(413, "stored original exceeds its observed-byte bound")
             digest.update(data)
             prefix = (prefix + data[:32])[:32]
             if utf8_text:
@@ -344,6 +336,57 @@ class UploadService:
         return self._save(
             matter, {**row, "receipt": finished.as_dict(), "completed_at": utcnow().isoformat()}
         )
+
+    def _verified_chunks(self, matter_id: str, row: dict, *, before_read: Callable | None = None):
+        """One integrity owner for upload completion and subsequent local reading."""
+        observed = 0
+        receipt = _receipt(row)
+        if len(row["chunks"]) != receipt.chunks or len(row["chunks"]) > MAX_UPLOAD_CHUNKS:
+            raise UploadRefused(409, "stored original chunk population does not match its receipt")
+        for chunk in row["chunks"]:
+            if before_read is not None:
+                before_read()
+            data = self.objects.read(matter_id, chunk["object_id"])
+            if before_read is not None:
+                before_read()
+            if (chunk["offset"] != observed or len(data) != chunk["size"]
+                    or not 0 < len(data) <= MAX_CHUNK_BYTES
+                    or hashlib.sha256(data).hexdigest() != chunk["sha256"]):
+                raise UploadRefused(409, "stored original failed its chunk integrity check")
+            observed += len(data)
+            if observed > MAX_UPLOAD_BYTES:
+                raise UploadRefused(413, "stored original exceeds its observed-byte bound")
+            yield data
+        if observed != receipt.observed_size:
+            raise UploadRefused(409, "stored original length does not match its receipt")
+
+    def verified_original(self, matter_id: str, actor_id: str, upload_id: str, *,
+                          expected_version: int, max_bytes: int,
+                          before_read: Callable | None = None) -> tuple[Matter, dict, bytes]:
+        """Trusted local-reader entry; ownership precedes byte access, not admission.
+
+        No HTTP route exposes this. The document service must additionally
+        check explicit analysis authority, quarantine and retention before
+        invoking a parser. Returning these bytes establishes no case fact.
+        A supplied request guard must raise on lost authority; it is invoked
+        before and after every protected chunk read, not only reconstruction.
+        """
+        matter = self.owned(matter_id, actor_id)
+        if type(expected_version) is not int or matter.version != expected_version:
+            raise UploadRefused(409, "the recorded file moved before original reading")
+        row = self._row(matter, upload_id)
+        receipt = _receipt(row)
+        if receipt.actor_id != actor_id or receipt.matter_id != matter_id:
+            raise UploadRefused(409,
+                "the original receipt does not belong to this actor and matter")
+        if receipt.state is not ReceiptState.RECEIVED:
+            raise UploadRefused(423, "the original is not completely received")
+        if type(max_bytes) is not int or not 0 < receipt.observed_size <= max_bytes:
+            raise UploadRefused(413, "the original exceeds the local reader's byte bound")
+        data = b"".join(self._verified_chunks(matter_id, row, before_read=before_read))
+        if hashlib.sha256(data).hexdigest() != receipt.observed_hash:
+            raise UploadRefused(409, "stored original no longer matches its completed digest")
+        return matter, row, data
 
     def cancel(self, matter_id: str, actor_id: str, upload_id: str) -> dict:
         matter = self.owned(matter_id, actor_id)

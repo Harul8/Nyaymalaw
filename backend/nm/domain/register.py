@@ -138,4 +138,12 @@ STRUCTURED_ONLY: frozenset[str] = frozenset({
     "backend/nm/core/posture.py::SYSTEM",
     "backend/nm/core/posture.py::ROLE_SYSTEM",
     "backend/nm/core/proof_read.py::SYSTEM",
+    # Its evidence-based reasons are private structured review records, not
+    # conversational prose. Actual dispatch isolates the captured package and
+    # carries no author conversation or peer-writing task.
+    "backend/nm/core/verifier.py::VERIFY_SYSTEM",
+    # Independent exact-word interaction judgments are private structured
+    # records, not author prose. The actual judge receives the current peer
+    # clause as a review standard; its reasons are never shown as conversation.
+    "backend/nm/core/interaction_review.py::INTERACTION_REVIEW_SYSTEM",
 })

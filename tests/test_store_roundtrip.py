@@ -27,6 +27,7 @@ from datetime import date
 import pytest
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
+from nm.domain.loop import LoopEvent, LoopIdentity, LoopMode, LoopRecord, StepKind, digest
 from nm.domain.matter import (
     AskedQuestion,
     Basis,
@@ -91,6 +92,7 @@ def _fully_populated() -> Matter:
     return Matter(
         id="mat_1", advocate_id="adv_1", title="Kukatpally",
         threads=(thread,), facts=(fact,),
+        loop_records=(_loop_record(),),
         turns_applied=("turn_1", "turn_2"),
         urgency_records=({"urgency_id": "urgency_1", "class": "personal_safety",
                           "state": "live", "basis": "Supplied danger",
@@ -126,6 +128,16 @@ def _fully_populated() -> Matter:
                           answered_by=None, times_asked=1),
         ),
         version=7)
+
+
+def _loop_record() -> LoopRecord:
+    identity = LoopIdentity("mat_1", "adv_1", "loop_1", digest("offer"),
+                            digest("principles"), digest("tools"), 1, LoopMode.RECORDED)
+    start = LoopEvent.create(1, StepKind.START, "2026-09-27T10:00:00+00:00",
+                             {"private": "recorded file text"}, identity.fingerprint)
+    stop = LoopEvent.create(2, StepKind.STOP, "2026-09-27T10:00:01+00:00",
+                            {"reason": "budget", "released": False}, start.fingerprint)
+    return LoopRecord(identity, (start, stop))
 
 
 def _ledger() -> dict:
@@ -210,7 +222,7 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
 
 
 @pytest.mark.parametrize("cls", [Matter, Fact, Thread, Posture, Provenance,
-                                 AskedQuestion, TurnReceipt])
+                                 AskedQuestion, TurnReceipt, LoopRecord, LoopIdentity, LoopEvent])
 def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     """THE GENERAL PROPERTY, checked per type.
 
@@ -232,6 +244,9 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
             Provenance: m.facts[0].provenance,
             AskedQuestion: m.asked[0],
             TurnReceipt: m.turn_receipts[0],
+            LoopRecord: m.loop_records[0],
+            LoopIdentity: m.loop_records[0].identity,
+            LoopEvent: m.loop_records[0].events[0],
         }[cls]
 
     found = pick(reloaded)
@@ -280,7 +295,7 @@ def test_every_persisted_type_is_covered_by_this_file():
 
     walk(domain.Matter)
     covered = {domain.Matter, Fact, Thread, Posture, Provenance,
-               PostureConflict, AskedQuestion, TurnReceipt}
+               PostureConflict, AskedQuestion, TurnReceipt, LoopRecord, LoopIdentity, LoopEvent}
     missing = reachable - covered
     assert not missing, (
         f"these persisted types are not round-tripped: "

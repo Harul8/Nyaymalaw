@@ -49,7 +49,14 @@ def test_media_contract_is_registered_and_preserves_both_permission_and_refusal(
     contract = catalog["media_contract"]
     assert set(contract["owner_criteria"]) == {"BK-69-AC3", "BK-79-AC3", "BK-88-AC4"}
     assert len(contract["prohibited_operations"]) == 5
-    assert len(contract["allowed_operations"]) == 5
+    assert set(contract["allowed_operations"]) == {
+        "transcription", "translation", "recording_local_diarisation",
+        "user_confirmed_attribution", "evidence_based_legal_assessment",
+        "local_document_text_extraction",
+    }
+    assert contract["operation_constraints"] == {
+        "local_document_text_extraction": {"processing_location": "local_only"},
+    }
     assert {f"EVAL-{n:03d}" for n in range(1, 31)} <= {c["id"] for c in catalog["synthetic_cases"]}
     assert len(catalog["synthetic_cases"]) == 34
     for case_id in ("EVAL-007", "EVAL-008", "EVAL-027"):
@@ -65,6 +72,14 @@ def test_media_contract_is_registered_and_preserves_both_permission_and_refusal(
         (("media_contract", "owner_criteria"), [], "media contract.owner_criteria"),
         (("media_contract", "prohibited_operations"), [], "media contract.prohibited_operations"),
         (("media_contract", "allowed_operations"), [], "media contract.allowed_operations"),
+        (("media_contract", "operation_constraints"), {}, "media contract.operation_constraints"),
+        (
+            ("media_contract", "operation_constraints", "local_document_text_extraction",
+             "processing_location"),
+            "global",
+            "media contract.operation_constraints.local_document_text_extraction"
+            ".processing_location",
+        ),
         (
             ("media_contract", "attribution_is_authentication"),
             True,

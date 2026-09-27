@@ -10,8 +10,11 @@ import os
 import re
 from pathlib import Path, PurePath, PureWindowsPath
 
+from cryptography.exceptions import InvalidTag
+
 from nm.adapters.store.sealing import MatterSealer
 from nm.domain.intake import MAX_CHUNK_BYTES
+from nm.ports.storage_errors import StoredObjectUnreadable
 
 
 def _containment_identity(path: PurePath) -> PurePath:
@@ -75,7 +78,10 @@ class SealedUploadStore:
             sealed = handle.read(MAX_CHUNK_BYTES * 2 + 1)
         if len(sealed) > MAX_CHUNK_BYTES * 2:
             raise ValueError("sealed upload object exceeds its bound")
-        data = self._sealer.open(matter_id, sealed)
+        try:
+            data = self._sealer.open(matter_id, sealed)
+        except InvalidTag as exc:
+            raise StoredObjectUnreadable("the sealed original failed authentication") from exc
         if not 0 < len(data) <= MAX_CHUNK_BYTES:
             raise ValueError("opened upload chunk exceeds its bound")
         return data

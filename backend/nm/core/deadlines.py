@@ -207,12 +207,16 @@ def from_stored(value, *, thread: str) -> Deadline:
     return row
 
 
-def read_matter(matter) -> RegisterRead:
+def read_matter(matter, *, source_current=None, checklist_projections=None) -> RegisterRead:
     """No persistence/model calls, no dropped failures and no default assessment."""
     population = getattr(matter, "threads", None)
     if not isinstance(population, (tuple, list)):
         return RegisterRead((), (RegisterProblem(None, None, "thread population unreadable"),),
                             (), (), ())
+    from nm.core.requirements import checked_file_projections, project
+
+    projections = (checked_file_projections(matter, checklist_projections,
+        source_current=source_current) if checklist_projections is not None else None)
     identities = [getattr(thread, "id", None) for thread in population]
     counts = Counter(identity for identity in identities if type(identity) is str)
     rows, problems, unassessed, assessed, threads = [], [], [], [], []
@@ -248,8 +252,11 @@ def read_matter(matter) -> RegisterRead:
                 problems.append(RegisterProblem(identity, index, "saved deadline row unreadable"))
         # Derived from the same validated answers as the board. These are
         # reminders, not a statutory clock or a computed legal deadline.
-        from nm.domain.requirements import State, checklist
-        for item in checklist(thread, matter.facts):
+        from nm.core.requirements import State
+        checklist = (projections[thread.id] if projections is not None else
+            project(thread, matter.facts, records=getattr(matter, "loop_records", ()),
+                    source_current=source_current))
+        for item in checklist.rows:
             if item.state is not State.PROMISED:
                 continue
             due = date.fromisoformat(item.outcome.due) if item.outcome.due else None

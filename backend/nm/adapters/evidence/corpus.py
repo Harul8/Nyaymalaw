@@ -37,7 +37,7 @@ from datetime import date
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from nm.domain.citation import last_wanted_section, wanted_section
+from nm.domain.citation import last_wanted_section, provision_label, wanted_section
 from nm.domain.clock import FORUM
 from nm.domain.matter import CauseOfAction
 from nm.domain.text import snippet
@@ -45,7 +45,6 @@ from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
-from nm.domain.citation import provision_label
 from nm.knowledge.manifest import (
     CorpusPublicationRefused,
     Manifest,
@@ -673,7 +672,12 @@ class CorpusEvidenceAdapter:
 
     def document(self, locator: str, kind: str, *, start: int = 0,
                  count: int | None = None) -> SourceDocument:
-        return self._whole_document(locator, kind).window(start, count)
+        from dataclasses import replace
+
+        document = self._whole_document(locator, kind)
+        if document.state == "read":
+            document = replace(document, locator=locator, kind=kind)
+        return document.window(start, count)
 
     def _whole_document(self, locator: str, kind: str) -> SourceDocument:
         """The whole Act or judgment a saved passage came from. LB-92.

@@ -111,6 +111,7 @@ class Change:
     reading of that is that they misread it the first time.
     """
 
+
     name: str
     was: str
     now: str
@@ -143,6 +144,86 @@ class Change:
     Empty means NOT THAT NOTHING DOES -- it means nothing was identified, and
     `advice_at_risk` is what reports the ones nobody answered that question
     for."""
+
+
+@dataclass(frozen=True)
+class DerivationHistory:
+    """A prior population, observed absence, or an unreadable history.
+
+    Observed absence is not an empty prior computation. It establishes that
+    conservation/change checks have no earlier released subject to govern.
+    """
+    prior: tuple[Derived, ...] | None
+    observed: bool
+    reason: str
+
+    def __post_init__(self):
+        if (type(self.observed) is not bool or not isinstance(self.reason, str)
+                or not self.reason.strip() or not self.observed and self.prior is not None
+                or self.prior is not None and (
+                    not isinstance(self.prior, tuple)
+                    or any(not isinstance(row, Derived) for row in self.prior)
+                    or len({row.name for row in self.prior}) != len(self.prior))):
+            raise ValueError("A derivation history needs its actual observation and reason")
+
+
+def _history_rows(rows, *, legacy=False):
+    if not isinstance(rows, list):
+        raise ValueError("Missing prior derivation population")
+    prior = []
+    for row in rows:
+        if (not isinstance(row, dict) or not {"name", "value", "from_facts"} <= set(row)
+                or set(row) - {"name", "value", "from_facts", "shown", "kind"}
+                or any(not isinstance(row[key], str) or not row[key].strip()
+                       for key in ("name", "value"))
+                or not isinstance(row["from_facts"], list)
+                or any(not isinstance(fid, str) or not fid.strip() for fid in row["from_facts"])
+                or "shown" in row and not isinstance(row["shown"], str)
+                or not legacy and not {"shown", "kind"} <= set(row)):
+            raise ValueError("Unreadable prior derivation")
+        prior.append(Derived(row["name"], row["value"], tuple(row["from_facts"]),
+                             row.get("shown", ""), Kind(row.get("kind", Kind.POSITION))))
+    if len({row.name for row in prior}) != len(prior):
+        raise ValueError("Ambiguous prior derivation identities")
+    return tuple(prior)
+
+
+def observe_history(matter, transcripts, *, selected_issue_ids, before_turn):
+    """Enumerate complete saved work; unreadable history cannot prove absence."""
+    if (not isinstance(transcripts, tuple)
+            or any(not isinstance(row, dict) or row.get("unreadable") for row in transcripts)):
+        return DerivationHistory(None, False, "The recorded derivation history is unreadable")
+    for record in reversed(matter.loop_records):
+        if not record.terminal or record.identity.turn_id == f"{before_turn}:publication":
+            continue
+        if not record.identity.turn_id.endswith(":publication"):
+            continue
+        stop = record.events[-1].payload
+        if stop.get("selected_issue_ids") != list(selected_issue_ids):
+            continue
+        rows = stop.get("derived")
+        try:
+            prior = _history_rows(rows)
+        except (KeyError, TypeError, ValueError):
+            return DerivationHistory(None, False, "The saved private derivation is unreadable")
+        return DerivationHistory(prior, True, "The complete saved prior derivation was observed")
+    for transcript in reversed(transcripts):
+        if "derived" not in transcript:
+            continue
+        rows = transcript["derived"]
+        try:
+            prior = _history_rows(rows, legacy=True)
+        except (KeyError, TypeError, ValueError):
+            return DerivationHistory(None, False, "The recorded prior derivation is unreadable")
+        # An older transcript has no selected-scope contract. A partial scope
+        # cannot claim the whole earlier answer was compared without provenance.
+        if set(selected_issue_ids) != {thread.id for thread in matter.threads}:
+            return DerivationHistory(None, False,
+                                     "The earlier derivation lacks this selected dispute scope")
+        return DerivationHistory(prior, True, "The complete prior recorded derivation was observed")
+    return DerivationHistory(None, True,
+        "Complete sealed work and transcript history contain no prior released derivation; "
+        "there is no earlier value to lose or change")
 
 
 @refuses_blank_text()

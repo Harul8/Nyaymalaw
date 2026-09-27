@@ -24,6 +24,9 @@ Two tiers cannot express two rules the spec already commits to:
 """
 from __future__ import annotations
 
+import json
+import math
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol, runtime_checkable
@@ -48,6 +51,15 @@ class Tier(str, Enum):
 
 class ModelError(Exception):
     """Base for every failure the port normalises."""
+
+    def __init__(self, message: str, *, usage: Usage | None = None,
+                 latency_ms: int = 0, retries: int = 0) -> None:
+        super().__init__(message)
+        # A rejected response still cost money. Never lose its receipt merely
+        # because its arguments or stop reason were refused after dispatch.
+        self.usage = usage
+        self.latency_ms = latency_ms
+        self.retries = retries
 
 
 class RateLimited(ModelError):
@@ -145,6 +157,18 @@ class Usage:
     cached_tokens: int = 0
     provider_extra: Mapping[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        if any(type(value) is not int or value < 0 for value in (
+                self.tokens_in, self.tokens_out, self.cached_tokens)):
+            raise ValueError("Usage token counts must be nonnegative integers")
+        if (type(self.cost_usd) not in (int, float) or not math.isfinite(self.cost_usd)
+                or self.cost_usd < 0):
+            raise ValueError("Usage cost must be finite and nonnegative")
+        if self.cached_tokens > self.tokens_in:
+            raise ValueError("Cached tokens cannot exceed total input tokens")
+        if not isinstance(self.provider_extra, Mapping):
+            raise ValueError("Provider accounting metadata must be a mapping")
+
 
 @dataclass(frozen=True)
 class ModelResult:
@@ -193,6 +217,157 @@ class EmbeddingResult:
     model: str
     provider: str
     usage: Usage
+
+
+@dataclass(frozen=True)
+class ToolDefinition:
+    """A named product capability, never a provider-native function object."""
+
+    name: str
+    description: str
+    parameters: Mapping[str, Any]
+
+    def __post_init__(self) -> None:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", self.name):
+            raise ValueError("A tool needs a portable identifier")
+        if not self.description.strip():
+            raise ValueError("A tool needs a description")
+        if self.parameters.get("type") != "object":
+            raise ValueError("Tool arguments must be an object")
+        _require_tool_schema(self.parameters)
+
+
+@dataclass(frozen=True)
+class ToolCall:
+    """A proposal, not authority to execute it. The harness owns permission."""
+
+    call_id: str
+    name: str
+    arguments: Mapping[str, Any]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.call_id, str) or not self.call_id.strip():
+            raise SchemaViolation("A tool call needs a correlation identity")
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise SchemaViolation("A tool call needs a name")
+        if not isinstance(self.arguments, dict):
+            raise SchemaViolation("Tool arguments must be an object")
+
+
+@dataclass(frozen=True)
+class ToolMessage:
+    """An append-only, provider-neutral conversation message.
+
+    Tool text contains a harness-produced receipt, not a second user instruction.
+    Its correlation id must resolve an outstanding assistant proposal.
+    """
+
+    role: str
+    text: str = ""
+    calls: tuple[ToolCall, ...] = ()
+    call_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.role not in {"user", "assistant", "tool"}:
+            raise ValueError("Unknown tool conversation role")
+        if not isinstance(self.text, str):
+            raise ValueError("Tool conversations carry text only")
+        if self.calls and self.role != "assistant":
+            raise ValueError("Only the assistant can propose tool calls")
+        if self.role == "tool":
+            if not self.call_id or not self.call_id.strip() or not self.text.strip():
+                raise ValueError("A tool result needs its call id and receipt")
+        elif self.call_id is not None:
+            raise ValueError("Only tool receipts carry a result correlation id")
+        elif not self.text.strip() and not self.calls:
+            raise ValueError("A conversation message cannot be empty")
+
+
+@dataclass(frozen=True)
+class ToolCallResult:
+    """Finished model proposal. Legal release still requires the harness."""
+
+    text: str | None
+    calls: tuple[ToolCall, ...]
+    tier: Tier
+    provider: str
+    model: str
+    usage: Usage
+    latency_ms: int
+    retries: int = 0
+    completion: Completion = Completion.NOT_ESTABLISHED
+
+    def __post_init__(self) -> None:
+        if not self.calls and not (self.text or "").strip():
+            raise SchemaViolation("The model proposed neither a tool nor text")
+
+    @property
+    def usable(self) -> bool:
+        return self.completion.usable_for_legal_work
+
+
+def tool_request_text(prompt: Prompt, tools: tuple[ToolDefinition, ...],
+                      messages: tuple[ToolMessage, ...]) -> str:
+    """One canonical representation for accounting and replay identity."""
+    return json.dumps({
+        "prompt": {"user": prompt.user, "system": prompt.system,
+                   "operation": prompt.operation},
+        "tools": [{"name": t.name, "description": t.description,
+                   "parameters": on_the_wire(t.parameters)} for t in tools],
+        "messages": [{"role": m.role, "text": m.text, "call_id": m.call_id,
+                      "calls": [{"call_id": c.call_id, "name": c.name,
+                                 "arguments": dict(c.arguments)} for c in m.calls]}
+                     for m in messages],
+    }, sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+
+
+def require_tool_request(tools: tuple[ToolDefinition, ...],
+                         messages: tuple[ToolMessage, ...]) -> None:
+    """No ambiguous tools or orphan/duplicate/missing execution receipts."""
+    names = [t.name for t in tools]
+    if not names or len(set(names)) != len(names):
+        raise ValueError("A tool request needs a nonempty unique tool registry")
+    for tool in tools:
+        _require_tool_schema(tool.parameters)
+    validate_tool_history(messages)
+
+
+def validate_tool_history(messages: tuple[ToolMessage, ...], *,
+                          allow_pending: bool = False) -> tuple[str, ...]:
+    """Validate correlation once; context may observe a not-yet-served round."""
+    pending: set[str] = set()
+    seen: set[str] = set()
+    for message in messages:
+        if message.role == "tool":
+            if message.call_id not in pending:
+                raise ValueError("A tool receipt has no outstanding call")
+            pending.remove(message.call_id)
+        else:
+            if pending:
+                raise ValueError("Tool proposals need all receipts before continuing")
+            for call in message.calls:
+                if call.call_id in seen:
+                    raise ValueError("Tool correlation identities cannot be reused")
+                seen.add(call.call_id)
+                pending.add(call.call_id)
+    if pending and not allow_pending:
+        raise ValueError("Tool proposals are missing execution receipts")
+    return tuple(sorted(pending))
+
+
+def require_tool_calls(calls: tuple[ToolCall, ...],
+                       tools: tuple[ToolDefinition, ...],
+                       messages: tuple[ToolMessage, ...] = ()) -> None:
+    """Validate proposals; this neither grants authority nor runs a tool."""
+    registry = {tool.name: tool for tool in tools}
+    seen = {c.call_id for m in messages for c in m.calls}
+    for call in calls:
+        if call.call_id in seen:
+            raise SchemaViolation("A tool call reused a correlation identity")
+        seen.add(call.call_id)
+        if call.name not in registry:
+            raise SchemaViolation(f"Undeclared tool {call.name!r} was proposed")
+        require_schema(dict(call.arguments), registry[call.name].parameters)
 
 
 # ------------------------------------------------------------------ port ---
@@ -270,7 +445,13 @@ def on_the_wire(schema) -> dict:
     the one place it comes off. A future key is covered by adding it to
     `NM_SCHEMA_KEYS`, not by remembering to strip it at each adapter.
     """
-    return {k: v for k, v in dict(schema).items() if k not in NM_SCHEMA_KEYS}
+    def strip(value):
+        if isinstance(value, dict):
+            return {k: strip(v) for k, v in value.items() if k not in NM_SCHEMA_KEYS}
+        if isinstance(value, list):
+            return [strip(v) for v in value]
+        return value
+    return strip(dict(schema))
 
 
 def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
@@ -280,18 +461,7 @@ def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
     offer, and a validator richer than that intersection would let a call site
     depend on something the next adapter cannot honour.
     """
-    if schema.get("type") == "object":
-        if not isinstance(data, dict):
-            raise SchemaViolation(f"expected an object, got {type(data).__name__}")
-        for key in schema.get("required", []):
-            if key not in data:
-                raise SchemaViolation(f"required property {key!r} is missing")
-        props = schema.get("properties", {})
-        for key, spec in props.items():
-            if key in data:
-                _require_type(key, data[key], spec)
-    elif schema.get("type") == "array" and not isinstance(data, list):
-        raise SchemaViolation(f"expected an array, got {type(data).__name__}")
+    _require_type("result", data, schema)
 
 
 _TYPES = {"string": str, "integer": int, "number": (int, float),
@@ -313,6 +483,71 @@ def _require_type(key: str, value: Any, spec: Mapping[str, Any]) -> None:
         raise SchemaViolation(
             f"property {key!r} value {value!r} is outside the permitted "
             f"vocabulary {spec['enum']}")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise SchemaViolation(f"property {key!r} is not a finite JSON number")
+    if type(value) in (int, float):
+        if "minimum" in spec and value < spec["minimum"]:
+            raise SchemaViolation(f"property {key!r} is below its minimum")
+        if "maximum" in spec and value > spec["maximum"]:
+            raise SchemaViolation(f"property {key!r} exceeds its maximum")
+    if isinstance(value, dict):
+        for required in spec.get("required", ()):
+            if required not in value:
+                raise SchemaViolation(f"required property {key}.{required!s} is missing")
+        properties = spec.get("properties", {})
+        if spec.get("additionalProperties") is False:
+            if set(value) - set(properties):
+                raise SchemaViolation(f"property {key!r} carries undeclared properties")
+        for name, child in properties.items():
+            if name in value:
+                _require_type(f"{key}.{name}", value[name], child)
+    if isinstance(value, list) and "items" in spec:
+        for index, child in enumerate(value):
+            _require_type(f"{key}[{index}]", child, spec["items"])
+    if isinstance(value, list):
+        if len(value) < spec.get("minItems", 0):
+            raise SchemaViolation(f"property {key!r} has too few items")
+        if "maxItems" in spec and len(value) > spec["maxItems"]:
+            raise SchemaViolation(f"property {key!r} has too many items")
+    if isinstance(value, str) and len(value) < spec.get("minLength", 0):
+        raise SchemaViolation(f"property {key!r} is too short")
+
+
+def _require_tool_schema(spec: Mapping[str, Any]) -> None:
+    """Refuse unsupported/loosely defined executable parameters at registration.
+
+    Strict parameter schemas are the portable intersection. Optional parameters
+    have a nullable type, not absent fields silently guessed by an adapter.
+    """
+    supported = {"type", "properties", "required", "additionalProperties", "items",
+                 "enum", "description", "title", "minItems", "maxItems", "minLength",
+                 "minimum", "maximum",
+                 *NM_SCHEMA_KEYS}
+    if set(spec) - supported:
+        raise ValueError("Tool schema contains a constraint this port cannot validate")
+    kinds = spec.get("type")
+    kinds = kinds if isinstance(kinds, list) else [kinds]
+    if not kinds or any(kind not in _TYPES for kind in kinds):
+        raise ValueError("A tool parameter needs a supported explicit type")
+    for name in ("minimum", "maximum"):
+        if name in spec and (not set(kinds) <= {"number", "integer", "null"}
+                             or type(spec[name]) not in (int, float)
+                             or not math.isfinite(spec[name])):
+            raise ValueError("Numeric tool bounds need finite numbers on numeric parameters")
+    if "minimum" in spec and "maximum" in spec and spec["minimum"] > spec["maximum"]:
+        raise ValueError("A tool minimum cannot exceed its maximum")
+    if "object" in kinds:
+        properties = spec.get("properties", {})
+        required = spec.get("required", [])
+        if (spec.get("additionalProperties") is not False
+                or set(required) != set(properties) or len(required) != len(set(required))):
+            raise ValueError("Tool objects must be closed with every field required")
+        for child in properties.values():
+            _require_tool_schema(child)
+    if "array" in kinds:
+        if not isinstance(spec.get("items"), dict):
+            raise ValueError("Tool arrays need a recursively checked item schema")
+        _require_tool_schema(spec["items"])
 
 
 @runtime_checkable
@@ -363,4 +598,14 @@ class ModelPort(Protocol):
         ...
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
+        ...
+
+    def tool_call(self, prompt: Prompt, tools: tuple[ToolDefinition, ...], tier: Tier, *,
+                  messages: tuple[ToolMessage, ...] = (),
+                  max_tokens: int | None = None) -> ToolCallResult:
+        """Choose text or product-tool proposals from an append-only conversation.
+
+        Providers translate messages and call formats internally. The harness,
+        not this port, decides whether a validated proposal may execute/release.
+        """
         ...

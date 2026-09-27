@@ -318,6 +318,14 @@ class FileMatterStore:
             raise EncryptionNotConfigured("original-byte uploads require the sealed store")
         return SealedUploadStore(self._root, self._sealer)
 
+    def document_storage(self):
+        """Composition-only derivative factory, using the same per-matter keys."""
+        from nm.adapters.store.documents import SealedDocumentStore
+
+        if self._sealer is None:
+            raise EncryptionNotConfigured("document derivatives require the sealed store")
+        return SealedDocumentStore(self._root, self._sealer)
+
     # ------------------------------------------------------- the envelope ---
 
     def _seal(self, matter_id: str, data: bytes) -> bytes:

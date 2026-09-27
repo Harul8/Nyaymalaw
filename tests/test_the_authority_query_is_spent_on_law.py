@@ -32,7 +32,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
 from nm.ports.evidence import EvidenceNeed
 

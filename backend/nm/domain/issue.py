@@ -38,7 +38,7 @@ rather than invisible.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from enum import Enum, nonmember
 
 from nm.domain.matter import Posture, Side, ThreadId, new_id
@@ -116,6 +116,10 @@ class Disposition:
     needs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        if (not isinstance(self.state, DispositionState) or not isinstance(self.reason, str)
+                or not isinstance(self.needs, tuple)
+                or any(not isinstance(value, str) or not value.strip() for value in self.needs)):
+            raise ValueError("an issue disposition has closed states and attributable needs")
         if self.state in (DispositionState.PARKED, DispositionState.CLOSED) \
                 and blank(self.reason):
             raise ValueError(
@@ -170,6 +174,19 @@ class Issue:
     provisions: tuple[str, ...] = ()
     authorities: tuple[str, ...] = ()
     deadline: str | None = None
+
+    def __post_init__(self) -> None:
+        if (any(not isinstance(value, str) or not value.strip()
+                for value in (self.thread, self.statement, self.id))
+                or not isinstance(self.kind, IssueKind) or not isinstance(self.runs_against, Side)
+                or not isinstance(self.disposition, Disposition)
+                or any(not isinstance(value, str) for value in (self.proof, self.serves_theory))
+                or any(not isinstance(values, tuple)
+                       or any(not isinstance(value, str) or not value.strip() for value in values)
+                       for values in (self.provisions, self.authorities))
+                or (self.deadline is not None and (
+                    not isinstance(self.deadline, str) or not self.deadline.strip()))):
+            raise ValueError("an issue preserves typed identity, disposition and source references")
 
     @implements("D9")
     def effect_for(self, posture: Posture) -> tuple[Effect, int]:
@@ -340,16 +357,30 @@ def from_stored(values) -> tuple[Issue, ...]:
         if isinstance(v, Issue):
             out.append(v)
             continue
-        if not isinstance(v, dict) or not str(v.get("statement") or "").strip():
+        if not isinstance(v, dict):
             continue
         try:
-            out.append(Issue(
-                thread=ThreadId(str(v.get("thread") or "")),
-                statement=str(v["statement"]),
-                kind=IssueKind(v.get("kind") or IssueKind.NOT_ESTABLISHED),
-                runs_against=Side(v.get("runs_against") or Side.UNKNOWN),
-                proof=str(v.get("proof") or ""),
-            ))
+            if not set(v) <= {row.name for row in fields(Issue)}:
+                continue
+            data = dict(v)
+            data["kind"] = IssueKind(data.get("kind", IssueKind.NOT_ESTABLISHED))
+            data["runs_against"] = Side(data.get("runs_against", Side.UNKNOWN))
+            for name in ("provisions", "authorities"):
+                if name in data:
+                    if not isinstance(data[name], (list, tuple)):
+                        raise ValueError("invalid source reference population")
+                    data[name] = tuple(data[name])
+            disposition = data.get("disposition")
+            if isinstance(disposition, dict):
+                if not set(disposition) <= {row.name for row in fields(Disposition)}:
+                    raise ValueError("unknown disposition fields")
+                needs = disposition.get("needs", ())
+                if not isinstance(needs, (list, tuple)):
+                    raise ValueError("invalid need population")
+                data["disposition"] = Disposition(
+                    DispositionState(disposition.get("state")),
+                    disposition.get("reason", ""), tuple(needs))
+            out.append(Issue(**data))
         except (ValueError, TypeError):
             continue
     return tuple(out)

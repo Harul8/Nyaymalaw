@@ -42,7 +42,8 @@ def _atom(atom_type: str, part: str, words: str) -> tuple[str, str]:
 
 SPLIT = [  # a store with no head: s.18 as its sub-sections, explanation and clauses
     _atom("sub_section", "(1)", "(1)\nWhere, before the expiration of the prescribed period ..."),
-    _atom("sub_section", "(2)", "(2)\nWhere the writing containing the acknowledgment is undated ..."),
+    _atom("sub_section", "(2)",
+          "(2)\nWhere the writing containing the acknowledgment is undated ..."),
     _atom("explanation", "(2) [explanation]", "Explanation.\nFor the purposes of this section,"),
     _atom("clause", "(2)(a)", "(a)\nan acknowledgment may be sufficient though it omits ..."),
 ]
@@ -122,13 +123,14 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
     sys.path.insert(0, str(ROOT / "backend"))
     from nm.knowledge.manifest import Manifest
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
-    ids = [r[0] for r in corpus.execute("select distinct act_id from chunks where doc_type='bare_act'")]
+    ids = [r[0] for r in corpus.execute(
+        "select distinct act_id from chunks where doc_type='bare_act'")]
     cache: dict[str, dict] = {}
 
     def rows(act_id):
         if act_id not in cache:
             by: dict[str, list] = {}
-            for pos, section, atom, blob in corpus.execute(
+            for _, section, atom, blob in corpus.execute(
                     "select pos, section_number, atom_type, blob from chunks "
                     "where doc_type='bare_act' and act_id=? order by pos", (act_id,)):
                 by.setdefault(section, []).append((atom, json.loads(blob).get("full_text") or ""))
@@ -144,7 +146,8 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
         stores = [a for a in ids for p in entry.act_patterns
                   if fnmatchcase(a.lower(), p.lower().replace("%", "*").replace("_", "?"))]
         for section in entry.intended_sections:
-            read = [(assemble_section(rows(s).get(section, [])), s) for s in stores if rows(s).get(section)]
+            read = [(assemble_section(rows(s).get(section, [])), s)
+                    for s in stores if rows(s).get(section)]
             read = [r for r in read if r[0]]
             if not read:
                 continue
@@ -159,7 +162,8 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
 @pytest.mark.class_c
 @pytest.mark.parametrize("question,section,must_hold", [
     ("Limitation Act, 1963 section 18", "18", ("(2)", "Explanation", "(c)")),
-    ("Negotiable Instruments Act, 1881 section 138", "138", ("Provided that", "(c)", "Explanation")),
+    ("Negotiable Instruments Act, 1881 section 138", "138",
+     ("Provided that", "(c)", "Explanation")),
     ("Specific Relief Act, 1963 section 6", "6", ("(2)", "against the Government", "(4)")),
 ])
 def test_the_measured_sections_reach_the_turn_whole(corpus, question, section, must_hold):

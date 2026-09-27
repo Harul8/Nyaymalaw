@@ -21,7 +21,7 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from nm.adapters.model._budget import estimate_tokens, guard_budget
+from nm.adapters.model._budget import estimate_tokens, guard_budget, guard_tool_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.core.chronology import CHART_HEADING
 from nm.domain.budget import Completion
@@ -29,12 +29,19 @@ from nm.domain.quotable import CONTEXT_HEADING, WORDS_HEADING
 from nm.domain.text import snippet
 from nm.ports.model import (
     EmbeddingResult,
+    ModelError,
     ModelResult,
     Prompt,
     SchemaViolation,
     Tier,
+    ToolCall,
+    ToolCallResult,
+    ToolDefinition,
+    ToolMessage,
     Usage,
     require_schema,
+    require_tool_calls,
+    tool_request_text,
 )
 
 Responder = Callable[[Prompt, Tier], str]
@@ -525,6 +532,7 @@ def scripted_inventory(user: str) -> str:
             "holder": holder,
             "form": form,
             "quoted": block[i:i + len(needle)],
+            "already": "",  # No existing inventory identity was established by this double.
         })
     return json.dumps({"items": rows})
 
@@ -1127,7 +1135,17 @@ def scripted_requirements(_prompt):
     return json.dumps({"requirements": []})
 
 
+def scripted_claim_verification(_prompt):
+    """A shaped non-assessment, never a free simulated expert approval."""
+    reason = "The offline default has not independently assessed this claim."
+    verdict = {"reason": reason, "supporting_words": [], "assessed": None}
+    return json.dumps({"classification_reason": reason, "textual_eligible": None,
+                       "textual_support": verdict, "applicability": verdict,
+                       "inference": verdict, "opposition_resolved": verdict})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "claim_verification": scripted_claim_verification,
     "requirements": scripted_requirements,
     "step_dependency": scripted_step_dependency,
     "investigation": scripted_investigation,
@@ -1163,11 +1181,21 @@ class ScriptedModelAdapter:
         config: ModelConfig,
         responses: Mapping[str, str] | None = None,
         responder: Responder | None = None,
+        tool_responses: tuple[Mapping[str, Any] | ModelError, ...] = (),
+        tool_responder: Callable[..., Mapping[str, Any]] | None = None,
+        structured_responses: Mapping[str, Mapping[str, Any] | ModelError] | None = None,
     ) -> None:
         self._config = config
         self._responses = dict(responses or {})
         self._responder = responder
         self.calls: list[tuple[Tier, Prompt]] = []
+        self._tool_responses = list(tool_responses)
+        self._tool_responder = tool_responder
+        self.tool_requests: list[str] = []
+        # Exact read fixtures are a separate channel from natural-language
+        # answer fixtures. An offline semantic default is not an assessment;
+        # controls must supply the particular judgment they intend to exercise.
+        self._structured_responses = dict(structured_responses or {})
 
     # ------------------------------------------------------------- port ---
     @property
@@ -1188,6 +1216,40 @@ class ScriptedModelAdapter:
         text = self._respond(prompt, tier)
         return self._result(text, None, prompt, tier, started)
 
+    def tool_call(self, prompt: Prompt, tools: tuple[ToolDefinition, ...], tier: Tier, *,
+                  messages: tuple[ToolMessage, ...] = (),
+                  max_tokens: int | None = None) -> ToolCallResult:
+        started = time.perf_counter()
+        guard_tool_budget(prompt, tools, tier, messages, max_tokens)
+        cfg = self._cfg(tier)
+        self.calls.append((tier, prompt))
+        request = tool_request_text(prompt, tools, messages)
+        self.tool_requests.append(request)
+        if self._tool_responder is not None:
+            raw = self._tool_responder(prompt, tools, tier, messages=messages,
+                                       max_tokens=max_tokens)
+        elif self._tool_responses:
+            raw = self._tool_responses.pop(0)
+        else:
+            raw = {"text": self._respond(prompt, tier), "calls": []}
+        if isinstance(raw, ModelError):
+            raise raw
+        calls = tuple(ToolCall(c["call_id"], c["name"], c["arguments"])
+                      for c in raw.get("calls", ()))
+        require_tool_calls(calls, tools, messages)
+        completion = Completion(raw.get("completion", Completion.COMPLETE.value))
+        if completion is not Completion.COMPLETE:
+            from nm.ports.model import OutputTruncated
+            raise OutputTruncated("The scripted tool proposal is incomplete")
+        text = raw.get("text")
+        tokens_in = estimate_tokens(request)
+        tokens_out = estimate_tokens(json.dumps(raw, allow_nan=False))
+        return ToolCallResult(text=text, calls=calls, tier=tier, provider=self.provider,
+                              model=self.resolved_model(tier),
+                              usage=Usage(tokens_in, tokens_out, cfg.cost(tokens_in, tokens_out)),
+                              latency_ms=int((time.perf_counter() - started) * 1000),
+                              completion=completion)
+
     def structured(
         self,
         prompt: Prompt,
@@ -1200,8 +1262,14 @@ class ScriptedModelAdapter:
         self._guard_budget(prompt, tier)
         self.calls.append((tier, prompt))
         raw = self._respond(prompt, tier)
-        responder = SCRIPTED_READS.get(schema.get("x-nm-read") or "")
-        if responder is not None:
+        read = schema.get("x-nm-read") or ""
+        responder = SCRIPTED_READS.get(read)
+        if read in self._structured_responses:
+            fixed = self._structured_responses[read]
+            if isinstance(fixed, ModelError):
+                raise fixed
+            raw = json.dumps(fixed, allow_nan=False)
+        elif responder is not None:
             # ONE responder, or the dispatch is ambiguous and the FIRST match
             # silently wins. That is what happened when the cause read was
             # added: `CAUSE_SCHEMA` contains `cannot_tell`, which was the role
@@ -1228,7 +1296,8 @@ class ScriptedModelAdapter:
             # written before `role_quote` existed states the role, if at all,
             # inside `quoted`. Empty is that assertion, not an invented one.
             data.setdefault('role_quote', '')
-        if schema.get('x-nm-read') == 'step_dependency' and isinstance(data, dict)                 and 'right_if_in_time' not in data:
+        if (schema.get('x-nm-read') == 'step_dependency' and isinstance(data, dict)
+                and 'right_if_in_time' not in data):
             # A controlled response written before the two halves existed
             # states only its verdict. It is restated in the new shape so that
             # the DERIVED verdict equals the stated one -- independent is right
@@ -1237,7 +1306,8 @@ class ScriptedModelAdapter:
             # that changes what the fixture asserted.
             said = data.get('dependence')
             halves = {'independent': ('yes', 'yes'), 'dependent': ('unknown', 'no')}
-            data['right_if_in_time'], data['right_if_out_of_time'] =                 halves.get(said, ('unknown', 'unknown'))
+            data['right_if_in_time'], data['right_if_out_of_time'] = halves.get(
+                said, ('unknown', 'unknown'))
         if (schema.get('x-nm-read') == 'dispute'
                 and 'source_allocations' in schema.get('properties', {})):
             # Test-double transport conversion only: never fill an unallocated

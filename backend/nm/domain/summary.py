@@ -438,10 +438,10 @@ def _established_on(thread: Thread) -> list[str]:
 
 
 
-def _requirement_state(thread, facts=()) -> dict:
+def _requirement_state(thread, facts=(), *, classifications=()) -> dict:
     """Three states for the checklist itself, counted rather than asserted."""
     from nm.domain.requirements import summary
-    return summary(thread, facts)
+    return summary(thread, facts, classifications=classifications)
 
 
 def _states(owner, names: tuple[str, ...]) -> dict:
@@ -486,6 +486,7 @@ def _states(owner, names: tuple[str, ...]) -> dict:
 
 def build(matter: Matter, thread_id: str | None = None,
           about: str = "", load_bearing: frozenset[str] = frozenset(),
+          *, classifications=None,
           ) -> MatterSummary:
     """Rebuild the summary from the matter. Nothing is stored twice.
 
@@ -519,7 +520,8 @@ def build(matter: Matter, thread_id: str | None = None,
             # read as reviewed -- a real regression on exactly the files where
             # the corpus is thin. The receiving advocate gets the fact; the
             # review contract keeps its seven sections.
-            "requirements": _requirement_state(t, matter.facts),
+            "requirements": _requirement_state(t, matter.facts,
+                classifications=(classifications or {}).get(t.id, ())),
         })
         established.extend(_established_on(t))
 

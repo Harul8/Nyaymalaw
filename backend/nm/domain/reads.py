@@ -83,6 +83,10 @@ class Read:
 #: on a schema in `backend/nm/` that is not here, so a twelfth read cannot be added
 #: without someone deciding which kind it is.
 READS: tuple[Read, ...] = (
+    Read("claim_verification", False,
+         "Independently assesses support, applicability, inference and opposition "
+         "before release. It does not establish any date, amount or governing "
+         "law; an unavailable/negative verdict withholds the affected claim.", echoes=True),
     Read("step_dependency", False,
          "Assesses whether the exact proposed step depends on an unresolved "
          "limitation position. Does not establish a date or law; unknown blocks "

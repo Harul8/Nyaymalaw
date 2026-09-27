@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from nm.domain.egress import DataClass, EgressRefused, Gatekeeper, Policy, Sink
-from nm.ports.model import ModelPort, Tier
+from nm.ports.model import ModelPort, Tier, tool_request_text
 
 #: RE-EXPORTED, NOT REDEFINED. The refusal belongs with the decision that
 #: makes it, and a second class by the same name here would mean an `except`
@@ -136,6 +136,13 @@ class PolicedModel:
         self._permit(self._size(prompt))
         return self.inner.structured(prompt, schema, tier,
                                      max_tokens=max_tokens)
+
+    def tool_call(self, prompt, tools, tier, *, messages=(), max_tokens=None):
+        # Receipts and tool schemas carry data too; do not measure only the
+        # initial user prompt while the follow-up sends the entire case file.
+        self._permit(len(tool_request_text(prompt, tools, messages).encode("utf8")))
+        return self.inner.tool_call(prompt, tools, tier, messages=messages,
+                                    max_tokens=max_tokens)
 
     def embed(self, texts: tuple[str, ...]):
         """POLICED, THOUGH `TracedModel` DELIBERATELY DOES NOT TRACE IT.

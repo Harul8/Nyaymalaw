@@ -4888,7 +4888,7 @@
       ],
       "inputs": [
         "The gate matrix and its existing checks.",
-        "A labelled set of claim-passage pairs for the verifier, chosen by the owner."
+        "Labelled verifier evidence packages chosen by the owner: exact source spans, established premises, contrary material and derived conclusions, with textual-support, applicability, inference and opposition judgments; include misclassification, partial-support and unavailable-verifier controls (LB-141)."
       ],
       "outputs": [
         "The existing output checks and professional boundaries run on the loop path, with checks before and after every tool call.",

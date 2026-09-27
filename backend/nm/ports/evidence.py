@@ -21,7 +21,8 @@ Each of those is a sentence an advocate would put in front of a judge.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import math
+from dataclasses import asdict, dataclass, fields
 from datetime import date
 from enum import Enum, nonmember
 from typing import Protocol, runtime_checkable
@@ -394,6 +395,59 @@ class Finding:
                 "a candidate presented as an answer is the whole of the "
                 "search-first design H3 replaces.")
 
+    def as_record(self) -> dict:
+        """The whole captured finding, with no metadata inferred or discarded."""
+        return _evidence_wire(asdict(self))
+
+    @classmethod
+    def from_record(cls, record: dict) -> "Finding":
+        """Rehydrate a closed source receipt using the existing legal type checks.
+
+        This is a pure port contract, not an adapter-private store codec. A
+        missing field is not filled from a constructor default: historical
+        evidence must say what was captured, including every unknown state.
+        """
+        if not isinstance(record, dict) or set(record) != {f.name for f in fields(cls)}:
+            raise ValueError("a captured Finding needs exactly all its declared fields")
+        data = dict(record)
+        for name in ("proposition", "ref", "span", "locator", "store", "binding_for",
+                     "binding_reason"):
+            if not isinstance(data[name], str) or blank(data[name]):
+                raise ValueError(f"a captured Finding needs nonblank {name}")
+        for name, kind in (("source_kind", SourceKind), ("binding", Binding),
+                           ("para_kind", ParaKind), ("origin", Origin)):
+            if not isinstance(data[name], str):
+                raise ValueError(f"a captured Finding needs a typed {name} value")
+            data[name] = kind(data[name])
+        for name in ("valid_from", "valid_to", "governing_date"):
+            if data[name] is not None:
+                if not isinstance(data[name], str):
+                    raise ValueError("captured source dates must be ISO calendar dates")
+                parsed = date.fromisoformat(data[name])
+                if parsed.isoformat() != data[name]:
+                    raise ValueError("captured source dates must be canonical ISO dates")
+                data[name] = parsed
+        treatment = data["treatment"]
+        if not isinstance(treatment, dict) or set(treatment) != {
+                f.name for f in fields(Treatment)}:
+            raise ValueError("captured treatment metadata is incomplete or carries unknown fields")
+        treatment = dict(treatment)
+        for name in ("scope", "source"):
+            if not isinstance(treatment[name], str) or blank(treatment[name]):
+                raise ValueError("captured treatment needs its scope and source")
+        for name in ("verbs", "by"):
+            if not isinstance(treatment[name], list) or any(
+                    not isinstance(value, str) or blank(value) for value in treatment[name]):
+                raise ValueError("captured treatment references are lists of nonblank text")
+            treatment[name] = tuple(treatment[name])
+        treatment["state"] = TreatmentState(treatment["state"])
+        data["treatment"] = Treatment(**treatment)
+        confidence = data["confidence"]
+        if confidence is not None and (type(confidence) not in (int, float)
+                                       or not math.isfinite(confidence)):
+            raise ValueError("captured ranking confidence is finite or explicitly absent")
+        return cls(**data)
+
     # ---------------------------------------------------------------- gates ---
     @property
     def in_force(self) -> bool:
@@ -427,6 +481,17 @@ class Finding:
         if self.supports is False:
             return (f"G-GROUND: the retrieved span does not support "
                     f"{self.proposition!r}")
+        return self.source_blocking_reason
+
+    @property
+    def source_blocking_reason(self) -> str | None:
+        """Identity/time/authority checks, separately from semantic support.
+
+        An independent verifier must inspect a not-yet-assessed candidate
+        without asserting that it already supports a proposition. This shares
+        the very same source rules used by `blocking_reason`; no copied gate
+        and no synthetic supports=True Finding is needed.
+        """
         if self.source_kind is SourceKind.AUTHORITY:
             if not self.binding.assessed:
                 return (f"G-BINDING: binding status for {self.ref} could not be "
@@ -472,6 +537,18 @@ class Finding:
         # An unassessed candidate can be inspected, not relied on. A known
         # mismatch must not be quoted as support for the proposition either.
         return self.supports is not False and self.in_force
+
+
+def _evidence_wire(value):
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _evidence_wire(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_evidence_wire(item) for item in value]
+    return value
 
 
 @refuses_blank_text()
@@ -602,8 +679,20 @@ class SourceDocument:
     excluded: int = 0
     """Passages of this document the corpus's own denylist held back. A
     document shown without them and without this count reads as whole."""
+    locator: str = ""
+    kind: str = ""
+    """Exact requested source identity observed by the document reader.
+
+    Older display-only adapters may leave both absent. Such a read cannot
+    certify reuse of a saved passage merely because matching words occur in it.
+    """
 
     def __post_init__(self) -> None:
+        if (not isinstance(self.locator, str) or not isinstance(self.kind, str)
+                or bool(self.locator) != bool(self.kind)
+                or (self.locator and (not self.locator.strip()
+                                     or self.kind not in {"provision", "authority"}))):
+            raise ValueError("a document identity has an exact locator and source kind, or neither")
         if self.state not in ("read", "not_held", "no_reader"):
             raise ValueError("a source document read has three states")
         if self.state == "read" and not self.segments:
@@ -614,7 +703,8 @@ class SourceDocument:
                 "vague disclaimer is silence in more words (PRD M4).")
         if self.state == "read" and self.total is None:
             object.__setattr__(self, "total", self.first + len(self.segments))
-        if self.state == "read" and (self.first < 0 or self.total < self.first + len(self.segments)):
+        if self.state == "read" and (
+                self.first < 0 or self.total < self.first + len(self.segments)):
             raise ValueError("a window cannot hold more of a document than the document has")
 
     @property

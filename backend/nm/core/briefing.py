@@ -81,7 +81,7 @@ def refuse_completion(gap_whats: tuple[str, ...],
             + "; ".join(state.open_predicates))
 
 
-def block(matter) -> dict:
+def block(matter, *, source_current=None, checklist_projections=None) -> dict:
     """The served intake-readiness block for one matter. ONE OWNER, so the turn
     response and the byte boundary cannot disagree about whether intake is ready
     -- the S9 shape this project keeps refusing. `matter` may be None on the
@@ -89,7 +89,8 @@ def block(matter) -> dict:
     if matter is None:
         return {"state": "not_assessed", "why": "no matter on this route",
                 "open_needs": [], "paused": [], "intake_complete_refused": ""}
-    agenda = dispute_agenda.project(matter)
+    agenda = dispute_agenda.project(matter, source_current=source_current,
+                                    checklist_projections=checklist_projections)
     gap_whats = tuple(
         (g.get("what") if isinstance(g, dict) else getattr(g, "what", ""))
         for t in matter.threads for g in (getattr(t, "gaps", ()) or ()))

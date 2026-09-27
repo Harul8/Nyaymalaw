@@ -105,6 +105,8 @@ class InputKind(str, Enum):
     FACT = "fact"
     PREMISE = "premise"
     AUTHORITY = "authority"
+    DOCUMENT = "document"
+    """An admitted case-document derivative, not legal authority or factual truth."""
     DERIVED = "derived"
 
     UNKNOWN = "unknown"
@@ -605,6 +607,7 @@ _SAID = {
     InputKind.FACT: "the case-file entry it rests on",
     InputKind.PREMISE: "the legal premise it rests on",
     InputKind.AUTHORITY: "the provision it rests on",
+    InputKind.DOCUMENT: "the admitted document extract it rests on",
     InputKind.DERIVED: "a conclusion it rests on",
 }
 
@@ -623,6 +626,7 @@ _UPSTREAM = {
     InputKind.FACT: "a corrected case-file entry",
     InputKind.PREMISE: "a changed legal premise",
     InputKind.AUTHORITY: "a changed provision",
+    InputKind.DOCUMENT: "a changed or withdrawn document extract",
     InputKind.DERIVED: "an earlier conclusion",
 }
 
@@ -821,13 +825,20 @@ def names_for(thread_id: str) -> Names:
 
 
 def fact_digest(fact) -> str:
-    """WHAT IS MATERIAL ABOUT A FACT: its words, its date, and whether it has
-    left the chart. Not the turn it arrived on, not its weight, not whether
-    the advocate has confirmed it -- a confirmation changes what a value is
-    worth, not what it is, and hashing it would mark every conclusion stale on
-    the turn the advocate agreed with them."""
-    return digest_of(getattr(fact, "statement", ""), getattr(fact, "date", None),
-                     getattr(fact, "superseded_by", None))
+    """Words, dates, admission status and provenance of the actual fact record.
+
+    A conclusion on an asserted account differs from a documentary finding.
+    Confirmation/conflict/basis changes therefore invalidate the same closure
+    as a change to the sentence, rather than leaving an old inference current.
+    """
+    # A conclusion rests on the status and source of an account, not only
+    # its words/date. Confirmation, a newly recorded conflict or a changed
+    # documentary basis can move the inference without changing that sentence.
+    from dataclasses import asdict
+
+    from nm.domain.file_mutation import neutral
+
+    return digest_of(neutral(asdict(fact)))
 
 
 def authority_id(finding) -> str:
@@ -838,9 +849,12 @@ def authority_id(finding) -> str:
 
 
 def authority_digest(finding) -> str:
-    """The span is the material: a republished provision whose words moved has
-    moved the conclusion built on the old words."""
-    return digest_of(getattr(finding, "span", ""))
+    """The whole captured source/status, not words with stale legal metadata.
+
+    A changed treatment, temporal window or binding attribution can change a
+    relied-on inference even when the quotation itself is unchanged.
+    """
+    return digest_of(finding.as_record())
 
 
 @implements("A3")
@@ -970,6 +984,7 @@ def settle(ledger: Ledger, produced: tuple[Node, ...], *, expected: tuple[str, .
 @implements("A3")
 def from_derived(row, *, premises: tuple[str, ...] = (),
                  authorities: tuple[str, ...] = (),
+                 documents: tuple[str, ...] = (),
                  unknown: bool = False, reason: str = "",
                  at: str = "") -> Node:
     """Build a ledger node from the `cascade.Derived` row the turn already made.
@@ -989,6 +1004,7 @@ def from_derived(row, *, premises: tuple[str, ...] = (),
              for f in getattr(row, "from_facts", ()) or ()]
     rests.extend(Rest(kind=InputKind.PREMISE, id=p) for p in premises)
     rests.extend(Rest(kind=InputKind.AUTHORITY, id=a) for a in authorities)
+    rests.extend(Rest(kind=InputKind.DOCUMENT, id=document) for document in documents)
     if unknown:
         rests.append(Rest(kind=InputKind.UNKNOWN, id="undeclared"))
     return Node(name=getattr(row, "name", ""), value=getattr(row, "value", ""),

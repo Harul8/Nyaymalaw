@@ -9,7 +9,6 @@ and a reservation bounding its worst case.
 from __future__ import annotations
 
 import pytest
-
 from nm.adapters.model.call_budget import MODEL, CallBudget
 from nm.ports.model import ConfigurationError
 

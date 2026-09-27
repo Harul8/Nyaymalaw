@@ -306,6 +306,14 @@ scorecard:
 
   - id: RG-32
     what: "Unsupported release"
+    detail: >
+      The non-decisive threshold is a tolerance for residual errors discovered
+      by evaluation of the complete held-out population, not permission to
+      release a claim already known to be unsupported. Every known unsupported
+      claim is repaired, removed or withheld at runtime, whether decisive or
+      non-decisive. The zero-invention invariant remains unchanged. A passing
+      evaluation neither certifies zero undiscovered errors nor waives the
+      runtime support checks.
     threshold: "== 0 decisive claims released without verified support; <= 0.02 of non-decisive claims"
     measured_by: "qualified review of held-out answers against their cited sources"
     owner: "owner, with a qualified reviewer"
@@ -346,8 +354,22 @@ scorecard:
 
   - id: RG-37
     what: "Cost and latency per satisfactorily completed task"
+    detail: >
+      Evaluate the complete task population, not only turns graded
+      satisfactory. Cost per satisfactorily completed task is the total
+      recorded cost of every attempt in that population divided by the number
+      of satisfactorily completed tasks. The numerator includes failed and
+      cancelled attempts, retries, repair and work on unfinished tasks; no
+      attempt's spend disappears because it did not produce a satisfactory
+      answer. With no satisfactorily completed tasks the ratio is not
+      measurable, never zero. Report the task and attempt populations,
+      completion rate, total spend and unfinished-task costs alongside the
+      ratio. A completed task's latency includes its failed attempts, retries
+      and repair, with unfinished-task elapsed time reported separately. These
+      are measurement requirements, not a claim that a task-level metric
+      runner already exists.
     threshold: "within LB-35's cost-per-turn release row; time targets per kind of turn are set by the owner before the first switch"
-    measured_by: "TurnMetrics over held-out turns graded satisfactory"
+    measured_by: "all held-out task attempts and their TurnMetrics, including failed, cancelled, retried, repaired and unfinished work, with qualified completion grades"
     owner: "owner"
     cadence: "before each switch of a kind of turn, and each release"
     blocking: true

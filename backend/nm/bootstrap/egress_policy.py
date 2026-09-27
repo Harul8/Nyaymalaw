@@ -32,6 +32,7 @@ from __future__ import annotations
 import pathlib
 
 from nm.domain.egress import HOME_REGION, DataClass, Policy, Processor, Sink
+from nm.ports.document_text import DOCUMENT_PROCESSOR
 
 INVENTORY = pathlib.Path("docs") / "blueprint" / "processors.yaml"
 
@@ -52,6 +53,7 @@ TRANSCRIPTION_PROCESSOR = "local-speech"
 CONTROLLED_LOCAL_PROCESSORS = frozenset({
     SCRIPTED_PROCESSOR, STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR,
     TRANSCRIPTION_PROCESSOR,
+    DOCUMENT_PROCESSOR,
 })
 LOCAL_BASIS = "IN-PROCESS-NO-EGRESS"
 

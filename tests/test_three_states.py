@@ -69,6 +69,50 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "UncertaintyDimension": (
+        "WHICH independent question a checked context must carry: extraction, "
+        "understanding, factual status, support, applicability, practical uncertainty "
+        "or decision readiness. Every dimension "
+        "is enumerated even when nobody assessed it. The outcome is the separate "
+        "AssessmentState, not a guessed eighth dimension."),
+    "ToolKind": (
+        "WHICH receipt contract a registered tool implements, declared before "
+        "invocation. An unregistered kind is refused rather than given a generic "
+        "source receipt. Availability and Assessment carry incomplete outcomes."),
+    "OfferRole": (
+        "WHICH trusted registry offering policy applies before model dispatch: "
+        "initial, optional or exact schema loader. It is configuration, not a "
+        "claim that inspection passed. RegisteredTool rejects unknown roles and "
+        "write-capable loaders; optional schemas remain unoffered until an "
+        "AVAILABLE/SUPPORTED durable inspection matches the exact admitted "
+        "registry. Actual read availability and assessment keep their three "
+        "states, and missing/corrupt loader receipts refuse loading. Exercised "
+        "by test_loader_metadata_is_typed_and_cannot_turn_a_write_into_an_initial_loader."),
+    "Availability": (
+        "HOW an actual completed tool invocation could access its input: "
+        "available, partial or unavailable. This is not a claim that an "
+        "unattempted read passed. Assessment.NOT_ASSESSED is mandatory on "
+        "unavailable reads, and ToolEnvelope refuses supported unavailable data."),
+    "Effect": (
+        "WHICH continuation the registered tool proposes: continue, question "
+        "or answer. The caller chose a declared operation; unknown operations "
+        "are refused. An answer proposal is always NOT_ASSESSED and is not "
+        "permission to release legal advice."),
+    "LoopMode": (
+        "WHICH trusted evaluation approval admitted the loop, recorded or "
+        "synthetic. There is intentionally no client mode or unknown mode that "
+        "a model could use to acquire authority. Unapproved matters are refused "
+        "before dispatch, not routed into a default evaluation."),
+    "StepKind": (
+        "WHICH durable event the runner actually records. The runner knows "
+        "whether it started, returned, failed or stopped. Missing or corrupted "
+        "events fail hash-chain validation; an unknown event cannot stand in "
+        "for an operation whose external outcome was not established."),
+    "StopReason": (
+        "WHY this controlled invocation stopped, selected by the runner. "
+        "Interrupted and provider failures retain unknown operation costs; "
+        "proposal is explicitly unreleased. A stopped run with no attributed "
+        "reason is invalid, not a successful completion."),
     "Requirement": (
         "WHICH FILING REQUIREMENT IS BEING ASKED ABOUT -- forum, valuation or "
         "court fee. The caller always knows which of the three it wants, "

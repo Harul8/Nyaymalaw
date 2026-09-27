@@ -15,7 +15,15 @@ guard live here, and an adapter that wants them calls the owner.
 from __future__ import annotations
 
 from nm.adapters.model.config import CONTEXT_BUDGET
-from nm.ports.model import ContextOverflow, Prompt, Tier
+from nm.ports.model import (
+    ContextOverflow,
+    Prompt,
+    Tier,
+    ToolDefinition,
+    ToolMessage,
+    require_tool_request,
+    tool_request_text,
+)
 from nm.ports.model import estimate_tokens as _estimate_tokens
 
 # THE ESTIMATOR LIVES ON THE PORT (BK-29). It is re-exported here so
@@ -45,3 +53,14 @@ def guard_budget(prompt: Prompt, tier: Tier) -> None:
             f"{budget}. The budget belongs to the port, not to the provider, so "
             f"this fails the same way whichever adapter is live."
         )
+
+
+def guard_tool_budget(prompt: Prompt, tools: tuple[ToolDefinition, ...], tier: Tier,
+                      messages: tuple[ToolMessage, ...], max_tokens: int | None) -> None:
+    """Schemas and execution receipts consume context too, on every provider."""
+    require_tool_request(tools, messages)
+    if max_tokens is not None and (type(max_tokens) is not int or max_tokens <= 0):
+        raise ValueError("A tool call output ceiling must be a positive integer")
+    size = estimate_tokens(tool_request_text(prompt, tools, messages))
+    if size + (max_tokens or 0) > CONTEXT_BUDGET[tier]:
+        raise ContextOverflow("Tool conversation, schemas and output exceed the port budget")

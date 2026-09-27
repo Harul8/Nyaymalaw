@@ -281,7 +281,8 @@ def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
 
 
 @implements("A2")
-def board_projection(matter: Matter, deadlines, today=None) -> dict:
+def board_projection(matter: Matter, deadlines, today=None, *, source_current=None,
+                     checklist_projections=None) -> dict:
     """`deadlines` HAS NO DEFAULT, deliberately.
 
     It had one -- `()` -- and the served board never passed a register, so
@@ -295,7 +296,8 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
     rows = nearest_first([_thread_row(t, deadlines, today,
                                       currency=getattr(matter, "dependencies", None))
                           for t in matter.threads])
-    agenda = _briefing.dispute_agenda.project(matter)
+    agenda = _briefing.dispute_agenda.project(matter, source_current=source_current,
+                                            checklist_projections=checklist_projections)
     receipts, problems = release_index(matter)
     sources = []
     if not problems:
@@ -483,7 +485,8 @@ def _cover_posture(matter: Matter) -> dict:
     return {"posture": posture, "posture_state": state, "postures": rows}
 
 
-def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
+def cover_projection(matter: Matter, deadlines=None, today=None, *, source_current=None,
+                     checklist_projections=None) -> dict:
     """THE COVER. Client, title, posture, stage, last activity, deadline state.
 
     EVERY FIELD IS EITHER PERSISTED OR SAYS IT IS NOT ASSESSED. BK-33-AC1's
@@ -552,7 +555,8 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         # INTAKE READINESS (P24). On the cover so it survives across turns and a
         # restart -- readiness is not turn completion, and a paused need waits on
         # its resume trigger rather than being forgotten.
-        "briefing": _briefing.block(matter),
+        "briefing": _briefing.block(matter, source_current=source_current,
+                                    checklist_projections=checklist_projections),
         # P33. WHAT IS BEING KEPT OR ERASED, and what is still outstanding.
         # `outstanding` travels with the state rather than being left for the
         # reader to infer from two counts that do not add up -- an advocate

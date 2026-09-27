@@ -37,6 +37,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from nm.domain.matter import Matter
 from nm.domain.text import refuses_blank_text, snippet
 
 
@@ -120,6 +121,25 @@ class Parties:
             if p.name.strip().lower() == name.strip().lower():
                 return p.side
         return "related"
+
+
+def on_file(matter: Matter) -> Parties:
+    """Exact recorded party population used by every conflict boundary.
+
+    Intake comes first, then each dispute's recorded parties. Nothing in a
+    title, actor identity, posture or unadmitted message becomes a party here.
+    Matching normalisation remains owned by Parties.names; original display
+    names and their recorded sides are preserved unchanged.
+    """
+    found = []
+    for name, side in (matter.intake_parties or {}).items():
+        found.append(Party(name=str(name), side=str(side), why="given at intake"))
+    for thread in matter.threads:
+        for name, side in (thread.parties or {}).items():
+            found.append(Party(name=str(name), side=str(side), why="recorded on the file"))
+    if not found:
+        return Parties(why="no party is recorded on this matter")
+    return Parties(parties=tuple(found), why=f"{len(found)} party(ies) recorded on this matter")
 
 
 #: What a read that did not run leaves behind. NOT an empty party set: those

@@ -37,21 +37,22 @@ import hashlib
 import json
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import date
 
 from nm.core.date_resolution import resolve
+from nm.domain.loop import LoopRecord, digest
 from nm.domain.requirements import (
+    ChecklistProjection,
     Force,
     Outcome,
     Requirement,
     State,
-    checklist,
-    due_items,
+    facts_identity,
     key,
     restored,
 )
 from nm.domain.requirements import Item as Item
-from nm.domain.requirements import nothing_to_ask as nothing_to_ask
-from nm.domain.requirements import settled as settled
+from nm.domain.requirements import project as domain_project
 from nm.domain.text import refuses_blank_text
 from nm.ports.model import Prompt
 
@@ -60,6 +61,106 @@ from nm.ports.model import Prompt
 #: real requirement clause in the corpus rather than chosen for roundness: the
 #: proviso limbs of s.138 run to dozens of characters.
 MINIMUM_SPAN = 24
+
+
+def _classifications(thread, facts, records, source_current=None):
+    from nm.core.checklist_review import classifications_for
+
+    return classifications_for(thread, facts, records, source_current=source_current)
+
+
+def project(thread, facts=(), *, records=(), source_current=None) -> ChecklistProjection:
+    return domain_project(thread, facts,
+        classifications=_classifications(thread, facts, records, source_current))
+
+
+@dataclass(frozen=True)
+class ChecklistProjections:
+    """Private request-local population; no dictionary or persisted PASS is accepted."""
+    matter_id: str
+    advocate_id: str
+    version: int
+    entries: tuple[tuple[str, ChecklistProjection], ...]
+    journal_identity: str
+    fact_identity: str
+
+    def __post_init__(self):
+        if (not self.matter_id or not self.advocate_id or type(self.version) is not int
+                or not isinstance(self.entries, tuple)
+                or any(not isinstance(row, tuple) or len(row) != 2 or
+                       not isinstance(row[0], str) or not isinstance(row[1], ChecklistProjection)
+                       for row in self.entries)
+                or len({row[0] for row in self.entries}) != len(self.entries)
+                or not isinstance(self.journal_identity, str) or len(self.journal_identity) != 64
+                or any(char not in "0123456789abcdef" for char in self.journal_identity)
+                or not isinstance(self.fact_identity, str) or len(self.fact_identity) != 64
+                or any(char not in "0123456789abcdef" for char in self.fact_identity)):
+            raise ValueError("A request-local checklist population has exact typed file subjects")
+
+    def require_current(self, matter):
+        if (matter.id != self.matter_id or matter.advocate_id != self.advocate_id
+                or matter.version != self.version
+                or tuple(thread.id for thread in matter.threads) != self.keys()
+                or _journal_identity(matter.loop_records) != self.journal_identity
+                or facts_identity(matter.facts) != self.fact_identity):
+            raise ValueError("The request-local checklist population differs from the current file")
+        for thread in matter.threads:
+            self[thread.id].require_current(thread, matter.facts)
+
+    def keys(self):
+        return tuple(ident for ident, _ in self.entries)
+
+    def __getitem__(self, ident):
+        for key_, value in self.entries:
+            if ident == key_:
+                return value
+        raise KeyError(ident)
+
+
+def _journal_identity(records):
+    if (not isinstance(records, tuple)
+            or any(type(record) is not LoopRecord for record in records)):
+        raise ValueError("The request-local checklist journal population is unreadable")
+    return digest(tuple((record.identity.fingerprint,
+                         tuple(event.fingerprint for event in record.events))
+                        for record in records))
+
+
+def file_projections(matter, *, source_current=None) -> ChecklistProjections:
+    return ChecklistProjections(matter.id, matter.advocate_id, matter.version,
+        tuple((thread.id, project(thread, matter.facts, records=matter.loop_records,
+                                  source_current=source_current)) for thread in matter.threads),
+        _journal_identity(matter.loop_records), facts_identity(matter.facts))
+
+
+def checked_file_projections(matter, supplied=None, *, source_current=None) -> ChecklistProjections:
+    if supplied is None:
+        return file_projections(matter, source_current=source_current)
+    if type(supplied) is not ChecklistProjections:
+        raise ValueError("Only this request's private typed checklist projection can be reused")
+    supplied.require_current(matter)
+    return supplied
+
+
+def checklist(thread, facts=(), *, records=(), source_current=None):
+    return project(thread, facts, records=records, source_current=source_current).rows
+
+
+def due_items(thread, facts, today, *, resumed=False, records=(), source_current=None):
+    return project(thread, facts, records=records, source_current=source_current
+                   ).due_items(today, resumed=resumed)
+
+
+def nothing_to_ask(thread, facts=(), *, records=(), source_current=None):
+    return project(thread, facts, records=records, source_current=source_current).nothing_to_ask
+
+
+def settled(thread, facts=(), *, records=(), source_current=None):
+    return project(thread, facts, records=records, source_current=source_current).settled
+
+
+def summary(thread, facts=(), *, records=(), source_current=None):
+    return project(thread, facts, records=records, source_current=source_current).summary()
 
 
 
@@ -291,11 +392,12 @@ ANSWER_RULE = (
 def answer_context(matter) -> str:
     return json.dumps([
         {"thread_id": t.id, "label": t.label, "items": [i.rendered()
-         for i in checklist(t, matter.facts)]} for t in matter.threads
+         for i in checklist(t, matter.facts, records=matter.loop_records)]} for t in matter.threads
         if restored(t)], ensure_ascii=False)
 
 
-def apply_answers(matter, proposals, *, message, turn_id, today, current_only=True):
+def apply_answers(matter, proposals, *, message, turn_id, today, current_only=True,
+                  requires_review=False):
     """Accept current, scoped quotations only; duplicates cannot silently win."""
     from collections import Counter
     from dataclasses import replace
@@ -317,8 +419,17 @@ def apply_answers(matter, proposals, *, message, turn_id, today, current_only=Tr
                 or not isinstance(quote, str) or not quote.strip() or quote not in message
                 or ident not in {key(r) for r in restored(thread)}):
             continue
+        selected_fact = row.get("fact_id")
+        if selected_fact is not None and (
+                not isinstance(selected_fact, str) or not selected_fact.strip()):
+            continue
+        requirement = next(r for r in restored(thread) if key(r) == ident)
+        current_source = thread.requirement_reads.get(requirement.locator)
+        if current_source and current_source != requirement.source_identity:
+            continue
         facts = [f for f in matter.facts if f.id in thread.chronology
                  and f.superseded_by is None
+                 and (selected_fact is None or f.id == selected_fact)
                  and (not current_only or f.provenance.turn == turn_id)
                  and f.provenance.kind == "advocate_statement" and quote in f.statement]
         if not facts:
@@ -329,8 +440,19 @@ def apply_answers(matter, proposals, *, message, turn_id, today, current_only=Tr
         try:
             state = State(row.get("answer"))
             due = resolve(expression, today) if expression else None
+            if selected_fact is not None and facts[0].provenance.turn != turn_id:
+                # An old relative promise is not relative to the day its law
+                # was re-read. Preserve its already recorded anchor, or leave
+                # the date explicitly unestablished instead of moving it.
+                previous = thread.requirement_outcomes.get(ident)
+                old = Outcome.restore(previous)
+                same_promise = (old is not None and state is State.PROMISED
+                    and old.state is State.PROMISED and old.fact == facts[0].id
+                    and old.basis == quote and previous.get("due_expression", "") == expression)
+                due = date.fromisoformat(old.due) if same_promise and old.due else None
             outcome = Outcome(state, quote, today.isoformat(), facts[0].id,
-                              due.isoformat() if due else "")
+                              due.isoformat() if due else "", requirement.source_identity,
+                              requires_review)
         except (TypeError, ValueError):
             continue
         outcomes = dict(thread.requirement_outcomes)
@@ -346,14 +468,16 @@ def apply_answers(matter, proposals, *, message, turn_id, today, current_only=Tr
     return matter
 
 
-def conversation_context(thread, facts, today, *, resumed=False) -> str:
-    rows = checklist(thread, facts)
+def conversation_context(thread, facts, today, *, resumed=False, records=(),
+                         source_current=None) -> str:
+    projection = project(thread, facts, records=records, source_current=source_current)
+    rows = projection.rows
     if not rows:
         return ""
-    due = {key(i.requirement) for i in due_items(thread, facts, today, resumed=resumed)}
+    due = {key(item.requirement) for item in projection.due_items(today, resumed=resumed)}
     return ("\n\nCHECKLIST CONTEXT, not a script or permission to act. Answer the "
-            "advocate's immediate request first. If useful, weave at most one small "
-            "group of up to two decision-changing questions into the response, "
+            "advocate's immediate request first. If useful, weave a proportionate "
+            "group of materially decision-changing questions into the response, "
             "chosen by what each answer unlocks, with urgency breaking ties. "
             "Do not ask for held or unavailable items. A promised item is not due "
             "for repetition unless due_now is true or the advocate raises it. "
@@ -364,3 +488,39 @@ def conversation_context(thread, facts, today, *, resumed=False) -> str:
             "No checklist state proves merits, authenticity, or document access.\n"
             + json.dumps([{**i.rendered(), "due_now": key(i.requirement) in due}
                           for i in rows], ensure_ascii=False))
+
+
+def context_projection(thread, facts, today: date, *, resumed=False, records=(),
+                       source_current=None) -> dict:
+    """One derived board/conversation view, never another outcome authority.
+
+    Raw requirements and complete answer history remain on the file. This
+    projection says what the existing checklist/due/completion owners derive
+    at a stated date; no tick, summary or model confidence supplies a state.
+    Information follow-ups are not legal deadlines.
+    """
+    if type(today) is not date or type(resumed) is not bool:
+        raise ValueError("A checklist projection has a trusted calendar date and resume state")
+    projection = project(thread, facts, records=records, source_current=source_current)
+    rows = projection.rows
+    due = {key(row.requirement) for row in projection.due_items(today, resumed=resumed)}
+    current_facts = {fact.id: fact for fact in facts if fact.superseded_by is None}
+    return {
+        "as_of": today.isoformat(), "summary": projection.summary(),
+        "items": [{**row.rendered(), "due_now": key(row.requirement) in due,
+                   "answer_statement": current_facts[row.outcome.fact].statement
+                       if row.outcome else "",
+                   "answer_status": "independent_relevance_review_required"
+                       if row.outcome and row.outcome.requires_review and
+                       not row.independently_reviewed else
+                       "attributed_information_not_proven" if row.outcome else "not_established"}
+                  for row in rows],
+        "unreadable_requirements": len(getattr(thread, "requirements", ()) or ()) - len(rows),
+        "duplicate_requirements": len(rows) - len({key(row.requirement) for row in rows}),
+        "asking_complete": projection.nothing_to_ask,
+        "settled": projection.settled,
+        "information_state_not_proof": True, "followups_are_not_legal_deadlines": True,
+        "source_basis": "known_read_generations" if (
+            rows and all(thread.requirement_reads.get(row.requirement.locator)
+                         for row in rows)) else "not_assessed_for_some_sources",
+    }

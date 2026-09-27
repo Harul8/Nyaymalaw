@@ -22,7 +22,6 @@ THE RULE, in three parts, each asserted below:
 from __future__ import annotations
 
 import pytest
-
 from nm.core import grounding
 from nm.domain.answer import Element, ElementKind
 from nm.domain.metrics import TurnMetrics
@@ -40,6 +39,7 @@ def _engine(tmp_path):
     from nm.adapters.model.scripted import ScriptedModelAdapter
     from nm.adapters.store.file_store import FileMatterStore
     from nm.core.turn import TurnEngine
+
     from tests.test_turn_contract import KEY, _Evidence, _model_config
     return TurnEngine(model=ScriptedModelAdapter(_model_config()),
                       store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence())

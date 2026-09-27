@@ -77,6 +77,7 @@ class ProcessingContract:
     unknown_configuration_denies: bool = True
     consent_overrides: bool = False
     persist_rejected: bool = False
+    local_only: frozenset[str] = frozenset()
 
     def known(self) -> frozenset[str]:
         return self.prohibited | self.allowed
@@ -118,6 +119,15 @@ def load(root: pathlib.Path | None = None) -> ProcessingContract:
         raise ContractUnreadable(
             "the media contract names no prohibited or no allowed operations, "
             "so it cannot decide anything")
+    constraints = contract.get("operation_constraints")
+    if not isinstance(constraints, dict) or not constraints:
+        raise ContractUnreadable("the processing-location constraints are absent or malformed")
+    local_only: set[str] = set()
+    for operation, constraint in constraints.items():
+        if (operation not in allowed or not isinstance(constraint, dict)
+                or constraint != {"processing_location": "local_only"}):
+            raise ContractUnreadable("a processing-location constraint is unknown or malformed")
+        local_only.add(operation)
     response = contract.get("response") or {}
     request = contract.get("request") or {}
     return ProcessingContract(
@@ -127,7 +137,8 @@ def load(root: pathlib.Path | None = None) -> ProcessingContract:
             str(request.get("unknown_configuration", "deny")) == "deny"),
         consent_overrides=bool(request.get("consent_override", False)),
         persist_rejected=bool(
-            response.get("raw_rejected_response_persistence", False)))
+            response.get("raw_rejected_response_persistence", False)),
+        local_only=frozenset(local_only))
 
 
 # ================================ the request ===============================
@@ -145,6 +156,8 @@ class Route:
     configuration_known: bool = True
     consent_given: bool = False
     note: str = ""
+    #: None means not established, never inferred local from a processor's name.
+    off_premises: bool | None = None
 
 
 def refuse_request(route: Route,
@@ -196,6 +209,12 @@ def refuse_request(route: Route,
         bad.append(
             f"the configuration of {route.processor!r} is not established, and "
             f"an unknown configuration is denied rather than assumed benign")
+
+    for operation in set(route.operations) | set(route.unavoidable):
+        if operation in contract.local_only and route.off_premises is not False:
+            bad.append(
+                f"{operation!r} is approved only for local processing; an external "
+                f"or unestablished processing location is refused before bytes leave")
 
     if route.consent_given and not contract.consent_overrides and bad:
         bad.append(

@@ -69,13 +69,14 @@ except ImportError as _missing:  # pragma: no cover -- refused, not chosen
     ) from _missing
 
 from nm.domain.text import refuses_blank_text
+from nm.ports.storage_errors import StoredObjectScopeRefused, StoredObjectUnreadable
 
 
-class KeyUnavailable(RuntimeError):
+class KeyUnavailable(StoredObjectUnreadable):
     """The key-encrypting key cannot be reached. NEVER a plaintext path."""
 
 
-class CrossMatterAccess(RuntimeError):
+class CrossMatterAccess(StoredObjectScopeRefused):
     """A wrapped key was presented for a matter it does not belong to.
 
     DISTINCT FROM CORRUPTION on purpose. A blob that will not decrypt is a
@@ -85,7 +86,7 @@ class CrossMatterAccess(RuntimeError):
     """
 
 
-class WrappedKeyUnreadable(RuntimeError):
+class WrappedKeyUnreadable(StoredObjectUnreadable):
     """The wrapped key is corrupt or truncated. Not a cross-matter attempt."""
 
 

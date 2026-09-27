@@ -38,6 +38,7 @@ from nm.core import (
     grounding,
     investigation,
     limitation,
+    output_checks,
     proof,
     proof_read,
     requirements,
@@ -67,7 +68,7 @@ from nm.core.threading import BindResult, BindState, bind
 from nm.domain import advice, citation, decision, engagement, issue, reads, reservation
 from nm.domain import brief as brief_mod
 from nm.domain import proof as domain_proof
-from nm.domain import summary as matter_memory
+from nm.core import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.budget import refuse_partial
 from nm.domain.capacity import CapacityPosition
@@ -105,16 +106,6 @@ from nm.domain.turn_receipt import (
 )
 from nm.domain.turn_receipt import fingerprint as offer_fingerprint
 from nm.ports.authority_weight import AuthorityWeightPort, Standing
-from nm.ports.filing_requirement import (
-    FilingRequirementPort,
-    Requirement as FilingRequirement,
-)
-from nm.ports.interim_relief import (
-    InterimRelief,
-    InterimReliefPort,
-    LimbState,
-)
-from nm.ports.procedural_period import ProceduralPeriodPort, Track
 from nm.ports.coverage import CoveragePort
 from nm.ports.elements import ElementsPort
 from nm.ports.evidence import (
@@ -126,7 +117,17 @@ from nm.ports.evidence import (
     SourceKind,
     TreatmentState,
 )
+from nm.ports.filing_requirement import (
+    FilingRequirementPort,
+)
+from nm.ports.filing_requirement import (
+    Requirement as FilingRequirement,
+)
 from nm.ports.institution import Against, PreInstitutionPort
+from nm.ports.interim_relief import (
+    InterimRelief,
+    InterimReliefPort,
+)
 from nm.ports.model import (
     ModelError,
     ModelPort,
@@ -134,6 +135,7 @@ from nm.ports.model import (
     Prompt,
     Tier,
 )
+from nm.ports.procedural_period import ProceduralPeriodPort, Track
 from nm.ports.store import StaleWrite, StorePort
 
 #: The most evidence rounds one turn may run. DECLARED SINCE SLICE 1 AND READ
@@ -832,11 +834,8 @@ class TurnEngine:
         # earlier kept a refused instruction off the file and made the one
         # read that judges an instruction the only one flying blind.
         refusal = self._read_duty(turn, matter, metrics)
-        metrics.fire("G-DUTY",
-                     "refused" if refusal.must_refuse else
-                     ("not_assessed" if refusal.refused else "clear"),
-                     refusal.refused or refusal.why
-                     or "nothing here requires refusal")
+        checked_duty = output_checks.duty_check(refusal)
+        metrics.fire(checked_duty.gate_id, checked_duty.state, checked_duty.reason)
         if refusal.must_refuse:
             answer = self._refusal_answer(turn, refusal, mode,
                                           mode_statement, metrics)
@@ -1881,7 +1880,7 @@ class TurnEngine:
                 metrics.fire(gate_id, state,
                              screen.detail or screen.not_assessed_because)
 
-        may, why = screens_mod.may_admit_substance(outstanding)
+        may, why = output_checks.admission_policy(outstanding)
 
         # THE BLANKET EXCEPTION IS GONE (BK-34).
         #
@@ -2058,40 +2057,7 @@ class TurnEngine:
         `COVERAGE GAP --` in its detail is not a screen pretending to be
         clean.
         """
-        if self._coverage is None:
-            detail = ("coverage for this jurisdiction has not been measured "
-                      "in this deployment, so I cannot say whether the corpus "
-                      "covers it. That is a gap in what I can tell you, not a "
-                      "finding that it is covered")
-            return screens_mod.Screen(
-                kind=screens_mod.ScreenKind.COMPETENCE,
-                state=screens_mod.ScreenState.CLEAR,
-                detail="NOT MEASURED -- " + detail)
-
-        position = self._coverage.position(turn.jurisdiction)
-        name = getattr(getattr(position, "state", None), "value", "")
-        # `detail`, NOT `why`. `CoveragePosition` calls it `detail`, and
-        # `getattr(position, "why", "")` returned the empty string for every
-        # jurisdiction -- a screen reporting a coverage position with no
-        # reason in it, which the type would then refuse.
-        why = getattr(position, "detail", "") or "no reason was recorded"
-
-        if name == "met":
-            return screens_mod.Screen(
-                kind=screens_mod.ScreenKind.COMPETENCE,
-                state=screens_mod.ScreenState.CLEAR,
-                detail=f"{turn.jurisdiction}: {why}")
-
-        # THE PREFIX IS WHAT `gate_for` READS BACK. The screen state is
-        # always CLEAR here -- competence discloses and never blocks -- so
-        # the finding has to live in the detail, and the gate mapping parses
-        # it from there. A prefix nobody wrote would silently become
-        # `covered`, which is the one answer this branch must never give.
-        return screens_mod.Screen(
-            kind=screens_mod.ScreenKind.COMPETENCE,
-            state=screens_mod.ScreenState.CLEAR,
-            detail=("NOT MEASURED -- " if name in ("not_measured", "")
-                    else "COVERAGE GAP -- ") + why)
+        return output_checks.competence_screen(self._coverage, turn.jurisdiction)
 
     def _parties_of(self, matter: Matter):
         """The party set this matter holds, as a `Parties`.
@@ -2104,24 +2070,7 @@ class TurnEngine:
         """
         from nm.core import parties as parties_mod
 
-        found = []
-        # INTAKE FIRST, then whatever the threads have learned since. Intake
-        # is what exists on turn one, and turn one is the turn that most needs
-        # screening.
-        for name, side in (matter.intake_parties or {}).items():
-            found.append(parties_mod.Party(
-                name=str(name), side=str(side), why="given at intake"))
-        for thread in matter.threads:
-            for name, side in (thread.parties or {}).items():
-                found.append(parties_mod.Party(
-                    name=str(name), side=str(side),
-                    why="recorded on the file"))
-        if not found:
-            return parties_mod.Parties(
-                why="no party is recorded on this matter")
-        return parties_mod.Parties(
-            parties=tuple(found),
-            why=f"{len(found)} party(ies) recorded on this matter")
+        return parties_mod.on_file(matter)
 
     def _read(self, prompt, schema, key: str, tier=Tier.ROUTINE):
         """Every structured read goes through here. BK-29.
@@ -3407,7 +3356,7 @@ class TurnEngine:
             test = assessment.test
             said_limbs = "; ".join(
                 f"{name} \u2014 {limb.what_would_answer_it}"
-                for (name, _state), limb in zip(assessment.states, test.limbs))
+                for (name, _state), limb in zip(assessment.states, test.limbs, strict=True))
             lead = (f"The {said} sought is decided on its own test, under "
                     f"{test.source}, and not on the strength of the suit.")
             if test.bar:
@@ -4262,20 +4211,10 @@ class TurnEngine:
         for their jurisdiction. 4,280 are held, and every one binds. What is
         disclosed now is the RECENCY gap that is really there.
         """
-        if self._coverage is None:
-            position_state, detail = "not_measured", (
-                "no coverage measurement is wired into this installation, so I "
-                "cannot tell you whether the binding court's output is held. "
-                "Run `python pipeline/quality/releasegate.py --write`.")
-        else:
-            position = self._coverage.position(turn.jurisdiction)
-            # `discloses` OWNS "anything but MET is said out loud". Asking
-            # `state is MET` here was the same rule in a second place, and
-            # the owner had no callers at all.
-            if not position.discloses:
-                return
-            position_state = position.state.value
-            detail = position.detail
+        position = output_checks.measured_coverage(self._coverage, turn.jurisdiction)
+        if not position.discloses:
+            return
+        position_state, detail = position.state.value, position.detail
 
         metrics.fire("G-COVERAGE",
                      "unmet" if position_state == "unmet" else "not_measured",
@@ -4698,53 +4637,12 @@ class TurnEngine:
             grounds.extend(self._relative_weight(shown, thread))
             return
 
-        if result.coverage is Coverage.NOT_HELD:
-            metrics.fire("G-NOTHELD", "not_held", result.missing or "")
-            grounds.append(Element(
-                kind=ElementKind.GROUND, thread=thread.id,
-                text=(f"Not held in the corpus: {result.missing} I am telling you "
-                      f"what is missing rather than answering from memory."),
-                disclosure=True))
-            return
-
-        if result.coverage is Coverage.NOT_ASSESSED:
-            # THE SEARCH DID NOT HAPPEN, and that is its own sentence.
-            #
-            # This branch exists because the one below used to be the `else`.
-            # Any Coverage member added later fell into it and was announced to
-            # the advocate as "a defect in my retrieval" -- a state nobody
-            # assessed, reported as a state that was assessed and failed. The
-            # absent-input shape, arriving by construction rather than by
-            # mistake.
-            metrics.fire("G-NOTASSESSED", "not_assessed", result.missing or "")
-            grounds.append(Element(
-                kind=ElementKind.GROUND, thread=thread.id,
-                text=(f"This was NOT looked up: {result.missing} I am not "
-                      f"telling you the law is silent, and I am not telling "
-                      f"you my retrieval failed. Nothing was searched."),
-                disclosure=True))
-            return
-
-        if result.coverage is Coverage.HELD_NOT_FOUND:
-            metrics.fire("G-HELDNOTFOUND", "held_not_found",
-                         f"held but not retrieved: {result.missing}")
-            grounds.append(Element(
-                kind=ElementKind.GROUND, thread=thread.id,
-                text=(f"A source this product declares it holds was not "
-                      f"retrieved: {result.missing} That is a defect in my "
-                      f"retrieval, not a gap in the law, and it is recorded "
-                      f"as one."),
-                disclosure=True))
-            return
-
-        # NO `else`. A member added tomorrow raises here instead of borrowing
-        # whichever branch happened to be last -- the same reason `Gate` refuses
-        # a row without a third state rather than trusting the author.
-        raise AssertionError(
-            f"unhandled Coverage member {result.coverage!r}. Every state a "
-            f"retrieval can be in has to be SAID to the advocate; falling "
-            f"through to the nearest branch tells them something untrue about "
-            f"what was searched.")
+        failure = output_checks.retrieval_failure(result)
+        if failure is None:
+            raise AssertionError("An answered retrieval did not return through its owner")
+        metrics.fire(failure.gate_id, failure.state, failure.reason)
+        grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
+                               text=failure.text, disclosure=True))
 
     @implements("E2")
     @implements("D8")
@@ -5023,15 +4921,13 @@ class TurnEngine:
         confidently and saying nothing, so the advocate is told which read
         came back empty and can supply the missing thing in a sentence.
         """
-        empties = getattr(self._model, "empty_decisive", None)
-        if not callable(empties):
+        population = output_checks.observe_reads(self._model, "empty_decisive")
+        if population.values is None:
+            if callable(getattr(self._model, "empty_decisive", None)):
+                metrics.violate("I1", "the decisive-read check could not run: "
+                                + population.error)
             return []
-        try:
-            reads = empties()
-        except Exception as exc:  # noqa: BLE001 -- never fail a turn
-            metrics.violate("I1", f"the decisive-read check could not run: "
-                                  f"{type(exc).__name__}: {exc}")
-            return []
+        reads = population.values
         if not reads:
             return []
 
@@ -5067,15 +4963,13 @@ class TurnEngine:
         collapsing both decisions into one place would be the wrong half
         of the fix.
         """
-        refused = getattr(self._model, "refused_reads", None)
-        if not callable(refused):
+        population = output_checks.observe_reads(self._model, "refused_reads")
+        if population.values is None:
+            if callable(getattr(self._model, "refused_reads", None)):
+                metrics.violate("I1", "the refused-read check could not run: "
+                                + population.error)
             return []
-        try:
-            reads = refused()
-        except Exception as exc:  # noqa: BLE001 -- never fail a turn
-            metrics.violate("I1", f"the refused-read check could not run: "
-                                  f"{type(exc).__name__}: {exc}")
-            return []
+        reads = population.values
         if not reads:
             return []
 
@@ -5442,14 +5336,13 @@ class TurnEngine:
             # comparison nobody made.
             return []
 
-        moved = cascade.changes(before, derived)
+        moved, gone = output_checks.derived_comparison(before, derived)
 
         # WHAT STOPPED BEING DERIVED. `changes` walks `after` and cannot see
         # this: a value present before and absent now produces nothing from
         # it. Most of what the product derives is re-read from scratch every
         # turn, so a read that found three issues on turn 2 and nothing on
         # turn 9 does not fail — it succeeds, quietly, with less.
-        gone = cascade.lost(before, derived)
         if gone:
             metrics.fire("G-CONSERVE", "lost", ", ".join(d.name for d in gone))
             out = [Element(
@@ -6838,30 +6731,13 @@ class TurnEngine:
         from one that never ran, which is the whole of defect shape S1 and is
         why `not_verified` is a state here rather than a null.
         """
-        verdict = self._verify_step(text, claims, metrics, file_note)
-
-        if verdict.contradicted and allow_repair:
-            named = next(c for c in claims if c.id == verdict.claim_id)
-            repaired = self._repair_step(text, named, verdict, metrics,
-                                         file_note)
-            if repaired:
-                second = self._verify_step(repaired, claims, metrics,
-                                           file_note)
-                if not second.contradicted and second.ran:
-                    metrics.fire(
-                        "G-CONSISTENT", "repaired",
-                        f"the step contradicted {named.id!r} and was rewritten "
-                        f"once: {verdict.why}")
-                    return repaired, second
-                # A REWRITE THAT COULD NOT BE VERIFIED IS NOT A REPAIR.
-                # Serving it would be taking the second read's silence as
-                # agreement, and the first read's finding stands until
-                # something replaces it.
-                verdict = second if second.contradicted else verdict
-
-        metrics.fire("G-CONSISTENT", verdict.state,
-                     verdict.refused or verdict.why)
-        return text, verdict
+        return consistency.checked_step(
+            text, claims, metrics=metrics, file_note=file_note,
+            allow_repair=allow_repair,
+            verify=lambda candidate, offered, *, file_note: self._verify_step(
+                candidate, offered, metrics, file_note),
+            repair=lambda candidate, claim, verdict, *, file_note: self._repair_step(
+                candidate, claim, verdict, metrics, file_note))
 
     def _verify_step(self, text: str, claims, metrics: TurnMetrics,
                      file_note: str = ""):
@@ -6872,37 +6748,8 @@ class TurnEngine:
         refusing here DELETES THE ADVICE, so a read that cannot run must not
         be able to silence a step that is perfectly sound.
         """
-        if not claims:
-            # NOTHING WAS COMPUTED, so there is nothing to contradict. This is
-            # not a pass -- it is the check having no subject, and calling the
-            # read anyway would spend a call to be told so.
-            #
-            # IT CARRIES ITS OWN REASON. Both this and a read that failed
-            # leave the step unverified, and they are different facts about
-            # the turn: one says nothing was computed, the other says the
-            # check broke. Reporting them with one sentence is the collapse
-            # this gate exists to refuse, one level down.
-            return consistency.NOTHING_TO_CHECK
-
-        try:
-            res = self._read(
-                      consistency.build_prompt(text, claims, file_note),
-                      consistency.CONSISTENCY_SCHEMA, "consistency", consistency.TIER)
-            metrics.record_call(res)
-        except ModelError as exc:
-            metrics.fire("G-MODEL", "unavailable",
-                         f"the consistency read could not run: {exc}")
-            return consistency.UNVERIFIED
-        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning (§7)
-            metrics.violate(
-                "D3", f"consistency read failed: {type(exc).__name__}: {exc}")
-            return consistency.UNVERIFIED
-
-        verdict = consistency.interpret(
-            res.data or {}, text, frozenset(c.id for c in claims))
-        if verdict.refused:
-            metrics.violate("D3", verdict.refused)
-        return verdict
+        return consistency.verify_step(
+            text, claims, read=self._read, metrics=metrics, file_note=file_note)
 
     def _repair_step(self, text: str, claim, verdict,
                      metrics: TurnMetrics, file_note: str = "") -> str:

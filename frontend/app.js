@@ -1717,6 +1717,13 @@ function renderTurn(entry) {
   // `repaint`, which renders NOTHING and looks exactly like a matter
   // with no conversation on it.
   const fired = ((entry.answer.metrics || {}).gates_fired || []);
+  if (entry.answer.matter_id && entry.answer.turn_id) {
+    window.NMLoopProgress.attachTurn(wrap, entry.answer.matter_id, entry.answer.turn_id, {
+      read: api,
+      isCurrent: () => !state.ended && Boolean(state.advocate) && wrap.isConnected
+        && ['advise', 'history'].includes(document.body.dataset.pane),
+    });
+  }
   const audit = document.createElement('details');
   audit.className = 'audit';
   const auditSum = document.createElement('summary');
@@ -1786,6 +1793,7 @@ function renderTurn(entry) {
 }
 
 function repaint() {
+  window.NMLoopProgress.stopAll();
   const t = $('thread');
   const follow = t.scrollHeight - t.scrollTop - t.clientHeight < 48;
   const top = t.scrollTop;
@@ -2590,6 +2598,7 @@ function openTab(name) {
 
 function showTab(name) {
   closeSourceReader(false);
+  window.NMLoopProgress.stopAll();
   document.body.dataset.pane = name;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
   const tab = tabFor(name);
@@ -4138,6 +4147,7 @@ async function loadHistoryMatters() {
 }
 
 async function showHistory(matterId) {
+  window.NMLoopProgress.stopAll();
   const generation = ++state.historyGeneration;
   const st = $('history-state');
   const body = $('history-body');
@@ -4164,6 +4174,13 @@ async function showHistory(matterId) {
   head.className = 'result-count';
   head.textContent = `${d.turn_count} turn${d.turn_count === 1 ? '' : 's'} on ${d.title}`;
   body.appendChild(head);
+
+  window.NMLoopProgress.attach(body, matterId, {
+    read: api,
+    unlinkedOnly: true,
+    isCurrent: () => generation === state.historyGeneration && !state.ended
+      && Boolean(state.advocate) && document.body.dataset.pane === 'history',
+  });
 
   // BK-39. THE SAME RENDERER, AND THAT IS THE WHOLE FIX.
   //

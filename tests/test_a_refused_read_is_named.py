@@ -180,6 +180,31 @@ REACHED_BY: dict[str, str] = {
 }
 
 
+def _refuse_independent_claim():
+    """The new dispatcher is not a fictional brief through the legacy engine."""
+    from nm.core.verifier import IndependentVerifier
+
+    from tests.test_independent_claim_verifier import Judge, package
+
+    subject = package()
+    model = TracedModel(inner=Judge(error=ModelError("The independent read cannot run")))
+    verdict = IndependentVerifier(model).verify(
+        subject, author_provider="scripted", author_model="distinct-author",
+        retrieved=tuple(span.finding for span in subject.spans))
+    assert not verdict.releasable and verdict.reason
+    return model.refused_reads()
+
+
+# Every non-legacy read has an actual dispatcher exercised with failure and
+# read from the real model trace. This is ownership, not an exclusion list.
+CONTROLLED_READ_OWNERS = {"claim_verification": _refuse_independent_claim}
+
+
+@pytest.mark.parametrize("read", sorted(CONTROLLED_READ_OWNERS))
+def test_every_controlled_refusal_owner_runs_and_names_its_actual_failed_read(read):
+    assert read in CONTROLLED_READ_OWNERS[read]()
+
+
 def _engine(tmp_path, read: str):
     """The engine, WRAPPED THE WAY THE COMPOSITION ROOT WRAPS IT.
 
@@ -313,7 +338,8 @@ def test_every_declared_read_is_driven_here():
                 for m in re.findall(r'"x-nm-read":\s*"([a-z_]+)"',
                                     p.read_text(encoding="utf-8"))}
 
-    missing = sorted(declared - set(REACHED_BY))
+    assert not set(REACHED_BY) & set(CONTROLLED_READ_OWNERS), "each read must have one dispatcher"
+    missing = sorted(declared - set(REACHED_BY) - set(CONTROLLED_READ_OWNERS))
     assert not missing, (
         f"these reads exist and nothing here drives them: {missing}")
 

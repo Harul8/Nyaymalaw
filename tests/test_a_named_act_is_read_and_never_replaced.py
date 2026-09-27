@@ -136,7 +136,8 @@ def _store(tmp_path: Path) -> tuple[Path, Manifest]:
                 ("relief_act_1986", "RELIEF 1986 WORDS"),
                 ("relief_act_2019", "RELIEF 2019 WORDS")]):
             con.execute("insert into chunks values (?, 'section_head', ?, ?, 'bare_act', '10', ?)",
-                        (act_id, f"c{pos}", json.dumps({"full_text": f"{act_id} . s.10: head\n{words}"}), pos))
+                        (act_id, f"c{pos}",
+                         json.dumps({"full_text": f"{act_id} . s.10: head\n{words}"}), pos))
     manifest = Manifest(entries=(
         ManifestEntry("Old Code, 1973", ("old_code_1973",), ("10",),
                       in_force_from=date(1974, 4, 1), in_force_to=date(2024, 6, 30)),
@@ -177,7 +178,8 @@ def test_a_title_without_its_year_is_never_resolved_by_date(tmp_path):
 
 @pytest.mark.class_a
 def test_an_unknown_act_is_named_as_unknown(tmp_path):
-    read = CorpusEvidenceAdapter(*_store(tmp_path)).read_provision("Other Act, 1999", "10", date(2025, 1, 1))
+    read = CorpusEvidenceAdapter(*_store(tmp_path)).read_provision(
+        "Other Act, 1999", "10", date(2025, 1, 1))
     assert read.coverage is Coverage.NOT_HELD and "Other Act, 1999" in read.missing
 
 
@@ -202,7 +204,8 @@ def test_every_read_says_not_assessed_when_the_corpus_cannot_be_read(tmp_path):
              and typing.get_type_hints(member).get("return") is EvidenceResult]
     assert {"fetch", "read_provision"} <= set(reads), reads
     for name in reads:
-        params = [p for p in typing.get_type_hints(getattr(CorpusEvidenceAdapter, name)) if p != "return"]
+        params = [p for p in typing.get_type_hints(getattr(CorpusEvidenceAdapter, name))
+                  if p != "return"]
         assert set(params) <= set(_ARGUMENTS), f"{name} takes {params}; supply them here"
         result = getattr(adapter, name)(**{p: _ARGUMENTS[p] for p in params})
         assert result.coverage is Coverage.NOT_ASSESSED, (name, result.coverage)
@@ -231,7 +234,8 @@ def _held_not_found_sites(tree: ast.AST) -> list[tuple[int, bool]]:
 
     def visit(node, guards):
         if isinstance(node, ast.If):
-            asks = "intends" in {n.attr for n in ast.walk(node.test) if isinstance(n, ast.Attribute)}
+            asks = "intends" in {
+                n.attr for n in ast.walk(node.test) if isinstance(n, ast.Attribute)}
             for child in node.body:
                 visit(child, guards + [asks])
             for child in node.orelse:
@@ -268,7 +272,8 @@ def test_held_not_found_is_only_ever_said_on_the_manifests_word():
 def test_the_held_not_found_scan_rejects_the_branch_it_replaced():
     replaced = ("def _fetch_authority(self, need):\n"
                 "    if not self.authority_available:\n"
-                "        return EvidenceResult(coverage=Coverage.HELD_NOT_FOUND, missing='not built')\n")
+                "        return EvidenceResult(coverage=Coverage.HELD_NOT_FOUND, "
+                "missing='not built')\n")
     assert _held_not_found_sites(ast.parse(replaced)) == [(3, False)]
 
 
@@ -288,7 +293,8 @@ def test_every_out_of_force_act_reads_as_itself_on_the_corpus(entry):
             continue
         (finding,) = read.findings
         assert any(fnmatchcase(finding.store.lower(), p.lower().replace("%", "*").replace("_", "?"))
-                   for p in entry.act_patterns), f"{entry.act_name} s.{section} read from {finding.store}"
+                   for p in entry.act_patterns), (
+                       f"{entry.act_name} s.{section} read from {finding.store}")
         assert finding.blocking_reason.startswith("G-INFORCE"), finding.blocking_reason
         return
     pytest.fail(f"no provision of {entry.act_name} was read, so nothing was checked")

@@ -35,7 +35,6 @@ import ast
 import pathlib
 
 import pytest
-
 from nm.domain.citation import provision_label
 
 pytestmark = pytest.mark.class_a
@@ -140,12 +139,12 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
     #: that is the whole job. Exempting it is the same line `test_one_fold.py`
     #: draws around `nm.domain.text.fold`: the rule is ONE definition, not
     #: none.
-    OWNER = "backend/nm/domain/citation.py"
+    owner = "backend/nm/domain/citation.py"
 
     found: list[str] = []
     for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
         rel = path.relative_to(ROOT).as_posix()
-        if rel == OWNER:
+        if rel == owner:
             continue
         try:
             tree = ast.parse(path.read_text(encoding="utf8"))

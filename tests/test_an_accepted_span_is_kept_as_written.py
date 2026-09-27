@@ -28,7 +28,6 @@ second.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.quotable import Quotable
 
 pytestmark = pytest.mark.class_a

@@ -69,7 +69,7 @@ from datetime import date
 
 from nm.core import deadlines, limitation
 from nm.domain.text import fold, refuses_blank_text, snippet
-from nm.ports.model import Tier
+from nm.ports.model import ModelError, Tier
 
 
 @refuses_blank_text()
@@ -448,3 +448,60 @@ def interpret(data: dict, step: str, offered: frozenset[str]) -> Verdict:
 
     return Verdict(claim_id=claim_id, quoted=quoted,
                    why=why or "the step contradicts a computed fact")
+
+
+def verify_step(text: str, claims: tuple[Claim, ...], *, read, metrics,
+                file_note: str = "") -> Verdict:
+    """One owner for a typed-fact check on any candidate-producing path.
+
+    ``read(prompt, schema, name, tier)`` supplies the application's existing
+    guarded model transport; ``metrics`` records the same calls and integrity
+    diagnostics as the ordinary turn. No configured/read population is a pass.
+
+    The historical interpretation retains its explicit ``refused`` diagnostic
+    when a model names an unoffered claim or cannot quote the step. A stricter
+    release boundary must examine ``ran`` AND ``refused`` as well as
+    ``contradicted``; ``consistent`` alone is not proof of verified support.
+    """
+    if not claims:
+        return NOTHING_TO_CHECK
+    try:
+        result = read(build_prompt(text, claims, file_note), CONSISTENCY_SCHEMA,
+                      "consistency", TIER)
+        metrics.record_call(result)
+    except ModelError as exc:
+        metrics.fire("G-MODEL", "unavailable", f"the consistency read could not run: {exc}")
+        return UNVERIFIED
+    except Exception as exc:  # noqa: BLE001 -- retained ERROR diagnostics, never a pass
+        metrics.violate("D3", f"consistency read failed: {type(exc).__name__}: {exc}")
+        return UNVERIFIED
+
+    verdict = interpret(result.data or {}, text, frozenset(claim.id for claim in claims))
+    if verdict.refused:
+        metrics.violate("D3", verdict.refused)
+    return verdict
+
+
+def checked_step(text: str, claims: tuple[Claim, ...], *, verify, repair, metrics,
+                 file_note: str = "", allow_repair: bool = True) -> tuple[str, Verdict]:
+    """One bounded repair, then the verified result or the original contradiction.
+
+    Injected ``verify(text, claims, *, file_note)`` and
+    ``repair(text, claim, verdict, *, file_note)`` keep provider authorization,
+    partial-output checks and accounting with the application's existing
+    transports. An unavailable second check cannot certify the rewrite.
+    """
+    verdict = verify(text, claims, file_note=file_note)
+    if verdict.contradicted and allow_repair:
+        named = next(claim for claim in claims if claim.id == verdict.claim_id)
+        repaired = repair(text, named, verdict, file_note=file_note)
+        if repaired:
+            second = verify(repaired, claims, file_note=file_note)
+            if not second.contradicted and second.ran and not second.refused:
+                metrics.fire(
+                    "G-CONSISTENT", "repaired",
+                    f"the step contradicted {named.id!r} and was rewritten once: {verdict.why}")
+                return repaired, second
+            verdict = second if second.contradicted else verdict
+    metrics.fire("G-CONSISTENT", verdict.state, verdict.refused or verdict.why)
+    return text, verdict

@@ -49,7 +49,8 @@ def _corpus(tmp_path: Path, denied: list[str]) -> CorpusEvidenceAdapter:
                 ("5", "a_5_1", "(1) the first sub-section"),
                 ("5", "a_5_2", "(2) a fragment of another table"),
                 ("6", "a_6_1", "(1) nothing but a fragment")]):
-            con.execute("insert into chunks values ('act_a', 'sub_section', ?, ?, 'bare_act', ?, ?)",
+            con.execute(
+                "insert into chunks values ('act_a', 'sub_section', ?, ?, 'bare_act', ?, ?)",
                         (chunk, json.dumps({"full_text": f"Act A . s.{section}: head\n{words}"}),
                          section, pos))
     (tmp_path / "contamination_denylist.json").write_text(json.dumps({"chunk_ids": denied}))
@@ -86,7 +87,8 @@ def test_an_act_document_counts_what_it_held_back(tmp_path):
 def test_a_judgment_document_counts_what_it_held_back(tmp_path):
     index = tmp_path / "authority.db"
     with sqlite3.connect(index) as con:
-        con.execute("create table paras(case_id, case_name, court, year, para_type, chunk_id, text)")
+        con.execute(
+            "create table paras(case_id, case_name, court, year, para_type, chunk_id, text)")
         for chunk in ("p1", "p2", "p3"):
             con.execute("insert into paras values ('c1', 'A v B', 'Supreme Court of India', "
                         "'2020', 'ratio', ?, ?)", (chunk, f"paragraph {chunk}"))
@@ -120,7 +122,8 @@ def test_no_caller_discards_what_the_screen_held_back():
     discarded, calls = [], 0
     for node in ast.walk(ast.parse(ADAPTER.read_text(encoding="utf-8"))):
         if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
-                and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "_screen":
+                and isinstance(node.value.func, ast.Attribute) \
+                and node.value.func.attr == "_screen":
             calls += 1
             target = node.targets[0]
             names = [e.id for e in getattr(target, "elts", []) if isinstance(e, ast.Name)]

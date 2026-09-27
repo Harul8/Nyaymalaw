@@ -4516,12 +4516,12 @@ items:
       mutation: "look an entry up by a neighbouring key, or add an entry without curated_from"
       expected_failure: "the lookup returns no curated table and the type refuses the entry"
   - id: BK-98-AC2
-    requirement: "a table entry never stands in for the provision it points to: the provision is retrieved and read back before the answer relies on it, and no section is mapped across the old and new codes by equal number"
+    requirement: "a table entry never stands in for the provision it points to: the exact provision is retrieved and read back before reliance, with its verified provision-version and effective interval on the governing date, not merely the Act's lifetime; an unavailable historical version is not assessed rather than replaced by current text, and no section is mapped across old and new codes by equal number"
     required_evidence: [domain_test, adversarial_test]
     evidence: {}
     negative_control:
-      mutation: "rely on an entry without retrieving its provision, or map an IPC section to the BNS by number"
-      expected_failure: "the reliance is withheld by G-GROUND and correspondence comes only from the curated table"
+      mutation: "rely on an entry without retrieving its provision, use current section text across an amendment without a dated version, or map an IPC section to the BNS by number"
+      expected_failure: "unsupported reliance is withheld; before and after a verified amendment the exact provision resolves to the respective source spans, unavailable history is not assessed, and code correspondence comes only from the curated table"
   - id: BK-98-AC3
     requirement: "every curated entry has a recorded counsel review against the actual section or judgment before any criterion relying on it is signed off"
     required_evidence: [counsel_review]
@@ -4560,12 +4560,12 @@ items:
       mutation: "execute an undeclared tool, act on malformed arguments, or let a provider tool format reach the core"
       expected_failure: "the call is refused and returned to the model, and the core check fails on a provider format"
   - id: BK-99-AC2
-    requirement: "every tool is declared once in a registry and returns one envelope -- found, not held, not found, not assessed or error, with its source, locator, index consulted and exclusions -- so a zero names its index; a closed vocabulary is required only as a tool's input key, and a tool absent from the registry cannot be called"
+    requirement: "every tool is declared once and returns the LB-154 envelope with separate execution outcome, capability availability, assessment and a kind-specific receipt: source reads carry store, version and exact locator, computations carry inputs, curated rule and calculation, action proposals carry approval and effect identity; non-document tools do not fabricate document locators, zero source matches name the index and exclusions, a closed vocabulary is required only as an input key, and undeclared tools cannot be called"
     required_evidence: [domain_test, adversarial_test]
     evidence: {}
     negative_control:
-      mutation: "return an empty list with no status, or call a tool the registry does not declare"
-      expected_failure: "the result is refused before the model sees it and the repository check fails the build"
+      mutation: "return an empty list with no assessment, omit a source-read locator or a computation/action receipt field, or call an undeclared tool"
+      expected_failure: "the malformed result or undeclared call is refused before model use; correctly shaped computation and action receipts without document locators are accepted"
   - id: BK-99-AC3
     requirement: "every step of the loop is a typed event appended in order to the turn's saved log, which survives a failed turn and is what the harness reads as process evidence"
     required_evidence: [domain_test, integration_test]
@@ -4588,12 +4588,12 @@ items:
       mutation: "drop the stream mid-turn, or stream an event the log does not hold"
       expected_failure: "the client resumes from its last sequence number and the stream and the log still agree"
   - id: BK-99-AC6
-    requirement: "the loop is built beside the pipeline and switched one kind of turn at a time: during the overlap both call one implementation of each gate, after a kind is switched no code path reaches its retired stage, and the cost per turn is a release row measured before a live turn is served"
+    requirement: "the loop is built beside the pipeline and switched one kind of turn at a time: overlap uses one implementation of each gate, a switched kind cannot reach its retired stage, each slice carries LB-43's explicit clause-to-criterion/evidence mapping and prerequisite closure before build or completion, and the absolute release bar including RG-32 and all-attempt RG-37 accounting is measured before live release"
     required_evidence: [domain_test, integration_test, production_measure]
     evidence: {}
     negative_control:
-      mutation: "call a copied gate on the loop path, reach a retired stage after the switch, or serve a live turn with its cost not measured"
-      expected_failure: "the repository check fails the build and the release row reads NOT MEASURED"
+      mutation: "call a copied gate, reach a retired stage, omit a selected clause or prerequisite from the slice record, exclude failed attempts from cost, or serve a live turn with the release bar not measured"
+      expected_failure: "the affected slice or switch is refused and an unmeasured required release row reads NOT MEASURED; comparative improvement never offsets an absolute failure"
 - id: BK-100
   title: "the loop's answer is checked, repaired and independently verified on every channel"
   kind: substrate
@@ -4619,12 +4619,12 @@ items:
       mutation: "submit an answer with one fabricated quotation, or edit the answer after its check"
       expected_failure: "it is repaired or withheld with its reason, and the edited answer is refused"
   - id: BK-100-AC2
-    requirement: "an independent verifier -- never the author and never shown the conversation -- gives its reason first and judges each claim against its cited passage, filling LB-103's assessed states; its tier and agreement are set by a labelled measurement counting both error directions"
+    requirement: "an independent verifier, never the author and never shown the conversation, reasons over LB-141's typed evidence package including spans, established premises and contrary material; it checks textual support and, for applied assessments and derived recommendations, applicability, inference and unresolved opposition, including the final conclusion itself; author labels cannot bypass those judgments, partial support releases only a self-contained supported part, unavailable verification withholds decisive conclusions and their dependants, and tier/agreement are measured counting both error directions"
     required_evidence: [domain_test, adversarial_test, model_eval]
     evidence: {}
     negative_control:
-      mutation: "cite a real passage for a proposition it does not state, or let the author grade its own claim"
-      expected_failure: "the claim is marked does not support and repaired, and the self-grade is refused"
+      mutation: "cite a real passage for a proposition it does not state, infer an invalid conclusion from correct premises, label applied advice as a textual claim, release a decisive recommendation on partial/unavailable verification with a disclaimer, or let the author self-grade"
+      expected_failure: "the unsupported claim, invalid inference and affected recommendation are repaired or withheld, the classification bypass and self-grade are refused, and independent fully checked material remains releasable"
   - id: BK-100-AC3
     requirement: "every number and date in an answer maps to a computation tool's result or to the advocate's or a document's own words; an unmatched figure goes to repair, and a figure resting on an inferred premise is labelled conditional"
     required_evidence: [domain_test, adversarial_test]

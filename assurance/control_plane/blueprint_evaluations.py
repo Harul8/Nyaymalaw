@@ -87,6 +87,7 @@ MEDIA_ALLOWED = frozenset(
         "recording_local_diarisation",
         "user_confirmed_attribution",
         "evidence_based_legal_assessment",
+        "local_document_text_extraction",
     }
 )
 MEDIA_CRITERIA = frozenset({"BK-69-AC3", "BK-79-AC3", "BK-88-AC4"})
@@ -162,6 +163,9 @@ AUTONOMY_ZERO_OBSERVATIONS = {
 # A changed product policy must change this independent control explicitly too.
 MEDIA_POLICY = {
     "attribution_is_authentication": False,
+    "operation_constraints": {
+        "local_document_text_extraction": {"processing_location": "local_only"},
+    },
     "procurement": {
         "scope": "selected_operation_and_configuration",
         "hidden_processing": "verify_absent",

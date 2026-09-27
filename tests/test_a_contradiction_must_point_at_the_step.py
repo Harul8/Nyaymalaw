@@ -13,7 +13,6 @@ refusing here deletes the advice.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import consistency
 
 pytestmark = pytest.mark.class_a

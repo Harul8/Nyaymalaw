@@ -53,7 +53,16 @@ from typing import Any, Mapping
 
 from nm.domain.reads import is_decisive
 from nm.domain.text import refuses_blank_text
-from nm.ports.model import EmbeddingResult, ModelPort, ModelResult, Prompt, Tier, TierUnavailable
+from nm.ports.model import (
+    EmbeddingResult,
+    ModelPort,
+    ModelResult,
+    Prompt,
+    Tier,
+    TierUnavailable,
+    ToolCallResult,
+    tool_request_text,
+)
 
 #: How much of a prompt or an answer is kept per call.
 #:
@@ -164,6 +173,8 @@ def _is_empty(result: ModelResult, schema: Mapping[str, Any] | None = None
     that omits a key the schema declares REQUIRED. That is the model failing
     to produce the shape it was asked for, and it is rare.
     """
+    if isinstance(result, ToolCallResult):
+        return not result.calls and not (result.text or "").strip()
     if result.data is None:
         return not (result.text or "").strip()
     if not result.data:
@@ -225,6 +236,13 @@ class TracedModel:
                             lambda: self.inner.complete(
                                 prompt, tier, max_tokens=max_tokens))
 
+    def tool_call(self, prompt, tools, tier, *, messages=(), max_tokens=None):
+        trace_prompt = Prompt(user=tool_request_text(prompt, tools, messages),
+                              system=prompt.system, operation=prompt.operation)
+        return self._traced("tool_call", prompt.operation or "tool loop", trace_prompt, tier,
+                            lambda: self.inner.tool_call(
+                                prompt, tools, tier, messages=messages, max_tokens=max_tokens))
+
     def structured(self, prompt: Prompt, schema: Mapping[str, Any],
                    tier: Tier, *,
                    max_tokens: int | None = None) -> ModelResult:
@@ -279,6 +297,9 @@ class TracedModel:
                 ordinal=len(self.calls) + 1, kind=kind, read=read,
                 tier=tier.value, model="", provider=self.inner.provider,
                 latency_ms=int((time.perf_counter() - started) * 1000),
+                tokens_in=getattr(getattr(exc, "usage", None), "tokens_in", 0),
+                tokens_out=getattr(getattr(exc, "usage", None), "tokens_out", 0),
+                retries=getattr(exc, "retries", 0),
                 system=_clip(prompt.system), user=_clip(prompt.user),
                 failed=f"{type(exc).__name__}: {exc}"))
             raise
@@ -292,10 +313,10 @@ class TracedModel:
             cached_tokens=result.usage.cached_tokens,
             retries=result.retries,
             downgraded_from=(result.downgraded_from.value
-                             if result.downgraded_from else None),
+                             if getattr(result, "downgraded_from", None) else None),
             system=_clip(prompt.system), user=_clip(prompt.user),
-            answer=_clip(result.text if result.text is not None
-                         else str(result.data)),
+            answer=_clip(str(result.calls) if isinstance(result, ToolCallResult)
+                         else (result.text if result.text is not None else str(result.data))),
             empty=_is_empty(result, schema)))
         return result
 

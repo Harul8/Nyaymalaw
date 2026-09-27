@@ -47,3 +47,29 @@ def require_permission(directory, account_id: str, config) -> None:
             "Your workspace and matters remain available.")
     if permission.notice_version != NOTICE_VERSION:
         raise ModelPermissionRefused("Read the current AI data-sharing notice before continuing.")
+
+
+def bind_text_model(adapter, *, directory, account_id: str, config,
+                    session_current, audit=None):
+    """One request-bound permission owner for author and independent verifier.
+
+    The provider adapter rechecks this owner on every attempted dispatch,
+    including retries. The outer existing policy wrapper also measures and
+    polices the request. A configured key or an evaluation grant is not consent.
+    """
+    from nm.adapters.model.policed import PolicedModel
+    from nm.adapters.model.traced import TracedModel
+
+    if not callable(session_current):
+        raise ModelPermissionRefused("AI processing requires its current authenticated session.")
+
+    def authorize():
+        if not session_current():
+            raise ModelPermissionRefused(
+                "Your session no longer permits AI processing. Sign in again to continue.")
+        require_permission(directory, account_id, config)
+
+    authorize()
+    return PolicedModel(
+        inner=TracedModel(inner=adapter.for_matter_text(authorize)),
+        policy=text_policy(), audit=audit, authorize=authorize)

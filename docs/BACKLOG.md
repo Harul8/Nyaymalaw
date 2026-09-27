@@ -8870,3 +8870,357 @@ re-sequencing the owner decides at the switch (LB-138); until then they are name
 The slice order is the review's revised proposal (born-digital PDF text in slice 2) and remains the owner's to
 confirm. Each packet's proof cites existing evaluation cases; dedicated cases for the loop are not yet
 specified.
+
+## 27 September 2026 — legal-brain contract refinements
+
+Owner authorised the six refinements from the review of `b0190a1` with "ok, go".
+This is a bounded plan/control-plane change, not authority to mark the legal brain built,
+run a full Class-A gate, or run a paid/golden/browser evaluation.
+
+| Work | Delivery owner | Status and proof planned |
+|---|---|---|
+| Remove the remaining full-answer, answer-or-question and universal-locator contradictions; mirror both workbook views | LB-163/165, LB-161, LB-143; BK-99-AC2 | Contract amendment complete; saved-cell preservation and reconciliation checked; future tool implementation remains pending |
+| Resolve packaged item ownership consistently in resolution and slice readiness | LB-43-AC4 | Implemented and locally tested; one packet-scoped mechanism in resolve and slice_blockers, 21 focused invariant tests passing |
+| Explicitly verify derived recommendations, prohibit classification-based bypass and define release on unavailable/partial verification | LB-141; BK-100-AC2 | Specification complete; typed evidence-package measurement and future verifier implementation/product controls remain pending |
+| Require dated provision revisions, with no present-text substitution when historical text is unavailable | LB-156; BK-98-AC2 | Specification complete; historical revision selection and before/after amendment/unavailable-history product proof remain pending |
+| Define RG-32 evaluation tolerance separately from runtime permission, and include every attempt in RG-37 cost accounting | LB-40; BK-99-AC6 | Measurement contract complete; numeric thresholds preserved; measurement runner and qualified results remain pending |
+| Require explicit clause/evidence mapping and prerequisite closure for each selected build slice | LB-43, LB-138 | Specification complete; coverage checker and approved per-slice maps/closure remain pending; ownership CLI explicitly reports only row ownership |
+
+General defect shapes: S1/S6 (unassessed or partial proof treated as clean), S7
+(acceptance contradicting the rule), S9 (different owners stating different contracts),
+and S11 (current text or evidence used for a different version). Existing requirements
+are amended rather than creating six competing delivery items.
+
+**How the change was made.** Nine Before Build requirements were amended (LB-40,
+LB-43, LB-138, LB-141, LB-143, LB-156, LB-161, LB-163, LB-165) and mirrored into
+Implementation Plan through the reconciler's existing column mapping. The answer/question
+row is LB-161, not LB-158 as labelled in the preceding review. Original owner descriptions,
+row order, styles, validations, sheet controls, tables, annotations and unrelated cells
+are preserved: 79 cells intentionally changed, zero unrelated-cell/native-feature changes,
+and no workbook package parts added or removed. The population is 193 requirements and
+501 clauses, including four newly specified negative/positive acceptance controls.
+The bundled Artifact Tool package was absent, so its permitted openpyxl fallback was used
+through one reproducible workbook tool with source-digest preconditions and independent
+saved-byte preservation checks. Expanded reading previews were inspected; they are not
+Excel layout-engine renders. The workbook was replaced only after preservation,
+reconciliation and ownership checks passed; the original is retained in the local run
+output directory.
+
+Registered criteria BK-98-AC2, BK-99-AC2/AC6 and BK-100-AC2 now state the same contracts.
+P51's input names labelled evidence packages, not merely claim-passage pairs. No future
+criterion's empty evidence was promoted. RG-32 and RG-37 retain their approved numbers,
+owners, cadence and blocking flags. The ownership fix uses one `registered_claims`
+mechanism: bare items expand only registered criteria in locally paired packets;
+invalid/declared rows cannot cover a criterion. The CLI no longer says a slice "may start"
+when only row ownership passed.
+
+**Local verification, over the completed amendments:** 136 tests passed in 19.24 seconds
+across requirement ownership, release-row retention, workbook scenario/reconciliation,
+blueprint mapping, exact named-Act reads and curated-table coverage. Blueprint check:
+zero specification problems. Plan/scenario check: zero problems, 19 generated feature
+files (74 other planned features still lack executable Gherkin). Ownership: 48 owned
+rows/162 clauses, four declared rows/13 clauses, 141 unowned rows/326 clauses, zero
+invalid references. Whitespace checking and undefined/conditionally-defined-name checking
+passed. Scoped Ruff passed excluding only the 17 pre-existing E501 line-length findings;
+this is not a claim that unmodified lint rules are fully green.
+
+**Gate evidence is not refreshed.** Backlog lint reported 19 stale-evidence findings:
+one Class-A artifact and 18 browser-journey references belong to an older source identity.
+No full Class-A, browser/golden run or paid-model evaluation was run, and no gate stamp or
+passing artifact was manufactured. These local checks do not certify professional quality,
+release readiness, the new verifier, historical section versions, or clause-level coverage.
+<!-- legal-brain-build-20260927 -->
+
+## 27 September 2026 — legal-brain end-to-end build (active)
+
+**Authority:** owner requests completing partial and missing legal-brain engineering. Preserve the existing professional controls, grounded facts/law, conversational presentation, and requirement ownership. The approved live batch is fictional matters only, GPT-4o mini, **USD5 total across at most 60 matters**; no live batch has run at this start record. Human legal review is not replaceable by an automated PASS.
+
+| Block | Current engineering status | Method and completion bar |
+| --- | --- | --- |
+| Criterion-level execution map and prerequisite closure (LB-43/LB-138) | Controlled map built; acceptance open | All six slices enumerate exact clause promises and prerequisites; no planned check or module existence derives acceptance. |
+| P49 provider-neutral tool calling and bounded loop | Controlled foundation built; packet partial | Actual provider-neutral dispatch, sealed events, pinned scope/source/provider/resource admission, cancellation, stagnation and replay. Recorded/synthetic only; no normal-client cutover. |
+| P50 tool envelope, registry and document text | Controlled foundation built; catalogue partial | Typed read/source/practice/write/calculation contracts and bounded local PDF/DOCX/text extraction. Missing reviewed calculations/indexing/media owners stay unavailable. |
+| P51 loop checks, independent verifier and bounded repair | Integrated private foundation built; publication partial | Saved exact packages reach a distinct verifier and all 18+6 final slots; absent owners remain unassessed. Actual output failures alone invite repairs, sharing all task limits. |
+| P52 saved, resumable progress and conversation presentation | Safe saved-work presentation built; packet partial | Owned History/progress and released-turn attachment; historic dispute labels, no private deliberation or unreleased advice. Separate dispute assessments and answer streaming remain open. |
+| P53 checked-file context and principles | Controlled foundation built; orchestration partial | Versioned principles, append-only requests, separate uncertainties and checked recovery/compaction, including fresh task/source-pinned research contexts. Automatic orchestration/compaction remain open. |
+| Legacy legal-brain partials and P54 evaluation/cutover | NOT COMPLETE; live acceptance NOT_RUN | Absolute and relative qualified evaluations, live batch, remaining owners and owner cutover decision remain mandatory. No synthetic candidate creates a client TurnReceipt. |
+
+**Recording rule:** update this record with paths, commands, actual results and remaining qualifications after each logical block. A test for a new module alone is not live product completion. Prior refinement changes in this tree are preserved. No gate bypass, fabricated counsel review, scenario-specific prompt patch or inherited old live budget is authorised.
+
+**Measured integration checkpoint:** 315 selected controls passed together, including real
+Application composition, actual sealed writes, exact saved independent verdicts, private
+repair, calculation bindings, checked research recovery and saved-work presentation. The
+selection was independently collected as 315; it is not canonical Class-A evidence.
+Additional served Chromium checks are controlled/scripted, not owner Chrome or a paid
+model evaluation. Layercheck passes across 239 modules; plan reconciliation reports
+19 feature files, 0 problems, while 74/93 planned features lack executable Gherkin.
+The six selected maps contain 119 contracts, 109 unique clauses, 31 unique rows; the
+whole legal-brain universe is still 193 rows/501 clauses. This is not whole-universe
+coverage: ownership currently remains 48 owned/141 unowned/4 declared.
+
+**General defects repaired during integration:** changed dispute or substantive source
+cannot inherit a finished retry; a provider/model cannot switch between rounds; research
+compaction cannot erase its task/windows; immutable screen/corpus/file failures cannot
+be repaired by model wording; independent judges share the step allowance and context
+assembly/final checks share elapsed time. Tests include rejecting controls and genuine
+saved-loop callers. No matter-specific answer or law was inserted.
+
+**Workbook record:** Before Build J and its Implementation Plan mirror carry two dated
+partial-build records. The second changes 32 named cells across eight rows; independent
+saved-byte checking preserves all 193 requirements/501 clauses, unrelated cells and native
+features. Original descriptions/current requirements/acceptance wording are unchanged.
+Authoring manifests and preservation checks are in
+`development_environment/one_off_tools/legal_brain_*_20260927.*` and the corresponding
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-build-20260927/` folder.
+
+**Still open:** complete tool coverage, admitted-upload text search, reviewed calculation
+selection and historical statutory revisions; real consistency/currency/derivation/duty
+subjects and accountable publication; automatic research/opposing tasks, advocate memory,
+per-dispute progress and final streaming; qualified absolute/relative measurements and
+owner LB-134 decisions. The current ordinary chat path remains TurnEngine. The live
+distinct-model verifier approval and owner Chrome session are still pending. **US$0 spent;
+no paid batch, gate promotion, staging, commit or push.**
+
+### Continuing engineering — 27 September 2026
+
+| Block | Status | Implementation and verification plan |
+| --- | --- | --- |
+| Admitted local document search and exact quotation | In progress | Trusted quarantine/admission and explicit analysis purpose; bounded originals; encrypted derivative receipts; exact source/unit quotation; restricted/held/erased/restored-state controls. No model clears quarantine. |
+| Saved final consistency, duty and currentness subjects | In progress | Existing domain owners and exact sealed original run, distinct validation receipts, shared budget; unknown inputs remain unassessed; private atomic publication cannot replace client cutover approval. |
+| Nested research and opposition orchestration | In progress | Source-pinned fresh child contexts, read-only tools, parent as sole writer, shared step/time/cost/token limits and durable reservation before dispatch. |
+| Actual private evaluation HTTP transport | In progress | Authenticated ownership, CSRF, current version and expiring installation-owned finite scope. No approval in an HTTP body, no private candidate or raw question on the wire, no ordinary-client cutover. |
+
+**Gate observation:** canonical gate attempt was explicitly terminated while its own
+pylint child had consumed over 26 CPU minutes. It did not complete and generated no
+passing evidence. A separate canonical Ruff population reports 1,768 findings in the
+broader tooling scope; these are not being hidden with exclusions or an authored PASS.
+Focused checks continue while engineering is in progress. Scope-specific checks are
+not a substitute for eventual canonical verification.
+
+**Live approval update:** owner permits GPT-5.1 sparingly for independent verification,
+with GPT-4o mini as author, sharing the same USD5 total fictional-matter ledger.
+No paid calls have run. Account-only preview/cutover remains an explicit pending choice.
+
+### Next integration closure — 27 September 2026
+
+| Planned change | Status | General mechanism and proof required |
+| --- | --- | --- |
+| Shared money and authenticated dispatch for both evaluation models | Implemented; focused verification in progress | Exact dated pins; one non-resettable ledger; verifier-only capability; the existing account-permission/session owner at every dispatch and retry. Revocation must refuse before another reservation or provider request. |
+| Quarantine checker paired with its actual destination | Implemented; 107 joined controls passed | Existing MEDIA policy before retention and every call, measured bytes, explicit paired processor ID; no guessed scanner approval. An injected object's earlier construction remains a trusted installation input. |
+| Current admitted document words in independent review | Implemented; 15 document controls passed | Actual encrypted upload/derivative/quotation/journal path, separate typed document spans and dependencies, exact re-read before review and private publication. Documents never become public legal authority or proven events. |
+| Conversational checklist semantic classification | In progress | Exact source/requirement/attributed account, independently judged from the saved work. Provenance alone cannot turn a denial into HELD. Absent or failed review remains outstanding; history is preserved. |
+| Independent event observations on a fresh file | In progress | Several events in one contribution retain separate source-bound interpretations. Never put one selected date on the whole account or borrow another event's clock. No model-issued human confirmation or deadline. |
+| Nested research source-generation closure | In progress | Decode the actual child source receipts through the shared capture owner. An aggregate source-set fingerprint is not the corpus generation and cannot silently satisfy a current-generation check. |
+| API-controlled live evaluation | NOT_RUN | Owner Chrome is disconnected. Separate authenticated evaluation identity/permission awaits confirmation; no fabricated qualification, professional sign-off or browser evidence. Both models retain the same USD5 cap. |
+
+All entries remain private engineering progress, not acceptance or release. The remaining
+calculation applicability resolver, conversational-only loop terminal, live comparative
+quality, full requirement coverage and normal-client cutover are not certified by these
+controls. No canonical gate or counsel evidence is promoted here.
+
+### Source reuse, offers and opposition closure — 27 September 2026
+
+| Change | Status | General mechanism and acceptance boundary |
+| --- | --- | --- |
+| Independent checklist review through the application | Implemented; selected controls passed | Four derived states require actual saved distinct-model relevance judgments on exact attributed responses. The legacy structural exception remains declared, not retrospectively certified. Cached law requires current exact source ownership. |
+| Source identity and concurrent projection correction | Implemented; joined verification in progress | A repeated passage in another document cannot certify reuse. SourceDocument records its exact locator and kind. The actual corpus reader supplies the receipt; request-bound checks compare the captured file version before and after reading. Changed text, unavailable readers, foreign publications, revoked sessions and concurrent corrections refuse certification. |
+| Request-local checklist derivation | In progress | Build the independently checked row projection once, reuse the existing completion/due/summary rules on that exact subject, and avoid source reads for parent journals that have no relevant sealed judgment. Do not cache mutable legacy corpus text as current. |
+| On-demand schemas on the real controlled lead loop | Implemented; joined verification in progress | Only exact schemas from a successfully checked, saved inspection enter later requests. Discovery does not grant authority. The full registry remains frozen; actual offered subsets are journaled and replayed. Children still have bounded read-only catalogues; reviewed playbooks and live efficiency remain open. |
+| Three private opposition-work roles | In progress | Early dispute, full dispute and cross-matter roles use the existing bounded research dispatcher and actual saved source receipts. The lead chooses relevant work. Status derives from saved current bases; reuse never pretends to run a new model. The full-pass key-detail threshold is still an owner decision, and work execution is not independently verified legal completeness. |
+
+**Interim measurements:** 165 joined application/document/conversation controls passed;
+78 shared-budget/account-permission controls passed; 80 independent-checklist/source/
+mutation/review controls passed. A later source/projection/legacy run found one new
+registry-policy enum needing its declared closed-policy contract (62 passed, one failed).
+The final joined result will be recorded after all shared files are frozen. No paid
+calls, browser evidence, gate promotion, staging or commits are claimed by this entry.
+
+### Checked fictional preview and conversation continuity — 27 September 2026
+
+| Work / diagnostic | Status | General mechanism and actual boundary |
+| --- | --- | --- |
+| Private question/acknowledgement wording transport | Implemented; selected controlled checks passed | Independently inspect the whole exact text with separately nullable non-merits, faithfulness, relevance, peer-register, proportionality and safety judgments. A question containing legal advice cannot bypass claim review. All private words remain not client-ready. |
+| Saved verdict disagreed with actual returned judgment | Corrected; rejecting controls passed | All live/replayed consumers use the same interpretation of the actual completed verifier response. A forged positive saved STOP cannot override a contradictory returned judgment. |
+| Empty and flat read-only contexts rejected as false registry drift | Corrected; 83 regression controls passed | One kind-aware initial-offer owner preserves empty historical/read-only context, refuses empty provider dispatch, and checks flat/on-demand inventory with the actual distinct registry contracts. The earlier 1427-pass/22-failure cumulative artifact remains red, not retrospectively promoted. |
+| Late checked preview lost its consent/source guard | Corrected; ten rejecting controls passed | Recheck exact source generation/law, documents, principles and actual account permission after recovering the checked words, in addition to final file/session/grant checks. False-like or absent permission never grants author-factory access. |
+| Actual fictional-only display/history acknowledgement | Implemented; 41 controls passed | Re-read the current checked preview, then write a sealed empty-body idempotent receipt through the existing journal/CAS owner. No submitted words, client TurnReceipt, Matter.asked, fact or human-attention claim is accepted. |
+| Author sees shown questions only as locator stubs | In progress | Reuse the sealed display-history owner in a bounded lead context anchored at the admitted initial version. Previously unseen candidates and later acknowledgements cannot alter exact retry identity; ordinary client delivery remains untouched. |
+| Separate private preview UI | Implemented; 15 controller and two Class-A controls passed | Left matter board, checked natural paragraphs, compact clearing composer, same request ID retry and explicit display-history failure. Verified private reader hyperlinks remain pending. |
+| Updated server preserves ordinary settings | Prepared; runtime reload pending | Trusted author factory applies only to the finite owner-approved fictional files. Normal application settings are preserved; shared evaluation ledger is separate. No normal-client cutover or account consent is granted. |
+
+**Owner/browser:** Chrome is connected; the owner signed in. Fictional evaluation
+matter `m_c2984671216c5ca6ed8a8ff50238a6e2` was opened through the actual UI.
+The owner approved its expiring scoped preview. No chat/paid call at this checkpoint:
+**US$0 spent**, one persistent USD5 total ledger, GPT-4o mini author, GPT-5.1 verifier
+only and sparingly. Actual complex-matter live quality remains NOT_RUN here.
+
+**Workbook:** build record 3 updates both Before Build and Implementation Plan.
+Saved-byte checks retain all **193 requirements / 501 clauses**, with **69 targeted
+cells changed, zero unrelated cells/native features/style changes, zero cell errors**.
+Requirements and acceptance text are untouched; records remain acceptance incomplete.
+No canonical gate promotion, counsel sign-off, staging, commit or push is claimed.
+
+### Actual preview diagnostics and protocol correction — 27 September 2026
+
+| Diagnostic / planned correction | Current status | General mechanism and evidence boundary |
+| --- | --- | --- |
+| Default certificate bundle could not verify the endpoint | Corrected for the trusted fictional operator launcher; first failed spend remains unknown | Non-billable comparison with existing OS roots; certificate/hostname verification retained, redirects and implicit proxy disabled. No new CA, insecure fallback or ordinary client configuration change. |
+| Provider returned ordinary prose instead of a typed tool action | Protocol corrected; fresh browser retest pending | OpenAI tool requests require a tool call; Anthropic requests its equivalent. The ordinary completion/structured ports are unchanged. Noncompliant returned prose is still charged, journaled and withheld, never reinterpreted as a checked answer. Twelve new plus 86 existing controls passed. |
+| A stopped request looked like an unfinished successful response | Implemented and tested | Closed messages for the whole stopped-state enum; no internal exception or private model content. Eighteen joined Python transport/presentation and 23 Node controller checks passed. Actual Chrome showed the interrupted state. |
+| Original user message could not reopen in saved History | Implemented; joined transport verification in progress | Save source-bound input before dispatch; legacy fallback only to the actual first request. Separate escaped user bubble, typed provenance and exact text identity. Missing input stays missing; there is no model/system/tool fallback and no paid dispatch from a read. |
+| Optional file-maintenance tools are not explained by the author guide | In progress | Proportionate substantive matter work should retain relevant source-bound assertions and distinct disputes, using discovered permitted tools. No fixed intake sequence, guessed links or conversion of allegations into established facts. This guidance still needs live behaviour measurement. |
+
+**Actual live work:** two owner-account fictional browser interactions are saved,
+neither passed. The second made two measured GPT-4o mini requests, 7,043 input /
+815 output tokens, USD0.001547. The first TLS failure retains its USD0.03 unknown-
+outcome reservation. The shared ledger is therefore charged **USD0.031547**; no
+GPT-5.1 request at this checkpoint. No retrieved law, board population or completed
+complex journey is inferred from provider billing or safe withholding.
+
+Workbook build record 4 records these failures in both views: **16 targeted cells,
+193 requirements / 501 clauses retained**, zero unrelated values/native features/
+style changes and zero cell errors. Acceptance remains incomplete. No canonical
+gate evidence, legal sign-off, staging, commit or push is created by this entry.
+
+### Exact review units and sealed-input continuity — 27 September 2026
+
+| Planned correction | Status | General mechanism / verification |
+| --- | --- | --- |
+| Independent reviewer counted only part of the proposed text | Implemented, focused checks passed; fresh browser verification pending | Versioned whole-text server-owned unit; numeric bounds derived in code, semantic judgments and exact quotes still judged independently. Historic v1 stays strict, no redispatch or manufactured PASS. |
+| Question-only turns lost earlier advocate inputs | Implemented, focused checks passed | One actual sealed-input selector with actor/file/mode/terminal/before-version checks; earlier words remain attributed unconfirmed data, not current instructions or facts. Missing or oversized input refuses rather than silently substitutes/truncates. |
+| Current-source tools could not admit an earlier supplied account | Implemented, focused checks passed | Separate strict `record_prior_instruction` capability, same file-mutation owners and one CAS writer; original provenance preserved. Existing six current-write schemas unchanged. |
+| Failed wording looked like work that could still finish | Implemented, focused checks passed | Safe failed state, no paragraphs or seen receipt, original input retained, terminal retry state cleared without another paid dispatch. |
+| New prompt site/schema absent from the reviewed inventory | Registered and checked | Actual assembled v2 prompt included; schema population 24→25 with both v1/v2 explicitly present; semantic and negative-wire assertions unchanged. |
+
+Joined integration: **123 passed** (19.90 seconds). Separate scoped populations:
+125 review, 148 continuity, 86 prompt-inventory, 26 Node controller tests passed.
+Layercheck 272 modules, exact guide owner zero problems, scoped Ruff clean. No
+full Class-A, expert-quality acceptance, client cutover or professional review
+is established by these selected checks.
+
+Actual third browser interaction is saved but failed: GPT-5.1 judged the question
+positively but covered 164 of its 173 characters. No question was shown as checked.
+Latest shared ledger charge **USD0.048467**, including USD0.03 unknown reservation;
+five measured mini author requests and one measured GPT-5.1 verifier request.
+No retrieved law, recorded disputes or successful complex journey yet.
+
+Workbook build record 6 updates both views: **42 targeted cells**, all 193 rows /
+501 clauses retained, zero unrelated values/styles/native features/cell errors.
+Historical failures remain failures. Pending acceptance and broader unowned work
+remain explicit. Nothing staged, committed, pushed or canonically promoted.
+
+### Fourth live diagnostic and proportionate substantive work — 27 September 2026
+
+**Recorded:** actual browser interaction `pv_3e34adbd_867f_4a00_ad7c_f2e015ef1cd5`.
+The restarted server was current (`serving=tree=3918500095e78077`). Earlier input
+was present in the actual dispatch; do not attribute this failure to lost context.
+The author read the empty file and proposed an acknowledgement promising later
+assessment. No law, recording or assessment occurred. The independent judge
+rejected faithfulness and omitted required current-instruction support for its
+positive safety judgment. The response was not displayed or marked seen.
+
+| Planned generalized improvement | Status | What establishes it |
+| --- | --- | --- |
+| Missing premises block dependent conclusions, not useful independent work | Implemented; 155 joined guide/prompt/protocol controls passed | Shared single guide, actual assembled requests, retained uncertain/corrected attribution and planted conflicting-guide controls. Conditional work still needs supplied facts, retrieved law and permission. No fixed scenario or tool sequence. |
+| Perform substantive work rather than terminate with a promise to do it | Implemented; same focused population passed | Final wording must reflect actual work or an honest limit/necessary question. A queue claim needs an actual owned task/receipt; no such queue is fabricated. Live compliance remains pending. |
+| Separate completed negative wording review from missing/unassessed review | Implemented; 43 served controls passed | False → failed, missing/null → pending, every required true → checked. No extra dispatch, empty unchecked paragraphs, no seen receipt or client release on failure. Twelve new criterion-by-criterion actual-route false/null controls and historical/scoped/stopped regressions passed, 173.96 seconds. |
+
+Shared ledger charged **USD0.071173**, including the retained USD0.03 unknown
+reservation; seven measured mini author and two measured GPT-5.1 verifier calls.
+Four interactions saved, none a completed successful legal journey. Fresh paid
+work paused during diagnosis and controlled testing. Workbook record 7: 30 cells,
+193 rows / 501 clauses preserved, no unrelated value/style/native-feature changes
+or errors. No full Class-A, professional sign-off, staging, commit or push.
+
+Workbook build record 8 now records completed generalized guide work and honest
+review states in both views: **25 targeted cells**, 193 rows / 501 clauses
+preserved, no unrelated value/style/native-feature changes or cell errors.
+The final guide/reader build has now been restarted and verified current:
+`serving=tree=aadacbdbee621594`. Chrome reload requires sign-in; the owner was
+asked to reauthenticate. No fifth paid interaction has run. Same finite fictional
+approval, expiry and US$5 ledger remain; no session protection is bypassed.
+All four original failed interactions remain failed.
+
+### Fifth live diagnostic: inaccessible owner pin — 27 September 2026
+
+**Observed:** `pv_8097bf49_2f92_4117_80fd_51cb70f252ae` stopped after four actual
+mini requests: file read, two capability discoveries, then owner-guide read.
+The guide read required the admitted guide hash, but all four dispatched
+requests omitted that hash. The author guessed `1.0`; the strict boundary
+correctly refused it. No factual recording, law retrieval or judge call occurred.
+Original input and failure remain in history. Ledger charged USD0.076274,
+including the unchanged unknown USD0.03 reservation.
+
+| Generalized work planned | Status | Completion rule |
+| --- | --- | --- |
+| Make a required opaque owner pin available from its trusted captured owner | Implemented; controlled checks passed | The provider-neutral context exposes its captured guide identity for flat and on-demand offerings, initial dispatch, recovery and compaction. No model chooses authority. |
+| Preserve exact currentness and permission refusals | Controlled checks passed | Wrong argument, changed live guide, altered captured identity and registry drift still refuse. No former failed response is upgraded. |
+| Verify the served contract and resume the same browser matter | Guide read verified live; full journey pending | The sixth actual interaction successfully read the admitted guide. Its independent wording evidence was malformed and withheld; this is not successful legal assessment. Original history, ledger and finite expiry are preserved. |
+
+Sweep: the owner-guide read is the only model-callable `expected_version`
+argument. Other version fields are trusted service/CAS inputs or arrive through
+captured source receipts. Reuse `ContextSession` as the sole context owner rather
+than duplicating guide text or adding scenario routing.
+
+**Implemented and controlled-tested:** the shared provider-neutral context now
+exposes its captured owner guide identity exactly once, without changing the
+tool schema or any permission/currentness test. The focused contract/context/
+catalogue population passed 83 tests (2.94 seconds); loop, offer-loading,
+checked-preview transport and historical-failure regressions passed 89 tests
+(47.65 seconds). Touched-file Ruff is clean. Missing/wrong/duplicate saved pins
+are refused; old prefixes are not silently regenerated as proof.
+
+Workbook record 9: 15 targeted cells in both views, all 193 requirements / 501
+clauses preserved, zero unrelated value/style/native-feature changes or cell
+errors. Its single builder now previews the actual selected progress rows rather
+than a fixed unrelated row. Actual successful browser work is still pending.
+No canonical gate, evidence promotion, stage, commit, push or client cutover.
+
+### Sixth live diagnostic: required review evidence and known availability — 27 September 2026
+
+**Measured:** `pv_a81a01c1_941b_40b6_b02f_73f740a7287d` successfully read the exact
+guide after the shared captured identity fix. It then proposed a question. All
+six raw independent booleans were true, but positive instruction safety cited
+no current original-instruction words. The strict interpreter correctly refused
+the incomplete proof. The proposed question also returned to an availability
+gap already described by the advocate; whether the underlying right exists is
+still unknown and must not be equated with missing paperwork. No words were
+shown, no disputes or facts were recorded and no law was retrieved. All six
+original interactions remain diagnostic history, not passed legal work.
+
+| Generalized improvement | Status | Verification required |
+| --- | --- | --- |
+| Put mandatory review evidence roles in the owned schema, not only prose | Implemented; 169 joined controls passed | Explicit protocol three requires response/current-instruction quote slots as applicable. Exact quote checks and independent semantic judgments remain binding; old protocols and failures are not upgraded. |
+| Distinguish known unavailable material from unknown substance/existence | Implemented; controlled guide/prompt checks passed | One guide plus generated consumer, actual-dispatch and contradiction controls. A repeated availability request needs a changed basis or distinct question. Semantic calibration remains open. |
+| Justify a question-only stop on a substantive request | Guide and review contract implemented; controlled checks passed | Use accessible checked-file/source capabilities before concluding no useful authorized work is supportable. No mandatory scenario/tool chain or recalled law. Actual model compliance remains unproved. |
+| Retest the resulting interaction through the actual browser | Deferred at owner's request; not run | The shared finite grant, USD5 ledger, cheap author and separate verifier stay unchanged. No seventh live interaction was dispatched. A safe stop is not successful legal judgment. |
+
+Charged ledger USD0.102957: fifteen measured mini requests USD0.015896, three
+measured GPT-5.1 reviews USD0.057061, and the retained unknown USD0.03 reservation.
+No credentials, qualifications or real-client permission changes are manufactured.
+
+**Current update closed; work stopped at the owner's request.** Protocol three
+has one owned registry shared by composition, grants, verifier permissions,
+saved checks and historical display. False/null judgments stay false/null;
+legal/action/unknown units cannot obtain a non-merits exemption. Mandatory exact
+quotes are validated against their owned response/current-instruction roles.
+The 36 new controls include the actual served checked read, display
+acknowledgement, history and free repeated read; the joined communication,
+served and model-owner population passed **169 tests**. Final prompt/discovery/
+clarification/model-owner regression passed **124 tests**; browser-controller
+checks passed **26 tests**. These populations overlap and are not a unique sum.
+Layercheck: 272 modules OK; guide ownership: zero problems; scoped Ruff clean.
+The reviewed prompt inventory adds an actual new builder/schema (25 to 26);
+two invalid-version controls now plant version 4 because version 3 is owned.
+No semantic assertion or historic failed proof was weakened or relabelled.
+
+Workbook build record 10 updates LB-128, LB-131, LB-141, LB-148 and LB-164 in
+both views: **25 targeted cells**, all **193 requirements / 501 clauses**
+preserved, zero unrelated values/styles/native-feature changes or cell errors.
+Published SHA256:
+`a71ebd876d4d0282e07ea8cca60b833648efe4a6b38167db9bf477a284931ed6`.
+All six live outcomes remain diagnostic failures; no full complex-matter or
+expert-quality acceptance is claimed. No further paid call, ordinary client
+cutover, counsel sign-off, canonical Class-A promotion, staging, commit or push.
+The task-owned preview server is stopped; restarting must recheck the existing
+finite approval and current session, never silently extend the expiry.

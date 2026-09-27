@@ -30,7 +30,6 @@ THE RULE, in two halves, and the second is the one that makes the first safe:
 from __future__ import annotations
 
 import pytest
-
 from nm.core import posture
 from nm.domain.matter import Basis, Role
 from nm.domain.quotable import Quotable

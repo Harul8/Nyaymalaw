@@ -220,7 +220,11 @@ def admitted(media_id: str, kind: MediaKind, *, purpose: str, authority: str,
 
         refused = refuse_request(Route(
             processor=(processors[0].name if processors else "(unnamed)"),
-            operations=tuple(operations)))
+            operations=tuple(operations),
+            off_premises=(
+                any(p.off_premises for p in processors)
+                if processors and all(type(p.off_premises) is bool for p in processors)
+                else None)))
         if refused:
             raise ValueError(
                 "this material cannot be admitted for that processing: "

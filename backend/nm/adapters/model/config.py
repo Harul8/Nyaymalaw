@@ -15,6 +15,7 @@ material, or a judge grading its own homework.
 """
 from __future__ import annotations
 
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -41,6 +42,10 @@ CONTEXT_BUDGET: dict[Tier, int] = {
 PRICES: dict[str, tuple[float, float]] = {
     "gpt-4o-mini-2024-07-18": (0.15, 0.60),
     "gpt-5.1": (1.25, 10.00),
+    # Independent-verifier evaluation pin; checked against the official model
+    # page on 27 September 2026. The ledger and provider receipt name this
+    # exact snapshot, not a floating alias that might resolve differently.
+    "gpt-5.1-2025-11-13": (1.25, 10.00),
     # Measured 5 September 2026 and CHEAPER THAN THE JUDGE, which is the whole
     # reason escalation became affordable: 0.875/7.00 against 5.1's 1.25/10.00.
     # Input has fallen 50% in ~90 days, so this is configuration and not a
@@ -105,6 +110,18 @@ class TierConfig:
 
     def cost(self, tokens_in: int, tokens_out: int) -> float:
         return (tokens_in * self.price_in + tokens_out * self.price_out) / 1_000_000
+
+
+def require_priced_snapshot(cfg: TierConfig, *, provider: str) -> TierConfig:
+    """Unknown external pricing is unestablished cost, never a free request."""
+    prices = PRICES.get(cfg.model)
+    if cfg.provider != provider:
+        raise ConfigurationError("The configured tier does not belong to this provider adapter")
+    if (prices is None or len(prices) != 2 or any(
+            type(value) not in (int, float) or not math.isfinite(value) or value < 0
+            for value in prices) or not any(prices)):
+        raise ConfigurationError("The selected snapshot needs an explicit, finite versioned price")
+    return cfg
 
 
 @dataclass(frozen=True)
