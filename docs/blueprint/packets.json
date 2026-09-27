@@ -4690,7 +4690,8 @@
       "criteria": [
         "BK-99-AC1",
         "BK-99-AC3",
-        "BK-99-AC4"
+        "BK-99-AC4",
+        "BK-101-AC1"
       ],
       "prerequisites": [],
       "decisions": [
@@ -4729,12 +4730,14 @@
       ],
       "inputs": [
         "The model port (complete, structured, embed) and its OpenAI and scripted adapters.",
-        "The owner's approval of LB-127, LB-128, LB-146, LB-147 and LB-164 and of the LB-138 slice order."
+        "The owner's approval of LB-127, LB-128, LB-146, LB-147 and LB-164 and of the LB-138 slice order.",
+        "The first distilled principles draft (LB-126)."
       ],
       "outputs": [
         "A tool-calling method on the model port with OpenAI, Anthropic and scripted adapters.",
         "A loop runner with declared step, token, cost and time budgets, beside the TurnEngine behind a switch.",
-        "A typed, ordered, saved step log per turn, and a replay adapter from recordings."
+        "A typed, ordered, saved step log per turn, and a replay adapter from recordings.",
+        "A versioned principles file the loop reads at the start of every turn, its version recorded on the turn; refined with the owner in P53."
       ],
       "steps": [
         "Add one tool-calling method to the model port; provider formats stay inside the adapters.",
@@ -4756,13 +4759,15 @@
       "expected": [
         "No provider format reaches the core.",
         "No loop runs without a budget, and a budget stop is never presented as a finished answer.",
-        "A replay proves the harness and the tools, never live model quality."
+        "A replay proves the harness and the tools, never live model quality.",
+        "No tool reads or writes a live matter before P51's safeguards run on the loop path: this slice runs on recorded and synthetic matters only."
       ],
       "rollback": "Keep the switch off: the TurnEngine serves every turn, and recordings and step logs are kept as evidence.",
       "final_criteria": [
         "BK-99-AC1",
         "BK-99-AC3",
-        "BK-99-AC4"
+        "BK-99-AC4",
+        "BK-101-AC1"
       ],
       "requires_completed_items": []
     },
@@ -4832,7 +4837,8 @@
       "expected": [
         "A zero result names its index.",
         "Tools that identify never rank, and tools that rank never identify.",
-        "Nothing unextracted is read as searched and empty."
+        "Nothing unextracted is read as searched and empty.",
+        "No tool reads or writes a live matter before P51's safeguards run on the loop path: this slice runs on recorded and synthetic matters only."
       ],
       "rollback": "Remove a tool from the registry and return 'not available' to the model; extracted text is a derivative and the original upload is untouched.",
       "final_criteria": [
@@ -4985,7 +4991,6 @@
       "title": "Slice 7 -- context for long matters: principles, stable prefix, clearing, compaction from the file, the research loop and memory",
       "kind": "implementation",
       "criteria": [
-        "BK-101-AC1",
         "BK-101-AC2",
         "BK-101-AC3",
         "BK-101-AC4"
@@ -5020,10 +5025,10 @@
         "Owner-edited principles and the first playbooks, once approved."
       ],
       "outputs": [
-        "A principles document read every turn; a stable prefix with append-only history; clearing by locator; compaction to a brief regenerated from the file; a fresh-context research loop; the advocate memory."
+        "The principles refined with the owner; a stable prefix with append-only history; clearing by locator; compaction to a brief regenerated from the file; a fresh-context research loop; the advocate memory."
       ],
       "steps": [
-        "Read the versioned principles at the start of every turn and freeze the prefix for the conversation.",
+        "Refine the principles with the owner, and freeze the prefix for the conversation.",
         "Clear spent results to locator stubs, and compact to a brief regenerated from the checked file.",
         "Run long reading as a fresh-context research loop that returns only findings with spans.",
         "Keep the advocate's memory apart from every matter, written only with approval."
@@ -5045,7 +5050,6 @@
       ],
       "rollback": "Build each request from the file as today; keep the full transcript and step log on the record.",
       "final_criteria": [
-        "BK-101-AC1",
         "BK-101-AC2",
         "BK-101-AC3",
         "BK-101-AC4"
@@ -5094,7 +5098,7 @@
       ],
       "steps": [
         "Run each kind of turn's golden subset through the pipeline and the loop, with the owner's approval of each run.",
-        "Switch a kind of turn only when the loop matches or beats the pipeline, with the cost per turn measured as a release row.",
+        "Switch a kind of turn only when the loop meets that kind's absolute acceptance bar (LB-39, LB-40, LB-72) and matches or beats the pipeline, with the cost per turn measured as a release row; no relative improvement offsets a critical error or an unassessed required capability.",
         "Remove the pipeline stages a switched kind no longer uses, so no second live path survives."
       ],
       "proof": {
@@ -5110,7 +5114,8 @@
       },
       "expected": [
         "No live golden run happens without the owner's approval of that run.",
-        "No second live path survives a switch."
+        "No second live path survives a switch.",
+        "Matching the pipeline is never the bar on its own."
       ],
       "rollback": "Turn the switch back for that kind of turn; pipeline stages are removed only after the switch has held.",
       "final_criteria": [

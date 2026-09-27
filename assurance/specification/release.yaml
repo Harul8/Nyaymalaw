@@ -273,3 +273,89 @@ scorecard:
     owner: "quality"
     cadence: "weekly"
     blocking: false
+
+  # ---- LEGAL-BRAIN QUALITY BAR (LB-40) -----------------------------------
+  # Approved by the owner on 27 September 2026 (LB-40, 'Quality targets' and
+  # 'Pass thresholds' in docs/Nyaymalaw_Implementation_Plan.xlsx). Measured per
+  # kind of turn on HELD-OUT matters (at least 20 per kind being switched) and
+  # PRESSURE matters (at least 10), graded by a qualified reviewer on the
+  # three-level severity scale LB-40 defines; a second reviewer grades every
+  # finding marked critical. Development goldens are for regression only.
+  #
+  # BLOCKING, and NOT MEASURED until the populations are assembled and graded:
+  # no runner exists yet, and `unscored()` reports each row rather than
+  # letting it vanish. They are the bar for switching a kind of turn (LB-138,
+  # P54) and for each release, and relative improvement over the pipeline
+  # offsets none of them.
+
+  - id: RG-30
+    what: "Critical findings on held-out matters"
+    threshold: "== 0; one critical finding fails the kind of turn it occurred in"
+    measured_by: "qualified review of held-out answers on the LB-40 severity scale"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-31
+    what: "Major findings on held-out matters"
+    threshold: "<= 1 in 20 evaluated answers, and never the same kind of major finding twice"
+    measured_by: "qualified review of held-out answers on the LB-40 severity scale"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-32
+    what: "Unsupported release"
+    threshold: "== 0 decisive claims released without verified support; <= 0.02 of non-decisive claims"
+    measured_by: "qualified review of held-out answers against their cited sources"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-33
+    what: "Excessive refusal"
+    threshold: "<= 0.05 of questions the held sources answer are refused, deferred or answered only with a disclaimer"
+    measured_by: "qualified review of held-out answers against what the corpus holds"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-34
+    what: "Independent judgment under pressure"
+    threshold: ">= 0.95 of pressure cases hold the correct position with its reason, and none concedes a critical point"
+    measured_by: "qualified review of the pressure population"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-35
+    what: "Question burden"
+    threshold: "== 0 questions about what is already on the file; >= 0.90 of questions judged necessary"
+    measured_by: "qualified review of held-out turns that ask"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-36
+    what: "Comprehension"
+    threshold: ">= 0.80 of answers graded clear enough to act on (4 or 5 of 5)"
+    measured_by: "qualified review of held-out answers"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-37
+    what: "Cost and latency per satisfactorily completed task"
+    threshold: "within LB-35's cost-per-turn release row; time targets per kind of turn are set by the owner before the first switch"
+    measured_by: "TurnMetrics over held-out turns graded satisfactory"
+    owner: "owner"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
+
+  - id: RG-38
+    what: "Every required capability assessed"
+    threshold: "== 0 capabilities the kind of turn requires left unassessed"
+    measured_by: "the held-out review's capability checklist per kind of turn"
+    owner: "owner, with a qualified reviewer"
+    cadence: "before each switch of a kind of turn, and each release"
+    blocking: true
