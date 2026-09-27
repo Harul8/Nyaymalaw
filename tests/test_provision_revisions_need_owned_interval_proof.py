@@ -10,11 +10,11 @@ from datetime import date, datetime
 
 import pytest
 
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import Coverage, EvidenceNeed, Finding
-from nm.legal_brain.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.provenance_sources import Standing
-from nm.legal_brain.provision_revision_sources import (
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed, Finding
+from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.legal_brain.retrieve.provenance_sources import Standing
+from nm.legal_brain.retrieve.provision_revision_sources import (
     AuthorityRole,
     AuthoritySpan,
     ProvisionRevision,
@@ -24,7 +24,7 @@ from nm.legal_brain.provision_revision_sources import (
     TransitionState,
     _digest,
 )
-from nm.legal_brain.source_registry_sources import (
+from nm.legal_brain.retrieve.source_registry_sources import (
     CanonicalSource,
     LegalReview,
     ReviewState,

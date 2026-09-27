@@ -99,8 +99,8 @@ def test_opening_context_never_becomes_a_fact_or_a_quotable_source(client):
 
 
 def test_every_conversational_call_uses_principles_and_the_saved_opening(client, tmp_path):
-    from nm.legal_brain.conversation import PRINCIPLES
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.common.conversation import PRINCIPLES
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests.test_matter_memory import _engine, _Recorder
 
     result = client.post('/api/matters/intake', json=offer(brief={
@@ -125,7 +125,7 @@ def test_every_conversational_call_uses_principles_and_the_saved_opening(client,
 
 
 def test_route_does_not_discard_the_tail_of_the_current_instruction():
-    from nm.legal_brain.route import build_prompt
+    from nm.legal_brain.understand.route import build_prompt
 
     message = 'supplied context ' * 300 + 'The immediate task is at the end.'
     prompt = build_prompt(message, 'recorded context ' * 300 + 'Ending recorded marker')
@@ -133,7 +133,7 @@ def test_route_does_not_discard_the_tail_of_the_current_instruction():
 
 
 def test_scripted_dispatch_cannot_confuse_shared_guidance_with_task_identity():
-    from nm.legal_brain.conversation import guided
+    from nm.legal_brain.common.conversation import guided
     from nm.shared.model_port import Prompt, Tier
     from nm.shared.model_scripted import ScriptedModelAdapter
     from tests.test_turn_contract import _model_config

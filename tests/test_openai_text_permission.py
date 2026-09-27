@@ -14,7 +14,7 @@ from nm.app.model_permission import require_permission, text_policy
 from nm.arrive.advocate_contracts import utcnow
 from nm.arrive.directory_port import AuthenticationUnavailable
 from nm.arrive.store_directory import FileDirectory
-from nm.legal_brain.duty import DUTY_SCHEMA
+from nm.legal_brain.verify.duty import DUTY_SCHEMA
 from nm.shared.egress_contracts import DataClass, EgressRefused, Route, Sink, refuse
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
 from nm.shared.model_openai_adapter import OpenAIModelAdapter

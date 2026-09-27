@@ -5,18 +5,19 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain import conversation, investigation
-from nm.legal_brain.corpus_evidence import EXAMINED_CEILING, CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.common import conversation
+from nm.legal_brain.retrieve import investigation
+from nm.legal_brain.retrieve.corpus_evidence import EXAMINED_CEILING, CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import (
     Coverage,
     EvidenceNeed,
     EvidenceResult,
     Treatment,
     TreatmentState,
 )
-from nm.legal_brain.manifest_sources import Manifest
-from nm.legal_brain.search_authority import AuthorityIndexSearch, _fts_query
-from nm.legal_brain.search_port import ResolutionState
+from nm.legal_brain.retrieve.manifest_sources import Manifest
+from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch, _fts_query
+from nm.legal_brain.retrieve.search_port import ResolutionState
 from nm.shared.model_port import Prompt
 from tests.test_bounded_judgment_investigation import offer, run
 from tests.test_corpus_conformance import _withdraw
@@ -201,7 +202,7 @@ def test_prompt_carries_independent_checks_and_never_promotes_the_passage():
 
 
 def test_the_requested_provision_cannot_certify_its_own_retrieval():
-    from nm.legal_brain import grounding
+    from nm.legal_brain.verify import grounding
     from tests.test_grounding_gate import answer_of
 
     f = replace(finding(), proposition='What does section 999 say?')
@@ -210,7 +211,7 @@ def test_the_requested_provision_cannot_certify_its_own_retrieval():
 
 
 def test_search_notes_never_become_an_advocates_legal_decision(tmp_path):
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from nm.shared.metrics_contracts import TurnMetrics
     from nm.work_the_file.matter_contracts import Thread
     from tests.test_turn_contract import build
@@ -218,7 +219,7 @@ def test_search_notes_never_become_an_advocates_legal_decision(tmp_path):
     engine, _ = build(tmp_path)
     thread = Thread.create('synthetic thread')
     candidate = replace(finding(), supports=None)
-    from nm.legal_brain.evidence_port import ParaKind, SourceKind
+    from nm.legal_brain.retrieve.evidence_port import ParaKind, SourceKind
     candidate = replace(candidate, source_kind=SourceKind.AUTHORITY,
                         para_kind=ParaKind.ATTRIBUTABLE)
     result = EvidenceResult(Coverage.ANSWERED, (candidate,), search_note='Search was bounded.')
@@ -256,7 +257,7 @@ def test_a_corrupt_index_is_an_unavailable_search_not_an_exception(tmp_path):
 
 
 def test_exhausted_search_budget_never_claims_corpus_absence(tmp_path):
-    from nm.legal_brain.turn import MAX_EVIDENCE_ROUNDS
+    from nm.legal_brain.orchestrate.turn import MAX_EVIDENCE_ROUNDS
     from nm.shared.metrics_contracts import TurnMetrics
     from tests.test_turn_contract import build
 

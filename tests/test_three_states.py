@@ -132,7 +132,7 @@ CLOSED: dict[str, str] = {
     "Force": (
         "HOW NECESSARY a source-bound requirement is -- required or "
         "strengthening -- and a requirement exists only where the read stated "
-        "one. `nm.legal_brain.requirements.read` DROPS a row whose force is "
+        "one. `nm.legal_brain.reason.requirements.read` DROPS a row whose force is "
         "missing or unrecognised and counts it in `Reading.dropped`, so no "
         "requirement ever carries a force nobody established; a third member "
         "meaning 'unclear' would keep a requirement the source did not "
@@ -391,7 +391,7 @@ def test_the_third_state_is_a_value_and_never_a_null():
     `basis=None`. It worked, and nothing forced a consumer to handle it —
     which is what `None` costs and a member does not.
     """
-    from nm.legal_brain.manifest_sources import ActBasis, Resolution
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Resolution
 
     assert ActBasis.NOT_RESOLVED in list(ActBasis)
     assert Resolution(None).basis is ActBasis.NOT_RESOLVED, (

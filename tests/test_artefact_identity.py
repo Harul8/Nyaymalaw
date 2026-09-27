@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.artefact_sources import ArtefactIdentity, ArtefactRefused
+from nm.legal_brain.retrieve.artefact_sources import ArtefactIdentity, ArtefactRefused
 
 pytestmark = pytest.mark.class_a
 

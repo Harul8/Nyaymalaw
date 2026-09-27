@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.brain_assessment import saved_package_reviews
-from nm.legal_brain.brain_release import ReviewRefused, prepare_claims
-from nm.legal_brain.loop_contracts import StepKind
+from nm.legal_brain.verify.brain_assessment import saved_package_reviews
+from nm.legal_brain.verify.brain_release import ReviewRefused, prepare_claims
+from nm.legal_brain.orchestrate.loop_contracts import StepKind
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import response
 from tests.test_reviewed_private_preview_checks_saved_words import changed_payload, replace_record

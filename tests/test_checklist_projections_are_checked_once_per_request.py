@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain import requirements
-from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord
-from nm.legal_brain.requirements_contracts import State
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord
+from nm.legal_brain.reason.requirements_contracts import State
 from nm.work_the_file import deadlines, dispute_agenda, summary
 from nm.work_the_file.matter_contracts import Certainty, Fact, Matter, Provenance, Thread
 from tests.test_checklist_classification_is_independently_reviewed import (

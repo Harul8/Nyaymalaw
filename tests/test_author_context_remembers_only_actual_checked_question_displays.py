@@ -7,13 +7,13 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_context import (
+from nm.legal_brain.understand.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,
     assemble_brief,
 )
-from nm.legal_brain.loop_contracts import LoopLimits
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.matter_contracts import Thread

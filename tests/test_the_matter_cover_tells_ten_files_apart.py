@@ -38,7 +38,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.turn import _matter_name
+from nm.legal_brain.orchestrate.turn import _matter_name
 
 pytestmark = pytest.mark.class_a
 

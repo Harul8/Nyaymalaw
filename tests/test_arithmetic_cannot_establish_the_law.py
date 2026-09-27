@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.premise import (
+from nm.legal_brain.reason.premise import (
     REQUIRED,
     SUFFICIENT,
     Basis,

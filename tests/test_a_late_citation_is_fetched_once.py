@@ -39,7 +39,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.turn import TurnEngine, TurnInput, TurnRefused
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnRefused
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore

@@ -9,9 +9,9 @@ import pytest
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import answer_from_payload, answer_payload
 from nm.app.api import application
-from nm.legal_brain.grounding import verify
-from nm.legal_brain.source_excerpt import capture
-from nm.legal_brain.source_excerpt_contracts import SourceExcerpt
+from nm.legal_brain.verify.grounding import verify
+from nm.legal_brain.retrieve.source_excerpt import capture
+from nm.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
 from tests.test_a_turn_receipt_is_not_an_archival_trace import _opened
 from tests.test_turn_contract import finding
 

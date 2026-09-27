@@ -15,13 +15,8 @@ from dataclasses import asdict, dataclass, replace
 from datetime import date
 from typing import Callable
 
-from nm.legal_brain import limitation
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.evidence_port import Finding
-from nm.legal_brain.loop_contracts import digest
-from nm.legal_brain.procedural_calculation import _population
-from nm.legal_brain.source_writes import _parent
-from nm.legal_brain.tools import (
+from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     PreparedToolResult,
@@ -32,8 +27,17 @@ from nm.legal_brain.tools import (
     ToolRefused,
     object_schema,
 )
-from nm.legal_brain.working_record import REFERENCE_SCHEMA, WorkingRecordOwner, exact_reference
-from nm.legal_brain.working_record_contracts import ReferenceKind
+from nm.legal_brain.procedure import limitation
+from nm.legal_brain.procedure.procedural_calculation import _population
+from nm.legal_brain.reason.source_writes import _parent
+from nm.legal_brain.reason.working_record import (
+    REFERENCE_SCHEMA,
+    WorkingRecordOwner,
+    exact_reference,
+)
+from nm.legal_brain.reason.working_record_contracts import ReferenceKind
+from nm.legal_brain.retrieve.evidence_port import Finding
+from nm.legal_brain.verify.brain_release import ReviewRefused
 from nm.shared.clock_contracts import today as forum_today
 from nm.shared.json_values import same_json_value
 from nm.shared.model_port import SchemaViolation, require_schema

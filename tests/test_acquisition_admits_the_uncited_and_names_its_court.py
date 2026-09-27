@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.acquisition_sources import (
+from nm.legal_brain.retrieve.acquisition_sources import (
     ACQUISITION_ESTABLISHES,
     POLICY_VERSION,
     AcquiredArtifact,
@@ -47,7 +47,7 @@ from nm.legal_brain.acquisition_sources import (
     stage_acquisition,
     submit_for_publication,
 )
-from nm.legal_brain.source_registry_sources import RightsState
+from nm.legal_brain.retrieve.source_registry_sources import RightsState
 
 pytestmark = pytest.mark.class_a
 
@@ -220,7 +220,7 @@ def test_a_document_cannot_widen_a_restricted_source():
 
 
 def test_the_effective_right_is_decided_in_one_place():
-    from nm.legal_brain.acquisition_sources import effective_right
+    from nm.legal_brain.retrieve.acquisition_sources import effective_right
 
     permitted = _scope()
     restricted = _scope(source_rights=RightsState.RESTRICTED)
@@ -262,7 +262,7 @@ def test_the_six_stages_are_six_and_are_distinct():
 def test_no_function_in_the_module_returns_applicable():
     """STRUCTURAL, over the compiled module rather than its prose. Three
     checks in this build have matched a docstring and passed for it."""
-    import nm.legal_brain.acquisition_sources as mod
+    import nm.legal_brain.retrieve.acquisition_sources as mod
 
     source = Path(mod.__file__).read_text(encoding="utf-8")
     body = "\n".join(line for line in source.splitlines()
@@ -312,11 +312,11 @@ def test_a_reconciled_run_can_be_offered_to_publication(tmp_path):
 def test_the_submission_is_not_a_publication(tmp_path):
     """Nothing in this module activates a snapshot. Acquisition that could
     publish is acquisition that will."""
-    import nm.legal_brain.acquisition_sources as mod
+    import nm.legal_brain.retrieve.acquisition_sources as mod
 
     source = Path(mod.__file__).read_text(encoding="utf-8")
     assert "publish_corpus(" not in source
-    assert "from nm.legal_brain.manifest_sources import" not in source
+    assert "from nm.legal_brain.retrieve.manifest_sources import" not in source
 
 
 def test_a_run_that_did_not_reconcile_offers_nothing(tmp_path):

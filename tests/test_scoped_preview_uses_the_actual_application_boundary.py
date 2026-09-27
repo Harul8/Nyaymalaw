@@ -5,10 +5,10 @@ from datetime import timedelta
 import pytest
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.legal_brain.brain_release import ReviewService
-from nm.legal_brain.interaction_review import COMMUNICATION_REVIEW_SCHEMA
-from nm.legal_brain.loop_contracts import LoopMode
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.verify.brain_release import ReviewService
+from nm.legal_brain.verify.interaction_review import COMMUNICATION_REVIEW_SCHEMA
+from nm.legal_brain.orchestrate.loop_contracts import LoopMode
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.model_port import Tier
 from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_interaction_words_require_an_independent_exact_review import InteractionJudge
@@ -145,7 +145,7 @@ def test_distinct_verifier_facade_admits_only_the_owned_communication_schema():
     from copy import deepcopy
     from unittest.mock import Mock
 
-    from nm.legal_brain.evaluation_models import VerifierOnly
+    from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
     from nm.shared.external_ai_contracts import ModelPermissionRefused
     from nm.shared.model_port import Prompt
 

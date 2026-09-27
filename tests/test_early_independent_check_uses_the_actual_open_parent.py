@@ -4,19 +4,19 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.early_independent_review import (
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.verify.early_independent_review import (
     TOOL,
     EarlyIndependentReviewService,
     EarlyReviewSubject,
 )
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.matter_support import captured_documents
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tool_sources import findings_from_record
-from nm.legal_brain.tools import DelegationPolicy, ToolRegistry
-from nm.legal_brain.verifier import IndependentVerifier
-from nm.legal_brain.working_record import PROPOSE_TOOL, READ_TOOL
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.reason.matter_support import captured_documents
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.retrieve.tool_sources import findings_from_record
+from nm.legal_brain.orchestrate.tools import DelegationPolicy, ToolRegistry
+from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.reason.working_record import PROPOSE_TOOL, READ_TOOL
 from nm.shared.budget_contracts import Budget, Completion
 from nm.shared.model_port import ProviderUnavailable, ToolCall, Usage
 from tests.test_independent_claim_verifier import Judge, response

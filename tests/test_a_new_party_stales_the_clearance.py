@@ -81,7 +81,7 @@ def test_the_turn_engine_asks_rather_than_computing_it():
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._read_parties)
     assert "stale_for" in body, (
@@ -115,7 +115,7 @@ def test_an_unassessed_screen_is_not_a_stale_clearance():
 
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
     body = inspect.getsource(TurnEngine._read_parties)
     assert "conflict.clears" in body, (
         "the disclosure is not guarded by the screen having actually cleared, "

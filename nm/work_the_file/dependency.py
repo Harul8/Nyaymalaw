@@ -91,12 +91,12 @@ class InputKind(str, Enum):
 
     They are separated because the CORRECTION for each is different and
     arrives from a different place, which is the same argument
-    `nm.legal_brain.premise.Kind` makes about the three legal premises.
+    `nm.legal_brain.reason.premise.Kind` makes about the three legal premises.
 
         FACT       the advocate corrects it, or a document supersedes it.
         PREMISE    a legal position; corrected by review or retrieval.
         AUTHORITY  a corpus source version; moved by publication or
-                   withdrawal, which `nm.legal_brain.manifest_sources` owns.
+                   withdrawal, which `nm.legal_brain.retrieve.manifest_sources` owns.
         DERIVED    another node. THIS IS WHAT MAKES THE CLOSURE TRANSITIVE,
                    and it is the edge `cascade.Derived.from_facts` cannot
                    express at all.
@@ -882,7 +882,7 @@ def authority_digest(finding) -> str:
 
 def premise_input_id(thread_id: str, kind, *, stated: bool = False) -> str:
     """One closed legal-position identity, never a scenario or field-name guess."""
-    from nm.legal_brain.premise import Kind
+    from nm.legal_brain.reason.premise import Kind
 
     if (not isinstance(thread_id, str) or not thread_id.strip()
             or type(stated) is not bool):
@@ -893,7 +893,7 @@ def premise_input_id(thread_id: str, kind, *, stated: bool = False) -> str:
 def decision_input_id(thread_id: str, what: str) -> str:
     """Reuse the settled-question owner's identity, not semantic prose matching."""
     from nm.advise.decision_contracts import _question
-    from nm.legal_brain.loop_contracts import digest
+    from nm.legal_brain.orchestrate.loop_contracts import digest
 
     if (not isinstance(thread_id, str) or not thread_id.strip()
             or not isinstance(what, str) or not what.strip()):
@@ -918,7 +918,7 @@ def _event_population_input(thread) -> tuple[str, bool]:
     """
     from dataclasses import asdict
 
-    from nm.legal_brain.loop_contracts import digest
+    from nm.legal_brain.orchestrate.loop_contracts import digest
     from nm.shared.json_values import same_json_value
     from nm.work_the_file.event_observation_contracts import EventObservation
     from nm.work_the_file.file_mutation_contracts import neutral
@@ -960,8 +960,8 @@ def _file_position_inputs(matter):
     from datetime import date
 
     from nm.advise.decision_contracts import DecidedBy, Decision, _question, from_stored
-    from nm.legal_brain.loop_contracts import digest
-    from nm.legal_brain.premise import Basis, Kind, Premises
+    from nm.legal_brain.orchestrate.loop_contracts import digest
+    from nm.legal_brain.reason.premise import Basis, Kind, Premises
     from nm.shared.json_values import same_json_value
     from nm.work_the_file.file_mutation_contracts import neutral
 
@@ -1051,7 +1051,7 @@ def sync_inputs(ledger: Ledger, matter, findings=(), *, reason: str = "",
     for ident, readings in populations.items():
         fingerprint, unavailable = readings[0]
         if len(readings) != 1:
-            from nm.legal_brain.loop_contracts import digest
+            from nm.legal_brain.orchestrate.loop_contracts import digest
 
             fingerprint = digest({"duplicate_dispute_populations": readings})
             unavailable = True

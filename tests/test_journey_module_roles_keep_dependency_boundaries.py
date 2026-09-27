@@ -47,6 +47,10 @@ def _manifests(root, roles):
     (root / "assurance/common").mkdir(parents=True, exist_ok=True)
     (root / "nm/source_layout.json").write_text(json.dumps(current), encoding="utf8")
     (root / "assurance/common/journey_layout.json").write_text(json.dumps(history), encoding="utf8")
+    relocation = {"schema": 1, "modules": [], "expected_roles": {}, "browser_assets": {}}
+    (root / "assurance/common/legal_brain_layout.json").write_text(
+        json.dumps(relocation), encoding="utf8",
+    )
     return current, history
 
 
@@ -131,7 +135,8 @@ def test_malformed_current_role_metadata_is_not_partial(tmp_path, change):
 
 
 @pytest.mark.parametrize("member", ["nm/source_layout.json",
-                                    "assurance/common/journey_layout.json"])
+                                    "assurance/common/journey_layout.json",
+                                    "assurance/common/legal_brain_layout.json"])
 def test_duplicate_json_keys_in_either_owner_are_refused(tmp_path, member):
     roles = role_tree(tmp_path, "")
     _manifests(tmp_path, roles)

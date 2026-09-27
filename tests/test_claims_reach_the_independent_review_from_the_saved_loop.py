@@ -6,13 +6,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tools import Boundary, foundation_tools
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import SchemaViolation, Tier, ToolCall
 from nm.shared.store_loop_log import MatterLoopLog

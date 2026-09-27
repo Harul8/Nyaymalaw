@@ -6,8 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.tools import (
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -119,7 +119,7 @@ def test_old_input_requires_exact_before_admission_owned_complete_parent(tmp_pat
     elif changed == "unsealed":
         before = replace(before, loop_records=(replace(parent, events=parent.events[:-1]),))
     else:
-        from nm.legal_brain.loop_contracts import LoopEvent, LoopMode, LoopRecord
+        from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopMode, LoopRecord
 
         identity = replace(parent.identity, **{
             "foreign_actor": {"advocate_id": "other"},
@@ -205,7 +205,7 @@ def test_an_earlier_assertion_can_be_linked_to_an_existing_dispute_without_truth
 def test_prior_words_cannot_escape_recorded_original_or_either_scope(tmp_path, changed):
     from copy import deepcopy
 
-    from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord, digest
+    from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, digest
 
     _store, before, context, _registry, first = registry_fixture(tmp_path)
     if changed == "narrowed_current":

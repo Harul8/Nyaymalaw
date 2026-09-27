@@ -178,8 +178,8 @@ def test_only_a_fingerprint_of_the_invitation_is_stored(client):
 
 def test_the_operator_tool_issues_the_bound_identity_and_prints_the_token_once(
         monkeypatch, capsys):
-    from operations import invite as command
     from nm.app import composition
+    from operations import invite as command
 
     issued = []
 

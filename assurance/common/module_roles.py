@@ -1,8 +1,8 @@
 """Authored architectural roles, independent of the journey directory names.
 
-The current product manifest owns classification. The migration manifest owns
-only the former identities used by historic, still-live population controls.
-Neither source is imported or executed by this reader.
+The current product manifest owns classification. Immutable journey history and
+the subsequent legal-brain relocation map compose former identities into current
+ones. No manifest is imported, executed or used to grant dependency permissions.
 """
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ ROLES = frozenset({"domain", "ports", "core", "adapters", "knowledge",
                    "infrastructure", "edge", "drafting", "obs", "bootstrap"})
 _MODULE = re.compile(r"nm(?:\.[a-zA-Z_]\w*)*\Z", re.ASCII)
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
+_BRAIN_STAGES = frozenset({"understand", "retrieve", "reason", "procedure", "verify",
+                           "communicate", "orchestrate", "evaluate", "common"})
 
 
 class LayoutError(ValueError):
@@ -141,13 +143,21 @@ def load_module_roles(*, root: Path = ROOT) -> ModuleRoles:
         for name, path in assets.items()
     ):
         raise LayoutError("invalid browser asset identities")
-    historical = _read(root / "assurance" / "common" / "journey_layout.json")
-    migrated = legacy_modules(root=root)
-    origins = {row["module"]: row["role"] for row in historical["modules"]}
-    changed = sorted(module for module in migrated.values()
-                     if roles.get(module) != origins[module])
+    historical, _ = _journey_modules(root=root)
+    relocated, relocation_roles, relocation_assets = _brain_relocations(
+        root=root, historical=historical,
+    )
+    changed = sorted(relocated.get(row["module"], row["module"])
+                     for row in historical["modules"]
+                     if roles.get(relocated.get(row["module"], row["module"])) != row["role"])
     if changed:
         raise LayoutError(f"migrated source owners missing or reclassified: {changed}")
+    changed = sorted(module for module, role in relocation_roles.items()
+                     if roles.get(module) != role)
+    if changed:
+        raise LayoutError(f"relocated source owners missing or reclassified: {changed}")
+    if any(assets.get(name) != path for name, path in relocation_assets.items()):
+        raise LayoutError("relocated browser owners differ from the served asset map")
     layout = classify_sources(root=root, roles=roles)
     owned_assets = {name: root / path for name, path in assets.items()}
     return replace(layout, assets=MappingProxyType(owned_assets))
@@ -157,8 +167,8 @@ def sources_for_roles(*roles: str, root: Path = ROOT) -> tuple[Path, ...]:
     return load_module_roles(root=root).sources_for_roles(*roles)
 
 
-def legacy_modules(*, root: Path = ROOT) -> Mapping[str, str]:
-    """Exact old->new module identities; not current roles or verification."""
+def _journey_modules(*, root: Path = ROOT) -> tuple[dict, Mapping[str, str]]:
+    """Read the immutable first migration without rewriting its destinations."""
     document = _read(root / "assurance" / "common" / "journey_layout.json")
     if set(document) != {"schema", "phases", "modules", "expected_roles", "browser_assets",
                          "moves", "package_notes"}:
@@ -192,11 +202,101 @@ def legacy_modules(*, root: Path = ROOT) -> Mapping[str, str]:
                    for role, count in expected.items())
             or dict(Counter(row["role"] for row in rows)) != expected):
         raise LayoutError("migration source population differs from its declaration")
-    return MappingProxyType(old)
+    assets = document["browser_assets"]
+    if not isinstance(assets, dict) or any(
+        not isinstance(name, str) or not name or "/" in name or "\\" in name
+        or not isinstance(path, str) or not path.startswith("nm/")
+        or ".." in Path(path).parts or "\\" in path or Path(path).is_absolute()
+        for name, path in assets.items()
+    ):
+        raise LayoutError("invalid historical browser asset identities")
+    return document, MappingProxyType(old)
+
+
+def _brain_relocations(
+    *, root: Path = ROOT, historical: dict,
+) -> tuple[Mapping[str, str], Mapping[str, str], Mapping[str, str]]:
+    """Closed second-move identities, roles and asset destinations; not evidence."""
+    document = _read(root / "assurance" / "common" / "legal_brain_layout.json")
+    if set(document) != {"schema", "modules", "expected_roles", "browser_assets"}:
+        raise LayoutError("legal-brain relocation fields differ from its closed schema")
+    rows = document["modules"]
+    if not isinstance(rows, list) or len(rows) > 10_000:
+        raise LayoutError("legal-brain relocation population is unavailable")
+    aliases: dict[str, str] = {}
+    roles: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {
+            "old_path", "path", "old_module", "module", "role", "sha256_before"
+        }:
+            raise LayoutError("invalid legal-brain relocation row")
+        before, after = row["old_module"], row["module"]
+        if (not isinstance(before, str) or not isinstance(after, str)
+                or not _MODULE.fullmatch(before) or not _MODULE.fullmatch(after)
+                or not before.startswith("nm.legal_brain.") or len(before.split(".")) != 3
+                or not after.startswith("nm.legal_brain.") or len(after.split(".")) != 4
+                or after.split(".")[2] not in _BRAIN_STAGES
+                or before.rsplit(".", 1)[-1] != after.rsplit(".", 1)[-1]
+                or row["old_path"] != before.replace(".", "/") + ".py"
+                or row["path"] != after.replace(".", "/") + ".py"
+                or not isinstance(row["role"], str) or row["role"] not in ROLES
+                or not isinstance(row["sha256_before"], str)
+                or not _SHA.fullmatch(row["sha256_before"])):
+            raise LayoutError("invalid legal-brain relocation identity")
+        if before in aliases or after in roles:
+            raise LayoutError("duplicate legal-brain relocation identity")
+        aliases[before] = after
+        roles[after] = row["role"]
+    expected = document["expected_roles"]
+    if (not isinstance(expected, dict)
+            or any(role not in ROLES or type(count) is not int or count < 1
+                   for role, count in expected.items())
+            or dict(Counter(roles.values())) != expected):
+        raise LayoutError("legal-brain relocation population differs from its declaration")
+    required = {row["module"] for row in historical["modules"]
+                if row["module"].startswith("nm.legal_brain.")}
+    if not required <= aliases.keys():
+        raise LayoutError("legal-brain relocation lost historical source owners")
+    assets = document["browser_assets"]
+    if not isinstance(assets, dict):
+        raise LayoutError("legal-brain relocation assets are unavailable")
+    destinations: dict[str, str] = {}
+    for name, row in assets.items():
+        if (not isinstance(name, str) or not name or "/" in name or "\\" in name
+                or Path(name).suffix not in {".js", ".css", ".html", ".svg"}
+                or not isinstance(row, dict)
+                or set(row) != {"old_path", "path", "sha256_before"}
+                or row["old_path"] != f"nm/legal_brain/{name}"
+                or not isinstance(row["path"], str)
+                or len(row["path"].split("/")) != 4
+                or row["path"].split("/")[:2] != ["nm", "legal_brain"]
+                or row["path"].split("/")[2] not in _BRAIN_STAGES
+                or row["path"].split("/")[3] != name
+                or not isinstance(row["sha256_before"], str)
+                or not _SHA.fullmatch(row["sha256_before"])):
+            raise LayoutError("invalid legal-brain browser relocation identity")
+        destinations[name] = row["path"]
+    historical_assets = {name for name, path in historical["browser_assets"].items()
+                         if path.startswith("nm/legal_brain/")}
+    if not historical_assets <= destinations.keys():
+        raise LayoutError("legal-brain relocation lost historical browser owners")
+    return (MappingProxyType(aliases), MappingProxyType(roles),
+            MappingProxyType(destinations))
+
+
+def legacy_modules(*, root: Path = ROOT) -> Mapping[str, str]:
+    """Exact original->current identities through both moves, never a verdict."""
+    historical, originals = _journey_modules(root=root)
+    relocated, _, _ = _brain_relocations(root=root, historical=historical)
+    return MappingProxyType({old: relocated.get(module, module)
+                             for old, module in originals.items()})
 
 
 def current_module(old_module: str, *, root: Path = ROOT) -> str:
-    module = legacy_modules(root=root).get(old_module, old_module)
+    historical, originals = _journey_modules(root=root)
+    relocated, _, _ = _brain_relocations(root=root, historical=historical)
+    before = originals.get(old_module, old_module)
+    module = relocated.get(before, before)
     load_module_roles(root=root).role(module)
     return module
 

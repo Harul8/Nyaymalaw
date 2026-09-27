@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from nm.legal_brain import issues, requirements
-from nm.legal_brain.issue_contracts import from_stored, merge
-from nm.legal_brain.loop_contracts import digest
-from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.legal_brain.reason import issues, requirements
+from nm.legal_brain.reason.issue_contracts import from_stored, merge
 from nm.shared.text_contracts import fold
 from nm.work_the_file import dependency
 from nm.work_the_file.file_mutation_contracts import FileMutation

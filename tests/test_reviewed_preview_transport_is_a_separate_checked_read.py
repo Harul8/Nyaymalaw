@@ -7,9 +7,9 @@ import pytest
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.reviewed_preview import MARKER, ReviewedPreviewService
-from nm.legal_brain.reviewed_preview_api import router
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.communicate.reviewed_preview import MARKER, ReviewedPreviewService
+from nm.legal_brain.communicate.reviewed_preview_api import router
 from tests.test_reviewed_private_preview_checks_saved_words import ready
 
 pytestmark = pytest.mark.class_a

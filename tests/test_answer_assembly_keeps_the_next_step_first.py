@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain.turn import _with_screens
+from nm.legal_brain.orchestrate.turn import _with_screens
 from nm.shared.model_scripted import SCRIPTED_READS
 
 pytestmark = pytest.mark.class_a

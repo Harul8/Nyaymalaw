@@ -22,9 +22,9 @@ import dataclasses
 import pytest
 
 from nm.advise import relief as relief_mod
-from nm.legal_brain import interim_relief_sources as curated
-from nm.legal_brain.interim_relief_port import InterimRelief, LimbState
-from nm.legal_brain.premise import Basis
+from nm.legal_brain.procedure import interim_relief_sources as curated
+from nm.legal_brain.procedure.interim_relief_port import InterimRelief, LimbState
+from nm.legal_brain.reason.premise import Basis
 
 pytestmark = pytest.mark.class_a
 
@@ -298,7 +298,7 @@ def _seeded(tmp_path, *, wired: bool):
     CLAUDE.md section 2 names. So the same file is served both ways and the
     difference is what is asserted.
     """
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, store = build(tmp_path)
@@ -353,7 +353,7 @@ def test_a_matter_with_no_interim_order_stated_says_nothing_about_one(tmp_path):
     """THE QUIET CASE. Most matters carry no interim application, and a
     product that announced the injunction test on every turn would bury the
     turns where it matters."""
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

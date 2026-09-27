@@ -8,18 +8,18 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain import grounding
-from nm.legal_brain.brain_assessment import AssessmentRefused, AssessmentService
-from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.brain_publication import PrivatePublicationService
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode
-from nm.legal_brain.matter_support import REFERENCE_KEYS, captured_documents
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tool_catalogue import catalogue_tools
-from nm.legal_brain.tools import Boundary, foundation_tools
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.verify import grounding
+from nm.legal_brain.verify.brain_assessment import AssessmentRefused, AssessmentService
+from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.verify.brain_publication import PrivatePublicationService
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode
+from nm.legal_brain.reason.matter_support import REFERENCE_KEYS, captured_documents
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.open_matter.matter_documents_port import DocumentRefused
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
@@ -214,7 +214,7 @@ def test_document_identity_changes_only_its_actual_dependency_closure(tmp_path):
 @pytest.mark.parametrize("mutation", ["missing_dispatch", "changed_snapshot", "wrong_actor_source",
                                       "established_fact", "repeated_return"])
 def test_document_capture_refuses_incomplete_or_changed_receipts(tmp_path, mutation):
-    from nm.legal_brain.loop_contracts import StepKind
+    from nm.legal_brain.orchestrate.loop_contracts import StepKind
 
     _, _, outcome, _, _, _, _ = _case(tmp_path)
     events = list(outcome.record.events)

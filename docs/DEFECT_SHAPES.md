@@ -267,7 +267,7 @@ living in the gap between them.** Every unit test passed. It was found the
 first time seven realistic turns ran end to end, which is the argument for the
 journey portfolio in `JOURNEY.md` §5 restated in one afternoon.
 
-The fix is the CHECK above and not a second hardening: `nm/legal_brain/citation_contracts.py`
+The fix is the CHECK above and not a second hardening: `nm/legal_brain/common/citation_contracts.py`
 is now the only module permitted to define such a pattern, and
 `tests/test_citation_patterns.py` scans `nm/` and fails the build on a second
 one. A grep is a weak enforcement mechanism and it is a great deal stronger

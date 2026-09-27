@@ -6,7 +6,7 @@ __all__ = ["MatterSummary", "build", "unbuildable"]
 
 
 def build(matter, *args, source_current=None, checklist_projections=None, **kwargs):
-    from nm.legal_brain.requirements import checked_file_projections
+    from nm.legal_brain.reason.requirements import checked_file_projections
 
     if "classifications" in kwargs:
         raise ValueError("Summary relevance proofs come only from this file's saved reviews")

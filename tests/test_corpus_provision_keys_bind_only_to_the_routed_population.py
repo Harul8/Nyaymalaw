@@ -4,8 +4,8 @@ import sqlite3
 
 import pytest
 
-from nm.legal_brain.evidence_port import Coverage
-from nm.legal_brain.provision_revision_sources import SelectionState
+from nm.legal_brain.retrieve.evidence_port import Coverage
+from nm.legal_brain.retrieve.provision_revision_sources import SelectionState
 from tests.test_provision_revisions_need_owned_interval_proof import BEFORE, TITLE, adapter
 
 pytestmark = pytest.mark.class_a

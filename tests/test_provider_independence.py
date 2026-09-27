@@ -32,7 +32,7 @@ import pytest
 
 from assurance.common.module_roles import classify_sources, source_module, sources_for_roles
 from nm.app.composition import build_model
-from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
@@ -218,8 +218,8 @@ def _schema_fragments(value):
 
 def _registered_arguments(client):
     """Actual installed tool declarations, not a schema filename exception."""
-    from nm.legal_brain.brain_release import ReviewService
-    from nm.legal_brain.verifier import IndependentVerifier
+    from nm.legal_brain.verify.brain_release import ReviewService
+    from nm.legal_brain.verify.verifier import IndependentVerifier
     from nm.shared.store_loop_log import MatterLoopLog
     from tests.test_controlled_brain_composition_keeps_the_account_boundary import _scope
     from tests.test_independent_claim_verifier import Judge

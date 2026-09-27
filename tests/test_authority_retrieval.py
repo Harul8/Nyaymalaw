@@ -21,8 +21,8 @@ from datetime import date
 import pytest
 
 from nm.app.composition import ROOT
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter, default_authority_index
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, default_authority_index
+from nm.legal_brain.retrieve.evidence_port import (
     Binding,
     Coverage,
     EvidenceNeed,
@@ -30,7 +30,7 @@ from nm.legal_brain.evidence_port import (
     SourceKind,
     TreatmentState,
 )
-from nm.legal_brain.manifest_sources import Manifest
+from nm.legal_brain.retrieve.manifest_sources import Manifest
 from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_c
@@ -218,7 +218,7 @@ IDENTITY = ROOT / ".nm" / "identity.db"
 
 @pytest.fixture(scope="module")
 def identity():
-    from nm.legal_brain.identity_sources import IdentityIndex
+    from nm.legal_brain.retrieve.identity_sources import IdentityIndex
     ix = IdentityIndex(IDENTITY)
     if not ix.available:
         pytest.skip("the identity index is not built — "
@@ -408,7 +408,7 @@ def test_a_ranking_that_rests_on_an_inferred_bench_discloses_it(identity):
     way: when the LOSER's bench was inferred, say it may have been larger."""
     import sqlite3
 
-    from nm.legal_brain.identity_sources import Precedence, supersedes
+    from nm.legal_brain.retrieve.identity_sources import Precedence, supersedes
     con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
     try:
         inferred = con.execute(

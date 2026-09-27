@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.citation_contracts import ProvisionKeyState, bind_provision_key
-from nm.legal_brain.source_registry_sources import CanonicalSource, SourceKind, SourceRegistry
+from nm.legal_brain.common.citation_contracts import ProvisionKeyState, bind_provision_key
+from nm.legal_brain.retrieve.source_registry_sources import CanonicalSource, SourceKind, SourceRegistry
 
 pytestmark = pytest.mark.class_a
 

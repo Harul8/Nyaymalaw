@@ -5,12 +5,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.practice_playbooks import playbook_tools
-from nm.legal_brain.practice_playbooks_adapter import FilePracticePlaybooks
-from nm.legal_brain.practice_playbooks_port import PlaybooksSnapshot, PlaybooksUnavailable
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tools import Assessment, ToolRefused
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.retrieve.practice_playbooks import playbook_tools
+from nm.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
+from nm.legal_brain.retrieve.practice_playbooks_port import PlaybooksSnapshot, PlaybooksUnavailable
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tools import Assessment, ToolRefused
 
 pytestmark = pytest.mark.class_a
 CONTEXT = SimpleNamespace(identity=SimpleNamespace(turn_id="playbook-test"))

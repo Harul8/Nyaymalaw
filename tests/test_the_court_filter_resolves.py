@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.jurisdiction_sources import STORED_AS, Court, stored_court
+from nm.legal_brain.retrieve.jurisdiction_sources import STORED_AS, Court, stored_court
 
 pytestmark = pytest.mark.class_a
 

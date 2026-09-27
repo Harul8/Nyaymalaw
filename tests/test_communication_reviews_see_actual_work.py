@@ -8,20 +8,20 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluation_models import VerifierOnly
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.interaction_review import (
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.verify.interaction_review import (
     COMMUNICATION_WORK_REVIEW_SCHEMA,
     InteractionReviewService,
     build_work_prompt,
     communication_subject,
 )
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind
-from nm.legal_brain.preview_display import displayed_questions, interaction_text
-from nm.legal_brain.tools import Boundary, foundation_tools
-from nm.legal_brain.verifier import IndependentVerifier
-from nm.legal_brain.work_receipts import require_work_receipts, work_receipts
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
+from nm.legal_brain.communicate.preview_display import displayed_questions, interaction_text
+from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.orchestrate.work_receipts import require_work_receipts, work_receipts
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, ToolCall, Usage
 from nm.shared.store_loop_log import MatterLoopLog
@@ -198,7 +198,7 @@ def test_delegated_unknown_unavailable_and_refused_work_retains_its_complete_pop
 
 
 def test_overflow_refuses_the_whole_receipt_population_without_truncating_it(tmp_path, monkeypatch):
-    from nm.legal_brain import work_receipts as owner
+    from nm.legal_brain.orchestrate import work_receipts as owner
 
     _, _, outcome, _, _ = _work_case(tmp_path, read_source=True)
     actual = owner.work_receipts(outcome.record)

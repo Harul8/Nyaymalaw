@@ -7,11 +7,11 @@ import pytest
 from nm.act import action, drafting
 from nm.act.action_contracts import ActionState
 from nm.act.action_proposal_tool import NAME, action_proposal_tools
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode, StepKind, StopReason
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tools import foundation_tools
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind, StopReason
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.orchestrate.tools import foundation_tools
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.matter_contracts import Thread
 from tests.test_the_drafting_package_is_checkable import _brief

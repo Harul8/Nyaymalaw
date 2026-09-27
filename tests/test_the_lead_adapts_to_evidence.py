@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain import lead
-from nm.legal_brain.delegation import Ledger
-from nm.legal_brain.delegation_contracts import (
+from nm.legal_brain.orchestrate import lead
+from nm.legal_brain.orchestrate.delegation import Ledger
+from nm.legal_brain.orchestrate.delegation_contracts import (
     Finding,
     Mandate,
     MandateDelta,
@@ -34,7 +34,7 @@ from nm.legal_brain.delegation_contracts import (
     Role,
     Task,
 )
-from nm.legal_brain.lead_contracts import Action, EpistemicStatus, Plan
+from nm.legal_brain.orchestrate.lead_contracts import Action, EpistemicStatus, Plan
 
 pytestmark = pytest.mark.class_a
 

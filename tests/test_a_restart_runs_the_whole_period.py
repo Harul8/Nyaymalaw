@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.limitation import (
+from nm.legal_brain.procedure.limitation import (
     Factor,
     FactorKind,
     Period,
@@ -94,5 +94,5 @@ def test_period_arithmetic_has_one_owner_across_the_product():
                      if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
             if {"add_years", "add_months"} <= calls:
                 owners.append(f"{path.relative_to(ROOT).as_posix()}::{fn.name}")
-    assert owners == ["nm/legal_brain/limitation.py::run_period"], (
+    assert owners == ["nm/legal_brain/procedure/limitation.py::run_period"], (
         f"period arithmetic is written in more than one place: {owners}")

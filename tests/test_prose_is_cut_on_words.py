@@ -75,9 +75,9 @@ PROSE = frozenset({
 #: above it -- an exemption that drifts onto a different line is worse than no
 #: exemption, because it silently permits whatever lands there next.
 EXEMPT: dict[tuple[str, str], str] = {
-    ("nm/legal_brain/turn.py", "element.text[:400]"):
+    ("nm/legal_brain/orchestrate/turn.py", "element.text[:400]"):
         "a fragment kept to seed a retrieval, never rendered",
-    ("nm/legal_brain/turn.py", "read.described[:6]"):
+    ("nm/legal_brain/orchestrate/turn.py", "read.described[:6]"):
         "a tuple of descriptors, not text; caught only by what it is called",
 }
 

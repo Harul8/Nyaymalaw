@@ -8,9 +8,9 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain import consistency, duty, grounding
-from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.verify import consistency, duty, grounding
+from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.retrieve.evidence_port import (
     Binding,
     Coverage,
     EvidenceNeed,
@@ -18,7 +18,7 @@ from nm.legal_brain.evidence_port import (
     ParaKind,
     SourceKind,
 )
-from nm.legal_brain.output_checks import (
+from nm.legal_brain.verify.output_checks import (
     BoundarySubjects,
     CheckReceipt,
     OutputSubjects,

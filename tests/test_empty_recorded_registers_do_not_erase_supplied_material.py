@@ -6,12 +6,12 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_context import ContextRefused, ContextSession
-from nm.legal_brain.conversation import PRINCIPLES
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tools import ToolRefused
+from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession
+from nm.legal_brain.common.conversation import PRINCIPLES
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.orchestrate.tools import ToolRefused
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.matter_contracts import Certainty

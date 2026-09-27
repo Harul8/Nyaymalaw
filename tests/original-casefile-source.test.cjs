@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const {createHash, webcrypto} = require('node:crypto');
 
-const shipped = fs.readFileSync('nm/legal_brain/matter-workspace.js', 'utf8');
+const shipped = fs.readFileSync('nm/legal_brain/communicate/matter-workspace.js', 'utf8');
 function walk(node) { return [node, ...node.children.flatMap(walk)]; }
 class Element {
   constructor(tag) { this.tagName = tag; this.children = []; this.listeners = {}; this.attributes = {}; this.open = false; }

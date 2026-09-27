@@ -9,17 +9,17 @@ from datetime import date
 
 import pytest
 
-import nm.legal_brain.provision_registry_composition as owner
-from nm.legal_brain.citation_contracts import ProvisionKeyState
-from nm.legal_brain.manifest_sources import CorpusPublicationRefused, PublishedCorpus, _event_id
-from nm.legal_brain.provenance_sources import Standing
-from nm.legal_brain.provision_registry_composition import (
+import nm.legal_brain.retrieve.provision_registry_composition as owner
+from nm.legal_brain.common.citation_contracts import ProvisionKeyState
+from nm.legal_brain.retrieve.manifest_sources import CorpusPublicationRefused, PublishedCorpus, _event_id
+from nm.legal_brain.retrieve.provenance_sources import Standing
+from nm.legal_brain.retrieve.provision_registry_composition import (
     REGISTRY_MEMBER,
     ProvisionRegistryRefused,
     RegistryLoadState,
     load_provision_registry,
 )
-from nm.legal_brain.provision_revision_sources import (
+from nm.legal_brain.retrieve.provision_revision_sources import (
     AuthorityRole,
     AuthoritySpan,
     ProvisionRevision,
@@ -28,7 +28,7 @@ from nm.legal_brain.provision_revision_sources import (
     TransitionState,
     _wire,
 )
-from nm.legal_brain.source_registry_sources import (
+from nm.legal_brain.retrieve.source_registry_sources import (
     BindingState,
     CanonicalSource,
     LegalReview,

@@ -102,7 +102,7 @@ CASES = (
     ("SYN_1999_NOCITE", SC, 1999, "Unreported Fixture vs Nobody", 1, "author_inline"),
 )
 
-#: (citation_key, case_id) -- keys as `nm.legal_brain.citation_contracts.reporter_key` makes them
+#: (citation_key, case_id) -- keys as `nm.legal_brain.common.citation_contracts.reporter_key` makes them
 CITATIONS = (
     ("1990SYN1", "SYN_1990_MARKER"),
     ("AIR1990SYN1", "SYN_1990_MARKER"),

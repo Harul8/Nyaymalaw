@@ -1,0 +1,549 @@
+"""Limitation as a COMPUTED DATE. D2.
+
+WHY A DATE AND NEVER A SENTENCE
+--------------------------------
+*"Roughly three years from the invoices"* is not an output. An advocate cannot
+file against it, cannot advise against it, and cannot tell whether it is right.
+A date can be checked; a sentence can only be believed.
+
+So `Limitation` carries `expires_on` and `days_remaining` as fields, and a
+computation that cannot produce them is NOT_COMPUTED — a third state — rather
+than prose that reads like an answer.
+
+THE INVARIANT, AND IT IS THE ONE THAT WAS MEASURED FAILING
+-----------------------------------------------------------
+E-042: EVERY CHRONOLOGY ENTRY APPEARS IN THE COVERAGE RECORD. The measured
+defect was an acknowledgment in writing on 12 June 2024 that sat in the
+chronology, was repeated back to the advocate, and never reached the
+arithmetic. The claim was reported time-barred. It was not.
+
+Nothing about that failure was visible: the citation was right, the period was
+right, the accrual date was right, and the answer was wrong because one fact in
+the chart was never asked about. So `covered` is a record with one row per
+chronology entry, each APPLIED or expressly NO_EFFECT, and
+`accounts_for_every_entry` refuses a computation that skipped one.
+
+Three states there too. NOT_ASSESSED is what an entry gets when the computation
+could not reach it, and it is distinguishable from "considered and irrelevant"
+because those call for different next moves.
+
+AN EXTENDING PROVISION IS RETRIEVED, NEVER REMEMBERED
+------------------------------------------------------
+Acknowledgment, part payment, exclusion, disability, fraud, notice periods,
+continuing breach — every one of them is a section, and every one of them is
+cited to retrieved text or it does not apply. `Factor.finding` is required by
+the type, so a factor asserted from memory cannot be constructed.
+
+THE CALENDAR COUNTS, NOT THE DAYS
+----------------------------------
+Three years from 15 April 2019 is 15 April 2022, not 1,095 days later. The
+difference is one day across a leap year, and one day is the whole of a
+limitation argument. `add_years` and `add_months` work on the calendar and
+clamp the month end, so 31 January plus one month is 28 February and not 3
+March.
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from datetime import date, timedelta
+from enum import Enum
+
+from nm.shared.text_contracts import clean, refuses_blank_text
+from nm.shared.traceability_contracts import implements
+from nm.work_the_file.matter_contracts import FactId, Side
+
+# ------------------------------------------------------- calendar arithmetic ---
+
+
+def add_years(on: date, years: int) -> date:
+    """The same day, `years` later, by the CALENDAR.
+
+    29 February plus one year is 28 February, because there is no 29 February
+    in the following year and the alternative -- 1 March -- would silently
+    extend the period by a day. A day is the whole of a limitation argument.
+    """
+    return _clamped(on.year + years, on.month, on.day)
+
+
+def add_months(on: date, months: int) -> date:
+    """The same day, `months` later, clamped to the month end.
+
+    31 January plus one month is 28 February. Rolling into 3 March would give
+    the advocate three days they do not have.
+    """
+    total = (on.year * 12 + (on.month - 1)) + months
+    return _clamped(total // 12, total % 12 + 1, on.day)
+
+
+def run_period(start: date, period: "Period") -> date:
+    """The date `period` ends when it runs from `start`. THE ONLY COPY.
+
+    Years, then months, then days -- calendar first so month-end clamping
+    happens once. Every place a period is laid over a date comes here: the
+    accrual, and every restart.
+
+    IT WAS WRITTEN FOUR TIMES, and two of the four dropped the days. `compute`
+    and `expiry_from` each held the accrual arithmetic and the restart
+    arithmetic, and both restart copies re-added years and months but not
+    days -- so an acknowledgment inside a ninety-day period put the expiry ON
+    the acknowledgment's own date, reporting a revived claim barred the day it
+    was revived. Measured 26 September 2026. One function cannot run a period
+    partially in one caller and fully in another.
+    """
+    on = start
+    if period.years:
+        on = add_years(on, period.years)
+    if period.months:
+        on = add_months(on, period.months)
+    if period.days:
+        on = on + timedelta(days=period.days)
+    return on
+
+
+def _clamped(year: int, month: int, day: int) -> date:
+    last = _DAYS[month] + (1 if month == 2 and _leap(year) else 0)
+    return date(year, month, min(day, last))
+
+
+_DAYS = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
+         7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
+
+
+def _leap(year: int) -> bool:
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+# ------------------------------------------------------------------ states ---
+
+
+class Applied(str, Enum):
+    """What the computation did with one chronology entry. THREE STATES.
+
+    `NO_EFFECT` and `NOT_ASSESSED` are the two that get conflated, and they
+    call for opposite next moves: the first is an answer, the second is a gap.
+    """
+
+    APPLIED = "applied"
+    NO_EFFECT = "no_effect"
+    NOT_ASSESSED = "not_assessed"
+
+
+class LimitationState(str, Enum):
+    """Whether a date could be produced, and WHY NOT when it could not.
+
+    THREE STATES, AND THE THIRD IS WHAT MAKES THE GATE SAFE. This held two,
+    and `NOT_COMPUTED` carried both `there is no period here` and `there is
+    one and we could not produce it`. Those are opposite facts: the first
+    is a finding and the second is a gap, and `G-LIMITATION` must refuse a
+    recommendation on the second and say nothing about the first.
+
+    The only thing separating them was the prose of
+    `not_computed_because`, and a gate reading that would be matching on a
+    sentence -- which is how three earlier controls in this product went
+    wrong.
+    """
+
+    COMPUTED = "computed"
+    #: There IS no limitation position to compute for this side on this
+    #: thread -- we are defending and have brought no claim, or the cause
+    #: carries no period. A FINDING, and nothing is blocked on it.
+    NOT_APPLICABLE = "not_applicable"
+    #: There is one and it was not produced. A GAP.
+    NOT_COMPUTED = "not_computed"
+    #: A date WAS produced, under a premise the product inferred rather than
+    #: established -- which entry the period runs from, most often. P22. It is
+    #: shown as conditional with its alternatives, it is never a deadline on
+    #: the register, and it blocks the directive step exactly as NOT_COMPUTED
+    #: does. Correct arithmetic under an assumed premise is an assumption.
+    CONDITIONAL = "conditional"
+
+
+class FactorKind(str, Enum):
+    """What moved the clock. Every one of these is a SECTION, never a memory."""
+
+    ACKNOWLEDGMENT = "acknowledgment"
+    PART_PAYMENT = "part_payment"
+    EXCLUSION = "exclusion"
+    DISABILITY = "disability"
+    FRAUD = "fraud"
+    NOTICE_PERIOD = "notice_period"
+    CONTINUING_BREACH = "continuing_breach"
+    NOT_ASSESSED = "not_assessed"
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class Factor:
+    """One thing that extends, restarts or excludes — CITED, never remembered.
+
+    `finding` is a required field with no default, so a factor asserted from
+    memory cannot be constructed. D2 forbids it in terms: acknowledgment, part
+    payment, exclusion, disability, fraud, notice periods, continuing breach
+    and continuing wrongs are each a provision, and each is retrieved or it
+    does not apply.
+    """
+
+    kind: FactorKind
+    fact: FactId
+    finding: str
+    """The retrieved provision this rests on. Required BY THE TYPE."""
+    restarts_from: date | None = None
+    adds_days: int = 0
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class Entry:
+    """One chronology entry, and what the computation did with it.
+
+    THE COVERAGE RECORD. A fact in the chart that never reaches the arithmetic
+    is the measured defect this whole record exists to refuse -- and it was
+    invisible, because every other part of the answer was right.
+    """
+
+    fact: FactId
+    applied: Applied
+    reason: str
+
+
+@refuses_blank_text("accrual_reason", "not_computed_because")
+@dataclass(frozen=True)
+class Limitation:
+    """A limitation position: a DATE, a day count, and what it rests on."""
+
+    for_side: Side
+    state: LimitationState = LimitationState.NOT_COMPUTED
+    article: str | None = None
+    """The retrieved Article or section. `None` while NOT_COMPUTED."""
+    accrual: FactId | None = None
+    accrual_reason: str = ""
+    period_years: int = 0
+    period_months: int = 0
+    period_days: int = 0
+    expires_on: date | None = None
+    factors: tuple[Factor, ...] = ()
+    covered: tuple[Entry, ...] = ()
+    not_computed_because: str = ""
+    premises: tuple[dict, ...] = ()
+    """THE LAW THIS RESTS ON, as `nm.legal_brain.reason.premise.Premise.as_dict()` rows --
+    which provision, what starts the period, which forum -- each with its
+    basis, source and review state. Present on every state, because a
+    position that was NOT computed still has premises the advocate can fix.
+    P22 (BK-65-AC2)."""
+    premise_digest: str = ""
+    """`Premises.digest()` of the rows above: the version of the legal
+    position this arithmetic was run under. The deadline register carries the
+    same digest, so a cover and a register from different premise versions
+    are visibly inconsistent rather than quietly disagreeing (BK-35-AC2)."""
+    conditional_because: str = ""
+    """Why the state is CONDITIONAL: the inferred premise, in words."""
+
+    @property
+    def why_not_computed(self) -> str:
+        """Why there is no period, ALWAYS a sentence. ONE COPY, and this is it.
+
+        THE MEASURED DEFECT, 23 September 2026, on a live matter. The advocate
+        was served:
+
+            NO limitation period has been computed on this thread: . Whether a
+            window is open or closed is NOT ESTABLISHED.
+
+        `f"...thread: {position.not_computed_because}."` with an empty reason.
+        The field is EXEMPT from `refuses_blank_text` on this very class,
+        because emptiness is a state it must be able to express -- so every
+        renderer has to handle it, and three of the four did not. The fourth,
+        `nm.legal_brain.reason.thresholds`, wrote `or "limitation was not computed"` inline,
+        which was right and was also the beginning of four copies of one rule.
+
+        THE RULE: A REASON THAT DOES NOT EXIST IS SAID, NOT LEFT AS A GAP IN A
+        SENTENCE. An empty interpolation renders as though the product had
+        nothing to say and meant it -- CLAUDE.md section 9, where an absent
+        input reads as a clean result, in the one line the advocate uses to
+        decide whether to go and work it out themselves.
+
+        Owned by the type rather than by its readers, so the next renderer is
+        correct the day it is written.
+        """
+        return clean(self.not_computed_because) or (
+            "no reason was recorded for this, which is itself a gap")
+    alternatives: tuple[dict, ...] = ()
+    """The same arithmetic under each competing factual trigger, as
+    `{"accrual": fact_id, "accrual_on": iso, "expires_on": iso}` rows. The
+    advocate sees every candidate date rather than the one the sort order
+    picked; none of them is a deadline until a premise is stated."""
+
+    def days_remaining(self, today: date) -> int | None:
+        """The count, or None where no date was produced.
+
+        E-043 requires every position to yield a date AND a day count. A
+        negative count is the answer where the period has run -- it is not an
+        error, and rounding it to zero would hide how far gone the claim is.
+        """
+        if self.expires_on is None:
+            return None
+        return (self.expires_on - today).days
+
+    def expired(self, today: date) -> bool | None:
+        """THREE STATES: expired, alive, or NOT COMPUTED.
+
+        `None` is the third, and it is why this returns an optional rather than
+        a bool: `False` for "we could not compute it" would read as "the claim
+        is alive", which is the most expensive false reassurance this product
+        could give.
+        """
+        remaining = self.days_remaining(today)
+        return None if remaining is None else remaining < 0
+
+    def accounts_for_every_entry(self, chronology: tuple[FactId, ...]) -> tuple[FactId, ...]:
+        """E-042. The chronology entries this computation never reached.
+
+        Returns the gap rather than a boolean, so the caller can name what was
+        missed. The measured defect was ONE acknowledgment, in the chart,
+        absent from the arithmetic -- and a boolean would have said `False`
+        without saying which.
+        """
+        seen = {e.fact for e in self.covered
+                if e.applied is not Applied.NOT_ASSESSED}
+        return tuple(f for f in chronology if f not in seen)
+
+
+#: Statutes write periods in words far more often than in figures, and the
+#: Limitation Act's Schedule writes them in words throughout.
+_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    "thirty": 30, "sixty": 60, "ninety": 90,
+}
+_PERIOD = re.compile(
+    r"\b(\d{1,3}|" + "|".join(_WORDS) + r")\s+(year|month|day)s?\b", re.I)
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class Period:
+    """A period, AND THE RETRIEVED TEXT IT WAS READ OUT OF.
+
+    The span is required by the type and verified against the numbers, so a
+    period the product invented cannot be constructed -- which is the same
+    mechanism `Factor.finding` uses to refuse an extending provision asserted
+    from memory, and it is here for the same reason.
+
+    Making it a type rather than three integers is what closes the hole.
+    `compute(years=3)` was reachable from anywhere and read as ordinary Python;
+    `compute(period=Period(3, 0, 0, "..."))` has to produce a span that really
+    says three years, and there is nowhere to get one except retrieval.
+    """
+
+    years: int
+    months: int
+    days: int
+    read_from: str
+
+    def __post_init__(self) -> None:
+        if not (self.years or self.months or self.days):
+            raise ValueError(
+                "a period of zero expires on the accrual date, which would "
+                "report every claim as barred the day it arose. Where no "
+                "period could be read, the position is NOT_COMPUTED.")
+        if min(self.years, self.months, self.days) < 0:
+            raise ValueError("a limitation period does not run backwards")
+        # THE SPAN MUST ACTUALLY SAY IT. Without this the field is decoration:
+        # any string would satisfy a required-text check, and an invented
+        # period would carry a real-looking citation beside it.
+        found = _read(self.read_from)
+        if found != (self.years, self.months, self.days):
+            raise ValueError(
+                f"this period is not what the retrieved text says. The span "
+                f"reads {found!r} and the period claims "
+                f"{(self.years, self.months, self.days)!r}. A period the "
+                f"product supplied itself is the defect that reported a "
+                f"twelve-year Article barred after three.")
+
+
+def _read(span: str) -> tuple[int, int, int] | None:
+    """The numbers a span states, with no Period built. One regex, one owner."""
+    if not span:
+        return None
+    m = _PERIOD.search(span)
+    if m is None:
+        return None
+    raw = m.group(1).lower()
+    n = _WORDS.get(raw) or int(raw)
+    unit = m.group(2).lower()
+    return ((n, 0, 0) if unit == "year"
+            else (0, n, 0) if unit == "month" else (0, 0, n))
+
+
+@implements("D2")
+def period_in(span: str) -> "Period | None":
+    """The period THE RETRIEVED TEXT STATES, or `None`.
+
+    THE PERIOD IS NOT A CONSTANT AND MAY NEVER BE ONE. It was measured being
+    one: the engine passed `years=3` into every computation it made, and on a
+    turn that retrieved *Article 65 — twelve years* it produced a bar three
+    years after accrual and reported the claim dead. Every citation on that
+    turn was correct. The Article was correct. The accrual date was correct.
+    The answer was wrong by nine years, and nothing in the output showed which
+    part had been invented, because the invented part looked exactly like the
+    retrieved part.
+
+    That is the same defect as asserting an extending provision from memory,
+    which `Factor.finding` already refuses by type -- so it gets the same
+    answer. The period comes out of the span, or it does not come at all and
+    the position is NOT_COMPUTED with the reason.
+
+    `None` is the third state and it is not failure: an Article whose text this
+    could not read is ordinary, and it must be distinguishable from a period of
+    zero, which `Period` refuses outright.
+    """
+    found = _read(span)
+    return None if found is None else Period(*found, read_from=span)
+
+
+def unique_period_in(span: str) -> "Period | None":
+    """A single supported period, never the first of competing clock clauses.
+
+    The legacy reader remains unchanged. New source-bound arithmetic callers
+    can require uniqueness without defining a second numeric/legal pattern.
+    Missing, zero or multiple readable periods are explicitly unassessed.
+    """
+    if type(span) is not str:
+        raise ValueError("a period reader requires exact source text")
+    if len(tuple(_PERIOD.finditer(span))) != 1:
+        return None
+    try:
+        return period_in(span)
+    except ValueError:
+        return None
+
+
+@implements("D2")
+def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
+            accrual_reason: str, chronology: tuple[FactId, ...],
+            period: Period,
+            factors: tuple[Factor, ...] = (),
+            considered: dict[FactId, str] | None = None,
+            premises: tuple[dict, ...] = (), premise_digest: str = "",
+            conditional_because: str = "",
+            alternatives: tuple[dict, ...] = ()) -> Limitation:
+    """Compute the position, and account for EVERY entry in the chronology.
+
+    `period` IS A TYPE AND NOT THREE INTEGERS. It carries the retrieved span it
+    was read out of and verifies itself against it, so there is no signature
+    here through which a period the product invented can reach the arithmetic.
+    It was three integers with defaults of zero, and the engine passed
+    `years=3` into every computation it made -- including one that had just
+    retrieved Article 65 and its twelve years.
+
+    `considered` names the entries the caller examined and found to have no
+    effect, with the reason. Anything in the chronology that is neither applied
+    nor considered lands as NOT_ASSESSED -- visibly, in the record -- rather
+    than being silently absent, which is how the acknowledgment was lost.
+    """
+    considered = considered or {}
+    years, months, days = period.years, period.months, period.days
+    # ONE ARITHMETIC. The date comes from `expiry_from`, which this function
+    # used to restate line for line -- and the restated restart dropped days.
+    on = expiry_from(accrual_on, period, factors)
+
+    applied_facts = {f.fact for f in factors}
+
+    rows: list[Entry] = []
+    for fid in chronology:
+        if fid == accrual:
+            # THE ACCRUAL EVENT IS APPLIED. It is the fact the clock runs FROM,
+            # and leaving it unaccounted made the record report a gap where the
+            # computation's own foundation sat -- which would have taught the
+            # reader to ignore the record.
+            rows.append(Entry(fid, Applied.APPLIED,
+                              f"accrual — {accrual_reason}"))
+        elif fid in applied_facts:
+            kind = next(f.kind for f in factors if f.fact == fid)
+            rows.append(Entry(fid, Applied.APPLIED,
+                              f"{kind.value} — moves the clock"))
+        elif fid in considered:
+            rows.append(Entry(fid, Applied.NO_EFFECT, considered[fid]))
+        else:
+            # NOT ASSESSED, and SAID SO. This row is the whole point of the
+            # record: the acknowledgment that was lost would appear here.
+            rows.append(Entry(fid, Applied.NOT_ASSESSED,
+                              "this entry was not examined against the period"))
+
+    return Limitation(
+        for_side=for_side,
+        # CONDITIONAL WHEN A PREMISE WAS INFERRED. The arithmetic is the same;
+        # what differs is what the date may be used for, and that is a STATE
+        # rather than a sentence so the register and the gates can read it.
+        state=(LimitationState.CONDITIONAL if conditional_because
+               else LimitationState.COMPUTED),
+        article=article,
+        accrual=accrual, accrual_reason=accrual_reason,
+        period_years=years, period_months=months, period_days=days,
+        expires_on=on, factors=factors, covered=tuple(rows),
+        premises=premises, premise_digest=premise_digest,
+        conditional_because=conditional_because, alternatives=alternatives)
+
+
+def expiry_from(accrual_on: date, period: Period,
+                factors: tuple[Factor, ...] = ()) -> date:
+    """The expiry, once. `compute` and a conditional position's alternatives
+    both come here, so a competing trigger's date is computed the way the
+    chosen one was.
+
+    A RESTART RUNS THE WHOLE PERIOD AFRESH FROM ITS DATE -- years, months AND
+    days, through `run_period` -- and does not add to the old expiry. Adding
+    would give a period longer than the statute allows, which is the error
+    that favours our own client.
+
+    THE LATEST RESTART GOVERNS, whatever order the factors arrive in. A fresh
+    period runs from each acknowledgment or payment made in time, so the one
+    that ends latest is the one in force; taking whichever was listed last
+    made the date depend on the order a caller happened to build the tuple.
+    Excluded days are added after, once.
+    """
+    restarts = [f.restarts_from for f in factors if f.restarts_from is not None]
+    on = run_period(max(restarts) if restarts else accrual_on, period)
+    extra = sum(f.adds_days for f in factors if f.adds_days)
+    return on + timedelta(days=extra) if extra else on
+
+
+
+def not_applicable(for_side: Side, because: str,
+                   chronology: tuple[FactId, ...] = (),
+                   premises: tuple[dict, ...] = (),
+                   premise_digest: str = "") -> Limitation:
+    """There is no period to compute for this side, and that is a FINDING.
+
+    Kept apart from `not_computed` at the TYPE, not in the reason string.
+    A defending party who has brought no claim has no limitation position,
+    and blocking the recommendation on that would refuse every defence in
+    the product for the absence of a period that does not exist.
+    """
+    return Limitation(
+        for_side=for_side, state=LimitationState.NOT_APPLICABLE,
+        not_computed_because=because,
+        covered=tuple(Entry(f, Applied.NOT_ASSESSED,
+                            "no period runs against this side on this "
+                            "thread")
+                      for f in chronology),
+        premises=premises, premise_digest=premise_digest)
+
+def not_computed(for_side: Side, because: str,
+                 chronology: tuple[FactId, ...] = (),
+                 premises: tuple[dict, ...] = (),
+                 premise_digest: str = "") -> Limitation:
+    """No date could be produced, and the reason is carried.
+
+    Not an error path. An Article that could not be retrieved, an accrual event
+    the advocate has not given, a period the corpus does not hold -- all
+    ordinary, and all of them must be distinguishable from "the claim is
+    alive", which is what a bare absence would read as.
+    """
+    return Limitation(
+        for_side=for_side, state=LimitationState.NOT_COMPUTED,
+        not_computed_because=because,
+        covered=tuple(Entry(f, Applied.NOT_ASSESSED,
+                            "no computation was made on this thread")
+                      for f in chronology),
+        premises=premises, premise_digest=premise_digest)

@@ -6,9 +6,9 @@ from copy import deepcopy
 
 import pytest
 
-from nm.legal_brain.brain_finalization import CheckRead
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.interaction_review import (
+from nm.legal_brain.verify.brain_finalization import CheckRead
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.verify.interaction_review import (
     COMMUNICATION_QUOTE_REVIEW_SCHEMA,
     CRITERIA,
     InteractionReviewService,

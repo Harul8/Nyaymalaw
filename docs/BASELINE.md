@@ -263,7 +263,7 @@ as *section 442* and the other was not. A realistic brief retrieved
 Act the corpus holds in full.
 
 **The lesson is the same one and it is now enforced the same way.** The pattern
-lives in `nm/legal_brain/citation_contracts.py`, and `tests/test_citation_patterns.py` fails
+lives in `nm/legal_brain/common/citation_contracts.py`, and `tests/test_citation_patterns.py` fails
 the build if a second one appears anywhere in `nm/`.
 
 ---
@@ -434,7 +434,7 @@ Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
 
 > **CHECK `rg-01`:** these figures are measured by `pipeline/releasegate.py`
 > against `assurance/specification/release.yaml`, written to `assurance/specification/coverage.yaml`, and **read at
-> turn time** by `nm/legal_brain/coverage_sources.py`. The release decision and the
+> turn time** by `nm/legal_brain/retrieve/coverage_sources.py`. The release decision and the
 > advocate-facing disclosure rest on ONE measurement, so they cannot disagree.
 
 ---

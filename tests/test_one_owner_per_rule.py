@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #:          why a second copy is dangerous)
 OWNED: dict[str, tuple[str, str, str]] = {
     "how an advocate writes a provision reference": (
-        "nm/legal_brain/citation_contracts.py",
+        "nm/legal_brain/common/citation_contracts.py",
         r"re\.compile\([^)]*(?:sections?|article|\bsec\b)",
         "the gate's copy was hardened against `O.S. 442/2023` parsing as "
         "section 442 and the adapter's was not, so a realistic brief retrieved "
@@ -58,7 +58,7 @@ OWNED: dict[str, tuple[str, str, str]] = {
         "fails at switch time, which is when it is most expensive (B-002)"),
 
     "how a court name is normalised": (
-        "nm/legal_brain/jurisdiction_sources.py",
+        "nm/legal_brain/retrieve/jurisdiction_sources.py",
         r"def normalise_court\b",
         "one judgment in 33,791 carries `Supreme Court` where every other "
         "carries `Supreme Court of India`; any second normaliser silently "

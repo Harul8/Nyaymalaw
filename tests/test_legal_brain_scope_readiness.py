@@ -62,7 +62,7 @@ def fixture():
             "requirement_prerequisite_closure": ["LB-2", "LB-3"], "clauses": [{
                 "clause": "LB-1-AC1", "requirement_version": "version-one",
                 "owners": [{"packet": "P01", "criterion": "BK-1-AC1"}],
-                "implementation": {"state": "planned", "paths": ["nm/legal_brain/loop.py"]},
+                "implementation": {"state": "planned", "paths": ["nm/legal_brain/orchestrate/loop.py"]},
                 "verification": {"method": "domain_test", "check": "test_good",
                     "negative_control": "test_rejects"},
                 "artifact": {"state": "NOT_RUN", "path": None, "tested_subject": None}}]}]}

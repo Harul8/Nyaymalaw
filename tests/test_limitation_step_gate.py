@@ -6,8 +6,9 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain import limitation, step_dependency
-from nm.legal_brain.turn import TurnEngine
+from nm.legal_brain.orchestrate.turn import TurnEngine
+from nm.legal_brain.procedure import limitation
+from nm.legal_brain.verify import step_dependency
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_port import ModelError
 from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter

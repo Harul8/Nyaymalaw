@@ -64,6 +64,12 @@ and they are not the bar.
 
 Production lives in `nm/<journey>/`, with descriptive files rather than nested
 layer folders. Read `docs/PROJECT_STRUCTURE.md` and the relevant phase README.
+Legal Brain is the size-based exception: eight shallow capability groups plus
+`common/`, with flat files inside each. Common owns only genuinely shared
+guidance/contracts; native tool doors, ports and adapters stay beside their
+capability. These groups are responsibilities in a reasoning loop, not a fixed
+execution sequence. The relocation map composes older identities without
+rewriting the historical journey manifest or granting new dependency permissions.
 `nm/app/main.py` is the entry point; the checkout root is the only import root.
 Browser assets are co-located with their owners and served through the closed
 allowlist in `nm/source_layout.json`, not by exposing the package directory.
@@ -106,8 +112,8 @@ The procedure, after any fix:
    from one module.** An enumerator scoped to a module misses the member added
    to a sibling module an hour later — which is exactly what happened to
    `test_every_declared_schema_is_satisfiable_when_nothing_was_established`,
-   written in the morning against `nm/legal_brain/posture.py` and already blind to
-   `nm/legal_brain/dispute.py` by the afternoon.
+   written in the morning against `nm/legal_brain/understand/posture.py` and already blind to
+   `nm/legal_brain/understand/dispute.py` by the afternoon.
 
 This applies to build fixes, test fixes and stress-test findings alike.
 
@@ -159,7 +165,7 @@ full, and the gate then correctly withheld the turn. Two correct components,
 one useless answer, and the defect living in the gap between them. Every unit
 test passed.
 
-`nm/legal_brain/citation_contracts.py` is now the only module permitted to define such a
+`nm/legal_brain/common/citation_contracts.py` is now the only module permitted to define such a
 pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
 on a second one.
 
@@ -258,7 +264,7 @@ python pipeline/releasegate.py --write     # measure the corpus, score assurance
 
 `assurance/specification/release.yaml` holds authored thresholds with an owner and a cadence.
 `pipeline/releasegate.py` measures, scores every row **PASS / FAIL / NOT MEASURED**,
-and writes `assurance/specification/coverage.yaml`. `nm/legal_brain/coverage_sources.py` reads that same file
+and writes `assurance/specification/coverage.yaml`. `nm/legal_brain/retrieve/coverage_sources.py` reads that same file
 at turn time, so the release decision and the advocate-facing disclosure
 (`G-COVERAGE`) rest on ONE measurement and cannot disagree.
 
@@ -276,7 +282,7 @@ on every authority turn that *no High Court output is held for this
 jurisdiction.* **4,280 are held, and every one of them binds** — Andhra Pradesh
 High Court judgements are Telangana judgements, which is a standing decision
 recorded in `BASELINE.md` §1.1 and already implemented correctly in
-`nm/legal_brain/jurisdiction_sources.py`.
+`nm/legal_brain/retrieve/jurisdiction_sources.py`.
 
 *Binding is a RELATIONSHIP, not a court name.* A zero from the wrong index
 reads exactly like absence — the trap this file already records against the
@@ -343,7 +349,7 @@ artefacts were surveyed on 29 August 2026 and both were declined:
 
 **The dense index is only knowable as unusable because it shipped an
 `identity.json`.** That is the entire argument for defect shape S11, and it
-is now enforced by `nm/legal_brain/artefact_sources.py` — using that real artefact as
+is now enforced by `nm/legal_brain/retrieve/artefact_sources.py` — using that real artefact as
 the counterexample its test must reject, because a synthetic fixture would
 prove only that the check compiles.
 

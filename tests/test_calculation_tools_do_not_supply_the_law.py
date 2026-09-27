@@ -7,18 +7,19 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain import limitation, premise
-from nm.legal_brain.calculation_tools import (
+from nm.legal_brain.procedure import limitation
+from nm.legal_brain.reason import premise
+from nm.legal_brain.procedure.calculation_tools import (
     CalculationSource,
     LimitationInputs,
     ReviewedFactor,
     calculation_snapshot,
     calculation_tools,
 )
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.loop_contracts import LoopEvent, LoopIdentity, LoopMode, StepKind, digest
-from nm.legal_brain.tool_sources import source_envelope
-from nm.legal_brain.tools import (
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopIdentity, LoopMode, StepKind, digest
+from nm.legal_brain.retrieve.tool_sources import source_envelope
+from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,

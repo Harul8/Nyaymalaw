@@ -4,16 +4,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_context import assemble_brief
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.legal_brain.conversational_proposal import (
+from nm.legal_brain.understand.brain_context import assemble_brief
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.understand.conversational_proposal import (
     MAX_CONVERSATION_CHARACTERS,
     ConversationalProposal,
 )
-from nm.legal_brain.loop_contracts import StepKind, StopReason
-from nm.legal_brain.loop_progress import project_event, sse_frame
-from nm.legal_brain.tools import Assessment, Boundary, ToolContext, ToolRefused
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
+from nm.legal_brain.communicate.loop_progress import project_event, sse_frame
+from nm.legal_brain.orchestrate.tools import Assessment, Boundary, ToolContext, ToolRefused
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import SchemaViolation, ToolCall
 from nm.shared.store_loop_log import MatterLoopLog

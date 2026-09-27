@@ -21,7 +21,7 @@ from enum import Enum, nonmember
 from typing import Literal
 
 from nm.advise.turn_receipt_contracts import TurnReceipt
-from nm.legal_brain.loop_contracts import LoopRecord
+from nm.legal_brain.orchestrate.loop_contracts import LoopRecord
 from nm.open_matter.intake_contracts import ReadQuality
 from nm.shared.spoken_contracts import Spoken
 from nm.shared.text_contracts import fold, refuses_blank_text
@@ -132,7 +132,8 @@ class CauseOfAction(str, Enum):
 #: vocabulary in this product describes its values; the one that decides
 #: which Article is looked up did not.
 #:
-#: HERE AND NOT IN `nm/legal_brain/cause.py`, because `nm/legal_brain/resolution_sources.py`
+#: HERE AND NOT IN `nm/legal_brain/reason/cause.py`, because
+#: `nm/legal_brain/retrieve/resolution_sources.py`
 #: states the same legal ground in `Edge.curated_from` and `core` may not
 #: import `knowledge`. A copy beside the reader would be two homes for one
 #: fact; `domain` imports nothing and both layers may read it.
@@ -494,7 +495,7 @@ class Thread:
 
     premises: tuple[dict, ...] = ()
     """THE LEGAL PREMISES THE LATEST LIMITATION COMPUTATION RAN UNDER, as
-    `nm.legal_brain.premise.Premise.as_dict()` rows: which provision, what starts the
+    `nm.legal_brain.reason.premise.Premise.as_dict()` rows: which provision, what starts the
     period, which forum -- each with basis, source and review state. P22.
     Written by the turn beside `deadlines`; read by the cover. Untyped for the
     cycle reason `deadlines` gives."""
@@ -545,8 +546,8 @@ class Thread:
     the type forbade the delete path and the pipeline deleted every issue on
     every turn by rebuilding the list.
 
-    UNTYPED for the same reason as `theory`: `nm.legal_brain.issue_contracts` imports this
-    module, so naming `Issue` here is a cycle. `nm.legal_brain.issue_contracts.from_stored`
+    UNTYPED for the same reason as `theory`: `nm.legal_brain.reason.issue_contracts` imports this
+    module, so naming `Issue` here is a cycle. `nm.legal_brain.reason.issue_contracts.from_stored`
     reads it back.
     """
     decisions: tuple[object, ...] = ()
@@ -631,12 +632,12 @@ class Thread:
     The staleness that argument has to answer is real and is handled where it
     belongs: `still_supported` checks a HELD position's material against the
     FILE, so a position resting on a corrected fact falls whatever the read
-    says. See `nm.legal_brain.proof_contracts.merge` for the asymmetry.
+    says. See `nm.legal_brain.reason.proof_contracts.merge` for the asymmetry.
 
     `tuple[object, ...]` and not `tuple[ProofPosition, ...]`: the store's
     decoder needs `get_origin` to see a parameterised tuple, and a bare
     `tuple` gave back a list. The type is untyped for the same cycle reason as
-    `issues` and `decisions`; `nm.legal_brain.proof_contracts.from_stored` reads it back.
+    `issues` and `decisions`; `nm.legal_brain.reason.proof_contracts.from_stored` reads it back.
     """
     theory: "object | None" = None
     """THE CASE THEORY THIS THREAD IS RUNNING ON. Persisted, and REVISED.
@@ -653,7 +654,7 @@ class Thread:
     SAID and forgot what it had CONCLUDED, and this is the first of the twelve
     handover sections that fixes.
 
-    TYPED `object` AND NOT `Theory`, DELIBERATELY. `nm.legal_brain.theory` imports
+    TYPED `object` AND NOT `Theory`, DELIBERATELY. `nm.legal_brain.reason.theory` imports
     from here, so naming the type would be a cycle — and the layer rule is
     that domain holds the state while core holds the reading of it. The store
     round-trips it structurally either way.
@@ -723,7 +724,7 @@ class Thread:
     MERGED, NEVER REPLACED. Later retrieval adds requirements -- a judgment
     read on turn nine can require proof of service that the section never
     mentioned -- and replacing would silently drop what an earlier passage
-    established. `nm.legal_brain.requirements` owns the merge.
+    established. `nm.legal_brain.reason.requirements` owns the merge.
 
     Untyped for the cycle reason `gaps` and `issues` carry.
     """
@@ -1069,7 +1070,8 @@ class Matter:
     no erasure requested* -- its true state, not a fabricated one."""
 
     research: tuple[dict, ...] = ()
-    """EVERY RESEARCH NEED OPENED ON THIS FILE, as `nm.legal_brain.research.Research.as_dict()`
+    """EVERY RESEARCH NEED OPENED ON THIS FILE, as
+    `nm.legal_brain.retrieve.research.Research.as_dict()`
     rows. BK-84-AC3, BK-38-AC1, P21.
 
     A TUPLE OF DICTS, for the cycle reason `dependencies` gives directly

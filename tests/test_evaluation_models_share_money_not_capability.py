@@ -6,8 +6,8 @@ from unittest.mock import Mock
 import pytest
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.legal_brain.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
-from nm.legal_brain.verifier import VERIFICATION_SCHEMA
+from nm.legal_brain.evaluate.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
+from nm.legal_brain.verify.verifier import VERIFICATION_SCHEMA
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
 from nm.shared.model_config import load
 from nm.shared.model_port import ConfigurationError, Prompt, Tier

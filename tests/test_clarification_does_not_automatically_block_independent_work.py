@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from nm.legal_brain.brain_context import ContextRefused
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.register_contracts import PEER
+from nm.legal_brain.understand.brain_context import ContextRefused
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.communicate.register_contracts import PEER
 from tests.test_owned_guidance_keeps_the_file_not_unrecorded_impressions import (
     context,
     recorded_file,

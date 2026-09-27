@@ -1,7 +1,7 @@
 """The record_requirement_answer door over the single native requirement writer."""
 
-from nm.legal_brain.requirements_contracts import State
-from nm.legal_brain.tools import RegisteredTool, ToolKind, object_schema
+from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind, object_schema
+from nm.legal_brain.reason.requirements_contracts import State
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.write_tools import _CONTROLS, _STRING, VERSION

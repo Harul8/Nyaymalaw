@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from nm.legal_brain.source_excerpt_contracts import SourceExcerpt
+from nm.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
 from nm.shared.text_contracts import blank, refuses_blank_text
 from nm.work_the_file.matter_contracts import ThreadId
 

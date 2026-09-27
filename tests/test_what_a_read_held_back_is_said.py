@@ -32,14 +32,14 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import Coverage
-from nm.legal_brain.manifest_sources import Manifest, ManifestEntry
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import Coverage
+from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "nm/legal_brain/corpus_evidence.py"
+ADAPTER = ROOT / "nm/legal_brain/retrieve/corpus_evidence.py"
 
 
 def _corpus(tmp_path: Path, denied: list[str]) -> CorpusEvidenceAdapter:

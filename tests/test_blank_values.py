@@ -23,8 +23,8 @@ WHY THE POPULATION IS DRAWN FROM THE WHOLE PRODUCT
 ---------------------------------------------------
 Because scoping an enumerator to one module is how they fail. Written this
 morning, `test_every_declared_schema_is_satisfiable_when_nothing_was_established`
-drew its population from `dir(nm.legal_brain.posture)` — and was already blind to
-`nm/legal_brain/dispute.py` four hours later. This one imports every module under
+drew its population from `dir(nm.legal_brain.understand.posture)` — and was already blind to
+`nm/legal_brain/understand/dispute.py` four hours later. This one imports every module under
 `nm/` and walks what it finds.
 """
 from __future__ import annotations

@@ -2,7 +2,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const {create, checkedMemory} = require('../nm/legal_brain/advocate-preferences.js');
+const {create, checkedMemory} = require('../nm/legal_brain/understand/advocate-preferences.js');
 
 class Element {
   constructor(tag = 'div') {
@@ -179,7 +179,7 @@ test('reopening or reloading fences an earlier same-account read and closing blo
 test('real application loads this module and clears it at every session/account boundary', () => {
   const html = fs.readFileSync('nm/app/index.html', 'utf8');
   const app = fs.readFileSync('nm/app/app.js', 'utf8');
-  const moduleSource = fs.readFileSync('nm/legal_brain/advocate-preferences.js', 'utf8');
+  const moduleSource = fs.readFileSync('nm/legal_brain/understand/advocate-preferences.js', 'utf8');
   assert.ok(html.indexOf('/static/advocate-preferences.js') < html.indexOf('/static/app.js'));
   assert.match(app, /function clearPrivileged\(\) \{\s+advocatePreferences\?\.clear\(\)/);
   assert.match(app, /function showApplication\([^)]*\) \{\s+advocatePreferences\?\.clear\(\)/);

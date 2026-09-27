@@ -413,7 +413,7 @@ def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(clie
 def test_declared_emergency_never_clears_ordinary_merits_admission(client):
     approve_fixture_account(client.directory)
     from nm.app.api import application
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from nm.shared.metrics_contracts import TurnMetrics
 
     created = client.post(
@@ -438,7 +438,7 @@ def test_declared_emergency_never_clears_ordinary_merits_admission(client):
 def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(client, monkeypatch):
     approve_fixture_account(client.directory)
     from nm.app.api import application
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
 
     made = client.post("/api/turn", json={"message": "we act for the plaintiff about an invoice"})
     assert made.status_code == 200

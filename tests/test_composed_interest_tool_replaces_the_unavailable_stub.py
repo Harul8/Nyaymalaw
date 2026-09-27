@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.loop_contracts import StopReason
+from nm.legal_brain.orchestrate.loop_contracts import StopReason
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.matter_contracts import Thread
 from tests.test_controlled_brain_composition_keeps_the_account_boundary import _compose, _scope

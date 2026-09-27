@@ -7,10 +7,10 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.brain_assessment import AssessmentService
-from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.brain_release import ProposalBindingRefused, ReviewRefused, prepare_claims
-from nm.legal_brain.loop_contracts import LoopEvent, LoopLimits, LoopRecord, StepKind, StopReason
+from nm.legal_brain.verify.brain_assessment import AssessmentService
+from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.verify.brain_release import ProposalBindingRefused, ReviewRefused, prepare_claims
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, LoopRecord, StepKind, StopReason
 from nm.shared.budget_contracts import Budget
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_document_words_reach_review_without_becoming_facts_or_law import (

@@ -1,7 +1,7 @@
 """The add_issue door; source-bound native questions are not certified answers."""
 
-from nm.legal_brain.issue_contracts import IssueKind
-from nm.legal_brain.tools import RegisteredTool, ToolKind, object_schema
+from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind, object_schema
+from nm.legal_brain.reason.issue_contracts import IssueKind
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.matter_contracts import Side

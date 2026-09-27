@@ -440,7 +440,7 @@ def _established_on(thread: Thread) -> list[str]:
 
 def _requirement_state(thread, facts=(), *, classifications=()) -> dict:
     """Three states for the checklist itself, counted rather than asserted."""
-    from nm.legal_brain.requirements_contracts import summary
+    from nm.legal_brain.reason.requirements_contracts import summary
     return summary(thread, facts, classifications=classifications)
 
 

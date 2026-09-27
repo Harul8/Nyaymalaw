@@ -25,8 +25,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.work_the_file.evidence_item import (
     Admissibility,
     EvidenceItem,

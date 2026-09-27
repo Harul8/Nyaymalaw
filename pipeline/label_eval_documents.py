@@ -21,13 +21,13 @@ WHAT THIS MODULE IS NOT ALLOWED TO DO, AND DOES NOT
 ----------------------------------------------------
 It defines NO pattern of its own for any of the three things it reads.
 
-    a provision reference  -> `nm.legal_brain.citation_contracts`, which is the only module
+    a provision reference  -> `nm.legal_brain.common.citation_contracts`, which is the only module
                               permitted to hold one; `tests/test_citation_patterns.py`
                               fails the build on a second copy
-    an Act title           -> `nm.legal_brain.manifest_sources.Manifest.resolve`, exact
+    an Act title           -> `nm.legal_brain.retrieve.manifest_sources.Manifest.resolve`, exact
                               title first and keyword only as a disclosed
                               inference, carrying `ActBasis`
-    a court name           -> `nm.legal_brain.jurisdiction_sources.normalise_court`
+    a court name           -> `nm.legal_brain.retrieve.jurisdiction_sources.normalise_court`
 
 What this module contributes is WHERE TO LOOK -- the opening of a registry
 order, around the words that introduce the prayer -- and nothing about how a
@@ -64,10 +64,10 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT ))
 
 from assurance.common._console import utf8_console  # noqa: E402
-from nm.legal_brain.citation_contracts import SECTION  # noqa: E402
-from nm.legal_brain.jurisdiction_sources import normalise_court  # noqa: E402
-from nm.legal_brain.manifest_sources import ActBasis, Manifest  # noqa: E402
-from nm.legal_brain.resolution_sources import corresponding, governs  # noqa: E402
+from nm.legal_brain.common.citation_contracts import SECTION  # noqa: E402
+from nm.legal_brain.retrieve.jurisdiction_sources import normalise_court  # noqa: E402
+from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest  # noqa: E402
+from nm.legal_brain.retrieve.resolution_sources import corresponding, governs  # noqa: E402
 
 utf8_console()
 

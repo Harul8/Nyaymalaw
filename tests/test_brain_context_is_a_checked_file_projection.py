@@ -17,7 +17,7 @@ from development_environment.developer_tooling.principles_codegen import (
     ownership_problems,
     rendered,
 )
-from nm.legal_brain.brain_context import (
+from nm.legal_brain.understand.brain_context import (
     AssessmentState,
     ContextPolicy,
     ContextRefused,
@@ -28,10 +28,10 @@ from nm.legal_brain.brain_context import (
     UncertaintyDimension,
     assemble_brief,
 )
-from nm.legal_brain.conversation import PRINCIPLES, guided
-from nm.legal_brain.loop_contracts import LoopEvent, LoopIdentity, LoopMode, LoopRecord, StepKind
-from nm.legal_brain.principles_file_adapter import FilePrinciples, load_principles
-from nm.legal_brain.principles_port import PrinciplesSnapshot, PrinciplesUnavailable
+from nm.legal_brain.common.conversation import PRINCIPLES, guided
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopIdentity, LoopMode, LoopRecord, StepKind
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples, load_principles
+from nm.legal_brain.common.principles_port import PrinciplesSnapshot, PrinciplesUnavailable
 from nm.shared.model_port import Prompt, ToolCall, ToolDefinition, ToolMessage, estimate_tokens
 from nm.work_the_file.matter_contracts import (
     AskedQuestion,
@@ -628,7 +628,7 @@ def test_recovery_rejects_changed_or_incomplete_source_identity(mutation):
 
 
 def test_context_core_has_no_file_io_or_provider_client_dependency():
-    source = Path("nm/legal_brain/brain_context.py").read_text(encoding="utf-8")
+    source = Path("nm/legal_brain/understand/brain_context.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     assert not any(
         isinstance(node, ast.Call)

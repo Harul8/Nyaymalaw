@@ -6,7 +6,7 @@ population can pass by disappearing, and a pause never answers a question.
 
 from __future__ import annotations
 
-from nm.legal_brain import requirements
+from nm.legal_brain.reason import requirements
 from nm.work_the_file import dependency
 from nm.work_the_file.summary_contracts import DERIVED_SECTIONS
 

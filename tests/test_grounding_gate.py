@@ -19,8 +19,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain import grounding
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.orchestrate.turn import TurnInput, TurnRefused
+from nm.legal_brain.retrieve.evidence_port import (
     Binding,
     Coverage,
     EvidenceResult,
@@ -29,8 +29,8 @@ from nm.legal_brain.evidence_port import (
     Treatment,
     TreatmentState,
 )
-from nm.legal_brain.jurisdiction_sources import binding_status, normalise_court
-from nm.legal_brain.turn import TurnInput, TurnRefused
+from nm.legal_brain.retrieve.jurisdiction_sources import binding_status, normalise_court
+from nm.legal_brain.verify import grounding
 from nm.shared.traceability_contracts import refuses
 from tests.test_turn_contract import _Evidence, briefed, build, finding
 
@@ -301,7 +301,7 @@ class _StaleHighCourt:
     """
 
     def position(self, jurisdiction):
-        from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
+        from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
         return CoveragePosition(
             CoverageState.UNMET, jurisdiction,
             "the most recent High Court judgment binding on this jurisdiction "
@@ -322,7 +322,7 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
     Told AFTERWARDS it reads as a footnote on a result they have already begun
     to trust. Told first it is a fact about what this corpus can answer.
     """
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _model_config

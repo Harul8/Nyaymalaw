@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.cause import _VOCABULARY, CAUSE_SCHEMA, CAUSE_VALUES
+from nm.legal_brain.reason.cause import _VOCABULARY, CAUSE_SCHEMA, CAUSE_VALUES
 from nm.work_the_file.matter_contracts import CAUSE_MEANS, CauseOfAction
 
 pytestmark = pytest.mark.class_a
@@ -90,7 +90,7 @@ def test_a_cause_with_no_definition_renders_visibly():
     state the defect was found in. It must render as something a reader
     notices.
     """
-    from nm.legal_brain import cause as reader
+    from nm.legal_brain.reason import cause as reader
 
     rendered = reader._VOCABULARY
     assert "no definition recorded" not in rendered, (
@@ -145,8 +145,8 @@ def test_a_tenant_is_not_a_title_claim_and_has_its_own_word():
     assert "tenant" in title and "not" in title
     assert "tenant" in tenant and "rent controller" in tenant
 
-    from nm.legal_brain.elements_sources import ELEMENTS, WITHHELD
-    from nm.legal_brain.resolution_sources import LIMITATION_ARTICLE
+    from nm.legal_brain.reason.elements_sources import ELEMENTS, WITHHELD
+    from nm.legal_brain.retrieve.resolution_sources import LIMITATION_ARTICLE
     assert CauseOfAction.POSSESSION_FROM_TENANT not in LIMITATION_ARTICLE, (
         "an Article was attached to the tenant cause without a curated source")
     assert CauseOfAction.POSSESSION_FROM_TENANT not in ELEMENTS

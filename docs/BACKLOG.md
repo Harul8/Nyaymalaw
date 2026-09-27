@@ -2,6 +2,35 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Legal Brain sub-stage organisation — 27 September 2026
+
+**IMPLEMENTED / scoped structural verification.** Owner requested subdivision of
+the large Legal Brain folder, with genuinely common files shared rather than
+copied. Move 214 existing modules and seven browser assets into eight flat
+capability groups plus `common`; add nine inert package initializers and review
+indexes. Preserve behaviour, old architectural roles, explicit model-tool
+admission, child scopes, permissions and the immutable historical journey map.
+Common owns 11 shared guidance/contract files; capability-specific tools and
+native services remain beside their capability. No fixed cognitive sequence or
+completion of an unfinished legal-brain feature is implied.
+
+Execution and outcomes:
+`development_environment/reviews/LEGAL_BRAIN_SUBSTAGE_MIGRATION_20260927.md`.
+All 221 move destinations verified; 387 current module identities reconcile;
+all 378 original production modules independently checked for executable parity.
+Nine group indexes cover 230 exact implementation/asset/initializer owners.
+Boundary controls: 153 passed. Final asset/tool/child/layout controls: 130 passed.
+Exact anchor/population controls: three passed. These overlap, not a full gate.
+All 4,742 original test functions remain; seven controls were added. Workbook,
+offline review records, corpus and private runtime data are unchanged.
+
+Broader controlled prompt/generation/browser cohort: 172 passed, two failed.
+Both failures reproduce in the same ordered cohort on pre-move code; the reload
+finding passes on isolated repeats and remains recorded as order-dependent,
+not silently discarded.
+No test was weakened, paid run authorised, Class-A promoted or client cutover
+performed. Prior broader source-sweep and broad lint findings remain open.
+
 ## Journey-first repository reorganisation — 27 September 2026
 
 **IMPLEMENTED / scoped verification / owner-authorised structural change.** Move existing application
@@ -844,9 +873,9 @@ shared junction target, build an index, make a model/network call, install the
 designed HTTP routes, publish a corpus or infer all-India coverage.
 
 **Frozen implementation files.** Existing owners remain
-`nm/legal_brain/identity_sources.py`, `nm/legal_brain/manifest_sources.py` and
+`nm/legal_brain/retrieve/identity_sources.py`, `nm/legal_brain/retrieve/manifest_sources.py` and
 `pipeline/build_identity_index.py`. Additive owners are
-`nm/legal_brain/source_registry_sources.py` and `pipeline/inventory_legal_sources.py`.
+`nm/legal_brain/retrieve/source_registry_sources.py` and `pipeline/inventory_legal_sources.py`.
 Proof lives in `tests/test_legal_source_inventory.py` and
 `tests/test_source_registry.py`. Existing consumers of the manifest and case
 identity remain regression witnesses and are not rewritten.
@@ -868,7 +897,7 @@ output and separately implement immutable publication and activation.
 ### P19 scoped Build and Test record — 11 September 2026
 
 **Build result: BUILT for the bounded engineering contribution; BK-84-AC1
-remains OPEN.** `nm/legal_brain/source_registry_sources.py` now owns bounded inventory,
+remains OPEN.** `nm/legal_brain/retrieve/source_registry_sources.py` now owns bounded inventory,
 canonical source identity, byte-exact version identity, explicit alias and
 legacy-locator bindings, and a non-serving readiness projection. The CLI writes
 an inventory report atomically and refuses to put its output inside the source
@@ -920,9 +949,9 @@ pointer and verify the referenced manifest and bytes before use. They will
 observe either the previous complete snapshot or the next complete snapshot,
 never a candidate directory, half-written manifest or mixed generation.
 
-Implementation is confined to `nm/legal_brain/artefact_sources.py`,
-`nm/legal_brain/manifest_sources.py`, `nm/legal_brain/corpus_evidence.py`,
-`nm/legal_brain/search_authority.py` and the retrieval wiring in
+Implementation is confined to `nm/legal_brain/retrieve/artefact_sources.py`,
+`nm/legal_brain/retrieve/manifest_sources.py`, `nm/legal_brain/retrieve/corpus_evidence.py`,
+`nm/legal_brain/retrieve/search_authority.py` and the retrieval wiring in
 `nm/app/composition.py`, with additive P20 tests. The composition owner
 was added during Build because safe constructors that no production path calls
 would reproduce the repository's previously measured “built but not served”
@@ -1288,15 +1317,15 @@ hypotheses are labelled; a supported premise is rechecked on source/instruction/
 permission change before reliance). AC3 (served briefing) is P24; AC4 (counsel
 comparison) is P35.
 
-**Prerequisites verified.** P47 (`nm/legal_brain/delegation.py` admission + acceptance,
+**Prerequisites verified.** P47 (`nm/legal_brain/orchestrate/delegation.py` admission + acceptance,
 built this session), P18 (currency/version invalidation), P21 (`SupportState` --
 semantic support is assessed, never proved by citation presence), P22 (the
 premise discipline: an inferred premise is a question, not a conclusion), P23
 (the relief position that reasoning feeds). The governing contract is
 `docs/blueprint/autonomy.json` (AUTO-01, AUTO-02).
 
-**Owners / boundary.** New: `nm/legal_brain/lead_contracts.py` (EpistemicStatus, Action, Claim,
-StepProposal, Plan) and `nm/legal_brain/lead.py` (classify, assess_support, infer,
+**Owners / boundary.** New: `nm/legal_brain/orchestrate/lead_contracts.py` (EpistemicStatus, Action, Claim,
+StepProposal, Plan) and `nm/legal_brain/orchestrate/lead.py` (classify, assess_support, infer,
 observe_source_change, recheck, propose, readiness, wants_specialist, dispatch,
 integrate_result). It reuses P21's SupportState concept, P18's version
 invalidation and P47's admission/acceptance -- `dispatch` and `integrate_result`
@@ -1396,12 +1425,12 @@ scope here.
 durable idempotent operations with the `UNKNOWN` reconcile state), P13
 (`nm/open_matter/commission_contracts.py`/`engagement.py` authored versioned commission with
 separate instructing/deciding parties), P17 (`nm/work_the_file/matter_contracts.py` +
-`nm/legal_brain/proof_contracts.py` the attributed file and canonical proposition) are present
+`nm/legal_brain/reason/proof_contracts.py` the attributed file and canonical proposition) are present
 with real consumers. The governing design contract is
 `docs/blueprint/autonomy.json` (`proof_level: design_contract`).
 
-**Owners / boundary.** New: `nm/legal_brain/delegation_contracts.py` (the task/result/mandate
-types) and `nm/legal_brain/delegation.py` (the admission boundary, the shared atomic
+**Owners / boundary.** New: `nm/legal_brain/orchestrate/delegation_contracts.py` (the task/result/mandate
+types) and `nm/legal_brain/orchestrate/delegation.py` (the admission boundary, the shared atomic
 `Ledger`, and the one acceptance path). It EXTENDS rather than duplicates: the
 mandate's version check mirrors P18's correction versioning; idempotency mirrors
 `Operation`; the canonical writer is the existing version-checked store commit;
@@ -2565,7 +2594,7 @@ implemented.
 **CONFIRMED OPEN 9 September 2026, verified in source.** Search still ranks
 paragraph rows directly — `select case_id, case_name, court, year, para_type,
 snippet(...), rank from paras ... order by rank`
-(`nm/legal_brain/search_authority.py:200`) — and the response carries no canonical
+(`nm/legal_brain/retrieve/search_authority.py:200`) — and the response carries no canonical
 citation, no bench and no attach-to-matter (`nm/app/api.py:613`).
 
 Worth naming: `CLAUDE.md` records that reporter citations are an exact key
@@ -3021,7 +3050,7 @@ firm-wide check until a verified firm membership and a working registry exist.
 run in ADMIT-A, before any fact is admitted, so the conflict screen cannot be
 run against parties read out of a brief it has not admitted — and admitting
 the brief to read them is what B3 forbids. So the advocate is asked who is
-involved when they open the file, and `nm/legal_brain/parties.py` reads any further
+involved when they open the file, and `nm/legal_brain/understand/parties.py` reads any further
 party out of each brief for the NEXT turn's screen, which is what
 `Screen.stale_for` has always needed and never had.
 
@@ -3057,14 +3086,14 @@ it the material the screens exist to hold back.
 acceptance clauses are unmet.
 
 *Adding a party does not stale the clearance.* Screens run and substance is
-admitted at `nm/legal_brain/turn.py:674`; parties newly named in that brief are
+admitted at `nm/legal_brain/orchestrate/turn.py:674`; parties newly named in that brief are
 extracted and persisted only at `:2069`. `_parties_of` documents the
 consequence in terms: *"a party named today is screened from tomorrow"*
 (`:1668`). The acceptance requires the opposite.
 
 *The emergency route does not exist.* `may_admit_substance` takes an
 `emergency` flag (`nm/open_matter/screens.py:245`), and the single production call
-site never passes it (`nm/legal_brain/turn.py:1451`). `matter.emergency_because` has
+site never passes it (`nm/legal_brain/orchestrate/turn.py:1451`). `matter.emergency_because` has
 read sites only and no production writer, and where it is read the emergency
 screen BLOCKS. The narrow recorded exception the row promises is unreachable.
 
@@ -3100,8 +3129,8 @@ the declaration somewhere B2 then has to move it from.
 Opened 9 September 2026, verified in source.
 
 `@implements("B1")`, `("B3")`, `("B4")` and `("B5")` appear at **13 sites**
-across `nm/legal_brain/route.py`, `nm/open_matter/screens.py`, `nm/open_matter/quarantine.py` and
-`nm/legal_brain/turn.py`. All six Phase B features are registered `status: decided`,
+across `nm/legal_brain/understand/route.py`, `nm/open_matter/screens.py`, `nm/open_matter/quarantine.py` and
+`nm/legal_brain/orchestrate/turn.py`. All six Phase B features are registered `status: decided`,
 which the PRD's own vocabulary (§0.5) defines as the pre-build state.
 
 At opening, `assurance/gate/trace.py` checked one direction only: T3 failed a feature
@@ -3164,7 +3193,7 @@ blank `firm_id` must read `NOT_ASSESSED` and never `CLEAR`.
 
 #### BK-8 — the phrase lists — **CLOSED as B-126**
 Not by trimming the lists. Both are gone, with both length rules, and
-`nm/legal_brain/route.py` reads the route. "bail" is one word and a case fact; "hi"
+`nm/legal_brain/understand/route.py` reads the route. "bail" is one word and a case fact; "hi"
 is one word and a greeting; a count cannot tell them apart.
 
 
@@ -3222,14 +3251,14 @@ interactive loop; model_eval/counsel_review only, not run here). And the task's
 named obligation: **close C1's fifth NEVER clause and remove TRACE-C1.**
 
 **Prerequisites verified.** P14 (the gap queue and question policy,
-`nm/legal_brain/gaps.py`), P17 (the attributed file), P21/P22 (source/premise
+`nm/legal_brain/reason/gaps.py`), P17 (the attributed file), P21/P22 (source/premise
 grounding), P46 (the adaptive lead, built this session -- its production
 consumer is this briefing).
 
-**Owners / boundary.** New: `nm/legal_brain/briefing.py` (readiness, refuse_completion,
+**Owners / boundary.** New: `nm/legal_brain/understand/briefing.py` (readiness, refuse_completion,
 live_gaps, next_step, block). Extended: `nm/work_the_file/matter_contracts.py`
 (`Matter.paused_needs` + `pause_need`/`resume_need`/`paused_need_texts`),
-`nm/legal_brain/turn.py` (`_ask` drops paused needs; the served turn carries the
+`nm/legal_brain/orchestrate/turn.py` (`_ask` drops paused needs; the served turn carries the
 briefing block), `nm/app/api.py` (the `briefing/unavailable` and
 `briefing/resume` routes; the `_Released` briefing field),
 `nm/work_the_file/projections_api.py` (briefing on the cover), `nm/app/index.html` + `nm/app/app.js`
@@ -3428,7 +3457,7 @@ exists for can create two matters.
 
 Before the first response the browser holds no `matterId`, so a retry sends the
 same `turn_id` with `matter_id: null` (`nm/app/app.js:836`). `_load_or_create`
-creates a fresh matter whenever `matter_id` is absent (`nm/legal_brain/turn.py:1716`),
+creates a fresh matter whenever `matter_id` is absent (`nm/legal_brain/orchestrate/turn.py:1716`),
 and the idempotency check runs AFTER it, scoped to the matter just created
 (`:611`) — which has applied nothing. A lost response to the opening turn
 duplicates the brief into a second matter.
@@ -3461,9 +3490,9 @@ matter that found it -- **one thread for three disputes**, labelled
 
 | | |
 |---|---|
-| `nm/legal_brain/dispute.py` | the read returns a COUNT. `verdict` is this message against the FILE; `described` is this message against ITSELF, and the second question has no file in it -- which is why turn 1 was never asked. Each item is checked against the advocate's own words and a failing item is DROPPED, because a thread gets created from these |
-| `nm/legal_brain/threading.py` | rules 4 and 5 open one thread per dispute. Labels come from the read, not from `_label`'s first line. Identifiers land on the first thread only -- a case number belongs to one dispute and nothing here knows which |
-| `nm/legal_brain/turn.py` | the read runs on turn 1; every thread lands on the matter. One extra model call, skipped only where a number of record decides the binding on a matter that already has threads |
+| `nm/legal_brain/understand/dispute.py` | the read returns a COUNT. `verdict` is this message against the FILE; `described` is this message against ITSELF, and the second question has no file in it -- which is why turn 1 was never asked. Each item is checked against the advocate's own words and a failing item is DROPPED, because a thread gets created from these |
+| `nm/legal_brain/understand/threading.py` | rules 4 and 5 open one thread per dispute. Labels come from the read, not from `_label`'s first line. Identifiers land on the first thread only -- a case number belongs to one dispute and nothing here knows which |
+| `nm/legal_brain/orchestrate/turn.py` | the read runs on turn 1; every thread lands on the matter. One extra model call, skipped only where a number of record decides the binding on a matter that already has threads |
 | `G-SPLIT` | the disputes NOT advised on are named and marked NOT ASSESSED |
 
 `tests/test_one_message_many_disputes.py` states the rule and not the
@@ -3693,11 +3722,11 @@ counterexamples run at the pure, engine, API and browser boundaries.
 
 **Done — the accrual, in two halves.** `Edge.accrues_on` carries the trigger
 from the Schedule's own third column for all seven curated Articles, and
-`accrual_trigger_for` in `nm/legal_brain/resolution_sources.py` is its single lookup —
+`accrual_trigger_for` in `nm/legal_brain/retrieve/resolution_sources.py` is its single lookup —
 the evidence adapter delegates to it rather than carrying a copy, and it
 crosses to the engine on the PORT (`EvidencePort.accrual_trigger`) rather than
 through `getattr`, which the dead-code sweep had correctly reported as
-unreachable. `nm/legal_brain/accrual.py` then reads WHICH dated entry satisfies the
+unreachable. `nm/legal_brain/reason/accrual.py` then reads WHICH dated entry satisfies the
 trigger, guarded by exact membership on the thread's own fact ids — a closed
 set generated per turn, so nothing is ranked. It answers the limb too, because
 Articles 14, 19 and 54 each have two and they give different dates.
@@ -3712,7 +3741,7 @@ same empty string as one saying *no curated trigger*, which is S1.
 
 **Done — the consistency gate.** `G-CONSISTENT`, response BLOCK, scope STEP,
 states `consistent | contradicted | repaired | not_verified`. It is NOT a
-phrase list: `nm/legal_brain/consistency.py` renders each of the turn's typed facts
+phrase list: `nm/legal_brain/verify/consistency.py` renders each of the turn's typed facts
 as one sentence with a stable id and asks which of THOSE the step contradicts,
 so the answer space is the turn's own computed facts and the guard is exact
 membership plus a quotation that must be in the step. A contradiction is
@@ -3743,7 +3772,7 @@ and `test_every_limitation_state_becomes_a_claim` is the pattern the proof
 claim would extend.
 
 **REOPENED 9 September 2026, verified in source.** The period still runs from
-an unchosen date. `nm/legal_brain/turn.py:2773` sets `accrual = dated[0]` and invokes
+an unchosen date. `nm/legal_brain/orchestrate/turn.py:2773` sets `accrual = dated[0]` and invokes
 the accrual read only `if len(dated) > 1 and trigger`. A specific-performance
 file carrying the agreement date but neither a fixed performance date nor a
 refusal therefore runs Article 54 from the agreement, confidently, and emits no
@@ -3836,7 +3865,7 @@ rather than at the edge - a guard absent from where it is exercised.
 
 #### BK-1 — E-102 still fails, and the verdict has moved — **CLOSED**
 Fixed as **B-122** and judged: **E-102 PASS** on `mat_bf1b5f744dbc`, with the
-control failing first. `nm/legal_brain/register_contracts.py` now holds one clause and every
+control failing first. `nm/legal_brain/communicate/register_contracts.py` now holds one clause and every
 prompt whose words reach the advocate carries it.
 
 The useful part was the verdict MOVING. After B-078's two structural fixes the
@@ -3883,7 +3912,7 @@ that makes a recommendation ADVICE rather than an output does not.
 Served text: *"... on thr_634d8e9685be — This damages the defence ..."* and,
 in History, *"TURN 1 · TURN_958000CAFFF4"*.
 
-`nm/legal_brain/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
+`nm/legal_brain/orchestrate/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
 `ThreadId`s — straight into an advocate-facing element.
 
 **Why the sweep did not catch it.** `test_no_internal_id_reaches_the_advocate`
@@ -4574,7 +4603,7 @@ versions auditable. This is W3 work.
 **Outcome: FIXED, and the placement was the defect rather than the call site.**
 Consolidating P19/P44/P20 into the shared tree at `a3d9c47` turned
 `test_only_one_module_in_the_product_removes_a_name` red on three `.unlink(`
-calls in `nm/legal_brain/manifest_sources.py` — two temporary-file removals in `finally`
+calls in `nm/legal_brain/retrieve/manifest_sources.py` — two temporary-file removals in `finally`
 blocks guarded by a check-then-act `exists()`, and one lock release catching
 only `FileNotFoundError`. A real Class-A failure on the integration commit, not
 a declared one: `known_failures.yaml` carries no pytest row.
@@ -4591,7 +4620,7 @@ established claim*) is about the product, not about a store adapter.
 layer may import and where `pathlib`/`shutil` are the standard library rather
 than the provider clients `layercheck` keeps out of the core.
 `nm/arrive/store_directory.py` and `file_store.py` import it from there; the
-four `nm/legal_brain/manifest_sources.py` sites go through it, which removes both TOCTOU
+four `nm/legal_brain/retrieve/manifest_sources.py` sites go through it, which removes both TOCTOU
 races and both bespoke failure policies. The lock release keeps its documented
 fail-closed behaviour — a lock that will not go stays, and the next publication
 is refused naming operator reconciliation — but can no longer replace the real
@@ -4630,9 +4659,9 @@ exist in code. Verified by inspection of the source, not from a delivery report.
 | Owner | Owns | Does not own |
 |---|---|---|
 | `nm/work_the_file/cascade.py` | what a derived value was and is between two turns; what advice rested on it; whether anybody said what needs undoing | why it moved, anything transitive, anything that survives the turn |
-| `nm/legal_brain/manifest_sources.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
+| `nm/legal_brain/retrieve/manifest_sources.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
 | `nm/work_the_file/matter_contracts.py` | `Fact.superseded_by` / `conflicts_with` — correction lineage on the fact itself | what was computed from that fact |
-| `nm/legal_brain/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
+| `nm/legal_brain/reason/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
 
 **Missing behaviour.** Nothing records *this conclusion was computed from these
 exact input versions*. Three consequences follow and each is a served defect: a
@@ -4642,7 +4671,7 @@ as current indefinitely, because a snapshot comparison is a moment; and a
 restart loses even the announcement.
 
 **Boundary, and the extension registered before use.** P18's declared boundary
-is `nm/work_the_file/cascade.py`, `nm/legal_brain/turn.py`, `nm/work_the_file/matter_contracts.py`,
+is `nm/work_the_file/cascade.py`, `nm/legal_brain/orchestrate/turn.py`, `nm/work_the_file/matter_contracts.py`,
 `tests/test_correction_supersedes.py`. Registered in
 `docs/blueprint/packets.json` on this commit: `nm/work_the_file/dependency.py` and
 `tests/test_a_correction_reaches_exactly_what_it_touched.py`. The served
@@ -4673,7 +4702,7 @@ fails 4 including the independence assertion; exhausted rework becoming
 **State on this commit: the mechanism exists and runs on no turn.** It is
 declared in `tests/test_reached_from_production.py::UNWIRED` with what will wire
 it, and named against A3 in `OWNER`. That declaration is a work queue, not an
-exemption: the day `nm/legal_brain/turn.py` imports it,
+exemption: the day `nm/legal_brain/orchestrate/turn.py` imports it,
 `test_no_declaration_outlives_its_wiring` fails and the entry must go.
 **BK-65-AC1 remains `planned` with no evidence recorded, and this commit changes
 nothing about that.**
@@ -4745,7 +4774,7 @@ derived from a derived value — the cover, the thread board and the deadline
 register go on serving the old figure with no mark on it. That is the served
 form of the defect the ledger was written for.
 
-**Producers of derived values, enumerated from `nm/legal_brain/turn.py`.**
+**Producers of derived values, enumerated from `nm/legal_brain/orchestrate/turn.py`.**
 
 | Producer | Value | Rests on |
 |---|---|---|
@@ -4867,7 +4896,7 @@ states the clause. A third, harness-only: `wait_for_function(expr, first, …)`
 passed the argument positionally and the installed Playwright refuses that;
 `arg=first`.
 
-**Observed and left standing, named.** In `nm/legal_brain/turn.py::_run`, the
+**Observed and left standing, named.** In `nm/legal_brain/orchestrate/turn.py::_run`, the
 conclusions written to the thread (`if concluded:`) are those of the FIRST
 derivation; when B-104's late-citation round re-derives, the second
 derivation's `concluded` is never written back. The ledger is settled after the
@@ -4887,7 +4916,7 @@ node is added first.
 
 **Decision: READY, with P18 committed ahead of it.** P17 is on the tree
 (`nm/work_the_file/casefile.py`, the commission and authority policy) and P20's
-publication interfaces exist in `nm/legal_brain/manifest_sources.py` — `PublishedCorpus`,
+publication interfaces exist in `nm/legal_brain/retrieve/manifest_sources.py` — `PublishedCorpus`,
 `get_source`, `record_corpus_dependency(root, CorpusDependency(work_id,
 snapshot_id, source_versions, observed_at))`, `withdraw_corpus(...) →
 WithdrawalResult(affected_work, active_snapshot_id)`. The composition root binds
@@ -4899,12 +4928,12 @@ reading the code and by querying the live indexes, not from the delivery report.
 
 | Owner | Owns | Does not own |
 |---|---|---|
-| `nm/legal_brain/search_port.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
-| `nm/legal_brain/search_authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
-| `nm/legal_brain/identity_sources.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
-| `pipeline/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `nm/legal_brain/citation_contracts.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
-| `nm/legal_brain/citator_sources.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
-| `nm/legal_brain/jurisdiction_sources.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
+| `nm/legal_brain/retrieve/search_port.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
+| `nm/legal_brain/retrieve/search_authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
+| `nm/legal_brain/retrieve/identity_sources.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
+| `pipeline/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `nm/legal_brain/common/citation_contracts.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
+| `nm/legal_brain/retrieve/citator_sources.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
+| `nm/legal_brain/retrieve/jurisdiction_sources.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
 | `nm/app/api.py::search` | `GET /api/search`: ranked paragraphs for a signed-in advocate, nothing matter-specific | a research record; attachment; scope |
 | `nm/app/app.js::renderSearch` | one card per ranked paragraph with origin and rank band | grouping, expansion, attachment |
 | `nm/work_the_file/dependency.py` (P18) | AUTHORITY edges keyed `store:locator`, digested on the span | learning that a source was withdrawn — nothing calls `sync_inputs` with a withdrawal |
@@ -4952,14 +4981,14 @@ method performs it.
    name the matter it is for, be refused for a matter the advocate does not
    hold, and a readback or attachment must be refused across matters.
 
-**Mechanism, and why it is one.** `nm/legal_brain/research.py` owns the RECORD and the
+**Mechanism, and why it is one.** `nm/legal_brain/retrieve/research.py` owns the RECORD and the
 VERDICTS — `Research`, `Consulted`, `AdverseSearch`, `Attachment`, the four
 `Outcome`s, `classify`, `may_attach`, `clean_bill` — as pure functions over the
 port types, persisted on `Matter.research` through the same generic codec as the
-ledger. `nm/legal_brain/search_port.py` gains `discover`, `expand`, `passage` and `resolve`
-so the edge asks the port and never SQLite. `nm/legal_brain/search_authority.py`
+ledger. `nm/legal_brain/retrieve/search_port.py` gains `discover`, `expand`, `passage` and `resolve`
+so the edge asks the port and never SQLite. `nm/legal_brain/retrieve/search_authority.py`
 implements them over the one FTS table and the one identity index it already
-opens. `nm/legal_brain/citation_contracts.py` gains `reporter_key`, and
+opens. `nm/legal_brain/common/citation_contracts.py` gains `reporter_key`, and
 `pipeline/build_identity_index.py` imports it — one owner of the exact key, at
 build and at read. Attachment goes through P18's ledger: the attached passage
 becomes an AUTHORITY input, so a later withdrawal reaches every conclusion that
@@ -4968,8 +4997,8 @@ is active. Nothing here ranks an Act, and nothing here turns a rank into an
 identity.
 
 **Boundary extension, registered in `docs/blueprint/packets.json` before any
-edit:** `nm/legal_brain/research.py` (new), `nm/legal_brain/citation_contracts.py`, `nm/work_the_file/matter_contracts.py`,
-`nm/legal_brain/identity_sources.py`, `nm/app/api.py`, `nm/work_the_file/projections_api.py`,
+edit:** `nm/legal_brain/retrieve/research.py` (new), `nm/legal_brain/common/citation_contracts.py`, `nm/work_the_file/matter_contracts.py`,
+`nm/legal_brain/retrieve/identity_sources.py`, `nm/app/api.py`, `nm/work_the_file/projections_api.py`,
 `nm/work_the_file/dependency.py`, `pipeline/build_identity_index.py`, `assurance/journeys/journey.py`,
 `nm/app/app.js`, `nm/app/index.html`, `nm/app/app.css`,
 `tests/test_research_keeps_finding_apart_from_verification.py` (new),
@@ -5019,7 +5048,7 @@ port's `withdrawn_sources`. The search pane offers *Record this as research*
 when a matter is open, renders cases (with matched-paragraph counts and
 origin), opens them to paragraphs, attaches with the five verdicts shown as
 five rows, and shows the research record from the file on every open of the
-pane. `nm.legal_brain.citation_contracts.reporter_key` is the one owner of the exact
+pane. `nm.legal_brain.common.citation_contracts.reporter_key` is the one owner of the exact
 citation key, at build and at read.
 
 **Measured, criterion by criterion.**
@@ -5065,16 +5094,16 @@ say in their own text that they are not law.
 ### P22 Start record — assess legal premises before conditional arithmetic — 12 September 2026
 
 **Decision: READY.** P18 (the currency ledger) and P21 (verified sources) are
-committed. `nm/legal_brain/premise.py` existed and was declared UNWIRED; the accrual
-read (`nm/legal_brain/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
+committed. `nm/legal_brain/reason/premise.py` existed and was declared UNWIRED; the accrual
+read (`nm/legal_brain/reason/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
 were built by BK-35's first half. What was missing is the step BK-65-AC2 names:
 the arithmetic ran without ever treating *which provision governs*, *what
 starts the period* and *which forum binds* as things that could be wrong.
 
-**Existing owners.** `nm/legal_brain/limitation.py` owns the arithmetic and already
+**Existing owners.** `nm/legal_brain/procedure/limitation.py` owns the arithmetic and already
 refuses to invent a PERIOD (`Period` verifies itself against the retrieved
-span). `nm/legal_brain/premise.py` owns the three premises, their four bases and the
-digest. `nm/legal_brain/turn.py::_limitation` chooses the accrual and computes.
+span). `nm/legal_brain/reason/premise.py` owns the three premises, their four bases and the
+digest. `nm/legal_brain/orchestrate/turn.py::_limitation` chooses the accrual and computes.
 `nm/work_the_file/deadlines.py` owns the register. None owned the join: premises built
 from what the turn retrieved, assessed before the arithmetic, and carried onto
 the result.
@@ -5096,9 +5125,9 @@ cover carry the premise digest, so the two are checked to be one version
 (BK-35-AC2); a corrected trigger date supersedes the fact and P18 currency
 marks the deadline stale.
 
-**Boundary extension, registered before editing:** `nm/legal_brain/premise.py`,
-`nm/legal_brain/limitation.py`, `nm/work_the_file/deadlines.py`, `nm/work_the_file/matter_contracts.py`,
-`nm/shared/gates_contracts.py`, `nm/legal_brain/turn.py`, `nm/app/api.py`,
+**Boundary extension, registered before editing:** `nm/legal_brain/reason/premise.py`,
+`nm/legal_brain/procedure/limitation.py`, `nm/work_the_file/deadlines.py`, `nm/work_the_file/matter_contracts.py`,
+`nm/shared/gates_contracts.py`, `nm/legal_brain/orchestrate/turn.py`, `nm/app/api.py`,
 `nm/work_the_file/projections_api.py`, `nm/app/app.js`, `nm/app/index.html`, `nm/app/app.css`, and
 the tests below.
 
@@ -5266,8 +5295,8 @@ rather than followed silently.
 
 **Owners / boundary (registered before edit in packets.json).** New:
 `nm/advise/relief.py` — the remedy/enforceability model; the recommendation and
-its consistency check are the existing owners it extends — `nm/legal_brain/turn.py`
-(`_relief`, `_recommend`), `nm/legal_brain/consistency.py` (`claims_for` gains a relief
+its consistency check are the existing owners it extends — `nm/legal_brain/orchestrate/turn.py`
+(`_relief`, `_recommend`), `nm/legal_brain/verify/consistency.py` (`claims_for` gains a relief
 claim, the ONE owner), `nm/shared/gates_contracts.py` (G-REMEDY), `nm/work_the_file/matter_contracts.py`
 (`Thread.objective`, `Thread.reliefs`). Feature realised: **E2** (compare viable
 routes by … enforceability). E3's proportionality tenet is honoured but left to
@@ -5940,20 +5969,20 @@ with one owner. Sizing that needs the population measured, which is this row.
 **Done, 8 September 2026.** Sixteen literals became one owner.
 
 `TurnEngine._read(prompt, schema, key)` is now the only route to a structured
-read, and the call site names the READ rather than a number. `nm/legal_brain/ceiling.py`
+read, and the call site names the READ rather than a number. `nm/legal_brain/common/ceiling.py`
 decides: a read whose answer follows the size of its input gets a ceiling
 derived from what it was shown; one whose answer is a verdict gets a stated
 number, in one table, with the reason beside it.
 
 **Whether a read echoes is the read's own property**, declared in
-`nm/legal_brain/reads_contracts.py` beside its entry — eleven do (`dates`, `dispute`,
+`nm/legal_brain/common/reads_contracts.py` beside its entry — eleven do (`dates`, `dispute`,
 `factors`, `inventory`, `issues`, `proof`, `adverse`, `attacks`, `exposure`,
 `salvage`, `parties`), eight do not. Nothing in the ceiling module decides it,
 because a table there would be a second place to record a property of the read.
 
 **Three defects the sweep produced, all worth keeping.**
 
-1. `nm/legal_brain/ceiling.py` imported the token estimator from
+1. `nm/legal_brain/common/ceiling.py` imported the token estimator from
    `nm/shared/model_budget.py` and `layercheck` refused it within the
    minute — `core` may not import `adapters`. Copying it would have been a
    second owner for *how big is this*, so it moved to
@@ -6475,7 +6504,7 @@ files, sends or claims to.
 (`nm/advise/options_contracts.py`, `nm/advise/advice_decision_contracts.py` — served through
 `/api/comparisons` and `/api/advice-decisions`), P28
 (`nm/advise/reassessment.py` — reached from the correction route, which returns
-`stale_decisions`), P47 (`nm/legal_brain/delegation_contracts.py`, `nm/legal_brain/delegation.py` —
+`stale_decisions`), P47 (`nm/legal_brain/orchestrate/delegation_contracts.py`, `nm/legal_brain/orchestrate/delegation.py` —
 BK-92-AC3 is the draft specialist's own criterion and the mandate machinery is
 what bounds it). All three are in the base commit `c2b70e9`.
 
@@ -6487,7 +6516,7 @@ the export. Extended: `nm/app/api.py` (the served package and export routes),
 `nm/work_the_file/matter_contracts.py` (the package rows).
 
 **Reused, not re-invented.** Quotation verification is
-`nm.legal_brain.research.quote_fidelity` — P21 already owns *is this the source's
+`nm.legal_brain.retrieve.research.quote_fidelity` — P21 already owns *is this the source's
 words* and owns the distinction between VERBATIM and DIFFERS. Staleness is
 `nm.work_the_file.dependency` through `nm.advise.reassessment`; a second freshness answer
 here would be the §4 defect on the subject where disagreement is most
@@ -6607,7 +6636,7 @@ are produced by writing text about a person who has not spoken yet and the
 failure mode is not an error, it is a plausible paragraph. Neither type has a
 field an answer or a conclusion could be written into; that is the mechanism.
 `refuse_scripting` and `refuse_leading` are backstops over prose that arrived
-from a model, and `nm/legal_brain/proof.py` already argues why a text tripwire is
+from a model, and `nm/legal_brain/reason/proof.py` already argues why a text tripwire is
 never the mechanism.
 
 **The concession boundary is DERIVED and this packet declares no type for it.**
@@ -6868,7 +6897,7 @@ every structured read passes through — so a read added next month is covered
 without its author knowing the rule exists, which is the only kind of coverage
 that lasts.
 
-**BK-29-AC1's mechanism already existed and is kept.** `nm/legal_brain/ceiling.py`
+**BK-29-AC1's mechanism already existed and is kept.** `nm/legal_brain/common/ceiling.py`
 derives an echoing read's ceiling from what it was shown and states a fixed
 read's in one table; the tests here hold both ends of that and the floor and
 cap that bound it.
@@ -7434,7 +7463,7 @@ unknown rather than zero.
 
 **Frozen implementation files.** Existing entry points remain
 `pipeline/fetch_judgments.py` and `pipeline/scrape_judgments.py`. Additive owners are
-`nm/legal_brain/acquisition_sources.py` and `pipeline/reconcile_acquisition.py`. Proof lives
+`nm/legal_brain/retrieve/acquisition_sources.py` and `pipeline/reconcile_acquisition.py`. Proof lives
 in `tests/test_judgment_acquisition.py` and
 `tests/test_acquisition_receipts.py`. No job, store, bootstrap, model, edge or
 browser owner is changed.
@@ -7456,7 +7485,7 @@ deferred to integration with the user's concurrent foundation branch.
 ### P44 scoped build and test record — 11 September 2026
 
 **Outcome: BUILT and locally tested, not published.** P44 now has a shared,
-versioned selection policy in `nm/legal_brain/acquisition_sources.py` and both acquisition
+versioned selection policy in `nm/legal_brain/retrieve/acquisition_sources.py` and both acquisition
 entry points use it: `pipeline/fetch_judgments.py` for the sanctioned API path and
 `pipeline/scrape_judgments.py` for the one-time web exception path. The legacy
 `--min-cited-by` input is recorded by the web command but is no longer an
@@ -8782,7 +8811,7 @@ documents; `Manifest._aliased_at_provision` reads them ONLY in the slot
 immediately after a `citation.SECTION` match, longest match at the position,
 and only where `_named_in` found no title. No pattern for a provision
 reference, an Act title or a court name was added anywhere — the alias is
-positional, and `nm.legal_brain.citation_contracts` keeps sole ownership of how a citation is
+positional, and `nm.legal_brain.common.citation_contracts` keeps sole ownership of how a citation is
 spelled.
 
 Five guards in `tests/test_citation_patterns.py`, all passing:

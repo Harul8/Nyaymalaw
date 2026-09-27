@@ -13,7 +13,16 @@ Nyaymalaw/
     app/              compose, serve and launch the application
     arrive/           account, registration, identity and access
     open_matter/      opening, screens, intake and media admission
-    legal_brain/      understand, retrieve, reason, verify and communicate
+    legal_brain/
+      understand/     message intent, context, party/posture and dispute binding
+      retrieve/       held law, sources, searches, citations and legal coverage
+      reason/         proof, theories, adverse material and source-backed needs
+      procedure/      procedural conditions and conditional calculations
+      verify/         grounding, independent checks and publication boundaries
+      communicate/    responses, references, workspace and safe progress
+      orchestrate/    reasoning loops, delegation, tools and continuation
+      evaluate/       private evaluations, execution capture and replay
+      common/         single shared guidance, read and citation owners
     work_the_file/    facts, chronology, disputes, requirements and deadlines
     advise/           recommendations, options, decisions and reassessment
     act/              permitted actions, drafting and hearing preparation
@@ -32,7 +41,9 @@ Nyaymalaw/
   .nm/                private runtime data and local evaluation records
 ```
 
-Each journey folder is flat. Its README lists the real files by responsibility.
+Smaller journey folders are flat. Legal brain is the bounded exception: eight
+shallow capability folders plus `common/`, all flat inside. Each README indexes
+the real files by responsibility.
 There is no second application under `backend/` and no separate UI code tree.
 Assurance keeps its existing purposeful gate/journey/control-plane homes: those
 are build controls, not user-journey stages. Tests remain shared so existing
@@ -44,7 +55,7 @@ cross-phase protections are not split or quietly dropped.
 |---|---|
 | [Arrive](../nm/arrive/README.md) | `store_directory.py`, `store_pending_accounts.py`, `professional_access.py`; account routes currently remain in `app/api.py` |
 | [Open a matter](../nm/open_matter/README.md) | `opening_contracts.py`, `commission_contracts.py`, `screens.py`, `intake.py`, `quarantine.py`, `document_permission.py` |
-| [Legal brain](../nm/legal_brain/README.md) | `controlled_brain.py`, `lead.py`, `loop.py`, `route.py`, `brain_context.py`, `search_authority.py`, `grounding.py`, `verifier.py`, `brain_publication.py` |
+| [Legal brain](../nm/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
 | [Work the file](../nm/work_the_file/README.md) | `casefile.py`, `file_mutation.py`, `dispute_agenda.py`, `deadlines.py`, `summary.py` |
 | [Advise](../nm/advise/README.md) | `advice_contracts.py`, `options.py`, `reassessment.py`, `relief.py` |
 | [Act](../nm/act/README.md) | `action.py`, `drafting.py`, `hearing.py` |
@@ -52,11 +63,18 @@ cross-phase protections are not split or quietly dropped.
 | [Close](../nm/close/README.md) | `closure_contracts.py`, `retention.py`, `retention_contracts.py` |
 | [Leave](../nm/leave/README.md) | `sign_out.py`; served logout and cookie removal remain in `app/api.py` |
 
-The legal brain is deliberately one folder. Descriptive filenames distinguish
-message routing, retrieval, dispute reasoning, checklists, verification,
-publication, prompt principles and tool entry points. `turn.py` remains the
-legacy turn engine; `controlled_brain.py` is not silently substituted for every
-client path by moving its file.
+The legal brain is grouped by responsibility, not by a fixed cognitive sequence.
+Read the [legal-brain index](../nm/legal_brain/README.md), then the capability you
+want to inspect. The index gives actual per-folder populations and each capability
+README lists every file. Descriptive filenames distinguish contracts, ports,
+adapters, native source owners, reasoning services and actual tool entry points.
+
+Common files stay in [legal_brain/common](../nm/legal_brain/common/README.md) only
+when they genuinely serve multiple capabilities. Capability-specific contracts
+are not moved into a generic contracts folder, and there is no parallel tool dump.
+The legacy turn path remains `legal_brain/orchestrate/turn.py`;
+`legal_brain/orchestrate/controlled_brain.py` is not silently substituted for every
+client path by reorganising source.
 
 ## Naming and boundaries
 
@@ -88,9 +106,12 @@ import is permitted only if its semantic dependency direction is permitted.
 Whole-product sweeps use the physical source population and explicit roles,
 never a vanished `core/` folder or a hand-picked subset that can pass vacuously.
 
-`assurance/common/journey_layout.json` records every original module's destination
-and original role. Its pre-move hashes are historical custody information, not
-fresh passing evidence. Existing result artifacts are not relabelled as passing
+`assurance/common/journey_layout.json` records the initial journey migration's
+original identities and roles. `assurance/common/legal_brain_layout.json` records
+the later legal-brain substage moves. `nm/source_layout.json` owns the actual current
+module and browser-asset destinations; the historical manifests are not live
+import aliases. Their pre-move hashes are custody information, not fresh passing
+evidence. Existing result artifacts are not relabelled as passing
 against renamed code. Generated workbook sources and historical evidence retain
 their own reconciliation and freshness checks.
 
@@ -101,7 +122,7 @@ budget, data-sharing grant or legal sign-off is created by reorganisation.
 The pre-move source checkpoint is local at `.nm/reorganisation/originals/`.
 Its initial evidence-directory filter accidentally omitted the original
 `adapters/evidence/corpus.py`; that implementation was moved intact and remains
-in `legal_brain/corpus_evidence.py`, but its original raw bytes are not in the
+in `legal_brain/retrieve/corpus_evidence.py`, but its original raw bytes are not in the
 checkpoint. Do not describe the checkpoint as a complete original-source backup
 or silently reconstruct that file to certify baseline tests. Retired empty
 package shells and caches are kept

@@ -8,8 +8,8 @@ import pytest
 
 from nm.app.composition import Application
 from nm.arrive.store_directory import FileDirectory
-from nm.legal_brain.provision_registry_composition import REGISTRY_MEMBER, RegistryLoadState
-from nm.legal_brain.provision_revision_sources import (
+from nm.legal_brain.retrieve.provision_registry_composition import REGISTRY_MEMBER, RegistryLoadState
+from nm.legal_brain.retrieve.provision_revision_sources import (
     AuthorityRole,
     AuthoritySpan,
     ProvisionRevision,

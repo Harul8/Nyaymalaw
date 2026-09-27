@@ -46,8 +46,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.resolution_sources import LIMITATION_ARTICLE, accrual_trigger_for
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.retrieve.resolution_sources import LIMITATION_ARTICLE, accrual_trigger_for
 from nm.shared.model_scripted import SCRIPTED_READS
 from nm.work_the_file.deadlines import DeadlineKind
 from tests.test_turn_contract import build

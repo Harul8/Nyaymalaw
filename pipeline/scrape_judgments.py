@@ -89,7 +89,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
-from nm.legal_brain.acquisition_sources import (  # noqa: E402
+from nm.legal_brain.retrieve.acquisition_sources import (  # noqa: E402
     AcquiredArtifact,
     AcquisitionRoute,
     AcquisitionScope,
@@ -99,7 +99,7 @@ from nm.legal_brain.acquisition_sources import (  # noqa: E402
     select_candidates,
     stage_acquisition,
 )
-from nm.legal_brain.source_registry_sources import RightsState  # noqa: E402
+from nm.legal_brain.retrieve.source_registry_sources import RightsState  # noqa: E402
 
 utf8_console()
 

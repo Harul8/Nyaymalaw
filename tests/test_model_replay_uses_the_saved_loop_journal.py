@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord, StepKind, digest
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind, digest
 from nm.shared.model_port import ProviderUnavailable, SchemaViolation, ToolCall, Usage
 from nm.shared.model_replay import ReplayModel
 from nm.shared.store_file_store import FileMatterStore

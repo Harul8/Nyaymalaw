@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter, assemble_section
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, assemble_section
 
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = "The Limitation Act, 1963 . s.18{part}: Effect of acknowledgment in writing."
@@ -122,7 +122,7 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
     """The population is the manifest's whole intended coverage, not a sample."""
     import sys
     sys.path.insert(0, str(ROOT ))
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     ids = [r[0] for r in corpus.execute(
         "select distinct act_id from chunks where doc_type='bare_act'")]
@@ -169,8 +169,8 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
 ])
 def test_the_measured_sections_reach_the_turn_whole(corpus, question, section, must_hold):
     """Through the served adapter, not the helper alone."""
-    from nm.legal_brain.evidence_port import EvidenceNeed
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.evidence_port import EvidenceNeed
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
     adapter = CorpusEvidenceAdapter(CORPUS, Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
     result = adapter.fetch(EvidenceNeed(question=question, governing_date=date(2025, 9, 1),
                                         provision_hint=section))

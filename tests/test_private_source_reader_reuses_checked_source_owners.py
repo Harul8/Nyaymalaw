@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.verify.brain_release import ReviewRefused
 from nm.shared.store_port import StaleWrite
 from tests.test_reviewed_private_preview_checks_saved_words import finding, ready
 

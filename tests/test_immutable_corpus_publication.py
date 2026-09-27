@@ -14,7 +14,7 @@ import pytest
 
 from nm.app.composition import INDEX_PROCESSOR, Application
 from nm.arrive.store_directory import FileDirectory
-from nm.legal_brain.acquisition_sources import (
+from nm.legal_brain.retrieve.acquisition_sources import (
     AcquiredArtifact,
     AcquisitionRoute,
     AcquisitionScope,
@@ -22,10 +22,10 @@ from nm.legal_brain.acquisition_sources import (
     select_candidates,
     stage_acquisition,
 )
-from nm.legal_brain.artefact_sources import ArtefactLineage
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import Coverage
-from nm.legal_brain.manifest_sources import (
+from nm.legal_brain.retrieve.artefact_sources import ArtefactLineage
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import Coverage
+from nm.legal_brain.retrieve.manifest_sources import (
     CorpusArtefactInput,
     CorpusDependency,
     CorpusPublicationRefused,
@@ -38,9 +38,9 @@ from nm.legal_brain.manifest_sources import (
     rollback_corpus,
     withdraw_corpus,
 )
-from nm.legal_brain.provenance_sources import Standing, Treatment
-from nm.legal_brain.search_authority import AuthorityIndexSearch
-from nm.legal_brain.source_registry_sources import (
+from nm.legal_brain.retrieve.provenance_sources import Standing, Treatment
+from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.legal_brain.retrieve.source_registry_sources import (
     CanonicalSource,
     LegalReview,
     ReviewState,

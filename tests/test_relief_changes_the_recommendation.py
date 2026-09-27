@@ -37,9 +37,9 @@ import pytest
 
 from nm.advise import relief as relief_r
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain import consistency
-from nm.legal_brain.premise import Basis
-from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.legal_brain.reason.premise import Basis
+from nm.legal_brain.verify import consistency
 from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
 from nm.shared.store_file_store import FileMatterStore
 from tests.test_factors_on_a_served_turn import _Corpus

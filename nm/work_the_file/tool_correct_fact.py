@@ -1,6 +1,6 @@
 """The correct_fact door; prior words and native dependency checks stay owned."""
 
-from nm.legal_brain.tools import RegisteredTool, ToolKind, object_schema
+from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind, object_schema
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.write_tools import _CONTROLS, _STRING, VERSION

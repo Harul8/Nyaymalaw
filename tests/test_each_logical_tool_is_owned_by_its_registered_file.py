@@ -11,11 +11,18 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode
-from nm.legal_brain.tool_catalogue import catalogue_tools
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tools import Boundary, ToolContext, ToolRefused, ToolRegistry, foundation_tools
+from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode
+from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.orchestrate.tools import (
+    Boundary,
+    ToolContext,
+    ToolRefused,
+    ToolRegistry,
+    foundation_tools,
+)
 from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.shared.source_layout import load_layout, source_paths
 from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
@@ -77,9 +84,10 @@ def test_each_separated_tool_file_owns_the_actual_handler_and_registration():
 
 
 def assert_owned_door(row):
-    expected = "nm.legal_brain.tool_" + row.definition.name
-    if row.handler.__module__.startswith(("nm.work_the_file.", "nm.act.")):
-        expected = row.handler.__module__.rsplit(".", 1)[0] + ".tool_" + row.definition.name
+    suffix = ".tool_" + row.definition.name
+    candidates = [module for module in load_layout()["modules"] if module.endswith(suffix)]
+    assert len(candidates) == 1, "Each registered name has exactly one declared physical owner"
+    expected = candidates[0]
     assert row.handler.__module__ == expected
     owner = importlib.import_module(expected)
     assert Path(inspect.getfile(owner)).name == "tool_" + row.definition.name + ".py"
@@ -154,7 +162,7 @@ def test_every_separated_door_still_crosses_the_registry_before_any_native_port(
 
 
 def test_the_three_factories_do_not_retain_duplicate_separated_handlers():
-    from nm.legal_brain import tool_catalogue, tool_discovery, tools
+    from nm.legal_brain.orchestrate import tool_catalogue, tool_discovery, tools
 
     rows, _ = actual_rows()
     separated_handlers = {row.handler.__name__ for row in rows}
@@ -188,9 +196,8 @@ def test_complete_actual_application_and_optional_population_have_physical_owned
     assert "finish_opposition" not in brain.registry._tools
 
     # Close the population against actual manufacturers, not a second name list.
-    root = Path(inspect.getfile(brain.__class__)).parents[1]
     declared = set()
-    for file in root.glob("*/*.py"):
+    for file in source_paths():
         tree = ast.parse(file.read_text(encoding="utf-8"))
         constructors = [
             node
@@ -211,16 +218,18 @@ def test_complete_actual_application_and_optional_population_have_physical_owned
 
 @pytest.mark.parametrize("name", ["finish_research", "finish_opposition"])
 def test_child_finish_definition_and_actual_dispatch_stay_in_child_only_owned_file(name):
-    from nm.legal_brain import nested_research
+    from nm.legal_brain.orchestrate import nested_research
 
-    module = importlib.import_module("nm.legal_brain.tool_" + name)
+    declared = [owner for owner in load_layout()["modules"] if owner.endswith(".tool_" + name)]
+    assert len(declared) == 1
+    module = importlib.import_module(declared[0])
     declaration = (
         nested_research.FINISH if name == "finish_research" else nested_research.OPPOSITION_FINISH
     )
     assert declaration is module.DEFINITION
     assert declaration.name == name
     assert module.finish.__module__ == module.__name__
-    assert "from nm.legal_brain.tool_" + name in dedent(
+    assert "from " + module.__name__ in dedent(
         inspect.getsource(nested_research.ResearchDispatcher._work)
     )
     handoff = Mock()

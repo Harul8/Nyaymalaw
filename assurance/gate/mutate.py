@@ -33,13 +33,13 @@ from assurance.control_plane.evidence import child_environment  # noqa: E402
 # (label, file, original, mutation, test that must fail, eval it proves)
 MUTATIONS = [
     ("posture read off the events rather than off what was stated",
-     "nm/legal_brain/posture.py",
+     "nm/legal_brain/understand/posture.py",
      ('    if not speaks_of_the_representation(quoted):'),
      ('    if False and not speaks_of_the_representation(quoted):'),
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
 
     ("a posture settled on a span the advocate never wrote",
-     "nm/legal_brain/posture.py",
+     "nm/legal_brain/understand/posture.py",
      "    if not quotable.accepts(quoted):",
      "    if False and not quotable.accepts(quoted):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
@@ -61,7 +61,7 @@ MUTATIONS = [
     # where it is not. That is the same defect stated in the new shape,
     # and it must still be caught.
     ("the verbatim guard handed the prompt instead of the advocate's words",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      ('            file=memory.advocate_words if memory else "",\n'
      "            # A SHARED INSTRUCTION IS NOT ANOTHER DISPUTE'S FACT"),
      ('            file=memory.as_context() if memory is not None else "",\n'
@@ -76,14 +76,14 @@ MUTATIONS = [
      "test_a_question_the_advocate_answered_is_never_asked_again", "E-035"),
 
     ("a question asked twice is put a third time in the same words",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "            if standing is not None and standing.ignored:",
      "            if False and standing is not None and standing.ignored:",
      "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
      "E-035"),
 
     ("retrieval reads the latest message alone, not the file",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      '                            account=memory.account if memory else "",',
      '                            account="",',
      "test_every_model_call_in_a_turn_receives_the_file", "E-036"),
@@ -93,14 +93,14 @@ MUTATIONS = [
     # advocate has ever said -- so keyword-scoring it is the outvoting
     # defect with the most evidence it will ever have behind it.
     ("the account widened the keyword scoring instead of only the title",
-     "nm/legal_brain/manifest_sources.py",
+     "nm/legal_brain/retrieve/manifest_sources.py",
      "            carried = self._named_in(account.lower(), on)",
      "            low = low + ' ' + account.lower()\n"
      "            carried = self._named_in(account.lower(), on)",
      "test_an_act_named_earlier_is_carried_by_exact_title_only", "E-036"),
 
     ("an out-of-vocabulary role accepted instead of blanked",
-     "nm/legal_brain/posture.py",
+     "nm/legal_brain/understand/posture.py",
      "        role = Role(raw_role)",
      "        role = Role.PLAINTIFF",
      "test_a_role_outside_the_products_vocabulary_is_blanked", "E-030"),
@@ -108,7 +108,7 @@ MUTATIONS = [
     # B-037. "our client" identifies nobody, and recording it produced
     # "You act for the our client. Did they file...?"
     ("a descriptor that names nobody recorded as though it named someone",
-     "nm/legal_brain/posture.py",
+     "nm/legal_brain/understand/posture.py",
      "    if described and names_nobody(described.lower()):",
      "    if False and described and names_nobody(described.lower()):",
      "test_a_descriptor_that_names_nobody_is_not_recorded", "E-030"),
@@ -117,7 +117,7 @@ MUTATIONS = [
     # fire on an account of events -- "the landlord has issued a quit notice
     # to the tenant" names two parties and neither is stated to be ours.
     ("the role read firing without the advocate stating their own side",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "                    or posture_reader.speaks_of_the_representation(said)):",
      "                    or True):",
      "test_an_account_of_events_never_settles_a_posture_on_the_engine", "E-030"),
@@ -134,7 +134,7 @@ MUTATIONS = [
     # then fails validation, fails OPEN, and looks exactly like the advocate
     # having said nothing.
     ("a required enum with no value for 'nothing was established'",
-     "nm/legal_brain/posture.py",
+     "nm/legal_brain/understand/posture.py",
      '            "enum": ["stated", "inferred", "not_stated"],',
      '            "enum": ["stated", "inferred"],',
      "test_every_declared_schema_is_satisfiable_when_nothing_was_established",
@@ -145,7 +145,7 @@ MUTATIONS = [
     # presented as the law) or too tight (a bare question of law refused).
     # A boundary with a counterexample on one side only is half a boundary.
     ("an authority set assembled behind a closed posture gate",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      ('        if not side_blind:\n'
      '            self._investigate('),
      ('        if True:\n'
@@ -153,7 +153,7 @@ MUTATIONS = [
      "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
 
     ("a directive step recommended behind a closed posture gate",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      ('        if not side_blind:\n'
      '            response = self._recommend('),
      ('        if True:\n'
@@ -161,7 +161,7 @@ MUTATIONS = [
      "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
 
     ("a bare question of law refused instead of answered",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      # THE SIDE-BLIND DERIVE, anchored from `side_blind=True` down: the
      # closing line alone now matches three call sites, and the first
      # match is not the one this test guards.
@@ -205,7 +205,7 @@ MUTATIONS = [
     # having happened, and swallowing that leaves the advocate advised
     # and the file silent about it.
     ("an audit-trail write failure swallowed",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        self._store.record_metrics(metrics.as_dict())\n"
      "        self._record_turn(turn, answer, matter, metrics, derived_values)",
      "        try:\n"
@@ -238,7 +238,7 @@ MUTATIONS = [
     # E-004. A model identifier in the core is how a step stops declaring a
     # TIER and starts naming a provider's model.
     ("a model identifier planted in the core",
-     "nm/legal_brain/grounding.py",
+     "nm/legal_brain/verify/grounding.py",
      "from __future__ import annotations",
      "from __future__ import annotations\n"
      "\n"
@@ -289,7 +289,7 @@ MUTATIONS = [
     # E-004f. Querying an index across embedding models does not error --
     # it returns plausible, confidently wrong neighbours.
     ("an index built with one embedding model queried with another",
-     "nm/legal_brain/artefact_sources.py",
+     "nm/legal_brain/retrieve/artefact_sources.py",
      "        if expected_model.lower() not in self.builder.lower():",
      "        if False and expected_model.lower() not in self.builder.lower():",
      "test_a_real_mismatched_index_is_refused", "E-004f"),
@@ -317,7 +317,7 @@ MUTATIONS = [
     # E-020b. A turn that ran out of rounds and said nothing is
     # indistinguishable from one that found everything it needed.
     ("the evidence bound reached without a visible gap",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        if exploratory and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
      "        if False and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
      "test_reaching_the_evidence_bound_produces_a_visible_gap", "E-020b"),
@@ -327,7 +327,7 @@ MUTATIONS = [
     # E-017. The advocate must never receive advice the file does not
     # record. Better to fail before showing than to show and fail to save.
     ("advice emitted without the commit that records it",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        return self._store.commit(updated, expected_version=expected_version)",
      "        return updated  # commit skipped",
      "test_a_turn_commits_atomically_and_the_commit_precedes_emission",
@@ -355,7 +355,7 @@ MUTATIONS = [
     # attaches the wrong posture and limitation to facts they do not
     # govern, and inverts the advice invisibly.
     ("a merge PERFORMED instead of proposed when two threads share a number",
-     "nm/legal_brain/threading.py",
+     "nm/legal_brain/understand/threading.py",
      "    if len(matches) > 1:",
      "    if False and len(matches) > 1:",
      "test_two_threads_with_one_identifier_propose_a_merge_and_never_perform_it",
@@ -391,13 +391,13 @@ MUTATIONS = [
     # as a holding, binding BINDING makes another State's High Court bind
     # Telangana, absent treatment makes an overruled case read as good law.
     ("a Finding constructible without the binding status that makes it usable",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "    binding: Binding",
      "    binding: Binding = Binding.BINDING",
      "test_a_finding_cannot_be_built_without_what_makes_it_auditable", "E-021"),
 
     ('a Finding constructible without the paragraph kind that makes it attributable',
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "    para_kind: ParaKind",
      "    para_kind: ParaKind = ParaKind.UNKNOWN",
      "test_a_finding_cannot_be_built_without_what_makes_it_auditable", "E-021"),
@@ -420,7 +420,7 @@ MUTATIONS = [
     # disclosures alone, and collapsing the two either punishes the product
     # for being honest or lets an unusable source ground an answer.
     ("an assertion citing what was never retrieved",
-     "nm/legal_brain/grounding.py",
+     "nm/legal_brain/verify/grounding.py",
      "        if element.disclosure:",
      "        if True:",
      "test_a_proposition_carries_a_finding_and_an_inference_never_does",
@@ -448,7 +448,7 @@ MUTATIONS = [
     # not a guard. Every defect the first external review found lived in
     # exactly that gap, so each response class is driven through the app.
     ("a gate that fires in the core and never reaches the served path",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      '            "G-UNSCREENED", "unscreened",',
      '            "G-COVERAGE", "unscreened",',
      "test_every_response_class_is_exercised_on_the_served_path", "E-014"),
@@ -468,7 +468,7 @@ MUTATIONS = [
     # -- and multi-thread files, which the golden set calls the normal
     # case, were unreachable.
     ("a new dispute welded onto the thread already open",
-     "nm/legal_brain/threading.py",
+     "nm/legal_brain/understand/threading.py",
      "        if opens_new_dispute is True:",
      "        if False and opens_new_dispute is True:",
      "test_a_second_dispute_does_not_inherit_the_first_thread_s_posture",
@@ -477,7 +477,7 @@ MUTATIONS = [
     # And the asymmetry as a DEFAULT: an unread dispute must never fall
     # back to the merge, which is the direction with no undo.
     ("an unread dispute defaulting to a merge",
-     "nm/legal_brain/threading.py",
+     "nm/legal_brain/understand/threading.py",
      "        if opens_new_dispute is False:",
      "        if opens_new_dispute is not True:",
      "test_a_dispute_read_that_could_not_tell_asks_rather_than_merging",
@@ -506,7 +506,7 @@ MUTATIONS = [
     # callers -- the docstring then says the rule lives somewhere nothing
     # runs, and the next person hardens the copy that never executes.
     ("a rule inlined, leaving its declared owner consulted by nothing",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        if not position.discloses:",
      '        if position.state.value == "met":',
      "test_no_function_in_the_product_is_defined_and_never_reached",
@@ -517,7 +517,7 @@ MUTATIONS = [
     # E-042. THE MEASURED DEFECT: an acknowledgment in the chronology that
     # never reached the arithmetic. Every other part of the answer was right.
     ("a chronology entry that never reaches the limitation computation",
-     "nm/legal_brain/limitation.py",
+     "nm/legal_brain/procedure/limitation.py",
      '                              "this entry was not examined against the period"))',
      '                              "no effect"))',
      "test_an_entry_nobody_examined_is_reported_as_not_assessed", "E-042"),
@@ -525,7 +525,7 @@ MUTATIONS = [
     # D2.3. Three years counted in days lands a day early across a leap
     # year, and a day is the whole of a limitation argument.
     ("a period counted in days where the statute counts by the calendar",
-     "nm/legal_brain/limitation.py",
+     "nm/legal_brain/procedure/limitation.py",
      "    return _clamped(on.year + years, on.month, on.day)",
      "    from datetime import timedelta as _t; return on + _t(days=365 * years)",
      "test_a_period_is_counted_by_the_calendar_and_never_in_days", "E-043"),
@@ -547,7 +547,7 @@ MUTATIONS = [
 
     # D1.0. An advocate reading eight rows believes the ninth was checked.
     ("a threshold nobody assessed left off the map",
-     "nm/legal_brain/thresholds.py",
+     "nm/legal_brain/reason/thresholds.py",
      "        for t in Threshold)",
      "        for t in assessed)",
      "test_every_threshold_appears_on_the_map_even_when_nobody_assessed_it",
@@ -574,7 +574,7 @@ MUTATIONS = [
     # shortcut where a future one would go: ahead of the model call, on
     # the length of the message. "bail" is one word and a case fact.
     ("route decided on word count",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        if not turn.message.strip():",
      "        if len(turn.message.split()) < 4:\n"
      '            return Route.NON_MATTER, Mode.SHORT_QUESTION, "short"\n'
@@ -598,19 +598,19 @@ MUTATIONS = [
      "test_matter_state_is_not_plaintext_on_disk", "E-011"),
 
     ("a replayed turn applied twice",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        if matter.has_applied(turn.turn_id):",
      "        if False and matter.has_applied(turn.turn_id):",
      "test_replaying_a_turn_does_not_apply_it_twice", "E-018"),
 
     ("a grounding violation softened instead of gating",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        if metrics.gating_violations:",
      "        if False and metrics.gating_violations:",
      "test_a_finding_whose_span_does_not_support_gates_the_output", "E-020"),
 
     ("metrics not written when the turn fails",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      # Anchored on the FAILURE path's own line, because the same three-line
      # block also closes the G-STALE path and an anchor matching both mutates
      # whichever comes first.
@@ -631,7 +631,7 @@ MUTATIONS = [
      "test_the_boards_are_bounded_by_row_count_not_turns", "E-063"),
 
     ("the union collapsed to a single store (defect B-164)",
-     "nm/legal_brain/corpus_evidence.py",
+     "nm/legal_brain/retrieve/corpus_evidence.py",
      "            for pattern in patterns:\n"
      "                stores.append(pattern)",
      "            for pattern in [p for p in patterns if not p.startswith('%')]:\n"
@@ -639,7 +639,7 @@ MUTATIONS = [
      "test_the_union_retrieves_a_section_the_thin_store_does_not_hold", "E-002b"),
 
     ("substance admitted before the screens (stop-ship #2)",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        screens = self._run_screens(matter, turn, metrics)",
      "        matter, _pre = self._admit_facts(matter, turn)\n"
      "        screens = self._run_screens(matter, turn, metrics)",
@@ -655,14 +655,14 @@ MUTATIONS = [
 
     # ---- slices 2 and 3: grounding, and the frame -------------------------
     ("a citation the answer invents (the fabricated section)",
-     "nm/legal_brain/grounding.py",
+     "nm/legal_brain/verify/grounding.py",
      "    report.violations.extend(verify_citations(answer.elements, quotable))",
      "    # report.violations.extend(verify_citations(answer.elements, quotable))",
      "test_a_provision_the_answer_cites_but_never_retrieved_withholds_the_turn",
      "E-020"),
 
     ("a fabricated quotation",
-     "nm/legal_brain/grounding.py",
+     "nm/legal_brain/verify/grounding.py",
      "    report.violations.extend(verify_quotes(answer.elements, quotable,\n"
      "                                          document_spans=document_spans))",
      "    # verify_quotes omitted: fabricated quotations are not checked",
@@ -670,28 +670,28 @@ MUTATIONS = [
      "E-020"),
 
     ("an unchecked citator read as clearance (the overruled authority)",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "            if self.treatment.state is TreatmentState.NOT_CHECKED:",
      "            if False and self.treatment.state is TreatmentState.NOT_CHECKED:",
      "test_an_authority_whose_treatment_was_never_checked_cannot_carry_a_proposition",
      "E-022"),
 
     ("a post-bifurcation Andhra judgment silently treated as binding",
-     "nm/legal_brain/jurisdiction_sources.py",
+     "nm/legal_brain/retrieve/jurisdiction_sources.py",
      "        if year < BIFURCATION.year:",
      "        if True:",
      "test_andhra_pradesh_after_the_bifurcation_is_not_assessed_rather_than_assumed",
      "E-002b"),
 
     ("superseded text served for a later governing date (the 2024 codes)",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "        if self.governing_date is not None and not self.in_force:",
      "        if False and self.governing_date is not None and not self.in_force:",
      "test_text_not_in_force_on_the_governing_date_cannot_carry_a_proposition",
      "E-023"),
 
     ("a thread bound by guessing instead of asking",
-     "nm/legal_brain/threading.py",
+     "nm/legal_brain/understand/threading.py",
      ('    labels = "; ".join(dispute(t.label) for t in matter.threads[:5])'),
      ('    return BindResult(BindState.BOUND, matter.threads[0], False, "guessed")\n'
      '    labels = "; ".join(dispute(t.label) for t in matter.threads[:5])'),
@@ -699,14 +699,14 @@ MUTATIONS = [
      "E-030"),
 
     ("a merge performed rather than proposed",
-     "nm/legal_brain/threading.py",
+     "nm/legal_brain/understand/threading.py",
      "    if len(matches) > 1:",
      "    if False and len(matches) > 1:",
      "test_two_threads_with_one_identifier_propose_a_merge_and_never_perform_it",
      "E-031"),
 
     ("the corpus gap silently not disclosed",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "            self._disclose_coverage(turn, thread, metrics, grounds)",
      "            pass  # self._disclose_coverage(turn, thread, metrics, grounds)",
      "test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after",
@@ -727,37 +727,37 @@ MUTATIONS = [
      "E-065"),
 
     ("a smaller bench treated as superseding a larger one",
-     "nm/legal_brain/identity_sources.py",
+     "nm/legal_brain/retrieve/identity_sources.py",
      "    winner = (Precedence.LEFT if left.bench_size > right.bench_size",
      "    winner = (Precedence.LEFT if left.bench_size < right.bench_size",
      "test_a_larger_bench_supersedes_a_smaller_one_in_the_same_court", "E-022"),
 
     ("co-ordinate benches ranked instead of referred",
-     "nm/legal_brain/identity_sources.py",
+     "nm/legal_brain/retrieve/identity_sources.py",
      "    if left.bench_size == right.bench_size:",
      "    if False and left.bench_size == right.bench_size:",
      "test_co_ordinate_benches_do_not_supersede_each_other", "E-022"),
 
     ("an unrecorded bench defaulting instead of blocking",
-     "nm/legal_brain/identity_sources.py",
+     "nm/legal_brain/retrieve/identity_sources.py",
      "    if not (left.bench_known and right.bench_known):",
      "    if False and not (left.bench_known and right.bench_known):",
      "test_an_unrecorded_bench_blocks_the_comparison_rather_than_defaulting", "E-022"),
 
     ("a High Court bench out-ranking the Supreme Court",
-     "nm/legal_brain/identity_sources.py",
+     "nm/legal_brain/retrieve/identity_sources.py",
      "    if left.tier != right.tier:",
      "    if False and left.tier != right.tier:",
      "test_the_supreme_court_is_senior_to_every_high_court", "E-022"),
 
     ("an unbuilt identity index clearing an authority",
-     "nm/legal_brain/identity_sources.py",
+     "nm/legal_brain/retrieve/identity_sources.py",
      '                "the identity index is not built, so no judgment was searched "',
      '                "clean, nothing found "',
      "test_an_absent_index_answers_not_known_rather_than_defaulting", "E-023"),
 
     ("a disclosure treated as a citation (withholding the honest answer)",
-     "nm/legal_brain/grounding.py",
+     "nm/legal_brain/verify/grounding.py",
      "        if element.disclosure:",
      "        if False and element.disclosure:",
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
@@ -773,7 +773,7 @@ MUTATIONS = [
     # doing its job. The planted defect is unchanged: recite the file after the
     # ask, so the answer grows with the file on every turn.
     ("an answer that recites the file back, growing every turn",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      ('            elements.extend(self._ask(askable, thread, metrics))\n'),
      ('            elements.extend(self._ask(askable, thread, metrics))\n'
      '        elements.extend(Element(kind=ElementKind.GROUND, thread=thread.id,\n'
@@ -987,7 +987,7 @@ MUTATIONS = [
     # always yielding something IS the manufactured question with a data
     # structure behind it.
     ("a queue that always has something to ask",
-     "nm/legal_brain/gaps.py",
+     "nm/legal_brain/reason/gaps.py",
      "    ordered = rank(gaps)\n"
      "    return ordered[0] if ordered else None",
      "    ordered = rank(gaps)\n"
@@ -998,7 +998,7 @@ MUTATIONS = [
     # E-090. An unresolved posture makes everything below it worthless,
     # however interesting.
     ("a queue that ranks an interesting question above a blocking gate",
-     "nm/legal_brain/gaps.py",
+     "nm/legal_brain/reason/gaps.py",
      "    return tuple(sorted(gaps, key=lambda g: g.priority))",
      "    return tuple(sorted(gaps, key=lambda g: -g.priority))",
      "test_the_queue_ranks_a_blocking_gate_above_everything_interesting",
@@ -1006,7 +1006,7 @@ MUTATIONS = [
 
     # E-090. Serial single questions make the advocate do the scheduling.
     ("questions asked across every thread at once",
-     "nm/legal_brain/gaps.py",
+     "nm/legal_brain/reason/gaps.py",
      "    return tuple(g for g in rank(gaps) if g.thread == thread)",
      "    return rank(gaps)",
      "test_questions_are_batched_one_thread_at_a_time", "E-090"),
@@ -1014,7 +1014,7 @@ MUTATIONS = [
     # E-091. "NM asking to finish the current thread first." A build that
     # passes its stages by railroading the advocate has failed.
     ("NM finishing its own thread before following the advocate",
-     "nm/legal_brain/gaps.py",
+     "nm/legal_brain/reason/gaps.py",
      "    return asked_about, leads(gaps)",
      "    top = leads(gaps)\n"
      "    return (top.thread if top else asked_about), top",
@@ -1110,7 +1110,7 @@ MUTATIONS = [
     # E-080. "A theory that works only if three documents are forgotten." It
     # reads perfectly -- the three are simply not mentioned.
     ("adverse facts the theory never accounts for, unreported",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      ('    handled = set(theory.explains) | set(theory.concedes) | set(theory.unresolved)\n'
      '    return tuple(f for f in adverse if f not in handled)'),
      ('    return ()'),
@@ -1119,7 +1119,7 @@ MUTATIONS = [
     # E-080. No theory disposes of nothing. Returning () there would make a
     # thread with no theory look fully accounted for.
     ("no theory reading as every adverse fact handled",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "    if theory is None:\n"
      "        return tuple(adverse)",
      "    if theory is None:\n"
@@ -1128,7 +1128,7 @@ MUTATIONS = [
 
     # E-080. A menu is the survey D6 rejects.
     ("two theories offered in parallel",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "    if len(mine) > 1:",
      "    if False and len(mine) > 1:",
      "test_exactly_one_theory_per_thread", "E-080"),
@@ -1136,7 +1136,7 @@ MUTATIONS = [
     # E-080. "The complainant has not proved his case" is a hope that the
     # other side fails, not a theory.
     ("a bare denial arrived at by default",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "        if self.stance is Stance.DENIAL and blank(self.chosen_because):",
      "        if False and self.stance is Stance.DENIAL:",
      "test_a_bare_denial_is_a_chosen_strategy_and_never_a_default", "E-080"),
@@ -1144,7 +1144,7 @@ MUTATIONS = [
     # E-081. "I never signed it" alongside "I signed it under a
     # misrepresentation". No string comparison shows it.
     ("two arguments needing opposite factual accounts, unflagged",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "                if fact in b.requires and b.requires[fact] != needed:",
      "                if False and fact in b.requires:",
      "test_two_arguments_needing_opposite_facts_are_flagged", "E-081"),
@@ -1152,7 +1152,7 @@ MUTATIONS = [
     # E-081. The alternative flag must not become an opt-out: "I never
     # borrowed the money, and in any event I repaid it" loses either way.
     ("the alternative plea used to suppress the inconsistency check",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "            if a.thread != b.thread:\n"
      "                continue",
      "            if a.thread != b.thread or b.in_the_alternative:\n"
@@ -1162,7 +1162,7 @@ MUTATIONS = [
     # E-081's positive control, in production. An argument committing to
     # nothing contradicts nothing, so a file of them reports health forever.
     ("an argument with no declared factual commitments, unreported",
-     "nm/legal_brain/theory.py",
+     "nm/legal_brain/reason/theory.py",
      "    return tuple(snippet(a.statement, 60) for a in arguments if not a.requires)",
      "    return ()",
      "test_an_argument_declaring_no_facts_cannot_be_silently_consistent",
@@ -1171,7 +1171,7 @@ MUTATIONS = [
     # E-082. "Emitted twice, or SILENTLY OMITTED." Omitted reads as "nothing
     # found" when nobody looked.
     ("a cross-file pass that never ran reading as one that found nothing",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      ('    if found is None:\n'
      '        return ExposureReport(\n'
      '            ExposureState.NOT_RUN,\n'
@@ -1185,7 +1185,7 @@ MUTATIONS = [
     # E-082. A section that appears only sometimes is one the advocate cannot
     # rely on being there.
     ("a single-thread file given no exposure report at all",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      "    if len(threads) < 2:\n"
      "        return ExposureReport(ExposureState.NONE_FOUND)",
      "    if len(threads) < 2:\n"
@@ -1197,21 +1197,21 @@ MUTATIONS = [
     # E-083. An attack with no answer and one expressly unanswerable are
     # different findings: work not done, versus a fact about the case.
     ("a recommended step with no stated opposing case",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      "        if not self.no_answer and blank(self.our_answer):",
      "        if False and not self.no_answer:",
      "test_every_attack_carries_our_answer_or_says_there_is_none", "E-083"),
 
     # E-084. "Consider a different forum", with no forum named.
     ("a salvage route stated at category level",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      "        if self.route and not self.findings:",
      "        if False and self.route:",
      "test_no_salvage_route_is_stated_at_category_level", "E-084"),
 
     # E-084. An unmarked route reads as a recommendation NM would run.
     ("a salvage route carrying no strength",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      "        if self.route and self.strength is Strength.NOT_ASSESSED:",
      "        if False and self.route:",
      "test_no_salvage_route_is_stated_at_category_level", "E-084"),
@@ -1219,7 +1219,7 @@ MUTATIONS = [
     # E-084. A report that varied two coordinates and concluded the case is
     # dead has not done the work, and the two make it look as though it had.
     ("coordinates nobody moved, unreported",
-     "nm/legal_brain/adversarial.py",
+     "nm/legal_brain/reason/adversarial.py",
      "    done = {s.coordinate for s in considered}\n"
      "    return tuple(c.value for c in Coordinate if c not in done)",
      "    return tuple(s.coordinate.value for s in considered\n"
@@ -1232,7 +1232,7 @@ MUTATIONS = [
     # no proof position at all. The conclusion looked complete -- three
     # elements worked carefully, two never mentioned. Short is invisible.
     ("a proof-coverage gate that certifies itself",
-     "nm/legal_brain/proof.py",
+     "nm/legal_brain/reason/proof.py",
      "    have = {p.element.strip().lower() for p in positions}\n"
      "    return tuple(e for e in elements if e.strip().lower() not in have)",
      "    want = {e.strip().lower() for e in elements}\n"
@@ -1243,7 +1243,7 @@ MUTATIONS = [
     # E-070. "To what standard" is half of whether the material is enough. An
     # element HELD to the wrong standard is not held.
     ("a proof status with no standard behind it",
-     "nm/legal_brain/proof_contracts.py",
+     "nm/legal_brain/reason/proof_contracts.py",
      "        if self.status is not ProofStatus.NOT_ASSESSED \\\n"
      "                and self.standard is Standard.NOT_ESTABLISHED:",
      "        if False and self.standard is Standard.NOT_ESTABLISHED:",
@@ -1252,20 +1252,20 @@ MUTATIONS = [
     # E-070. A presumption is a section, and one asserted from memory decides
     # who loses when the evidence is silent.
     ("a burden shifted by a presumption nobody cited",
-     "nm/legal_brain/proof_contracts.py",
+     "nm/legal_brain/reason/proof_contracts.py",
      "        if self.shifted_by and not self.shift_provision.strip():",
      "        if False and self.shifted_by:",
      "test_a_presumption_that_shifts_the_burden_names_its_provision", "E-070"),
 
     # E-071. "You cannot prove the loan", full stop.
     ("a proof gap reported as a verdict",
-     "nm/legal_brain/proof_contracts.py",
+     "nm/legal_brain/reason/proof_contracts.py",
      "        if self.status is ProofStatus.OBTAINABLE and blank(self.closing_material):",
      "        if False and self.status is ProofStatus.OBTAINABLE:",
      "test_a_proof_gap_is_never_a_verdict", "E-071"),
 
     ("an absent element with no express dead end",
-     "nm/legal_brain/proof_contracts.py",
+     "nm/legal_brain/reason/proof_contracts.py",
      "        if self.status is ProofStatus.ABSENT and blank(self.dead_end):",
      "        if False and self.status is ProofStatus.ABSENT:",
      "test_a_proof_gap_is_never_a_verdict", "E-071"),
@@ -1273,7 +1273,7 @@ MUTATIONS = [
     # E-072. "Your client is concealing the payment." NM has not met the
     # client and holds no material on which a credibility finding could rest.
     ("an answer that judges the client rather than the file",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "            for sentence in proof.characterises_the_client(element.text):",
      "            for sentence in ():",
      "test_the_served_turn_records_a_characterisation_of_the_client", "E-072"),
@@ -1282,7 +1282,7 @@ MUTATIONS = [
     # product to hedge, and D5.1 says the drift to design against is
     # SOFTENING, not accusing.
     ("a restraint that spreads from the client to the opponent",
-     "nm/legal_brain/proof.py",
+     "nm/legal_brain/reason/proof.py",
      "        if _CHARACTER.search(sentence) and _OURS.search(sentence):",
      "        if _CHARACTER.search(sentence):",
      "test_the_restraint_does_not_extend_to_the_opponent_or_to_the_finding",
@@ -1313,7 +1313,7 @@ MUTATIONS = [
     # all issue labels ever spotted -- 641 of 3,192 -- led by limitation,
     # bail, and forum or jurisdiction.
     ("a classifier that filters instead of dispositioning",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "    return tuple(replace(i, disposition=given[i.id]) if i.id in given else i\n"
      "                 for i in spotted)",
      "    return tuple(replace(i, disposition=given[i.id]) if i.id in given else i\n"
@@ -1324,14 +1324,14 @@ MUTATIONS = [
     # were lost, and which three is the whole difference between a rounding
     # error and an advocate missing a deadline.
     ("a conservation check that cannot name what was lost",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "    return tuple(snippet(i.statement, 80) for i in spotted if i.id not in out)",
      "    return ()",
      "test_the_conservation_check_names_what_was_lost", "E-060"),
 
     # E-060. A deletion with extra steps is still a deletion.
     ("an issue parked with no reason",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "        if self.state in (DispositionState.PARKED, DispositionState.CLOSED) \\\n"
      "                and blank(self.reason):",
      "        if False and self.state in (DispositionState.PARKED,):",
@@ -1341,7 +1341,7 @@ MUTATIONS = [
     # carries an opinion about whose problem it is, and it is wrong for half
     # the advocates who read it.
     ("an effect that does not turn with the posture",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "        if self.runs_against is posture.side:\n"
      "            return Effect.OPPOSES, posture.version\n"
      "        return Effect.SUPPORTS, posture.version",
@@ -1351,7 +1351,7 @@ MUTATIONS = [
     # E-061. An unresolved posture yielding `neutral` is a finding that the
     # issue helps nobody, which nobody established.
     ("an unassessed effect rendered as neutral",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "            return Effect.NOT_ASSESSED, posture.version",
      "            return Effect.NEUTRAL, posture.version",
      "test_an_effect_is_never_stored_and_so_cannot_survive_its_own_reversal",
@@ -1360,7 +1360,7 @@ MUTATIONS = [
     # E-062. `tracks {'civil': 2, 'revenue': 1}` passing unvalidated and
     # emptying the charge map. It entered through the path nobody guarded.
     ("an out-of-vocabulary facet value propagated",
-     "nm/legal_brain/issue_contracts.py",
+     "nm/legal_brain/reason/issue_contracts.py",
      "    except (ValueError, AttributeError):\n"
      "        return default",
      "    except (ValueError, AttributeError):\n"
@@ -1386,7 +1386,7 @@ MUTATIONS = [
     # conduct in 2023 -- confidently, with a real citation, and the 2024 codes
     # make that the difference between right and wrong.
     ("a query without a governing date defaulted to today",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "        if self.governing_date is None:\n"
      "            raise ValueError(",
      "        if False and self.governing_date is None:\n"
@@ -1398,7 +1398,7 @@ MUTATIONS = [
     # Article arrived at by ranking. Two defaults made a ranked guess and an
     # exact lookup indistinguishable from the Finding's own data.
     ("a resolved Finding carrying a similarity score",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "        if self.origin is Origin.RESOLVED and self.confidence is not None:",
      "        if False and self.origin is Origin.RESOLVED:",
      "test_a_resolved_finding_cannot_carry_a_similarity_score", "E-051"),
@@ -1406,7 +1406,7 @@ MUTATIONS = [
     # E-051. A candidate presented as an answer is the search-first design
     # H3 replaces.
     ("a searched Finding that drops the confidence it was ranked on",
-     "nm/legal_brain/evidence_port.py",
+     "nm/legal_brain/retrieve/evidence_port.py",
      "        if self.origin is Origin.SEARCHED and self.confidence is None:",
      "        if False and self.origin is Origin.SEARCHED:",
      "test_a_resolved_finding_cannot_carry_a_similarity_score", "E-051"),
@@ -1415,7 +1415,7 @@ MUTATIONS = [
     # cause it does not hold must fall through to search, not to the closest
     # edge -- fuzzy may rank, never identify.
     ("the cause graph returning a near neighbour instead of nothing",
-     "nm/legal_brain/resolution_sources.py",
+     "nm/legal_brain/retrieve/resolution_sources.py",
      "    return LIMITATION_ARTICLE.get(cause)",
      "    return LIMITATION_ARTICLE.get(cause) or next(iter(LIMITATION_ARTICLE.values()))",
      "test_the_graph_resolves_by_exact_lookup_and_never_by_similarity",
@@ -1423,7 +1423,7 @@ MUTATIONS = [
 
     # E-051. An out-of-vocabulary cause accepted as a routing decision.
     ("a cause outside the closed vocabulary accepted as a route",
-     "nm/legal_brain/cause.py",
+     "nm/legal_brain/reason/cause.py",
      "        cause = CauseOfAction(raw)",
      "        cause = CauseOfAction.GOODS_SOLD_PRICE",
      "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
@@ -1431,7 +1431,7 @@ MUTATIONS = [
     # E-051. The verbatim guard, which the posture reader was measured
     # failing: the extractor quoting this product's own question back at it.
     ("a cause settled on a span the advocate never wrote",
-     "nm/legal_brain/cause.py",
+     "nm/legal_brain/reason/cause.py",
      "    if not quotable.accepts(quoted):",
      "    if False and not quotable.accepts(quoted):",
      "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
@@ -1440,7 +1440,7 @@ MUTATIONS = [
     # `article_for` and `_route` can both be right while the engine never sets
     # the field, and the served turns would look identical.
     ("the engine never putting a cause on the need",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        return read.cause.value if read.resolved else None",
      "        return None",
      "test_the_engine_sets_the_cause_so_the_graph_can_be_consulted", "E-051"),
@@ -1448,7 +1448,7 @@ MUTATIONS = [
     # E-051. The advocate's own instruction outranked by the graph -- the
     # mirror of keyword scoring outvoting a named Act on `possession`.
     ("a section the advocate named outranked by the graph",
-     "nm/legal_brain/corpus_evidence.py",
+     "nm/legal_brain/retrieve/corpus_evidence.py",
      "        if wanted_section(need.question):",
      "        if False and wanted_section(need.question):",
      "test_a_provision_the_advocate_named_outranks_the_graph", "E-051"),
@@ -1457,7 +1457,7 @@ MUTATIONS = [
     # paragraph vanished with no count and no trace, so a miss caused by the
     # ceiling was indistinguishable from an absence in the corpus.
     ("a top-k cut that binds without saying so",
-     "nm/legal_brain/corpus_evidence.py",
+     "nm/legal_brain/retrieve/corpus_evidence.py",
      "        truncated = len(rows) > EXAMINED_CEILING",
      "        truncated = False",
      "test_a_ceiling_that_binds_is_reported_and_never_silent", "E-052"),
@@ -1465,7 +1465,7 @@ MUTATIONS = [
     # E-054. A BNS charge retrieving nothing because the case law cites the
     # IPC. Case law is overwhelmingly pre-2024 and cites the old numbering.
     ("a new-code charge that cannot reach its old-code authority",
-     "nm/legal_brain/resolution_sources.py",
+     "nm/legal_brain/retrieve/resolution_sources.py",
      "        if (c.old_act, c.old_provision) == key:",
      "        if False and (c.old_act, c.old_provision) == key:",
      "test_authority_under_the_corresponding_old_provision_is_reachable",
@@ -1475,7 +1475,7 @@ MUTATIONS = [
     # in different codes, and matching digits is the wrong-Act defect one
     # layer down.
     ("a correspondence matched on the section number alone",
-     "nm/legal_brain/resolution_sources.py",
+     "nm/legal_brain/retrieve/resolution_sources.py",
      "    key = (act.strip(), str(provision).strip())",
      "    key = (act.strip(), str(provision).strip())\n"
      "    return next((c for c in CORRESPONDS\n"
@@ -1485,7 +1485,7 @@ MUTATIONS = [
 
     # E-054. The era rule: the governing date is the date of the CONDUCT.
     ("the era rule reading the date of the advice, not of the conduct",
-     "nm/legal_brain/resolution_sources.py",
+     "nm/legal_brain/retrieve/resolution_sources.py",
      "    return \"the 2023 codes\" if on >= TRANSITION else \"the 1860/1898/1973 codes\"",
      "    return \"the 2023 codes\"",
      "test_the_governing_date_is_the_date_of_the_conduct", "E-054"),
@@ -1531,7 +1531,7 @@ MUTATIONS = [
     # The Article was right, the accrual was right, every citation was right,
     # and the answer was wrong by nine years.
     ("a limitation period the product supplied rather than read",
-     "nm/legal_brain/limitation.py",
+     "nm/legal_brain/procedure/limitation.py",
      "        if found != (self.years, self.months, self.days):",
      "        if False and found != (self.years, self.months, self.days):",
      "test_the_period_cannot_be_supplied_by_the_product", "E-043"),
@@ -1539,7 +1539,7 @@ MUTATIONS = [
     # A PERIOD OF ZERO expires on the accrual date -- state COMPUTED, a real
     # date, a real day count, and every claim barred the day it arose.
     ("a period of zero accepted as a computed period",
-     "nm/legal_brain/limitation.py",
+     "nm/legal_brain/procedure/limitation.py",
      "        if not (self.years or self.months or self.days):",
      "        if False and (self.years or self.months or self.days):",
      "test_a_period_of_zero_is_refused_rather_than_computed", "E-043"),
@@ -1547,7 +1547,7 @@ MUTATIONS = [
     # E-045 was a class-A eval that ran only against the module. On a defending
     # thread their limitation is often the whole answer.
     ("the opponent's limitation never computed on a defending thread",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        defending = thread.posture.side is Side.DEFENDING",
      "        defending = False"
      "test_on_a_defending_thread_the_turn_computes_the_opponents_limitation",
@@ -1558,7 +1558,7 @@ MUTATIONS = [
     # a finding that nothing was found, asserted whether or not anything had
     # been looked for.
     ("an action that drops the by-when the register actually holds",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        live = deadlines.upcoming(register, today)",
      "        live = ()",
      "test_a_recommended_action_carries_the_by_when_the_register_holds",
@@ -1567,7 +1567,7 @@ MUTATIONS = [
     # D3.1. A passed window presented as this action's by-when files the thing
     # that can no longer be done among the things that still can.
     ("a passed deadline presented as an action's by-when",
-     "nm/legal_brain/turn.py",
+     "nm/legal_brain/orchestrate/turn.py",
      "        gone = deadlines.passed(register, today)",
      "        gone = (); return (register[0].on if register else None), None",
      "test_a_passed_deadline_never_becomes_the_by_when_of_an_action",

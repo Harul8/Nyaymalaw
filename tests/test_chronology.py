@@ -22,7 +22,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.shared.traceability_contracts import refuses
 from nm.work_the_file.chronology import (
     DateState,

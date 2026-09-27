@@ -34,7 +34,7 @@ three days old when this was written.
 THE BOUND
 ----------
 A caller may need MORE normalisation than the base and that is not a second
-copy — `nm.legal_brain.grounding._citation_fold` folds `vs` and `versus` to `v`,
+copy — `nm.legal_brain.verify.grounding._citation_fold` folds `vs` and `versus` to `v`,
 which is right for a case name and wrong for an advocate's sentence. What it
 may not do is define its own base, so the rule is that it must CALL `fold`.
 """
@@ -158,7 +158,7 @@ def test_a_composition_on_the_base_is_permitted():
     vs the reply" with "the notice v the reply", so it is right that it lives
     in `grounding` and wrong that it would live in `text`.
     """
-    from nm.legal_brain.grounding import _citation_fold
+    from nm.legal_brain.verify.grounding import _citation_fold
     from nm.shared.text_contracts import fold
 
     assert _citation_fold("Rao vs Sunkara") == _citation_fold("Rao v Sunkara")

@@ -22,7 +22,8 @@ import json
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.legal_brain.retrieve.evidence_port import (
     Coverage,
     EvidencePort,
     EvidenceResult,
@@ -30,7 +31,6 @@ from nm.legal_brain.evidence_port import (
     SourceKind,
     Treatment,
 )
-from nm.legal_brain.turn import TurnEngine, TurnInput
 from nm.shared.gates_contracts import GATES, Response
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StaleWrite
@@ -96,7 +96,7 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatc
     guards a corpus that does not exist yet, and the way to test either is to
     drive it rather than to wait for it.
     """
-    from nm.legal_brain import turn as turn_module
+    from nm.legal_brain.orchestrate import turn as turn_module
 
     class _Exhausting(EvidencePort):
         """Every fetch succeeds, so only the BOUND can stop the turn."""
@@ -155,7 +155,7 @@ def test_a_named_provision_does_not_spend_the_wandering_budget(tmp_path):
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._factors)
     assert "exploratory=False" in body, (
@@ -170,7 +170,7 @@ def test_a_named_provision_is_still_counted(tmp_path):
     bound stop matching reality."""
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._fetch)
     assert "metrics.evidence_rounds += 1" in src
@@ -310,7 +310,7 @@ def test_a_finding_cannot_be_built_without_what_makes_it_auditable():
     # para_kind and treatment have NO DEFAULT: omitting them is a TypeError.
     import inspect
 
-    from nm.legal_brain.evidence_port import Finding
+    from nm.legal_brain.retrieve.evidence_port import Finding
     params = inspect.signature(Finding).parameters
     for field in ("locator", "span", "binding", "binding_for", "binding_reason",
                   "para_kind", "treatment", "supports"):
@@ -336,7 +336,7 @@ def test_a_proposition_carries_a_finding_and_an_inference_never_does():
     could NOT be established is marked `disclosure`, and the grounding gate
     holds asserting elements to their findings while leaving disclosures alone.
     """
-    from nm.legal_brain import grounding
+    from nm.legal_brain.verify import grounding
 
     retrieved = (finding(),)          # Limitation Act Article 65
 

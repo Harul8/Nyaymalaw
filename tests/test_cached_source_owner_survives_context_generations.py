@@ -8,8 +8,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
 from nm.shared.model_port import Prompt, Tier, ToolCall
 from tests.test_checklist_classification_is_independently_reviewed import (
     current_fixture_source,

@@ -27,7 +27,7 @@ import json
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.traceability_contracts import refuses
 from nm.work_the_file.matter_contracts import Matter, Provenance
@@ -388,7 +388,7 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
     today's code.
 
     That is defect shape S11 exactly, and it is the same argument
-    `nm/legal_brain/artefact_sources.py` makes about the dense index: the ONLY reason
+    `nm/legal_brain/retrieve/artefact_sources.py` makes about the dense index: the ONLY reason
     that 437MB artefact was knowably unusable is that it shipped an
     `identity.json`. A run that cannot say what it ran against is the same
     artefact wearing a different hat.

@@ -213,7 +213,7 @@ def read_matter(matter, *, source_current=None, checklist_projections=None) -> R
     if not isinstance(population, (tuple, list)):
         return RegisterRead((), (RegisterProblem(None, None, "thread population unreadable"),),
                             (), (), ())
-    from nm.legal_brain.requirements import checked_file_projections, project
+    from nm.legal_brain.reason.requirements import checked_file_projections, project
 
     projections = (checked_file_projections(matter, checklist_projections,
         source_current=source_current) if checklist_projections is not None else None)
@@ -252,7 +252,7 @@ def read_matter(matter, *, source_current=None, checklist_projections=None) -> R
                 problems.append(RegisterProblem(identity, index, "saved deadline row unreadable"))
         # Derived from the same validated answers as the board. These are
         # reminders, not a statutory clock or a computed legal deadline.
-        from nm.legal_brain.requirements import State
+        from nm.legal_brain.reason.requirements import State
         checklist = (projections[thread.id] if projections is not None else
             project(thread, matter.facts, records=getattr(matter, "loop_records", ()),
                     source_current=source_current))

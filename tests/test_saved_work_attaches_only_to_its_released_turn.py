@@ -7,9 +7,9 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
-from nm.legal_brain.brain_context import ContextSession, assemble_brief
-from nm.legal_brain.loop_contracts import LoopRecord, StepKind, StopReason
-from nm.legal_brain.loop_progress import links_released_turn, progress, recorded_scope
+from nm.legal_brain.understand.brain_context import ContextSession, assemble_brief
+from nm.legal_brain.orchestrate.loop_contracts import LoopRecord, StepKind, StopReason
+from nm.legal_brain.communicate.loop_progress import links_released_turn, progress, recorded_scope
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture, snapshot
 from tests.test_saved_loop_progress_is_not_an_advice_transport import AT, SECRET, add, base, work
 

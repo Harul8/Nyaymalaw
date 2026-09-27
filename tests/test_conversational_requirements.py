@@ -6,9 +6,9 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain import requirements
-from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist, key, settled
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key, settled
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_scripted import SCRIPTED_READS
 from nm.shared.store_file_store import FileMatterStore
@@ -215,7 +215,7 @@ def test_force_is_not_invented_from_document_type(kind, force):
 
 
 def test_session_return_does_not_change_the_idempotent_request_identity():
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
     turn = TurnInput(advocate_id='adv', message='These are my instructions',
                      session_reference='old-session')
     assert TurnEngine._offer(turn, 'matter') == TurnEngine._offer(

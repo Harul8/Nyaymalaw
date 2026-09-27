@@ -24,10 +24,10 @@ from dataclasses import dataclass
 
 import pytest
 
-from nm.legal_brain import filing_requirement_sources as curated
-from nm.legal_brain import thresholds
-from nm.legal_brain.filing_requirement_port import Requirement, SourceState
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.procedure import filing_requirement_sources as curated
+from nm.legal_brain.procedure.filing_requirement_port import Requirement, SourceState
+from nm.legal_brain.reason import thresholds
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

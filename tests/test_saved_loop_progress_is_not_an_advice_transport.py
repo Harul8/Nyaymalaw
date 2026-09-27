@@ -9,7 +9,7 @@ from dataclasses import replace
 import pytest
 from fastapi import HTTPException
 
-from nm.legal_brain.loop_contracts import (
+from nm.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopIdentity,
     LoopMode,
@@ -17,7 +17,7 @@ from nm.legal_brain.loop_contracts import (
     StepKind,
     StopReason,
 )
-from nm.legal_brain.loop_progress import (
+from nm.legal_brain.communicate.loop_progress import (
     InvalidProgressCursor,
     cursor_at,
     progress,
@@ -263,7 +263,7 @@ def test_route_refuses_a_record_transplanted_between_matters(client):
 
 def collect_stream(*, disconnect_after=None, revoke_after=None, owner_lost_after=None):
     """Drive the actual route generator so buffering cannot hide its checks."""
-    from nm.legal_brain.loop_progress_api import router
+    from nm.legal_brain.communicate.loop_progress_api import router
 
     record = work()
     count = [0]

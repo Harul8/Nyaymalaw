@@ -13,8 +13,10 @@ Review the application in the same order as the advocate's work:
 9. [Leave](leave/README.md): session termination.
 
 [App](app/README.md) composes and serves those owners; [Shared](shared/README.md)
-contains the common security, storage and provider boundaries. Each folder is
-flat, with descriptive filenames and one actual model tool per `tool_<name>.py`.
+contains the common security, storage and provider boundaries. Smaller journey
+folders remain flat. Legal brain uses eight shallow responsibility folders plus
+`common/`, each flat inside, with descriptive filenames and one actual model tool
+per `tool_<name>.py`.
 
 The phase folders are ownership/navigation, not a fixed legal reasoning sequence
 or a claim that every planned feature is built. Requirements remain in Before

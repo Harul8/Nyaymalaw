@@ -23,7 +23,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.provenance_sources import (
+from nm.legal_brain.retrieve.provenance_sources import (
     SUPPORTED_JURISDICTIONS,
     SourceRecord,
     Standing,

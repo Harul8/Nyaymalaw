@@ -39,7 +39,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.work_the_file import summary_contracts as summary_mod
 from nm.work_the_file.matter_contracts import Matter, Thread
 from tests.test_turn_contract import build
@@ -140,7 +140,7 @@ def test_the_assessed_names_come_from_the_derive_phase_and_not_a_second_list():
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._run)
     assert "assessed=tuple(dict.fromkeys(" in src
@@ -217,7 +217,7 @@ def test_a_computed_register_reaches_the_handover(tmp_path):
     """PHASE 3'S WHOLE CLAIM, on a served turn.
 
     `nm/work_the_file/deadlines.py` is reached ten times from the turn engine and
-    `nm/legal_brain/gaps.py` four. Neither result survived the turn, so the handover
+    `nm/legal_brain/reason/gaps.py` four. Neither result survived the turn, so the handover
     carried no deadlines and no gaps section on a file where both had been
     computed every turn since the brief arrived. Not unbuilt -- built, run,
     and thrown away.
@@ -257,7 +257,7 @@ def test_an_empty_queue_is_a_finding_and_an_absent_one_is_not(tmp_path):
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._derive)
     assert 'concluded["gaps"] = tuple(gaps)' in src, (
@@ -283,7 +283,7 @@ def test_the_persisted_derivation_is_replaced_and_never_merged(tmp_path):
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     # WHITESPACE-COLLAPSED. `authorities=` wraps across two lines, and a
     # line-exact match reported it missing when it was there -- an assertion
@@ -349,7 +349,7 @@ def test_the_screens_are_recorded_even_when_they_refuse_the_matter():
     after it."""
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._run)
     landed = src.index("matter, screens=screens.screens")

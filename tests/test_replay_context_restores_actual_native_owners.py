@@ -8,14 +8,14 @@ from datetime import date, timedelta
 
 import pytest
 
-from nm.legal_brain.brain_context import ContextSession
-from nm.legal_brain.checklist_sources import bind_source_current
-from nm.legal_brain.loop import LoopRunner
-from nm.legal_brain.loop_contracts import LoopLimits, digest
-from nm.legal_brain.manifest_sources import Manifest
-from nm.legal_brain.replay_capture_contracts import ReplayCaptureRefused, inspect_capture, instant
-from nm.legal_brain.replay_context import restore_runtime_context
-from nm.legal_brain.strict_replay import (
+from nm.legal_brain.understand.brain_context import ContextSession
+from nm.legal_brain.retrieve.checklist_sources import bind_source_current
+from nm.legal_brain.orchestrate.loop import LoopRunner
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, digest
+from nm.legal_brain.retrieve.manifest_sources import Manifest
+from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, inspect_capture, instant
+from nm.legal_brain.evaluate.replay_context import restore_runtime_context
+from nm.legal_brain.evaluate.strict_replay import (
     FrozenEvidence,
     FrozenModel,
     FrozenPrinciples,

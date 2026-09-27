@@ -24,8 +24,8 @@ import typing
 
 import pytest
 
-from nm.legal_brain.search_authority import AuthorityIndexSearch
-from nm.legal_brain.search_port import (
+from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.legal_brain.retrieve.search_port import (
     CaseIdentityRead,
     CorpusSearchPort,
     PassageRead,
@@ -76,7 +76,7 @@ def test_an_index_that_cannot_be_read_is_unavailable_not_empty(tmp_path):
 
 def test_a_refused_read_is_never_reported_as_a_missing_paragraph(tmp_path):
     """The measured case: the index is fine and the READ was refused."""
-    from nm.legal_brain.search_policed import PolicedSearch
+    from nm.legal_brain.retrieve.search_policed import PolicedSearch
     inner = AuthorityIndexSearch(_index(tmp_path))
     policed = PolicedSearch.__new__(PolicedSearch)
     policed.inner = inner

@@ -3,10 +3,10 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist
-from nm.legal_brain.source_writes import SourceRequirementMutation, source_write_tools
-from nm.legal_brain.tools import PreparedToolResult
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist
+from nm.legal_brain.reason.source_writes import SourceRequirementMutation, source_write_tools
+from nm.legal_brain.orchestrate.tools import PreparedToolResult
 from nm.shared.model_port import ToolCall
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.file_mutation_contracts import FileMutation
@@ -115,7 +115,7 @@ def test_requirement_proposals_cannot_certify_answers_or_delete_prior_work(tmp_p
 
 
 def test_the_atomic_writer_refuses_an_arbitrary_subclass_that_skips_validation(tmp_path):
-    from nm.legal_brain.loop_contracts import LoopEvent
+    from nm.legal_brain.orchestrate.loop_contracts import LoopEvent
 
     store, brain, outcome, prepared = _run(tmp_path)
 

@@ -71,7 +71,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
-from nm.legal_brain.evidence_port import (  # noqa: E402
+from nm.legal_brain.retrieve.evidence_port import (  # noqa: E402
     ATTRIBUTABLE_LABELS,
     CORPUS_LABELS,
 )

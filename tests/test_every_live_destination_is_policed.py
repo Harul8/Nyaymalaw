@@ -38,8 +38,8 @@ import pathlib
 
 import pytest
 
-from nm.legal_brain.evidence_port import Coverage
-from nm.legal_brain.search_policed import PolicedSearch
+from nm.legal_brain.retrieve.evidence_port import Coverage
+from nm.legal_brain.retrieve.search_policed import PolicedSearch
 from nm.shared.egress_contracts import (
     DataClass,
     EgressRefused,
@@ -331,7 +331,7 @@ def test_the_live_inventory_records_every_processor_the_root_names():
 POLICED: dict[Sink, str] = {
     Sink.MODEL: "nm/shared/model_policed.py",
     Sink.STORAGE: "nm/shared/policed_port_adapter.py",
-    Sink.INDEX: "nm/legal_brain/search_policed.py",
+    Sink.INDEX: "nm/legal_brain/retrieve/search_policed.py",
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
     Sink.MAIL: "nm/app/composition.py",

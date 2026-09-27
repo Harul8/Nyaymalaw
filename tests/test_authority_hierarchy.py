@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.identity_sources import (
+from nm.legal_brain.retrieve.identity_sources import (
     CaseIdentity,
     IdentityIndex,
     Precedence,

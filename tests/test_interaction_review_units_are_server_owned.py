@@ -7,11 +7,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_finalization import CheckRead
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.conversation import PRINCIPLES
-from nm.legal_brain.evaluation_models import VerifierOnly
-from nm.legal_brain.interaction_review import (
+from nm.legal_brain.verify.brain_finalization import CheckRead
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.common.conversation import PRINCIPLES
+from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
+from nm.legal_brain.verify.interaction_review import (
     COMMUNICATION_UNIT_REVIEW_SCHEMA,
     CRITERIA,
     InteractionReviewService,
@@ -22,7 +22,7 @@ from nm.legal_brain.interaction_review import (
     interpret_unit_review,
     whole_text_unit,
 )
-from nm.legal_brain.register_contracts import PEER
+from nm.legal_brain.communicate.register_contracts import PEER
 from nm.shared.budget_contracts import Completion, Spend
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelResult, Prompt, Tier, Usage

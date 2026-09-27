@@ -37,8 +37,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain import theory as theory_reader
-from nm.legal_brain.theory import build_adverse_prompt, build_theory_prompt
+from nm.legal_brain.reason import theory as theory_reader
+from nm.legal_brain.reason.theory import build_adverse_prompt, build_theory_prompt
 
 pytestmark = pytest.mark.class_a
 

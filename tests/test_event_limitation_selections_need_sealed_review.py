@@ -8,17 +8,18 @@ from unittest.mock import patch
 
 import pytest
 
-from nm.legal_brain import limitation, premise
-from nm.legal_brain.calculation_tools import EVENT_VERSION, VERSION, calculation_tools
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind
-from nm.legal_brain.reviewed_limitation_selection import (
+from nm.legal_brain.procedure import limitation
+from nm.legal_brain.reason import premise
+from nm.legal_brain.procedure.calculation_tools import EVENT_VERSION, VERSION, calculation_tools
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
+from nm.legal_brain.procedure.reviewed_limitation_selection import (
     LimitationSelectionReviewService,
     limitation_selection_tools,
     prepare_limitation_selections,
     resolve_limitation_inputs,
     selection_inventory,
 )
-from nm.legal_brain.tools import (
+from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,

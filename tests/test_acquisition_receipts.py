@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain.acquisition_sources import (
+from nm.legal_brain.retrieve.acquisition_sources import (
     AcquiredArtifact,
     AcquisitionRefused,
     AcquisitionRoute,
@@ -20,7 +20,7 @@ from nm.legal_brain.acquisition_sources import (
     select_candidates,
     stage_acquisition,
 )
-from nm.legal_brain.source_registry_sources import RightsState
+from nm.legal_brain.retrieve.source_registry_sources import RightsState
 from pipeline import reconcile_acquisition as reconcile_cli
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)

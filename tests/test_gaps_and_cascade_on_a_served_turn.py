@@ -22,8 +22,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain import gaps as gap_queue
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.reason import gaps as gap_queue
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.work_the_file import cascade
 from nm.work_the_file import evidence_item as inventory
@@ -343,7 +343,7 @@ def test_a_derivation_that_produced_nothing_records_no_row():
     this turn" look like an ordinary value that happens to be small, and
     `lost` would never see it.
     """
-    from nm.legal_brain.turn import _record
+    from nm.legal_brain.orchestrate.turn import _record
     from nm.work_the_file.matter_contracts import Thread
 
     thread = Thread.create(label="a thread")
@@ -424,7 +424,7 @@ def test_the_cascade_counts_what_the_thread_holds_not_what_the_turn_showed():
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._derive)
     for what, held in (("issues", 'concluded.get("issues"'),

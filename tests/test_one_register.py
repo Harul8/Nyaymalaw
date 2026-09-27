@@ -43,7 +43,11 @@ import pathlib
 import pytest
 
 from assurance.common.module_roles import sources_for_roles
-from nm.legal_brain.register_contracts import ADDRESSES_THE_ADVOCATE, PEER, STRUCTURED_ONLY
+from nm.legal_brain.communicate.register_contracts import (
+    ADDRESSES_THE_ADVOCATE,
+    PEER,
+    STRUCTURED_ONLY,
+)
 
 pytestmark = pytest.mark.class_a
 
@@ -93,7 +97,7 @@ def test_no_declaration_names_a_prompt_that_is_gone():
     real = system_constants()
     # The recommendation is built inline in `_recommend` rather than as a
     # module constant, so it is named in the table and cannot be scanned for.
-    inline = {"nm/legal_brain/turn.py::recommendation"}
+    inline = {"nm/legal_brain/orchestrate/turn.py::recommendation"}
     stale = sorted(
         (set(ADDRESSES_THE_ADVOCATE) | set(STRUCTURED_ONLY)) - real - inline)
     assert not stale, (
@@ -108,7 +112,7 @@ def test_every_advocate_facing_prompt_carries_the_clause():
     missing = []
     for name in ADDRESSES_THE_ADVOCATE:
         if name.endswith("::recommendation"):
-            body = (ROOT / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
+            body = (ROOT / "nm/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
             if "+ PEER +" not in body:
                 missing.append(name)
             continue
@@ -211,7 +215,7 @@ def test_the_clause_is_one_string_and_not_six():
     its own wording first, because it was the only prompt E-102 had caught;
     six copies of a sentence drift from each other within a slice, which is
     what a register rule cannot survive."""
-    turn = (ROOT / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
+    turn = (ROOT / "nm/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
     assert "WHERE THE FILE ALREADY HOLDS THE DOCUMENT A STEP CONCERNS" \
         not in turn, (
             "the recommendation still carries its own copy of the register "

@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.brain_context import (
+from nm.legal_brain.understand.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,

@@ -65,7 +65,7 @@ from nm.arrive.directory_port import (  # noqa: F401
     SessionsUnavailable,
 )
 from nm.arrive.professional_access_contracts import ProfessionalApproval
-from nm.legal_brain.advocate_memory_contracts import AdvocateMemory
+from nm.legal_brain.understand.advocate_memory_contracts import AdvocateMemory
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission
 from nm.shared.names_contracts import discard
 from nm.shared.store_file_store import _Cipher
@@ -900,7 +900,7 @@ class FileDirectory:
 
     # ----------------------------------------- advocate preferences ---
     def _advocate_memory(self, doc: dict, advocate_id: str) -> AdvocateMemory | None:
-        from nm.legal_brain.advocate_memory import MAX_RECORD_BYTES, decode_memory
+        from nm.legal_brain.understand.advocate_memory import MAX_RECORD_BYTES, decode_memory
 
         if "advocate_memory" not in doc:
             return None
@@ -923,7 +923,7 @@ class FileDirectory:
     def record_advocate_memory(
         self, memory: AdvocateMemory, *, expected_version: int
     ) -> AdvocateMemory:
-        from nm.legal_brain.advocate_memory import MAX_RECORD_BYTES, decode_memory
+        from nm.legal_brain.understand.advocate_memory import MAX_RECORD_BYTES, decode_memory
 
         if (
             type(memory) is not AdvocateMemory

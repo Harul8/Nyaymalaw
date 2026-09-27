@@ -7,15 +7,15 @@ import pytest
 
 from nm.app import api
 from nm.arrive.advocate_contracts import utcnow
-from nm.legal_brain.brain_release import ReviewService
-from nm.legal_brain.controlled_brain import EvaluationScope
-from nm.legal_brain.controlled_evaluations_composition import (
+from nm.legal_brain.verify.brain_release import ReviewService
+from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
+from nm.legal_brain.evaluate.controlled_evaluations_composition import (
     ControlledEvaluation,
     EvaluationUnavailable,
     grant_for,
 )
-from nm.legal_brain.loop_contracts import LoopMode
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.orchestrate.loop_contracts import LoopMode
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.model_port import ToolCall
 from nm.shared.store_loop_log import MatterLoopLog
 from nm.work_the_file.matter_contracts import Matter

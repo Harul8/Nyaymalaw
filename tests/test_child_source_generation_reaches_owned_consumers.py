@@ -6,11 +6,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.calculation_tools import CalculationSource, _source_on_file
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.loop_contracts import StepKind, StopReason
-from nm.legal_brain.source_writes import source_write_tools
-from nm.legal_brain.tool_sources import findings_from_record, source_envelope
+from nm.legal_brain.procedure.calculation_tools import CalculationSource, _source_on_file
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
+from nm.legal_brain.reason.source_writes import source_write_tools
+from nm.legal_brain.retrieve.tool_sources import findings_from_record, source_envelope
 from nm.shared.model_port import ToolCall
 from tests.test_independent_claim_verifier import finding
 from tests.test_nested_research_has_one_budget_and_one_writer import finish, run, setup

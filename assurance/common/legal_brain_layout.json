@@ -1,0 +1,1763 @@
+{
+  "schema": 1,
+  "modules": [
+    {
+      "old_path": "nm/legal_brain/accrual.py",
+      "path": "nm/legal_brain/reason/accrual.py",
+      "old_module": "nm.legal_brain.accrual",
+      "module": "nm.legal_brain.reason.accrual",
+      "role": "core",
+      "sha256_before": "35757f23bb1bc571b4cdfea8edebc76ea3349a762586089b66a0a5038fca38ef"
+    },
+    {
+      "old_path": "nm/legal_brain/acquisition_sources.py",
+      "path": "nm/legal_brain/retrieve/acquisition_sources.py",
+      "old_module": "nm.legal_brain.acquisition_sources",
+      "module": "nm.legal_brain.retrieve.acquisition_sources",
+      "role": "knowledge",
+      "sha256_before": "220520020789522b8fb72ed5ddcb71e979d1a907668a5bf22c8f078f540c8568"
+    },
+    {
+      "old_path": "nm/legal_brain/adversarial.py",
+      "path": "nm/legal_brain/reason/adversarial.py",
+      "old_module": "nm.legal_brain.adversarial",
+      "module": "nm.legal_brain.reason.adversarial",
+      "role": "core",
+      "sha256_before": "41364b84412d5ff638dc3934336b901f0a7bdc1fd3bb1125d112eadfc5fe4b85"
+    },
+    {
+      "old_path": "nm/legal_brain/advocate_memory.py",
+      "path": "nm/legal_brain/understand/advocate_memory.py",
+      "old_module": "nm.legal_brain.advocate_memory",
+      "module": "nm.legal_brain.understand.advocate_memory",
+      "role": "core",
+      "sha256_before": "9992ceed1f3cdf521bd7b6cc876a934ef8ce100f506f048fadd8da9862cfcb8e"
+    },
+    {
+      "old_path": "nm/legal_brain/advocate_memory_contracts.py",
+      "path": "nm/legal_brain/understand/advocate_memory_contracts.py",
+      "old_module": "nm.legal_brain.advocate_memory_contracts",
+      "module": "nm.legal_brain.understand.advocate_memory_contracts",
+      "role": "domain",
+      "sha256_before": "f38d81051a1ba6f4d4173f10ab245c9e05b62d5f52bc786ae5d059c77f96d0a2"
+    },
+    {
+      "old_path": "nm/legal_brain/advocate_memory_routes_api.py",
+      "path": "nm/legal_brain/understand/advocate_memory_routes_api.py",
+      "old_module": "nm.legal_brain.advocate_memory_routes_api",
+      "module": "nm.legal_brain.understand.advocate_memory_routes_api",
+      "role": "edge",
+      "sha256_before": "b79cac3a13ea5dbc79a9defda391ff4b2a28ef6f30841e3b3a5da15c602a80f5"
+    },
+    {
+      "old_path": "nm/legal_brain/artefact_sources.py",
+      "path": "nm/legal_brain/retrieve/artefact_sources.py",
+      "old_module": "nm.legal_brain.artefact_sources",
+      "module": "nm.legal_brain.retrieve.artefact_sources",
+      "role": "knowledge",
+      "sha256_before": "4c2603d457588a78de54532c9c22019da62eeb1f5c639cf104f095d128a80d89"
+    },
+    {
+      "old_path": "nm/legal_brain/authority_weight_adapter.py",
+      "path": "nm/legal_brain/retrieve/authority_weight_adapter.py",
+      "old_module": "nm.legal_brain.authority_weight_adapter",
+      "module": "nm.legal_brain.retrieve.authority_weight_adapter",
+      "role": "adapters",
+      "sha256_before": "e93aab9e7437b970fe1aff10bd1381de4bd6f6754ba11731d1f856088955fa2e"
+    },
+    {
+      "old_path": "nm/legal_brain/authority_weight_port.py",
+      "path": "nm/legal_brain/retrieve/authority_weight_port.py",
+      "old_module": "nm.legal_brain.authority_weight_port",
+      "module": "nm.legal_brain.retrieve.authority_weight_port",
+      "role": "ports",
+      "sha256_before": "cf0e577668001627f84a0696f8de167beb6ea72338f6349c05be72ffe4338d19"
+    },
+    {
+      "old_path": "nm/legal_brain/authority_weight_sources.py",
+      "path": "nm/legal_brain/retrieve/authority_weight_sources.py",
+      "old_module": "nm.legal_brain.authority_weight_sources",
+      "module": "nm.legal_brain.retrieve.authority_weight_sources",
+      "role": "knowledge",
+      "sha256_before": "16d940108b7bf1d302d1574306791ff5b17dff5ebfd7d8c06971cbf496363c58"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_assessment.py",
+      "path": "nm/legal_brain/verify/brain_assessment.py",
+      "old_module": "nm.legal_brain.brain_assessment",
+      "module": "nm.legal_brain.verify.brain_assessment",
+      "role": "core",
+      "sha256_before": "2ea31cd452f50f6d09bb5229271d9166932de7bcf9ac3aabe3d6e1f27646d5ee"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_context.py",
+      "path": "nm/legal_brain/understand/brain_context.py",
+      "old_module": "nm.legal_brain.brain_context",
+      "module": "nm.legal_brain.understand.brain_context",
+      "role": "core",
+      "sha256_before": "902dd65a2fed18d6464c847c06ac138aacf401b09a11ab84f41f384052bc9448"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_evaluation.py",
+      "path": "nm/legal_brain/evaluate/brain_evaluation.py",
+      "old_module": "nm.legal_brain.brain_evaluation",
+      "module": "nm.legal_brain.evaluate.brain_evaluation",
+      "role": "core",
+      "sha256_before": "62ab8d8b9157211710e2e54427382c0b8989e800d1b1d9720a73c96dc3bef4b0"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_finalization.py",
+      "path": "nm/legal_brain/verify/brain_finalization.py",
+      "old_module": "nm.legal_brain.brain_finalization",
+      "module": "nm.legal_brain.verify.brain_finalization",
+      "role": "core",
+      "sha256_before": "f4f1a171f0dec65e5bc8fe0fb19212ab0e9306b3bf80786ee11d4dffa57d24c1"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_preview_api.py",
+      "path": "nm/legal_brain/evaluate/brain_preview_api.py",
+      "old_module": "nm.legal_brain.brain_preview_api",
+      "module": "nm.legal_brain.evaluate.brain_preview_api",
+      "role": "edge",
+      "sha256_before": "899445116f36a7b5cab50ef2ee908e7d910c8193fbae828043ecbc49eaa0f648"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_publication.py",
+      "path": "nm/legal_brain/verify/brain_publication.py",
+      "old_module": "nm.legal_brain.brain_publication",
+      "module": "nm.legal_brain.verify.brain_publication",
+      "role": "core",
+      "sha256_before": "e030301d41da38ebe7785319e89b79ef6eac5703c1d58bff41a415d1c8835b2f"
+    },
+    {
+      "old_path": "nm/legal_brain/brain_release.py",
+      "path": "nm/legal_brain/verify/brain_release.py",
+      "old_module": "nm.legal_brain.brain_release",
+      "module": "nm.legal_brain.verify.brain_release",
+      "role": "core",
+      "sha256_before": "4eaed8947a55105295c67b73562726fd0067927e2549d04709c3559a92a3841d"
+    },
+    {
+      "old_path": "nm/legal_brain/briefing.py",
+      "path": "nm/legal_brain/understand/briefing.py",
+      "old_module": "nm.legal_brain.briefing",
+      "module": "nm.legal_brain.understand.briefing",
+      "role": "core",
+      "sha256_before": "89e2502af1ca1b2235f3bda05fd924f3b44f21c16f88d12fb530a818e546e4d0"
+    },
+    {
+      "old_path": "nm/legal_brain/calculation_tools.py",
+      "path": "nm/legal_brain/procedure/calculation_tools.py",
+      "old_module": "nm.legal_brain.calculation_tools",
+      "module": "nm.legal_brain.procedure.calculation_tools",
+      "role": "core",
+      "sha256_before": "a824d22ec29cb3dcea45c5145313a4b08ff3a025ea1208f8a0c9317e5884226c"
+    },
+    {
+      "old_path": "nm/legal_brain/cause.py",
+      "path": "nm/legal_brain/reason/cause.py",
+      "old_module": "nm.legal_brain.cause",
+      "module": "nm.legal_brain.reason.cause",
+      "role": "core",
+      "sha256_before": "a3a8dfcbde2fda0d175c2ebb91da81ce1b8e12625180324dea21d38a2f8e335c"
+    },
+    {
+      "old_path": "nm/legal_brain/ceiling.py",
+      "path": "nm/legal_brain/common/ceiling.py",
+      "old_module": "nm.legal_brain.ceiling",
+      "module": "nm.legal_brain.common.ceiling",
+      "role": "core",
+      "sha256_before": "03affe9a0465755ae5c254b417410cc7313732373cb15e93d07748619b221f74"
+    },
+    {
+      "old_path": "nm/legal_brain/checked_input_continuation.py",
+      "path": "nm/legal_brain/orchestrate/checked_input_continuation.py",
+      "old_module": "nm.legal_brain.checked_input_continuation",
+      "module": "nm.legal_brain.orchestrate.checked_input_continuation",
+      "role": "core",
+      "sha256_before": "e3bf13322d58b52674979dbbb0302648ca95d9da297c60add4776e8334fb11d7"
+    },
+    {
+      "old_path": "nm/legal_brain/checklist_review.py",
+      "path": "nm/legal_brain/verify/checklist_review.py",
+      "old_module": "nm.legal_brain.checklist_review",
+      "module": "nm.legal_brain.verify.checklist_review",
+      "role": "core",
+      "sha256_before": "63d352b17c5884c8a2f041202406144d6f5f0a46673375e568518bf0581cf5e8"
+    },
+    {
+      "old_path": "nm/legal_brain/checklist_sources.py",
+      "path": "nm/legal_brain/retrieve/checklist_sources.py",
+      "old_module": "nm.legal_brain.checklist_sources",
+      "module": "nm.legal_brain.retrieve.checklist_sources",
+      "role": "bootstrap",
+      "sha256_before": "664fa4dd410603e4be506d9e4c43ef2042269d43c25b2148dc3bb83ca873552f"
+    },
+    {
+      "old_path": "nm/legal_brain/citation_contracts.py",
+      "path": "nm/legal_brain/common/citation_contracts.py",
+      "old_module": "nm.legal_brain.citation_contracts",
+      "module": "nm.legal_brain.common.citation_contracts",
+      "role": "domain",
+      "sha256_before": "1c3f63fb4d246778e93a0bd8f8c651adf687ba5f0c5d83721842b5bcc385f843"
+    },
+    {
+      "old_path": "nm/legal_brain/citator_sources.py",
+      "path": "nm/legal_brain/retrieve/citator_sources.py",
+      "old_module": "nm.legal_brain.citator_sources",
+      "module": "nm.legal_brain.retrieve.citator_sources",
+      "role": "knowledge",
+      "sha256_before": "7849d18b1dc17641d90ffb274fa910012c8ca7baa67f0496fe570108ef903db9"
+    },
+    {
+      "old_path": "nm/legal_brain/consistency.py",
+      "path": "nm/legal_brain/verify/consistency.py",
+      "old_module": "nm.legal_brain.consistency",
+      "module": "nm.legal_brain.verify.consistency",
+      "role": "core",
+      "sha256_before": "be512dbb702c21f80f89a959b87db66f556d204bb9d0765d00fbb1f8a29807de"
+    },
+    {
+      "old_path": "nm/legal_brain/controlled_brain.py",
+      "path": "nm/legal_brain/orchestrate/controlled_brain.py",
+      "old_module": "nm.legal_brain.controlled_brain",
+      "module": "nm.legal_brain.orchestrate.controlled_brain",
+      "role": "core",
+      "sha256_before": "ea22d2a431d57a2751b8fa4d7b078123ef73e5b90b0885e304b98ac2e7eba725"
+    },
+    {
+      "old_path": "nm/legal_brain/controlled_evaluations_composition.py",
+      "path": "nm/legal_brain/evaluate/controlled_evaluations_composition.py",
+      "old_module": "nm.legal_brain.controlled_evaluations_composition",
+      "module": "nm.legal_brain.evaluate.controlled_evaluations_composition",
+      "role": "bootstrap",
+      "sha256_before": "1ba2f2dd52802e1c89ad45d7be2f180a73a26582f90e32de72d7a058e7923821"
+    },
+    {
+      "old_path": "nm/legal_brain/controlled_generations.py",
+      "path": "nm/legal_brain/orchestrate/controlled_generations.py",
+      "old_module": "nm.legal_brain.controlled_generations",
+      "module": "nm.legal_brain.orchestrate.controlled_generations",
+      "role": "bootstrap",
+      "sha256_before": "3bd17037cb318b8a21ec1c703d5c0e4661b9dcccf70b131efa8599feea357fc1"
+    },
+    {
+      "old_path": "nm/legal_brain/controlled_registry_composition.py",
+      "path": "nm/legal_brain/orchestrate/controlled_registry_composition.py",
+      "old_module": "nm.legal_brain.controlled_registry_composition",
+      "module": "nm.legal_brain.orchestrate.controlled_registry_composition",
+      "role": "bootstrap",
+      "sha256_before": "064ee709e32aa23c26388b1041797769cdae702726e6f0e4e331ff116b4bbd8f"
+    },
+    {
+      "old_path": "nm/legal_brain/conversation.py",
+      "path": "nm/legal_brain/common/conversation.py",
+      "old_module": "nm.legal_brain.conversation",
+      "module": "nm.legal_brain.common.conversation",
+      "role": "core",
+      "sha256_before": "65a1e304e9c1b9f2be3da041832bd4f01c78c1dad8153129c7f521c501efae90"
+    },
+    {
+      "old_path": "nm/legal_brain/conversational_proposal.py",
+      "path": "nm/legal_brain/understand/conversational_proposal.py",
+      "old_module": "nm.legal_brain.conversational_proposal",
+      "module": "nm.legal_brain.understand.conversational_proposal",
+      "role": "core",
+      "sha256_before": "1f060ce3a7486f1a04817b9d9ea8eaa61d545f7e7e56df87efdf2de622512740"
+    },
+    {
+      "old_path": "nm/legal_brain/corpus_evidence.py",
+      "path": "nm/legal_brain/retrieve/corpus_evidence.py",
+      "old_module": "nm.legal_brain.corpus_evidence",
+      "module": "nm.legal_brain.retrieve.corpus_evidence",
+      "role": "adapters",
+      "sha256_before": "063bf6926df07dfbf5e59a0f7dc8bc2dc311488d3dbeb4fd51f25909bedc8b70"
+    },
+    {
+      "old_path": "nm/legal_brain/coverage_contracts.py",
+      "path": "nm/legal_brain/retrieve/coverage_contracts.py",
+      "old_module": "nm.legal_brain.coverage_contracts",
+      "module": "nm.legal_brain.retrieve.coverage_contracts",
+      "role": "domain",
+      "sha256_before": "31b5702fa3fd2017b42403a563a001f4971cdba9daf031e5a3ec317412100734"
+    },
+    {
+      "old_path": "nm/legal_brain/coverage_port.py",
+      "path": "nm/legal_brain/retrieve/coverage_port.py",
+      "old_module": "nm.legal_brain.coverage_port",
+      "module": "nm.legal_brain.retrieve.coverage_port",
+      "role": "ports",
+      "sha256_before": "e6001205eeb5f0c6807c1cea89dbb4ae77f899eb5e3c4561aa556ea3c708535e"
+    },
+    {
+      "old_path": "nm/legal_brain/coverage_sources.py",
+      "path": "nm/legal_brain/retrieve/coverage_sources.py",
+      "old_module": "nm.legal_brain.coverage_sources",
+      "module": "nm.legal_brain.retrieve.coverage_sources",
+      "role": "knowledge",
+      "sha256_before": "1b33404972c326d1cc58c8123e1a4573ab6b1bb7b34c3e0242bf9da007a2acdc"
+    },
+    {
+      "old_path": "nm/legal_brain/curation_contracts.py",
+      "path": "nm/legal_brain/common/curation_contracts.py",
+      "old_module": "nm.legal_brain.curation_contracts",
+      "module": "nm.legal_brain.common.curation_contracts",
+      "role": "domain",
+      "sha256_before": "da011fd6f1eb496f09ef66793cce4299c85410fd19c34be087e5a10a503e45bc"
+    },
+    {
+      "old_path": "nm/legal_brain/dated_provisions.py",
+      "path": "nm/legal_brain/retrieve/dated_provisions.py",
+      "old_module": "nm.legal_brain.dated_provisions",
+      "module": "nm.legal_brain.retrieve.dated_provisions",
+      "role": "bootstrap",
+      "sha256_before": "7846771f69282e0219e55294171cbb2c43e1e811cc544552cf33272136f33c54"
+    },
+    {
+      "old_path": "nm/legal_brain/delegation.py",
+      "path": "nm/legal_brain/orchestrate/delegation.py",
+      "old_module": "nm.legal_brain.delegation",
+      "module": "nm.legal_brain.orchestrate.delegation",
+      "role": "core",
+      "sha256_before": "22e8570bd03de6572f0508ba1a18655599a880f3f6cd618a181c44bd50aeeceb"
+    },
+    {
+      "old_path": "nm/legal_brain/delegation_contracts.py",
+      "path": "nm/legal_brain/orchestrate/delegation_contracts.py",
+      "old_module": "nm.legal_brain.delegation_contracts",
+      "module": "nm.legal_brain.orchestrate.delegation_contracts",
+      "role": "domain",
+      "sha256_before": "a68f6b0b1ec9c687b67b040fb417847fb83a15f3792d3b738fefb6d9f8312e90"
+    },
+    {
+      "old_path": "nm/legal_brain/dispute.py",
+      "path": "nm/legal_brain/understand/dispute.py",
+      "old_module": "nm.legal_brain.dispute",
+      "module": "nm.legal_brain.understand.dispute",
+      "role": "core",
+      "sha256_before": "a28759e44ebbb6d892116b465f8eb3f7af9cfc451f173e6f496f72e008e775b3"
+    },
+    {
+      "old_path": "nm/legal_brain/duty.py",
+      "path": "nm/legal_brain/verify/duty.py",
+      "old_module": "nm.legal_brain.duty",
+      "module": "nm.legal_brain.verify.duty",
+      "role": "core",
+      "sha256_before": "a1f6139d40808c9446524ce0a692fc8f871f5b8a9e72e1909153d67ec86830b0"
+    },
+    {
+      "old_path": "nm/legal_brain/early_independent_review.py",
+      "path": "nm/legal_brain/verify/early_independent_review.py",
+      "old_module": "nm.legal_brain.early_independent_review",
+      "module": "nm.legal_brain.verify.early_independent_review",
+      "role": "core",
+      "sha256_before": "1265eec91523ed077c8fd2dfb227666d213765e8eaf235ce5014f0f080186908"
+    },
+    {
+      "old_path": "nm/legal_brain/elements_adapter.py",
+      "path": "nm/legal_brain/reason/elements_adapter.py",
+      "old_module": "nm.legal_brain.elements_adapter",
+      "module": "nm.legal_brain.reason.elements_adapter",
+      "role": "adapters",
+      "sha256_before": "9de225de7cd769992d1249c7f10604b35b5087cd31840b2e33f5e4127a2f0b3e"
+    },
+    {
+      "old_path": "nm/legal_brain/elements_port.py",
+      "path": "nm/legal_brain/reason/elements_port.py",
+      "old_module": "nm.legal_brain.elements_port",
+      "module": "nm.legal_brain.reason.elements_port",
+      "role": "ports",
+      "sha256_before": "c8e2068acde62a18c75b78bf9d194f3c948c2a25b6214a6131b24a4b26a96ab7"
+    },
+    {
+      "old_path": "nm/legal_brain/elements_sources.py",
+      "path": "nm/legal_brain/reason/elements_sources.py",
+      "old_module": "nm.legal_brain.elements_sources",
+      "module": "nm.legal_brain.reason.elements_sources",
+      "role": "knowledge",
+      "sha256_before": "9e765df0d8264bf602f447d96510891140acae761ead48f16068c5f8d7b442ef"
+    },
+    {
+      "old_path": "nm/legal_brain/evaluation_history.py",
+      "path": "nm/legal_brain/evaluate/evaluation_history.py",
+      "old_module": "nm.legal_brain.evaluation_history",
+      "module": "nm.legal_brain.evaluate.evaluation_history",
+      "role": "core",
+      "sha256_before": "118ff198d7b3a5bff40e240c7b7edc96a74619675912f95f4906d65ffb114d7d"
+    },
+    {
+      "old_path": "nm/legal_brain/evaluation_models.py",
+      "path": "nm/legal_brain/evaluate/evaluation_models.py",
+      "old_module": "nm.legal_brain.evaluation_models",
+      "module": "nm.legal_brain.evaluate.evaluation_models",
+      "role": "bootstrap",
+      "sha256_before": "a30b77fdcc198f29a96171de313594d9ed19ad0b539222e4cbe08eab9ede65b5"
+    },
+    {
+      "old_path": "nm/legal_brain/event_limitation_calculation.py",
+      "path": "nm/legal_brain/procedure/event_limitation_calculation.py",
+      "old_module": "nm.legal_brain.event_limitation_calculation",
+      "module": "nm.legal_brain.procedure.event_limitation_calculation",
+      "role": "core",
+      "sha256_before": "11407f8b3889c2687e7d5de7609ac95bc331c6255e1b64aca41ac775fae07436"
+    },
+    {
+      "old_path": "nm/legal_brain/evidence_port.py",
+      "path": "nm/legal_brain/retrieve/evidence_port.py",
+      "old_module": "nm.legal_brain.evidence_port",
+      "module": "nm.legal_brain.retrieve.evidence_port",
+      "role": "ports",
+      "sha256_before": "c64d4f3c5342ecd32c7f3f68cf3b5cc4326d129f3195bcc49923f46f33fccff1"
+    },
+    {
+      "old_path": "nm/legal_brain/factors.py",
+      "path": "nm/legal_brain/reason/factors.py",
+      "old_module": "nm.legal_brain.factors",
+      "module": "nm.legal_brain.reason.factors",
+      "role": "core",
+      "sha256_before": "915fb2b18193eb182ee8ade1cddac01018d8c9e417ee0e0026bc5e1acbd0f1db"
+    },
+    {
+      "old_path": "nm/legal_brain/fee_calculation_contracts.py",
+      "path": "nm/legal_brain/procedure/fee_calculation_contracts.py",
+      "old_module": "nm.legal_brain.fee_calculation_contracts",
+      "module": "nm.legal_brain.procedure.fee_calculation_contracts",
+      "role": "domain",
+      "sha256_before": "02aac90e28dcc03ad9181501de8d81be999897e7cac913c19c56aa767da1b654"
+    },
+    {
+      "old_path": "nm/legal_brain/filing_requirement_adapter.py",
+      "path": "nm/legal_brain/procedure/filing_requirement_adapter.py",
+      "old_module": "nm.legal_brain.filing_requirement_adapter",
+      "module": "nm.legal_brain.procedure.filing_requirement_adapter",
+      "role": "adapters",
+      "sha256_before": "79f291bdad3e1c470db866f9e3d716b643c3a3b4b9faeb040e29c697c2543d19"
+    },
+    {
+      "old_path": "nm/legal_brain/filing_requirement_port.py",
+      "path": "nm/legal_brain/procedure/filing_requirement_port.py",
+      "old_module": "nm.legal_brain.filing_requirement_port",
+      "module": "nm.legal_brain.procedure.filing_requirement_port",
+      "role": "ports",
+      "sha256_before": "c6391ce337e95aad84342cdb986afb285574c6f4094bfc190562d87e3e1f6eb5"
+    },
+    {
+      "old_path": "nm/legal_brain/filing_requirement_sources.py",
+      "path": "nm/legal_brain/procedure/filing_requirement_sources.py",
+      "old_module": "nm.legal_brain.filing_requirement_sources",
+      "module": "nm.legal_brain.procedure.filing_requirement_sources",
+      "role": "knowledge",
+      "sha256_before": "ede041527207aef0e2ce63321b6723f0d089bfe4835810911782bd4c91d0d359"
+    },
+    {
+      "old_path": "nm/legal_brain/gaps.py",
+      "path": "nm/legal_brain/reason/gaps.py",
+      "old_module": "nm.legal_brain.gaps",
+      "module": "nm.legal_brain.reason.gaps",
+      "role": "core",
+      "sha256_before": "9476d745945f30821a8b5c974b6956640e6c5eeb35d7547acd7b0a7ae3b7d3d3"
+    },
+    {
+      "old_path": "nm/legal_brain/generations_port.py",
+      "path": "nm/legal_brain/orchestrate/generations_port.py",
+      "old_module": "nm.legal_brain.generations_port",
+      "module": "nm.legal_brain.orchestrate.generations_port",
+      "role": "ports",
+      "sha256_before": "352b2aecc182d2f5535b5c112dcfa0eb4c32844a4127c5d44f3d935a6f65e608"
+    },
+    {
+      "old_path": "nm/legal_brain/governing_law_adapter.py",
+      "path": "nm/legal_brain/procedure/governing_law_adapter.py",
+      "old_module": "nm.legal_brain.governing_law_adapter",
+      "module": "nm.legal_brain.procedure.governing_law_adapter",
+      "role": "adapters",
+      "sha256_before": "77f165559ac4a02e8fa5185e9c68cf9a336d93c3bef013eec81601c524469373"
+    },
+    {
+      "old_path": "nm/legal_brain/governing_law_port.py",
+      "path": "nm/legal_brain/procedure/governing_law_port.py",
+      "old_module": "nm.legal_brain.governing_law_port",
+      "module": "nm.legal_brain.procedure.governing_law_port",
+      "role": "ports",
+      "sha256_before": "f4575a0dfba407e67da709dddf6696ee8c6221e1e0082186cda28e2766d58f2c"
+    },
+    {
+      "old_path": "nm/legal_brain/governing_law_sources.py",
+      "path": "nm/legal_brain/procedure/governing_law_sources.py",
+      "old_module": "nm.legal_brain.governing_law_sources",
+      "module": "nm.legal_brain.procedure.governing_law_sources",
+      "role": "knowledge",
+      "sha256_before": "99d3e84f9ac928c48a52771000f22b9cb2dd0b53dd7d7a7923cd139d6e110cff"
+    },
+    {
+      "old_path": "nm/legal_brain/grounded_file_tools.py",
+      "path": "nm/legal_brain/reason/grounded_file_tools.py",
+      "old_module": "nm.legal_brain.grounded_file_tools",
+      "module": "nm.legal_brain.reason.grounded_file_tools",
+      "role": "core",
+      "sha256_before": "7efd341145a2c51c290cc834d87e14e03880207901b42d843d66b681f1890d7e"
+    },
+    {
+      "old_path": "nm/legal_brain/grounding.py",
+      "path": "nm/legal_brain/verify/grounding.py",
+      "old_module": "nm.legal_brain.grounding",
+      "module": "nm.legal_brain.verify.grounding",
+      "role": "core",
+      "sha256_before": "b9ec45dc91fc96b3abd057340bb36fa6c915fad5e23f49924d324ae58824171b"
+    },
+    {
+      "old_path": "nm/legal_brain/identity_sources.py",
+      "path": "nm/legal_brain/retrieve/identity_sources.py",
+      "old_module": "nm.legal_brain.identity_sources",
+      "module": "nm.legal_brain.retrieve.identity_sources",
+      "role": "knowledge",
+      "sha256_before": "0020c5a9fab62a2d9f92f114a349bfb8aeab05685a67afdc7b5aca3c0fea54a1"
+    },
+    {
+      "old_path": "nm/legal_brain/institution_adapter.py",
+      "path": "nm/legal_brain/procedure/institution_adapter.py",
+      "old_module": "nm.legal_brain.institution_adapter",
+      "module": "nm.legal_brain.procedure.institution_adapter",
+      "role": "adapters",
+      "sha256_before": "4b1a57f21d051dca2fab4d90b161877b927d6841efeb2156b7234b23bbbd6871"
+    },
+    {
+      "old_path": "nm/legal_brain/institution_port.py",
+      "path": "nm/legal_brain/procedure/institution_port.py",
+      "old_module": "nm.legal_brain.institution_port",
+      "module": "nm.legal_brain.procedure.institution_port",
+      "role": "ports",
+      "sha256_before": "f6be34ca8a4cb8d23562033a637dc540bfda4dad8d883a8292a36d7e28ca79c3"
+    },
+    {
+      "old_path": "nm/legal_brain/institution_sources.py",
+      "path": "nm/legal_brain/procedure/institution_sources.py",
+      "old_module": "nm.legal_brain.institution_sources",
+      "module": "nm.legal_brain.procedure.institution_sources",
+      "role": "knowledge",
+      "sha256_before": "eb4d23d755c6b135618b2184feb098b902e0947bf0c875ebd6b8d44304a58e17"
+    },
+    {
+      "old_path": "nm/legal_brain/interaction_review.py",
+      "path": "nm/legal_brain/verify/interaction_review.py",
+      "old_module": "nm.legal_brain.interaction_review",
+      "module": "nm.legal_brain.verify.interaction_review",
+      "role": "core",
+      "sha256_before": "b3e849a44c6d9ba49762a4d530fff51be1bbfd9f0d2f19d0b9529edd52f35615"
+    },
+    {
+      "old_path": "nm/legal_brain/interaction_subject.py",
+      "path": "nm/legal_brain/verify/interaction_subject.py",
+      "old_module": "nm.legal_brain.interaction_subject",
+      "module": "nm.legal_brain.verify.interaction_subject",
+      "role": "core",
+      "sha256_before": "366f040a77fe726eb0307e835e2cb9a206545acaaf79ea1198e1e5f3c7f450cd"
+    },
+    {
+      "old_path": "nm/legal_brain/interest_calculation_contracts.py",
+      "path": "nm/legal_brain/procedure/interest_calculation_contracts.py",
+      "old_module": "nm.legal_brain.interest_calculation_contracts",
+      "module": "nm.legal_brain.procedure.interest_calculation_contracts",
+      "role": "domain",
+      "sha256_before": "a2666545d94c3c9687a1ed4d1aa80cc41a2c8f4b815de8323d0f55cc8e8693be"
+    },
+    {
+      "old_path": "nm/legal_brain/interim_relief_adapter.py",
+      "path": "nm/legal_brain/procedure/interim_relief_adapter.py",
+      "old_module": "nm.legal_brain.interim_relief_adapter",
+      "module": "nm.legal_brain.procedure.interim_relief_adapter",
+      "role": "adapters",
+      "sha256_before": "24a91632134348eddca5cdd1ef16d8530fbc9d9d2a13b629fe9c6ad244fdd43b"
+    },
+    {
+      "old_path": "nm/legal_brain/interim_relief_port.py",
+      "path": "nm/legal_brain/procedure/interim_relief_port.py",
+      "old_module": "nm.legal_brain.interim_relief_port",
+      "module": "nm.legal_brain.procedure.interim_relief_port",
+      "role": "ports",
+      "sha256_before": "54ba5d8bbde5c4a6ff4358c0b40191acd5a4f6fe8ec5d96cd7fcb044962efd79"
+    },
+    {
+      "old_path": "nm/legal_brain/interim_relief_sources.py",
+      "path": "nm/legal_brain/procedure/interim_relief_sources.py",
+      "old_module": "nm.legal_brain.interim_relief_sources",
+      "module": "nm.legal_brain.procedure.interim_relief_sources",
+      "role": "knowledge",
+      "sha256_before": "fa5d1b6d40e971c142383c4280267c2ed1e86b858123a52d243ba99c74685e87"
+    },
+    {
+      "old_path": "nm/legal_brain/investigation.py",
+      "path": "nm/legal_brain/retrieve/investigation.py",
+      "old_module": "nm.legal_brain.investigation",
+      "module": "nm.legal_brain.retrieve.investigation",
+      "role": "core",
+      "sha256_before": "807c9227ec3c91fa0a76601b2ddc7dd37ccbc46506dad45c485f786a7471e6a5"
+    },
+    {
+      "old_path": "nm/legal_brain/issue_contracts.py",
+      "path": "nm/legal_brain/reason/issue_contracts.py",
+      "old_module": "nm.legal_brain.issue_contracts",
+      "module": "nm.legal_brain.reason.issue_contracts",
+      "role": "domain",
+      "sha256_before": "f5147e8e5ea72e186b3b8756aa8a8d4700588f1e17e5176644309c10f3847df9"
+    },
+    {
+      "old_path": "nm/legal_brain/issues.py",
+      "path": "nm/legal_brain/reason/issues.py",
+      "old_module": "nm.legal_brain.issues",
+      "module": "nm.legal_brain.reason.issues",
+      "role": "core",
+      "sha256_before": "1e005d9e5abb748bade02ecdf44c71860d54ddf59cdf2dcd31a43f9137f91d42"
+    },
+    {
+      "old_path": "nm/legal_brain/jurisdiction_sources.py",
+      "path": "nm/legal_brain/retrieve/jurisdiction_sources.py",
+      "old_module": "nm.legal_brain.jurisdiction_sources",
+      "module": "nm.legal_brain.retrieve.jurisdiction_sources",
+      "role": "knowledge",
+      "sha256_before": "677ba622844bbb7ba8d67038adcb9fd2df0e2174db240cf7281845a3b321b4d4"
+    },
+    {
+      "old_path": "nm/legal_brain/lead.py",
+      "path": "nm/legal_brain/orchestrate/lead.py",
+      "old_module": "nm.legal_brain.lead",
+      "module": "nm.legal_brain.orchestrate.lead",
+      "role": "core",
+      "sha256_before": "e29375f42a1be2032d696eb6d0e70dd27d57e549e3b47f6e058ff04ed8195303"
+    },
+    {
+      "old_path": "nm/legal_brain/lead_contracts.py",
+      "path": "nm/legal_brain/orchestrate/lead_contracts.py",
+      "old_module": "nm.legal_brain.lead_contracts",
+      "module": "nm.legal_brain.orchestrate.lead_contracts",
+      "role": "domain",
+      "sha256_before": "c1802ae6d8db700ca1dca607c1b7dddc015bb66f8188ca4ebac2688f9e6837f1"
+    },
+    {
+      "old_path": "nm/legal_brain/limitation.py",
+      "path": "nm/legal_brain/procedure/limitation.py",
+      "old_module": "nm.legal_brain.limitation",
+      "module": "nm.legal_brain.procedure.limitation",
+      "role": "core",
+      "sha256_before": "93c294c4df9de6355571380b32ee82094f88d320af562c90af006ba78054e10d"
+    },
+    {
+      "old_path": "nm/legal_brain/loop.py",
+      "path": "nm/legal_brain/orchestrate/loop.py",
+      "old_module": "nm.legal_brain.loop",
+      "module": "nm.legal_brain.orchestrate.loop",
+      "role": "core",
+      "sha256_before": "fa0fb7bd12694a7968fbf75bf2af91cc5ea09f011ee9dfee752c4c149465bb9d"
+    },
+    {
+      "old_path": "nm/legal_brain/loop_contracts.py",
+      "path": "nm/legal_brain/orchestrate/loop_contracts.py",
+      "old_module": "nm.legal_brain.loop_contracts",
+      "module": "nm.legal_brain.orchestrate.loop_contracts",
+      "role": "domain",
+      "sha256_before": "e1f6dbccb194c3e8b07c8ae52e2eb4b217253f8adcf5a127c98028487bbc3f56"
+    },
+    {
+      "old_path": "nm/legal_brain/loop_log_port.py",
+      "path": "nm/legal_brain/orchestrate/loop_log_port.py",
+      "old_module": "nm.legal_brain.loop_log_port",
+      "module": "nm.legal_brain.orchestrate.loop_log_port",
+      "role": "ports",
+      "sha256_before": "c99a3a0e5e8213b0caf58a1d96d440cf6013cfb7564254e20412a59541533da8"
+    },
+    {
+      "old_path": "nm/legal_brain/loop_progress.py",
+      "path": "nm/legal_brain/communicate/loop_progress.py",
+      "old_module": "nm.legal_brain.loop_progress",
+      "module": "nm.legal_brain.communicate.loop_progress",
+      "role": "core",
+      "sha256_before": "8c7f07e45c2b7a2613b6c0e795d6beb42e268a34329b115bb42e0d214ab25fbd"
+    },
+    {
+      "old_path": "nm/legal_brain/loop_progress_api.py",
+      "path": "nm/legal_brain/communicate/loop_progress_api.py",
+      "old_module": "nm.legal_brain.loop_progress_api",
+      "module": "nm.legal_brain.communicate.loop_progress_api",
+      "role": "edge",
+      "sha256_before": "76d79bffea396b15640b582a47bd735571b6acaaccbd3f951346de35b1ea90a7"
+    },
+    {
+      "old_path": "nm/legal_brain/manifest_sources.py",
+      "path": "nm/legal_brain/retrieve/manifest_sources.py",
+      "old_module": "nm.legal_brain.manifest_sources",
+      "module": "nm.legal_brain.retrieve.manifest_sources",
+      "role": "knowledge",
+      "sha256_before": "bae3e499c45384a7c54d6e337418307a9f573fd1d462f2019a9887c83d5e6876"
+    },
+    {
+      "old_path": "nm/legal_brain/matter_support.py",
+      "path": "nm/legal_brain/reason/matter_support.py",
+      "old_module": "nm.legal_brain.matter_support",
+      "module": "nm.legal_brain.reason.matter_support",
+      "role": "core",
+      "sha256_before": "7f741b2c7ba90ac96f88d14cfa2f645ab7a54bc29edf6433843c17e82ef71611"
+    },
+    {
+      "old_path": "nm/legal_brain/nested_research.py",
+      "path": "nm/legal_brain/orchestrate/nested_research.py",
+      "old_module": "nm.legal_brain.nested_research",
+      "module": "nm.legal_brain.orchestrate.nested_research",
+      "role": "core",
+      "sha256_before": "aeccf4df1040608305d2d5458be0ac6003c4a59a172eb342023bfe725ae85f66"
+    },
+    {
+      "old_path": "nm/legal_brain/opposition_work.py",
+      "path": "nm/legal_brain/reason/opposition_work.py",
+      "old_module": "nm.legal_brain.opposition_work",
+      "module": "nm.legal_brain.reason.opposition_work",
+      "role": "core",
+      "sha256_before": "fb0d005654ceb586d1a210cd40c456354a84087744e5601e569d9be5055fbf4f"
+    },
+    {
+      "old_path": "nm/legal_brain/output_checks.py",
+      "path": "nm/legal_brain/verify/output_checks.py",
+      "old_module": "nm.legal_brain.output_checks",
+      "module": "nm.legal_brain.verify.output_checks",
+      "role": "core",
+      "sha256_before": "47a4af11f4f779c875becba1e26fd8f566968f49c371e9162e188fe6b0d41740"
+    },
+    {
+      "old_path": "nm/legal_brain/parties.py",
+      "path": "nm/legal_brain/understand/parties.py",
+      "old_module": "nm.legal_brain.parties",
+      "module": "nm.legal_brain.understand.parties",
+      "role": "core",
+      "sha256_before": "f964e79f69906966b8a99357dc0c01e172203ded178023f9c58479bbef04c250"
+    },
+    {
+      "old_path": "nm/legal_brain/posture.py",
+      "path": "nm/legal_brain/understand/posture.py",
+      "old_module": "nm.legal_brain.posture",
+      "module": "nm.legal_brain.understand.posture",
+      "role": "core",
+      "sha256_before": "0557da916eab6deeead3a11c2688b248d9964a20c7e1a0b98a6ab0eac2652167"
+    },
+    {
+      "old_path": "nm/legal_brain/practice_playbooks.py",
+      "path": "nm/legal_brain/retrieve/practice_playbooks.py",
+      "old_module": "nm.legal_brain.practice_playbooks",
+      "module": "nm.legal_brain.retrieve.practice_playbooks",
+      "role": "core",
+      "sha256_before": "8c8575e8085550ce8541c7ebb2f7ad0c68fe0b9ffc2af51cd76a6de22e19fc81"
+    },
+    {
+      "old_path": "nm/legal_brain/practice_playbooks_adapter.py",
+      "path": "nm/legal_brain/retrieve/practice_playbooks_adapter.py",
+      "old_module": "nm.legal_brain.practice_playbooks_adapter",
+      "module": "nm.legal_brain.retrieve.practice_playbooks_adapter",
+      "role": "adapters",
+      "sha256_before": "b53dff75c8ee301963c3bbbd5eac3c718045d1f1d66dfa828fbb95ba9d5b53d7"
+    },
+    {
+      "old_path": "nm/legal_brain/practice_playbooks_port.py",
+      "path": "nm/legal_brain/retrieve/practice_playbooks_port.py",
+      "old_module": "nm.legal_brain.practice_playbooks_port",
+      "module": "nm.legal_brain.retrieve.practice_playbooks_port",
+      "role": "ports",
+      "sha256_before": "aa58edcc592f1600986a4247c9ffb7224e8fae4a0ca1b30f7b8e5e1826526bb1"
+    },
+    {
+      "old_path": "nm/legal_brain/premise.py",
+      "path": "nm/legal_brain/reason/premise.py",
+      "old_module": "nm.legal_brain.premise",
+      "module": "nm.legal_brain.reason.premise",
+      "role": "core",
+      "sha256_before": "987e405b7a4805df260315d6737e341465e4be50eb2e8f2808175876789266a0"
+    },
+    {
+      "old_path": "nm/legal_brain/preview_display.py",
+      "path": "nm/legal_brain/communicate/preview_display.py",
+      "old_module": "nm.legal_brain.preview_display",
+      "module": "nm.legal_brain.communicate.preview_display",
+      "role": "core",
+      "sha256_before": "7c765bf4497d6895ddb31e860b7eb10782858ae84a07af7b9d6807ce2d27189a"
+    },
+    {
+      "old_path": "nm/legal_brain/preview_seen.py",
+      "path": "nm/legal_brain/communicate/preview_seen.py",
+      "old_module": "nm.legal_brain.preview_seen",
+      "module": "nm.legal_brain.communicate.preview_seen",
+      "role": "core",
+      "sha256_before": "79c802a02b8502a51405d1c928f9e3bde80e85dfa46846efa620b2d5c155bfee"
+    },
+    {
+      "old_path": "nm/legal_brain/preview_seen_api.py",
+      "path": "nm/legal_brain/communicate/preview_seen_api.py",
+      "old_module": "nm.legal_brain.preview_seen_api",
+      "module": "nm.legal_brain.communicate.preview_seen_api",
+      "role": "edge",
+      "sha256_before": "32a3e9b56b579544db7716412972d2d4d89c60930c3bf430c511c3d7bbea0cb4"
+    },
+    {
+      "old_path": "nm/legal_brain/principles_file_adapter.py",
+      "path": "nm/legal_brain/common/principles_file_adapter.py",
+      "old_module": "nm.legal_brain.principles_file_adapter",
+      "module": "nm.legal_brain.common.principles_file_adapter",
+      "role": "adapters",
+      "sha256_before": "e69a1807c32be887a1f5fda614d37afc3e89721cbbe85aa4c79dbcf15f68babf"
+    },
+    {
+      "old_path": "nm/legal_brain/principles_generated.py",
+      "path": "nm/legal_brain/common/principles_generated.py",
+      "old_module": "nm.legal_brain.principles_generated",
+      "module": "nm.legal_brain.common.principles_generated",
+      "role": "core",
+      "sha256_before": "7aa89c9e09f74e6a38f92dda95d4863f33602b029d16c677ae575610870a1c3e"
+    },
+    {
+      "old_path": "nm/legal_brain/principles_port.py",
+      "path": "nm/legal_brain/common/principles_port.py",
+      "old_module": "nm.legal_brain.principles_port",
+      "module": "nm.legal_brain.common.principles_port",
+      "role": "ports",
+      "sha256_before": "e39976a5bb6054b1da797b9f511b4d98ed07bfd9092eff271238c84d2a731c69"
+    },
+    {
+      "old_path": "nm/legal_brain/procedural_calculation.py",
+      "path": "nm/legal_brain/procedure/procedural_calculation.py",
+      "old_module": "nm.legal_brain.procedural_calculation",
+      "module": "nm.legal_brain.procedure.procedural_calculation",
+      "role": "core",
+      "sha256_before": "c07073872f1ee0c786ff195c4c8e13cd35d96197534c17ac418048d5c2bf16fe"
+    },
+    {
+      "old_path": "nm/legal_brain/procedural_period_adapter.py",
+      "path": "nm/legal_brain/procedure/procedural_period_adapter.py",
+      "old_module": "nm.legal_brain.procedural_period_adapter",
+      "module": "nm.legal_brain.procedure.procedural_period_adapter",
+      "role": "adapters",
+      "sha256_before": "ea8eaea3e53f1c6591d7779d295f8299982f605e4ce6b2a17cea6971e776cb3c"
+    },
+    {
+      "old_path": "nm/legal_brain/procedural_period_port.py",
+      "path": "nm/legal_brain/procedure/procedural_period_port.py",
+      "old_module": "nm.legal_brain.procedural_period_port",
+      "module": "nm.legal_brain.procedure.procedural_period_port",
+      "role": "ports",
+      "sha256_before": "1e2bb56a17a6c6fb820b8a17f4c2c52fbb23bc341fe2174c010a36535e93d8f4"
+    },
+    {
+      "old_path": "nm/legal_brain/procedural_period_sources.py",
+      "path": "nm/legal_brain/procedure/procedural_period_sources.py",
+      "old_module": "nm.legal_brain.procedural_period_sources",
+      "module": "nm.legal_brain.procedure.procedural_period_sources",
+      "role": "knowledge",
+      "sha256_before": "a267fc86695e24f16e410f8bac835245a64b03f7b8bfd4d730a013a01c8b80f3"
+    },
+    {
+      "old_path": "nm/legal_brain/proof.py",
+      "path": "nm/legal_brain/reason/proof.py",
+      "old_module": "nm.legal_brain.proof",
+      "module": "nm.legal_brain.reason.proof",
+      "role": "core",
+      "sha256_before": "ef9a1c60093c4b8e3047473d82adac2aac8d273f4cb752036e6ee38917657fc1"
+    },
+    {
+      "old_path": "nm/legal_brain/proof_contracts.py",
+      "path": "nm/legal_brain/reason/proof_contracts.py",
+      "old_module": "nm.legal_brain.proof_contracts",
+      "module": "nm.legal_brain.reason.proof_contracts",
+      "role": "domain",
+      "sha256_before": "64189c7ab2cb8ca0633345807bec29b8fa60637074942060fd46f5f398472553"
+    },
+    {
+      "old_path": "nm/legal_brain/proof_read.py",
+      "path": "nm/legal_brain/reason/proof_read.py",
+      "old_module": "nm.legal_brain.proof_read",
+      "module": "nm.legal_brain.reason.proof_read",
+      "role": "core",
+      "sha256_before": "efcdee733bbeb2f991e30dc098f15030b3094ca018c7bf11b8903ec96b5e49d3"
+    },
+    {
+      "old_path": "nm/legal_brain/provenance_sources.py",
+      "path": "nm/legal_brain/retrieve/provenance_sources.py",
+      "old_module": "nm.legal_brain.provenance_sources",
+      "module": "nm.legal_brain.retrieve.provenance_sources",
+      "role": "knowledge",
+      "sha256_before": "854a981f759757a08e96ef78e7cde8a769fdbba020648692906466974564b3be"
+    },
+    {
+      "old_path": "nm/legal_brain/provision_registry_composition.py",
+      "path": "nm/legal_brain/retrieve/provision_registry_composition.py",
+      "old_module": "nm.legal_brain.provision_registry_composition",
+      "module": "nm.legal_brain.retrieve.provision_registry_composition",
+      "role": "bootstrap",
+      "sha256_before": "d003bed36a70ca174ff04475552ef934e5610ca8e920d910f1058e89a5094cb9"
+    },
+    {
+      "old_path": "nm/legal_brain/provision_review.py",
+      "path": "nm/legal_brain/retrieve/provision_review.py",
+      "old_module": "nm.legal_brain.provision_review",
+      "module": "nm.legal_brain.retrieve.provision_review",
+      "role": "bootstrap",
+      "sha256_before": "f0b870060c541918e5b373bd740dd429fa6fb5c6d240886a73d3c7b76190cbef"
+    },
+    {
+      "old_path": "nm/legal_brain/provision_revision_sources.py",
+      "path": "nm/legal_brain/retrieve/provision_revision_sources.py",
+      "old_module": "nm.legal_brain.provision_revision_sources",
+      "module": "nm.legal_brain.retrieve.provision_revision_sources",
+      "role": "knowledge",
+      "sha256_before": "0c1d63124e573772851d626db465af1f87862575748b76a5b762c45c7bc82c30"
+    },
+    {
+      "old_path": "nm/legal_brain/quotable_contracts.py",
+      "path": "nm/legal_brain/common/quotable_contracts.py",
+      "old_module": "nm.legal_brain.quotable_contracts",
+      "module": "nm.legal_brain.common.quotable_contracts",
+      "role": "domain",
+      "sha256_before": "172d8f56d67ea84a326634e45a58d98256f811656fcd76bd33f41d5d04ad72c6"
+    },
+    {
+      "old_path": "nm/legal_brain/reads_contracts.py",
+      "path": "nm/legal_brain/common/reads_contracts.py",
+      "old_module": "nm.legal_brain.reads_contracts",
+      "module": "nm.legal_brain.common.reads_contracts",
+      "role": "domain",
+      "sha256_before": "03a69df86cebe439a7746c4ed963c69d07b49625cf450f5f137ece737b3a6e99"
+    },
+    {
+      "old_path": "nm/legal_brain/recorded_package_subject.py",
+      "path": "nm/legal_brain/verify/recorded_package_subject.py",
+      "old_module": "nm.legal_brain.recorded_package_subject",
+      "module": "nm.legal_brain.verify.recorded_package_subject",
+      "role": "core",
+      "sha256_before": "fa2a1b491187b0ea43915aa3186965ce8d97a5befded07b09f3efe4cb17ecada"
+    },
+    {
+      "old_path": "nm/legal_brain/register_contracts.py",
+      "path": "nm/legal_brain/communicate/register_contracts.py",
+      "old_module": "nm.legal_brain.register_contracts",
+      "module": "nm.legal_brain.communicate.register_contracts",
+      "role": "domain",
+      "sha256_before": "11e234ed5b87cb226d6e118ac1f3f03d30e73edf74273f4b61eeb004b900507b"
+    },
+    {
+      "old_path": "nm/legal_brain/replay_capture_contracts.py",
+      "path": "nm/legal_brain/evaluate/replay_capture_contracts.py",
+      "old_module": "nm.legal_brain.replay_capture_contracts",
+      "module": "nm.legal_brain.evaluate.replay_capture_contracts",
+      "role": "domain",
+      "sha256_before": "945e845b696f7ec8ae129dcde8dd06fae92af1e34b13e82a49eae944f8dc3d24"
+    },
+    {
+      "old_path": "nm/legal_brain/replay_context.py",
+      "path": "nm/legal_brain/evaluate/replay_context.py",
+      "old_module": "nm.legal_brain.replay_context",
+      "module": "nm.legal_brain.evaluate.replay_context",
+      "role": "bootstrap",
+      "sha256_before": "fc0003b5ff999eacaf3002026087445fb57ca2bb14dd808b866030f8409b7485"
+    },
+    {
+      "old_path": "nm/legal_brain/requirements.py",
+      "path": "nm/legal_brain/reason/requirements.py",
+      "old_module": "nm.legal_brain.requirements",
+      "module": "nm.legal_brain.reason.requirements",
+      "role": "core",
+      "sha256_before": "4d75df622c34507d852a427aeb43bd70ac7b920cf571391fd3cd62015e821ab6"
+    },
+    {
+      "old_path": "nm/legal_brain/requirements_contracts.py",
+      "path": "nm/legal_brain/reason/requirements_contracts.py",
+      "old_module": "nm.legal_brain.requirements_contracts",
+      "module": "nm.legal_brain.reason.requirements_contracts",
+      "role": "domain",
+      "sha256_before": "0aca0e476bedf7f10eef0aff3accd975abd46136e4d1d1040ef3e49cc2e7fe22"
+    },
+    {
+      "old_path": "nm/legal_brain/research.py",
+      "path": "nm/legal_brain/retrieve/research.py",
+      "old_module": "nm.legal_brain.research",
+      "module": "nm.legal_brain.retrieve.research",
+      "role": "core",
+      "sha256_before": "23ca77e4d30f618e9c5a5ba2ab5cb156b3c5b2578f443c274efade91382dedf0"
+    },
+    {
+      "old_path": "nm/legal_brain/research_context.py",
+      "path": "nm/legal_brain/retrieve/research_context.py",
+      "old_module": "nm.legal_brain.research_context",
+      "module": "nm.legal_brain.retrieve.research_context",
+      "role": "core",
+      "sha256_before": "bbd1a84bc4c138ceea3b316862ce3f2942fc2261175430bb97b11d6ce061033b"
+    },
+    {
+      "old_path": "nm/legal_brain/resolution_sources.py",
+      "path": "nm/legal_brain/retrieve/resolution_sources.py",
+      "old_module": "nm.legal_brain.resolution_sources",
+      "module": "nm.legal_brain.retrieve.resolution_sources",
+      "role": "knowledge",
+      "sha256_before": "4c5e59b731569b0dda5e97ca1ea6ef83219ff25eff6937bb699c34a7b8c0f7ca"
+    },
+    {
+      "old_path": "nm/legal_brain/reviewed_fee_selection.py",
+      "path": "nm/legal_brain/procedure/reviewed_fee_selection.py",
+      "old_module": "nm.legal_brain.reviewed_fee_selection",
+      "module": "nm.legal_brain.procedure.reviewed_fee_selection",
+      "role": "core",
+      "sha256_before": "80a96c6d89a17fc217ef50d67fa7b348e86076bd1b6f5f1d9e7f7d6f7766dcae"
+    },
+    {
+      "old_path": "nm/legal_brain/reviewed_interest_selection.py",
+      "path": "nm/legal_brain/procedure/reviewed_interest_selection.py",
+      "old_module": "nm.legal_brain.reviewed_interest_selection",
+      "module": "nm.legal_brain.procedure.reviewed_interest_selection",
+      "role": "core",
+      "sha256_before": "5560494bf22d166729d724c6506407262c3ddd6a34809a7a6631383b17ad4c93"
+    },
+    {
+      "old_path": "nm/legal_brain/reviewed_limitation_selection.py",
+      "path": "nm/legal_brain/procedure/reviewed_limitation_selection.py",
+      "old_module": "nm.legal_brain.reviewed_limitation_selection",
+      "module": "nm.legal_brain.procedure.reviewed_limitation_selection",
+      "role": "core",
+      "sha256_before": "82c29a881aa726c6005085246386c1455a249acd876df6dac37aea33d48bf422"
+    },
+    {
+      "old_path": "nm/legal_brain/reviewed_preview.py",
+      "path": "nm/legal_brain/communicate/reviewed_preview.py",
+      "old_module": "nm.legal_brain.reviewed_preview",
+      "module": "nm.legal_brain.communicate.reviewed_preview",
+      "role": "core",
+      "sha256_before": "02f271a1bbfd430a9e3ddaecb09a8bc9f78ce1b21eb12fc513a13a406cb5b7f7"
+    },
+    {
+      "old_path": "nm/legal_brain/reviewed_preview_api.py",
+      "path": "nm/legal_brain/communicate/reviewed_preview_api.py",
+      "old_module": "nm.legal_brain.reviewed_preview_api",
+      "module": "nm.legal_brain.communicate.reviewed_preview_api",
+      "role": "edge",
+      "sha256_before": "2fa443702a2dba904d089e729695cf53778af13fbe2f502b1beafe33f30599d8"
+    },
+    {
+      "old_path": "nm/legal_brain/route.py",
+      "path": "nm/legal_brain/understand/route.py",
+      "old_module": "nm.legal_brain.route",
+      "module": "nm.legal_brain.understand.route",
+      "role": "core",
+      "sha256_before": "15ad4beaa470434b67590e2b6d083dce1b481009d69b6f81bdc0e8c89543ef5e"
+    },
+    {
+      "old_path": "nm/legal_brain/runtime_capture.py",
+      "path": "nm/legal_brain/evaluate/runtime_capture.py",
+      "old_module": "nm.legal_brain.runtime_capture",
+      "module": "nm.legal_brain.evaluate.runtime_capture",
+      "role": "bootstrap",
+      "sha256_before": "70ba5d21b2def7733bed69b96af2546ed6603bac42dd3f09b0629425cbba13bc"
+    },
+    {
+      "old_path": "nm/legal_brain/runtime_model_tape.py",
+      "path": "nm/legal_brain/evaluate/runtime_model_tape.py",
+      "old_module": "nm.legal_brain.runtime_model_tape",
+      "module": "nm.legal_brain.evaluate.runtime_model_tape",
+      "role": "bootstrap",
+      "sha256_before": "3f9e56e620ce5b2ce869b54fd4d3417b6cfe05f20dbca957b9795ac96db3c587"
+    },
+    {
+      "old_path": "nm/legal_brain/runtime_port_tape.py",
+      "path": "nm/legal_brain/evaluate/runtime_port_tape.py",
+      "old_module": "nm.legal_brain.runtime_port_tape",
+      "module": "nm.legal_brain.evaluate.runtime_port_tape",
+      "role": "bootstrap",
+      "sha256_before": "97a849fedceca5342237cb189e2ed3a1fc4b1453f8683834fcc6023c1065a94d"
+    },
+    {
+      "old_path": "nm/legal_brain/search_authority.py",
+      "path": "nm/legal_brain/retrieve/search_authority.py",
+      "old_module": "nm.legal_brain.search_authority",
+      "module": "nm.legal_brain.retrieve.search_authority",
+      "role": "adapters",
+      "sha256_before": "fb4e6f71fb46d1a88f2634be2c10e51fd8588bb31dde62b4eb5f8e271abdb108"
+    },
+    {
+      "old_path": "nm/legal_brain/search_policed.py",
+      "path": "nm/legal_brain/retrieve/search_policed.py",
+      "old_module": "nm.legal_brain.search_policed",
+      "module": "nm.legal_brain.retrieve.search_policed",
+      "role": "adapters",
+      "sha256_before": "e1834ebc8436c192b8f4d538cc17ae2561701f319fa0853be690197009074e18"
+    },
+    {
+      "old_path": "nm/legal_brain/search_port.py",
+      "path": "nm/legal_brain/retrieve/search_port.py",
+      "old_module": "nm.legal_brain.search_port",
+      "module": "nm.legal_brain.retrieve.search_port",
+      "role": "ports",
+      "sha256_before": "1a3da0d32094a9df7a7192c75e3efedc9c7861a05d8a63ed99cc19508b449c6b"
+    },
+    {
+      "old_path": "nm/legal_brain/source_excerpt.py",
+      "path": "nm/legal_brain/retrieve/source_excerpt.py",
+      "old_module": "nm.legal_brain.source_excerpt",
+      "module": "nm.legal_brain.retrieve.source_excerpt",
+      "role": "core",
+      "sha256_before": "14deff28a34f2a11a3629b42cab666ae713db86667721a3cfbaf77b194092a98"
+    },
+    {
+      "old_path": "nm/legal_brain/source_excerpt_contracts.py",
+      "path": "nm/legal_brain/retrieve/source_excerpt_contracts.py",
+      "old_module": "nm.legal_brain.source_excerpt_contracts",
+      "module": "nm.legal_brain.retrieve.source_excerpt_contracts",
+      "role": "domain",
+      "sha256_before": "c98ba4382999fd39b57af6472e1786b3b396a32794464637c9928d37a093c224"
+    },
+    {
+      "old_path": "nm/legal_brain/source_registry_sources.py",
+      "path": "nm/legal_brain/retrieve/source_registry_sources.py",
+      "old_module": "nm.legal_brain.source_registry_sources",
+      "module": "nm.legal_brain.retrieve.source_registry_sources",
+      "role": "knowledge",
+      "sha256_before": "6296bd99eeda351d8e47ec883386b524be664d031016b8bccfe5dcf7993fef83"
+    },
+    {
+      "old_path": "nm/legal_brain/source_writes.py",
+      "path": "nm/legal_brain/reason/source_writes.py",
+      "old_module": "nm.legal_brain.source_writes",
+      "module": "nm.legal_brain.reason.source_writes",
+      "role": "core",
+      "sha256_before": "4728106eadf01c59c1861d66253b038c5eead38b092eea6f032337e148a72568"
+    },
+    {
+      "old_path": "nm/legal_brain/step_dependency.py",
+      "path": "nm/legal_brain/verify/step_dependency.py",
+      "old_module": "nm.legal_brain.step_dependency",
+      "module": "nm.legal_brain.verify.step_dependency",
+      "role": "core",
+      "sha256_before": "3a69cb089207c17c3d865d3dfc8ccd1796da08a8cd89bb70c78a99918173dea8"
+    },
+    {
+      "old_path": "nm/legal_brain/strict_replay.py",
+      "path": "nm/legal_brain/evaluate/strict_replay.py",
+      "old_module": "nm.legal_brain.strict_replay",
+      "module": "nm.legal_brain.evaluate.strict_replay",
+      "role": "bootstrap",
+      "sha256_before": "ca3639b13fcd6578d5bbff55c939921a1f5fd19326f6aef97f79fea2e2d1b79d"
+    },
+    {
+      "old_path": "nm/legal_brain/theory.py",
+      "path": "nm/legal_brain/reason/theory.py",
+      "old_module": "nm.legal_brain.theory",
+      "module": "nm.legal_brain.reason.theory",
+      "role": "core",
+      "sha256_before": "811ba495c8046fe63d8825530c7653a26fb05b61b2ce286fa21ac4c0002b317c"
+    },
+    {
+      "old_path": "nm/legal_brain/threading.py",
+      "path": "nm/legal_brain/understand/threading.py",
+      "old_module": "nm.legal_brain.threading",
+      "module": "nm.legal_brain.understand.threading",
+      "role": "core",
+      "sha256_before": "0ad00910e15a8bb580a2c2667f1434c8868090939a351e1f3817152e6f090465"
+    },
+    {
+      "old_path": "nm/legal_brain/thresholds.py",
+      "path": "nm/legal_brain/reason/thresholds.py",
+      "old_module": "nm.legal_brain.thresholds",
+      "module": "nm.legal_brain.reason.thresholds",
+      "role": "core",
+      "sha256_before": "6eafdf9942ffed7b6bfbd94099c65072fcc9bc68d8aabe9126702eed7c082eb7"
+    },
+    {
+      "old_path": "nm/legal_brain/tiers_contracts.py",
+      "path": "nm/legal_brain/common/tiers_contracts.py",
+      "old_module": "nm.legal_brain.tiers_contracts",
+      "module": "nm.legal_brain.common.tiers_contracts",
+      "role": "domain",
+      "sha256_before": "12c0287d5e965a9a2aefbb35c76476f44e9fbe8cbbf824406ec59db8dbafe0d1"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_ask_advocate.py",
+      "path": "nm/legal_brain/understand/tool_ask_advocate.py",
+      "old_module": "nm.legal_brain.tool_ask_advocate",
+      "module": "nm.legal_brain.understand.tool_ask_advocate",
+      "role": "core",
+      "sha256_before": "d2df56650f8862c626ccfd2b39423da47b702e498c59aee4c3654e318ba52c5e"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_catalogue.py",
+      "path": "nm/legal_brain/orchestrate/tool_catalogue.py",
+      "old_module": "nm.legal_brain.tool_catalogue",
+      "module": "nm.legal_brain.orchestrate.tool_catalogue",
+      "role": "core",
+      "sha256_before": "90991fd2a0b6d0110a49d78076d24162c48322a6559d555ac85aabf25cfaf28b"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_check_candidate_independently.py",
+      "path": "nm/legal_brain/verify/tool_check_candidate_independently.py",
+      "old_module": "nm.legal_brain.tool_check_candidate_independently",
+      "module": "nm.legal_brain.verify.tool_check_candidate_independently",
+      "role": "core",
+      "sha256_before": "7451a8df852b87eecbb3ad0280af7a49b81514585147fe515b54f83a712b8c7b"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_compute_interest.py",
+      "path": "nm/legal_brain/procedure/tool_compute_interest.py",
+      "old_module": "nm.legal_brain.tool_compute_interest",
+      "module": "nm.legal_brain.procedure.tool_compute_interest",
+      "role": "core",
+      "sha256_before": "7e52ff9ae45f4ebddf168fdad8f10f1dbb5d90f65670dc4be33803b2cb133370"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_compute_limitation.py",
+      "path": "nm/legal_brain/procedure/tool_compute_limitation.py",
+      "old_module": "nm.legal_brain.tool_compute_limitation",
+      "module": "nm.legal_brain.procedure.tool_compute_limitation",
+      "role": "core",
+      "sha256_before": "4c945d800d73e80f81c4f5df04ce1bb4e8f0246277e72aad989f70c4c7b2a081"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_compute_procedural_period.py",
+      "path": "nm/legal_brain/procedure/tool_compute_procedural_period.py",
+      "old_module": "nm.legal_brain.tool_compute_procedural_period",
+      "module": "nm.legal_brain.procedure.tool_compute_procedural_period",
+      "role": "core",
+      "sha256_before": "be682a99311521aefb2892e8b66d1e4fc0dcb57fb26bbec225b4bbf8e0b95654"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_court_fee.py",
+      "path": "nm/legal_brain/procedure/tool_court_fee.py",
+      "old_module": "nm.legal_brain.tool_court_fee",
+      "module": "nm.legal_brain.procedure.tool_court_fee",
+      "role": "core",
+      "sha256_before": "9958f947fadf88a7a8f152cf1f94e9f088fe188654fadbc45baab5095691a481"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_date_arithmetic.py",
+      "path": "nm/legal_brain/procedure/tool_date_arithmetic.py",
+      "old_module": "nm.legal_brain.tool_date_arithmetic",
+      "module": "nm.legal_brain.procedure.tool_date_arithmetic",
+      "role": "core",
+      "sha256_before": "d64aed578c9627039d640a31d8137adca4c967a99049417f2ec1bcca4c354ad8"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_discover_tools.py",
+      "path": "nm/legal_brain/orchestrate/tool_discover_tools.py",
+      "old_module": "nm.legal_brain.tool_discover_tools",
+      "module": "nm.legal_brain.orchestrate.tool_discover_tools",
+      "role": "core",
+      "sha256_before": "e4c55bff4083236168a572a99bb9801ed9d28a818a5bbca136f55cec565c3479"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_discovery.py",
+      "path": "nm/legal_brain/orchestrate/tool_discovery.py",
+      "old_module": "nm.legal_brain.tool_discovery",
+      "module": "nm.legal_brain.orchestrate.tool_discovery",
+      "role": "core",
+      "sha256_before": "eed6be28e0b5f12921e75f9fcebde240a5f4407e0aea87e74e457d1bea8021ed"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_elements_of.py",
+      "path": "nm/legal_brain/reason/tool_elements_of.py",
+      "old_module": "nm.legal_brain.tool_elements_of",
+      "module": "nm.legal_brain.reason.tool_elements_of",
+      "role": "core",
+      "sha256_before": "0c28bf0f795ef67ce042b5cba61827051098568233d5f89f3ffdbc0636e9116e"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_filing_requirements.py",
+      "path": "nm/legal_brain/procedure/tool_filing_requirements.py",
+      "old_module": "nm.legal_brain.tool_filing_requirements",
+      "module": "nm.legal_brain.procedure.tool_filing_requirements",
+      "role": "core",
+      "sha256_before": "3bb2b08d01ac7e14b2ce9d0647174a0ded4c00d2e8bda2899f9bd8120484fb54"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_finish_opposition.py",
+      "path": "nm/legal_brain/reason/tool_finish_opposition.py",
+      "old_module": "nm.legal_brain.tool_finish_opposition",
+      "module": "nm.legal_brain.reason.tool_finish_opposition",
+      "role": "core",
+      "sha256_before": "9aef4229a4ffc3f75a25b21ecd941ab65e355e7381a640607ef663b9789de0d9"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_finish_research.py",
+      "path": "nm/legal_brain/retrieve/tool_finish_research.py",
+      "old_module": "nm.legal_brain.tool_finish_research",
+      "module": "nm.legal_brain.retrieve.tool_finish_research",
+      "role": "core",
+      "sha256_before": "6f1d8d89a5324565ade7fb77d941df2a45055c6bff88846cd3511a37797a4d1a"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_governing_code.py",
+      "path": "nm/legal_brain/procedure/tool_governing_code.py",
+      "old_module": "nm.legal_brain.tool_governing_code",
+      "module": "nm.legal_brain.procedure.tool_governing_code",
+      "role": "core",
+      "sha256_before": "c781045c16d784039d4cd955b275bf921d000c78b193372d323b6d78bcc8089b"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_identify_act.py",
+      "path": "nm/legal_brain/retrieve/tool_identify_act.py",
+      "old_module": "nm.legal_brain.tool_identify_act",
+      "module": "nm.legal_brain.retrieve.tool_identify_act",
+      "role": "core",
+      "sha256_before": "f23723ffb032e5c7da79ce2afb1bc03123f187113bc584eb8389be3941c3a874"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_inspect_tool.py",
+      "path": "nm/legal_brain/orchestrate/tool_inspect_tool.py",
+      "old_module": "nm.legal_brain.tool_inspect_tool",
+      "module": "nm.legal_brain.orchestrate.tool_inspect_tool",
+      "role": "core",
+      "sha256_before": "a7f54a0fe8d32d4e892204534dcdf2dbb5ddc8d83afafda7a9aa1d6f8ab7bde8"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_interim_test.py",
+      "path": "nm/legal_brain/procedure/tool_interim_test.py",
+      "old_module": "nm.legal_brain.tool_interim_test",
+      "module": "nm.legal_brain.procedure.tool_interim_test",
+      "role": "core",
+      "sha256_before": "1813c19e013475caffbac12230a274f8789d3d8b5008497daea37f9f06f8b1e7"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_list_deadlines.py",
+      "path": "nm/legal_brain/procedure/tool_list_deadlines.py",
+      "old_module": "nm.legal_brain.tool_list_deadlines",
+      "module": "nm.legal_brain.procedure.tool_list_deadlines",
+      "role": "core",
+      "sha256_before": "18ba381cb2b8f265b07865713a5fa9e037c6ca282c55f5021dafeffed86a652e"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_offers.py",
+      "path": "nm/legal_brain/orchestrate/tool_offers.py",
+      "old_module": "nm.legal_brain.tool_offers",
+      "module": "nm.legal_brain.orchestrate.tool_offers",
+      "role": "core",
+      "sha256_before": "fc597f1dc9d50959758695d8edf778f0653668743635ef553fd7612d4fb34f72"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_oppose.py",
+      "path": "nm/legal_brain/reason/tool_oppose.py",
+      "old_module": "nm.legal_brain.tool_oppose",
+      "module": "nm.legal_brain.reason.tool_oppose",
+      "role": "core",
+      "sha256_before": "ee00ffe4794db1ab641f7c4afd656600fe514ab68249d7d780178d9fb1b36c22"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_oppose_early.py",
+      "path": "nm/legal_brain/reason/tool_oppose_early.py",
+      "old_module": "nm.legal_brain.tool_oppose_early",
+      "module": "nm.legal_brain.reason.tool_oppose_early",
+      "role": "core",
+      "sha256_before": "965e726a5caad8abbed8f00429f3e60e7f4e5b437c12b71e2a9876dcd6ff95f9"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_oppose_full.py",
+      "path": "nm/legal_brain/reason/tool_oppose_full.py",
+      "old_module": "nm.legal_brain.tool_oppose_full",
+      "module": "nm.legal_brain.reason.tool_oppose_full",
+      "role": "core",
+      "sha256_before": "ab822dcc254aabe59863d5b95fc8353efba53cda135456c7e1d59e6a6a9835a2"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_oppose_matter.py",
+      "path": "nm/legal_brain/reason/tool_oppose_matter.py",
+      "old_module": "nm.legal_brain.tool_oppose_matter",
+      "module": "nm.legal_brain.reason.tool_oppose_matter",
+      "role": "core",
+      "sha256_before": "5c523af19cd6a201aa8c7f880daaced64fa818283a5bcda3a7bf83953fb688c5"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_pre_institution_steps.py",
+      "path": "nm/legal_brain/procedure/tool_pre_institution_steps.py",
+      "old_module": "nm.legal_brain.tool_pre_institution_steps",
+      "module": "nm.legal_brain.procedure.tool_pre_institution_steps",
+      "role": "core",
+      "sha256_before": "abdee373038ef5762e929f297fc9b9783f78a6f8daf61aa0452e1e9065f8b70d"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_procedural_periods.py",
+      "path": "nm/legal_brain/procedure/tool_procedural_periods.py",
+      "old_module": "nm.legal_brain.tool_procedural_periods",
+      "module": "nm.legal_brain.procedure.tool_procedural_periods",
+      "role": "core",
+      "sha256_before": "b804da39af59d1e6883562480166f901dad09c57dd9772911251c3e76735aea7"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_propose_conversation.py",
+      "path": "nm/legal_brain/understand/tool_propose_conversation.py",
+      "old_module": "nm.legal_brain.tool_propose_conversation",
+      "module": "nm.legal_brain.understand.tool_propose_conversation",
+      "role": "core",
+      "sha256_before": "7d4b0c4e4875e6f391c86058b3b27be8410a8e250f857981a5bea6b536c1bfcc"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_propose_fee_selection.py",
+      "path": "nm/legal_brain/procedure/tool_propose_fee_selection.py",
+      "old_module": "nm.legal_brain.tool_propose_fee_selection",
+      "module": "nm.legal_brain.procedure.tool_propose_fee_selection",
+      "role": "core",
+      "sha256_before": "8ffd22c81c8195373dd5bf6631a3e304e533ac4aaca4a3532a12272a1cafdd62"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_propose_interest_selection.py",
+      "path": "nm/legal_brain/procedure/tool_propose_interest_selection.py",
+      "old_module": "nm.legal_brain.tool_propose_interest_selection",
+      "module": "nm.legal_brain.procedure.tool_propose_interest_selection",
+      "role": "core",
+      "sha256_before": "36dedfb0447999aa2a2ac42234f00c072cefde72fa8a215e168ab2d54c5ca66a"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_propose_limitation_selection.py",
+      "path": "nm/legal_brain/procedure/tool_propose_limitation_selection.py",
+      "old_module": "nm.legal_brain.tool_propose_limitation_selection",
+      "module": "nm.legal_brain.procedure.tool_propose_limitation_selection",
+      "role": "core",
+      "sha256_before": "2f13c4e78954d8bf0db58878a3c6d1261d92a3fc97bf7519190a5588fc5e0af1"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_propose_working_record.py",
+      "path": "nm/legal_brain/reason/tool_propose_working_record.py",
+      "old_module": "nm.legal_brain.tool_propose_working_record",
+      "module": "nm.legal_brain.reason.tool_propose_working_record",
+      "role": "core",
+      "sha256_before": "3365b0f28da84838e92975528c98c405b795eec47ab3ac8c4100859547fbaeb0"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_quote_matter.py",
+      "path": "nm/legal_brain/understand/tool_quote_matter.py",
+      "old_module": "nm.legal_brain.tool_quote_matter",
+      "module": "nm.legal_brain.understand.tool_quote_matter",
+      "role": "core",
+      "sha256_before": "3e77f14de5517d9b5822b1cb68ab516d793f73efb0c7f156d9d8ffa5b438dc57"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_rank_authorities.py",
+      "path": "nm/legal_brain/retrieve/tool_rank_authorities.py",
+      "old_module": "nm.legal_brain.tool_rank_authorities",
+      "module": "nm.legal_brain.retrieve.tool_rank_authorities",
+      "role": "core",
+      "sha256_before": "0a966a250ce7ed6369899c3f0d7a675232c69d82379be6a59426ec443663a742"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_facts.py",
+      "path": "nm/legal_brain/understand/tool_read_facts.py",
+      "old_module": "nm.legal_brain.tool_read_facts",
+      "module": "nm.legal_brain.understand.tool_read_facts",
+      "role": "core",
+      "sha256_before": "155da61800bf3ca1c7e0ed2300f562584f43f05200a0dfd26f6e7ae86161520e"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_fee_inventory.py",
+      "path": "nm/legal_brain/procedure/tool_read_fee_inventory.py",
+      "old_module": "nm.legal_brain.tool_read_fee_inventory",
+      "module": "nm.legal_brain.procedure.tool_read_fee_inventory",
+      "role": "core",
+      "sha256_before": "4f3f5d26c346d29923375f4790417aac2ec5cce7257d0b9df8380601c01665b2"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_interest_inventory.py",
+      "path": "nm/legal_brain/procedure/tool_read_interest_inventory.py",
+      "old_module": "nm.legal_brain.tool_read_interest_inventory",
+      "module": "nm.legal_brain.procedure.tool_read_interest_inventory",
+      "role": "core",
+      "sha256_before": "5d6578d75926fe1fbd22f88c98ae2f35cfaf263c7080d2696166ccc01c897686"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_judgment.py",
+      "path": "nm/legal_brain/retrieve/tool_read_judgment.py",
+      "old_module": "nm.legal_brain.tool_read_judgment",
+      "module": "nm.legal_brain.retrieve.tool_read_judgment",
+      "role": "core",
+      "sha256_before": "152d14fb8a16f76400312d839a9c8abc4918014d304435257d9be57ddc2fae16"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_limitation_candidates.py",
+      "path": "nm/legal_brain/procedure/tool_read_limitation_candidates.py",
+      "old_module": "nm.legal_brain.tool_read_limitation_candidates",
+      "module": "nm.legal_brain.procedure.tool_read_limitation_candidates",
+      "role": "core",
+      "sha256_before": "6d5354eb7016dd58ffe3eea1a6e5e847c61239455d26cd93bbc7a3c0f621a2e6"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_matter.py",
+      "path": "nm/legal_brain/understand/tool_read_matter.py",
+      "old_module": "nm.legal_brain.tool_read_matter",
+      "module": "nm.legal_brain.understand.tool_read_matter",
+      "role": "core",
+      "sha256_before": "d5562c21a32fbc5b98607e0c9f4c8ebd9af62b7225009b63f5f91b579a0823d8"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_opposition_status.py",
+      "path": "nm/legal_brain/reason/tool_read_opposition_status.py",
+      "old_module": "nm.legal_brain.tool_read_opposition_status",
+      "module": "nm.legal_brain.reason.tool_read_opposition_status",
+      "role": "core",
+      "sha256_before": "2eb9042e14f1410f86ae62d9d619897b54dae55767bc891a2683f5f5ac0f911b"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_owner_guide.py",
+      "path": "nm/legal_brain/common/tool_read_owner_guide.py",
+      "old_module": "nm.legal_brain.tool_read_owner_guide",
+      "module": "nm.legal_brain.common.tool_read_owner_guide",
+      "role": "core",
+      "sha256_before": "1d07f6b21a287d5adf5423fb3c556e251c2315aabf48f4785916abd5f609231c"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_paragraph.py",
+      "path": "nm/legal_brain/retrieve/tool_read_paragraph.py",
+      "old_module": "nm.legal_brain.tool_read_paragraph",
+      "module": "nm.legal_brain.retrieve.tool_read_paragraph",
+      "role": "core",
+      "sha256_before": "498d0093c26bd034efe7ae417b06fc3ed0420437c87eb1499e6fb42fb4651449"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_playbook_catalogue.py",
+      "path": "nm/legal_brain/retrieve/tool_read_playbook_catalogue.py",
+      "old_module": "nm.legal_brain.tool_read_playbook_catalogue",
+      "module": "nm.legal_brain.retrieve.tool_read_playbook_catalogue",
+      "role": "core",
+      "sha256_before": "6562a258c256642f9a4a2bbbf68c2690757cbc7a8eb93d66f3da888333e39c75"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_practice_playbook.py",
+      "path": "nm/legal_brain/retrieve/tool_read_practice_playbook.py",
+      "old_module": "nm.legal_brain.tool_read_practice_playbook",
+      "module": "nm.legal_brain.retrieve.tool_read_practice_playbook",
+      "role": "core",
+      "sha256_before": "3d9ce55af941041aef1b21032d478b3dfa0beb99fa510578d8212dab32591fe4"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_procedural_calculation_inputs.py",
+      "path": "nm/legal_brain/procedure/tool_read_procedural_calculation_inputs.py",
+      "old_module": "nm.legal_brain.tool_read_procedural_calculation_inputs",
+      "module": "nm.legal_brain.procedure.tool_read_procedural_calculation_inputs",
+      "role": "core",
+      "sha256_before": "ee16e52f400bb77db29cc0461c3313994d644acbd87cbc8f2a7a4f5e018b754a"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_provision.py",
+      "path": "nm/legal_brain/retrieve/tool_read_provision.py",
+      "old_module": "nm.legal_brain.tool_read_provision",
+      "module": "nm.legal_brain.retrieve.tool_read_provision",
+      "role": "core",
+      "sha256_before": "6f707dfc54bf3dc2bc0d409872c3329494b36a43115a002e3632148b78ce94db"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_source_document.py",
+      "path": "nm/legal_brain/retrieve/tool_read_source_document.py",
+      "old_module": "nm.legal_brain.tool_read_source_document",
+      "module": "nm.legal_brain.retrieve.tool_read_source_document",
+      "role": "core",
+      "sha256_before": "f708f4783c3ad363a46e9ca8931c102d3334785557be2f7ab358aff70bb0de97"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_thread.py",
+      "path": "nm/legal_brain/understand/tool_read_thread.py",
+      "old_module": "nm.legal_brain.tool_read_thread",
+      "module": "nm.legal_brain.understand.tool_read_thread",
+      "role": "core",
+      "sha256_before": "e90d40c63755563420afb1f473acf8ff9d3f23721ed956694631a5cf2bfc6dfe"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_turn.py",
+      "path": "nm/legal_brain/understand/tool_read_turn.py",
+      "old_module": "nm.legal_brain.tool_read_turn",
+      "module": "nm.legal_brain.understand.tool_read_turn",
+      "role": "core",
+      "sha256_before": "1fce8fa72c988d33ad96d7f4af47a92462f1ff5cb2b9e3279d833afbdc95f490"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_read_working_inventory.py",
+      "path": "nm/legal_brain/reason/tool_read_working_inventory.py",
+      "old_module": "nm.legal_brain.tool_read_working_inventory",
+      "module": "nm.legal_brain.reason.tool_read_working_inventory",
+      "role": "core",
+      "sha256_before": "a143dc8636a7bbb0bf9f7e07d11d110fe121d3b1e4ca6a0259ef5951d20181e5"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_record_grounded_file_reading.py",
+      "path": "nm/legal_brain/reason/tool_record_grounded_file_reading.py",
+      "old_module": "nm.legal_brain.tool_record_grounded_file_reading",
+      "module": "nm.legal_brain.reason.tool_record_grounded_file_reading",
+      "role": "core",
+      "sha256_before": "e0fafdc01d3831197fa1efe39ec14d455159a55f4485bf6ba93bacb2d1b59f18"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_record_requirements.py",
+      "path": "nm/legal_brain/reason/tool_record_requirements.py",
+      "old_module": "nm.legal_brain.tool_record_requirements",
+      "module": "nm.legal_brain.reason.tool_record_requirements",
+      "role": "core",
+      "sha256_before": "924e57480a93e3bb59a5ab875dea2136a6447ad60184fd8fd5029934a3687c0c"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_research.py",
+      "path": "nm/legal_brain/retrieve/tool_research.py",
+      "old_module": "nm.legal_brain.tool_research",
+      "module": "nm.legal_brain.retrieve.tool_research",
+      "role": "core",
+      "sha256_before": "6fbea21e26e895ff5c15e72e67e415f314ba97971b282ecdc9ec7eda7af46e55"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_resolve_citation.py",
+      "path": "nm/legal_brain/retrieve/tool_resolve_citation.py",
+      "old_module": "nm.legal_brain.tool_resolve_citation",
+      "module": "nm.legal_brain.retrieve.tool_resolve_citation",
+      "role": "core",
+      "sha256_before": "5c4a90e78707c9fdb6007e99487a47163f30ba0fbb8d5bc9ae09e98b3338f053"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_search_authorities.py",
+      "path": "nm/legal_brain/retrieve/tool_search_authorities.py",
+      "old_module": "nm.legal_brain.tool_search_authorities",
+      "module": "nm.legal_brain.retrieve.tool_search_authorities",
+      "role": "core",
+      "sha256_before": "1076e70c70685c28fddc33f02fa5fe407514857a0ff7c2166c321aa0b1c4a622"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_search_authority.py",
+      "path": "nm/legal_brain/retrieve/tool_search_authority.py",
+      "old_module": "nm.legal_brain.tool_search_authority",
+      "module": "nm.legal_brain.retrieve.tool_search_authority",
+      "role": "core",
+      "sha256_before": "e2bde08b7b0b20a940a855e8a8c044fde2601e4bb7ce2557a1f42ec5898990f1"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_search_matter.py",
+      "path": "nm/legal_brain/understand/tool_search_matter.py",
+      "old_module": "nm.legal_brain.tool_search_matter",
+      "module": "nm.legal_brain.understand.tool_search_matter",
+      "role": "core",
+      "sha256_before": "7ee6d45da55ca99e982e50f16bb7c40468bd112ff9efc61208488d1e61132f25"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_sources.py",
+      "path": "nm/legal_brain/retrieve/tool_sources.py",
+      "old_module": "nm.legal_brain.tool_sources",
+      "module": "nm.legal_brain.retrieve.tool_sources",
+      "role": "core",
+      "sha256_before": "39d9140b67532168d286999b6f2002580d033a0334a18f36b9392861aece88d3"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_submit_answer.py",
+      "path": "nm/legal_brain/communicate/tool_submit_answer.py",
+      "old_module": "nm.legal_brain.tool_submit_answer",
+      "module": "nm.legal_brain.communicate.tool_submit_answer",
+      "role": "core",
+      "sha256_before": "4bd81da1b98520d36ee29422ac5bdb20b446565e124ec2eb3fe970672bcea37d"
+    },
+    {
+      "old_path": "nm/legal_brain/tool_treatment.py",
+      "path": "nm/legal_brain/retrieve/tool_treatment.py",
+      "old_module": "nm.legal_brain.tool_treatment",
+      "module": "nm.legal_brain.retrieve.tool_treatment",
+      "role": "core",
+      "sha256_before": "56a3399ad51156c80d9749d51938202c0ef4fb8a28c9af771b6733c0c1ec90e7"
+    },
+    {
+      "old_path": "nm/legal_brain/tools.py",
+      "path": "nm/legal_brain/orchestrate/tools.py",
+      "old_module": "nm.legal_brain.tools",
+      "module": "nm.legal_brain.orchestrate.tools",
+      "role": "core",
+      "sha256_before": "a65afb8e468cc92500d87d4c76daf7fef7b0e0822d664822a1e5b885e25567f9"
+    },
+    {
+      "old_path": "nm/legal_brain/turn.py",
+      "path": "nm/legal_brain/orchestrate/turn.py",
+      "old_module": "nm.legal_brain.turn",
+      "module": "nm.legal_brain.orchestrate.turn",
+      "role": "core",
+      "sha256_before": "c471f27fdf9eae02238aeaa165344e34f08cf699f5a138c22145425f6dd3ad51"
+    },
+    {
+      "old_path": "nm/legal_brain/verifier.py",
+      "path": "nm/legal_brain/verify/verifier.py",
+      "old_module": "nm.legal_brain.verifier",
+      "module": "nm.legal_brain.verify.verifier",
+      "role": "core",
+      "sha256_before": "aab52bfa6ccfa57ec09a120a7220ca9f84dbbf1dea53a530d939fd63b4903702"
+    },
+    {
+      "old_path": "nm/legal_brain/work_receipts.py",
+      "path": "nm/legal_brain/orchestrate/work_receipts.py",
+      "old_module": "nm.legal_brain.work_receipts",
+      "module": "nm.legal_brain.orchestrate.work_receipts",
+      "role": "core",
+      "sha256_before": "bc55e89673e0d0cc3b79cbb7e748fd56641251093c1b2718905625fd765d8dba"
+    },
+    {
+      "old_path": "nm/legal_brain/working_explanation.py",
+      "path": "nm/legal_brain/communicate/working_explanation.py",
+      "old_module": "nm.legal_brain.working_explanation",
+      "module": "nm.legal_brain.communicate.working_explanation",
+      "role": "core",
+      "sha256_before": "2929ad6f4c44f117af74465029cbc00a0c9f1fa94d876228353bc02745fbbbba"
+    },
+    {
+      "old_path": "nm/legal_brain/working_record.py",
+      "path": "nm/legal_brain/reason/working_record.py",
+      "old_module": "nm.legal_brain.working_record",
+      "module": "nm.legal_brain.reason.working_record",
+      "role": "core",
+      "sha256_before": "14975e6a58a34d93cd4a479e9ad965f2989c0bb1a7f66856291eccb6abeca769"
+    },
+    {
+      "old_path": "nm/legal_brain/working_record_contracts.py",
+      "path": "nm/legal_brain/reason/working_record_contracts.py",
+      "old_module": "nm.legal_brain.working_record_contracts",
+      "module": "nm.legal_brain.reason.working_record_contracts",
+      "role": "domain",
+      "sha256_before": "90948d1f56586627f3da2e7ea4c57884c9acb4d8b8c3093de887d4f4cb94a509"
+    },
+    {
+      "old_path": "nm/legal_brain/working_scope.py",
+      "path": "nm/legal_brain/verify/working_scope.py",
+      "old_module": "nm.legal_brain.working_scope",
+      "module": "nm.legal_brain.verify.working_scope",
+      "role": "core",
+      "sha256_before": "502936ad50e2caf43c350021a6003944680feb4675f2b49142c31f005f2f3813"
+    }
+  ],
+  "expected_roles": {
+    "adapters": 12,
+    "bootstrap": 13,
+    "core": 133,
+    "domain": 19,
+    "edge": 5,
+    "knowledge": 18,
+    "ports": 14
+  },
+  "browser_assets": {
+    "advocate-preferences.js": {
+      "old_path": "nm/legal_brain/advocate-preferences.js",
+      "path": "nm/legal_brain/understand/advocate-preferences.js",
+      "sha256_before": "9fea79b82feb2caf30cf8fe985cd37cf904af73b7ce8c334a3152755450d5f46"
+    },
+    "brain-preview.html": {
+      "old_path": "nm/legal_brain/brain-preview.html",
+      "path": "nm/legal_brain/evaluate/brain-preview.html",
+      "sha256_before": "93301673be5b44dc627b91b469e213666171635cbe2bdf930d77df842aa23cd5"
+    },
+    "brain-preview.js": {
+      "old_path": "nm/legal_brain/brain-preview.js",
+      "path": "nm/legal_brain/evaluate/brain-preview.js",
+      "sha256_before": "37cb36ef2e526a5d497d4adb5c682479b7f1d5828d4565f7067fd315c01c7195"
+    },
+    "matter-workspace.css": {
+      "old_path": "nm/legal_brain/matter-workspace.css",
+      "path": "nm/legal_brain/communicate/matter-workspace.css",
+      "sha256_before": "6b90594e858c3d8cc8e70413393878ed918c319b5c0df82cb68c9c47881105bf"
+    },
+    "matter-workspace.js": {
+      "old_path": "nm/legal_brain/matter-workspace.js",
+      "path": "nm/legal_brain/communicate/matter-workspace.js",
+      "sha256_before": "6edf92f3bfd79930e5d1936fe4f52a485ed3dd68d18dacab16e81bd8768b0a4c"
+    },
+    "source-reader.js": {
+      "old_path": "nm/legal_brain/source-reader.js",
+      "path": "nm/legal_brain/communicate/source-reader.js",
+      "sha256_before": "c908daecda1746467d3617e4f1657b50372cfa9efb5b3f7433af8df93111daff"
+    },
+    "loop-progress.js": {
+      "old_path": "nm/legal_brain/loop-progress.js",
+      "path": "nm/legal_brain/communicate/loop-progress.js",
+      "sha256_before": "4f3af7aa9f577a2c98d13ebfdb158869a2a71e8db45283f210c30e81ce08a625"
+    }
+  }
+}

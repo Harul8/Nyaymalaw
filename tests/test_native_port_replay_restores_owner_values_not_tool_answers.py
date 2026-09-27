@@ -6,11 +6,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceKind
-from nm.legal_brain.loop_contracts import digest
-from nm.legal_brain.practice_playbooks_adapter import FilePracticePlaybooks
-from nm.legal_brain.replay_capture_contracts import ReplayCaptureRefused
-from nm.legal_brain.runtime_port_tape import (
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceKind
+from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
+from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused
+from nm.legal_brain.evaluate.runtime_port_tape import (
     CONTRACTS,
     METHODS,
     NativePortRecorder,

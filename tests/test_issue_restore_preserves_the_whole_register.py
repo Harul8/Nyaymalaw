@@ -3,7 +3,7 @@ from dataclasses import asdict, fields, replace
 
 import pytest
 
-from nm.legal_brain.issue_contracts import (
+from nm.legal_brain.reason.issue_contracts import (
     Disposition,
     DispositionState,
     Issue,

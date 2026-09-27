@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_saved_loop_progress_is_not_an_advice_transport import SECRET, add, work
 from tests.test_saved_work_attaches_only_to_its_released_turn import scoped_work

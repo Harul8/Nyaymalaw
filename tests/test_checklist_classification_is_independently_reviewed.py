@@ -7,11 +7,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain import requirements
-from nm.legal_brain.brain_assessment import AssessmentService
-from nm.legal_brain.checklist_review import ChecklistReviewService, classifications_for
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.requirements_contracts import Force, Outcome, Requirement, State, checklist, key
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.verify.brain_assessment import AssessmentService
+from nm.legal_brain.verify.checklist_review import ChecklistReviewService, classifications_for
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.reason.requirements_contracts import Force, Outcome, Requirement, State, checklist, key
 from nm.shared.model_port import ProviderUnavailable, ToolCall
 from nm.work_the_file import deadlines, dispute_agenda, summary
 from nm.work_the_file.matter_contracts import Certainty, Thread

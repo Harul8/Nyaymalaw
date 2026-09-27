@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.citation_contracts import cases_named, provisions_cited, wanted_section
+from nm.legal_brain.common.citation_contracts import cases_named, provisions_cited, wanted_section
 from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
@@ -92,7 +92,7 @@ def test_no_module_defines_its_own_provision_pattern():
     `section|sec|s\\.` regex anywhere in `nm/` outside the canonical module
     fails the build, and whoever writes it is pointed at the one to import.
     """
-    canonical = ROOT / "nm/legal_brain/citation_contracts.py"
+    canonical = ROOT / "nm/legal_brain/common/citation_contracts.py"
     pattern = re.compile(r"re\.compile\([^)]*(?:sections?|article|\bsec\b)",
                          re.I | re.S)
     offenders = []
@@ -104,7 +104,7 @@ def test_no_module_defines_its_own_provision_pattern():
     assert not offenders, (
         "a second provision-reference pattern exists in "
         + ", ".join(offenders)
-        + " — import from nm.legal_brain.citation_contracts instead. The last time there were "
+        + " — import from nm.legal_brain.common.citation_contracts instead. The last time there were "
           "two, one was hardened and the other was not, and a realistic brief "
           "retrieved the wrong section and reported a corpus gap.")
 
@@ -140,7 +140,7 @@ def test_an_act_is_named_or_it_is_inferred_and_never_silently_matched():
     """
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     on = date(2026, 8, 30)
@@ -167,7 +167,7 @@ def test_a_named_act_beats_every_keyword_score():
     for a provision the corpus holds."""
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     brief = ("client was dispossessed from the property and wants possession "
@@ -189,7 +189,7 @@ def test_no_act_title_is_a_substring_of_another():
     True of today's 17 Acts. It is a property of the manifest, not a law, so it
     is checked rather than assumed: the eighteenth Act is where it would break.
     """
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     titles = {e.act_name: e.act_name.split(",")[0].strip().lower()
@@ -209,7 +209,7 @@ def test_no_alias_sits_inside_an_act_title():
     living inside a different Act's title would make a question naming that Act
     also match the alias's owner, and the choice between them is a guess again.
     """
-    from nm.legal_brain.manifest_sources import Manifest, _flatten, title_without_year
+    from nm.legal_brain.retrieve.manifest_sources import Manifest, _flatten, title_without_year
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     titles = {_flatten(title_without_year(e.act_name)): e.act_name
@@ -232,7 +232,7 @@ def test_no_alias_is_claimed_by_two_acts():
     """
     import collections
 
-    from nm.legal_brain.manifest_sources import Manifest, _flatten
+    from nm.legal_brain.retrieve.manifest_sources import Manifest, _flatten
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     owners = collections.defaultdict(set)
@@ -259,7 +259,7 @@ def test_an_alias_that_contains_another_is_still_distinguished():
     """
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     after = date(2025, 3, 1)
@@ -290,7 +290,7 @@ def test_an_alias_is_read_only_after_a_provision_reference():
     """
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     on = date(2023, 6, 1)
@@ -319,7 +319,7 @@ def test_a_full_title_still_outranks_every_alias():
     """
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     both = m.resolve(
@@ -337,7 +337,7 @@ def test_no_keyword_is_claimed_by_two_acts():
     depend on iteration order, which is a coin toss wearing a score."""
     import collections
 
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     owners = collections.defaultdict(list)
@@ -353,7 +353,7 @@ def test_an_inferred_act_names_what_else_it_could_have_been():
     matters more than the guess."""
     from datetime import date
 
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     r = m.resolve("he was dispossessed and the claim may be time-barred",
@@ -381,7 +381,7 @@ def test_two_acts_may_share_a_title_only_if_their_windows_do_not_overlap():
     The same reasoning already carries the IPC/BNS and CrPC/BNSS pairs. This
     makes it a checked property instead of an assumption.
     """
-    from nm.legal_brain.manifest_sources import Manifest, title_without_year
+    from nm.legal_brain.retrieve.manifest_sources import Manifest, title_without_year
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     by_title: dict[str, list] = {}
@@ -416,7 +416,7 @@ def test_a_superseded_act_is_declared_rather_than_dropped():
     force Act must surface as "that Act existed, on a different date" rather
     than as a flat absence.
     """
-    from nm.legal_brain.manifest_sources import ActBasis, Manifest
+    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
 

@@ -30,9 +30,9 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.evidence_port import SourceDocument
-from nm.legal_brain.search_authority import AuthorityIndexSearch
-from nm.legal_brain.search_port import CaseExpansion, Coverage
+from nm.legal_brain.retrieve.evidence_port import SourceDocument
+from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.legal_brain.retrieve.search_port import CaseExpansion, Coverage
 
 pytestmark = pytest.mark.class_a
 

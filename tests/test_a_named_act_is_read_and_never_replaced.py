@@ -39,9 +39,9 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import Coverage, EvidenceNeed, EvidenceResult
-from nm.legal_brain.manifest_sources import (
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed, EvidenceResult
+from nm.legal_brain.retrieve.manifest_sources import (
     ActBasis,
     Manifest,
     ManifestEntry,

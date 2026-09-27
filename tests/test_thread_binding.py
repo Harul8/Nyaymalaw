@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.threading import BindState, bind, identifiers_in
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.understand.threading import BindState, bind, identifiers_in
 from nm.shared.traceability_contracts import refuses
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Role, Thread
 from tests.test_turn_contract import build
@@ -277,7 +277,7 @@ def test_a_second_dispute_does_not_inherit_the_first_thread_s_posture(tmp_path):
     The golden set calls multi-thread files THE NORMAL CASE (GS-08, GS-09,
     GS-10, GS-22), and none of them could pass.
     """
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

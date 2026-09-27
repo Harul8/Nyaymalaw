@@ -8,20 +8,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_finalization import SavedCheckReader
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument, SourceKind
-from nm.legal_brain.interaction_review import (
+from nm.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument, SourceKind
+from nm.legal_brain.verify.interaction_review import (
     COMMUNICATION_REVIEW_SCHEMA,
     CRITERIA,
     InteractionReviewService,
 )
-from nm.legal_brain.interaction_subject import InteractionSubjectOwner
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode, StepKind
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tool_sources import capture_document, source_envelope
-from nm.legal_brain.tools import (
+from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.retrieve.tool_sources import capture_document, source_envelope
+from nm.legal_brain.orchestrate.tools import (
     Boundary,
     OfferRole,
     RegisteredTool,
@@ -423,7 +423,7 @@ def test_changed_incomplete_or_downgraded_checker_identity_remains_unassessed(
 
 
 def test_actual_admitted_document_words_are_checked_without_law_or_fact_promotion(tmp_path):
-    from nm.legal_brain.matter_support import REFERENCE_KEYS, captured_documents
+    from nm.legal_brain.reason.matter_support import REFERENCE_KEYS, captured_documents
     from tests.test_document_words_reach_review_without_becoming_facts_or_law import (
         _case as document_case,
     )

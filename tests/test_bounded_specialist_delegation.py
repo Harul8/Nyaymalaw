@@ -24,8 +24,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.delegation import Ledger, accept, admit, whole_task_clean
-from nm.legal_brain.delegation_contracts import (
+from nm.legal_brain.orchestrate.delegation import Ledger, accept, admit, whole_task_clean
+from nm.legal_brain.orchestrate.delegation_contracts import (
     Finding,
     Mandate,
     MandateDelta,

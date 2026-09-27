@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from nm.advise.turn_receipt_contracts import release_index
 from nm.close import retention as _retention
-from nm.legal_brain import briefing as _briefing
+from nm.legal_brain.understand import briefing as _briefing
 from nm.shared.clock_contracts import today as forum_today
 from nm.shared.traceability_contracts import implements
 from nm.work_the_file.matter_contracts import Matter, Role
@@ -599,7 +599,7 @@ def premises_projection(matter: Matter) -> dict:
     thread's own premises -- which is the cover and the register disagreeing
     about the law, and it must be seen.
     """
-    from nm.legal_brain.premise import Premises
+    from nm.legal_brain.reason.premise import Premises
 
     threads = []
     any_conditional = False

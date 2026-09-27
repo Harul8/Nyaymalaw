@@ -50,7 +50,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.turn import TurnInput, TurnRefused
+from nm.legal_brain.orchestrate.turn import TurnInput, TurnRefused
 from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_turn_contract import _model_config, build
 
@@ -188,7 +188,7 @@ def test_the_derived_population_is_drawn_from_the_write_back():
     import ast
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     tree = ast.parse(inspect.getsource(TurnEngine._run).lstrip())
     written = set()

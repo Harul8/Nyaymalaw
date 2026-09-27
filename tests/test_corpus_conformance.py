@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 
 from assurance.gate import layercheck
-from nm.legal_brain import source_registry_sources as source_registry
-from nm.legal_brain.acquisition_sources import ReconciliationState, reconcile_acquisition
-from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
-from nm.legal_brain.manifest_sources import (
+from nm.legal_brain.retrieve import source_registry_sources as source_registry
+from nm.legal_brain.retrieve.acquisition_sources import ReconciliationState, reconcile_acquisition
+from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed
+from nm.legal_brain.retrieve.manifest_sources import (
     CorpusDependency,
     CorpusPublicationRefused,
     get_corpus,
@@ -20,8 +20,8 @@ from nm.legal_brain.manifest_sources import (
     rollback_corpus,
     withdraw_corpus,
 )
-from nm.legal_brain.search_authority import AuthorityIndexSearch
-from nm.legal_brain.source_registry_sources import RightsState
+from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.legal_brain.retrieve.source_registry_sources import RightsState
 from pipeline import fetch_judgments, scrape_judgments
 from tests.source_role_fixtures import role_tree
 from tests.test_acquisition_receipts import _stage

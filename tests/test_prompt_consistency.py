@@ -16,11 +16,12 @@ from types import SimpleNamespace
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain import adversarial, posture, theory
-from nm.legal_brain.conversation import PRINCIPLES, guided
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.register_contracts import PEER
-from nm.legal_brain.turn import _with_screens
+from nm.legal_brain.common.conversation import PRINCIPLES, guided
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.communicate.register_contracts import PEER
+from nm.legal_brain.orchestrate.turn import _with_screens
+from nm.legal_brain.reason import adversarial, theory
+from nm.legal_brain.understand import posture
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_port import Prompt
 from nm.work_the_file import chronology
@@ -136,7 +137,7 @@ def test_composed_systems_have_one_policy_owner_and_no_known_conflicting_rules()
 
 
 def test_dispatched_interaction_checker_has_exact_data_and_current_owned_guidance(tmp_path):
-    from nm.legal_brain.interaction_review import COMMUNICATION_REVIEW_SCHEMA, CRITERIA
+    from nm.legal_brain.verify.interaction_review import COMMUNICATION_REVIEW_SCHEMA, CRITERIA
     from tests.test_interaction_words_require_an_independent_exact_review import _case
 
     _, _, outcome, judge, service = _case(tmp_path, text="Understood.", message="Thank you.")
@@ -177,7 +178,7 @@ def test_dispatched_interaction_checker_has_exact_data_and_current_owned_guidanc
 
 def _controlled_prompt_problems(prompt, messages, *, expected_user, file_words):
     """Review actual dispatched author bytes, not an artificially guided copy."""
-    from nm.legal_brain.brain_context import UncertaintyDimension
+    from nm.legal_brain.understand.brain_context import UncertaintyDimension
 
     errors = []
     system = prompt.system or ""
@@ -217,8 +218,8 @@ def _controlled_prompt_problems(prompt, messages, *, expected_user, file_words):
 
 def _research_prompt_problems(prompt, definitions, messages, *, kind, question, issues):
     """Review the real child prefix/task boundaries, not another assembled prompt."""
-    from nm.legal_brain.brain_context import UncertaintyDimension
-    from nm.legal_brain.opposition_work import PASSES
+    from nm.legal_brain.reason.opposition_work import PASSES
+    from nm.legal_brain.understand.brain_context import UncertaintyDimension
 
     errors = []
     if prompt.system.count(PRINCIPLES) != 1 or prompt.system.count(PEER) != 1:
@@ -261,7 +262,7 @@ def _research_prompt_problems(prompt, definitions, messages, *, kind, question, 
     "research", "oppose", "oppose_early", "oppose_full", "oppose_matter"])
 def test_actual_research_and_opposition_dispatch_has_reviewed_reasoning_and_communication(kind,
                                                                                        tmp_path):
-    from nm.legal_brain.loop_contracts import StopReason
+    from nm.legal_brain.orchestrate.loop_contracts import StopReason
     from nm.shared.model_port import ToolCall
     from tests.test_nested_research_has_one_budget_and_one_writer import finish as generic_finish
     from tests.test_opposition_work_is_three_distinct_private_source_tasks import (
@@ -393,7 +394,7 @@ def test_controlled_prompt_review_rejects_missing_disciplines_or_file_boundary(t
 
 def _verifier_prompt_problems(prompt, schema, *, expected_payload):
     """The independent critic has a separate data/review task, not a chat task."""
-    from nm.legal_brain.verifier import VERIFY_SYSTEM
+    from nm.legal_brain.verify.verifier import VERIFY_SYSTEM
 
     errors = []
     if prompt.system != VERIFY_SYSTEM or prompt.operation != "independent_claim_verification":
@@ -424,7 +425,7 @@ def _verifier_prompt_problems(prompt, schema, *, expected_payload):
 
 
 def _actual_verifier_prompt():
-    from nm.legal_brain.verifier import EvidenceSpan, IndependentVerifier
+    from nm.legal_brain.verify.verifier import EvidenceSpan, IndependentVerifier
     from tests.test_independent_claim_verifier import Judge, finding, package
 
     contrary = finding(
@@ -457,10 +458,10 @@ def _actual_verifier_prompt():
 
 
 def test_private_verifier_prompt_carries_evidence_reason_and_unknown_without_author_instructions():
-    from nm.legal_brain.register_contracts import STRUCTURED_ONLY
+    from nm.legal_brain.communicate.register_contracts import STRUCTURED_ONLY
 
     assert "verifier:verification_prompt" in SITES
-    assert "nm/legal_brain/verifier.py::VERIFY_SYSTEM" in STRUCTURED_ONLY
+    assert "nm/legal_brain/verify/verifier.py::VERIFY_SYSTEM" in STRUCTURED_ONLY
     prompt, schema, payload = _actual_verifier_prompt()
     assert _verifier_prompt_problems(prompt, schema, expected_payload=payload) == []
     for principle in (
@@ -845,7 +846,7 @@ def _descriptions(value):
 
 
 def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
-    from nm.legal_brain import accrual, factors, issues, proof_read
+    from nm.legal_brain.reason import accrual, factors, issues, proof_read
     from nm.shared.model_port import on_the_wire
     from nm.work_the_file import evidence_item
 
@@ -903,7 +904,8 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
     assert ("interaction_review", "COMMUNICATION_PREMISE_REVIEW_SCHEMA") in schemas
     assert ("verifier", "VERIFICATION_SCHEMA") in schemas
     assert ("requirements", "SCHEMA") in schemas
-    from nm.legal_brain import dispute, requirements
+    from nm.legal_brain.reason import requirements
+    from nm.legal_brain.understand import dispute
 
     assert dispute.DISPUTE_SCHEMA["properties"]["requirement_answers"] is requirements.ANSWER_ROWS
     assert ("dispute", "DISPUTE_SCHEMA") in schemas
@@ -928,7 +930,7 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
 
 @pytest.mark.parametrize("value", [None, "false", 0, {}])
 def test_unknown_writing_never_becomes_an_oral_admission_or_a_legal_negative(value):
-    from nm.legal_brain import factors
+    from nm.legal_brain.reason import factors
     from tests.test_factors import S18
 
     statement = "The other party admitted the outstanding amount."
@@ -969,7 +971,7 @@ def test_explicit_filing_progresses_but_inferred_progress_and_side_reversal_do_n
 def test_advice_repair_must_be_complete_before_it_can_be_used(tmp_path, monkeypatch, completion):
     from dataclasses import replace
 
-    from nm.legal_brain.consistency import Claim
+    from nm.legal_brain.verify.consistency import Claim
     from nm.shared.budget_contracts import Completion
     from nm.shared.model_port import Tier
     from tests.test_adversarial_on_a_served_turn import build
@@ -1039,7 +1041,7 @@ def test_no_proceeding_does_not_force_a_filed_role_for_source_only_explanation(
 
 
 def test_an_advisory_issue_can_be_admitted_without_a_court_or_an_opponent():
-    from nm.legal_brain import issues
+    from nm.legal_brain.reason import issues
 
     statement = "I need advice on the proposed agreement before execution."
     result = issues.read(

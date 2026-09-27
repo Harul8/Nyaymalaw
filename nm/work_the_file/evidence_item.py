@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum, nonmember
 
-from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.shared.spoken_contracts import Spoken
 from nm.shared.text_contracts import blank, refuses_blank_text
 from nm.shared.traceability_contracts import implements

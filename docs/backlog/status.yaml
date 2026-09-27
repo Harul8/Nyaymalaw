@@ -4793,20 +4793,20 @@ events:
   to: in_progress
   reason: a party named in a brief is screened only from the next turn, and the emergency
     route has no caller
-  evidence: nm/legal_brain/turn.py:1668, nm/legal_brain/turn.py:1451
+  evidence: nm/legal_brain/orchestrate/turn.py:1668, nm/legal_brain/orchestrate/turn.py:1451
 - item: BK-35
   at: '2026-09-09'
   from: done
   to: in_progress
   reason: the period runs from the first dated fact when only one exists, whatever the curated
     trigger requires
-  evidence: nm/legal_brain/turn.py:2773
+  evidence: nm/legal_brain/orchestrate/turn.py:2773
 - item: BK-36
   at: '2026-09-09'
   from: done
   to: in_progress
   reason: a lost response to an opening turn duplicates the brief into a second matter
-  evidence: nm/legal_brain/turn.py:1716, nm/app/app.js:836
+  evidence: nm/legal_brain/orchestrate/turn.py:1716, nm/app/app.js:836
 - item: BK-40
   at: '2026-09-09'
   from: done

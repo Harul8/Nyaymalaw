@@ -2,9 +2,9 @@
 
 import pytest
 
-from nm.legal_brain import dispute
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.understand import dispute
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_matter_memory import _engine, _Recorder
@@ -54,7 +54,7 @@ def test_recovered_spans_keep_the_original_turn_not_the_clarification(tmp_path):
 
 
 def test_opponent_correction_requires_current_exact_words_not_old_file():
-    from nm.legal_brain import posture
+    from nm.legal_brain.understand import posture
     text = 'I act for A. Our ownership opponent is B, not C; please correct C.'
     data = dict(states_client=True, role='prospective_claimant', role_basis='stated',
                 client_described_as='A', opponent='B', quoted=text,
@@ -89,7 +89,7 @@ def payload(*spans):
 def test_existing_inventory_repair_has_a_fixed_target_population():
     from jsonschema import ValidationError, validate
 
-    from nm.legal_brain.conversation import PRINCIPLES, guided
+    from nm.legal_brain.common.conversation import PRINCIPLES, guided
     from nm.work_the_file.matter_contracts import Thread
 
     a, b = Thread.create(label='First'), Thread.create(label='Second')
@@ -180,7 +180,8 @@ def test_nullable_schema_types_do_not_crash_a_valid_factor_read(value):
 def test_live_research_and_checklist_schemas_restrict_sources_to_supplied_material():
     from jsonschema import ValidationError, validate
 
-    from nm.legal_brain import investigation, requirements
+    from nm.legal_brain.retrieve import investigation
+    from nm.legal_brain.reason import requirements
 
     rows = investigation.catalogue('Assess the supplied record.', 'A payment is disputed.', ())
     schema = investigation.schema_for(rows, 'snapshot')
@@ -361,7 +362,7 @@ def test_fixed_inventory_metadata_never_reaches_the_provider():
 
 
 def test_rent_route_is_specific_and_all_causes_have_definitions():
-    from nm.legal_brain.resolution_sources import article_for
+    from nm.legal_brain.retrieve.resolution_sources import article_for
     from nm.work_the_file.matter_contracts import CAUSE_MEANS, CauseOfAction
 
     assert set(CAUSE_MEANS) == set(CauseOfAction) - {CauseOfAction.NOT_ESTABLISHED}
@@ -373,7 +374,7 @@ def test_rent_route_is_specific_and_all_causes_have_definitions():
 
 
 def test_ambiguous_new_work_asks_about_proposals_not_a_nonexistent_board_control():
-    from nm.legal_brain.threading import bind
+    from nm.legal_brain.understand.threading import bind
     from nm.work_the_file.matter_contracts import Fact, Provenance, Thread
     m = Matter.create(advocate_id='adv', title='File').with_thread(Thread.create(label='Existing'))
     message = 'Additional claim A. Additional claim B.'
@@ -388,7 +389,7 @@ def test_ambiguous_new_work_asks_about_proposals_not_a_nonexistent_board_control
 
 
 def test_cross_dispute_claims_require_attributed_distinct_premises():
-    from nm.legal_brain.adversarial import read_exposures
+    from nm.legal_brain.reason.adversarial import read_exposures
     positions = ({'thread': 'a', 'facts': [{'id': 'f1', 'statement': 'The debt remains due.'}]},
                  {'thread': 'b', 'facts': [
                      {'id': 'f2', 'statement': 'The debt was fully repaid.'}]})
@@ -418,7 +419,7 @@ def test_consistency_refusal_never_republishes_the_rejected_candidate(client, mo
     from dataclasses import replace
 
     from nm.app.api import application
-    from nm.legal_brain.consistency import Verdict
+    from nm.legal_brain.verify.consistency import Verdict
     from tests.test_a_withheld_turn_commits_no_conclusion import BRIEF
 
     engine = application().engine
@@ -446,7 +447,7 @@ def test_consistency_refusal_never_republishes_the_rejected_candidate(client, mo
 
 
 def test_consistency_instructions_preserve_independent_adverse_analysis():
-    from nm.legal_brain.consistency import SYSTEM
+    from nm.legal_brain.verify.consistency import SYSTEM
     assert "not advising the opponent" in SYSTEM
     assert "not merely discussing material that may hurt our client" in SYSTEM
 
@@ -460,8 +461,8 @@ def test_inventory_contract_recognises_reorganisation_without_erasing_history():
 def test_research_selectors_preserve_quoted_unicode_text_and_refuse_cross_source():
     import json
 
-    from nm.legal_brain import investigation
-    from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+    from nm.legal_brain.retrieve import investigation
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
 
     text = 'The witness wrote "payment disputed" — not an admission.'
     searches = []
@@ -488,7 +489,7 @@ def test_research_selectors_preserve_quoted_unicode_text_and_refuse_cross_source
 def test_accrual_receives_undated_exclusions_as_well_as_selectable_dates(tmp_path):
     from datetime import date
 
-    from nm.legal_brain import accrual
+    from nm.legal_brain.reason import accrual
     from nm.work_the_file.matter_contracts import Fact, Provenance
 
     dated = Fact.create(statement='A disputed event.', date=date(2026, 8, 5),

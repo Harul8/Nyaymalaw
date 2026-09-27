@@ -12,9 +12,9 @@ import hashlib
 import json
 from dataclasses import asdict
 
-from nm.legal_brain.loop_contracts import LoopRecord, StepKind
-from nm.legal_brain.tool_offers import OfferRefused, ToolOfferState
-from nm.legal_brain.tools import (
+from nm.legal_brain.orchestrate.loop_contracts import LoopRecord, StepKind
+from nm.legal_brain.orchestrate.tool_offers import OfferRefused, ToolOfferState
+from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Effect,

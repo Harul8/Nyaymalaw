@@ -1,7 +1,7 @@
 """Legal premises are established before the arithmetic, and stated by the advocate.
 BK-65-AC2, BK-35-AC1, BK-35-AC2. P22.
 
-The domain half is `nm/legal_brain/premise.py`: three kinds, four bases, the block on
+The domain half is `nm/legal_brain/reason/premise.py`: three kinds, four bases, the block on
 unestablished and the conditional on inferred. The served half drives the real
 ASGI app: a cause with no curated accrual trigger and two dated events computes
 CONDITIONAL -- a date shown with its alternatives, NOT a deadline on the
@@ -29,7 +29,7 @@ CONDITIONAL_BRIEF = (
 # ================================================= the domain, no server ====
 
 def test_the_three_premises_are_separate_and_none_derivable_from_arithmetic():
-    from nm.legal_brain import premise as pr
+    from nm.legal_brain.reason import premise as pr
 
     good = pr.Premises((
         pr.Premise(pr.Kind.APPLICABLE_LAW, "Article 22", pr.Basis.ATTRIBUTED,
@@ -56,7 +56,7 @@ def test_the_three_premises_are_separate_and_none_derivable_from_arithmetic():
 
 
 def test_an_unestablished_premise_is_named_by_its_kind():
-    from nm.legal_brain import premise as pr
+    from nm.legal_brain.reason import premise as pr
 
     missing = pr.Premises((
         pr.Premise(pr.Kind.ACCRUAL_RULE, "x", pr.Basis.ATTRIBUTED, source="s"),
@@ -67,7 +67,7 @@ def test_an_unestablished_premise_is_named_by_its_kind():
 
 
 def test_a_premise_carries_its_review_state_and_survives_storage():
-    from nm.legal_brain import premise as pr
+    from nm.legal_brain.reason import premise as pr
 
     attributed = pr.Premise(pr.Kind.APPLICABLE_LAW, "Article 22", pr.Basis.ATTRIBUTED,
                            source="act:art22")
@@ -85,7 +85,7 @@ def test_a_premise_carries_its_review_state_and_survives_storage():
 
 
 def test_the_digest_moves_when_a_premise_moves():
-    from nm.legal_brain import premise as pr
+    from nm.legal_brain.reason import premise as pr
 
     a = pr.Premises((pr.Premise(pr.Kind.ACCRUAL_RULE, "from delivery",
                               pr.Basis.ATTRIBUTED, source="s"),))
@@ -99,7 +99,7 @@ def test_the_digest_moves_when_a_premise_moves():
 def test_the_same_dates_expire_differently_under_different_triggers():
     from datetime import date
 
-    from nm.legal_brain.limitation import Period, expiry_from
+    from nm.legal_brain.procedure.limitation import Period, expiry_from
 
     p = Period(years=3, months=0, days=0, read_from="three years")
     assert expiry_from(date(2016, 2, 3), p) == date(2019, 2, 3)

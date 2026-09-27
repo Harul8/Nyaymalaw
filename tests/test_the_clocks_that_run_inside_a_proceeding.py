@@ -26,9 +26,9 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain import procedural_period_sources as curated
-from nm.legal_brain.procedural_period_port import Bindingness, Extension, Track
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.procedure import procedural_period_sources as curated
+from nm.legal_brain.procedure.procedural_period_port import Bindingness, Extension, Track
 from nm.work_the_file import deadlines
 from nm.work_the_file.matter_contracts import Role
 from tests.test_turn_contract import build

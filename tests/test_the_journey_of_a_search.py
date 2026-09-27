@@ -44,7 +44,7 @@ BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
 @pytest.fixture(scope="module")
 def journey(tmp_path_factory):
     from assurance.journeys.served import PASSWORD, running
-    from nm.legal_brain.search_authority import AuthorityIndexSearch
+    from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
     from tests import synthetic_index as syn
 
     root = tmp_path_factory.mktemp("journey-search")

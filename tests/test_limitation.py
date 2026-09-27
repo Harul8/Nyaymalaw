@@ -15,7 +15,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.limitation import (
+from nm.legal_brain.procedure.limitation import (
     Applied,
     Factor,
     FactorKind,

@@ -48,7 +48,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.shared.text_contracts import fold, refuses_blank_text, snippet
 from nm.work_the_file.date_resolution import resolve as resolve_calendar_expression
 from nm.work_the_file.matter_contracts import Certainty, Fact, FactId

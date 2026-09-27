@@ -15,7 +15,9 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import Element, ElementKind, Route, Signal
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnRefused, classify_route
+from nm.legal_brain.retrieve.evidence_port import (
     Binding,
     Coverage,
     EvidencePort,
@@ -25,10 +27,8 @@ from nm.legal_brain.evidence_port import (
     SourceKind,
     Treatment,
 )
-from nm.legal_brain.posture import interpret
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.resolution_sources import accrual_trigger_for as corpus_trigger
-from nm.legal_brain.turn import TurnEngine, TurnInput, TurnRefused, classify_route
+from nm.legal_brain.retrieve.resolution_sources import accrual_trigger_for as corpus_trigger
+from nm.legal_brain.understand.posture import interpret
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
@@ -199,7 +199,7 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # `test_an_unmeasured_installation_says_so_rather_than_implying_coverage`
     # measure a measured one, which is the test passing on the opposite of
     # its own subject.
-    from nm.legal_brain.coverage_sources import CoverageProfile
+    from nm.legal_brain.retrieve.coverage_sources import CoverageProfile
     profile = (CoverageProfile.load(ROOT / "assurance" / "specification" / "coverage.yaml")
                if coverage else None)
     # LB-121's CURATED PRE-INSTITUTION TABLE, wired because the composition
@@ -207,12 +207,12 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # tests a deployment that does not ship (CLAUDE.md section 8), and the
     # `statutory_notice` row is exactly the kind of difference that would hide
     # here and appear on a served turn.
-    from nm.legal_brain.filing_requirement_adapter import (
+    from nm.legal_brain.procedure.filing_requirement_adapter import (
         CuratedFilingRequirements,
     )
-    from nm.legal_brain.institution_adapter import CuratedPreInstitution
-    from nm.legal_brain.interim_relief_adapter import CuratedInterimRelief
-    from nm.legal_brain.procedural_period_adapter import (
+    from nm.legal_brain.procedure.institution_adapter import CuratedPreInstitution
+    from nm.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
+    from nm.legal_brain.procedure.procedural_period_adapter import (
         CuratedProceduralPeriods,
     )
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
@@ -872,7 +872,7 @@ def test_every_answer_in_the_run_carries_the_trailing_disclosures(tmp_path):
     """
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     #: Answer constructions that legitimately carry no trailing rows,
     #: by the text that identifies them, with the reason.
@@ -929,7 +929,7 @@ def test_the_admit_decision_goes_through_the_module(tmp_path):
     and the one that matters would be the hard-coded one."""
     import inspect
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._run_screens)
     assert "may_admit_substance" in body

@@ -22,7 +22,7 @@ Raising every ceiling moves the cliff without removing it and leaves sixteen
 call sites each choosing a number. CLAUDE.md §4's question is not *where is
 the other copy* but *what makes a second copy impossible*, and the answer is
 that a call site cannot name a ceiling at all: `TurnEngine._read` takes the
-read's KEY, and `nm/legal_brain/ceiling.py` decides.
+read's KEY, and `nm/legal_brain/common/ceiling.py` decides.
 
 WHAT THIS FILE REFUSES
 ------------------------
@@ -38,8 +38,8 @@ import pathlib
 import pytest
 
 from assurance.common.module_roles import classify_sources, sources_for_roles
-from nm.legal_brain import ceiling
-from nm.legal_brain import reads_contracts as reads
+from nm.legal_brain.common import ceiling
+from nm.legal_brain.common import reads_contracts as reads
 from tests.source_role_fixtures import role_tree
 
 pytestmark = pytest.mark.class_a
@@ -88,7 +88,7 @@ def test_no_structured_read_names_its_own_ceiling():
         "quotes has an output the size of its input, and a constant there "
         "fails by TRUNCATION -- a parse error, so the read is lost rather "
         "than short. Call `TurnEngine._read(prompt, schema, key)` and let "
-        "`nm/legal_brain/ceiling.py` decide:\n  " + "\n  ".join(offenders))
+        "`nm/legal_brain/common/ceiling.py` decide:\n  " + "\n  ".join(offenders))
 
 
 def test_every_read_declares_whether_it_echoes():

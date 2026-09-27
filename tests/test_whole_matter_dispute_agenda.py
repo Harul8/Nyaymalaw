@@ -6,11 +6,11 @@ from dataclasses import replace
 import pytest
 
 from nm.advise.answer_contracts import Element, ElementKind
-from nm.legal_brain import briefing, posture
-from nm.legal_brain.dispute import Described, interpret
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.threading import _with_identifiers, bind
-from nm.legal_brain.turn import ScreenResult, TurnInput, _with_screens
+from nm.legal_brain.understand import briefing, posture
+from nm.legal_brain.understand.dispute import Described, interpret
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.understand.threading import _with_identifiers, bind
+from nm.legal_brain.orchestrate.turn import ScreenResult, TurnInput, _with_screens
 from nm.open_matter.screens import Screen, ScreenKind, ScreenState
 from nm.shared.model_scripted import SCRIPTED_READS
 from nm.work_the_file import dispute_agenda
@@ -104,7 +104,7 @@ def test_a_retrieved_trigger_cannot_certify_a_model_selected_event(tmp_path, eve
     from datetime import date
     from types import SimpleNamespace
 
-    from nm.legal_brain import premise
+    from nm.legal_brain.reason import premise
 
     engine, _ = _engine(tmp_path, _Recorder())
     dated = [replace(fact(f"Recorded event {i}"), date=date(2020 + i, 2, 3))

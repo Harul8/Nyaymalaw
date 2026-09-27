@@ -22,8 +22,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain import adversarial as adv
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.reason import adversarial as adv
 from tests.test_turn_contract import build, confirmed
 
 pytestmark = pytest.mark.class_a

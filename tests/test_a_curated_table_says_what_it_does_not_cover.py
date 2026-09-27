@@ -10,7 +10,7 @@ examined and found to require nothing:
 * the procedural-period table, asked about a known role with no row, listed
   EVERY period as undecided, as though the role were unknown.
 
-Four tables answered that one question four ways. `nm.legal_brain.curation_contracts` is the
+Four tables answered that one question four ways. `nm.legal_brain.common.curation_contracts` is the
 one answer: every table keyed on a closed vocabulary says CURATED, WITHHELD,
 NOT_CURATED or KEY_NOT_ESTABLISHED for every key.
 
@@ -38,14 +38,14 @@ import pytest
 
 from assurance.common.module_roles import load_module_roles, source_module
 from assurance.gate.layercheck import imported_names
-from nm.legal_brain import institution_sources as institution
-from nm.legal_brain import procedural_period_sources as procedural_period
-from nm.legal_brain import thresholds
-from nm.legal_brain.curation_contracts import Curation
-from nm.legal_brain.institution_port import Against
-from nm.legal_brain.procedural_period_adapter import CuratedProceduralPeriods
-from nm.legal_brain.procedural_period_port import Track
-from nm.legal_brain.turn import TurnEngine
+from nm.legal_brain.procedure import institution_sources as institution
+from nm.legal_brain.procedure import procedural_period_sources as procedural_period
+from nm.legal_brain.reason import thresholds
+from nm.legal_brain.common.curation_contracts import Curation
+from nm.legal_brain.procedure.institution_port import Against
+from nm.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
+from nm.legal_brain.procedure.procedural_period_port import Track
+from nm.legal_brain.orchestrate.turn import TurnEngine
 from nm.work_the_file.matter_contracts import CauseOfAction, Role
 
 pytestmark = pytest.mark.class_a

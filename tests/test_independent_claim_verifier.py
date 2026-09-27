@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.evidence_port import (
+from nm.legal_brain.retrieve.evidence_port import (
     Binding,
     Finding,
     ParaKind,
@@ -16,7 +16,7 @@ from nm.legal_brain.evidence_port import (
     Treatment,
     TreatmentState,
 )
-from nm.legal_brain.verifier import (
+from nm.legal_brain.verify.verifier import (
     EvidencePackage,
     EvidenceSpan,
     IndependentVerifier,

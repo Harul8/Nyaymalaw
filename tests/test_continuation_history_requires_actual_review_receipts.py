@@ -5,18 +5,18 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.checked_input_continuation import (
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.orchestrate.checked_input_continuation import (
     CheckedInputContinuation,
     CheckedInputContinuationService,
     CheckedInputReference,
 )
-from nm.legal_brain.evaluation_history import (
+from nm.legal_brain.evaluate.evaluation_history import (
     _feedback_parent,
     record_repaired_evaluation,
     resolve_preview_parent,
 )
-from nm.legal_brain.loop_contracts import StepKind
+from nm.legal_brain.orchestrate.loop_contracts import StepKind
 from tests.test_checked_inputs_continue_in_the_actual_evaluation import _actual, _evaluate
 from tests.test_reviewed_private_preview_checks_saved_words import changed_payload, replace_record
 
@@ -188,7 +188,7 @@ def test_history_requires_real_positive_judge_response_not_a_saved_pass(tmp_path
 
 
 def test_actual_interest_history_uses_its_canonical_source_selection_owner(tmp_path):
-    from nm.legal_brain.loop_contracts import LoopLimits
+    from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
     from nm.shared.model_port import ToolCall
     from tests.test_interest_is_exact_source_owned_and_independently_selected import (
         _actual as interest,
@@ -229,7 +229,7 @@ def test_actual_interest_history_uses_its_canonical_source_selection_owner(tmp_p
 def test_actual_checked_working_package_cannot_masquerade_as_fee_input_in_history(tmp_path):
     from types import SimpleNamespace
 
-    from nm.legal_brain.working_record import WorkingRecordReviewService
+    from nm.legal_brain.reason.working_record import WorkingRecordReviewService
     from nm.shared.model_port import ToolCall
     from tests.test_early_independent_check_uses_the_actual_open_parent import (
         LIMITS,

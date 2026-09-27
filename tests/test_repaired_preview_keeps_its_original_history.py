@@ -6,11 +6,11 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluation_history import resolve_preview_parent
-from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord
-from nm.legal_brain.preview_display import displayed_questions, interaction_text
-from nm.legal_brain.verifier import IndependentVerifier
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.evaluate.evaluation_history import resolve_preview_parent
+from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord
+from nm.legal_brain.communicate.preview_display import displayed_questions, interaction_text
+from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from nm.shared.store_loop_log import MatterLoopLog

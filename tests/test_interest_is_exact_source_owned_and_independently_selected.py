@@ -9,9 +9,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.interest_calculation_contracts import (
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.procedure.interest_calculation_contracts import (
     InterestInputs,
     InterestNotAssessed,
     InterestPayment,
@@ -19,9 +19,9 @@ from nm.legal_brain.interest_calculation_contracts import (
     compute_interest,
     decimal_literal,
 )
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode, StepKind
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.reviewed_interest_selection import (
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.procedure.reviewed_interest_selection import (
     COMPUTE,
     PROPOSE,
     READ,
@@ -29,10 +29,10 @@ from nm.legal_brain.reviewed_interest_selection import (
     InterestSelectionReviewService,
     interest_tools,
 )
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tools import Boundary, foundation_tools
-from nm.legal_brain.verifier import IndependentVerifier
-from nm.legal_brain.working_record import WorkingRecordOwner
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.reason.working_record import WorkingRecordOwner
 from nm.shared.budget_contracts import Budget
 from nm.work_the_file.event_observation_contracts import EventObservation
 from nm.work_the_file.matter_contracts import Thread
@@ -175,7 +175,7 @@ def _actual(
         cost_ceiling=lambda *_: 0.03,
     )
     reviews = InterestSelectionReviewService(reviewer=reviewer, owner=owner)
-    from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
 
     evidence = Mock()
     evidence.read_provision.return_value = EvidenceResult(
@@ -470,8 +470,8 @@ def test_interest_review_retains_prior_actual_selection_spend_and_replays_it_onc
 
 
 def test_actual_contract_extract_supplies_interest_without_a_fake_legal_finding(tmp_path):
-    from nm.legal_brain.matter_support import REFERENCE_KEYS
-    from nm.legal_brain.tool_catalogue import catalogue_tools
+    from nm.legal_brain.reason.matter_support import REFERENCE_KEYS
+    from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
     from nm.open_matter.matter_documents_port import DocumentRefused
     from nm.shared.model_port import ToolCall
     from nm.shared.store_loop_log import MatterLoopLog

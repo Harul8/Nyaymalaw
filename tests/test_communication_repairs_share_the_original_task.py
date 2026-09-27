@@ -11,9 +11,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_evaluation import EvaluationService
-from nm.legal_brain.interaction_review import CRITERIA
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind
+from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
+from nm.legal_brain.verify.interaction_review import CRITERIA
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall, Usage
 from nm.work_the_file.original_instruction import read_original_instruction

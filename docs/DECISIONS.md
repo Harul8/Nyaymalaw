@@ -160,7 +160,7 @@ one. BK-31 was `blocked` on this and it was blocking BK-34, a P0.
 **Decided.** The roster. Enrolment now requires an operator-issued invitation
 for one named advocate and workspace.
 
-**What settled it was not the dates.** `nm/legal_brain/turn.py:1575` relaxes scope and
+**What settled it was not the dates.** `nm/legal_brain/orchestrate/turn.py:1575` relaxes scope and
 capacity release to ONE PERSON, and says why: *"the deployment is a controlled
 roster of practising advocates and the advocate IS the firm, so requiring a
 second person would stop every matter at intake in a solo practice."* That
@@ -896,7 +896,7 @@ one of them retrieves successfully** — the defect is never that the lookup
 fails, it is that it succeeds and the answer is wrong in a way nothing
 downstream can see.
 
-`nm/legal_brain/provenance_sources.py` refuses reliance and **names the precise basis**,
+`nm/legal_brain/retrieve/provenance_sources.py` refuses reliance and **names the precise basis**,
 because the criterion's expected failure is that use is withheld with the exact
 unresolved reason and the four causes have four different remedies. Every field
 is required and may be explicitly unknown: `effective_from=None` is a record

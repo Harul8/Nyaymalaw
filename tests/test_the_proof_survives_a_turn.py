@@ -39,13 +39,13 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain import proof_contracts as domain_proof
-from nm.legal_brain import proof_read
-from nm.legal_brain.elements_adapter import CuratedElements
-from nm.legal_brain.elements_sources import elements_for
-from nm.legal_brain.proof_contracts import Burden, ProofPosition, ProofStatus, Standard
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.turn import TurnEngine, TurnInput, TurnMetrics
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnMetrics
+from nm.legal_brain.reason import proof_contracts as domain_proof
+from nm.legal_brain.reason import proof_read
+from nm.legal_brain.reason.elements_adapter import CuratedElements
+from nm.legal_brain.reason.elements_sources import elements_for
+from nm.legal_brain.reason.proof_contracts import Burden, ProofPosition, ProofStatus, Standard
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore
@@ -177,7 +177,7 @@ def test_a_position_that_is_not_held_has_no_material_to_withdraw():
 # =============================== the store ==================================
 
 def test_positions_come_back_from_the_store_typed(tmp_path):
-    """`Thread.proof` is untyped because `nm.legal_brain.proof_contracts` would be a cycle,
+    """`Thread.proof` is untyped because `nm.legal_brain.reason.proof_contracts` would be a cycle,
     so the store returns plain dicts. Left implicit, the next turn would merge
     dicts against positions, match nothing, and every element would look
     freshly unassessed every turn — this defect arriving through its repair,

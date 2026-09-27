@@ -21,7 +21,7 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from nm.legal_brain.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING
+from nm.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_budget import estimate_tokens, guard_budget, guard_tool_budget
 from nm.shared.model_config import CONTEXT_BUDGET, ModelConfig, TierConfig
@@ -300,7 +300,7 @@ def scripted_role(user: str) -> str:
 #: A phrase list is fine HERE and is not fine in the product, for exactly the
 #: reason `scripted_posture` gives about its own regex: this stands in for a
 #: model on a deterministic path, and the product's own answer is a model read
-#: with guards (`nm/legal_brain/cause.py`) precisely because no list can be complete.
+#: with guards (`nm/legal_brain/reason/cause.py`) precisely because no list can be complete.
 _SCRIPTED_CAUSE = (
     ("goods were supplied", "goods_sold_price"),
     ("goods sold", "goods_sold_price"),
@@ -321,7 +321,7 @@ def scripted_cause(user: str) -> str:
     """A deterministic stand-in for the model's cause read.
 
     THE QUOTED SPAN IS THE ADVOCATE'S OWN WORDS, taken from `user`, because
-    `nm.legal_brain.cause.interpret` refuses a span that is not — and a double that
+    `nm.legal_brain.reason.cause.interpret` refuses a span that is not — and a double that
     could not satisfy the product's own guard would prove the guard untested
     rather than satisfied.
     """
@@ -1332,7 +1332,7 @@ class ScriptedModelAdapter:
                              for span in [row['quoted'], *row['additional_quotes']])]
                 for key, unit in units.items()}
             # A SHARED INSTRUCTION GOES TO EVERY DISPUTE, which is what the read
-            # is told (`nm.legal_brain.dispute`: "allocating shared instructions to
+            # is told (`nm.legal_brain.understand.dispute`: "allocating shared instructions to
             # every affected entry"). On an enumerated brief the unit that no
             # dispute's own span covers -- "We act for the plaintiff." ahead of
             # "First, ... Second, ..." -- is that instruction. Not a guessed

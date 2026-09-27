@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain import research as rs
-from nm.legal_brain.evidence_port import Binding, Coverage
+from nm.legal_brain.retrieve import research as rs
+from nm.legal_brain.retrieve.evidence_port import Binding, Coverage
 
 pytestmark = pytest.mark.class_a
 

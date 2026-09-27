@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.issue_contracts import (
+from nm.legal_brain.reason.issue_contracts import (
     Disposition,
     DispositionState,
     Effect,

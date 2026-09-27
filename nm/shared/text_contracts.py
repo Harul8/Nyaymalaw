@@ -75,10 +75,10 @@ def fold(text: str | None) -> str:
     MEASURED, 6 September 2026, on the six definitions then in `nm/`:
 
         nm/work_the_file/chronology.py   words only  ── the same three characters
-        nm/legal_brain/dispute.py      words only
-        nm/legal_brain/posture.py      words only
-        nm/legal_brain/grounding.py    words only, plus the case-name `vs`/`v` pivot
-        nm/legal_brain/issue_contracts.py      WHITESPACE COLLAPSE ONLY — punctuation kept
+        nm/legal_brain/understand/dispute.py      words only
+        nm/legal_brain/understand/posture.py      words only
+        nm/legal_brain/verify/grounding.py    words only, plus the case-name `vs`/`v` pivot
+        nm/legal_brain/reason/issue_contracts.py      WHITESPACE COLLAPSE ONLY — punctuation kept
         nm/advise/decision_contracts.py   WHITESPACE COLLAPSE ONLY
 
     So `chronology.conflicts` read "the agreement is dated 15-4-1984" and
@@ -95,7 +95,7 @@ def fold(text: str | None) -> str:
     sentences say the same thing.
 
     A caller needing MORE normalisation than this composes on top and says
-    why — `nm.legal_brain.grounding` folds `vs` and `versus` to `v` because a case
+    why — `nm.legal_brain.verify.grounding` folds `vs` and `versus` to `v` because a case
     name written both ways is one case, and that is a fact about citations
     rather than about text. What no caller may do is define its own base.
 
@@ -119,12 +119,12 @@ def fold_spacing(text: str | None) -> str:
     words; one differing in punctuation or case is not. Fold a quote with the
     word-based `fold` and *"the price, and delivery."* matches *"the price and
     delivery"* -- a paraphrase reported as VERBATIM, which is exactly what C1's
-    third NEVER forbids and what `nm.legal_brain.research.quote_fidelity` exists to
+    third NEVER forbids and what `nm.legal_brain.retrieve.research.quote_fidelity` exists to
     refuse. So the quote comparison collapses WHITESPACE ONLY and keeps case
     and punctuation.
 
     It lives here rather than beside its one caller for the reason this whole
-    module exists: `nm/legal_brain/research.py` defined it privately and
+    module exists: `nm/legal_brain/retrieve/research.py` defined it privately and
     `tests/test_one_fold.py` caught it as a second base. TWO FOLDING NOTIONS IS
     FINE; two owners of one notion is the defect.
     """
@@ -203,7 +203,7 @@ def words(text: str | None) -> tuple[str, ...]:
 #: first person about the representation; an account of events does not. This
 #: set is CLOSED and complete in a way a list of party descriptors can never be.
 #:
-#: IT LIVES HERE BECAUSE TWO LAYERS NEED IT. `nm.legal_brain.posture` asks it of one
+#: IT LIVES HERE BECAUSE TWO LAYERS NEED IT. `nm.legal_brain.understand.posture` asks it of one
 #: quoted span; `nm.work_the_file.summary_contracts` asks it of a fact, to decide whether a
 #: statement belongs to the whole file or to one dispute. `domain` may import
 #: only `domain`, so a copy in core would have been a copy -- and the failure
@@ -249,7 +249,7 @@ def representation_only(statement: str | None) -> str:
     single statement. Anything that wants the first without the others has to
     cut, and the cut belongs here beside the predicate that decides which parts
     qualify -- `nm.work_the_file.summary_contracts` carries these across disputes and
-    `nm.legal_brain.posture` guards one span against the same rule.
+    `nm.legal_brain.understand.posture` guards one span against the same rule.
 
     MEASURED 22 September 2026. Carrying the whole fact for the sake of its
     first sentence put the cheque case's events into the lease dispute's

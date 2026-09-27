@@ -1037,7 +1037,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -1262,7 +1262,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -1274,7 +1274,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/route.py",
+          "path": "nm/legal_brain/understand/route.py",
           "kind": "existing"
         }
       ],
@@ -1355,7 +1355,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -1508,7 +1508,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/proof_contracts.py",
+          "path": "nm/legal_brain/reason/proof_contracts.py",
           "kind": "existing"
         },
         {
@@ -1520,15 +1520,15 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/posture.py",
+          "path": "nm/legal_brain/understand/posture.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/threading.py",
+          "path": "nm/legal_brain/understand/threading.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -1603,7 +1603,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -1721,11 +1721,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/identity_sources.py",
+          "path": "nm/legal_brain/retrieve/identity_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/manifest_sources.py",
+          "path": "nm/legal_brain/retrieve/manifest_sources.py",
           "kind": "existing"
         },
         {
@@ -1733,7 +1733,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/source_registry_sources.py",
+          "path": "nm/legal_brain/retrieve/source_registry_sources.py",
           "kind": "planned"
         },
         {
@@ -1805,19 +1805,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/legal_brain/artefact_sources.py",
+          "path": "nm/legal_brain/retrieve/artefact_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/manifest_sources.py",
+          "path": "nm/legal_brain/retrieve/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/corpus_evidence.py",
+          "path": "nm/legal_brain/retrieve/corpus_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/search_authority.py",
+          "path": "nm/legal_brain/retrieve/search_authority.py",
           "kind": "existing"
         },
         {
@@ -1888,39 +1888,39 @@
       ],
       "boundaries": [
         {
-          "path": "nm/legal_brain/search_port.py",
+          "path": "nm/legal_brain/retrieve/search_port.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/evidence_port.py",
+          "path": "nm/legal_brain/retrieve/evidence_port.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/search_authority.py",
+          "path": "nm/legal_brain/retrieve/search_authority.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/corpus_evidence.py",
+          "path": "nm/legal_brain/retrieve/corpus_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/resolution_sources.py",
+          "path": "nm/legal_brain/retrieve/resolution_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/citator_sources.py",
+          "path": "nm/legal_brain/retrieve/citator_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/research.py",
+          "path": "nm/legal_brain/retrieve/research.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/citation_contracts.py",
+          "path": "nm/legal_brain/common/citation_contracts.py",
           "kind": "existing"
         },
         {
@@ -1928,11 +1928,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/identity_sources.py",
+          "path": "nm/legal_brain/retrieve/identity_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/manifest_sources.py",
+          "path": "nm/legal_brain/retrieve/manifest_sources.py",
           "kind": "existing"
         },
         {
@@ -1944,7 +1944,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/search_policed.py",
+          "path": "nm/legal_brain/retrieve/search_policed.py",
           "kind": "existing"
         },
         {
@@ -2076,11 +2076,11 @@
       ],
       "boundaries": [
         {
-          "path": "nm/legal_brain/accrual.py",
+          "path": "nm/legal_brain/reason/accrual.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/limitation.py",
+          "path": "nm/legal_brain/procedure/limitation.py",
           "kind": "existing"
         },
         {
@@ -2088,19 +2088,19 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/thresholds.py",
+          "path": "nm/legal_brain/reason/thresholds.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/proof.py",
+          "path": "nm/legal_brain/reason/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/premise.py",
+          "path": "nm/legal_brain/reason/premise.py",
           "kind": "existing"
         },
         {
@@ -2218,15 +2218,15 @@
       ],
       "boundaries": [
         {
-          "path": "nm/legal_brain/proof.py",
+          "path": "nm/legal_brain/reason/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/theory.py",
+          "path": "nm/legal_brain/reason/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/thresholds.py",
+          "path": "nm/legal_brain/reason/thresholds.py",
           "kind": "existing"
         },
         {
@@ -2234,15 +2234,15 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/adversarial.py",
+          "path": "nm/legal_brain/reason/adversarial.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/issues.py",
+          "path": "nm/legal_brain/reason/issues.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/issue_contracts.py",
+          "path": "nm/legal_brain/reason/issue_contracts.py",
           "kind": "existing"
         },
         {
@@ -2250,11 +2250,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/consistency.py",
+          "path": "nm/legal_brain/verify/consistency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -2341,11 +2341,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/gaps.py",
+          "path": "nm/legal_brain/reason/gaps.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -2357,7 +2357,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/briefing.py",
+          "path": "nm/legal_brain/understand/briefing.py",
           "kind": "existing"
         },
         {
@@ -2458,7 +2458,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -2549,11 +2549,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/grounding.py",
+          "path": "nm/legal_brain/verify/grounding.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -2638,11 +2638,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/theory.py",
+          "path": "nm/legal_brain/reason/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -2965,11 +2965,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/theory.py",
+          "path": "nm/legal_brain/reason/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/proof.py",
+          "path": "nm/legal_brain/reason/proof.py",
           "kind": "existing"
         },
         {
@@ -3524,7 +3524,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
@@ -4236,11 +4236,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/manifest_sources.py",
+          "path": "nm/legal_brain/retrieve/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/acquisition_sources.py",
+          "path": "nm/legal_brain/retrieve/acquisition_sources.py",
           "kind": "existing"
         },
         {
@@ -4256,7 +4256,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/source_registry_sources.py",
+          "path": "nm/legal_brain/retrieve/source_registry_sources.py",
           "kind": "existing"
         },
         {
@@ -4442,11 +4442,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/lead_contracts.py",
+          "path": "nm/legal_brain/orchestrate/lead_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/lead.py",
+          "path": "nm/legal_brain/orchestrate/lead.py",
           "kind": "existing"
         },
         {
@@ -4542,11 +4542,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/delegation_contracts.py",
+          "path": "nm/legal_brain/orchestrate/delegation_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/delegation.py",
+          "path": "nm/legal_brain/orchestrate/delegation.py",
           "kind": "existing"
         },
         {
@@ -4619,27 +4619,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/legal_brain/governing_law_sources.py",
+          "path": "nm/legal_brain/procedure/governing_law_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/institution_sources.py",
+          "path": "nm/legal_brain/procedure/institution_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/interim_relief_sources.py",
+          "path": "nm/legal_brain/procedure/interim_relief_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/procedural_period_sources.py",
+          "path": "nm/legal_brain/procedure/procedural_period_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/filing_requirement_sources.py",
+          "path": "nm/legal_brain/procedure/filing_requirement_sources.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/identity_sources.py",
+          "path": "nm/legal_brain/retrieve/identity_sources.py",
           "kind": "existing"
         }
       ],
@@ -4712,11 +4712,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/loop.py",
+          "path": "nm/legal_brain/orchestrate/loop.py",
           "kind": "planned"
         },
         {
@@ -4797,7 +4797,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/manifest_sources.py",
+          "path": "nm/legal_brain/retrieve/manifest_sources.py",
           "kind": "existing"
         },
         {
@@ -4805,7 +4805,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/tools.py",
+          "path": "nm/legal_brain/orchestrate/tools.py",
           "kind": "planned"
         }
       ],
@@ -4874,15 +4874,15 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/grounding.py",
+          "path": "nm/legal_brain/verify/grounding.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/consistency.py",
+          "path": "nm/legal_brain/verify/consistency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/verifier.py",
+          "path": "nm/legal_brain/verify/verifier.py",
           "kind": "planned"
         }
       ],
@@ -4948,13 +4948,13 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/matter-workspace.js",
+          "path": "nm/legal_brain/communicate/matter-workspace.js",
           "kind": "existing"
         }
       ],
       "inputs": [
         "The saved step log (P49) and the citation detector on every channel (P51).",
-        "The matter board in nm/legal_brain/matter-workspace.js."
+        "The matter board in nm/legal_brain/communicate/matter-workspace.js."
       ],
       "outputs": [
         "A server-sent-events endpoint beside /api/turn, and a collapsible scratch-pad panel, closed by default, saved with each turn."
@@ -5084,7 +5084,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/legal_brain/turn.py",
+          "path": "nm/legal_brain/orchestrate/turn.py",
           "kind": "existing"
         }
       ],

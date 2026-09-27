@@ -23,13 +23,13 @@ def test_private_preview_controller_runs_its_nonempty_rejecting_population():
 
 
 def test_preview_is_separate_and_has_a_persistent_warning_before_the_workspace():
-    page = (ROOT / "nm/legal_brain/brain-preview.html").read_text(encoding="utf-8")
+    page = (ROOT / "nm/legal_brain/evaluate/brain-preview.html").read_text(encoding="utf-8")
     marker = "Private fictional-matter evaluation—not client advice or release."
     assert marker in page
     assert page.index('id="evaluation-marker"') < page.index('id="workspace"')
     assert 'id="evaluation-marker" hidden' not in page
     assert '<script src="/static/brain-preview.js" defer>' in page
     assert "/static/app.js" not in page
-    controller = (ROOT / "nm/legal_brain/brain-preview.js").read_text(encoding="utf-8")
+    controller = (ROOT / "nm/legal_brain/evaluate/brain-preview.js").read_text(encoding="utf-8")
     for prohibited in ("innerHTML", "localStorage", "/api/turn", "raw_candidate"):
         assert prohibited not in controller, prohibited

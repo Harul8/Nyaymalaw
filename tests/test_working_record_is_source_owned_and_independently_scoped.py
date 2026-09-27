@@ -9,16 +9,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.brain_finalization import SavedCheckReader
-from nm.legal_brain.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.loop_contracts import LoopLimits, LoopMode, StepKind, digest
-from nm.legal_brain.principles_file_adapter import FilePrinciples
-from nm.legal_brain.tool_discovery import discovery_tools
-from nm.legal_brain.tools import Boundary, foundation_tools
-from nm.legal_brain.verifier import IndependentVerifier
-from nm.legal_brain.working_record import (
+from nm.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind, digest
+from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.reason.working_record import (
     PROPOSE_TOOL,
     READ_TOOL,
     WorkingRecordOwner,
@@ -27,8 +27,8 @@ from nm.legal_brain.working_record import (
     receipt_progress,
     working_record_tools,
 )
-from nm.legal_brain.working_record_contracts import AnalysisArea
-from nm.legal_brain.working_scope import CHECK_NAME, WORKING_SCOPE_SCHEMA, WorkingScopeService
+from nm.legal_brain.reason.working_record_contracts import AnalysisArea
+from nm.legal_brain.verify.working_scope import CHECK_NAME, WORKING_SCOPE_SCHEMA, WorkingScopeService
 from nm.shared.budget_contracts import Budget, Completion, Spend
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import ModelResult, Tier, ToolCall, Usage

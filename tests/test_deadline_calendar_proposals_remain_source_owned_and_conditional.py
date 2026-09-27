@@ -7,9 +7,9 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.tools import PreparedToolResult, ToolRegistry
-from nm.legal_brain.working_record import READ_TOOL, WorkingRecordOwner
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.orchestrate.tools import PreparedToolResult, ToolRegistry
+from nm.legal_brain.reason.working_record import READ_TOOL, WorkingRecordOwner
 from nm.shared.model_port import Tier, ToolCall
 from nm.work_the_file import dependency
 from nm.work_the_file.deadline_proposals import (
@@ -162,7 +162,7 @@ def case_of(
             current_source_generation=lambda: state["generation"],
         )
     )
-    from nm.legal_brain.working_record import working_record_tools
+    from nm.legal_brain.reason.working_record import working_record_tools
 
     # _fixture's actual lower loop does not compose these independently optional tools.
     if READ_TOOL not in {tool.name for tool in brain.registry.definitions}:
@@ -440,7 +440,7 @@ def test_currency_hook_does_not_claim_legacy_or_other_rows(tmp_path):
 def authenticated_case(client):
     from unittest.mock import Mock
 
-    from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
     from tests.test_procedural_arithmetic_is_only_a_current_conditional_candidate import (
         authenticated_procedural_case,
     )
@@ -544,7 +544,7 @@ def test_actual_authenticated_source_proposal_entry_is_owned_and_not_body_approv
 def test_actual_authenticated_late_source_revocation_preserves_calendar_history_not_deadline(
     client, monkeypatch
 ):
-    from nm.legal_brain.evidence_port import SourceDocument
+    from nm.legal_brain.retrieve.evidence_port import SourceDocument
 
     app, matter, _model, _generation, held = authenticated_case(client)
     original = ToolRegistry.invoke
@@ -596,7 +596,7 @@ def test_missing_calendar_is_not_a_claim_of_an_open_court_or_complete_calendar(t
 
 
 def test_changed_primary_source_invalidates_calendar_and_deadline_not_unrelated_work(tmp_path):
-    from nm.legal_brain.evidence_port import Finding
+    from nm.legal_brain.retrieve.evidence_port import Finding
 
     case, _, outcome, _ = case_of(tmp_path)
     matter = case[0].load("mat_loop")

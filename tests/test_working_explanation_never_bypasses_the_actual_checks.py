@@ -8,12 +8,12 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain.brain_assessment import captured_retrievals
-from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
-from nm.legal_brain.loop_contracts import digest
-from nm.legal_brain.working_explanation import (
+from nm.legal_brain.verify.brain_assessment import captured_retrievals
+from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.legal_brain.communicate.working_explanation import (
     CONSISTENCY_NAME,
     CRITERIA,
     DUTY_NAME,

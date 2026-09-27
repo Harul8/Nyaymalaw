@@ -6,7 +6,7 @@
 WHAT THIS IS, AND WHAT IT DELIBERATELY IS NOT
 ---------------------------------------------
 This decides WHICH documents the evaluation set is drawn from. It does not
-stage, quarantine or reconcile them -- `nm/legal_brain/acquisition_sources.py`
+stage, quarantine or reconcile them -- `nm/legal_brain/retrieve/acquisition_sources.py`
 owns that, and a second staging path beside it is the duplicate this project
 already pays for elsewhere. The output here is a manifest of S3 keys plus the
 identity of the frame they were drawn from; everything downstream reads that.

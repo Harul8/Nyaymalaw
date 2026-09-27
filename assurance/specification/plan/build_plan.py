@@ -822,7 +822,7 @@ d("B-009", "2026-08-30", "retrieval",
   "not knowing the evidence adapter held a second copy of it.",
   "S9 — two owners for one truth",
   "The first realistic seven-turn scenario, end to end",
-  "One pattern module, nm/legal_brain/citation_contracts.py, with both guards; a test scans "
+  "One pattern module, nm/legal_brain/common/citation_contracts.py, with both guards; a test scans "
   "nm/ and fails the build on a second pattern.",
   "Yes — and the duplicate is now structurally refused, not just removed.",
   "tests/test_citation_patterns.py; ALSO SWEPT BY tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home")
@@ -918,7 +918,7 @@ d("B-016", "2026-08-30", "retrieval",
   "An Act NAMED in the question beats every keyword score; longest title wins.",
   "Yes — matched against every manifest entry's own name, so a new Act is "
   "covered without touching the rule.",
-  "nm/legal_brain/manifest_sources.py `_named_in`")
+  "nm/legal_brain/retrieve/manifest_sources.py `_named_in`")
 
 d("B-017", "2026-08-30", "core",
   "`_fold` did not normalise `vs` to `v`, so a retrieved authority whose ref "
@@ -943,7 +943,7 @@ d("B-018", "2026-08-30", "core",
   "The browser, on the authority path",
   "The span counts: it IS retrieved primary text, which is the promise.",
   "Yes — every finding, every source kind.",
-  "nm/legal_brain/grounding.py `_covered_provisions`")
+  "nm/legal_brain/verify/grounding.py `_covered_provisions`")
 
 d("B-019", "2026-08-30", "knowledge",
   "The product's OWN binding explanation read `(Constitution, Art. 141)`. The "
@@ -1117,7 +1117,7 @@ d("B-031", "2026-08-30", "core",
   "it must speak of the representation rather than the events — a test on "
   "grammar, which is closed, not on vocabulary, which is not.",
   "Yes — no list of party words exists anywhere in the product now.",
-  "assurance/gate/mutate.py x3 on nm/legal_brain/posture.py; tests/test_turn_contract.py")
+  "assurance/gate/mutate.py x3 on nm/legal_brain/understand/posture.py; tests/test_turn_contract.py")
 
 d("B-032", "2026-08-30", "store",
   "ENCODING WAS AUTOMATIC AND DECODING WAS HAND-WRITTEN. `_enc` uses asdict so "
@@ -1369,7 +1369,7 @@ d("B-044", "2026-08-30", "release",
   "own standing decision three paragraphs above it, under which every held "
   "Andhra Pradesh judgement IS a Telangana judgement. I measured the words "
   "rather than the decision, and the binding rule in "
-  "nm/legal_brain/jurisdiction_sources.py had it right the whole time.",
+  "nm/legal_brain/retrieve/jurisdiction_sources.py had it right the whole time.",
   "S3 — a zero from the wrong index reads as absence",
   "The user, for the third time: AP HC cases are Telangana cases",
   "RG-01 measures binding-court output — Supreme Court plus the High Court for "
@@ -1546,7 +1546,7 @@ d("B-052", "2026-08-30", "core",
   "thread",
   "`bind` takes a three-state reading. CONTINUES binds; OPENS creates a "
   "thread, stated; CANNOT TELL asks, exactly as rule 6 already does. The read "
-  "is `nm/legal_brain/dispute.py`, with the same two guards as the posture read.",
+  "is `nm/legal_brain/understand/dispute.py`, with the same two guards as the posture read.",
   "Yes — the default now follows the asymmetry the module already stated: "
   "never guess toward the merge, because a wrong split is visible and "
   "recoverable and a wrong merge is neither. Multi-thread files are what the "
@@ -2027,7 +2027,7 @@ d("B-072", "2026-08-31", "core",
 
 d("B-073", "2026-08-31", "core",
   "NOTHING PRODUCES A `Factor`, so no acknowledgment, part payment, exclusion "
-  "or disability ever moves a limitation date. `nm/legal_brain/limitation.py` has "
+  "or disability ever moves a limitation date. `nm/legal_brain/procedure/limitation.py` has "
   "carried the type since slice 4, with `Factor.finding` required so one "
   "cannot be asserted from memory, and `compute` applies restarts and "
   "extensions correctly — and no call site anywhere builds one. On GS-14 the "
@@ -3302,7 +3302,7 @@ d("B-108", "2026-09-05", "core",
   "appeared without it \u2014 which is an argument for rerunning a scenario "
   "after a model change rather than assuming a better model is strictly "
   "better.",
-  "`nm/legal_brain/quotable_contracts.py`. ONE VALUE GOES TO THE PROMPT AND TO THE GUARD: "
+  "`nm/legal_brain/common/quotable_contracts.py`. ONE VALUE GOES TO THE PROMPT AND TO THE GUARD: "
   "`block()` renders the labelled section and `accepts()` is the check, off "
   "the same three fields \u2014 `turn` (what the advocate said this turn), "
   "`file` (what they said earlier) and `context` (our rendering, shown and "
@@ -3374,7 +3374,7 @@ d("B-109", "2026-09-06", "adapters",
   "The escalation is WITHDRAWN. The five call sites ask for ROUTINE again, "
   "HARD_TIER_STEPS is empty, and NM_MODEL_HARD is commented out rather than "
   "deleted \u2014 one line to restore once B-108 is fixed. "
-  "`nm.legal_brain.reads_contracts.is_decisive` STAYS: it is what makes G-READ fire on a "
+  "`nm.legal_brain.common.reads_contracts.is_decisive` STAYS: it is what makes G-READ fire on a "
   "decisive read that answers with nothing, which is a separate mechanism "
   "from which model runs it, and conflating them would have made the revert "
   "delete a guard that had nothing to do with the escalation.",
@@ -3384,11 +3384,11 @@ d("B-109", "2026-09-06", "adapters",
   "\u00a77.4.1 states (escalation is earned by a recorded measurement) was "
   "followed to the letter and still produced a regression, because the letter "
   "does not say the measurement must be of CURRENT code. It does now, in "
-  "nm/legal_brain/tiers_contracts.py.\n\n"
+  "nm/legal_brain/common/tiers_contracts.py.\n\n"
   "It is also a caution about \u2018better model\u2019 as a fix: a stronger "
   "model does not fail LESS, it fails DIFFERENTLY, and where a guard was "
   "tuned to the weaker one\u2019s habits the change reads as a regression.",
-  "nm/legal_brain/tiers_contracts.py records the round trip \u2014 the entry that was added "
+  "nm/legal_brain/common/tiers_contracts.py records the round trip \u2014 the entry that was added "
   "and withdrawn, with all three numbers \u2014 and "
   "tests/test_reads_registry.py::"
   "test_no_read_asks_for_the_hard_tier_while_none_is_earned asserts the "
@@ -3644,7 +3644,7 @@ d("B-115", "2026-09-06", "core",
   "Fixed at three of four sites; the fourth is a recorded cost")
 
 d("B-116", "2026-09-06", "core",
-  "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `nm/legal_brain/proof_contracts.py` has carried "
+  "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `nm/legal_brain/reason/proof_contracts.py` has carried "
   "the whole contract since slice 7: a position that cannot be HELD without "
   "material, cannot be OBTAINABLE without saying what would obtain it, cannot "
   "be ABSENT without naming the dead end, and `uncovered` drawing its "
@@ -3660,8 +3660,8 @@ d("B-116", "2026-09-06", "core",
   "resemblance is what made this the next thing to build rather than the "
   "next thing to survey.",
   "THE LAW IS CURATED AND THE FILE IS READ, and that split is the design. "
-  "`nm/legal_brain/elements_sources.py` holds what each cause requires, with "
-  "`curated_from` required by the type; `nm/legal_brain/proof_read.py` asks the "
+  "`nm/legal_brain/reason/elements_sources.py` holds what each cause requires, with "
+  "`curated_from` required by the type; `nm/legal_brain/reason/proof_read.py` asks the "
   "model only what THIS FILE can do about each one.\n\n"
   "A model asked \u2018what are the elements of specific performance\u2019 "
   "answers plausibly and differently every call. Every position downstream "
@@ -3743,7 +3743,7 @@ d("B-118", "2026-09-06", "core",
   "The sweep obligation, taken rather than waited for: a producer of "
   "per-turn state was added to a product where every sibling is persisted, "
   "so the question was asked before a scenario asked it.",
-  "`Thread.proof`, and `nm.legal_brain.proof_contracts.merge` with the asymmetry stated: "
+  "`Thread.proof`, and `nm.legal_brain.reason.proof_contracts.merge` with the asymmetry stated: "
   "SILENCE NEVER OVERWRITES, because a read that did not mention an element "
   "has said nothing about it and nothing is not a finding. A POSITIVE "
   "STATEMENT ALWAYS WINS, including a regression from HELD to ABSENT \u2014 "
@@ -3756,7 +3756,7 @@ d("B-118", "2026-09-06", "core",
   "party can wobble in. It falls to NOT_ASSESSED and never to ABSENT: absent "
   "means nothing identified would establish it, which is a finding nobody "
   "made.",
-  "Yes, and the general rule is the one `nm/legal_brain/issues.py` states: a value "
+  "Yes, and the general rule is the one `nm/legal_brain/reason/issues.py` states: a value "
   "that is a FUNCTION of something else is re-derived to stay true, and a "
   "value that is a CONCLUSION somebody reached is persisted, because "
   "re-deriving it does not refresh it \u2014 it discards it whenever the "
@@ -3841,7 +3841,7 @@ d("B-120", "2026-09-06", "core",
   "read alone would ask only about the items that read happened to mention, "
   "so an item that vanished would stop being asked about \u2014 which is the "
   "document going quietly missing that the counterexample is about.",
-  "Yes, and it completes the rule `nm/legal_brain/issues.py` states: a value that "
+  "Yes, and it completes the rule `nm/legal_brain/reason/issues.py` states: a value that "
   "is a FUNCTION of something else is re-derived to stay true; a value that "
   "is a CONCLUSION somebody reached, or a THING SOMEBODY DID, is persisted. "
   "The limitation position and the deadline register stay derived under the "
@@ -3922,7 +3922,7 @@ d("B-122", "2026-09-06", "core",
   "The judged re-run itself. THE VERDICT MOVING IS THE FINDING: the judge "
   "stopped quoting the recommendation and the bare Act, which is both fixes "
   "confirmed, and started quoting two reads nobody had touched.",
-  "`nm/legal_brain/register_contracts.py` holds ONE clause, and every prompt whose words "
+  "`nm/legal_brain/communicate/register_contracts.py` holds ONE clause, and every prompt whose words "
   "reach the advocate carries it. The recommendation’s own wording is "
   "gone — six copies of a sentence drift within a slice, which is what a "
   "register rule cannot survive.\n\n"
@@ -4080,7 +4080,7 @@ d("B-126", "2026-09-07", "core",
   "Reading the function after B-124, and then being told the rule rather "
   "than deriving it. B-124 had COMPOSED the two keyword lists, which fixed "
   "four measured phrasings and left the shape.",
-  "`nm/legal_brain/route.py` reads it. Both keyword lists are gone — 27 nouns "
+  "`nm/legal_brain/understand/route.py` reads it. Both keyword lists are gone — 27 nouns "
   "and 5 phrases — and both length rules with them. `classify_route` "
   "survives as the FALLBACK and no longer guesses: with no model there is "
   "nothing to read meaning with, so it takes the safe direction.\n\n"
@@ -4426,7 +4426,7 @@ d("B-133", "2026-09-07", "edge",
 d("B-134", "2026-09-07", "turn",
   "TWO COMPLETE MODULES RAN ON EVERY TURN AND THEIR RESULTS WERE THROWN "
   "AWAY. `nm/work_the_file/deadlines.py` is reached TEN times from the turn "
-  "engine and `nm/legal_brain/gaps.py` FOUR; neither appeared in `concluded`, "
+  "engine and `nm/legal_brain/reason/gaps.py` FOUR; neither appeared in `concluded`, "
   "so nothing persisted and the handover reported both as sections the "
   "product does not build \u2014 on a file where each had been computed "
   "every turn since the brief arrived.",
@@ -4436,7 +4436,7 @@ d("B-134", "2026-09-07", "turn",
   "built-and-discarded.",
   "S1 \u2014 an absent input reading as success",
   "Counted the call sites. `deadlines.` appears ten times in "
-  "`nm/legal_brain/turn.py` and `gaps.` four, and neither name is among the "
+  "`nm/legal_brain/orchestrate/turn.py` and `gaps.` four, and neither name is among the "
   "six keys of `concluded`. A module with that many callers is not "
   "unbuilt, which is what made the blocker list wrong rather than "
   "merely incomplete.",
@@ -4885,7 +4885,7 @@ d("B-167", "2026-09-26", "knowledge",
   "hold, and every consumer read the empty tuple as the answer.",
   "S1 -- an absent input reading as success",
   "Asking each of the six keyed tables for every member of its key enum.",
-  "`nm.legal_brain.curation_contracts.Curation` -- CURATED, WITHHELD, NOT_CURATED, "
+  "`nm.legal_brain.common.curation_contracts.Curation` -- CURATED, WITHHELD, NOT_CURATED, "
   "KEY_NOT_ESTABLISHED -- is answered by every keyed table through its port, "
   "and only a CURATED key may produce 'nothing applies'. The turn discloses "
   "an uncurated role as a gap in what is held.",

@@ -39,7 +39,7 @@ IT LIVED THERE, AND THE LAYER WAS THE DEFECT. `assurance/gate/layercheck.py` per
 `knowledge` to import only `{knowledge, ports, domain}`, so `nm/knowledge/`
 could not reach the owner at all. When P20's immutable-corpus publication
 landed -- three temporary-file removals and a lock release in
-`nm/legal_brain/manifest_sources.py` -- it could not have used the one mechanism even had
+`nm/legal_brain/retrieve/manifest_sources.py` -- it could not have used the one mechanism even had
 its author looked for it, and the product-wide sweep went red on the
 integration commit that brought the two branches together.
 

@@ -20,7 +20,7 @@ So neither type has a field an answer or a conclusion could be written into.
 `topics` are SUBJECTS TO ASK ABOUT; `purpose` is THE QUESTION PUT. And because
 prose reaches these fields from a model, `refuse_scripting` and
 `refuse_leading` are backstops over the text -- not the mechanism, which is the
-absence of the field, exactly as `nm/legal_brain/proof.py` argues for its own tripwire.
+absence of the field, exactly as `nm/legal_brain/reason/proof.py` argues for its own tripwire.
 
 CONTACT IS LOGGED BECAUSE THE ALLEGATION IS UNFALSIFIABLE OTHERWISE
 --------------------------------------------------------------------

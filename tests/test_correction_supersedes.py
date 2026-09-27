@@ -37,8 +37,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.quotable_contracts import Quotable
-from nm.legal_brain.turn import TurnInput
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.work_the_file import chronology
 from nm.work_the_file.matter_contracts import Fact, Provenance
 from tests.test_turn_contract import briefed, build
@@ -253,7 +253,7 @@ def test_a_missed_correction_becomes_a_blocking_question(tmp_path):
     real one to miss would be waiting on a coincidence.
     """
 
-    from nm.legal_brain.turn import TurnEngine
+    from nm.legal_brain.orchestrate.turn import TurnEngine
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config

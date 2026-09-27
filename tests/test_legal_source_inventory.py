@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from nm.legal_brain.source_registry_sources import (
+from nm.legal_brain.retrieve.source_registry_sources import (
     Assessment,
     AssetKind,
     DigestState,
@@ -91,7 +91,7 @@ def test_large_and_failed_reads_are_visible_not_absence(tmp_path, monkeypatch):
     assert report.unhashed == 1
     assert report.assets[0].digest_state is DigestState.NOT_ASSESSED
 
-    original = __import__("nm.legal_brain.source_registry_sources", fromlist=["_sha256"])
+    original = __import__("nm.legal_brain.retrieve.source_registry_sources", fromlist=["_sha256"])
     monkeypatch.setattr(original, "_sha256", lambda _path: (_ for _ in ()).throw(PermissionError()))
     failed = inventory_sources(root, observed_at=NOW, max_hash_bytes=10)
     assert failed.status is Assessment.PARTIAL

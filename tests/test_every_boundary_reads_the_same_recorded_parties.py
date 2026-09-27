@@ -5,8 +5,8 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.parties import on_file
-from nm.legal_brain.turn import TurnEngine
+from nm.legal_brain.understand.parties import on_file
+from nm.legal_brain.orchestrate.turn import TurnEngine
 from nm.work_the_file.matter_contracts import Matter, Posture, Thread
 
 pytestmark = pytest.mark.class_a

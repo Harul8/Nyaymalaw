@@ -184,7 +184,7 @@ def test_a_served_turn_records_the_typed_recommendation_on_the_thread():
     """THE RECORD REACHES THE FILE, not just the sentence. BK-96-AC2 asks for
     a PERSISTED and served recommendation, and the whole point of B-074 is
     that a recommendation nothing can interrogate is what went wrong."""
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))
@@ -205,7 +205,7 @@ def test_the_served_record_reports_what_it_could_not_establish():
     This is the assertion that would fail first if somebody "completed" the
     template to make the record look finished.
     """
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))
@@ -223,7 +223,7 @@ def test_the_served_record_reports_what_it_could_not_establish():
 def test_an_attributed_by_when_names_where_the_date_came_from():
     """Where the register holds a dated deadline the record says so; where it
     does not, the by-when is empty and the reason travels as a reservation."""
-    from nm.legal_brain.turn import TurnInput
+    from nm.legal_brain.orchestrate.turn import TurnInput
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))

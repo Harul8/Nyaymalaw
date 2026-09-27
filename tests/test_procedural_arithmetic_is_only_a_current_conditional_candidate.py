@@ -8,16 +8,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain import limitation
-from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument
-from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.procedural_calculation import (
+from nm.legal_brain.procedure import limitation
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.procedure.procedural_calculation import (
     COMPUTE,
     READ,
     VERSION,
     procedural_calculation_tools,
 )
-from nm.legal_brain.working_record import WorkingRecordOwner
+from nm.legal_brain.reason.working_record import WorkingRecordOwner
 from nm.shared.authority_contracts import Act
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall

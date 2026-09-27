@@ -41,8 +41,8 @@ pytestmark = pytest.mark.class_c
 def adapter():
     if not (CORPUS / "chunks.db").exists():
         pytest.skip("the corpus is not attached")
-    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.manifest_sources import Manifest
+    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.retrieve.manifest_sources import Manifest
 
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     return CorpusEvidenceAdapter(CORPUS, manifest), manifest
@@ -62,7 +62,7 @@ def test_every_declared_act_retrieves_at_least_one_intended_section(adapter):
     adapter for it, at a date the Act was in force. An Act that cannot answer
     for the first provision it declares is a claim the corpus cannot honour.
     """
-    from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed
 
     ad, manifest = adapter
     failures: list[str] = []
@@ -100,9 +100,9 @@ def test_an_act_the_corpus_cannot_serve_is_caught(adapter):
     """
     import dataclasses
 
-    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
-    from nm.legal_brain.manifest_sources import ManifestEntry
+    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed
+    from nm.legal_brain.retrieve.manifest_sources import ManifestEntry
 
     _, manifest = adapter
     ghost = ManifestEntry(

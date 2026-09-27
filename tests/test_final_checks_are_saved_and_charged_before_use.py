@@ -6,11 +6,11 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.brain_assessment import AssessmentService
-from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.brain_release import ReviewRefused
-from nm.legal_brain.evidence_port import Binding, Treatment
-from nm.legal_brain.loop_contracts import StepKind
+from nm.legal_brain.verify.brain_assessment import AssessmentService
+from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.legal_brain.retrieve.evidence_port import Binding, Treatment
+from nm.legal_brain.orchestrate.loop_contracts import StepKind
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import ProviderUnavailable, Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
@@ -194,7 +194,7 @@ def test_an_unreadable_transcript_leaves_prior_derived_checks_unassessed(tmp_pat
     store.transcripts_for = lambda *_: (_ for _ in ()).throw(OSError("Unavailable history"))
     result = finalizer.prepare(outcome, review)
     assert not result.subjects.derivation_history.observed
-    from nm.legal_brain.output_checks import run_output_checks
+    from nm.legal_brain.verify.output_checks import run_output_checks
 
     checks = {row.gate_id: row for row in run_output_checks(result.subjects)}
     assert checks["G-CONSERVE"].assessed is None

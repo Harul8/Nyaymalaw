@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.tool_offers import OfferRefused, ToolOfferState
+from nm.legal_brain.orchestrate.tool_offers import OfferRefused, ToolOfferState
 from nm.shared.model_port import ToolDefinition, require_tool_request
 
 pytestmark = pytest.mark.class_a

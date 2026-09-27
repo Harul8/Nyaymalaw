@@ -9,13 +9,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain import brain_context, requirements
-from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
-from nm.legal_brain.register_contracts import PEER
-from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist, key
-from nm.legal_brain.tool_catalogue import catalogue_tools
-from nm.legal_brain.tools import (
+from nm.legal_brain.understand import brain_context
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
+from nm.legal_brain.communicate.register_contracts import PEER
+from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.legal_brain.orchestrate.tools import (
     Boundary,
     PreparedToolResult,
     ToolContext,

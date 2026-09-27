@@ -57,9 +57,9 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
-from nm.legal_brain import cause as cause_reader  # noqa: E402
-from nm.legal_brain import factors as factor_reader  # noqa: E402
-from nm.legal_brain import posture as posture_reader  # noqa: E402
+from nm.legal_brain.reason import cause as cause_reader  # noqa: E402
+from nm.legal_brain.reason import factors as factor_reader  # noqa: E402
+from nm.legal_brain.understand import posture as posture_reader  # noqa: E402
 from nm.shared.model_config import load, load_dotenv  # noqa: E402
 from nm.shared.model_openai_adapter import OpenAIModelAdapter  # noqa: E402
 from nm.shared.model_port import Prompt, Tier  # noqa: E402

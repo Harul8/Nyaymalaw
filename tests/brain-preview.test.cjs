@@ -2,7 +2,7 @@
 'use strict';
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {create, checkedPreview, checkedInstruction, parentLoops} = require('../nm/legal_brain/brain-preview.js');
+const {create, checkedPreview, checkedInstruction, parentLoops} = require('../nm/legal_brain/evaluate/brain-preview.js');
 const {createHash, webcrypto} = require('node:crypto');
 const MARKER = 'Private fictional-matter evaluation—not client advice or release.';
 function workingStatus() {
