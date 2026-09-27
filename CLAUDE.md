@@ -271,8 +271,10 @@ criterion, and the advocate-facing disclosure at the same time (**B-044**).
 
 `pipeline/indexing/build_authority_index.py` builds the FTS index over 451,548 attributable
 case paragraphs. **It is not run automatically and nothing in the repo triggers
-it.** Until it exists, every authority need returns `HELD_NOT_FOUND` naming the
-tool — it does **not** fall back to scanning `chunks.db`, because a fallback
+it.** Until it exists, every authority need returns `NOT_ASSESSED` naming the
+tool (the gate matrix's `G-NOTASSESSED`: a store absent, unopenable or never
+built; it said `HELD_NOT_FOUND` until 27 September 2026, which claims a search
+ran) — it does **not** fall back to scanning `chunks.db`, because a fallback
 with different recall swapped in silently is the three-stores defect wearing a
 helpful face.
 

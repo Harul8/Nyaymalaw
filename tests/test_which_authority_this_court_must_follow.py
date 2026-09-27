@@ -22,7 +22,7 @@ import pytest
 from nm.core.turn import TurnInput
 from nm.knowledge import authority_weight as curated
 from nm.knowledge.identity import CaseIdentity
-from nm.ports.authority_weight import Standing, Weighing
+from nm.ports.authority_weight import Standing, Weighed, Weighing
 
 from tests.test_turn_contract import build
 
@@ -60,7 +60,7 @@ HCX = _case("hcx", "High Court for the State of Telangana", None, "Das v Bose")
 
 def _weigh(*cases: CaseIdentity) -> tuple[Weighing, ...]:
     index = _Index({c.case_id: c for c in cases})
-    return curated.weigh(tuple(f"{c.case_id}::ch::ratio" for c in cases), index)
+    return curated.weigh(tuple(f"{c.case_id}::ch::ratio" for c in cases), index).weighings
 
 
 # ================================================== the rule is not restated ==
@@ -128,12 +128,16 @@ def test_a_case_the_index_does_not_hold_produces_nothing_at_all():
     compare, and a line for each would bury the pairs that matter under the
     corpus's coverage."""
     index = _Index({HC2.case_id: HC2})
-    assert curated.weigh(("hc2::ch::ratio", "unknown::ch::ratio"), index) == ()
+    result = curated.weigh(("hc2::ch::ratio", "unknown::ch::ratio"), index)
+    assert result.weighings == ()
+    assert "no record" in result.why, "an empty weighing did not say why (LB-154)"
 
 
 def test_one_authority_is_never_weighed_against_itself():
     index = _Index({HC2.case_id: HC2})
-    assert curated.weigh(("hc2::ch::ratio", "hc2::ch2::ratio"), index) == ()
+    result = curated.weigh(("hc2::ch::ratio", "hc2::ch2::ratio"), index)
+    assert result.weighings == ()
+    assert "fewer than two" in result.why
 
 
 def test_the_comparison_is_bounded_and_says_so_rather_than_truncating():
@@ -161,9 +165,10 @@ class _Weigher:
         self._weighings = weighings
         self.asked: list[tuple[str, ...]] = []
 
-    def weigh(self, locators: tuple[str, ...]) -> tuple[Weighing, ...]:
+    def weigh(self, locators: tuple[str, ...]) -> Weighed:
         self.asked.append(locators)
-        return self._weighings
+        return Weighed(weighings=self._weighings,
+                       why="" if self._weighings else "the test names no pair")
 
 
 def _authority(case_id: str, title: str) -> object:

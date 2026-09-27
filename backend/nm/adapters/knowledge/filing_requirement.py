@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.knowledge import filing_requirement as curated
 from nm.ports.filing_requirement import Readiness, Requirement
@@ -40,3 +41,7 @@ class CuratedFilingRequirements:
     @implements("D1")
     def readiness(self, requirement: Requirement) -> Readiness:
         return curated.readiness(requirement, self._manifest)
+
+    @implements("D1")
+    def coverage(self, requirement: Requirement) -> Curation:
+        return curated.coverage(requirement)

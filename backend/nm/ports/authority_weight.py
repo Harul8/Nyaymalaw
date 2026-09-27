@@ -77,6 +77,28 @@ class Weighing:
     lower: str = ""
 
 
+@refuses_blank_text("why")
+@dataclass(frozen=True)
+class Weighed:
+    """What one weighing produced -- and, where it produced nothing, WHY.
+
+    `weigh` returned a bare tuple, and an empty one meant four things: fewer
+    than two authorities to compare, none of them held by the identity index,
+    the same authority twice, and an index that is not built. A tool the model
+    calls must never hand back a bare empty result (LB-154), so an empty
+    `weighings` carries its reason and the type refuses one that does not.
+    """
+
+    weighings: tuple[Weighing, ...] = ()
+    why: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.weighings and not (self.why or "").strip():
+            raise ValueError(
+                "a weighing that produced nothing must say why -- an empty result "
+                "with no reason reads as 'these authorities are unranked' (S1)")
+
+
 class AuthorityWeightPort(Protocol):
     """The knowledge plane, asked to rank the authorities of one turn.
 
@@ -87,7 +109,7 @@ class AuthorityWeightPort(Protocol):
     cannot rank produces `NOT_RECORDED` with the reason.
     """
 
-    def weigh(self, locators: tuple[str, ...]) -> tuple[Weighing, ...]: ...
+    def weigh(self, locators: tuple[str, ...]) -> Weighed: ...
 
 
-__all__ = ["Standing", "Weighing", "AuthorityWeightPort"]
+__all__ = ["Standing", "Weighing", "Weighed", "AuthorityWeightPort"]

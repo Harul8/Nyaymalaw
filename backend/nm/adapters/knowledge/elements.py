@@ -8,6 +8,7 @@ read is exercised on a cause that does not exist.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction
 from nm.domain.traceability import implements
 from nm.knowledge import elements as curated
@@ -24,3 +25,7 @@ class CuratedElements:
     @implements("D5")
     def why_not(self, cause: CauseOfAction) -> str:
         return curated.why_not(cause)
+
+    @implements("D5")
+    def coverage(self, cause: CauseOfAction) -> Curation:
+        return curated.coverage(cause)

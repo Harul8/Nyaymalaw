@@ -19,6 +19,7 @@ import pytest
 from nm.core import thresholds
 from nm.core.turn import TurnInput
 from nm.domain.citation import provision_label
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction
 from nm.knowledge import institution as curated
 from nm.ports.institution import Against
@@ -105,7 +106,8 @@ def test_an_engaged_condition_is_blocked_and_named_never_answered():
     engaged = curated.engaged(CauseOfAction.CHEQUE_DISHONOUR, Against.UNKNOWN)
     assert engaged, "the fixture cause engages nothing, so this proves nothing"
 
-    row = thresholds.from_institution(engaged, ())
+    row = thresholds.from_institution(
+        engaged, (), coverage=curated.coverage(CauseOfAction.CHEQUE_DISHONOUR))
     assert row.state is thresholds.ThresholdState.BLOCKED
     assert row.state is not thresholds.ThresholdState.ANSWERED
     for engagement in engaged:
@@ -124,7 +126,8 @@ def test_an_unestablished_key_is_undecided_and_never_not_applicable():
     Returning it because the cause is unknown is the silence D1 forbids
     wearing a finding's clothes."""
     row = thresholds.from_institution(
-        (), curated.undecided(CauseOfAction.NOT_ESTABLISHED, Against.UNKNOWN))
+        (), curated.undecided(CauseOfAction.NOT_ESTABLISHED, Against.UNKNOWN),
+        coverage=curated.coverage(CauseOfAction.NOT_ESTABLISHED))
     assert row.state is thresholds.ThresholdState.BLOCKED
     assert row.state is not thresholds.ThresholdState.NOT_APPLICABLE
     assert "undecided, not inapplicable" in row.reason
@@ -133,10 +136,12 @@ def test_an_unestablished_key_is_undecided_and_never_not_applicable():
 def test_not_applicable_is_reached_only_when_nothing_is_left_undecided():
     """AND THE FINDING IS AVAILABLE, or the map could never close this row.
 
-    It is reached from an established cause and an established opponent that
-    between them engage nothing -- and it says the table is what answered,
-    not a search of every statute."""
-    row = thresholds.from_institution((), ())
+    It is reached from an established cause THE TABLE EXAMINED and an
+    established opponent that between them engage nothing -- and it says the
+    table is what answered, not a search of every statute. A cause the table
+    never examined cannot reach it (`test_a_curated_table_says_what_it_does_
+    not_cover.py`)."""
+    row = thresholds.from_institution((), (), coverage=Curation.CURATED)
     assert row.state is thresholds.ThresholdState.NOT_APPLICABLE
     assert "curated table" in row.reason
 

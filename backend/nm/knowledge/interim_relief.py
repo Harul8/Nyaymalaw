@@ -18,6 +18,7 @@ entries on the BK-85-AC3 pattern.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.ports.interim_relief import (
     Assessment,
@@ -119,6 +120,18 @@ TESTS: dict[InterimRelief, Test] = {
 
 
 @implements("D1")
+def coverage(relief: InterimRelief) -> Curation:
+    """WHETHER THIS TABLE EXAMINED THE RELIEF. `nm.domain.curation`.
+
+    A relief nobody stated is a missing key; a stated relief with no row -- a
+    stay, today -- was never examined, and its test is simply not held here.
+    """
+    if relief is InterimRelief.NOT_STATED:
+        return Curation.KEY_NOT_ESTABLISHED
+    return Curation.CURATED if relief in TESTS else Curation.NOT_CURATED
+
+
+@implements("D1")
 def test_for(relief: InterimRelief) -> Test | None:
     """The curated test, or None where none is held.
 
@@ -166,4 +179,4 @@ def assess(relief: InterimRelief) -> Assessment:
                 "nothing here has seen")
 
 
-__all__ = ["TESTS", "test_for", "assess"]
+__all__ = ["TESTS", "coverage", "test_for", "assess"]

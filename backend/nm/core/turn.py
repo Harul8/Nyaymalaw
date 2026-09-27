@@ -73,6 +73,7 @@ from nm.domain.budget import refuse_partial
 from nm.domain.capacity import CapacityPosition
 from nm.domain.capacity import record_on as record_capacity
 from nm.domain.clock import FORUM
+from nm.domain.curation import Curation
 from nm.domain.gates import Response
 from nm.domain.matter import (
     Basis,
@@ -3452,6 +3453,10 @@ class TurnEngine:
         track = Track.not_established()
         running = self._procedural.engaged(role, track)
         undecided = self._procedural.undecided(role, track)
+        # A KNOWN ROLE THE TABLE NEVER EXAMINED is said, never left as silence:
+        # no row here is not "no clock runs" (`nm.domain.curation`, S1).
+        uncurated = self._procedural.coverage(role) in (Curation.NOT_CURATED,
+                                                        Curation.WITHHELD)
 
         rows = tuple(deadlines.Deadline(
             thread=thread.id, kind=deadlines.DeadlineKind.PROCEDURAL_PERIOD,
@@ -3484,6 +3489,14 @@ class TurnEngine:
                       f"commercial suit of a specified value or an ordinary "
                       f"one: {said}. The two read differently and I will not "
                       f"pick one because nobody said.")))
+        if uncurated:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I hold no curated periods for a "
+                      f"{role.value.replace('_', ' ')} in a proceeding, so "
+                      f"any period that runs for this role is not listed here. "
+                      f"That is a gap in what I hold, not a finding that no "
+                      f"period runs.")))
         return rows, out
 
     def _filing_requirements(self, thread) -> list[Element]:
@@ -3545,7 +3558,7 @@ class TurnEngine:
                          if f.source_kind is SourceKind.AUTHORITY and f.locator)
         if len(locators) < 2:
             return []
-        weighed = self._authority_weight.weigh(locators)
+        weighed = self._authority_weight.weigh(locators).weighings
         out: list[Element] = []
         for weighing in weighed:
             if weighing.standing is Standing.SUPERSEDES:
@@ -3564,10 +3577,10 @@ class TurnEngine:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=(f"{unranked} pair(s) of the authorities above could not "
-                      f"be ranked against each other, because the bench is not "
-                      f"recorded for at least one of them. That is a gap in "
-                      f"what is held, not a finding that they are of equal "
-                      f"weight.")))
+                      f"be ranked against each other, because the court or the "
+                      f"bench is not recorded for at least one of them. That "
+                      f"is a gap in what is held, not a finding that they are "
+                      f"of equal weight.")))
         return out
 
     @implements("D1")
@@ -3599,7 +3612,8 @@ class TurnEngine:
         against = Against.UNKNOWN
         return thresholds.from_institution(
             self._pre_institution.engaged(cause, against),
-            self._pre_institution.undecided(cause, against))
+            self._pre_institution.undecided(cause, against),
+            coverage=self._pre_institution.coverage(cause))
 
     def _accrual_trigger(self, cause_read) -> str:
         """The statutory trigger for this cause, or empty.

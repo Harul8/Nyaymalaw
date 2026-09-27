@@ -16,7 +16,7 @@ from pathlib import Path
 from nm.domain.traceability import implements
 from nm.knowledge import authority_weight as curated
 from nm.knowledge.identity import IdentityIndex
-from nm.ports.authority_weight import Weighing
+from nm.ports.authority_weight import Weighed
 
 
 class CuratedAuthorityWeight:
@@ -30,11 +30,14 @@ class CuratedAuthorityWeight:
         self._index = IdentityIndex(index_path)
 
     @implements("D3")
-    def weigh(self, locators: tuple[str, ...]) -> tuple[Weighing, ...]:
+    def weigh(self, locators: tuple[str, ...]) -> Weighed:
         if not self._index.available:
             # AN UNBUILT INDEX RANKS NOTHING. It must not be able to report
             # that two authorities could not be compared either, because that
             # reads as a fact about the judgments rather than about this
             # installation -- the coverage disclosure owns that statement.
-            return ()
+            # The reason is carried for a caller that asks (a tool), and the
+            # turn shows nothing from it.
+            return Weighed(why="the case identity index is not built on this "
+                               "installation, so no authority is ranked")
         return curated.weigh(locators, self._index)

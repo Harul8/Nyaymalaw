@@ -7,6 +7,7 @@ the turn a table of its own without touching the curated one.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction
 from nm.domain.traceability import implements
 from nm.knowledge import institution as curated
@@ -25,3 +26,7 @@ class CuratedPreInstitution:
     def undecided(self, cause: CauseOfAction,
                   against: Against) -> tuple[Condition, ...]:
         return curated.undecided(cause, against)
+
+    @implements("D1")
+    def coverage(self, cause: CauseOfAction) -> Curation:
+        return curated.coverage(cause)

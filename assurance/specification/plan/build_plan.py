@@ -4873,6 +4873,184 @@ d("B-166", "2026-09-26", "limitation",
   "years, months and days.")
 
 
+d("B-167", "2026-09-26", "knowledge",
+  "AN UNCURATED KEY READ AS 'NOTHING APPLIES'. The pre-institution table "
+  "answered a cause it had never examined with no conditions, and the "
+  "threshold row went NOT_APPLICABLE -- a finding that no notice or step is "
+  "required, made from an empty lookup. The period table listed every period "
+  "as undecided for any role it did not hold, which read as the whole table "
+  "being in play.",
+  "Reviewing the capabilities the tool layer would wrap. Each curated table "
+  "was keyed on an enum and returned an empty tuple for a key it did not "
+  "hold, and every consumer read the empty tuple as the answer.",
+  "S1 -- an absent input reading as success",
+  "Asking each of the six keyed tables for every member of its key enum.",
+  "`nm.domain.curation.Curation` -- CURATED, WITHHELD, NOT_CURATED, "
+  "KEY_NOT_ESTABLISHED -- is answered by every keyed table through its port, "
+  "and only a CURATED key may produce 'nothing applies'. The turn discloses "
+  "an uncurated role as a gap in what is held.",
+  "Yes -- the population is every knowledge-plane port keyed on an enum, "
+  "read from the adapters, and every member of each key.",
+  "tests/test_a_curated_table_says_what_it_does_not_cover.py::"
+  "test_every_keyed_table_answers_coverage_for_every_key draws the tables "
+  "from the product; "
+  "test_an_uncurated_cause_never_reads_as_no_condition_applies and "
+  "test_the_served_turn_discloses_an_uncurated_role hold the consumers.")
+
+d("B-168", "2026-09-26", "retrieval",
+  "AN EXACT READ ANSWERED A BARE NONE FOR TWO FACTS. `passage` and "
+  "`case_identity` returned None both where the index holds no such thing "
+  "and where the read never happened -- a withdrawn publication, a refused "
+  "egress, an unbuilt index. The attach route asked `search.available` to "
+  "tell them apart, so a read the policy REFUSED was reported to the "
+  "advocate as a locator that named nothing.",
+  "Reviewing the capabilities the tool layer would wrap. The return type "
+  "was Optional, and Optional has one way to say no.",
+  "S1 -- an absent input reading as success",
+  "Reading the attach route against the policed search's refusal path.",
+  "`PassageRead` and `CaseIdentityRead` carry RESOLVED, UNRESOLVED or "
+  "INDEX_UNAVAILABLE and a reason the type refuses to leave blank; the "
+  "routes read the state, never index availability.",
+  "Yes -- the port's own signatures are the population, so a read added "
+  "later cannot answer a bare None.",
+  "tests/test_an_exact_read_says_why_it_found_nothing.py::"
+  "test_no_read_on_the_search_port_returns_a_bare_none reads every method "
+  "the port declares; "
+  "test_a_refused_read_is_never_reported_as_a_missing_paragraph holds the "
+  "measured case.")
+
+d("B-169", "2026-09-26", "authority",
+  "A STATE WAS READ FROM ITS REASON'S WORDS. `Precedence` had one value "
+  "for a finding (equal benches) and a gap (a bench not recorded), so "
+  "`authority_weight` told them apart by looking for the word "
+  "'co-ordinate' in the sentence `supersedes` wrote. Reword the sentence "
+  "and a conflict between equal benches is reported as a missing record.",
+  "Reviewing the capabilities the tool layer would wrap. The enum was "
+  "written before the second meaning existed, and the consumer recovered "
+  "it from prose rather than asking for a value.",
+  "S1 -- an absent input reading as success (a gap and a finding sharing "
+  "one value)",
+  "Reading the weighing code while reviewing it as a tool.",
+  "`Precedence.CO_ORDINATE` is its own value; the standing is taken from "
+  "the value. `Weighed` refuses an empty result without a reason.",
+  "Yes -- no code in the product may branch on a phrase in a reason; the "
+  "scan covers every module.",
+  "tests/test_a_state_is_never_read_from_its_reason.py::"
+  "test_no_state_in_the_product_is_decided_by_a_phrase_in_its_reason scans "
+  "backend/nm; test_the_scan_rejects_the_code_it_replaced is its "
+  "counterexample.")
+
+d("B-170", "2026-09-26", "retrieval",
+  "A NAMED ACT OUT OF FORCE WAS REPLACED BY A KEYWORD GUESS. B-016 again, "
+  "one step further: `_named_in` skipped a named Act not in force on the "
+  "date, and keyword scoring then chose another. 'Bail under section 437 of "
+  "the Code of Criminal Procedure' on a 2025 date read BNSS s.437 -- a "
+  "different provision of a different code -- and told the advocate 'You "
+  "did not name an Act'. Cheating under s.420 of the Indian Penal Code read "
+  "s.420 of the BNSS, the procedure code.",
+  "B-016's fix made a name beat keywords, but only a name IN FORCE on the "
+  "date, and identification and inference lived in one method, so a caller "
+  "could not ask for only what was named.",
+  "S3 -- a confident wrong lookup",
+  "Splitting exact identification from keyword inference for the tool "
+  "layer, then running every out-of-force Act's name against every keyword "
+  "in force.",
+  "`Manifest.identify` is exact and reports a named Act out of force as "
+  "superseded; `Manifest.infer` is keyword candidates only; `resolve` "
+  "composes them and never infers past a name. `read_provision` reads a "
+  "named Act's provision exactly, and an out-of-force one is returned "
+  "blocked by G-INFORCE, never replaced.",
+  "Yes -- the population is every out-of-force manifest entry, by title and "
+  "by every abbreviation, against every keyword in force on the date.",
+  "tests/test_a_named_act_is_read_and_never_replaced.py::"
+  "test_a_named_act_is_never_outvoted_by_keywords sweeps the manifest; "
+  "test_identify_never_guesses_and_infer_never_identifies holds the split; "
+  "test_an_out_of_force_act_is_read_as_itself_and_blocked holds the reader.")
+
+d("B-171", "2026-09-27", "retrieval",
+  "A READ THAT NEVER RAN WAS REPORTED AS ONE THAT FAILED. An unreadable "
+  "corpus answered HELD_NOT_FOUND -- 'the corpus holds this and retrieval "
+  "failed' -- although nothing was searched; G-NOTASSESSED exists for a "
+  "store 'absent, unopenable, or never built'. An unbuilt authority index "
+  "said the same (swept the next day; CLAUDE.md had recorded the old state). "
+  "And a case expansion read at "
+  "most 200 paragraphs with nothing to say it had stopped: 49 held "
+  "judgments run past 200, Kesavananda Bharati to 1,124.",
+  "The unreadable branch predates NOT_ASSESSED and borrowed the nearest "
+  "state; the expansion limit was a bound nobody reported.",
+  "S1 -- an absent input reading as success",
+  "Adding the exact provision reader, and measuring paragraphs per case in "
+  "the built authority index.",
+  "Every corpus read passes one guard, `_guarded`, which answers "
+  "NOT_ASSESSED for an unreadable corpus. `CaseExpansion.next_after` says "
+  "where the next page starts and is None only at the end; a stored "
+  "document's window says where it sits and how much it left out.",
+  "Yes -- the population is every public read on the adapter returning an "
+  "EvidenceResult, read from its annotations.",
+  "tests/test_a_named_act_is_read_and_never_replaced.py::"
+  "test_every_read_says_not_assessed_when_the_corpus_cannot_be_read and "
+  "test_held_not_found_is_only_ever_said_on_the_manifests_word, which scans "
+  "backend/nm for any HELD_NOT_FOUND not issued on the manifest's word; "
+  "tests/test_a_page_says_it_is_one.py::test_a_page_that_stopped_early_says_so "
+  "and test_a_window_says_where_it_sits_and_what_it_left_out.")
+
+d("B-172", "2026-09-27", "retrieval",
+  "A JUDGMENT'S PARAGRAPHS WERE ORDERED AS TEXT. `expand` sorted by "
+  "`chunk_id`, a string, so P1001 came before P101: 13 of the 49 judgments "
+  "over 200 paragraphs came back out of source order, and Kesavananda "
+  "Bharati's paragraph 1001 was its eighteenth. The document reader already "
+  "read by stored order, so the two readers disagreed about one judgment.",
+  "The expansion was written against short judgments, where zero-padded "
+  "ids sort correctly, and never measured past 999 paragraphs.",
+  "S9 -- two owners for one truth (the order of a source)",
+  "Measuring expansion against stored order while adding paging.",
+  "Both readers order by `rowid`, the order the index stored the source in.",
+  "Yes -- no SQL in backend/nm may order a source by a locator, chunk id or "
+  "section number.",
+  "tests/test_a_page_says_it_is_one.py::"
+  "test_no_reader_orders_a_source_by_a_string_key scans backend/nm; "
+  "test_paging_reads_every_paragraph_once_in_stored_order plants the "
+  "P101/P1001 case.")
+
+d("B-173", "2026-09-27", "retrieval",
+  "WHAT THE DENYLIST HELD BACK WAS NEVER SAID. Four readers skipped a "
+  "denylisted chunk with a bare `continue`, so a provision with a passage "
+  "held back read as whole, and one held back entirely read as NOT HELD or "
+  "a retrieval defect. /api/health said '44 chunk(s) excluded'; all 44 ids "
+  "name a store chunks.db does not hold, so none was.",
+  "The denylist was applied at each read as it was written, with no count "
+  "and nothing comparing the list to the stores.",
+  "S1 -- an absent input reading as success",
+  "Measuring the denylist's ids against chunks.db and the authority index.",
+  "`_screen` is the only consumer of the denylist and returns what it held "
+  "back; every read says it. A provision held back entirely is NOT_HELD "
+  "with the reason. Health reports ids LISTED, not excluded.",
+  "Yes -- the scan's population is every function in backend/nm reaching "
+  "the denylist.",
+  "tests/test_what_a_read_held_back_is_said.py::"
+  "test_the_denylist_is_consulted_only_by_the_screen and "
+  "test_no_caller_discards_what_the_screen_held_back.")
+
+d("B-174", "2026-09-27", "release",
+  "AN AUTHORED RELEASE ROW WITH NO MEASUREMENT VANISHED FROM THE SCORECARD. "
+  "`releasegate.score` reported the rows it had code for and nothing else, so "
+  "a threshold written into release.yaml with no measurement behind it did "
+  "not appear at all -- and a scorecard missing a row reads exactly like one "
+  "where every row was looked at. Latent until the LB-40 quality bar was added "
+  "as RG-30 to RG-38, which no runner measures yet.",
+  "Adding the owner-approved quality bar to release.yaml. Every earlier row "
+  "had been added together with its measurement, so the gap never showed.",
+  "S1 -- an absent input reading as success",
+  "Reading score() while adding rows it had no code for.",
+  "`unscored()` runs last in `score` and reports every authored row it did "
+  "not measure as NOT MEASURED, keeping its blocking flag -- so it fails the "
+  "release exactly as release.yaml says NOT MEASURED must.",
+  "Yes -- the population is release.yaml itself, every row that will ever be "
+  "authored.",
+  "tests/test_a_release_row_is_never_silently_unscored.py::"
+  "test_every_authored_row_appears_in_the_score reads release.yaml; "
+  "test_the_scorer_completes_the_scorecard_before_returning holds the call.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

@@ -37,10 +37,11 @@ from nm.ports.evidence import Coverage, Treatment
 from nm.ports.search import (
     CaseDiscovery,
     CaseExpansion,
+    CaseIdentityRead,
     CitationResolution,
     CorpusSearch,
     CorpusSearchPort,
-    Paragraph,
+    PassageRead,
     ResolutionState,
 )
 
@@ -106,16 +107,19 @@ class PolicedSearch:
                                    to_year=to_year, limit=limit)
 
     def expand(self, case_id: str, *, query: str | None = None,
-               limit: int = 200) -> CaseExpansion:
+               limit: int = 200, after: str | None = None) -> CaseExpansion:
         refused = self._permit(len(f"{case_id}{query or ''}".encode("utf8")))
         if refused:
             return CaseExpansion(case_id=case_id, index=f"{self.processor_id} (refused)",
                                  coverage=Coverage.NOT_ASSESSED, why=refused)
-        return self.inner.expand(case_id, query=query, limit=limit)
+        return self.inner.expand(case_id, query=query, limit=limit, after=after)
 
-    def passage(self, locator: str) -> Paragraph | None:
-        if self._permit(len((locator or "").encode("utf8"))):
-            return None
+    def passage(self, locator: str) -> PassageRead:
+        refused = self._permit(len((locator or "").encode("utf8")))
+        if refused:
+            # A REFUSED READ IS NOT A MISSING PARAGRAPH: it did not happen.
+            return PassageRead(locator=locator or "", state=ResolutionState.INDEX_UNAVAILABLE,
+                               why=refused)
         return self.inner.passage(locator)
 
     def resolve(self, citation: str) -> CitationResolution:
@@ -132,9 +136,11 @@ class PolicedSearch:
             return Treatment.not_checked(refused)
         return self.inner.treatment(case_id)
 
-    def case_identity(self, case_id: str):
-        if self._permit(len((case_id or "").encode("utf8"))):
-            return None
+    def case_identity(self, case_id: str) -> CaseIdentityRead:
+        refused = self._permit(len((case_id or "").encode("utf8")))
+        if refused:
+            return CaseIdentityRead(case_id=case_id or "", state=ResolutionState.INDEX_UNAVAILABLE,
+                                    why=refused)
         return self.inner.case_identity(case_id)
 
     def __getattr__(self, name: str) -> Any:

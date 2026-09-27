@@ -78,7 +78,14 @@ class Precedence(str, Enum):
 
     LEFT = "left"
     RIGHT = "right"
+    CO_ORDINATE = "co_ordinate"
+    """A FINDING: two benches of equal strength, neither superseding the other.
+    Separated from `NOT_COMPARABLE` on 26 September 2026 -- the two were one
+    value, and the only thing that told them apart was the word "co-ordinate"
+    in the reason, which `authority_weight` searched the text for. A state
+    decided by a phrase changes the day the phrase is reworded."""
     NOT_COMPARABLE = "not_comparable"
+    """A GAP: a court that could not be identified, or a bench not recorded."""
 
 
 @refuses_blank_text()
@@ -171,7 +178,7 @@ def supersedes(left: CaseIdentity, right: CaseIdentity) -> tuple[Precedence, str
             "be applied blind")
 
     if left.bench_size == right.bench_size:
-        return Precedence.NOT_COMPARABLE, (
+        return Precedence.CO_ORDINATE, (
             f"co-ordinate benches ({left.describe()}). Neither supersedes the "
             f"other; a conflict between them is resolved by reference to a "
             f"larger bench, not by ranking")

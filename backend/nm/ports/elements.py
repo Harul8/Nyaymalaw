@@ -25,6 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction, Side
 from nm.domain.proof import Burden, Standard
 from nm.domain.text import refuses_blank_text
@@ -82,3 +83,11 @@ class ElementsPort(Protocol):
     def elements_for(self, cause: CauseOfAction) -> Elements | None: ...
 
     def why_not(self, cause: CauseOfAction) -> str: ...
+
+    def coverage(self, cause: CauseOfAction) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...

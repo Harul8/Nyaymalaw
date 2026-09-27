@@ -33,6 +33,7 @@ from datetime import date
 from enum import Enum
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.text import refuses_blank_text
 
 
@@ -110,6 +111,24 @@ class Governing:
     read_the_saving: str = ""
     """The saving provision to read where one decides this answer. Empty where
     the succession is not engaged at all."""
+    rule: Succession | None = None
+    """THE CURATED SUCCESSION THIS ANSWER APPLIED -- both Acts, the
+    commencement, the saving provision and where the row was curated from.
+
+    An answer carried the Act and a sentence, and the row that produced them
+    stayed behind in the table: an advocate or a tool checking "why the BNS?"
+    had the conclusion and not the rule, and could not tell a curated
+    succession from a reading of one. `None` exactly where no succession is
+    curated for the limb, which `because` already says."""
+
+    def __post_init__(self) -> None:
+        if (self.act or self.read_the_saving) and self.rule is None:
+            raise ValueError(
+                "an answer that names an Act or a saving provision must carry "
+                "the succession it applied -- a conclusion without its rule "
+                "cannot be checked against the text")
+        if self.rule is not None and self.read_the_saving not in ("", self.rule.saving):
+            raise ValueError("the saving provision named is not the applied succession's")
 
     @property
     def established(self) -> bool:
@@ -123,6 +142,14 @@ class GoverningLawPort(Protocol):
                   pending: Pending) -> Governing: ...
 
     def successions(self) -> tuple[Succession, ...]: ...
+
+    def coverage(self, limb: Limb) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...
 
 
 __all__ = ["Limb", "Pending", "Succession", "Governing", "GoverningLawPort"]

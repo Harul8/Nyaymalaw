@@ -94,7 +94,9 @@ def test_co_ordinate_benches_do_not_supersede_each_other():
     verdict, why = supersedes(
         case("Supreme Court of India", bench=3, year=2010),
         case("Supreme Court of India", bench=3, year=1998))
-    assert verdict is Precedence.NOT_COMPARABLE
+    # A FINDING OF ITS OWN, not a gap: CO_ORDINATE, never LEFT or RIGHT, and
+    # never NOT_COMPARABLE -- which is what an unrecorded bench is (26 Sep 2026).
+    assert verdict is Precedence.CO_ORDINATE
     assert "co-ordinate" in why
     assert "larger bench" in why
 

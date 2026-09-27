@@ -8,6 +8,7 @@ READ BACK before it is relied on.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction
 from nm.domain.traceability import implements
 from nm.ports.institution import Against, Condition, Engagement
@@ -108,6 +109,21 @@ BY_OPPONENT: dict[Against, tuple[str, ...]] = {
 
 
 @implements("D1")
+def coverage(cause: CauseOfAction) -> Curation:
+    """WHETHER THIS TABLE EXAMINED THE CAUSE. `nm.domain.curation`.
+
+    A cause with no row in `BY_CAUSE` was never examined, and engaging nothing
+    through it is silence rather than a finding that no condition applies. A
+    cause somebody examined and found to require nothing is listed in
+    `BY_CAUSE` with an EMPTY tuple, which makes it CURATED -- the decision is
+    then written down rather than inferred from an absent row.
+    """
+    if cause is CauseOfAction.NOT_ESTABLISHED:
+        return Curation.KEY_NOT_ESTABLISHED
+    return Curation.CURATED if cause in BY_CAUSE else Curation.NOT_CURATED
+
+
+@implements("D1")
 def engaged(cause: CauseOfAction, against: Against = Against.UNKNOWN,
             ) -> tuple[Engagement, ...]:
     """Every pre-institution condition this cause and opponent bring into play.
@@ -154,4 +170,4 @@ def undecided(cause: CauseOfAction, against: Against) -> tuple[Condition, ...]:
 
 
 __all__ = ["Against", "Condition", "Engagement", "CONDITIONS", "BY_CAUSE",
-           "BY_OPPONENT", "engaged", "undecided"]
+           "BY_OPPONENT", "coverage", "engaged", "undecided"]

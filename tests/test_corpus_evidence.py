@@ -81,13 +81,20 @@ def test_a_section_outside_intended_coverage_is_an_honest_refusal(adapter):
 def test_an_unreadable_corpus_is_not_reported_as_nothing_held(tmp_path):
     """An absent input must never read as an answer.
 
-    A corpus that cannot be read is HELD_NOT_FOUND -- a defect that escalates --
+    A corpus that cannot be read is NOT_ASSESSED -- nothing was searched --
     and never NOT_HELD, which would tell the advocate the law does not exist.
+
+    It asserted HELD_NOT_FOUND until 26 September 2026, which was the nearest
+    state available when this was written: `Coverage` had no value for a
+    search that never ran, so an unopenable store borrowed one that says the
+    corpus HOLDS the provision and retrieval failed. NOT_ASSESSED was added
+    for exactly this; the rule here is unchanged, the state is the true one.
     """
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     broken = CorpusEvidenceAdapter(tmp_path / "nothing-here", manifest)
     result = broken.fetch(need("section 6 of the specific relief act"))
-    assert result.coverage is Coverage.HELD_NOT_FOUND
+    assert result.coverage is Coverage.NOT_ASSESSED
+    assert result.coverage is not Coverage.NOT_HELD
     assert "not readable" in result.missing
 
 

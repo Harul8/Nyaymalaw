@@ -54,6 +54,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction
 from nm.domain.text import refuses_blank_text
 
@@ -133,6 +134,14 @@ class PreInstitutionPort(Protocol):
 
     def undecided(self, cause: CauseOfAction,
                   against: Against) -> tuple[Condition, ...]: ...
+
+    def coverage(self, cause: CauseOfAction) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...
 
 
 __all__ = ["Against", "Condition", "Engagement", "PreInstitutionPort"]

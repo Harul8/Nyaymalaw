@@ -18,6 +18,7 @@ signs off these entries on the BK-85-AC3 pattern.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import Role
 from nm.domain.traceability import implements
 from nm.ports.procedural_period import (
@@ -131,15 +132,31 @@ PERIODS: dict[str, Period] = {
 #: WHICH ROLES BRING WHICH PERIODS INTO PLAY. Exact membership on the closed
 #: `Role` vocabulary -- the whole point of that vocabulary being closed.
 #:
-#: A role absent from this table engages nothing. That is not a finding that
-#: no period runs: `undecided` answers from what is not established, and an
-#: unknown role leaves every period undecided rather than inapplicable.
+#: A role absent from this table engages nothing, and that is NOT a finding
+#: that no period runs: `coverage` says the role was never examined. An UNKNOWN
+#: role is a different fact -- the key itself is missing -- and leaves every
+#: period undecided rather than inapplicable.
 BY_ROLE: dict[Role, tuple[str, ...]] = {
     Role.DEFENDANT: ("cpc_o8_r1_written_statement_ordinary",
                      "cpc_o8_r1_written_statement_commercial",
                      "cpc_o37_r3_leave_to_defend"),
     Role.PROSPECTIVE_RESPONDENT: ("cpc_148a_caveat_life",),
 }
+
+
+@implements("D3")
+def coverage(role: Role) -> Curation:
+    """WHETHER THIS TABLE EXAMINED THE ROLE. `nm.domain.curation`.
+
+    A known role with no row was never examined: the periods that run for it
+    are simply not held here, which is NOT the same as every period being
+    undecided. This table used to report exactly that -- a plaintiff was told
+    every defendant's clock was an open question -- because it could not say
+    "not curated" and borrowed the unknown-role answer instead.
+    """
+    if role is Role.UNKNOWN:
+        return Curation.KEY_NOT_ESTABLISHED
+    return Curation.CURATED if role in BY_ROLE else Curation.NOT_CURATED
 
 
 @implements("D3")
@@ -187,11 +204,15 @@ def undecided(role: Role, track: Track) -> tuple[Period, ...]:
             period = PERIODS[key]
             if period.track is not Track.NOT_ESTABLISHED:
                 out.setdefault(key, period)
-    if role not in BY_ROLE:
+    if coverage(role) is Curation.KEY_NOT_ESTABLISHED:
+        # ONLY AN UNKNOWN ROLE leaves every period undecided. A known role this
+        # table never examined is `NOT_CURATED`, said by `coverage` -- not
+        # every period being an open question for it.
         for keys in BY_ROLE.values():
             for key in keys:
                 out.setdefault(key, PERIODS[key])
     return tuple(out.values())
 
 
-__all__ = ["NOT_THE_EXTENSION_ROUTE", "PERIODS", "BY_ROLE", "engaged", "undecided"]
+__all__ = ["NOT_THE_EXTENSION_ROUTE", "PERIODS", "BY_ROLE", "coverage", "engaged",
+           "undecided"]

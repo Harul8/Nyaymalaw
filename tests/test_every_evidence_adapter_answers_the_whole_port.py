@@ -279,7 +279,11 @@ def test_a_real_adapter_overrides_them():
     NOT READABLE on a working corpus and nothing would say why."""
     from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
 
-    for name in ("available", "readiness", "accrual_trigger"):
+    # EVERY MEMBER, from the Protocol. This was a list of three written here,
+    # and `document` and `read_provision` were added to the port after it --
+    # a real adapter inheriting either default would answer "no reader" on a
+    # working corpus, and a hand-written list is how that goes unseen.
+    for name in sorted(port_members()):
         assert name in CorpusEvidenceAdapter.__dict__, (
             f"the real adapter inherits `{name}` from the port's default, so "
             f"the product would report the safe answer rather than the true "

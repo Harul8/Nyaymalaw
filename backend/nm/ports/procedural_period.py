@@ -39,6 +39,7 @@ from dataclasses import dataclass
 from enum import Enum, nonmember
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.matter import Role
 from nm.domain.spoken import Spoken
 from nm.domain.text import refuses_blank_text
@@ -165,6 +166,14 @@ class ProceduralPeriodPort(Protocol):
     def engaged(self, role: Role, track: Track) -> tuple[Running, ...]: ...
 
     def undecided(self, role: Role, track: Track) -> tuple[Period, ...]: ...
+
+    def coverage(self, role: Role) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...
 
 
 __all__ = ["Track", "Bindingness", "Extension", "Period", "Running",

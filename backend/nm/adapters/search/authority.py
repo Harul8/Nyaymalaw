@@ -35,10 +35,12 @@ from nm.ports.search import (
     CaseDiscovery,
     CaseExpansion,
     CaseHit,
+    CaseIdentityRead,
     CitationResolution,
     CorpusSearch,
     IndexIdentity,
     Paragraph,
+    PassageRead,
     ResolutionState,
     SearchHit,
 )
@@ -104,14 +106,27 @@ class AuthorityIndexSearch:
     def _treatment(self, case_id: str) -> Treatment:
         return self._identity_index.treatment(case_id)
 
-    def case_identity(self, case_id: str):
+    def case_identity(self, case_id: str) -> CaseIdentityRead:
+        """The identity record, not held, or not readable -- never a bare None."""
         try:
             return self._published_read(lambda: self._case_identity(case_id))
-        except CorpusPublicationRefused:
-            return None
+        except CorpusPublicationRefused as exc:
+            return CaseIdentityRead(case_id=case_id, state=ResolutionState.INDEX_UNAVAILABLE,
+                                    why=f"Published legal source is not usable: {exc}")
 
-    def _case_identity(self, case_id: str):
-        return self._identity_index.case(case_id)
+    def _case_identity(self, case_id: str) -> CaseIdentityRead:
+        if not self._identity_index.available:
+            return CaseIdentityRead(case_id=case_id, state=ResolutionState.INDEX_UNAVAILABLE,
+                                    why="the case identity index is not available on "
+                                        "this installation")
+        identity = self._identity_index.case(case_id)
+        if identity is None:
+            return CaseIdentityRead(
+                case_id=case_id, state=ResolutionState.UNRESOLVED,
+                why=(f"the identity index holds no record for case {case_id!r}; "
+                     f"it may hold the case under another id, or not at all"))
+        return CaseIdentityRead(case_id=case_id, state=ResolutionState.RESOLVED,
+                                identity=identity)
 
     def _published_read(self, read: Callable[[], _T]) -> _T:
         """One boundary for ALL reads, including withdrawal during a read."""
@@ -427,17 +442,27 @@ class AuthorityIndexSearch:
             con.close()
 
     def expand(self, case_id: str, *, query: str | None = None,
-               limit: int = 200) -> CaseExpansion:
+               limit: int = 200, after: str | None = None) -> CaseExpansion:
         try:
-            return self._published_read(lambda: self._expand(case_id, query=query, limit=limit))
+            return self._published_read(
+                lambda: self._expand(case_id, query=query, limit=limit, after=after))
         except CorpusPublicationRefused as exc:
             return CaseExpansion(case_id=case_id, index=self.name,
                                  coverage=Coverage.NOT_ASSESSED,
                                  why=f"Published legal source is not usable: {exc}")
 
     def _expand(self, case_id: str, *, query: str | None = None,
-                limit: int = 200) -> CaseExpansion:
+                limit: int = 200, after: str | None = None) -> CaseExpansion:
         """Every indexed paragraph of one case, BY LOCATOR, in source order.
+
+        SOURCE ORDER IS THE ORDER THE INDEX STORED THEM IN -- `rowid`, which
+        the document reader already reads by. This sorted by `chunk_id`, a
+        string, so `P1001` came before `P101`: measured 27 September 2026, 13
+        of the 49 judgments over 200 paragraphs came back out of order, and
+        Kesavananda Bharati's paragraph 1001 was its eighteenth.
+
+        PAGED, AND A PAGE SAYS IT IS ONE. `next_after` names where the next
+        page starts; it is `None` only where this page reached the end.
 
         `complete` IS `False` BY CONSTRUCTION for this index: it holds the
         attributable kinds only (`attributable_kinds` in its identity), so a
@@ -463,57 +488,84 @@ class AuthorityIndexSearch:
                                      why="the index carries no identity")
             kinds = dict(con.execute("select key, value from identity")).get(
                 "attributable_kinds", "")
+            start = _page_start(after, identity)
+            if isinstance(start, str):
+                return CaseExpansion(case_id=case_id, index=self.name,
+                                     coverage=Coverage.NOT_ASSESSED, why=start)
             match = _fts_query(query) if query else None
             if match:
                 where, args = "case_id = ? and paras match ?", [case_id, match]
             else:
                 where, args = "case_id = ?", [case_id]
+            page = max(1, min(int(limit), 500))
             rows = con.execute(
-                "select chunk_id, case_id, case_name, court, year, para_type, text "
-                f"from paras where {where} order by chunk_id limit ?",
-                [*args, max(1, min(int(limit), 500))]).fetchall()
+                "select rowid, chunk_id, case_id, case_name, court, year, para_type, text "
+                f"from paras where {where} and rowid > ? order by rowid limit ?",
+                [*args, start, page + 1]).fetchall()
         except sqlite3.Error as exc:
             return CaseExpansion(case_id=case_id, index=self.name,
                                  coverage=Coverage.NOT_ASSESSED,
                                  why=f"the index rejected the read: {exc}")
         finally:
             con.close()
-        paragraphs = tuple(_paragraph(r) for r in rows)
+        more = len(rows) > page
+        rows = rows[:page]
+        paragraphs = tuple(_paragraph(r[1:]) for r in rows)
         return CaseExpansion(
             case_id=case_id, index=self.name, coverage=Coverage.ANSWERED,
             identity=identity, paragraphs=paragraphs,
             # KNOWN INCOMPLETE when the index says it kept only some kinds.
             complete=False if kinds else None,
+            next_after=f"{identity.built_at}#{rows[-1][0]}" if more else None,
             why=(None if paragraphs else
-                 f"the index holds no paragraph for case {case_id!r}; it may "
-                 f"hold the case under another id, or not at all"))
+                 f"the index holds no paragraph for case {case_id!r}"
+                 + (" after the point this page started from" if start else
+                    "; it may hold the case under another id, or not at all")))
 
-    def passage(self, locator: str) -> Paragraph | None:
-        """Exact paragraph or unavailable; None is NOT proof of corpus absence."""
+    def passage(self, locator: str) -> PassageRead:
+        """The paragraph, not held, or not readable -- never a bare None.
+
+        `None` used to carry both "no such paragraph" and "the read did not
+        happen", and the attach route told the advocate their locator named
+        nothing when the read had been refused."""
         try:
             return self._published_read(lambda: self._passage(locator))
-        except CorpusPublicationRefused:
-            return None
+        except CorpusPublicationRefused as exc:
+            return PassageRead(locator=locator or "", state=ResolutionState.INDEX_UNAVAILABLE,
+                               why=f"Published legal source is not usable: {exc}")
 
-    def _passage(self, locator: str) -> Paragraph | None:
-        """ONE paragraph, by its exact chunk id. `None` means not held --
-        which the caller must not read as absence of the law; the index says
-        which kinds it holds."""
-        if not self._path.exists() or not (locator or "").strip():
-            return None
+    def _passage(self, locator: str) -> PassageRead:
+        """ONE paragraph, by its exact chunk id. UNRESOLVED means the index was
+        read and holds no such paragraph -- which is still not absence of the
+        law; the index says which kinds of paragraph it holds."""
+        wanted = (locator or "").strip()
+        if not wanted:
+            return PassageRead(locator="", state=ResolutionState.UNRESOLVED,
+                               why="no locator was given")
+        if not self._path.exists():
+            return PassageRead(locator=wanted, state=ResolutionState.INDEX_UNAVAILABLE,
+                               why=f"the authority index is not built at {self._path.name}")
         try:
             con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
-        except sqlite3.Error:
-            return None
+        except sqlite3.Error as exc:
+            return PassageRead(locator=wanted, state=ResolutionState.INDEX_UNAVAILABLE,
+                               why=f"the authority index could not be opened: {exc}")
         try:
             row = con.execute(
                 "select chunk_id, case_id, case_name, court, year, para_type, text "
-                "from paras where chunk_id = ? limit 1", (locator.strip(),)).fetchone()
-        except sqlite3.Error:
-            return None
+                "from paras where chunk_id = ? limit 1", (wanted,)).fetchone()
+        except sqlite3.Error as exc:
+            return PassageRead(locator=wanted, state=ResolutionState.INDEX_UNAVAILABLE,
+                               why=f"the authority index could not be read: {exc}")
         finally:
             con.close()
-        return _paragraph(row) if row else None
+        if not row:
+            return PassageRead(
+                locator=wanted, state=ResolutionState.UNRESOLVED,
+                why=(f"the index holds no paragraph with the locator {wanted!r}; it "
+                     f"may hold the judgment under another locator, or not at all"))
+        return PassageRead(locator=wanted, state=ResolutionState.RESOLVED,
+                           paragraph=_paragraph(row))
 
     def resolve(self, citation: str) -> CitationResolution:
         try:
@@ -602,6 +654,26 @@ def _hit(row: tuple) -> SearchHit:
         rank=float(rank or 0.0),
         confidence=_confidence(float(rank or 0.0)),
     )
+
+
+def _page_start(after: str | None, identity: IndexIdentity) -> int | str:
+    """The stored position a page starts after, or WHY it cannot be read.
+
+    A cursor carries the build it was issued by. One from another build, or
+    one this index never issued, is refused by name rather than read as the
+    start -- restarting silently would hand back page one as though it were
+    page three.
+    """
+    if after is None:
+        return 0
+    built, _, position = (after or "").rpartition("#")
+    if not position.isdigit():
+        return f"{after!r} is not a page position this index issued"
+    if built != identity.built_at:
+        return (f"that page was read from the index built {built or 'at an unknown time'}; "
+                f"the index now was built {identity.built_at}, so its order may differ -- "
+                f"read the case again from the start")
+    return int(position)
 
 
 def _paragraph(row: tuple) -> Paragraph:

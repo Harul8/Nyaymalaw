@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.ports.governing_law import Governing, Limb, Pending, Succession
 
@@ -64,6 +65,18 @@ SUCCESSIONS: tuple[Succession, ...] = (
 
 
 @implements("D4")
+def coverage(limb: Limb) -> Curation:
+    """WHETHER THIS TABLE HOLDS A SUCCESSION FOR THE LIMB. `nm.domain.curation`.
+
+    A limb with no succession row was never examined, and an empty answer for
+    it would read as "no replacement is engaged" -- which is a finding about
+    the law, not about this table.
+    """
+    return (Curation.CURATED if any(s.limb is limb for s in SUCCESSIONS)
+            else Curation.NOT_CURATED)
+
+
+@implements("D4")
 def governing(limb: Limb, on: date | None, pending: Pending) -> Governing:
     """Which Act governs this limb, or an honest account of what is missing.
 
@@ -91,32 +104,32 @@ def governing(limb: Limb, on: date | None, pending: Pending) -> Governing:
                      f"neither {row.replaced} nor {row.replacing} is named. "
                      f"Give me the date and I will read the saving provision "
                      f"against it"),
-            read_the_saving=row.saving)
+            read_the_saving=row.saving, rule=row)
     if on < row.commenced_on:
         return Governing(
             limb=limb, act=row.replaced,
             because=(f"{on.isoformat()} is before {row.replacing} commenced on "
                      f"{row.commenced_on.isoformat()}"),
-            read_the_saving=row.saving)
+            read_the_saving=row.saving, rule=row)
     if limb is Limb.SUBSTANTIVE:
         return Governing(
             limb=limb, act=row.replacing,
             because=(f"{on.isoformat()} is on or after {row.replacing} "
                      f"commenced on {row.commenced_on.isoformat()}"),
-            read_the_saving=row.saving)
+            read_the_saving=row.saving, rule=row)
     if pending is Pending.YES:
         return Governing(
             limb=limb, act=row.replaced,
             because=(f"the proceeding was already under way when "
                      f"{row.replacing} commenced on "
                      f"{row.commenced_on.isoformat()}"),
-            read_the_saving=row.saving)
+            read_the_saving=row.saving, rule=row)
     if pending is Pending.NO:
         return Governing(
             limb=limb, act=row.replacing,
             because=(f"nothing was under way when {row.replacing} commenced "
                      f"on {row.commenced_on.isoformat()}"),
-            read_the_saving=row.saving)
+            read_the_saving=row.saving, rule=row)
     return Governing(
         limb=limb,
         because=(f"whether a proceeding was already under way when "
@@ -124,11 +137,11 @@ def governing(limb: Limb, on: date | None, pending: Pending) -> Governing:
                  f"{row.commenced_on.isoformat()} is not established, and that "
                  f"is what the saving provision turns on. Tell me and I will "
                  f"name the Act"),
-        read_the_saving=row.saving)
+        read_the_saving=row.saving, rule=row)
 
 
 def successions() -> tuple[Succession, ...]:
     return SUCCESSIONS
 
 
-__all__ = ["SUCCESSIONS", "governing", "successions"]
+__all__ = ["SUCCESSIONS", "coverage", "governing", "successions"]

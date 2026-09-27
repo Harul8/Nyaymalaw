@@ -36,6 +36,7 @@ from enum import Enum
 
 from nm.core.limitation import Limitation, LimitationState
 from nm.domain.citation import provision_label
+from nm.domain.curation import Curation
 from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -171,7 +172,15 @@ def absurd(map_: tuple[ThresholdAnswer, ...], chronology: tuple[date, ...],
     return tuple(out)
 
 
-def from_institution(engaged: tuple, undecided: tuple) -> ThresholdAnswer:
+#: What the row adds when the cause's own conditions were never curated. One
+#: sentence, used wherever the row is built, so the gap is said the same way.
+_CAUSE_NOT_CURATED = ("No curated table covers this cause, so conditions it may "
+                      "carry are not listed here; they are read from the "
+                      "retrieved law, and their absence here is not a finding")
+
+
+def from_institution(engaged: tuple, undecided: tuple, *,
+                     coverage: Curation) -> ThresholdAnswer:
     """The `statutory_notice` row, from the pre-institution table. LB-121.
 
     THREE STATES AND NOT ONE OF THEM IS "SATISFIED". This slice establishes
@@ -181,10 +190,14 @@ def from_institution(engaged: tuple, undecided: tuple) -> ThresholdAnswer:
     which would dispose of the threshold, and never NOT_APPLICABLE, which is a
     finding that it does not arise.
 
-    `NOT_APPLICABLE` IS REACHED ONLY WHEN NOTHING IS UNDECIDED. A cause nobody
-    has established engages nothing, and reporting that as "no condition
-    applies" is the silence D1 forbids wearing a finding's clothes.
+    `NOT_APPLICABLE` IS REACHED ONLY WHEN NOTHING IS UNDECIDED AND THE TABLE
+    EXAMINED THE CAUSE. A cause nobody has established engages nothing, and a
+    cause the table never examined engages nothing either -- and reporting
+    either as "no condition applies" is the silence D1 forbids wearing a
+    finding's clothes. `coverage` is REQUIRED, with no default, so a caller
+    cannot skip the question (`nm.domain.curation`).
     """
+    uncurated = coverage in (Curation.NOT_CURATED, Curation.WITHHELD)
     if engaged:
         named = "; ".join(
             f"{e.condition.said} "
@@ -195,17 +208,26 @@ def from_institution(engaged: tuple, undecided: tuple) -> ThresholdAnswer:
             state=ThresholdState.BLOCKED,
             reason=(f"this matter engages {named}. Whether the file shows it "
                     f"done is not assessed -- tell me and I will read it "
-                    f"against the section"))
+                    f"against the section"
+                    + (f". {_CAUSE_NOT_CURATED}" if uncurated else "")))
     if undecided:
         named = "; ".join(
             f"{c.said} ({provision_label(c.act, c.provision)})"
             for c in undecided)
+        waiting = ("who the proceeding is against is" if uncurated or
+                   coverage is Curation.CURATED else
+                   "the cause and who the proceeding is against are")
         return ThresholdAnswer(
             threshold=Threshold.STATUTORY_NOTICE,
             state=ThresholdState.BLOCKED,
             reason=(f"whether this matter engages {named} cannot be settled "
-                    f"until the cause and who the proceeding is against are "
-                    f"established. That is undecided, not inapplicable"))
+                    f"until {waiting} established. That is undecided, not "
+                    f"inapplicable" + (f". {_CAUSE_NOT_CURATED}" if uncurated else "")))
+    if not coverage.answer_stands:
+        return ThresholdAnswer(
+            threshold=Threshold.STATUTORY_NOTICE,
+            state=ThresholdState.BLOCKED,
+            reason=_CAUSE_NOT_CURATED)
     return ThresholdAnswer(
         threshold=Threshold.STATUTORY_NOTICE,
         state=ThresholdState.NOT_APPLICABLE,

@@ -7,6 +7,7 @@ already use.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import Role
 from nm.domain.traceability import implements
 from nm.knowledge import procedural_period as curated
@@ -23,3 +24,7 @@ class CuratedProceduralPeriods:
     @implements("D3")
     def undecided(self, role: Role, track: Track) -> tuple[Period, ...]:
         return curated.undecided(role, track)
+
+    @implements("D3")
+    def coverage(self, role: Role) -> Curation:
+        return curated.coverage(role)

@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.text import refuses_blank_text
 
 
@@ -113,6 +114,14 @@ class FilingRequirementPort(Protocol):
     """The knowledge plane, asked whether a filing requirement can be read."""
 
     def readiness(self, requirement: Requirement) -> Readiness: ...
+
+    def coverage(self, requirement: Requirement) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...
 
 
 __all__ = ["Requirement", "SourceState", "Authority", "Readiness",

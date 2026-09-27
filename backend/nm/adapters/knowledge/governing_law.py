@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.knowledge import governing_law as curated
 from nm.ports.governing_law import Governing, Limb, Pending, Succession
@@ -24,3 +25,7 @@ class CuratedGoverningLaw:
     @implements("D4")
     def successions(self) -> tuple[Succession, ...]:
         return curated.successions()
+
+    @implements("D4")
+    def coverage(self, limb: Limb) -> Curation:
+        return curated.coverage(limb)

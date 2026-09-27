@@ -267,6 +267,31 @@ class Manifest:
 
         Keyword-scored and deliberately simple. This is the resolution layer at
         its thinnest; the cause-of-action graph that replaces it is slice 5.
+
+        TWO OPERATIONS, COMPOSED HERE AND NOWHERE ELSE. `identify` is exact and
+        never guesses; `infer` is keyword candidates and always discloses. They
+        were one body, so a caller that wanted only what the advocate NAMED --
+        a tool asked "which Act is this?" -- could not ask for it without also
+        getting a guess shaped like an identification. An Act the question
+        names but which was not in force on the date is reported, not replaced
+        by a keyword match on another Act: that is a successor chosen by
+        inference, disclosed as "you did not name an Act" to an advocate who did.
+        """
+        identified = self.identify(question, on, account)
+        if identified.entry is not None or identified.superseded is not None:
+            return identified
+        return self.infer(question, on)
+
+    def identify(self, question: str, on: date | None = None,
+                 account: str = "") -> "Resolution":
+        """THE ACT THE ADVOCATE NAMED, exactly -- or NOT_RESOLVED. Never a guess.
+
+        NAMED by its title, by an abbreviation in the slot after a provision,
+        or carried by exact title from earlier on the thread. Where the
+        question names an Act that was not in force on `on`, and no Act in
+        force carries that name, the result is NOT_RESOLVED with that Act as
+        `superseded`: the name identified something, and it was not the law
+        on that date.
         """
         low = question.lower()
 
@@ -315,6 +340,23 @@ class Manifest:
             if carried is not None:
                 return Resolution(carried, ActBasis.NAMED, carried=True)
 
+        # NAMED, BUT NOT THE LAW ON THIS DATE. Said, never swapped. Only this
+        # turn's own words: the account is a second-chance input, and a name
+        # carried from it that is out of force leaves this turn unidentified.
+        named_then = (self._named_in(low, None)
+                      or self._aliased_at_provision(question, None)[0])
+        if named_then is not None and on is not None and not named_then.in_force_on(on):
+            return Resolution(None, ActBasis.NOT_RESOLVED, named_then,
+                              matched_on=(named_then.act_name,))
+        return Resolution(None, ActBasis.NOT_RESOLVED)
+
+    def infer(self, question: str, on: date | None = None) -> "Resolution":
+        """KEYWORD CANDIDATES. `INFERRED` and disclosed, or NOT_RESOLVED.
+
+        Never an identification, and it never reads a title: that is
+        `identify`'s job, and a caller wanting only what was named asks it.
+        """
+        low = question.lower()
         best: ManifestEntry | None = None
         superseded: ManifestEntry | None = None
         best_score = superseded_score = 0

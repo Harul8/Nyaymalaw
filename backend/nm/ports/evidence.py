@@ -592,6 +592,16 @@ class SourceDocument:
     segments: tuple[tuple[str, str], ...] = ()
     target: int | None = None
     missing: str = ""
+    first: int = 0
+    """Where `segments[0]` sits in the whole document. `target` counts from
+    the whole document too, so a window that does not hold the cited segment
+    still says where it is."""
+    total: int | None = None
+    """How many segments the WHOLE document has. A read built without it is
+    the whole document, and says so; a window says how much it left out."""
+    excluded: int = 0
+    """Passages of this document the corpus's own denylist held back. A
+    document shown without them and without this count reads as whole."""
 
     def __post_init__(self) -> None:
         if self.state not in ("read", "not_held", "no_reader"):
@@ -602,6 +612,36 @@ class SourceDocument:
             raise ValueError(
                 "a document that was not read must NAME what is missing. A "
                 "vague disclaimer is silence in more words (PRD M4).")
+        if self.state == "read" and self.total is None:
+            object.__setattr__(self, "total", self.first + len(self.segments))
+        if self.state == "read" and (self.first < 0 or self.total < self.first + len(self.segments)):
+            raise ValueError("a window cannot hold more of a document than the document has")
+
+    @property
+    def whole(self) -> bool:
+        """Does this read hold every segment of the document?"""
+        return self.state == "read" and self.first == 0 and self.total == len(self.segments)
+
+    def window(self, start: int = 0, count: int | None = None) -> "SourceDocument":
+        """`count` segments from `start`. ONE COPY, and every reader uses it.
+
+        A tool reading a judgment of 1,124 paragraphs cannot take them in one
+        answer, and a reader that cut them off would be a part read as whole.
+        The window says where it sits and how much it left out; asking past
+        the end is refused, because an empty window is the shape of an empty
+        document.
+        """
+        if self.state != "read" or (start == 0 and count is None):
+            return self
+        if start < 0 or (count is not None and count < 1):
+            raise ValueError(f"no window starts at {start} and holds {count} segments")
+        if start >= len(self.segments):
+            raise ValueError(
+                f"segment {start} is past the end of a {len(self.segments)}-segment document")
+        from dataclasses import replace
+        end = len(self.segments) if count is None else start + count
+        return replace(self, segments=self.segments[start:end], first=self.first + start,
+                       total=self.total)
 
 
 @runtime_checkable
@@ -695,8 +735,36 @@ class EvidencePort(Protocol):
         """
         return {}
 
-    def document(self, locator: str, kind: str) -> SourceDocument:
+    def read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
+        """ONE PROVISION OF ONE NAMED ACT, read exactly. LB-156.
+
+        `fetch` takes a QUESTION and works out which Act it is about before it
+        reads anything -- by the cause of action, a title in the words, an
+        abbreviation, or keywords. A caller that already knows the Act (the
+        advocate named it; a tool call names it) had no way to say so: it had
+        to write a sentence and hope `fetch` resolved it back to the same Act.
+        That is which-Act decided twice, the second time by inference.
+
+        THIS DOES NOT DECIDE WHICH ACT GOVERNS. It reads the one named, and
+        only that one. An Act not in force on `as_of` is read as held and its
+        Finding is blocked by `G-INFORCE` with the window stated; a successor
+        is never read in its place. Which law governs a date is a separate
+        question with its own owner (`GoverningLawPort`).
+
+        DEFAULTS TO NOT_ASSESSED, the honest direction: an adapter nobody has
+        asked reads nothing, and saying NOT_HELD would be a claim about a
+        corpus nobody consulted.
+        """
+        return EvidenceResult(
+            coverage=Coverage.NOT_ASSESSED,
+            missing="this installation has no reader for a named provision")
+
+    def document(self, locator: str, kind: str, *, start: int = 0,
+                 count: int | None = None) -> SourceDocument:
         """The stored document behind a saved passage's locator. LB-92.
+
+        WHOLE BY DEFAULT; `start`/`count` read a window of it through
+        `SourceDocument.window`, which says what the window left out.
 
         ON THE PORT rather than reached by `getattr`, because the sweep in
         `tests/test_every_evidence_adapter_answers_the_whole_port.py` draws

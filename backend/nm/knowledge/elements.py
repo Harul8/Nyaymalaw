@@ -39,6 +39,7 @@ advocates who ever read it.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.matter import CauseOfAction, Side
 from nm.domain.proof import Standard
 from nm.domain.traceability import implements
@@ -289,6 +290,22 @@ def elements_for(cause: CauseOfAction) -> Elements | None:
 
 
 @implements("D5")
+def coverage(cause: CauseOfAction) -> Curation:
+    """WHETHER THIS TABLE EXAMINED THE CAUSE. `nm.domain.curation`.
+
+    THE ONE PLACE the four states are decided for this table; `why_not` words
+    them rather than deciding them a second time.
+    """
+    if cause is CauseOfAction.NOT_ESTABLISHED:
+        return Curation.KEY_NOT_ESTABLISHED
+    if cause in ELEMENTS:
+        return Curation.CURATED
+    if cause in WITHHELD:
+        return Curation.WITHHELD
+    return Curation.NOT_CURATED
+
+
+@implements("D5")
 def why_not(cause: CauseOfAction) -> str:
     """Why this cause has no ingredients, in words for the advocate.
 
@@ -298,12 +315,13 @@ def why_not(cause: CauseOfAction) -> str:
     told only "not assessed" cannot tell which, and the two call for different
     things from them -- supply the missing route, or wait.
     """
-    if cause is CauseOfAction.NOT_ESTABLISHED:
+    state = coverage(cause)
+    if state is Curation.KEY_NOT_ESTABLISHED:
         return ("the cause of action on this thread has not been established, "
                 "so there is no element list to work from")
-    if cause in ELEMENTS:
+    if state is Curation.CURATED:
         return ""
-    if cause in WITHHELD:
+    if state is Curation.WITHHELD:
         return WITHHELD[cause]
     return (f"the elements of {cause.value.replace('_', ' ')} are not curated "
             f"in this product yet. Nothing has been guessed in their place.")

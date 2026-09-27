@@ -73,6 +73,7 @@ from nm.edge.projections import (
 )
 from nm.edge.uploads import UploadRefused
 from nm.ports.directory import AccountBusy, AuthenticationUnavailable
+from nm.ports.search import ResolutionState
 from nm.ports.store import StaleWrite
 
 #: How many surfaced cases one round asks the identity index about. Bounded,
@@ -848,6 +849,9 @@ def _stored_document(held, source, element, receipt, offset: int,
             "next_offset": end if end < len(body) else None,
             "total_characters": len(body), "qualification": element.text,
             "segment_count": len(held.segments),
+            # HELD BACK, COUNTED. A document shown without its contaminated
+            # passages and without this count reads as whole.
+            "excluded_passages": held.excluded,
             "anchor_offset": at if at >= 0 else None,
             "anchor_length": length if at >= 0 else None,
             "relied_on_matches": at >= 0,
@@ -4324,7 +4328,8 @@ def get_research(matter_id: str, research_id: str, advocate_id: Advocate) -> dic
 
 @app.get("/api/matters/{matter_id}/research/{research_id}/cases/{case_id}")
 def inspect_case(matter_id: str, research_id: str, case_id: str,
-                 advocate_id: Advocate, q: str | None = None) -> dict:
+                 advocate_id: Advocate, q: str | None = None,
+                 after: str | None = None) -> dict:
     """Grouped inspection: a case's paragraphs, read back through the research
     that surfaced it. SCOPE ON READBACK: a case this research did not consult
     is not read through it -- the same 404, so the route cannot be used to
@@ -4336,8 +4341,12 @@ def inspect_case(matter_id: str, research_id: str, case_id: str,
         raise HTTPException(status_code=404,
                             detail="this research did not surface that case")
     search = application().search
-    expansion = search.expand(case_id, query=q)
-    identity = search.case_identity(case_id)
+    expansion = search.expand(case_id, query=q, after=after)
+    # THREE STATES, AND THE SECOND AND THIRD ARE SAID. A case with no identity
+    # record and an identity index that could not be read both rendered as
+    # `"case": null`, which reads as a case nobody knows anything about.
+    read = search.case_identity(case_id)
+    identity = read.identity
     return {
         "state": "ok", "matter_id": m.id, "research_id": record.id,
         "case_id": case_id, "index": expansion.index,
@@ -4351,10 +4360,14 @@ def inspect_case(matter_id: str, research_id: str, case_id: str,
             "title": identity.title, "court": identity.court,
             "year": identity.year, "bench": identity.describe(),
             "bench_inferred": identity.bench_inferred},
+        "case_state": read.state.value, "case_why": read.why,
         "paragraphs": [{
             "locator": p.locator, "para_type": p.para_type, "text": p.text,
             "origin": p.origin.value} for p in expansion.paragraphs],
         "paragraph_count": len(expansion.paragraphs),
+        # A PAGE SAYS IT IS ONE. `None` is the end of what the index holds;
+        # anything else is where the next page starts, passed back as `after`.
+        "next_after": expansion.next_after,
     }
 
 
@@ -4384,10 +4397,15 @@ def attach_source(matter_id: str, research_id: str, body: AttachRequest,
     today = _today().isoformat()
     search = application().search
 
-    passage = search.passage(body.locator)
+    read = search.passage(body.locator)
+    passage = read.paragraph
     consulted = {cid for c in record.consulted for cid in c.case_ids}
     if passage is None:
-        identity = (rs.IdentityState.INDEX_UNAVAILABLE if not search.available
+        # THE READ SAYS WHICH. This asked `search.available` to guess, and a
+        # read refused by policy or by a withdrawn publication -- with the
+        # index available -- was reported as a locator that named nothing.
+        identity = (rs.IdentityState.INDEX_UNAVAILABLE
+                    if read.state is ResolutionState.INDEX_UNAVAILABLE
                     else rs.IdentityState.UNRESOLVED)
         quote = rs.QuoteState.NOT_CHECKED
         case_id = ""
@@ -4397,6 +4415,8 @@ def attach_source(matter_id: str, research_id: str, body: AttachRequest,
         quote = rs.quote_fidelity(body.quote, passage.text)
         case_id = passage.case_id
     ok, why = rs.may_attach(identity, quote)
+    if passage is None and not ok:
+        why = read.why
     if passage is not None and identity is rs.IdentityState.UNRESOLVED:
         why = (f"the locator names a paragraph of {passage.case_id!r}, which this "
                f"research did not surface; attach through the research that found it")

@@ -33,7 +33,7 @@ from enum import Enum
 from typing import Protocol
 
 from nm.domain.text import refuses_blank_text
-from nm.ports.evidence import Coverage, Origin
+from nm.ports.evidence import Coverage, Origin, Treatment
 
 
 @refuses_blank_text()
@@ -192,15 +192,15 @@ class CorpusSearchPort(Protocol):
                  limit: int = 20) -> "CaseDiscovery": ...
 
     def expand(self, case_id: str, *, query: str | None = None,
-               limit: int = 200) -> "CaseExpansion": ...
+               limit: int = 200, after: str | None = None) -> "CaseExpansion": ...
 
-    def passage(self, locator: str) -> "Paragraph | None": ...
+    def passage(self, locator: str) -> "PassageRead": ...
 
     def resolve(self, citation: str) -> "CitationResolution": ...
 
-    def treatment(self, case_id: str): ...
+    def treatment(self, case_id: str) -> Treatment: ...
 
-    def case_identity(self, case_id: str): ...
+    def case_identity(self, case_id: str) -> "CaseIdentityRead": ...
 
 
 
@@ -305,9 +305,20 @@ class CaseExpansion:
     paragraphs: tuple[Paragraph, ...] = ()
     complete: bool | None = None
     why: str | None = None
+    next_after: str | None = None
+    """WHERE THE NEXT PAGE STARTS, or `None` where this page reached the end.
+
+    A PAGE IS NOT THE CASE. `limit` bounded the read and nothing said it had
+    bound: 49 held judgments run past 200 paragraphs, eight past the 500
+    ceiling, and Kesavananda Bharati's 1,124 came back as its first 200 with
+    nothing to tell them from the whole. A read that stopped early says so
+    here, and passing this back as `after` reads on from exactly that point.
+
+    OPAQUE AND TIED TO ONE BUILD of the index: continuing across a rebuild
+    would splice two different paragraph orders into one reading."""
 
     def __post_init__(self) -> None:
-        if self.coverage is Coverage.NOT_ASSESSED and self.paragraphs:
+        if self.coverage is Coverage.NOT_ASSESSED and (self.paragraphs or self.next_after):
             raise ValueError("an expansion that could not run returned paragraphs")
 
 
@@ -338,3 +349,60 @@ class CitationResolution:
     state: ResolutionState
     case_id: str = ""
     why: str = ""
+
+
+def _one_of_three(state: "ResolutionState", held: object, why: str, what: str) -> None:
+    """The rule both exact reads keep: what was found, or why not -- never neither."""
+    if state is ResolutionState.RESOLVED:
+        if held is None:
+            raise ValueError(f"a resolved {what} read carries what it resolved to")
+    else:
+        if held is not None:
+            raise ValueError(f"an unresolved {what} read returned something anyway")
+        if not (why or "").strip():
+            raise ValueError(
+                f"an unread {what} must say why. `None` alone was both 'the index "
+                f"holds no such thing' and 'the index could not be read', and the "
+                f"advocate was told the first when the second was true (S1)")
+
+
+@refuses_blank_text("why", "locator")
+@dataclass(frozen=True)
+class PassageRead:
+    """ONE PARAGRAPH BY ITS EXACT LOCATOR -- read, not held, or not readable.
+
+    `passage` returned `Paragraph | None`, and `None` meant two things: the
+    index holds no paragraph with that locator, and the read never happened
+    (a withdrawn publication, a refused egress, an unbuilt index). The attach
+    route then told the advocate their locator named nothing when the read had
+    been refused. The three states are `ResolutionState`'s, the ones an exact
+    citation lookup already speaks.
+    """
+
+    locator: str
+    state: ResolutionState
+    paragraph: Paragraph | None = None
+    why: str = ""
+
+    def __post_init__(self) -> None:
+        _one_of_three(self.state, self.paragraph, self.why, "passage")
+
+
+@refuses_blank_text("why", "case_id")
+@dataclass(frozen=True)
+class CaseIdentityRead:
+    """ONE CASE'S IDENTITY RECORD BY ITS EXACT ID -- or why there is none.
+
+    `identity` is the identity index's own record (`nm.knowledge.identity.
+    CaseIdentity`); the port does not import the knowledge plane, so it is
+    carried as the object it is. `None` without a state was the same two-
+    meaning silence as `passage`.
+    """
+
+    case_id: str
+    state: ResolutionState
+    identity: object | None = None
+    why: str = ""
+
+    def __post_init__(self) -> None:
+        _one_of_three(self.state, self.identity, self.why, "case identity")

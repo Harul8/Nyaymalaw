@@ -25,6 +25,7 @@ signs off these entries on the BK-85-AC3 pattern.
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.ports.filing_requirement import (
     Authority,
@@ -116,6 +117,17 @@ def _titles(manifest) -> frozenset[str]:
 
 
 @implements("D1")
+def coverage(requirement: Requirement) -> Curation:
+    """WHETHER THIS TABLE NAMES THE INSTRUMENTS FOR THE REQUIREMENT.
+
+    `nm.domain.curation`. A requirement with no instrument row was never
+    examined, and `readiness` for it would read every named title as held --
+    there would be none to be missing.
+    """
+    return Curation.CURATED if AUTHORITIES.get(requirement) else Curation.NOT_CURATED
+
+
+@implements("D1")
 def readiness(requirement: Requirement, manifest=None) -> Readiness:
     """Whether this requirement can be answered, and what is in the way.
 
@@ -164,4 +176,4 @@ def readiness(requirement: Requirement, manifest=None) -> Readiness:
              "recorded version"))
 
 
-__all__ = ["AUTHORITIES", "SCHEDULE_VERSIONS", "readiness"]
+__all__ = ["AUTHORITIES", "SCHEDULE_VERSIONS", "coverage", "readiness"]

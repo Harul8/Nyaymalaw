@@ -530,7 +530,28 @@ def score(rows: list[dict], m: dict) -> Score:
         s.add("RG-25", PASS if sv["p95_latency_ms"] <= 8000 else FAIL,
               f"p95 latency {sv['p95_latency_ms']}ms over {n} served turns",
               blocking("RG-25"))
+    unscored(rows, s)
     return s
+
+
+def unscored(rows: list[dict], s: Score) -> list[str]:
+    """Every authored row this tool has no measurement for, scored NOT MEASURED.
+
+    `score` reports the rows it has code for, and nothing else -- so a threshold
+    authored in release.yaml with no measurement behind it did not appear at all,
+    and a scorecard with a row missing reads exactly like one where every row
+    was looked at (S1). Found 27 September 2026 while adding the LB-40 quality
+    bar, whose rows no runner measures yet. ONE rule, for every row that will
+    ever be authored: absent from the score is NOT MEASURED, never absent.
+    """
+    added = []
+    for row in rows:
+        if s.get(row["id"]) is None:
+            s.add(row["id"], UNMEASURED,
+                  "no measurement for this row is implemented in pipeline/quality/releasegate.py",
+                  bool(row.get("blocking")))
+            added.append(row["id"])
+    return added
 
 
 def coverage_document(m: dict, s: Score) -> dict:

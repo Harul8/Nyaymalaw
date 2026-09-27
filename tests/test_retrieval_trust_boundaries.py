@@ -68,7 +68,8 @@ def evidence(tmp_path, rows):
 def test_every_read_refuses_a_withdrawn_source(tmp_path, monkeypatch, method, args, during):
     snapshot = _runtime_publication(tmp_path)
     search = AuthorityIndexSearch.from_published_snapshot(snapshot)
-    assert search.expand('c1').paragraphs and search.passage('p1')
+    assert search.expand('c1').paragraphs
+    assert search.passage('p1').state is ResolutionState.RESOLVED
     # Identity fixtures need no second database: the sentinel proves dispatch
     # was suppressed, not merely that the fixture happened to have no case.
     monkeypatch.setattr(search._identity_index, 'case', lambda _: 'SENSITIVE CASE')
@@ -78,7 +79,7 @@ def test_every_read_refuses_a_withdrawn_source(tmp_path, monkeypatch, method, ar
     monkeypatch.setattr(search._identity_index, 'case_for_citation', lambda _: 'c1')
     assert search.resolve('(2020) 1 SCC 1').state is ResolutionState.RESOLVED
     assert search.treatment('c1').state is TreatmentState.CLEAN
-    assert search.case_identity('c1') == 'SENSITIVE CASE'
+    assert search.case_identity('c1').identity == 'SENSITIVE CASE'
     if during:
         original = getattr(search, '_' + method, None)
         assert callable(original), f'{method} must use the common guarded read boundary'
@@ -101,7 +102,11 @@ def test_every_read_refuses_a_withdrawn_source(tmp_path, monkeypatch, method, ar
         assert result.state is TreatmentState.NOT_CHECKED
         assert 'withdrawn' in result.scope
     else:
-        assert result is None
+        # passage and case_identity: a refused read SAYS it was refused.
+        # This asserted a bare `None`, which pinned the very silence that
+        # told the attach route a refused read was a missing paragraph (S7).
+        assert result.state is ResolutionState.INDEX_UNAVAILABLE
+        assert 'withdrawn' in result.why
 
 
 @pytest.mark.parametrize('identifier', ['c1', 'c1" OR case_id:"c2', 'c1 OR c2', 'c1:c2'])

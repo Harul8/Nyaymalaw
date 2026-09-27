@@ -22,7 +22,7 @@ THE AUTHORITY INDEX IS SEPARATE, AND ITS ABSENCE IS VISIBLE
 ------------------------------------------------------------
 Case-law retrieval reads `.nm/authority.db`, built offline by
 `pipeline/indexing/build_authority_index.py`. When that index is absent this adapter
-returns HELD_NOT_FOUND naming it -- it does NOT fall back to scanning
+returns NOT_ASSESSED naming it -- it does NOT fall back to scanning
 `chunks.db`. A fallback with different recall, swapped in silently, is the
 "three stores, three answers" defect wearing a helpful face: the advocate would
 have no way to know which retrieval answered them.
@@ -284,7 +284,12 @@ class CorpusEvidenceAdapter:
                 f"{self._identity.stats().get('with_bench', '?')} with a bench"
                 if self._identity.available else
                 "INDEX NOT BUILT -- run pipeline/indexing/build_identity_index.py"),
-            "denylist": f"{len(self._denylist())} chunk(s) excluded",
+            # LISTED, NOT EXCLUDED. Measured 27 September 2026: all 44 ids on
+            # the list name a store `chunks.db` does not hold, so this said
+            # "44 chunk(s) excluded" while excluding none. What a read held
+            # back is said by that read.
+            "denylist": (f"{len(self._denylist())} chunk id(s) listed; each read "
+                         f"reports what it held back"),
         }
 
     def accrual_trigger(self, cause: str) -> str:
@@ -318,13 +323,84 @@ class CorpusEvidenceAdapter:
                 self._denied = set(doc.get("chunk_ids") or ())
         return self._denied
 
+    def _screen(self, rows: list, chunk_at: int) -> tuple[list, int]:
+        """THE DENYLIST, APPLIED AND COUNTED. ONE OWNER.
+
+        Every read that holds back a contaminated chunk does it here and gets
+        the count back to say. Four readers each skipped with a bare
+        `continue`, so a provision or judgment with a passage held back read
+        exactly like one that never had it.
+        """
+        denied = self._denylist()
+        kept = [row for row in rows if row[chunk_at] not in denied]
+        return kept, len(rows) - len(kept)
+
+    @staticmethod
+    def _held_back(excluded: int) -> str | None:
+        return (f"{excluded} passage(s) were held back because the corpus's own "
+                f"contamination denylist names them; the text shown is without them."
+                if excluded else None)
+
     # --------------------------------------------------------------- fetch ---
     def fetch(self, need: EvidenceNeed) -> EvidenceResult:
-        """Permission to use a retained generation is checked at each boundary."""
+        return self._guarded(lambda: self._fetch(need))
+
+    def read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
+        """ONE PROVISION OF ONE NAMED ACT, read exactly. See the port. LB-156.
+
+        THE TITLE IS MATCHED EXACTLY, year included, because a yearless title
+        is not an identity: `Consumer Protection Act` is two Acts in this
+        manifest, and choosing between them by date is deciding which law
+        governs -- the question this method refuses to answer. Where the
+        yearless title matches, the Acts it could mean are NAMED so the caller
+        can choose; nothing is chosen for them.
+
+        The section is taken in the corpus's key form, or as a reference the
+        one provision pattern in `nm.domain.citation` reads -- `Article 65`
+        becomes `Article_65` there, not here.
+        """
+        return self._guarded(lambda: self._read_provision(act, section, as_of))
+
+    def _read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
+        entry = self._manifest.act((act or "").strip())
+        if entry is None:
+            title = title_without_year(act).lower()
+            could_mean = [e.act_name for e in self._manifest.entries
+                          if title and title_without_year(e.act_name).lower() == title]
+            missing = (f"no Act titled {act!r} is in the curated manifest; an "
+                       f"exact title with its year is required.")
+            if could_mean:
+                missing += f" Under that title it holds: {'; '.join(could_mean)}."
+            return EvidenceResult(coverage=Coverage.NOT_HELD, missing=missing,
+                                  searched_stores=("manifest",))
+        key = wanted_section(section or "") or (section or "").strip()
+        if not key:
+            return EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=f"no provision of {entry.act_name} was named to read",
+                searched_stores=("manifest",))
+        need = EvidenceNeed(question=provision_label(entry.act_name, key),
+                            governing_date=as_of, provision_hint=key)
+        return self._read(entry, key, need, None)
+
+    def _guarded(self, read) -> EvidenceResult:
+        """EVERY READ OF THE CORPUS PASSES HERE. ONE OWNER.
+
+        Permission to use a retained generation is checked at each boundary.
+        And a corpus that cannot be read at all is NOT_ASSESSED -- nothing
+        was searched. It was reported as HELD_NOT_FOUND, which tells the
+        advocate the corpus holds the provision and retrieval failed: a claim
+        about a search that never ran.
+        """
         try:
             if self._published_snapshot is not None:
                 self._published_snapshot.require_usable()
-            result = self._fetch(need)
+            if not self.available:
+                return EvidenceResult(
+                    coverage=Coverage.NOT_ASSESSED,
+                    missing=f"the corpus is not readable at {self._db}",
+                    searched_stores=())
+            result = read()
             if self._published_snapshot is not None:
                 self._published_snapshot.require_usable()
             return result
@@ -336,15 +412,6 @@ class CorpusEvidenceAdapter:
             )
 
     def _fetch(self, need: EvidenceNeed) -> EvidenceResult:
-        if not self.available:
-            # The corpus could not be read. That is NOT "nothing is held" --
-            # an absent input must never read as an answer.
-            return EvidenceResult(
-                coverage=Coverage.HELD_NOT_FOUND,
-                missing=f"the corpus is not readable at {self._db}",
-                searched_stores=(),
-            )
-
         if need.want_authority:
             return self._fetch_authority(need)
 
@@ -422,10 +489,23 @@ class CorpusEvidenceAdapter:
         within a slice, and the half that drifted would report a corpus gap for
         an Act held in full.
         """
-        findings, stores = self._union_lookup(entry.act_patterns, section, entry, need)
+        findings, stores, excluded = self._union_lookup(entry.act_patterns, section, entry, need)
         if findings:
             return EvidenceResult(coverage=Coverage.ANSWERED, findings=findings,
-                                  searched_stores=stores, assumption=note)
+                                  searched_stores=stores, assumption=note,
+                                  search_note=self._held_back(excluded))
+        if excluded:
+            # EVERY PASSAGE FOUND WAS HELD BACK. Neither neighbour is true: it
+            # was retrieved, so this is no retrieval defect, and text is held
+            # under that number, so it is no plain gap. No text that can be
+            # relied on is held, and the reason is said.
+            return EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=(f"the only text held for {provision_label(entry.act_name, section)} "
+                         f"is on the corpus's contamination denylist, so none is held "
+                         f"that can be relied on."),
+                searched_stores=stores, assumption=note,
+                search_note=self._held_back(excluded))
 
         # Zero hits. The manifest -- not the hit count -- decides which of the
         # two remaining states this is.
@@ -534,6 +614,7 @@ class CorpusEvidenceAdapter:
         """
         stores: list[str] = []
         candidates: list[Finding] = []
+        excluded = 0
         con = sqlite3.connect(f"file:{self._db}?mode=ro", uri=True)
         try:
             for pattern in patterns:
@@ -542,13 +623,13 @@ class CorpusEvidenceAdapter:
                 # The provision is assembled from all of them (`assemble_section`);
                 # one atom was part of the section for 760 of 3,402 provisions.
                 by_store: dict[str, list[tuple[str, str]]] = {}
-                for act_id, atom_type, chunk_id, blob in con.execute(
+                rows, held_back = self._screen(con.execute(
                         """select act_id, atom_type, chunk_id, blob from chunks
                            where doc_type='bare_act' and act_id like ? and section_number=?
                            order by act_id, pos""",
-                        (pattern, section)):
-                    if chunk_id in self._denylist():
-                        continue
+                        (pattern, section)).fetchall(), 2)
+                excluded += held_back
+                for act_id, atom_type, _chunk_id, blob in rows:
                     by_store.setdefault(act_id, []).append(
                         (atom_type, json.loads(blob).get("full_text") or ""))
                 if not by_store:
@@ -583,14 +664,18 @@ class CorpusEvidenceAdapter:
             con.close()
 
         if not candidates:
-            return (), tuple(stores)
+            return (), tuple(stores), excluded
         # The fullest text wins, and EVERY store searched is named.
         best = max(candidates, key=lambda f: len(f.span))
-        return (best,), tuple(stores)
+        return (best,), tuple(stores), excluded
 
     # ------------------------------------------------------ document reader ---
 
-    def document(self, locator: str, kind: str) -> SourceDocument:
+    def document(self, locator: str, kind: str, *, start: int = 0,
+                 count: int | None = None) -> SourceDocument:
+        return self._whole_document(locator, kind).window(start, count)
+
+    def _whole_document(self, locator: str, kind: str) -> SourceDocument:
         """The whole Act or judgment a saved passage came from. LB-92.
 
         A READ OF WHAT IS HELD, and nothing else: the same database the passage
@@ -641,9 +726,8 @@ class CorpusEvidenceAdapter:
         # reader uses. This kept the LONGEST ATOM per section, which is the same
         # defect in a second place: the reader showed s.18(1) as section 18.
         atoms: dict[str, list[tuple[str, str]]] = {}
-        for section_number, atom_type, chunk_id, blob in rows:
-            if chunk_id in self._denylist():
-                continue
+        rows, excluded = self._screen(rows, 2)
+        for section_number, atom_type, _chunk_id, blob in rows:
             atoms.setdefault(str(section_number or "").strip(), []).append(
                 (atom_type, json.loads(blob).get("full_text") or ""))
         best: dict[str, tuple[str, str]] = {}
@@ -665,7 +749,7 @@ class CorpusEvidenceAdapter:
         return SourceDocument(
             state="read", label=label, store=act_id,
             snapshot_id=self.published_snapshot_id or "",
-            segments=segments, target=target,
+            segments=segments, target=target, excluded=excluded,
             missing="" if target is not None else
             f"the cited provision could not be located in the text held for {label}")
 
@@ -684,14 +768,13 @@ class CorpusEvidenceAdapter:
             return SourceDocument(
                 state="no_reader",
                 missing="the authority index could not be opened for reading")
-        segments, target, named = [], None, ""
-        for _, para_type, para_chunk, body, case_name, court, year in rows:
-            # THE CASE IS NAMED BY ITS NAME. `IdentityIndex.describe()` returns
-            # the bench ("3-judge bench"), which is detail about a judgment the
-            # advocate has not been told the name of.
-            named = named or f"{case_name} ({court}, {year})"
-            if para_chunk in self._denylist():
-                continue
+        segments, target = [], None
+        # THE CASE IS NAMED BY ITS NAME. `IdentityIndex.describe()` returns
+        # the bench ("3-judge bench"), which is detail about a judgment the
+        # advocate has not been told the name of.
+        named = next((f"{r[4]} ({r[5]}, {r[6]})" for r in rows), "")
+        rows, excluded = self._screen(rows, 2)
+        for _, para_type, para_chunk, body, _case_name, _court, _year in rows:
             spoken = " ".join((body or "").split())
             if not spoken:
                 continue
@@ -707,7 +790,7 @@ class CorpusEvidenceAdapter:
         return SourceDocument(
             state="read", label=f"{named or 'Judgment'}{bench}",
             store="authority_index", snapshot_id=self.published_snapshot_id or "",
-            segments=tuple(segments), target=target,
+            segments=tuple(segments), target=target, excluded=excluded,
             missing="" if target is not None else
             "the cited paragraph could not be located in the judgment as held")
 
@@ -730,8 +813,13 @@ class CorpusEvidenceAdapter:
         if not self.authority_available:
             # NOT an empty result. The capability exists and its index does
             # not, and those are different sentences.
+            #
+            # NOT_ASSESSED, which the gate matrix defines for a store "absent,
+            # unopenable, or never built" (G-NOTASSESSED). This returned
+            # HELD_NOT_FOUND -- "the corpus holds this and retrieval failed" --
+            # for a search that never ran; the state predates NOT_ASSESSED.
             return EvidenceResult(
-                coverage=Coverage.HELD_NOT_FOUND,
+                coverage=Coverage.NOT_ASSESSED,
                 missing=(
                     "the authority index is not built, so no judgment was "
                     "searched. No claim about the held population can be made. Build it with "
@@ -799,6 +887,7 @@ class CorpusEvidenceAdapter:
         # visible through `evidence_bound_hit`.
         truncated = len(rows) > EXAMINED_CEILING
         rows = rows[:EXAMINED_CEILING]
+        rows, excluded = self._screen(rows, 6)
 
         findings: list[Finding] = []
         # THE STRUCTURAL FLOOR. A paragraph matching one incidental word of a
@@ -812,8 +901,6 @@ class CorpusEvidenceAdapter:
         floor = 2 if len(terms) >= 2 else 1
         thin = 0
         for row_id, case_id, case_name, court, year, para_type, chunk_id, text in rows:
-            if chunk_id in self._denylist():
-                continue
             kind = kind_for_corpus_label(para_type)
             if not kind.attributable:
                 # G-ATTRIB. Counsel's submission is 14.8% of the corpus and
@@ -868,7 +955,8 @@ class CorpusEvidenceAdapter:
             coverage=Coverage.ANSWERED if findings else Coverage.SEARCHED_NO_MATCH,
             findings=tuple(findings), missing=query_note if not findings else None,
             searched_stores=("authority_index",),
-            search_note=" ".join(x for x in (self._era_note(need), query_note, cut) if x))
+            search_note=" ".join(x for x in (self._era_note(need), query_note, cut,
+                                             self._held_back(excluded)) if x))
 
     # Words that say WHAT KIND of thing is wanted rather than what it is about.
     # In an authority search "is there any judgment we can rely on" is entirely

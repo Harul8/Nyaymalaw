@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Protocol
 
+from nm.domain.curation import Curation
 from nm.domain.text import refuses_blank_text
 
 
@@ -127,6 +128,14 @@ class InterimReliefPort(Protocol):
     def test_for(self, relief: InterimRelief) -> Test | None: ...
 
     def assess(self, relief: InterimRelief) -> Assessment: ...
+
+    def coverage(self, relief: InterimRelief) -> Curation:
+        """WHETHER THIS TABLE EXAMINED THE KEY -- `nm.domain.curation`.
+
+        Asked directly, so a key nobody curated is never read off an empty
+        answer as "nothing applies" (S1).
+        """
+        ...
 
 
 __all__ = ["InterimRelief", "LimbState", "Limb", "Test", "Assessment",

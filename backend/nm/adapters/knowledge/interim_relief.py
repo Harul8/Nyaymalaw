@@ -6,6 +6,7 @@ the same arrangement `CuratedElements`, `CuratedPreInstitution`,
 """
 from __future__ import annotations
 
+from nm.domain.curation import Curation
 from nm.domain.traceability import implements
 from nm.knowledge import interim_relief as curated
 from nm.ports.interim_relief import Assessment, InterimRelief, Test
@@ -21,3 +22,7 @@ class CuratedInterimRelief:
     @implements("D1")
     def assess(self, relief: InterimRelief) -> Assessment:
         return curated.assess(relief)
+
+    @implements("D1")
+    def coverage(self, relief: InterimRelief) -> Curation:
+        return curated.coverage(relief)
