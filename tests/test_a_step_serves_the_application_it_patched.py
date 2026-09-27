@@ -6,7 +6,7 @@ Measured 18 September 2026, on F-C-03's socket scenario. The step
 
     @given("the live dictation service", target_fixture="live_speech")
     def the_live_dictation_service(monkeypatch):
-        from nm.edge.api import application
+        from nm.app.api import application
         monkeypatch.setattr(application().live_dictation, "inner", engine)
 
 put a stand-in speech engine on `application()` -- and `application()` is a
@@ -118,7 +118,7 @@ def test_no_step_reaches_an_application_it_did_not_ask_for():
         "these are invoked by pytest and reach the wired application without "
         "depending on a fixture that wires one:\n  " + "\n  ".join(strays)
         + "\n\nAdd the `wired` fixture to the signature and use it instead of "
-          "importing `nm.edge.api.application`. A step that resolves the "
+          "importing `nm.app.api.application`. A step that resolves the "
           "application itself gets the previous test's, and the patch it makes "
           "there changes nothing — which is how F-C-03's socket came to run the "
           "real speech model against a stand-in's assertions.")

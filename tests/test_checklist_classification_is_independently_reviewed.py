@@ -6,15 +6,16 @@ from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
-from nm.core import deadlines, dispute_agenda, requirements, summary
-from nm.core.brain_assessment import AssessmentService
-from nm.core.checklist_review import ChecklistReviewService, classifications_for
-from nm.core.write_tools import write_tools
-from nm.domain.loop import LoopLimits, StepKind, StopReason
-from nm.domain.matter import Certainty, Thread
-from nm.domain.requirements import Force, Outcome, Requirement, State, checklist, key
-from nm.ports.model import ProviderUnavailable, ToolCall
 
+from nm.legal_brain import requirements
+from nm.legal_brain.brain_assessment import AssessmentService
+from nm.legal_brain.checklist_review import ChecklistReviewService, classifications_for
+from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.requirements_contracts import Force, Outcome, Requirement, State, checklist, key
+from nm.shared.model_port import ProviderUnavailable, ToolCall
+from nm.work_the_file import deadlines, dispute_agenda, summary
+from nm.work_the_file.matter_contracts import Certainty, Thread
+from nm.work_the_file.write_tools import write_tools
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import finding, response
 from tests.test_the_loop_records_work_before_using_it import _response

@@ -123,7 +123,7 @@ NEW_ROWS = {
         "returned to the model as an error.\n"
         "LB-127-AC3 (planted): a malformed argument set is returned for "
         "correction and never executed.",
-        "backend/nm/ports/model.py (complete, structured and embed today; no "
+        "nm/shared/model_port.py (complete, structured and embed today; no "
         "tool calling); adapters/model/openai_adapter.py; scripted.py. Model "
         "identifiers stay pinned, never floating aliases (the port's existing "
         "rule).",
@@ -194,7 +194,7 @@ NEW_ROWS = {
         "assessed result is visible in the step log.\n"
         "LB-129-AC3 (planted): an Act named with a shared word resolves to no "
         "Act rather than the wrong one.",
-        "backend/nm/knowledge/*; backend/nm/ports/*; LB-120-125. OPEN: the "
+        "nm/knowledge/*; nm/ports/*; LB-120-125. OPEN: the "
         "first tool set, chosen for the first pull request.",
     ]),
     "LB-130": ("L.3", [
@@ -252,7 +252,7 @@ NEW_ROWS = {
         "violates it is caught on the loop path.\n"
         "LB-131-AC2: a check that cannot run is shown as not assessed, never as "
         "passed.",
-        "backend/nm/domain/gates.py (the matrix) and metrics.fire. The checks "
+        "nm/shared/gates_contracts.py (the matrix) and metrics.fire. The checks "
         "exist; this row puts them after the loop.",
     ]),
     "LB-132": ("L.4", [
@@ -420,7 +420,7 @@ NEW_ROWS = {
         "LB-137-AC2: a zero result names its index.\n"
         "LB-137-AC3 (planted): a retrieved passage containing an instruction "
         "does not change the model's behaviour.",
-        "LB-100-108; backend/nm/domain/citation.py; MAX_EVIDENCE_ROUNDS, to be "
+        "LB-100-108; nm/legal_brain/citation_contracts.py; MAX_EVIDENCE_ROUNDS, to be "
         "replaced by the loop budget.",
     ]),
     "LB-138": ("L.8", [

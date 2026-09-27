@@ -1,0 +1,4131 @@
+{
+  "schema": 1,
+  "phases": [
+    "app",
+    "arrive",
+    "open_matter",
+    "legal_brain",
+    "work_the_file",
+    "advise",
+    "act",
+    "carry",
+    "close",
+    "leave",
+    "shared"
+  ],
+  "modules": [
+    {
+      "old_path": "backend/nm/adapters/documents/isolation.py",
+      "path": "nm/open_matter/document_isolation.py",
+      "old_module": "nm.adapters.documents.isolation",
+      "module": "nm.open_matter.document_isolation",
+      "role": "adapters",
+      "sha256_before": "6e5f7b21078461ef91df44585a861ce164b7fe2878cf49ea23dce99bf6826e19"
+    },
+    {
+      "old_path": "backend/nm/adapters/documents/local.py",
+      "path": "nm/open_matter/document_local.py",
+      "old_module": "nm.adapters.documents.local",
+      "module": "nm.open_matter.document_local",
+      "role": "adapters",
+      "sha256_before": "dc537ccd7410aa7ccb24f77d41a6ba960718cfdba1291f0f0c1af67c15295c81"
+    },
+    {
+      "old_path": "backend/nm/adapters/evidence/corpus.py",
+      "path": "nm/legal_brain/corpus_evidence.py",
+      "old_module": "nm.adapters.evidence.corpus",
+      "module": "nm.legal_brain.corpus_evidence",
+      "role": "adapters",
+      "sha256_before": "cdb08c4f59163df613596ec90b8ee27750bea55db9e7f918938ae34408d8272f"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_adapter.py",
+      "old_module": "nm.adapters.knowledge.authority_weight",
+      "module": "nm.legal_brain.authority_weight_adapter",
+      "role": "adapters",
+      "sha256_before": "058c2f21c49081cc658fdb62095b54090832d6b146742ef72f7379e16c375baa"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/elements.py",
+      "path": "nm/legal_brain/elements_adapter.py",
+      "old_module": "nm.adapters.knowledge.elements",
+      "module": "nm.legal_brain.elements_adapter",
+      "role": "adapters",
+      "sha256_before": "b8948a3ee032d6001d964f9f6c98db980cb9aa869abbb059f16ea59ca938748d"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_adapter.py",
+      "old_module": "nm.adapters.knowledge.filing_requirement",
+      "module": "nm.legal_brain.filing_requirement_adapter",
+      "role": "adapters",
+      "sha256_before": "c3a2c5e43ed50bc0a33d5f7571f0e18a1790443b79070dbdba991d88bceee79d"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/governing_law.py",
+      "path": "nm/legal_brain/governing_law_adapter.py",
+      "old_module": "nm.adapters.knowledge.governing_law",
+      "module": "nm.legal_brain.governing_law_adapter",
+      "role": "adapters",
+      "sha256_before": "92145a88b46e8addfa1c2e23efbbcb24df52c0a110fd492f2ba77241813ee85c"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/institution.py",
+      "path": "nm/legal_brain/institution_adapter.py",
+      "old_module": "nm.adapters.knowledge.institution",
+      "module": "nm.legal_brain.institution_adapter",
+      "role": "adapters",
+      "sha256_before": "afdf2c88872a2b1516bb2536924b5d075fbdc1da11b0efb049c6185e3c7ed4e2"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_adapter.py",
+      "old_module": "nm.adapters.knowledge.interim_relief",
+      "module": "nm.legal_brain.interim_relief_adapter",
+      "role": "adapters",
+      "sha256_before": "e7a89afc57bd40b263b6dd41326497477448cc674fe3cbd5f996c72e03f40043"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_adapter.py",
+      "old_module": "nm.adapters.knowledge.procedural_period",
+      "module": "nm.legal_brain.procedural_period_adapter",
+      "role": "adapters",
+      "sha256_before": "93d89bf9d773f0e09a5e77a41656f377daa7eb8a6a492245fce8834e6d3219dc"
+    },
+    {
+      "old_path": "backend/nm/adapters/mail/gmail.py",
+      "path": "nm/arrive/mail_gmail.py",
+      "old_module": "nm.adapters.mail.gmail",
+      "module": "nm.arrive.mail_gmail",
+      "role": "adapters",
+      "sha256_before": "e7ff3ce2cb8fecbf36b07fd4057058546771724c24f5d3d626b21c06d3cb8936"
+    },
+    {
+      "old_path": "backend/nm/adapters/mail/outbox.py",
+      "path": "nm/arrive/mail_outbox.py",
+      "old_module": "nm.adapters.mail.outbox",
+      "module": "nm.arrive.mail_outbox",
+      "role": "adapters",
+      "sha256_before": "8686c78957dad3833cc4826eece285aa2084a9298ca92e33e11c85ec481dfbb5"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/_budget.py",
+      "path": "nm/shared/model_budget.py",
+      "old_module": "nm.adapters.model._budget",
+      "module": "nm.shared.model_budget",
+      "role": "adapters",
+      "sha256_before": "edfe35f1a9e7fd0b7245d417291b6d682ddf2aec12f906d5cea014a475a0b696"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/_transport.py",
+      "path": "nm/shared/model_transport.py",
+      "old_module": "nm.adapters.model._transport",
+      "module": "nm.shared.model_transport",
+      "role": "adapters",
+      "sha256_before": "916bf8d0ca6c19b230666c7267914d079ddf309fb0c1077e52d1aeecb09213e4"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/anthropic_adapter.py",
+      "path": "nm/shared/model_anthropic_adapter.py",
+      "old_module": "nm.adapters.model.anthropic_adapter",
+      "module": "nm.shared.model_anthropic_adapter",
+      "role": "adapters",
+      "sha256_before": "8b6cf7ff59fbee4801c57fc1e931b50144a1da613e57f725ff8a5d12865ebdd9"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/call_budget.py",
+      "path": "nm/shared/model_call_budget.py",
+      "old_module": "nm.adapters.model.call_budget",
+      "module": "nm.shared.model_call_budget",
+      "role": "adapters",
+      "sha256_before": "eda4e0bb4cd0a2e404c165e555779115fe5c62b13e89efd75f3de7d1c6b2ffbe"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/config.py",
+      "path": "nm/shared/model_config.py",
+      "old_module": "nm.adapters.model.config",
+      "module": "nm.shared.model_config",
+      "role": "adapters",
+      "sha256_before": "20c15a9bf8066eaa80d21cd06fcfb0fbc6f913625dfd1426f949ed619575eff3"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/openai_adapter.py",
+      "path": "nm/shared/model_openai_adapter.py",
+      "old_module": "nm.adapters.model.openai_adapter",
+      "module": "nm.shared.model_openai_adapter",
+      "role": "adapters",
+      "sha256_before": "c990fa06b11c7e574f2643fd6ceaa5feb5fa65eceaa4046cba7e6a54985ed485"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/policed.py",
+      "path": "nm/shared/model_policed.py",
+      "old_module": "nm.adapters.model.policed",
+      "module": "nm.shared.model_policed",
+      "role": "adapters",
+      "sha256_before": "d1085ac7941359216ec8342108c9e953d6d745abee0a016f3eaf1264e92a2d43"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/replay.py",
+      "path": "nm/shared/model_replay.py",
+      "old_module": "nm.adapters.model.replay",
+      "module": "nm.shared.model_replay",
+      "role": "adapters",
+      "sha256_before": "9f6cf06ced104c19104bdf73856e43d77254a3104c013a10ea4008bd632b11b3"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/scripted.py",
+      "path": "nm/shared/model_scripted.py",
+      "old_module": "nm.adapters.model.scripted",
+      "module": "nm.shared.model_scripted",
+      "role": "adapters",
+      "sha256_before": "883e21d010283e9a6403c35ad48276f9a2490c2ccc09904c1518c03cd8d7199c"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/traced.py",
+      "path": "nm/shared/model_traced.py",
+      "old_module": "nm.adapters.model.traced",
+      "module": "nm.shared.model_traced",
+      "role": "adapters",
+      "sha256_before": "3e9bc00ed958a40c1be448b8ba83c20a250fc073a2ff66bfd0dffd05a606f8ad"
+    },
+    {
+      "old_path": "backend/nm/adapters/optional.py",
+      "path": "nm/shared/optional_adapter.py",
+      "old_module": "nm.adapters.optional",
+      "module": "nm.shared.optional_adapter",
+      "role": "adapters",
+      "sha256_before": "82df60ce99f1a703b64522fcae6053d52f0ffc81dd74b4b7d34c4d8de60ae107"
+    },
+    {
+      "old_path": "backend/nm/adapters/policed_port.py",
+      "path": "nm/shared/policed_port_adapter.py",
+      "old_module": "nm.adapters.policed_port",
+      "module": "nm.shared.policed_port_adapter",
+      "role": "adapters",
+      "sha256_before": "9ffcdb1daba693c8c0b54c4a8a84742605c1baa25d8fd7468b098218797aac7b"
+    },
+    {
+      "old_path": "backend/nm/adapters/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks_adapter.py",
+      "old_module": "nm.adapters.practice_playbooks",
+      "module": "nm.legal_brain.practice_playbooks_adapter",
+      "role": "adapters",
+      "sha256_before": "5ffd1a536f6411e6c3beea007caed7796f96d944c517919a86714abc10ea08e5"
+    },
+    {
+      "old_path": "backend/nm/adapters/principles_file.py",
+      "path": "nm/legal_brain/principles_file_adapter.py",
+      "old_module": "nm.adapters.principles_file",
+      "module": "nm.legal_brain.principles_file_adapter",
+      "role": "adapters",
+      "sha256_before": "91824b6c59a19a28961c8a73b0046d8866ef59830c1cdaea9c5ffaa73bc4955b"
+    },
+    {
+      "old_path": "backend/nm/adapters/search/authority.py",
+      "path": "nm/legal_brain/search_authority.py",
+      "old_module": "nm.adapters.search.authority",
+      "module": "nm.legal_brain.search_authority",
+      "role": "adapters",
+      "sha256_before": "88bae11b301e8c476da45e73bc0921fcf0acfd082916b42ed987a670bfcd9171"
+    },
+    {
+      "old_path": "backend/nm/adapters/search/policed.py",
+      "path": "nm/legal_brain/search_policed.py",
+      "old_module": "nm.adapters.search.policed",
+      "module": "nm.legal_brain.search_policed",
+      "role": "adapters",
+      "sha256_before": "dc09109724ec181c9a82952e1c13e61fab1211327a9c22e085a5c0907131009a"
+    },
+    {
+      "old_path": "backend/nm/adapters/speech/local_whisper.py",
+      "path": "nm/open_matter/speech_local_whisper.py",
+      "old_module": "nm.adapters.speech.local_whisper",
+      "module": "nm.open_matter.speech_local_whisper",
+      "role": "adapters",
+      "sha256_before": "688d5fd8771d942783f0da839eb9e2af740686b4e43a6a985b992dcb65370be8"
+    },
+    {
+      "old_path": "backend/nm/adapters/speech/vosk_live.py",
+      "path": "nm/open_matter/speech_vosk_live.py",
+      "old_module": "nm.adapters.speech.vosk_live",
+      "module": "nm.open_matter.speech_vosk_live",
+      "role": "adapters",
+      "sha256_before": "b0f7bc1d06b2b8cab6688019aa7468df3ccf14182a80764dc33e4a5767b1e4a2"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/directory.py",
+      "path": "nm/arrive/store_directory.py",
+      "old_module": "nm.adapters.store.directory",
+      "module": "nm.arrive.store_directory",
+      "role": "adapters",
+      "sha256_before": "8d6d6de7b3ed74c24028cbe356b05be43b28653d444673cf1d4bd4218d53f575"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/documents.py",
+      "path": "nm/shared/store_documents.py",
+      "old_module": "nm.adapters.store.documents",
+      "module": "nm.shared.store_documents",
+      "role": "adapters",
+      "sha256_before": "d0724c24825db2007b08eabb417c9b3cd75469a022cc2406b1ad09e234d22a81"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/envelope.py",
+      "path": "nm/shared/store_envelope.py",
+      "old_module": "nm.adapters.store.envelope",
+      "module": "nm.shared.store_envelope",
+      "role": "adapters",
+      "sha256_before": "e0ab0dbfa6d2e4e786e68d0594c659a9b7ccfdcd281a32ba2172717692a15ec8"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/file_store.py",
+      "path": "nm/shared/store_file_store.py",
+      "old_module": "nm.adapters.store.file_store",
+      "module": "nm.shared.store_file_store",
+      "role": "adapters",
+      "sha256_before": "4e4c69abf94d68f6326842d256b84d7f8a52ed11b21508c743ccac3666dd1490"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/loop_log.py",
+      "path": "nm/shared/store_loop_log.py",
+      "old_module": "nm.adapters.store.loop_log",
+      "module": "nm.shared.store_loop_log",
+      "role": "adapters",
+      "sha256_before": "316536211cab5747a2e7c5aebfa07ba89788cb62cd60d49762775ef792c1f731"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/pending_accounts.py",
+      "path": "nm/arrive/store_pending_accounts.py",
+      "old_module": "nm.adapters.store.pending_accounts",
+      "module": "nm.arrive.store_pending_accounts",
+      "role": "adapters",
+      "sha256_before": "ccc4a36c83f51fd01f0f2953de710a9c1abe28ebc0fd8352a0a7188e230787f0"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/postgres.py",
+      "path": "nm/shared/store_postgres.py",
+      "old_module": "nm.adapters.store.postgres",
+      "module": "nm.shared.store_postgres",
+      "role": "adapters",
+      "sha256_before": "7a40032216b9c3600f5ee14979a46126cac6c6a9581cfb0d4c37ce3ffe29cad1"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/sealing.py",
+      "path": "nm/shared/store_sealing.py",
+      "old_module": "nm.adapters.store.sealing",
+      "module": "nm.shared.store_sealing",
+      "role": "adapters",
+      "sha256_before": "75c776aef83dff34bc83f34c9676754d994888496b404a8b50f1cab5d110780f"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/uploads.py",
+      "path": "nm/shared/store_uploads.py",
+      "old_module": "nm.adapters.store.uploads",
+      "module": "nm.shared.store_uploads",
+      "role": "adapters",
+      "sha256_before": "8cb4f009221afb03c6156186805baac692432e5a842130d82513a3d2a779a390"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/checklist_sources.py",
+      "path": "nm/legal_brain/checklist_sources.py",
+      "old_module": "nm.bootstrap.checklist_sources",
+      "module": "nm.legal_brain.checklist_sources",
+      "role": "bootstrap",
+      "sha256_before": "6e44ce456dcba33c90489a1b1b252da58977fbe48d9c8132202d175cd6e85d02"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/composition.py",
+      "path": "nm/app/composition.py",
+      "old_module": "nm.bootstrap.composition",
+      "module": "nm.app.composition",
+      "role": "bootstrap",
+      "sha256_before": "9ad5e34d9df6169b1f15044e8014e0f0826f4c77aca95738bc5c4ac69c0ca1f0"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_evaluations.py",
+      "path": "nm/legal_brain/controlled_evaluations_composition.py",
+      "old_module": "nm.bootstrap.controlled_evaluations",
+      "module": "nm.legal_brain.controlled_evaluations_composition",
+      "role": "bootstrap",
+      "sha256_before": "a918123bf2c4b8b7be442772843df76d5c7d3b7ecdd718852f7dbf6e6ccf7cff"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_generations.py",
+      "path": "nm/legal_brain/controlled_generations.py",
+      "old_module": "nm.bootstrap.controlled_generations",
+      "module": "nm.legal_brain.controlled_generations",
+      "role": "bootstrap",
+      "sha256_before": "449fa230874ff887f77ec46d22bf131cbc4755e819e7ad65f26a6cd688fc4933"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_registry.py",
+      "path": "nm/legal_brain/controlled_registry_composition.py",
+      "old_module": "nm.bootstrap.controlled_registry",
+      "module": "nm.legal_brain.controlled_registry_composition",
+      "role": "bootstrap",
+      "sha256_before": "05d582b2f6d91a9c9e4cb9dfefcc84efb8b9385ed41627e46180a9675615e728"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/dated_provisions.py",
+      "path": "nm/legal_brain/dated_provisions.py",
+      "old_module": "nm.bootstrap.dated_provisions",
+      "module": "nm.legal_brain.dated_provisions",
+      "role": "bootstrap",
+      "sha256_before": "bedd6ccd76a36276e5be922b423d778a1d17b068e7f7921158eaf0c3e5b4c3ff"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/document_permission.py",
+      "path": "nm/open_matter/document_permission.py",
+      "old_module": "nm.bootstrap.document_permission",
+      "module": "nm.open_matter.document_permission",
+      "role": "bootstrap",
+      "sha256_before": "db2e7405062be1e230dcd0ab52e2db764639dcc32e5048e8911144bacd22b9c2"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/egress_policy.py",
+      "path": "nm/shared/egress_policy.py",
+      "old_module": "nm.bootstrap.egress_policy",
+      "module": "nm.shared.egress_policy",
+      "role": "bootstrap",
+      "sha256_before": "a154e846b635ef77ec13727b5979948bb50593ffa086a57159ed39533d8558b4"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/evaluation_models.py",
+      "path": "nm/legal_brain/evaluation_models.py",
+      "old_module": "nm.bootstrap.evaluation_models",
+      "module": "nm.legal_brain.evaluation_models",
+      "role": "bootstrap",
+      "sha256_before": "82b5c2b234f05754ea3ed59a9bb7d4de22c857889e63ec3ee17d95b7e64fb17d"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/main.py",
+      "path": "nm/app/main.py",
+      "old_module": "nm.bootstrap.main",
+      "module": "nm.app.main",
+      "role": "bootstrap",
+      "sha256_before": "054e1fc374567ac8444336f4dc144cd785743a50fc78bb384c4045e3aa2cc4c3"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/model_permission.py",
+      "path": "nm/app/model_permission.py",
+      "old_module": "nm.bootstrap.model_permission",
+      "module": "nm.app.model_permission",
+      "role": "bootstrap",
+      "sha256_before": "e6ff67ac72d3380c10dc8bfc0aa785cc2befc0b3ca17a4b40fd54ae2edeb2d71"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/provision_registry.py",
+      "path": "nm/legal_brain/provision_registry_composition.py",
+      "old_module": "nm.bootstrap.provision_registry",
+      "module": "nm.legal_brain.provision_registry_composition",
+      "role": "bootstrap",
+      "sha256_before": "0909bfa581a67e99d6a9454cc07e9c853f683f2ca1383a8b2b3f3dfe80a5d456"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/provision_review.py",
+      "path": "nm/legal_brain/provision_review.py",
+      "old_module": "nm.bootstrap.provision_review",
+      "module": "nm.legal_brain.provision_review",
+      "role": "bootstrap",
+      "sha256_before": "57b8a35112d3c18fcba6783cd3a73cda724d4e389e0a46b852ea01d06317ea08"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/replay_context.py",
+      "path": "nm/legal_brain/replay_context.py",
+      "old_module": "nm.bootstrap.replay_context",
+      "module": "nm.legal_brain.replay_context",
+      "role": "bootstrap",
+      "sha256_before": "0a6add1691368c8959a783000355ee14c987d574cd8140b9f27f0a6996a080a5"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_capture.py",
+      "path": "nm/legal_brain/runtime_capture.py",
+      "old_module": "nm.bootstrap.runtime_capture",
+      "module": "nm.legal_brain.runtime_capture",
+      "role": "bootstrap",
+      "sha256_before": "005c00d487fff3aa9fbe7b75a7662a9b2aaa7a6347f4169608649713acaa254c"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_model_tape.py",
+      "path": "nm/legal_brain/runtime_model_tape.py",
+      "old_module": "nm.bootstrap.runtime_model_tape",
+      "module": "nm.legal_brain.runtime_model_tape",
+      "role": "bootstrap",
+      "sha256_before": "4fab317fcca311ca9e1b458e5c4716ddb0a961e1fddf01f5fae24f3b947ba9eb"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_port_tape.py",
+      "path": "nm/legal_brain/runtime_port_tape.py",
+      "old_module": "nm.bootstrap.runtime_port_tape",
+      "module": "nm.legal_brain.runtime_port_tape",
+      "role": "bootstrap",
+      "sha256_before": "3cf67ceeb5c64ae585f57b6f26d2e526ae517aa9a3f0a4c323850af63e38e83e"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/strict_replay.py",
+      "path": "nm/legal_brain/strict_replay.py",
+      "old_module": "nm.bootstrap.strict_replay",
+      "module": "nm.legal_brain.strict_replay",
+      "role": "bootstrap",
+      "sha256_before": "abf7349916b3823a6e9022c5e446da965969831baefba3d62cdc968104ec8b5c"
+    },
+    {
+      "old_path": "backend/nm/core/accrual.py",
+      "path": "nm/legal_brain/accrual.py",
+      "old_module": "nm.core.accrual",
+      "module": "nm.legal_brain.accrual",
+      "role": "core",
+      "sha256_before": "efcc599ba4e5540470cdaf7208a2072492d5ca51b6a02c9c2647dcd5964430df"
+    },
+    {
+      "old_path": "backend/nm/core/action.py",
+      "path": "nm/act/action.py",
+      "old_module": "nm.core.action",
+      "module": "nm.act.action",
+      "role": "core",
+      "sha256_before": "9aa58000dcd7bf6bb11385e6ff68e96521e934116a9f7b7029477fb17f5e1958"
+    },
+    {
+      "old_path": "backend/nm/core/action_proposal_tool.py",
+      "path": "nm/act/action_proposal_tool.py",
+      "old_module": "nm.core.action_proposal_tool",
+      "module": "nm.act.action_proposal_tool",
+      "role": "core",
+      "sha256_before": "3ced79a13e54dcf3cd79bb8fba00a1dda03891fc2efe7723168421f71a08b726"
+    },
+    {
+      "old_path": "backend/nm/core/adversarial.py",
+      "path": "nm/legal_brain/adversarial.py",
+      "old_module": "nm.core.adversarial",
+      "module": "nm.legal_brain.adversarial",
+      "role": "core",
+      "sha256_before": "92c3ec9ac43ebf09b8d97f40970afb1b7b08d772cd5f49750a1f22ec6cde253a"
+    },
+    {
+      "old_path": "backend/nm/core/advocate_memory.py",
+      "path": "nm/legal_brain/advocate_memory.py",
+      "old_module": "nm.core.advocate_memory",
+      "module": "nm.legal_brain.advocate_memory",
+      "role": "core",
+      "sha256_before": "798ee12e4d1d5867b17e2702846b21687402b737cdc64d81fd700acc9d592f71"
+    },
+    {
+      "old_path": "backend/nm/core/brain_assessment.py",
+      "path": "nm/legal_brain/brain_assessment.py",
+      "old_module": "nm.core.brain_assessment",
+      "module": "nm.legal_brain.brain_assessment",
+      "role": "core",
+      "sha256_before": "424f698b74dd8d0e71c611d683992fa1cf4bf3dd98bafa535466d66fb59bf49a"
+    },
+    {
+      "old_path": "backend/nm/core/brain_context.py",
+      "path": "nm/legal_brain/brain_context.py",
+      "old_module": "nm.core.brain_context",
+      "module": "nm.legal_brain.brain_context",
+      "role": "core",
+      "sha256_before": "b8387e2a5a7c9b0ed6dadc8c98bbafeaa84ad08accf22e1bf67cf16768e42edc"
+    },
+    {
+      "old_path": "backend/nm/core/brain_evaluation.py",
+      "path": "nm/legal_brain/brain_evaluation.py",
+      "old_module": "nm.core.brain_evaluation",
+      "module": "nm.legal_brain.brain_evaluation",
+      "role": "core",
+      "sha256_before": "ff58cc41411d81963d3e7103cf02c14df0ab483b69f24bbe738db902e14ad68a"
+    },
+    {
+      "old_path": "backend/nm/core/brain_finalization.py",
+      "path": "nm/legal_brain/brain_finalization.py",
+      "old_module": "nm.core.brain_finalization",
+      "module": "nm.legal_brain.brain_finalization",
+      "role": "core",
+      "sha256_before": "062f32de0c4699414fa03f56d023506531f42a1aed77275bad20065c49072a4e"
+    },
+    {
+      "old_path": "backend/nm/core/brain_publication.py",
+      "path": "nm/legal_brain/brain_publication.py",
+      "old_module": "nm.core.brain_publication",
+      "module": "nm.legal_brain.brain_publication",
+      "role": "core",
+      "sha256_before": "c5c7817db0b6c8e99b07c054877a78ba394180cea91c17935fa28e39b002a627"
+    },
+    {
+      "old_path": "backend/nm/core/brain_release.py",
+      "path": "nm/legal_brain/brain_release.py",
+      "old_module": "nm.core.brain_release",
+      "module": "nm.legal_brain.brain_release",
+      "role": "core",
+      "sha256_before": "a5915b369262044001d6a05dd217c98c660f5666ed2fcafce54036cb90567cf4"
+    },
+    {
+      "old_path": "backend/nm/core/briefing.py",
+      "path": "nm/legal_brain/briefing.py",
+      "old_module": "nm.core.briefing",
+      "module": "nm.legal_brain.briefing",
+      "role": "core",
+      "sha256_before": "8e8ed7a05f6e9d9ff64c2cd95f967186e4b3f5456cc6f389c2928d70e4d8bf36"
+    },
+    {
+      "old_path": "backend/nm/core/calculation_tools.py",
+      "path": "nm/legal_brain/calculation_tools.py",
+      "old_module": "nm.core.calculation_tools",
+      "module": "nm.legal_brain.calculation_tools",
+      "role": "core",
+      "sha256_before": "7960cbba60e19abe238f93139350fd8804155861a91ce602c319c0844f692904"
+    },
+    {
+      "old_path": "backend/nm/core/cascade.py",
+      "path": "nm/work_the_file/cascade.py",
+      "old_module": "nm.core.cascade",
+      "module": "nm.work_the_file.cascade",
+      "role": "core",
+      "sha256_before": "3d14b6a4297c5e97a6a7616370e0aa8675ff6531df18e631b5d8e961306577e9"
+    },
+    {
+      "old_path": "backend/nm/core/casefile.py",
+      "path": "nm/work_the_file/casefile.py",
+      "old_module": "nm.core.casefile",
+      "module": "nm.work_the_file.casefile",
+      "role": "core",
+      "sha256_before": "4b889e4d3b04ceee549ca14e23cf0beb10ef6c9f4165a628e7c45414fc06f4ed"
+    },
+    {
+      "old_path": "backend/nm/core/cause.py",
+      "path": "nm/legal_brain/cause.py",
+      "old_module": "nm.core.cause",
+      "module": "nm.legal_brain.cause",
+      "role": "core",
+      "sha256_before": "16de4ba40e3815ef8f07387abfdd5a0b027ba1666f922765d4996db2adcc784b"
+    },
+    {
+      "old_path": "backend/nm/core/ceiling.py",
+      "path": "nm/legal_brain/ceiling.py",
+      "old_module": "nm.core.ceiling",
+      "module": "nm.legal_brain.ceiling",
+      "role": "core",
+      "sha256_before": "e63a49b205a45624316aa9fc15a8cd8742cb8bf349ae295ba3225bbed1f32642"
+    },
+    {
+      "old_path": "backend/nm/core/checked_input_continuation.py",
+      "path": "nm/legal_brain/checked_input_continuation.py",
+      "old_module": "nm.core.checked_input_continuation",
+      "module": "nm.legal_brain.checked_input_continuation",
+      "role": "core",
+      "sha256_before": "d9ac74feb9f4a85f81368961be425f755e9df3018fe88eb4ac2b56f88d7ca61c"
+    },
+    {
+      "old_path": "backend/nm/core/checklist_review.py",
+      "path": "nm/legal_brain/checklist_review.py",
+      "old_module": "nm.core.checklist_review",
+      "module": "nm.legal_brain.checklist_review",
+      "role": "core",
+      "sha256_before": "4e2461c35b550cdedc4cda6d49fa336d5443808fc47b8994b7061def32897ba3"
+    },
+    {
+      "old_path": "backend/nm/core/chronology.py",
+      "path": "nm/work_the_file/chronology.py",
+      "old_module": "nm.core.chronology",
+      "module": "nm.work_the_file.chronology",
+      "role": "core",
+      "sha256_before": "3afa4873acd6c7dfee0d158b2a98d4609a77db203be7e36e7045c13ee9fbe72a"
+    },
+    {
+      "old_path": "backend/nm/core/conflict.py",
+      "path": "nm/open_matter/conflict.py",
+      "old_module": "nm.core.conflict",
+      "module": "nm.open_matter.conflict",
+      "role": "core",
+      "sha256_before": "506bb7d8ee2865a91b9d1516158c8e0fa95f9365ddb6d946d7e1af96e2d71307"
+    },
+    {
+      "old_path": "backend/nm/core/consistency.py",
+      "path": "nm/legal_brain/consistency.py",
+      "old_module": "nm.core.consistency",
+      "module": "nm.legal_brain.consistency",
+      "role": "core",
+      "sha256_before": "3d650a5c41dec7f4e7ec7f55796cee2840db3b30df3ac12399326413fbf5640d"
+    },
+    {
+      "old_path": "backend/nm/core/controlled_brain.py",
+      "path": "nm/legal_brain/controlled_brain.py",
+      "old_module": "nm.core.controlled_brain",
+      "module": "nm.legal_brain.controlled_brain",
+      "role": "core",
+      "sha256_before": "97d7352c28ea859618f43382c846dc08ede56f1f9ccc71f5a8864743bdf0b7b5"
+    },
+    {
+      "old_path": "backend/nm/core/conversation.py",
+      "path": "nm/legal_brain/conversation.py",
+      "old_module": "nm.core.conversation",
+      "module": "nm.legal_brain.conversation",
+      "role": "core",
+      "sha256_before": "77361ef380f86e8e2ae80e25e4b0015ac61f731497bde61cbeabbc9f977298ed"
+    },
+    {
+      "old_path": "backend/nm/core/conversational_proposal.py",
+      "path": "nm/legal_brain/conversational_proposal.py",
+      "old_module": "nm.core.conversational_proposal",
+      "module": "nm.legal_brain.conversational_proposal",
+      "role": "core",
+      "sha256_before": "eb73cb434b3d9650a200a91672090dd14802c82051fbe546f63e243240c8c952"
+    },
+    {
+      "old_path": "backend/nm/core/date_resolution.py",
+      "path": "nm/work_the_file/date_resolution.py",
+      "old_module": "nm.core.date_resolution",
+      "module": "nm.work_the_file.date_resolution",
+      "role": "core",
+      "sha256_before": "166cd764d512423757ec2fa54895e7be59d453a06fef704d89b9bfff49064096"
+    },
+    {
+      "old_path": "backend/nm/core/deadline_proposals.py",
+      "path": "nm/work_the_file/deadline_proposals.py",
+      "old_module": "nm.core.deadline_proposals",
+      "module": "nm.work_the_file.deadline_proposals",
+      "role": "core",
+      "sha256_before": "55815898ee80f2f24aa69503ed55e3d6dafe7d07f642412b0390428253671db2"
+    },
+    {
+      "old_path": "backend/nm/core/deadlines.py",
+      "path": "nm/work_the_file/deadlines.py",
+      "old_module": "nm.core.deadlines",
+      "module": "nm.work_the_file.deadlines",
+      "role": "core",
+      "sha256_before": "cad8acb40911130afc1e24486a97e2d710038f511eddb2f4720c6ba7c68f6845"
+    },
+    {
+      "old_path": "backend/nm/core/delegation.py",
+      "path": "nm/legal_brain/delegation.py",
+      "old_module": "nm.core.delegation",
+      "module": "nm.legal_brain.delegation",
+      "role": "core",
+      "sha256_before": "30133e3ec885676c39785add384605674a41a831c4346e9bd72c032e0ee58e3c"
+    },
+    {
+      "old_path": "backend/nm/core/dependency.py",
+      "path": "nm/work_the_file/dependency.py",
+      "old_module": "nm.core.dependency",
+      "module": "nm.work_the_file.dependency",
+      "role": "core",
+      "sha256_before": "8810c5eddb2587db5f75e15c157a1c810514646e4343c4e849a55f31301b82b7"
+    },
+    {
+      "old_path": "backend/nm/core/dispute.py",
+      "path": "nm/legal_brain/dispute.py",
+      "old_module": "nm.core.dispute",
+      "module": "nm.legal_brain.dispute",
+      "role": "core",
+      "sha256_before": "eaaa39aa36eeab975248e2907b026eed6bad3945e2a765c38faf5d206652acdc"
+    },
+    {
+      "old_path": "backend/nm/core/dispute_agenda.py",
+      "path": "nm/work_the_file/dispute_agenda.py",
+      "old_module": "nm.core.dispute_agenda",
+      "module": "nm.work_the_file.dispute_agenda",
+      "role": "core",
+      "sha256_before": "d6619a514fc1ba874f745bd6e466dd86118f7d1ea421e4456e8cd83ad53c3b90"
+    },
+    {
+      "old_path": "backend/nm/core/drafting.py",
+      "path": "nm/act/drafting.py",
+      "old_module": "nm.core.drafting",
+      "module": "nm.act.drafting",
+      "role": "core",
+      "sha256_before": "414efc8dac62580e87cbca571086e7af9385586320ba783387fe9a29e49313b0"
+    },
+    {
+      "old_path": "backend/nm/core/duty.py",
+      "path": "nm/legal_brain/duty.py",
+      "old_module": "nm.core.duty",
+      "module": "nm.legal_brain.duty",
+      "role": "core",
+      "sha256_before": "9a8fc2a49ec1ab30a0db8b95c87dc01b3bc6af53d7247c3687118f75a3987f90"
+    },
+    {
+      "old_path": "backend/nm/core/early_independent_review.py",
+      "path": "nm/legal_brain/early_independent_review.py",
+      "old_module": "nm.core.early_independent_review",
+      "module": "nm.legal_brain.early_independent_review",
+      "role": "core",
+      "sha256_before": "a73a83ee22e86437e432127d05c93e2c8f8f539542ff4a6f5fd4778c450ebdc1"
+    },
+    {
+      "old_path": "backend/nm/core/evaluation_history.py",
+      "path": "nm/legal_brain/evaluation_history.py",
+      "old_module": "nm.core.evaluation_history",
+      "module": "nm.legal_brain.evaluation_history",
+      "role": "core",
+      "sha256_before": "6e48b9869afdbd354b0df73c7938b1aecaf7c46035a41f979494d7514cfb24d3"
+    },
+    {
+      "old_path": "backend/nm/core/event_limitation_calculation.py",
+      "path": "nm/legal_brain/event_limitation_calculation.py",
+      "old_module": "nm.core.event_limitation_calculation",
+      "module": "nm.legal_brain.event_limitation_calculation",
+      "role": "core",
+      "sha256_before": "b46ee8f21f598d04ee1fdc5ce1939c648e6cf7c2937d66603de9cd60be11e85d"
+    },
+    {
+      "old_path": "backend/nm/core/evidence_item.py",
+      "path": "nm/work_the_file/evidence_item.py",
+      "old_module": "nm.core.evidence_item",
+      "module": "nm.work_the_file.evidence_item",
+      "role": "core",
+      "sha256_before": "b18ab1f87a0c3b47a92f02eaa4dd59ee05ad1e54a209ca505e5ade8d1acb8ab4"
+    },
+    {
+      "old_path": "backend/nm/core/factors.py",
+      "path": "nm/legal_brain/factors.py",
+      "old_module": "nm.core.factors",
+      "module": "nm.legal_brain.factors",
+      "role": "core",
+      "sha256_before": "ddfeed2d945aeb9d546b20aa42bfc115c051eedfea9fbe19096a9c2d5bbaa99d"
+    },
+    {
+      "old_path": "backend/nm/core/file_mutation.py",
+      "path": "nm/work_the_file/file_mutation.py",
+      "old_module": "nm.core.file_mutation",
+      "module": "nm.work_the_file.file_mutation",
+      "role": "core",
+      "sha256_before": "5bb57d9033005c8cba61b8c2840481a5bdd130c02a5cbc8979e890146951708e"
+    },
+    {
+      "old_path": "backend/nm/core/gaps.py",
+      "path": "nm/legal_brain/gaps.py",
+      "old_module": "nm.core.gaps",
+      "module": "nm.legal_brain.gaps",
+      "role": "core",
+      "sha256_before": "8cc45a03a7650b8b5c0e66fd036a3f650dc17c6fd1c704dd87e540c16b848eef"
+    },
+    {
+      "old_path": "backend/nm/core/grounded_file_tools.py",
+      "path": "nm/legal_brain/grounded_file_tools.py",
+      "old_module": "nm.core.grounded_file_tools",
+      "module": "nm.legal_brain.grounded_file_tools",
+      "role": "core",
+      "sha256_before": "56d7d30b61da1da407f4662f5b3ae884ad3b2445f1efd56c134cebf9fb87de97"
+    },
+    {
+      "old_path": "backend/nm/core/grounding.py",
+      "path": "nm/legal_brain/grounding.py",
+      "old_module": "nm.core.grounding",
+      "module": "nm.legal_brain.grounding",
+      "role": "core",
+      "sha256_before": "8230821146252a81df918ca661e6d7ca61b1fa6906766c57d528cae565fc4fec"
+    },
+    {
+      "old_path": "backend/nm/core/handover.py",
+      "path": "nm/carry/handover.py",
+      "old_module": "nm.core.handover",
+      "module": "nm.carry.handover",
+      "role": "core",
+      "sha256_before": "8a0989eff14333bb9cf9033073abcba2ce9f37ba77185123a0ba8d9381d78cd6"
+    },
+    {
+      "old_path": "backend/nm/core/hearing.py",
+      "path": "nm/act/hearing.py",
+      "old_module": "nm.core.hearing",
+      "module": "nm.act.hearing",
+      "role": "core",
+      "sha256_before": "42f19c09e4c73bb74538f1fbaa5fca52dbf0aab14c6c844dcfd5dfb2fd85b1f4"
+    },
+    {
+      "old_path": "backend/nm/core/intake.py",
+      "path": "nm/open_matter/intake.py",
+      "old_module": "nm.core.intake",
+      "module": "nm.open_matter.intake",
+      "role": "core",
+      "sha256_before": "51fc5d6e1d6143c938cf7a5afa4460e266e82cfd3207aad38f32fa5cb3bbb576"
+    },
+    {
+      "old_path": "backend/nm/core/interaction_review.py",
+      "path": "nm/legal_brain/interaction_review.py",
+      "old_module": "nm.core.interaction_review",
+      "module": "nm.legal_brain.interaction_review",
+      "role": "core",
+      "sha256_before": "e24e9cb7dcf756c7f9f1ba6160b1dae1c61aa40069b35ede0a39a3b601825e64"
+    },
+    {
+      "old_path": "backend/nm/core/interaction_subject.py",
+      "path": "nm/legal_brain/interaction_subject.py",
+      "old_module": "nm.core.interaction_subject",
+      "module": "nm.legal_brain.interaction_subject",
+      "role": "core",
+      "sha256_before": "ed3dabc1256f373415d3efb278e56a24cb52c2e035a0364d6a36d13174a1964d"
+    },
+    {
+      "old_path": "backend/nm/core/investigation.py",
+      "path": "nm/legal_brain/investigation.py",
+      "old_module": "nm.core.investigation",
+      "module": "nm.legal_brain.investigation",
+      "role": "core",
+      "sha256_before": "e659f8c585ae1106546bde35ec2e1823e75c1fe5aef1309f564f6e48079e49ee"
+    },
+    {
+      "old_path": "backend/nm/core/issues.py",
+      "path": "nm/legal_brain/issues.py",
+      "old_module": "nm.core.issues",
+      "module": "nm.legal_brain.issues",
+      "role": "core",
+      "sha256_before": "047cbb6ebd9689f4e6d862ded91503caaa3c658c27a8ee7ec266020917ebd383"
+    },
+    {
+      "old_path": "backend/nm/core/json_values.py",
+      "path": "nm/shared/json_values.py",
+      "old_module": "nm.core.json_values",
+      "module": "nm.shared.json_values",
+      "role": "core",
+      "sha256_before": "8af2d1b82b8cd681b5cff1f658eec247aecfd479203d7c592b2bc7cef8bcd018"
+    },
+    {
+      "old_path": "backend/nm/core/lead.py",
+      "path": "nm/legal_brain/lead.py",
+      "old_module": "nm.core.lead",
+      "module": "nm.legal_brain.lead",
+      "role": "core",
+      "sha256_before": "e2e6faa125f8d093161a83cc90519d0f00957ea14199a3d9b0bfef7b8c428d4e"
+    },
+    {
+      "old_path": "backend/nm/core/limitation.py",
+      "path": "nm/legal_brain/limitation.py",
+      "old_module": "nm.core.limitation",
+      "module": "nm.legal_brain.limitation",
+      "role": "core",
+      "sha256_before": "c204f142dc688feb9d74672bf35a0265ed42f3810d8f98c41e4e76f683c7851f"
+    },
+    {
+      "old_path": "backend/nm/core/loop.py",
+      "path": "nm/legal_brain/loop.py",
+      "old_module": "nm.core.loop",
+      "module": "nm.legal_brain.loop",
+      "role": "core",
+      "sha256_before": "4d27c0381463e6fc051cb550199df78fa4a545b56704b301dd86691d0f626e3f"
+    },
+    {
+      "old_path": "backend/nm/core/loop_progress.py",
+      "path": "nm/legal_brain/loop_progress.py",
+      "old_module": "nm.core.loop_progress",
+      "module": "nm.legal_brain.loop_progress",
+      "role": "core",
+      "sha256_before": "39c4aad8b5d284a49e4313ab07ae53a7cc33a4318ea5e170df39dce3b8e94e53"
+    },
+    {
+      "old_path": "backend/nm/core/matter_support.py",
+      "path": "nm/legal_brain/matter_support.py",
+      "old_module": "nm.core.matter_support",
+      "module": "nm.legal_brain.matter_support",
+      "role": "core",
+      "sha256_before": "09928c9b955f7b6d09e3defebb16f01fb6f28269abaa34ab5b459aa91f0b9e23"
+    },
+    {
+      "old_path": "backend/nm/core/nested_research.py",
+      "path": "nm/legal_brain/nested_research.py",
+      "old_module": "nm.core.nested_research",
+      "module": "nm.legal_brain.nested_research",
+      "role": "core",
+      "sha256_before": "558d47569a6be21bd0d9635011c66ebb2395257943ed485b8feafa33e13ea5d5"
+    },
+    {
+      "old_path": "backend/nm/core/opposition_work.py",
+      "path": "nm/legal_brain/opposition_work.py",
+      "old_module": "nm.core.opposition_work",
+      "module": "nm.legal_brain.opposition_work",
+      "role": "core",
+      "sha256_before": "a2923f7e1fdac83febb551701897d6ba5b05e33e2304445e91c70ccd0522b6f0"
+    },
+    {
+      "old_path": "backend/nm/core/options.py",
+      "path": "nm/advise/options.py",
+      "old_module": "nm.core.options",
+      "module": "nm.advise.options",
+      "role": "core",
+      "sha256_before": "f6a70deda0ab04aefcb61f2b0f34f41f15a7f2aadede2547b18ca157e2198f9d"
+    },
+    {
+      "old_path": "backend/nm/core/original_instruction.py",
+      "path": "nm/work_the_file/original_instruction.py",
+      "old_module": "nm.core.original_instruction",
+      "module": "nm.work_the_file.original_instruction",
+      "role": "core",
+      "sha256_before": "3442b1f5d5c7e50e10fddc799fdc92ba2d62c15f7362732355dbd388a09df3e7"
+    },
+    {
+      "old_path": "backend/nm/core/original_source_locators.py",
+      "path": "nm/work_the_file/original_source_locators.py",
+      "old_module": "nm.core.original_source_locators",
+      "module": "nm.work_the_file.original_source_locators",
+      "role": "core",
+      "sha256_before": "cd3b6020c6e8d1951313b6a46d7e50b8bddc663b54dfbc87349abd80b9a3eb76"
+    },
+    {
+      "old_path": "backend/nm/core/output_checks.py",
+      "path": "nm/legal_brain/output_checks.py",
+      "old_module": "nm.core.output_checks",
+      "module": "nm.legal_brain.output_checks",
+      "role": "core",
+      "sha256_before": "24e74c9b987a70a37c138563f4436245772585d24e99685ca0a8cc65161ffbf3"
+    },
+    {
+      "old_path": "backend/nm/core/parties.py",
+      "path": "nm/legal_brain/parties.py",
+      "old_module": "nm.core.parties",
+      "module": "nm.legal_brain.parties",
+      "role": "core",
+      "sha256_before": "603bc8fd527cb9a206edd63f712d1c987e2d4b301eefa10e06747a1548611a80"
+    },
+    {
+      "old_path": "backend/nm/core/posture.py",
+      "path": "nm/legal_brain/posture.py",
+      "old_module": "nm.core.posture",
+      "module": "nm.legal_brain.posture",
+      "role": "core",
+      "sha256_before": "aef8b2ba62930a964c9f9b23d59ee169ac080afda012a29cecf267f4096edce6"
+    },
+    {
+      "old_path": "backend/nm/core/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks.py",
+      "old_module": "nm.core.practice_playbooks",
+      "module": "nm.legal_brain.practice_playbooks",
+      "role": "core",
+      "sha256_before": "5cb98f57692c2ced63f3e9b31e5e2260963cdf1e0a8b8bd6a68e095dc0ab500d"
+    },
+    {
+      "old_path": "backend/nm/core/premise.py",
+      "path": "nm/legal_brain/premise.py",
+      "old_module": "nm.core.premise",
+      "module": "nm.legal_brain.premise",
+      "role": "core",
+      "sha256_before": "151307d593d93f581062c7e63b049c833a0a9c32530def751d2e9849bf858079"
+    },
+    {
+      "old_path": "backend/nm/core/preview_display.py",
+      "path": "nm/legal_brain/preview_display.py",
+      "old_module": "nm.core.preview_display",
+      "module": "nm.legal_brain.preview_display",
+      "role": "core",
+      "sha256_before": "db1b365b134fa6150cd94e54d754c0547bb5423b8e254404aacbb47be36ec38b"
+    },
+    {
+      "old_path": "backend/nm/core/preview_seen.py",
+      "path": "nm/legal_brain/preview_seen.py",
+      "old_module": "nm.core.preview_seen",
+      "module": "nm.legal_brain.preview_seen",
+      "role": "core",
+      "sha256_before": "37deebddcf5b67f998fda831232134d4ac73f3fca5976003035376ab9e18971d"
+    },
+    {
+      "old_path": "backend/nm/core/principles_generated.py",
+      "path": "nm/legal_brain/principles_generated.py",
+      "old_module": "nm.core.principles_generated",
+      "module": "nm.legal_brain.principles_generated",
+      "role": "core",
+      "sha256_before": "7aa89c9e09f74e6a38f92dda95d4863f33602b029d16c677ae575610870a1c3e"
+    },
+    {
+      "old_path": "backend/nm/core/private_file_tools.py",
+      "path": "nm/work_the_file/private_file_tools.py",
+      "old_module": "nm.core.private_file_tools",
+      "module": "nm.work_the_file.private_file_tools",
+      "role": "core",
+      "sha256_before": "aaef5e69ff1b07f89aac012f1ed60f53fb7d66e77b4975403c7f40aaede6b3f7"
+    },
+    {
+      "old_path": "backend/nm/core/procedural_calculation.py",
+      "path": "nm/legal_brain/procedural_calculation.py",
+      "old_module": "nm.core.procedural_calculation",
+      "module": "nm.legal_brain.procedural_calculation",
+      "role": "core",
+      "sha256_before": "f41f9aaea408fbb444959c53d97bf79d7b751087a7726915025eae9f21e9e69c"
+    },
+    {
+      "old_path": "backend/nm/core/professional_access.py",
+      "path": "nm/arrive/professional_access.py",
+      "old_module": "nm.core.professional_access",
+      "module": "nm.arrive.professional_access",
+      "role": "core",
+      "sha256_before": "af6f6e26fa0289f6ae12e8165fac8e1092b82aa6d43611edb35b1993d272deb7"
+    },
+    {
+      "old_path": "backend/nm/core/proof.py",
+      "path": "nm/legal_brain/proof.py",
+      "old_module": "nm.core.proof",
+      "module": "nm.legal_brain.proof",
+      "role": "core",
+      "sha256_before": "a4dcf51b14a1d4474b3043db81b90413068e7a2ea9bad8f5d96c9c68ff02e682"
+    },
+    {
+      "old_path": "backend/nm/core/proof_read.py",
+      "path": "nm/legal_brain/proof_read.py",
+      "old_module": "nm.core.proof_read",
+      "module": "nm.legal_brain.proof_read",
+      "role": "core",
+      "sha256_before": "540315f6eb25ff2191168ff7d07837e23219f3e07f4158e0f9cb6648eb48e57e"
+    },
+    {
+      "old_path": "backend/nm/core/quarantine.py",
+      "path": "nm/open_matter/quarantine.py",
+      "old_module": "nm.core.quarantine",
+      "module": "nm.open_matter.quarantine",
+      "role": "core",
+      "sha256_before": "5d77e937423d141b08310048e6fa6f7ce0ce44bd25af97411d55cc9b7281d7d4"
+    },
+    {
+      "old_path": "backend/nm/core/reassessment.py",
+      "path": "nm/advise/reassessment.py",
+      "old_module": "nm.core.reassessment",
+      "module": "nm.advise.reassessment",
+      "role": "core",
+      "sha256_before": "eec9835c7183395185326cff8ea43eb744c2f8cd94fe0cd30650de75b61244eb"
+    },
+    {
+      "old_path": "backend/nm/core/recorded_package_subject.py",
+      "path": "nm/legal_brain/recorded_package_subject.py",
+      "old_module": "nm.core.recorded_package_subject",
+      "module": "nm.legal_brain.recorded_package_subject",
+      "role": "core",
+      "sha256_before": "8713f3c593fdf18e4f0969cec9aadd6439279f354930cf56efdc6228af4512c9"
+    },
+    {
+      "old_path": "backend/nm/core/relief.py",
+      "path": "nm/advise/relief.py",
+      "old_module": "nm.core.relief",
+      "module": "nm.advise.relief",
+      "role": "core",
+      "sha256_before": "c1578a47dcff82f030d88dd88ea9984bd4180a187c42aef708b27e82a3ba08a7"
+    },
+    {
+      "old_path": "backend/nm/core/requirements.py",
+      "path": "nm/legal_brain/requirements.py",
+      "old_module": "nm.core.requirements",
+      "module": "nm.legal_brain.requirements",
+      "role": "core",
+      "sha256_before": "69e4eb07a8568e2b733ca823cc86533a489bedfa67ecef1e565afc7eeba4c87a"
+    },
+    {
+      "old_path": "backend/nm/core/research.py",
+      "path": "nm/legal_brain/research.py",
+      "old_module": "nm.core.research",
+      "module": "nm.legal_brain.research",
+      "role": "core",
+      "sha256_before": "0aab2a38cf915efe7a026f34edcd94c7ed750ec453db83575d483fb3388ca5e4"
+    },
+    {
+      "old_path": "backend/nm/core/research_context.py",
+      "path": "nm/legal_brain/research_context.py",
+      "old_module": "nm.core.research_context",
+      "module": "nm.legal_brain.research_context",
+      "role": "core",
+      "sha256_before": "37458cec3199b0adcdcf20c9067eb7683d7346fac09077b083567857b705df5b"
+    },
+    {
+      "old_path": "backend/nm/core/retention.py",
+      "path": "nm/close/retention.py",
+      "old_module": "nm.core.retention",
+      "module": "nm.close.retention",
+      "role": "core",
+      "sha256_before": "097fb4f3a34a8d393f65c55c1d3dc74686b063140501a84017dd009909d55875"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_fee_selection.py",
+      "path": "nm/legal_brain/reviewed_fee_selection.py",
+      "old_module": "nm.core.reviewed_fee_selection",
+      "module": "nm.legal_brain.reviewed_fee_selection",
+      "role": "core",
+      "sha256_before": "0a45573ba799e2ef6a7bf48b5a0bb3b897501498675a7b18d754d698de2a0f76"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_interest_selection.py",
+      "path": "nm/legal_brain/reviewed_interest_selection.py",
+      "old_module": "nm.core.reviewed_interest_selection",
+      "module": "nm.legal_brain.reviewed_interest_selection",
+      "role": "core",
+      "sha256_before": "d0d84a4f650117d228df38b18af7ad346699313e5c72987ed6a828e5d4c9677c"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_limitation_selection.py",
+      "path": "nm/legal_brain/reviewed_limitation_selection.py",
+      "old_module": "nm.core.reviewed_limitation_selection",
+      "module": "nm.legal_brain.reviewed_limitation_selection",
+      "role": "core",
+      "sha256_before": "9f65f6449cf2c41102f71514fc8eda54026a566ef4bbc90c5f95847375e947c9"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_preview.py",
+      "path": "nm/legal_brain/reviewed_preview.py",
+      "old_module": "nm.core.reviewed_preview",
+      "module": "nm.legal_brain.reviewed_preview",
+      "role": "core",
+      "sha256_before": "711b6bf68b11d8cfb5c8ac10eb26518941d29021ccdffbbaf7fa9991c5d07cd9"
+    },
+    {
+      "old_path": "backend/nm/core/route.py",
+      "path": "nm/legal_brain/route.py",
+      "old_module": "nm.core.route",
+      "module": "nm.legal_brain.route",
+      "role": "core",
+      "sha256_before": "cbfd4a7983b626c1b5a7c3e8dc4dabe4f83ea1a8eb34eaff8ff78bc784bee179"
+    },
+    {
+      "old_path": "backend/nm/core/screens.py",
+      "path": "nm/open_matter/screens.py",
+      "old_module": "nm.core.screens",
+      "module": "nm.open_matter.screens",
+      "role": "core",
+      "sha256_before": "2f88d5a4318ab148c43e7a28b6b3cbd37a93a2edce3cd58ee75abe7685de7917"
+    },
+    {
+      "old_path": "backend/nm/core/service.py",
+      "path": "nm/carry/service.py",
+      "old_module": "nm.core.service",
+      "module": "nm.carry.service",
+      "role": "core",
+      "sha256_before": "6b3a25043bf0de4beee7634214b1a3e266b8285c469554929652690090bd9dcd"
+    },
+    {
+      "old_path": "backend/nm/core/source_excerpt.py",
+      "path": "nm/legal_brain/source_excerpt.py",
+      "old_module": "nm.core.source_excerpt",
+      "module": "nm.legal_brain.source_excerpt",
+      "role": "core",
+      "sha256_before": "cc581bdfaac78d2e9c62bab03ee981056436cec83193e68718d39ef173bfda79"
+    },
+    {
+      "old_path": "backend/nm/core/source_writes.py",
+      "path": "nm/legal_brain/source_writes.py",
+      "old_module": "nm.core.source_writes",
+      "module": "nm.legal_brain.source_writes",
+      "role": "core",
+      "sha256_before": "39163a43a8837c693c2d60eed7fa0c468e4089d1d99c2b273a200c56a1fe7979"
+    },
+    {
+      "old_path": "backend/nm/core/step_dependency.py",
+      "path": "nm/legal_brain/step_dependency.py",
+      "old_module": "nm.core.step_dependency",
+      "module": "nm.legal_brain.step_dependency",
+      "role": "core",
+      "sha256_before": "212ceb03d0ca57758c3054d6ab0b775eb3d243b834644c076d1227c4cd25549f"
+    },
+    {
+      "old_path": "backend/nm/core/summary.py",
+      "path": "nm/work_the_file/summary.py",
+      "old_module": "nm.core.summary",
+      "module": "nm.work_the_file.summary",
+      "role": "core",
+      "sha256_before": "da5b1facafd2e143a46b52fa58af04bd5c2dd183954f5437ceab2aea0358d5f1"
+    },
+    {
+      "old_path": "backend/nm/core/theory.py",
+      "path": "nm/legal_brain/theory.py",
+      "old_module": "nm.core.theory",
+      "module": "nm.legal_brain.theory",
+      "role": "core",
+      "sha256_before": "a854542d0aa4b1cd28d100109042f0829c7ccf411a8239ab8e4e408d8d72c61e"
+    },
+    {
+      "old_path": "backend/nm/core/threading.py",
+      "path": "nm/legal_brain/threading.py",
+      "old_module": "nm.core.threading",
+      "module": "nm.legal_brain.threading",
+      "role": "core",
+      "sha256_before": "880a31dc00aa6c18ca17717202d05be99956e6a107d912c8aa1a95933b5276f6"
+    },
+    {
+      "old_path": "backend/nm/core/thresholds.py",
+      "path": "nm/legal_brain/thresholds.py",
+      "old_module": "nm.core.thresholds",
+      "module": "nm.legal_brain.thresholds",
+      "role": "core",
+      "sha256_before": "ec28cccc393d456336f66d39477fbfb54dd9275602095cebc1a4b37efabb043c"
+    },
+    {
+      "old_path": "backend/nm/core/tool_catalogue.py",
+      "path": "nm/legal_brain/tool_catalogue.py",
+      "old_module": "nm.core.tool_catalogue",
+      "module": "nm.legal_brain.tool_catalogue",
+      "role": "core",
+      "sha256_before": "24af4ef9eba33793c438941ac732df12b4034a12e21b166cb9380503d2c8bd76"
+    },
+    {
+      "old_path": "backend/nm/core/tool_discovery.py",
+      "path": "nm/legal_brain/tool_discovery.py",
+      "old_module": "nm.core.tool_discovery",
+      "module": "nm.legal_brain.tool_discovery",
+      "role": "core",
+      "sha256_before": "69f2377620d62d1e7cfeae14476173e3d6b9c2827b362188cedb6b1b5f7b9efb"
+    },
+    {
+      "old_path": "backend/nm/core/tool_offers.py",
+      "path": "nm/legal_brain/tool_offers.py",
+      "old_module": "nm.core.tool_offers",
+      "module": "nm.legal_brain.tool_offers",
+      "role": "core",
+      "sha256_before": "d17a82f57ad69f8bf09eaec200c74b1eca5d326463ed1d40f07800cd3ad7e04e"
+    },
+    {
+      "old_path": "backend/nm/core/tool_sources.py",
+      "path": "nm/legal_brain/tool_sources.py",
+      "old_module": "nm.core.tool_sources",
+      "module": "nm.legal_brain.tool_sources",
+      "role": "core",
+      "sha256_before": "ddc33e2a4d8ebffe3d4e9b23ab9ba35506e67fa04bb679405ddad35ab97d9e04"
+    },
+    {
+      "old_path": "backend/nm/core/tools.py",
+      "path": "nm/legal_brain/tools.py",
+      "old_module": "nm.core.tools",
+      "module": "nm.legal_brain.tools",
+      "role": "core",
+      "sha256_before": "2d9a160c7d69aa2784f07ffbcf9dd69df813344fdb39fcbb75b012fa9a488420"
+    },
+    {
+      "old_path": "backend/nm/core/turn.py",
+      "path": "nm/legal_brain/turn.py",
+      "old_module": "nm.core.turn",
+      "module": "nm.legal_brain.turn",
+      "role": "core",
+      "sha256_before": "395e9d91982ee359899dbc95da9b683b3223e7214337bcc7314c83e001562669"
+    },
+    {
+      "old_path": "backend/nm/core/verifier.py",
+      "path": "nm/legal_brain/verifier.py",
+      "old_module": "nm.core.verifier",
+      "module": "nm.legal_brain.verifier",
+      "role": "core",
+      "sha256_before": "347be237e5c4b1cd4abc09a97a6bdd0236097d36633b6f5bb4ae73d53b959e00"
+    },
+    {
+      "old_path": "backend/nm/core/work_receipts.py",
+      "path": "nm/legal_brain/work_receipts.py",
+      "old_module": "nm.core.work_receipts",
+      "module": "nm.legal_brain.work_receipts",
+      "role": "core",
+      "sha256_before": "3e339ccd008f0b5e47a8f842d1f3a18984839a81c66bbd630551585e5456cefc"
+    },
+    {
+      "old_path": "backend/nm/core/worker.py",
+      "path": "nm/shared/worker.py",
+      "old_module": "nm.core.worker",
+      "module": "nm.shared.worker",
+      "role": "core",
+      "sha256_before": "76d31a49aebd0fa842a6fa75f96d82301c5d7f7967edf17fc5389909a2cdf48a"
+    },
+    {
+      "old_path": "backend/nm/core/working_explanation.py",
+      "path": "nm/legal_brain/working_explanation.py",
+      "old_module": "nm.core.working_explanation",
+      "module": "nm.legal_brain.working_explanation",
+      "role": "core",
+      "sha256_before": "751864ed92f7b7cb8385d8a3452206af752f111cf4c51d95309bb8cc79477cb7"
+    },
+    {
+      "old_path": "backend/nm/core/working_record.py",
+      "path": "nm/legal_brain/working_record.py",
+      "old_module": "nm.core.working_record",
+      "module": "nm.legal_brain.working_record",
+      "role": "core",
+      "sha256_before": "986c171a43e8e4182d87308659c5335684cf406271f80008c466dcf4514fb5ba"
+    },
+    {
+      "old_path": "backend/nm/core/working_scope.py",
+      "path": "nm/legal_brain/working_scope.py",
+      "old_module": "nm.core.working_scope",
+      "module": "nm.legal_brain.working_scope",
+      "role": "core",
+      "sha256_before": "e2b5cb32f967344e9453ad56d952ea1eeb2a028d7f87d02aace15c447f350df5"
+    },
+    {
+      "old_path": "backend/nm/core/write_tools.py",
+      "path": "nm/work_the_file/write_tools.py",
+      "old_module": "nm.core.write_tools",
+      "module": "nm.work_the_file.write_tools",
+      "role": "core",
+      "sha256_before": "fa6cddfe8fa524ec5bb1231acfefaf2d91d806432d1b13f71d514d2d55a5e2dc"
+    },
+    {
+      "old_path": "backend/nm/domain/account_confirmation.py",
+      "path": "nm/arrive/account_confirmation_contracts.py",
+      "old_module": "nm.domain.account_confirmation",
+      "module": "nm.arrive.account_confirmation_contracts",
+      "role": "domain",
+      "sha256_before": "a8c0aee0e89a5a9301d70aadc27becf8dc1b6896c2cd1c76eac793515ed80226"
+    },
+    {
+      "old_path": "backend/nm/domain/action.py",
+      "path": "nm/act/action_contracts.py",
+      "old_module": "nm.domain.action",
+      "module": "nm.act.action_contracts",
+      "role": "domain",
+      "sha256_before": "14eb34e481710e3fe3654e068847861a5842b97f995d28a824605bd29282a69b"
+    },
+    {
+      "old_path": "backend/nm/domain/advice.py",
+      "path": "nm/advise/advice_contracts.py",
+      "old_module": "nm.domain.advice",
+      "module": "nm.advise.advice_contracts",
+      "role": "domain",
+      "sha256_before": "adcfd5975379f3f8640881e094393d3341c9f48750081def5a3b90dac0bc295d"
+    },
+    {
+      "old_path": "backend/nm/domain/advice_decision.py",
+      "path": "nm/advise/advice_decision_contracts.py",
+      "old_module": "nm.domain.advice_decision",
+      "module": "nm.advise.advice_decision_contracts",
+      "role": "domain",
+      "sha256_before": "72c74317009ab2ec184ceb6bc85116cb953a3110be14131149fe328f750e28fd"
+    },
+    {
+      "old_path": "backend/nm/domain/advocate.py",
+      "path": "nm/arrive/advocate_contracts.py",
+      "old_module": "nm.domain.advocate",
+      "module": "nm.arrive.advocate_contracts",
+      "role": "domain",
+      "sha256_before": "64bda18a0dd63281dbdafa27d39f1f6ee6625cf8006833fb45fdffd4427c7654"
+    },
+    {
+      "old_path": "backend/nm/domain/advocate_memory.py",
+      "path": "nm/legal_brain/advocate_memory_contracts.py",
+      "old_module": "nm.domain.advocate_memory",
+      "module": "nm.legal_brain.advocate_memory_contracts",
+      "role": "domain",
+      "sha256_before": "f61a3eb056a035c12bdd1ee0c742691f4cfd1d038a3a33be09780bd1b51cbfcc"
+    },
+    {
+      "old_path": "backend/nm/domain/answer.py",
+      "path": "nm/advise/answer_contracts.py",
+      "old_module": "nm.domain.answer",
+      "module": "nm.advise.answer_contracts",
+      "role": "domain",
+      "sha256_before": "ad7ec1dcbf020c108be1a09b16e716074075af2b28e09d16f7d0fa11e59dc719"
+    },
+    {
+      "old_path": "backend/nm/domain/attempts.py",
+      "path": "nm/arrive/attempts_contracts.py",
+      "old_module": "nm.domain.attempts",
+      "module": "nm.arrive.attempts_contracts",
+      "role": "domain",
+      "sha256_before": "45922d8b36e9add65d80bb924fab5c86596ef9f3b148e3b01163b7610de27f64"
+    },
+    {
+      "old_path": "backend/nm/domain/authority.py",
+      "path": "nm/shared/authority_contracts.py",
+      "old_module": "nm.domain.authority",
+      "module": "nm.shared.authority_contracts",
+      "role": "domain",
+      "sha256_before": "eceb6d5e2adfda36031104a0109f7e4552b13abceb0c1f1836d33443611fc97c"
+    },
+    {
+      "old_path": "backend/nm/domain/binding.py",
+      "path": "nm/open_matter/binding_contracts.py",
+      "old_module": "nm.domain.binding",
+      "module": "nm.open_matter.binding_contracts",
+      "role": "domain",
+      "sha256_before": "31763d101d00988b25871ff2c926ed2f11231802f3a94888babe557aa892c666"
+    },
+    {
+      "old_path": "backend/nm/domain/brief.py",
+      "path": "nm/advise/brief_contracts.py",
+      "old_module": "nm.domain.brief",
+      "module": "nm.advise.brief_contracts",
+      "role": "domain",
+      "sha256_before": "fed5d0ee47e9c0f7b1985cb329f18367d9aceff71b460eadc813a98440182078"
+    },
+    {
+      "old_path": "backend/nm/domain/budget.py",
+      "path": "nm/shared/budget_contracts.py",
+      "old_module": "nm.domain.budget",
+      "module": "nm.shared.budget_contracts",
+      "role": "domain",
+      "sha256_before": "fa4e4e876ba181338abb3d2d4b5761e072db7b52630fc761a873c3cc852879e4"
+    },
+    {
+      "old_path": "backend/nm/domain/capacity.py",
+      "path": "nm/open_matter/capacity_contracts.py",
+      "old_module": "nm.domain.capacity",
+      "module": "nm.open_matter.capacity_contracts",
+      "role": "domain",
+      "sha256_before": "b7888a9030b8e35d7beb0bddef877c8863ee819f4c723c761a45716f42427cc3"
+    },
+    {
+      "old_path": "backend/nm/domain/citation.py",
+      "path": "nm/legal_brain/citation_contracts.py",
+      "old_module": "nm.domain.citation",
+      "module": "nm.legal_brain.citation_contracts",
+      "role": "domain",
+      "sha256_before": "b0f40b97c2bc5bef6480ecfcdc1c407015496e9ffb52f208ab4f3c0b980704a0"
+    },
+    {
+      "old_path": "backend/nm/domain/clock.py",
+      "path": "nm/shared/clock_contracts.py",
+      "old_module": "nm.domain.clock",
+      "module": "nm.shared.clock_contracts",
+      "role": "domain",
+      "sha256_before": "e3e3e1a59acb33bc2ea4aebf569e3ffd8eec957316d557b297681343d850e7fd"
+    },
+    {
+      "old_path": "backend/nm/domain/closure.py",
+      "path": "nm/close/closure_contracts.py",
+      "old_module": "nm.domain.closure",
+      "module": "nm.close.closure_contracts",
+      "role": "domain",
+      "sha256_before": "ba12cf597df21eef2a8b04fc87c08df153de1442a548967f1d4d35e5e645a521"
+    },
+    {
+      "old_path": "backend/nm/domain/commission.py",
+      "path": "nm/open_matter/commission_contracts.py",
+      "old_module": "nm.domain.commission",
+      "module": "nm.open_matter.commission_contracts",
+      "role": "domain",
+      "sha256_before": "87bb336c2f02a5dae2cee711324f6f603021309a752d510a308ec17d4e25c488"
+    },
+    {
+      "old_path": "backend/nm/domain/coverage.py",
+      "path": "nm/legal_brain/coverage_contracts.py",
+      "old_module": "nm.domain.coverage",
+      "module": "nm.legal_brain.coverage_contracts",
+      "role": "domain",
+      "sha256_before": "b8b204f995294c7e7bfcccb1d0456277582297cfc95ceabbd593f23862ffdb8d"
+    },
+    {
+      "old_path": "backend/nm/domain/curation.py",
+      "path": "nm/legal_brain/curation_contracts.py",
+      "old_module": "nm.domain.curation",
+      "module": "nm.legal_brain.curation_contracts",
+      "role": "domain",
+      "sha256_before": "da011fd6f1eb496f09ef66793cce4299c85410fd19c34be087e5a10a503e45bc"
+    },
+    {
+      "old_path": "backend/nm/domain/decision.py",
+      "path": "nm/advise/decision_contracts.py",
+      "old_module": "nm.domain.decision",
+      "module": "nm.advise.decision_contracts",
+      "role": "domain",
+      "sha256_before": "18d0b8d019fbdea4b7855dcc24c6c677571e5a8f4e941b877731d1b797782c97"
+    },
+    {
+      "old_path": "backend/nm/domain/delegation.py",
+      "path": "nm/legal_brain/delegation_contracts.py",
+      "old_module": "nm.domain.delegation",
+      "module": "nm.legal_brain.delegation_contracts",
+      "role": "domain",
+      "sha256_before": "63e1b56450728f088d7ce408be381f5b4e96ac7e3b9cb001b57a62af0cc872c4"
+    },
+    {
+      "old_path": "backend/nm/domain/deployment.py",
+      "path": "nm/shared/deployment_contracts.py",
+      "old_module": "nm.domain.deployment",
+      "module": "nm.shared.deployment_contracts",
+      "role": "domain",
+      "sha256_before": "acbd118bdb48afa134d665e50311f658eeff775d7c2f3e226b065cce0ec3019b"
+    },
+    {
+      "old_path": "backend/nm/domain/dictation.py",
+      "path": "nm/open_matter/dictation_contracts.py",
+      "old_module": "nm.domain.dictation",
+      "module": "nm.open_matter.dictation_contracts",
+      "role": "domain",
+      "sha256_before": "87e3059594571c5c8fde48a90609c8c0cd2735a992bba77a53998184236028b0"
+    },
+    {
+      "old_path": "backend/nm/domain/drafting.py",
+      "path": "nm/act/drafting_contracts.py",
+      "old_module": "nm.domain.drafting",
+      "module": "nm.act.drafting_contracts",
+      "role": "domain",
+      "sha256_before": "957378e4bf5c3f45f19467ff0732e58ccbdf0a0d76b93cade2a6d4361cdb2184"
+    },
+    {
+      "old_path": "backend/nm/domain/egress.py",
+      "path": "nm/shared/egress_contracts.py",
+      "old_module": "nm.domain.egress",
+      "module": "nm.shared.egress_contracts",
+      "role": "domain",
+      "sha256_before": "3708b3022dffdf8aaf8e79458edc1e8fc42774a024cb212c6bbee847a18086d2"
+    },
+    {
+      "old_path": "backend/nm/domain/emergency.py",
+      "path": "nm/open_matter/emergency_contracts.py",
+      "old_module": "nm.domain.emergency",
+      "module": "nm.open_matter.emergency_contracts",
+      "role": "domain",
+      "sha256_before": "e6ef7f2e4220b57ed0e56b245a5e68e8ea2c5f9ec497a2bf2c557b735521dc73"
+    },
+    {
+      "old_path": "backend/nm/domain/engagement.py",
+      "path": "nm/open_matter/engagement_contracts.py",
+      "old_module": "nm.domain.engagement",
+      "module": "nm.open_matter.engagement_contracts",
+      "role": "domain",
+      "sha256_before": "95b18e382592717298015893aab596103489d504818f5450c1894fb9dde29729"
+    },
+    {
+      "old_path": "backend/nm/domain/event_observation.py",
+      "path": "nm/work_the_file/event_observation_contracts.py",
+      "old_module": "nm.domain.event_observation",
+      "module": "nm.work_the_file.event_observation_contracts",
+      "role": "domain",
+      "sha256_before": "10f9ffd2e61f643653d8df6ed0f3a595a4734132babc0041a63973537c867ac2"
+    },
+    {
+      "old_path": "backend/nm/domain/external_ai.py",
+      "path": "nm/shared/external_ai_contracts.py",
+      "old_module": "nm.domain.external_ai",
+      "module": "nm.shared.external_ai_contracts",
+      "role": "domain",
+      "sha256_before": "fbd05a89d66b285aa61d8c44753dfe97bce494044bdc2f6f88d3af9285ad02f2"
+    },
+    {
+      "old_path": "backend/nm/domain/fee_calculation.py",
+      "path": "nm/legal_brain/fee_calculation_contracts.py",
+      "old_module": "nm.domain.fee_calculation",
+      "module": "nm.legal_brain.fee_calculation_contracts",
+      "role": "domain",
+      "sha256_before": "2495234a637cc1298022ef59c8c3bcf87bf6dfd7da44a7d357669006186f3517"
+    },
+    {
+      "old_path": "backend/nm/domain/file_mutation.py",
+      "path": "nm/work_the_file/file_mutation_contracts.py",
+      "old_module": "nm.domain.file_mutation",
+      "module": "nm.work_the_file.file_mutation_contracts",
+      "role": "domain",
+      "sha256_before": "079de59ac7800d3f1dfdd20d69bec441b05f989bbb79453cd6a8e2e4da427b91"
+    },
+    {
+      "old_path": "backend/nm/domain/gates.py",
+      "path": "nm/shared/gates_contracts.py",
+      "old_module": "nm.domain.gates",
+      "module": "nm.shared.gates_contracts",
+      "role": "domain",
+      "sha256_before": "35aa30c5298b80e072c524f49fabd6171cb6a66c87bc3a764a4636aaa72f886b"
+    },
+    {
+      "old_path": "backend/nm/domain/handover.py",
+      "path": "nm/carry/handover_contracts.py",
+      "old_module": "nm.domain.handover",
+      "module": "nm.carry.handover_contracts",
+      "role": "domain",
+      "sha256_before": "9576bc17073f7f84cf6b5626ec451bbe70702249604f7290ff3d8f374421e9ae"
+    },
+    {
+      "old_path": "backend/nm/domain/identity.py",
+      "path": "nm/shared/identity_contracts.py",
+      "old_module": "nm.domain.identity",
+      "module": "nm.shared.identity_contracts",
+      "role": "domain",
+      "sha256_before": "e59123fd2b979265d4ce4d157260c73e95d4d944d66225eff9c9662b57812e50"
+    },
+    {
+      "old_path": "backend/nm/domain/incident.py",
+      "path": "nm/shared/incident_contracts.py",
+      "old_module": "nm.domain.incident",
+      "module": "nm.shared.incident_contracts",
+      "role": "domain",
+      "sha256_before": "00f17f3c0dbfa96489199ddbb46b781420e076aa7fb8e5e8ab9aa74221aff3db"
+    },
+    {
+      "old_path": "backend/nm/domain/intake.py",
+      "path": "nm/open_matter/intake_contracts.py",
+      "old_module": "nm.domain.intake",
+      "module": "nm.open_matter.intake_contracts",
+      "role": "domain",
+      "sha256_before": "b84facf1cfaec35e110b0b04bce91b10eee45870cb8b856f42798800e8b7c3e9"
+    },
+    {
+      "old_path": "backend/nm/domain/interest_calculation.py",
+      "path": "nm/legal_brain/interest_calculation_contracts.py",
+      "old_module": "nm.domain.interest_calculation",
+      "module": "nm.legal_brain.interest_calculation_contracts",
+      "role": "domain",
+      "sha256_before": "c2302155bebfba35ebd69b007329d8a35334fa484df6532307fad337ad8595e2"
+    },
+    {
+      "old_path": "backend/nm/domain/issue.py",
+      "path": "nm/legal_brain/issue_contracts.py",
+      "old_module": "nm.domain.issue",
+      "module": "nm.legal_brain.issue_contracts",
+      "role": "domain",
+      "sha256_before": "633c5e9cb07de7906453d8821eaf0ff8e65a73f91c19698dc4bb84192f51a460"
+    },
+    {
+      "old_path": "backend/nm/domain/lead.py",
+      "path": "nm/legal_brain/lead_contracts.py",
+      "old_module": "nm.domain.lead",
+      "module": "nm.legal_brain.lead_contracts",
+      "role": "domain",
+      "sha256_before": "fd90901ce8c9f966215effc98401ca2eb0d1c64d02f327d25c6c345e7af6f3af"
+    },
+    {
+      "old_path": "backend/nm/domain/legal_review.py",
+      "path": "nm/shared/legal_review_contracts.py",
+      "old_module": "nm.domain.legal_review",
+      "module": "nm.shared.legal_review_contracts",
+      "role": "domain",
+      "sha256_before": "346a8b123579611dbe3075fdf3472a9a80bd58f508dfbeb6ba3e7e026b167fc0"
+    },
+    {
+      "old_path": "backend/nm/domain/loop.py",
+      "path": "nm/legal_brain/loop_contracts.py",
+      "old_module": "nm.domain.loop",
+      "module": "nm.legal_brain.loop_contracts",
+      "role": "domain",
+      "sha256_before": "906e163d9fe6eddbe727e74024305ef44b510efe2313d8e4547cd668f37541da"
+    },
+    {
+      "old_path": "backend/nm/domain/mail.py",
+      "path": "nm/arrive/mail_contracts.py",
+      "old_module": "nm.domain.mail",
+      "module": "nm.arrive.mail_contracts",
+      "role": "domain",
+      "sha256_before": "bc9f407a1c5de3c517d2aecef58c2c452c3740fba3e45327eacbaf49d0c4fc15"
+    },
+    {
+      "old_path": "backend/nm/domain/matter.py",
+      "path": "nm/work_the_file/matter_contracts.py",
+      "old_module": "nm.domain.matter",
+      "module": "nm.work_the_file.matter_contracts",
+      "role": "domain",
+      "sha256_before": "d59133912ec691cb25cdcef3bf43100a941adf9db0c69a50665df465bfa14baf"
+    },
+    {
+      "old_path": "backend/nm/domain/media.py",
+      "path": "nm/open_matter/media_contracts.py",
+      "old_module": "nm.domain.media",
+      "module": "nm.open_matter.media_contracts",
+      "role": "domain",
+      "sha256_before": "f47051b2aa8005888c9cf83577133bf53486757b4623b5df80ee6c10c2f4d4cf"
+    },
+    {
+      "old_path": "backend/nm/domain/media_policy.py",
+      "path": "nm/open_matter/media_policy_contracts.py",
+      "old_module": "nm.domain.media_policy",
+      "module": "nm.open_matter.media_policy_contracts",
+      "role": "domain",
+      "sha256_before": "f51fe459876490af2b2a885ca1000eb36c2b9f63173914f94118515832d8e680"
+    },
+    {
+      "old_path": "backend/nm/domain/metrics.py",
+      "path": "nm/shared/metrics_contracts.py",
+      "old_module": "nm.domain.metrics",
+      "module": "nm.shared.metrics_contracts",
+      "role": "domain",
+      "sha256_before": "4ddbe1d88377cd5c71e2c46841a651c9aa4c69e7c55589fc1150911ada22505c"
+    },
+    {
+      "old_path": "backend/nm/domain/names.py",
+      "path": "nm/shared/names_contracts.py",
+      "old_module": "nm.domain.names",
+      "module": "nm.shared.names_contracts",
+      "role": "domain",
+      "sha256_before": "5c5580b6ebbd4a1a454620f610963713fa5f0208b7836dddc9b49fe2927d76ad"
+    },
+    {
+      "old_path": "backend/nm/domain/opening.py",
+      "path": "nm/open_matter/opening_contracts.py",
+      "old_module": "nm.domain.opening",
+      "module": "nm.open_matter.opening_contracts",
+      "role": "domain",
+      "sha256_before": "209ee3ac9526b096ce03e76ae9219e16dd7aeb8020d0482071fd0f8569890ee7"
+    },
+    {
+      "old_path": "backend/nm/domain/operation.py",
+      "path": "nm/shared/operation_contracts.py",
+      "old_module": "nm.domain.operation",
+      "module": "nm.shared.operation_contracts",
+      "role": "domain",
+      "sha256_before": "52e97061c792548a63be3fe11aa08d9b4f4ba7e7fefd5f9b09aa1626c9907b22"
+    },
+    {
+      "old_path": "backend/nm/domain/options.py",
+      "path": "nm/advise/options_contracts.py",
+      "old_module": "nm.domain.options",
+      "module": "nm.advise.options_contracts",
+      "role": "domain",
+      "sha256_before": "809a1e5fe8e3b06836236d1269f1788f48138de3768d121653d9135454fbc3ff"
+    },
+    {
+      "old_path": "backend/nm/domain/professional_access.py",
+      "path": "nm/arrive/professional_access_contracts.py",
+      "old_module": "nm.domain.professional_access",
+      "module": "nm.arrive.professional_access_contracts",
+      "role": "domain",
+      "sha256_before": "8370017bc70a2582ea2e9027900e2f7fa3167727a0054cec8e3f803aea5e835d"
+    },
+    {
+      "old_path": "backend/nm/domain/proof.py",
+      "path": "nm/legal_brain/proof_contracts.py",
+      "old_module": "nm.domain.proof",
+      "module": "nm.legal_brain.proof_contracts",
+      "role": "domain",
+      "sha256_before": "39386b1fd864f6909d4184f5aedf60874cda210cd3af384412f2ac38762baa61"
+    },
+    {
+      "old_path": "backend/nm/domain/quotable.py",
+      "path": "nm/legal_brain/quotable_contracts.py",
+      "old_module": "nm.domain.quotable",
+      "module": "nm.legal_brain.quotable_contracts",
+      "role": "domain",
+      "sha256_before": "986c50d33cb34c713eb88719708729e7b833d5c4098623dcb1451ab0661dc3dc"
+    },
+    {
+      "old_path": "backend/nm/domain/reads.py",
+      "path": "nm/legal_brain/reads_contracts.py",
+      "old_module": "nm.domain.reads",
+      "module": "nm.legal_brain.reads_contracts",
+      "role": "domain",
+      "sha256_before": "aedf7afb33d937d0ce4d31eadc01f0e82ae72a8af9281fb8baf9b795966b1f60"
+    },
+    {
+      "old_path": "backend/nm/domain/register.py",
+      "path": "nm/legal_brain/register_contracts.py",
+      "old_module": "nm.domain.register",
+      "module": "nm.legal_brain.register_contracts",
+      "role": "domain",
+      "sha256_before": "4fd239de700dc17280fd7a36095c628e961b3b94ac4300708fca364bf704ea6a"
+    },
+    {
+      "old_path": "backend/nm/domain/release.py",
+      "path": "nm/shared/release_contracts.py",
+      "old_module": "nm.domain.release",
+      "module": "nm.shared.release_contracts",
+      "role": "domain",
+      "sha256_before": "2bf418c17653529cc6bb3d069ba435d98ae141140f444882b1a9456ba97bd083"
+    },
+    {
+      "old_path": "backend/nm/domain/replay_capture.py",
+      "path": "nm/legal_brain/replay_capture_contracts.py",
+      "old_module": "nm.domain.replay_capture",
+      "module": "nm.legal_brain.replay_capture_contracts",
+      "role": "domain",
+      "sha256_before": "c5cafe51d14ba0525dad9890ed716e9dfb21b939fb7c41a6abf1cc161a09da48"
+    },
+    {
+      "old_path": "backend/nm/domain/requirements.py",
+      "path": "nm/legal_brain/requirements_contracts.py",
+      "old_module": "nm.domain.requirements",
+      "module": "nm.legal_brain.requirements_contracts",
+      "role": "domain",
+      "sha256_before": "88cb868b17c4eb409212d65b53314e464f2f9c252370eeba566b9abb95994a4f"
+    },
+    {
+      "old_path": "backend/nm/domain/reservation.py",
+      "path": "nm/advise/reservation_contracts.py",
+      "old_module": "nm.domain.reservation",
+      "module": "nm.advise.reservation_contracts",
+      "role": "domain",
+      "sha256_before": "9871fbae966c85612f8936991a84f7cd1960fa702a7dc3c22679b52e0470c96a"
+    },
+    {
+      "old_path": "backend/nm/domain/restore.py",
+      "path": "nm/shared/restore_contracts.py",
+      "old_module": "nm.domain.restore",
+      "module": "nm.shared.restore_contracts",
+      "role": "domain",
+      "sha256_before": "71ace01af7c6234552796b820b7cd6f28de1fee8538b6e6cf5211db961f38605"
+    },
+    {
+      "old_path": "backend/nm/domain/retention.py",
+      "path": "nm/close/retention_contracts.py",
+      "old_module": "nm.domain.retention",
+      "module": "nm.close.retention_contracts",
+      "role": "domain",
+      "sha256_before": "f365bfde07da6e4c90e25025938df44eb333a24bcd5f50b764deb6bc77a02367"
+    },
+    {
+      "old_path": "backend/nm/domain/review.py",
+      "path": "nm/shared/review_contracts.py",
+      "old_module": "nm.domain.review",
+      "module": "nm.shared.review_contracts",
+      "role": "domain",
+      "sha256_before": "50ceb635937e25cad9cacfcc44237c6e771beb156936f492b466c5e02427d09a"
+    },
+    {
+      "old_path": "backend/nm/domain/service.py",
+      "path": "nm/carry/service_contracts.py",
+      "old_module": "nm.domain.service",
+      "module": "nm.carry.service_contracts",
+      "role": "domain",
+      "sha256_before": "607e0b32ed8905c51bd5b9c8770c0637314fc6cc4adcc2e5d0edd73e7e4dbf98"
+    },
+    {
+      "old_path": "backend/nm/domain/source_excerpt.py",
+      "path": "nm/legal_brain/source_excerpt_contracts.py",
+      "old_module": "nm.domain.source_excerpt",
+      "module": "nm.legal_brain.source_excerpt_contracts",
+      "role": "domain",
+      "sha256_before": "c98ba4382999fd39b57af6472e1786b3b396a32794464637c9928d37a093c224"
+    },
+    {
+      "old_path": "backend/nm/domain/spoken.py",
+      "path": "nm/shared/spoken_contracts.py",
+      "old_module": "nm.domain.spoken",
+      "module": "nm.shared.spoken_contracts",
+      "role": "domain",
+      "sha256_before": "e806825f473dfedd1dcb4f2df48d73373bfbfe5cd593cb8253452421df1780f5"
+    },
+    {
+      "old_path": "backend/nm/domain/summary.py",
+      "path": "nm/work_the_file/summary_contracts.py",
+      "old_module": "nm.domain.summary",
+      "module": "nm.work_the_file.summary_contracts",
+      "role": "domain",
+      "sha256_before": "ac517a85bb75231fbbfc912768a649df96425afb43a9a4bc1d3aa8b622555b49"
+    },
+    {
+      "old_path": "backend/nm/domain/text.py",
+      "path": "nm/shared/text_contracts.py",
+      "old_module": "nm.domain.text",
+      "module": "nm.shared.text_contracts",
+      "role": "domain",
+      "sha256_before": "59a84560c3ad97bca96de232f6bf62571897ada47a4c005ff55bfc75bfd32196"
+    },
+    {
+      "old_path": "backend/nm/domain/tiers.py",
+      "path": "nm/legal_brain/tiers_contracts.py",
+      "old_module": "nm.domain.tiers",
+      "module": "nm.legal_brain.tiers_contracts",
+      "role": "domain",
+      "sha256_before": "af9c72192c0268061ed268358f6888cd45bffb1109211b44840a8c0c6b67ca40"
+    },
+    {
+      "old_path": "backend/nm/domain/traceability.py",
+      "path": "nm/shared/traceability_contracts.py",
+      "old_module": "nm.domain.traceability",
+      "module": "nm.shared.traceability_contracts",
+      "role": "domain",
+      "sha256_before": "70ecd1179d083a285edfc7f6fa04dd0cc5bbc885da9b3fd4bf850ca3b59d57f0"
+    },
+    {
+      "old_path": "backend/nm/domain/turn_receipt.py",
+      "path": "nm/advise/turn_receipt_contracts.py",
+      "old_module": "nm.domain.turn_receipt",
+      "module": "nm.advise.turn_receipt_contracts",
+      "role": "domain",
+      "sha256_before": "c70ee9b0570cef7fa0b6a3259366d1d01548804b3708aa4f41b2dd1317ce9024"
+    },
+    {
+      "old_path": "backend/nm/domain/urgency.py",
+      "path": "nm/work_the_file/urgency_contracts.py",
+      "old_module": "nm.domain.urgency",
+      "module": "nm.work_the_file.urgency_contracts",
+      "role": "domain",
+      "sha256_before": "fd980227a7ded0b21e36f18018520304679835bdbef983f27c7264cf738e18e8"
+    },
+    {
+      "old_path": "backend/nm/domain/witness.py",
+      "path": "nm/act/witness_contracts.py",
+      "old_module": "nm.domain.witness",
+      "module": "nm.act.witness_contracts",
+      "role": "domain",
+      "sha256_before": "5fcf81da0251e00bd9bc61237dfe7a7fecaab78f62bce5636bf5e7eb26c49a31"
+    },
+    {
+      "old_path": "backend/nm/domain/working_record.py",
+      "path": "nm/legal_brain/working_record_contracts.py",
+      "old_module": "nm.domain.working_record",
+      "module": "nm.legal_brain.working_record_contracts",
+      "role": "domain",
+      "sha256_before": "0eb821c83b9a8635f68f447b055c000664c99f53ba7a15fa50e79c1c60afc393"
+    },
+    {
+      "old_path": "backend/nm/edge/advocate_memory_routes.py",
+      "path": "nm/legal_brain/advocate_memory_routes_api.py",
+      "old_module": "nm.edge.advocate_memory_routes",
+      "module": "nm.legal_brain.advocate_memory_routes_api",
+      "role": "edge",
+      "sha256_before": "4a18915a0e4d70077bd8046014b7f5a22d1c498f5e38d1bec12360537f30e903"
+    },
+    {
+      "old_path": "backend/nm/edge/api.py",
+      "path": "nm/app/api.py",
+      "old_module": "nm.edge.api",
+      "module": "nm.app.api",
+      "role": "edge",
+      "sha256_before": "0b245128c96c481373ce2de36ea97ce286764992e7c663253ce40a10f6054789"
+    },
+    {
+      "old_path": "backend/nm/edge/brain_preview.py",
+      "path": "nm/legal_brain/brain_preview_api.py",
+      "old_module": "nm.edge.brain_preview",
+      "module": "nm.legal_brain.brain_preview_api",
+      "role": "edge",
+      "sha256_before": "ebeb20e3252ebc3644be7c279f386d346bd3d5581780fcc4e19da630bf855eea"
+    },
+    {
+      "old_path": "backend/nm/edge/document_reading.py",
+      "path": "nm/open_matter/document_reading_api.py",
+      "old_module": "nm.edge.document_reading",
+      "module": "nm.open_matter.document_reading_api",
+      "role": "edge",
+      "sha256_before": "cb016e08dd69d53c2d0221dae2de7390614dcc0a34830ef0fcfa0243408ce92e"
+    },
+    {
+      "old_path": "backend/nm/edge/documents.py",
+      "path": "nm/open_matter/documents_api.py",
+      "old_module": "nm.edge.documents",
+      "module": "nm.open_matter.documents_api",
+      "role": "edge",
+      "sha256_before": "2f3e0a6147c86d1938f2e26eed37ed3a7dcce0ea0943b62262d40f27562b175b"
+    },
+    {
+      "old_path": "backend/nm/edge/loop_progress.py",
+      "path": "nm/legal_brain/loop_progress_api.py",
+      "old_module": "nm.edge.loop_progress",
+      "module": "nm.legal_brain.loop_progress_api",
+      "role": "edge",
+      "sha256_before": "18ed36123b76ade68801886fff1fad18a494397048af37a3b8c6ec20b857701a"
+    },
+    {
+      "old_path": "backend/nm/edge/original_documents.py",
+      "path": "nm/work_the_file/original_documents_api.py",
+      "old_module": "nm.edge.original_documents",
+      "module": "nm.work_the_file.original_documents_api",
+      "role": "edge",
+      "sha256_before": "5cb6777b6248789890344a6fcc73498dbd84314609ffd26f20d96a22414f68b7"
+    },
+    {
+      "old_path": "backend/nm/edge/preview_seen.py",
+      "path": "nm/legal_brain/preview_seen_api.py",
+      "old_module": "nm.edge.preview_seen",
+      "module": "nm.legal_brain.preview_seen_api",
+      "role": "edge",
+      "sha256_before": "7766711d3a9aa28e241a35a66bfc456b615b5285be9b7574be7c8f7589243af9"
+    },
+    {
+      "old_path": "backend/nm/edge/projections.py",
+      "path": "nm/work_the_file/projections_api.py",
+      "old_module": "nm.edge.projections",
+      "module": "nm.work_the_file.projections_api",
+      "role": "edge",
+      "sha256_before": "c6f42f2cace05d594a773ffb62716a00f0571124634969a7807f6cbc4b5c251e"
+    },
+    {
+      "old_path": "backend/nm/edge/reviewed_preview.py",
+      "path": "nm/legal_brain/reviewed_preview_api.py",
+      "old_module": "nm.edge.reviewed_preview",
+      "module": "nm.legal_brain.reviewed_preview_api",
+      "role": "edge",
+      "sha256_before": "69c07512466470d188ed349df5ff27339582605955c4a367c044e90748d8975e"
+    },
+    {
+      "old_path": "backend/nm/edge/transcripts.py",
+      "path": "nm/open_matter/transcripts_api.py",
+      "old_module": "nm.edge.transcripts",
+      "module": "nm.open_matter.transcripts_api",
+      "role": "edge",
+      "sha256_before": "343a9dd249d9ab1c40ea437950912f3628db37b20ec52fd8c8f99af35b0757ea"
+    },
+    {
+      "old_path": "backend/nm/edge/uploads.py",
+      "path": "nm/open_matter/uploads_api.py",
+      "old_module": "nm.edge.uploads",
+      "module": "nm.open_matter.uploads_api",
+      "role": "edge",
+      "sha256_before": "c3221a216f8fe1a09758af6529bcb19b8ea7fd58805d91f4f1562562688a8231"
+    },
+    {
+      "old_path": "backend/nm/knowledge/acquisition.py",
+      "path": "nm/legal_brain/acquisition_sources.py",
+      "old_module": "nm.knowledge.acquisition",
+      "module": "nm.legal_brain.acquisition_sources",
+      "role": "knowledge",
+      "sha256_before": "428dc95e25579054b48377cf4aed09509f993f4b010c03fae73dd68256d638da"
+    },
+    {
+      "old_path": "backend/nm/knowledge/artefact.py",
+      "path": "nm/legal_brain/artefact_sources.py",
+      "old_module": "nm.knowledge.artefact",
+      "module": "nm.legal_brain.artefact_sources",
+      "role": "knowledge",
+      "sha256_before": "5c8dc9e8112350c5e5085a5a712db95d87499c4434c592084e2835d62d6c0986"
+    },
+    {
+      "old_path": "backend/nm/knowledge/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_sources.py",
+      "old_module": "nm.knowledge.authority_weight",
+      "module": "nm.legal_brain.authority_weight_sources",
+      "role": "knowledge",
+      "sha256_before": "c2da56869710b4f276d0209dd9442fb26143d6c7212da1ae74c408756dab3519"
+    },
+    {
+      "old_path": "backend/nm/knowledge/citator.py",
+      "path": "nm/legal_brain/citator_sources.py",
+      "old_module": "nm.knowledge.citator",
+      "module": "nm.legal_brain.citator_sources",
+      "role": "knowledge",
+      "sha256_before": "4e6c94f4bcde5bc0aeefe722fd22fc0260433d6637e70865a27e959ed838779d"
+    },
+    {
+      "old_path": "backend/nm/knowledge/coverage.py",
+      "path": "nm/legal_brain/coverage_sources.py",
+      "old_module": "nm.knowledge.coverage",
+      "module": "nm.legal_brain.coverage_sources",
+      "role": "knowledge",
+      "sha256_before": "833206af2cbb44e3ce5c69f22740e9df36c94f58741c56d9f07cbd1683f190c7"
+    },
+    {
+      "old_path": "backend/nm/knowledge/elements.py",
+      "path": "nm/legal_brain/elements_sources.py",
+      "old_module": "nm.knowledge.elements",
+      "module": "nm.legal_brain.elements_sources",
+      "role": "knowledge",
+      "sha256_before": "2188e2b322d1f99aa0534fc9ea7cf0c0a6a15216a48026c3e012301945fc1921"
+    },
+    {
+      "old_path": "backend/nm/knowledge/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_sources.py",
+      "old_module": "nm.knowledge.filing_requirement",
+      "module": "nm.legal_brain.filing_requirement_sources",
+      "role": "knowledge",
+      "sha256_before": "6aadfc2cb04e029ce12a4e3f487f5e6ee0494c3e783d4ae85f1d09f8a8a0be0e"
+    },
+    {
+      "old_path": "backend/nm/knowledge/governing_law.py",
+      "path": "nm/legal_brain/governing_law_sources.py",
+      "old_module": "nm.knowledge.governing_law",
+      "module": "nm.legal_brain.governing_law_sources",
+      "role": "knowledge",
+      "sha256_before": "6e9b4c23080e87afd06d6358599a5be6626c6716fc279724cb6e6fad77760708"
+    },
+    {
+      "old_path": "backend/nm/knowledge/identity.py",
+      "path": "nm/legal_brain/identity_sources.py",
+      "old_module": "nm.knowledge.identity",
+      "module": "nm.legal_brain.identity_sources",
+      "role": "knowledge",
+      "sha256_before": "88b16c7a8744f76f0f9547d4a2594886e612e389c812297097759408be8b68b5"
+    },
+    {
+      "old_path": "backend/nm/knowledge/institution.py",
+      "path": "nm/legal_brain/institution_sources.py",
+      "old_module": "nm.knowledge.institution",
+      "module": "nm.legal_brain.institution_sources",
+      "role": "knowledge",
+      "sha256_before": "fc5652ef98e27c56dd8edef1b60c361870339b8ff3a9200b321c0549a6f40192"
+    },
+    {
+      "old_path": "backend/nm/knowledge/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_sources.py",
+      "old_module": "nm.knowledge.interim_relief",
+      "module": "nm.legal_brain.interim_relief_sources",
+      "role": "knowledge",
+      "sha256_before": "f8ef726339fb25b3b25f86048924f3c0312740843c197605dee5eaf3d4f4f38a"
+    },
+    {
+      "old_path": "backend/nm/knowledge/jurisdiction.py",
+      "path": "nm/legal_brain/jurisdiction_sources.py",
+      "old_module": "nm.knowledge.jurisdiction",
+      "module": "nm.legal_brain.jurisdiction_sources",
+      "role": "knowledge",
+      "sha256_before": "931ab6711b76f0f94075036f8ca706a3e6e2352e16eed91cbeec2b76b242a1ba"
+    },
+    {
+      "old_path": "backend/nm/knowledge/manifest.py",
+      "path": "nm/legal_brain/manifest_sources.py",
+      "old_module": "nm.knowledge.manifest",
+      "module": "nm.legal_brain.manifest_sources",
+      "role": "knowledge",
+      "sha256_before": "d3eb2458c5c1f11a6308a2cf7c0370e804564d7ac5b23748bb7d7c227ae09c16"
+    },
+    {
+      "old_path": "backend/nm/knowledge/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_sources.py",
+      "old_module": "nm.knowledge.procedural_period",
+      "module": "nm.legal_brain.procedural_period_sources",
+      "role": "knowledge",
+      "sha256_before": "3fb342797d3ea121e455ad7001fbb21247f544d599712fa7c5600c9f7f4506d0"
+    },
+    {
+      "old_path": "backend/nm/knowledge/provenance.py",
+      "path": "nm/legal_brain/provenance_sources.py",
+      "old_module": "nm.knowledge.provenance",
+      "module": "nm.legal_brain.provenance_sources",
+      "role": "knowledge",
+      "sha256_before": "3e7a278c7e967d0a5fc145ca01177255cf4613de8f0f2928c670141ca6c40779"
+    },
+    {
+      "old_path": "backend/nm/knowledge/provision_revision.py",
+      "path": "nm/legal_brain/provision_revision_sources.py",
+      "old_module": "nm.knowledge.provision_revision",
+      "module": "nm.legal_brain.provision_revision_sources",
+      "role": "knowledge",
+      "sha256_before": "a183ee7889128ce11ab13a55064f2b5b7725b9ab397a2dd33a818741ed7c2d4e"
+    },
+    {
+      "old_path": "backend/nm/knowledge/resolution.py",
+      "path": "nm/legal_brain/resolution_sources.py",
+      "old_module": "nm.knowledge.resolution",
+      "module": "nm.legal_brain.resolution_sources",
+      "role": "knowledge",
+      "sha256_before": "af950b291e68853b30037fc27820d737771c137e32f07f9601bc81be57aa154d"
+    },
+    {
+      "old_path": "backend/nm/knowledge/source_registry.py",
+      "path": "nm/legal_brain/source_registry_sources.py",
+      "old_module": "nm.knowledge.source_registry",
+      "module": "nm.legal_brain.source_registry_sources",
+      "role": "knowledge",
+      "sha256_before": "3977f61c699d93ee294dfaef021c52274962d4628aa689263257b047f5a7faa4"
+    },
+    {
+      "old_path": "backend/nm/ports/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_port.py",
+      "old_module": "nm.ports.authority_weight",
+      "module": "nm.legal_brain.authority_weight_port",
+      "role": "ports",
+      "sha256_before": "48ee36a694fa20f0a4397dceb61138582f5e607fbed0d13593e501a993f6f48b"
+    },
+    {
+      "old_path": "backend/nm/ports/coverage.py",
+      "path": "nm/legal_brain/coverage_port.py",
+      "old_module": "nm.ports.coverage",
+      "module": "nm.legal_brain.coverage_port",
+      "role": "ports",
+      "sha256_before": "90f777b69484613cf1615b3fadbed7f59c0888aa8c2e34e05b1013997a9e0b2d"
+    },
+    {
+      "old_path": "backend/nm/ports/directory.py",
+      "path": "nm/arrive/directory_port.py",
+      "old_module": "nm.ports.directory",
+      "module": "nm.arrive.directory_port",
+      "role": "ports",
+      "sha256_before": "4ba6fb2645d7d9eea37441aa5dbf281b71fc7bd9b77a5cbd754c30b1415b3043"
+    },
+    {
+      "old_path": "backend/nm/ports/document_text.py",
+      "path": "nm/open_matter/document_text_port.py",
+      "old_module": "nm.ports.document_text",
+      "module": "nm.open_matter.document_text_port",
+      "role": "ports",
+      "sha256_before": "593150e5d150e98d6ee40501011e0d69a27668164f8b19791dcabb2ca7c8c0b6"
+    },
+    {
+      "old_path": "backend/nm/ports/elements.py",
+      "path": "nm/legal_brain/elements_port.py",
+      "old_module": "nm.ports.elements",
+      "module": "nm.legal_brain.elements_port",
+      "role": "ports",
+      "sha256_before": "e0d09b93189a689b2848c138797875ffc35c35eab8af90815a30e10400be1f85"
+    },
+    {
+      "old_path": "backend/nm/ports/evidence.py",
+      "path": "nm/legal_brain/evidence_port.py",
+      "old_module": "nm.ports.evidence",
+      "module": "nm.legal_brain.evidence_port",
+      "role": "ports",
+      "sha256_before": "68492891e75566724098c9c718e97d36fb507594566cb6cd7dd94a4786d99c42"
+    },
+    {
+      "old_path": "backend/nm/ports/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_port.py",
+      "old_module": "nm.ports.filing_requirement",
+      "module": "nm.legal_brain.filing_requirement_port",
+      "role": "ports",
+      "sha256_before": "ef1cddc738460d46c673f9754c1a163551785a339d0402ec766c9c1b151d81d6"
+    },
+    {
+      "old_path": "backend/nm/ports/generations.py",
+      "path": "nm/legal_brain/generations_port.py",
+      "old_module": "nm.ports.generations",
+      "module": "nm.legal_brain.generations_port",
+      "role": "ports",
+      "sha256_before": "352b2aecc182d2f5535b5c112dcfa0eb4c32844a4127c5d44f3d935a6f65e608"
+    },
+    {
+      "old_path": "backend/nm/ports/governing_law.py",
+      "path": "nm/legal_brain/governing_law_port.py",
+      "old_module": "nm.ports.governing_law",
+      "module": "nm.legal_brain.governing_law_port",
+      "role": "ports",
+      "sha256_before": "d82f6d95a3353f1fb44cadc63fb30895d5728abea97d8225d1e7d1937c1c2a79"
+    },
+    {
+      "old_path": "backend/nm/ports/institution.py",
+      "path": "nm/legal_brain/institution_port.py",
+      "old_module": "nm.ports.institution",
+      "module": "nm.legal_brain.institution_port",
+      "role": "ports",
+      "sha256_before": "71169a2598919250ab6e5cbed7d6b6ae81a43ae52c09063dff499959cfac69da"
+    },
+    {
+      "old_path": "backend/nm/ports/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_port.py",
+      "old_module": "nm.ports.interim_relief",
+      "module": "nm.legal_brain.interim_relief_port",
+      "role": "ports",
+      "sha256_before": "527bb7645c0f7e7d644e419c8450d936d67b93da82a31ef797fabef1611d9e0f"
+    },
+    {
+      "old_path": "backend/nm/ports/loop_log.py",
+      "path": "nm/legal_brain/loop_log_port.py",
+      "old_module": "nm.ports.loop_log",
+      "module": "nm.legal_brain.loop_log_port",
+      "role": "ports",
+      "sha256_before": "9a59dd75c64f4ec8d80de0752a231bfd3988685c4141b5f0b350cafa25594de6"
+    },
+    {
+      "old_path": "backend/nm/ports/mail.py",
+      "path": "nm/arrive/mail_port.py",
+      "old_module": "nm.ports.mail",
+      "module": "nm.arrive.mail_port",
+      "role": "ports",
+      "sha256_before": "5b1f8ea1ccfa295ae4b70da3ccbcd82eb7a43d3168bd20c5c69bd1a7df3623c9"
+    },
+    {
+      "old_path": "backend/nm/ports/matter_documents.py",
+      "path": "nm/open_matter/matter_documents_port.py",
+      "old_module": "nm.ports.matter_documents",
+      "module": "nm.open_matter.matter_documents_port",
+      "role": "ports",
+      "sha256_before": "42e772688e8a4cb2d365cbbcc94066db3cab8ce10519f3c75b9bdf9adba8b1d0"
+    },
+    {
+      "old_path": "backend/nm/ports/model.py",
+      "path": "nm/shared/model_port.py",
+      "old_module": "nm.ports.model",
+      "module": "nm.shared.model_port",
+      "role": "ports",
+      "sha256_before": "12a8cbef88282eef6aa0f5e5790028fc970969ded39afd09e76b8ad2cce3e0a4"
+    },
+    {
+      "old_path": "backend/nm/ports/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks_port.py",
+      "old_module": "nm.ports.practice_playbooks",
+      "module": "nm.legal_brain.practice_playbooks_port",
+      "role": "ports",
+      "sha256_before": "aa58edcc592f1600986a4247c9ffb7224e8fae4a0ca1b30f7b8e5e1826526bb1"
+    },
+    {
+      "old_path": "backend/nm/ports/principles.py",
+      "path": "nm/legal_brain/principles_port.py",
+      "old_module": "nm.ports.principles",
+      "module": "nm.legal_brain.principles_port",
+      "role": "ports",
+      "sha256_before": "e39976a5bb6054b1da797b9f511b4d98ed07bfd9092eff271238c84d2a731c69"
+    },
+    {
+      "old_path": "backend/nm/ports/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_port.py",
+      "old_module": "nm.ports.procedural_period",
+      "module": "nm.legal_brain.procedural_period_port",
+      "role": "ports",
+      "sha256_before": "5417bd314741bf3ad5b7f96e2e155a4ef8e4e803c2712304e86cf0956d138c4a"
+    },
+    {
+      "old_path": "backend/nm/ports/search.py",
+      "path": "nm/legal_brain/search_port.py",
+      "old_module": "nm.ports.search",
+      "module": "nm.legal_brain.search_port",
+      "role": "ports",
+      "sha256_before": "5167e4ede5d03114eaebbe617effe1d87db4e6c5acae506dd210505651dc0725"
+    },
+    {
+      "old_path": "backend/nm/ports/storage_errors.py",
+      "path": "nm/shared/storage_errors_port.py",
+      "old_module": "nm.ports.storage_errors",
+      "module": "nm.shared.storage_errors_port",
+      "role": "ports",
+      "sha256_before": "45d4dc27d3c0fff60f2ac33052a47e379ecc7da140e3d06a95b82072b103176c"
+    },
+    {
+      "old_path": "backend/nm/ports/store.py",
+      "path": "nm/shared/store_port.py",
+      "old_module": "nm.ports.store",
+      "module": "nm.shared.store_port",
+      "role": "ports",
+      "sha256_before": "3b9b4e7ba2f1b415cbd28c4b1631998afe0b4dad175990f3ffa087b942fa716b"
+    },
+    {
+      "old_path": "backend/nm/ports/transactional.py",
+      "path": "nm/shared/transactional_port.py",
+      "old_module": "nm.ports.transactional",
+      "module": "nm.shared.transactional_port",
+      "role": "ports",
+      "sha256_before": "61a70326d7655e216043db5719fad5838a909e2be2ba021d38d471098e7d694d"
+    },
+    {
+      "old_path": "backend/nm/ports/transcription.py",
+      "path": "nm/open_matter/transcription_port.py",
+      "old_module": "nm.ports.transcription",
+      "module": "nm.open_matter.transcription_port",
+      "role": "ports",
+      "sha256_before": "1b90a2d997366646edd84ad87ed640e16df90ef8323b5d4b0c746fa7f8346f74"
+    },
+    {
+      "old_path": "backend/nm/ports/upload.py",
+      "path": "nm/open_matter/upload_port.py",
+      "old_module": "nm.ports.upload",
+      "module": "nm.open_matter.upload_port",
+      "role": "ports",
+      "sha256_before": "ad99f48749061bc2532bd10bc2057f26f607908984a1d9e70fc0b39e846bb9c8"
+    }
+  ],
+  "expected_roles": {
+    "adapters": 39,
+    "bootstrap": 18,
+    "core": 109,
+    "domain": 73,
+    "edge": 12,
+    "knowledge": 18,
+    "ports": 24
+  },
+  "browser_assets": {
+    "app.css": "nm/app/app.css",
+    "app.js": "nm/app/app.js",
+    "index.html": "nm/app/index.html",
+    "brain-preview.html": "nm/legal_brain/brain-preview.html",
+    "brain-preview.js": "nm/legal_brain/brain-preview.js",
+    "source-reader.js": "nm/legal_brain/source-reader.js",
+    "loop-progress.js": "nm/legal_brain/loop-progress.js",
+    "matter-workspace.css": "nm/legal_brain/matter-workspace.css",
+    "matter-workspace.js": "nm/legal_brain/matter-workspace.js",
+    "advocate-preferences.js": "nm/legal_brain/advocate-preferences.js",
+    "draft-vault.js": "nm/arrive/draft-vault.js",
+    "dictation-worklet.js": "nm/open_matter/dictation-worklet.js",
+    "intake-materials.css": "nm/open_matter/intake-materials.css",
+    "intake-materials.js": "nm/open_matter/intake-materials.js"
+  },
+  "moves": [
+    {
+      "old_path": "backend/nm/adapters/documents/isolation.py",
+      "path": "nm/open_matter/document_isolation.py",
+      "sha256_before": "6e5f7b21078461ef91df44585a861ce164b7fe2878cf49ea23dce99bf6826e19"
+    },
+    {
+      "old_path": "backend/nm/adapters/documents/local.py",
+      "path": "nm/open_matter/document_local.py",
+      "sha256_before": "dc537ccd7410aa7ccb24f77d41a6ba960718cfdba1291f0f0c1af67c15295c81"
+    },
+    {
+      "old_path": "backend/nm/adapters/evidence/corpus.py",
+      "path": "nm/legal_brain/corpus_evidence.py",
+      "sha256_before": "cdb08c4f59163df613596ec90b8ee27750bea55db9e7f918938ae34408d8272f"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_adapter.py",
+      "sha256_before": "058c2f21c49081cc658fdb62095b54090832d6b146742ef72f7379e16c375baa"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/elements.py",
+      "path": "nm/legal_brain/elements_adapter.py",
+      "sha256_before": "b8948a3ee032d6001d964f9f6c98db980cb9aa869abbb059f16ea59ca938748d"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_adapter.py",
+      "sha256_before": "c3a2c5e43ed50bc0a33d5f7571f0e18a1790443b79070dbdba991d88bceee79d"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/governing_law.py",
+      "path": "nm/legal_brain/governing_law_adapter.py",
+      "sha256_before": "92145a88b46e8addfa1c2e23efbbcb24df52c0a110fd492f2ba77241813ee85c"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/institution.py",
+      "path": "nm/legal_brain/institution_adapter.py",
+      "sha256_before": "afdf2c88872a2b1516bb2536924b5d075fbdc1da11b0efb049c6185e3c7ed4e2"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_adapter.py",
+      "sha256_before": "e7a89afc57bd40b263b6dd41326497477448cc674fe3cbd5f996c72e03f40043"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_adapter.py",
+      "sha256_before": "93d89bf9d773f0e09a5e77a41656f377daa7eb8a6a492245fce8834e6d3219dc"
+    },
+    {
+      "old_path": "backend/nm/adapters/mail/gmail.py",
+      "path": "nm/arrive/mail_gmail.py",
+      "sha256_before": "e7ff3ce2cb8fecbf36b07fd4057058546771724c24f5d3d626b21c06d3cb8936"
+    },
+    {
+      "old_path": "backend/nm/adapters/mail/outbox.py",
+      "path": "nm/arrive/mail_outbox.py",
+      "sha256_before": "8686c78957dad3833cc4826eece285aa2084a9298ca92e33e11c85ec481dfbb5"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/_budget.py",
+      "path": "nm/shared/model_budget.py",
+      "sha256_before": "edfe35f1a9e7fd0b7245d417291b6d682ddf2aec12f906d5cea014a475a0b696"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/_transport.py",
+      "path": "nm/shared/model_transport.py",
+      "sha256_before": "916bf8d0ca6c19b230666c7267914d079ddf309fb0c1077e52d1aeecb09213e4"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/anthropic_adapter.py",
+      "path": "nm/shared/model_anthropic_adapter.py",
+      "sha256_before": "8b6cf7ff59fbee4801c57fc1e931b50144a1da613e57f725ff8a5d12865ebdd9"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/call_budget.py",
+      "path": "nm/shared/model_call_budget.py",
+      "sha256_before": "eda4e0bb4cd0a2e404c165e555779115fe5c62b13e89efd75f3de7d1c6b2ffbe"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/config.py",
+      "path": "nm/shared/model_config.py",
+      "sha256_before": "20c15a9bf8066eaa80d21cd06fcfb0fbc6f913625dfd1426f949ed619575eff3"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/openai_adapter.py",
+      "path": "nm/shared/model_openai_adapter.py",
+      "sha256_before": "c990fa06b11c7e574f2643fd6ceaa5feb5fa65eceaa4046cba7e6a54985ed485"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/policed.py",
+      "path": "nm/shared/model_policed.py",
+      "sha256_before": "d1085ac7941359216ec8342108c9e953d6d745abee0a016f3eaf1264e92a2d43"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/replay.py",
+      "path": "nm/shared/model_replay.py",
+      "sha256_before": "9f6cf06ced104c19104bdf73856e43d77254a3104c013a10ea4008bd632b11b3"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/scripted.py",
+      "path": "nm/shared/model_scripted.py",
+      "sha256_before": "883e21d010283e9a6403c35ad48276f9a2490c2ccc09904c1518c03cd8d7199c"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/traced.py",
+      "path": "nm/shared/model_traced.py",
+      "sha256_before": "3e9bc00ed958a40c1be448b8ba83c20a250fc073a2ff66bfd0dffd05a606f8ad"
+    },
+    {
+      "old_path": "backend/nm/adapters/optional.py",
+      "path": "nm/shared/optional_adapter.py",
+      "sha256_before": "82df60ce99f1a703b64522fcae6053d52f0ffc81dd74b4b7d34c4d8de60ae107"
+    },
+    {
+      "old_path": "backend/nm/adapters/policed_port.py",
+      "path": "nm/shared/policed_port_adapter.py",
+      "sha256_before": "9ffcdb1daba693c8c0b54c4a8a84742605c1baa25d8fd7468b098218797aac7b"
+    },
+    {
+      "old_path": "backend/nm/adapters/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks_adapter.py",
+      "sha256_before": "5ffd1a536f6411e6c3beea007caed7796f96d944c517919a86714abc10ea08e5"
+    },
+    {
+      "old_path": "backend/nm/adapters/principles_file.py",
+      "path": "nm/legal_brain/principles_file_adapter.py",
+      "sha256_before": "91824b6c59a19a28961c8a73b0046d8866ef59830c1cdaea9c5ffaa73bc4955b"
+    },
+    {
+      "old_path": "backend/nm/adapters/search/authority.py",
+      "path": "nm/legal_brain/search_authority.py",
+      "sha256_before": "88bae11b301e8c476da45e73bc0921fcf0acfd082916b42ed987a670bfcd9171"
+    },
+    {
+      "old_path": "backend/nm/adapters/search/policed.py",
+      "path": "nm/legal_brain/search_policed.py",
+      "sha256_before": "dc09109724ec181c9a82952e1c13e61fab1211327a9c22e085a5c0907131009a"
+    },
+    {
+      "old_path": "backend/nm/adapters/speech/local_whisper.py",
+      "path": "nm/open_matter/speech_local_whisper.py",
+      "sha256_before": "688d5fd8771d942783f0da839eb9e2af740686b4e43a6a985b992dcb65370be8"
+    },
+    {
+      "old_path": "backend/nm/adapters/speech/vosk_live.py",
+      "path": "nm/open_matter/speech_vosk_live.py",
+      "sha256_before": "b0f7bc1d06b2b8cab6688019aa7468df3ccf14182a80764dc33e4a5767b1e4a2"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/directory.py",
+      "path": "nm/arrive/store_directory.py",
+      "sha256_before": "8d6d6de7b3ed74c24028cbe356b05be43b28653d444673cf1d4bd4218d53f575"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/documents.py",
+      "path": "nm/shared/store_documents.py",
+      "sha256_before": "d0724c24825db2007b08eabb417c9b3cd75469a022cc2406b1ad09e234d22a81"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/envelope.py",
+      "path": "nm/shared/store_envelope.py",
+      "sha256_before": "e0ab0dbfa6d2e4e786e68d0594c659a9b7ccfdcd281a32ba2172717692a15ec8"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/file_store.py",
+      "path": "nm/shared/store_file_store.py",
+      "sha256_before": "4e4c69abf94d68f6326842d256b84d7f8a52ed11b21508c743ccac3666dd1490"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/loop_log.py",
+      "path": "nm/shared/store_loop_log.py",
+      "sha256_before": "316536211cab5747a2e7c5aebfa07ba89788cb62cd60d49762775ef792c1f731"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/pending_accounts.py",
+      "path": "nm/arrive/store_pending_accounts.py",
+      "sha256_before": "ccc4a36c83f51fd01f0f2953de710a9c1abe28ebc0fd8352a0a7188e230787f0"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/postgres.py",
+      "path": "nm/shared/store_postgres.py",
+      "sha256_before": "7a40032216b9c3600f5ee14979a46126cac6c6a9581cfb0d4c37ce3ffe29cad1"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/sealing.py",
+      "path": "nm/shared/store_sealing.py",
+      "sha256_before": "75c776aef83dff34bc83f34c9676754d994888496b404a8b50f1cab5d110780f"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/uploads.py",
+      "path": "nm/shared/store_uploads.py",
+      "sha256_before": "8cb4f009221afb03c6156186805baac692432e5a842130d82513a3d2a779a390"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/checklist_sources.py",
+      "path": "nm/legal_brain/checklist_sources.py",
+      "sha256_before": "6e44ce456dcba33c90489a1b1b252da58977fbe48d9c8132202d175cd6e85d02"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/composition.py",
+      "path": "nm/app/composition.py",
+      "sha256_before": "9ad5e34d9df6169b1f15044e8014e0f0826f4c77aca95738bc5c4ac69c0ca1f0"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_evaluations.py",
+      "path": "nm/legal_brain/controlled_evaluations_composition.py",
+      "sha256_before": "a918123bf2c4b8b7be442772843df76d5c7d3b7ecdd718852f7dbf6e6ccf7cff"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_generations.py",
+      "path": "nm/legal_brain/controlled_generations.py",
+      "sha256_before": "449fa230874ff887f77ec46d22bf131cbc4755e819e7ad65f26a6cd688fc4933"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/controlled_registry.py",
+      "path": "nm/legal_brain/controlled_registry_composition.py",
+      "sha256_before": "05d582b2f6d91a9c9e4cb9dfefcc84efb8b9385ed41627e46180a9675615e728"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/dated_provisions.py",
+      "path": "nm/legal_brain/dated_provisions.py",
+      "sha256_before": "bedd6ccd76a36276e5be922b423d778a1d17b068e7f7921158eaf0c3e5b4c3ff"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/document_permission.py",
+      "path": "nm/open_matter/document_permission.py",
+      "sha256_before": "db2e7405062be1e230dcd0ab52e2db764639dcc32e5048e8911144bacd22b9c2"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/egress_policy.py",
+      "path": "nm/shared/egress_policy.py",
+      "sha256_before": "a154e846b635ef77ec13727b5979948bb50593ffa086a57159ed39533d8558b4"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/evaluation_models.py",
+      "path": "nm/legal_brain/evaluation_models.py",
+      "sha256_before": "82b5c2b234f05754ea3ed59a9bb7d4de22c857889e63ec3ee17d95b7e64fb17d"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/main.py",
+      "path": "nm/app/main.py",
+      "sha256_before": "054e1fc374567ac8444336f4dc144cd785743a50fc78bb384c4045e3aa2cc4c3"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/model_permission.py",
+      "path": "nm/app/model_permission.py",
+      "sha256_before": "e6ff67ac72d3380c10dc8bfc0aa785cc2befc0b3ca17a4b40fd54ae2edeb2d71"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/provision_registry.py",
+      "path": "nm/legal_brain/provision_registry_composition.py",
+      "sha256_before": "0909bfa581a67e99d6a9454cc07e9c853f683f2ca1383a8b2b3f3dfe80a5d456"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/provision_review.py",
+      "path": "nm/legal_brain/provision_review.py",
+      "sha256_before": "57b8a35112d3c18fcba6783cd3a73cda724d4e389e0a46b852ea01d06317ea08"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/replay_context.py",
+      "path": "nm/legal_brain/replay_context.py",
+      "sha256_before": "0a6add1691368c8959a783000355ee14c987d574cd8140b9f27f0a6996a080a5"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_capture.py",
+      "path": "nm/legal_brain/runtime_capture.py",
+      "sha256_before": "005c00d487fff3aa9fbe7b75a7662a9b2aaa7a6347f4169608649713acaa254c"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_model_tape.py",
+      "path": "nm/legal_brain/runtime_model_tape.py",
+      "sha256_before": "4fab317fcca311ca9e1b458e5c4716ddb0a961e1fddf01f5fae24f3b947ba9eb"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/runtime_port_tape.py",
+      "path": "nm/legal_brain/runtime_port_tape.py",
+      "sha256_before": "3cf67ceeb5c64ae585f57b6f26d2e526ae517aa9a3f0a4c323850af63e38e83e"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/strict_replay.py",
+      "path": "nm/legal_brain/strict_replay.py",
+      "sha256_before": "abf7349916b3823a6e9022c5e446da965969831baefba3d62cdc968104ec8b5c"
+    },
+    {
+      "old_path": "backend/nm/core/accrual.py",
+      "path": "nm/legal_brain/accrual.py",
+      "sha256_before": "efcc599ba4e5540470cdaf7208a2072492d5ca51b6a02c9c2647dcd5964430df"
+    },
+    {
+      "old_path": "backend/nm/core/action.py",
+      "path": "nm/act/action.py",
+      "sha256_before": "9aa58000dcd7bf6bb11385e6ff68e96521e934116a9f7b7029477fb17f5e1958"
+    },
+    {
+      "old_path": "backend/nm/core/action_proposal_tool.py",
+      "path": "nm/act/action_proposal_tool.py",
+      "sha256_before": "3ced79a13e54dcf3cd79bb8fba00a1dda03891fc2efe7723168421f71a08b726"
+    },
+    {
+      "old_path": "backend/nm/core/adversarial.py",
+      "path": "nm/legal_brain/adversarial.py",
+      "sha256_before": "92c3ec9ac43ebf09b8d97f40970afb1b7b08d772cd5f49750a1f22ec6cde253a"
+    },
+    {
+      "old_path": "backend/nm/core/advocate_memory.py",
+      "path": "nm/legal_brain/advocate_memory.py",
+      "sha256_before": "798ee12e4d1d5867b17e2702846b21687402b737cdc64d81fd700acc9d592f71"
+    },
+    {
+      "old_path": "backend/nm/core/brain_assessment.py",
+      "path": "nm/legal_brain/brain_assessment.py",
+      "sha256_before": "424f698b74dd8d0e71c611d683992fa1cf4bf3dd98bafa535466d66fb59bf49a"
+    },
+    {
+      "old_path": "backend/nm/core/brain_context.py",
+      "path": "nm/legal_brain/brain_context.py",
+      "sha256_before": "b8387e2a5a7c9b0ed6dadc8c98bbafeaa84ad08accf22e1bf67cf16768e42edc"
+    },
+    {
+      "old_path": "backend/nm/core/brain_evaluation.py",
+      "path": "nm/legal_brain/brain_evaluation.py",
+      "sha256_before": "ff58cc41411d81963d3e7103cf02c14df0ab483b69f24bbe738db902e14ad68a"
+    },
+    {
+      "old_path": "backend/nm/core/brain_finalization.py",
+      "path": "nm/legal_brain/brain_finalization.py",
+      "sha256_before": "062f32de0c4699414fa03f56d023506531f42a1aed77275bad20065c49072a4e"
+    },
+    {
+      "old_path": "backend/nm/core/brain_publication.py",
+      "path": "nm/legal_brain/brain_publication.py",
+      "sha256_before": "c5c7817db0b6c8e99b07c054877a78ba394180cea91c17935fa28e39b002a627"
+    },
+    {
+      "old_path": "backend/nm/core/brain_release.py",
+      "path": "nm/legal_brain/brain_release.py",
+      "sha256_before": "a5915b369262044001d6a05dd217c98c660f5666ed2fcafce54036cb90567cf4"
+    },
+    {
+      "old_path": "backend/nm/core/briefing.py",
+      "path": "nm/legal_brain/briefing.py",
+      "sha256_before": "8e8ed7a05f6e9d9ff64c2cd95f967186e4b3f5456cc6f389c2928d70e4d8bf36"
+    },
+    {
+      "old_path": "backend/nm/core/calculation_tools.py",
+      "path": "nm/legal_brain/calculation_tools.py",
+      "sha256_before": "7960cbba60e19abe238f93139350fd8804155861a91ce602c319c0844f692904"
+    },
+    {
+      "old_path": "backend/nm/core/cascade.py",
+      "path": "nm/work_the_file/cascade.py",
+      "sha256_before": "3d14b6a4297c5e97a6a7616370e0aa8675ff6531df18e631b5d8e961306577e9"
+    },
+    {
+      "old_path": "backend/nm/core/casefile.py",
+      "path": "nm/work_the_file/casefile.py",
+      "sha256_before": "4b889e4d3b04ceee549ca14e23cf0beb10ef6c9f4165a628e7c45414fc06f4ed"
+    },
+    {
+      "old_path": "backend/nm/core/cause.py",
+      "path": "nm/legal_brain/cause.py",
+      "sha256_before": "16de4ba40e3815ef8f07387abfdd5a0b027ba1666f922765d4996db2adcc784b"
+    },
+    {
+      "old_path": "backend/nm/core/ceiling.py",
+      "path": "nm/legal_brain/ceiling.py",
+      "sha256_before": "e63a49b205a45624316aa9fc15a8cd8742cb8bf349ae295ba3225bbed1f32642"
+    },
+    {
+      "old_path": "backend/nm/core/checked_input_continuation.py",
+      "path": "nm/legal_brain/checked_input_continuation.py",
+      "sha256_before": "d9ac74feb9f4a85f81368961be425f755e9df3018fe88eb4ac2b56f88d7ca61c"
+    },
+    {
+      "old_path": "backend/nm/core/checklist_review.py",
+      "path": "nm/legal_brain/checklist_review.py",
+      "sha256_before": "4e2461c35b550cdedc4cda6d49fa336d5443808fc47b8994b7061def32897ba3"
+    },
+    {
+      "old_path": "backend/nm/core/chronology.py",
+      "path": "nm/work_the_file/chronology.py",
+      "sha256_before": "3afa4873acd6c7dfee0d158b2a98d4609a77db203be7e36e7045c13ee9fbe72a"
+    },
+    {
+      "old_path": "backend/nm/core/conflict.py",
+      "path": "nm/open_matter/conflict.py",
+      "sha256_before": "506bb7d8ee2865a91b9d1516158c8e0fa95f9365ddb6d946d7e1af96e2d71307"
+    },
+    {
+      "old_path": "backend/nm/core/consistency.py",
+      "path": "nm/legal_brain/consistency.py",
+      "sha256_before": "3d650a5c41dec7f4e7ec7f55796cee2840db3b30df3ac12399326413fbf5640d"
+    },
+    {
+      "old_path": "backend/nm/core/controlled_brain.py",
+      "path": "nm/legal_brain/controlled_brain.py",
+      "sha256_before": "97d7352c28ea859618f43382c846dc08ede56f1f9ccc71f5a8864743bdf0b7b5"
+    },
+    {
+      "old_path": "backend/nm/core/conversation.py",
+      "path": "nm/legal_brain/conversation.py",
+      "sha256_before": "77361ef380f86e8e2ae80e25e4b0015ac61f731497bde61cbeabbc9f977298ed"
+    },
+    {
+      "old_path": "backend/nm/core/conversational_proposal.py",
+      "path": "nm/legal_brain/conversational_proposal.py",
+      "sha256_before": "eb73cb434b3d9650a200a91672090dd14802c82051fbe546f63e243240c8c952"
+    },
+    {
+      "old_path": "backend/nm/core/date_resolution.py",
+      "path": "nm/work_the_file/date_resolution.py",
+      "sha256_before": "166cd764d512423757ec2fa54895e7be59d453a06fef704d89b9bfff49064096"
+    },
+    {
+      "old_path": "backend/nm/core/deadline_proposals.py",
+      "path": "nm/work_the_file/deadline_proposals.py",
+      "sha256_before": "55815898ee80f2f24aa69503ed55e3d6dafe7d07f642412b0390428253671db2"
+    },
+    {
+      "old_path": "backend/nm/core/deadlines.py",
+      "path": "nm/work_the_file/deadlines.py",
+      "sha256_before": "cad8acb40911130afc1e24486a97e2d710038f511eddb2f4720c6ba7c68f6845"
+    },
+    {
+      "old_path": "backend/nm/core/delegation.py",
+      "path": "nm/legal_brain/delegation.py",
+      "sha256_before": "30133e3ec885676c39785add384605674a41a831c4346e9bd72c032e0ee58e3c"
+    },
+    {
+      "old_path": "backend/nm/core/dependency.py",
+      "path": "nm/work_the_file/dependency.py",
+      "sha256_before": "8810c5eddb2587db5f75e15c157a1c810514646e4343c4e849a55f31301b82b7"
+    },
+    {
+      "old_path": "backend/nm/core/dispute.py",
+      "path": "nm/legal_brain/dispute.py",
+      "sha256_before": "eaaa39aa36eeab975248e2907b026eed6bad3945e2a765c38faf5d206652acdc"
+    },
+    {
+      "old_path": "backend/nm/core/dispute_agenda.py",
+      "path": "nm/work_the_file/dispute_agenda.py",
+      "sha256_before": "d6619a514fc1ba874f745bd6e466dd86118f7d1ea421e4456e8cd83ad53c3b90"
+    },
+    {
+      "old_path": "backend/nm/core/drafting.py",
+      "path": "nm/act/drafting.py",
+      "sha256_before": "414efc8dac62580e87cbca571086e7af9385586320ba783387fe9a29e49313b0"
+    },
+    {
+      "old_path": "backend/nm/core/duty.py",
+      "path": "nm/legal_brain/duty.py",
+      "sha256_before": "9a8fc2a49ec1ab30a0db8b95c87dc01b3bc6af53d7247c3687118f75a3987f90"
+    },
+    {
+      "old_path": "backend/nm/core/early_independent_review.py",
+      "path": "nm/legal_brain/early_independent_review.py",
+      "sha256_before": "a73a83ee22e86437e432127d05c93e2c8f8f539542ff4a6f5fd4778c450ebdc1"
+    },
+    {
+      "old_path": "backend/nm/core/evaluation_history.py",
+      "path": "nm/legal_brain/evaluation_history.py",
+      "sha256_before": "6e48b9869afdbd354b0df73c7938b1aecaf7c46035a41f979494d7514cfb24d3"
+    },
+    {
+      "old_path": "backend/nm/core/event_limitation_calculation.py",
+      "path": "nm/legal_brain/event_limitation_calculation.py",
+      "sha256_before": "b46ee8f21f598d04ee1fdc5ce1939c648e6cf7c2937d66603de9cd60be11e85d"
+    },
+    {
+      "old_path": "backend/nm/core/evidence_item.py",
+      "path": "nm/work_the_file/evidence_item.py",
+      "sha256_before": "b18ab1f87a0c3b47a92f02eaa4dd59ee05ad1e54a209ca505e5ade8d1acb8ab4"
+    },
+    {
+      "old_path": "backend/nm/core/factors.py",
+      "path": "nm/legal_brain/factors.py",
+      "sha256_before": "ddfeed2d945aeb9d546b20aa42bfc115c051eedfea9fbe19096a9c2d5bbaa99d"
+    },
+    {
+      "old_path": "backend/nm/core/file_mutation.py",
+      "path": "nm/work_the_file/file_mutation.py",
+      "sha256_before": "5bb57d9033005c8cba61b8c2840481a5bdd130c02a5cbc8979e890146951708e"
+    },
+    {
+      "old_path": "backend/nm/core/gaps.py",
+      "path": "nm/legal_brain/gaps.py",
+      "sha256_before": "8cc45a03a7650b8b5c0e66fd036a3f650dc17c6fd1c704dd87e540c16b848eef"
+    },
+    {
+      "old_path": "backend/nm/core/grounded_file_tools.py",
+      "path": "nm/legal_brain/grounded_file_tools.py",
+      "sha256_before": "56d7d30b61da1da407f4662f5b3ae884ad3b2445f1efd56c134cebf9fb87de97"
+    },
+    {
+      "old_path": "backend/nm/core/grounding.py",
+      "path": "nm/legal_brain/grounding.py",
+      "sha256_before": "8230821146252a81df918ca661e6d7ca61b1fa6906766c57d528cae565fc4fec"
+    },
+    {
+      "old_path": "backend/nm/core/handover.py",
+      "path": "nm/carry/handover.py",
+      "sha256_before": "8a0989eff14333bb9cf9033073abcba2ce9f37ba77185123a0ba8d9381d78cd6"
+    },
+    {
+      "old_path": "backend/nm/core/hearing.py",
+      "path": "nm/act/hearing.py",
+      "sha256_before": "42f19c09e4c73bb74538f1fbaa5fca52dbf0aab14c6c844dcfd5dfb2fd85b1f4"
+    },
+    {
+      "old_path": "backend/nm/core/intake.py",
+      "path": "nm/open_matter/intake.py",
+      "sha256_before": "51fc5d6e1d6143c938cf7a5afa4460e266e82cfd3207aad38f32fa5cb3bbb576"
+    },
+    {
+      "old_path": "backend/nm/core/interaction_review.py",
+      "path": "nm/legal_brain/interaction_review.py",
+      "sha256_before": "e24e9cb7dcf756c7f9f1ba6160b1dae1c61aa40069b35ede0a39a3b601825e64"
+    },
+    {
+      "old_path": "backend/nm/core/interaction_subject.py",
+      "path": "nm/legal_brain/interaction_subject.py",
+      "sha256_before": "ed3dabc1256f373415d3efb278e56a24cb52c2e035a0364d6a36d13174a1964d"
+    },
+    {
+      "old_path": "backend/nm/core/investigation.py",
+      "path": "nm/legal_brain/investigation.py",
+      "sha256_before": "e659f8c585ae1106546bde35ec2e1823e75c1fe5aef1309f564f6e48079e49ee"
+    },
+    {
+      "old_path": "backend/nm/core/issues.py",
+      "path": "nm/legal_brain/issues.py",
+      "sha256_before": "047cbb6ebd9689f4e6d862ded91503caaa3c658c27a8ee7ec266020917ebd383"
+    },
+    {
+      "old_path": "backend/nm/core/json_values.py",
+      "path": "nm/shared/json_values.py",
+      "sha256_before": "8af2d1b82b8cd681b5cff1f658eec247aecfd479203d7c592b2bc7cef8bcd018"
+    },
+    {
+      "old_path": "backend/nm/core/lead.py",
+      "path": "nm/legal_brain/lead.py",
+      "sha256_before": "e2e6faa125f8d093161a83cc90519d0f00957ea14199a3d9b0bfef7b8c428d4e"
+    },
+    {
+      "old_path": "backend/nm/core/limitation.py",
+      "path": "nm/legal_brain/limitation.py",
+      "sha256_before": "c204f142dc688feb9d74672bf35a0265ed42f3810d8f98c41e4e76f683c7851f"
+    },
+    {
+      "old_path": "backend/nm/core/loop.py",
+      "path": "nm/legal_brain/loop.py",
+      "sha256_before": "4d27c0381463e6fc051cb550199df78fa4a545b56704b301dd86691d0f626e3f"
+    },
+    {
+      "old_path": "backend/nm/core/loop_progress.py",
+      "path": "nm/legal_brain/loop_progress.py",
+      "sha256_before": "39c4aad8b5d284a49e4313ab07ae53a7cc33a4318ea5e170df39dce3b8e94e53"
+    },
+    {
+      "old_path": "backend/nm/core/matter_support.py",
+      "path": "nm/legal_brain/matter_support.py",
+      "sha256_before": "09928c9b955f7b6d09e3defebb16f01fb6f28269abaa34ab5b459aa91f0b9e23"
+    },
+    {
+      "old_path": "backend/nm/core/nested_research.py",
+      "path": "nm/legal_brain/nested_research.py",
+      "sha256_before": "558d47569a6be21bd0d9635011c66ebb2395257943ed485b8feafa33e13ea5d5"
+    },
+    {
+      "old_path": "backend/nm/core/opposition_work.py",
+      "path": "nm/legal_brain/opposition_work.py",
+      "sha256_before": "a2923f7e1fdac83febb551701897d6ba5b05e33e2304445e91c70ccd0522b6f0"
+    },
+    {
+      "old_path": "backend/nm/core/options.py",
+      "path": "nm/advise/options.py",
+      "sha256_before": "f6a70deda0ab04aefcb61f2b0f34f41f15a7f2aadede2547b18ca157e2198f9d"
+    },
+    {
+      "old_path": "backend/nm/core/original_instruction.py",
+      "path": "nm/work_the_file/original_instruction.py",
+      "sha256_before": "3442b1f5d5c7e50e10fddc799fdc92ba2d62c15f7362732355dbd388a09df3e7"
+    },
+    {
+      "old_path": "backend/nm/core/original_source_locators.py",
+      "path": "nm/work_the_file/original_source_locators.py",
+      "sha256_before": "cd3b6020c6e8d1951313b6a46d7e50b8bddc663b54dfbc87349abd80b9a3eb76"
+    },
+    {
+      "old_path": "backend/nm/core/output_checks.py",
+      "path": "nm/legal_brain/output_checks.py",
+      "sha256_before": "24e74c9b987a70a37c138563f4436245772585d24e99685ca0a8cc65161ffbf3"
+    },
+    {
+      "old_path": "backend/nm/core/parties.py",
+      "path": "nm/legal_brain/parties.py",
+      "sha256_before": "603bc8fd527cb9a206edd63f712d1c987e2d4b301eefa10e06747a1548611a80"
+    },
+    {
+      "old_path": "backend/nm/core/posture.py",
+      "path": "nm/legal_brain/posture.py",
+      "sha256_before": "aef8b2ba62930a964c9f9b23d59ee169ac080afda012a29cecf267f4096edce6"
+    },
+    {
+      "old_path": "backend/nm/core/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks.py",
+      "sha256_before": "5cb98f57692c2ced63f3e9b31e5e2260963cdf1e0a8b8bd6a68e095dc0ab500d"
+    },
+    {
+      "old_path": "backend/nm/core/premise.py",
+      "path": "nm/legal_brain/premise.py",
+      "sha256_before": "151307d593d93f581062c7e63b049c833a0a9c32530def751d2e9849bf858079"
+    },
+    {
+      "old_path": "backend/nm/core/preview_display.py",
+      "path": "nm/legal_brain/preview_display.py",
+      "sha256_before": "db1b365b134fa6150cd94e54d754c0547bb5423b8e254404aacbb47be36ec38b"
+    },
+    {
+      "old_path": "backend/nm/core/preview_seen.py",
+      "path": "nm/legal_brain/preview_seen.py",
+      "sha256_before": "37deebddcf5b67f998fda831232134d4ac73f3fca5976003035376ab9e18971d"
+    },
+    {
+      "old_path": "backend/nm/core/principles_generated.py",
+      "path": "nm/legal_brain/principles_generated.py",
+      "sha256_before": "7aa89c9e09f74e6a38f92dda95d4863f33602b029d16c677ae575610870a1c3e"
+    },
+    {
+      "old_path": "backend/nm/core/private_file_tools.py",
+      "path": "nm/work_the_file/private_file_tools.py",
+      "sha256_before": "aaef5e69ff1b07f89aac012f1ed60f53fb7d66e77b4975403c7f40aaede6b3f7"
+    },
+    {
+      "old_path": "backend/nm/core/procedural_calculation.py",
+      "path": "nm/legal_brain/procedural_calculation.py",
+      "sha256_before": "f41f9aaea408fbb444959c53d97bf79d7b751087a7726915025eae9f21e9e69c"
+    },
+    {
+      "old_path": "backend/nm/core/professional_access.py",
+      "path": "nm/arrive/professional_access.py",
+      "sha256_before": "af6f6e26fa0289f6ae12e8165fac8e1092b82aa6d43611edb35b1993d272deb7"
+    },
+    {
+      "old_path": "backend/nm/core/proof.py",
+      "path": "nm/legal_brain/proof.py",
+      "sha256_before": "a4dcf51b14a1d4474b3043db81b90413068e7a2ea9bad8f5d96c9c68ff02e682"
+    },
+    {
+      "old_path": "backend/nm/core/proof_read.py",
+      "path": "nm/legal_brain/proof_read.py",
+      "sha256_before": "540315f6eb25ff2191168ff7d07837e23219f3e07f4158e0f9cb6648eb48e57e"
+    },
+    {
+      "old_path": "backend/nm/core/quarantine.py",
+      "path": "nm/open_matter/quarantine.py",
+      "sha256_before": "5d77e937423d141b08310048e6fa6f7ce0ce44bd25af97411d55cc9b7281d7d4"
+    },
+    {
+      "old_path": "backend/nm/core/reassessment.py",
+      "path": "nm/advise/reassessment.py",
+      "sha256_before": "eec9835c7183395185326cff8ea43eb744c2f8cd94fe0cd30650de75b61244eb"
+    },
+    {
+      "old_path": "backend/nm/core/recorded_package_subject.py",
+      "path": "nm/legal_brain/recorded_package_subject.py",
+      "sha256_before": "8713f3c593fdf18e4f0969cec9aadd6439279f354930cf56efdc6228af4512c9"
+    },
+    {
+      "old_path": "backend/nm/core/relief.py",
+      "path": "nm/advise/relief.py",
+      "sha256_before": "c1578a47dcff82f030d88dd88ea9984bd4180a187c42aef708b27e82a3ba08a7"
+    },
+    {
+      "old_path": "backend/nm/core/requirements.py",
+      "path": "nm/legal_brain/requirements.py",
+      "sha256_before": "69e4eb07a8568e2b733ca823cc86533a489bedfa67ecef1e565afc7eeba4c87a"
+    },
+    {
+      "old_path": "backend/nm/core/research.py",
+      "path": "nm/legal_brain/research.py",
+      "sha256_before": "0aab2a38cf915efe7a026f34edcd94c7ed750ec453db83575d483fb3388ca5e4"
+    },
+    {
+      "old_path": "backend/nm/core/research_context.py",
+      "path": "nm/legal_brain/research_context.py",
+      "sha256_before": "37458cec3199b0adcdcf20c9067eb7683d7346fac09077b083567857b705df5b"
+    },
+    {
+      "old_path": "backend/nm/core/retention.py",
+      "path": "nm/close/retention.py",
+      "sha256_before": "097fb4f3a34a8d393f65c55c1d3dc74686b063140501a84017dd009909d55875"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_fee_selection.py",
+      "path": "nm/legal_brain/reviewed_fee_selection.py",
+      "sha256_before": "0a45573ba799e2ef6a7bf48b5a0bb3b897501498675a7b18d754d698de2a0f76"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_interest_selection.py",
+      "path": "nm/legal_brain/reviewed_interest_selection.py",
+      "sha256_before": "d0d84a4f650117d228df38b18af7ad346699313e5c72987ed6a828e5d4c9677c"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_limitation_selection.py",
+      "path": "nm/legal_brain/reviewed_limitation_selection.py",
+      "sha256_before": "9f65f6449cf2c41102f71514fc8eda54026a566ef4bbc90c5f95847375e947c9"
+    },
+    {
+      "old_path": "backend/nm/core/reviewed_preview.py",
+      "path": "nm/legal_brain/reviewed_preview.py",
+      "sha256_before": "711b6bf68b11d8cfb5c8ac10eb26518941d29021ccdffbbaf7fa9991c5d07cd9"
+    },
+    {
+      "old_path": "backend/nm/core/route.py",
+      "path": "nm/legal_brain/route.py",
+      "sha256_before": "cbfd4a7983b626c1b5a7c3e8dc4dabe4f83ea1a8eb34eaff8ff78bc784bee179"
+    },
+    {
+      "old_path": "backend/nm/core/screens.py",
+      "path": "nm/open_matter/screens.py",
+      "sha256_before": "2f88d5a4318ab148c43e7a28b6b3cbd37a93a2edce3cd58ee75abe7685de7917"
+    },
+    {
+      "old_path": "backend/nm/core/service.py",
+      "path": "nm/carry/service.py",
+      "sha256_before": "6b3a25043bf0de4beee7634214b1a3e266b8285c469554929652690090bd9dcd"
+    },
+    {
+      "old_path": "backend/nm/core/source_excerpt.py",
+      "path": "nm/legal_brain/source_excerpt.py",
+      "sha256_before": "cc581bdfaac78d2e9c62bab03ee981056436cec83193e68718d39ef173bfda79"
+    },
+    {
+      "old_path": "backend/nm/core/source_writes.py",
+      "path": "nm/legal_brain/source_writes.py",
+      "sha256_before": "39163a43a8837c693c2d60eed7fa0c468e4089d1d99c2b273a200c56a1fe7979"
+    },
+    {
+      "old_path": "backend/nm/core/step_dependency.py",
+      "path": "nm/legal_brain/step_dependency.py",
+      "sha256_before": "212ceb03d0ca57758c3054d6ab0b775eb3d243b834644c076d1227c4cd25549f"
+    },
+    {
+      "old_path": "backend/nm/core/summary.py",
+      "path": "nm/work_the_file/summary.py",
+      "sha256_before": "da5b1facafd2e143a46b52fa58af04bd5c2dd183954f5437ceab2aea0358d5f1"
+    },
+    {
+      "old_path": "backend/nm/core/theory.py",
+      "path": "nm/legal_brain/theory.py",
+      "sha256_before": "a854542d0aa4b1cd28d100109042f0829c7ccf411a8239ab8e4e408d8d72c61e"
+    },
+    {
+      "old_path": "backend/nm/core/threading.py",
+      "path": "nm/legal_brain/threading.py",
+      "sha256_before": "880a31dc00aa6c18ca17717202d05be99956e6a107d912c8aa1a95933b5276f6"
+    },
+    {
+      "old_path": "backend/nm/core/thresholds.py",
+      "path": "nm/legal_brain/thresholds.py",
+      "sha256_before": "ec28cccc393d456336f66d39477fbfb54dd9275602095cebc1a4b37efabb043c"
+    },
+    {
+      "old_path": "backend/nm/core/tool_catalogue.py",
+      "path": "nm/legal_brain/tool_catalogue.py",
+      "sha256_before": "24af4ef9eba33793c438941ac732df12b4034a12e21b166cb9380503d2c8bd76"
+    },
+    {
+      "old_path": "backend/nm/core/tool_discovery.py",
+      "path": "nm/legal_brain/tool_discovery.py",
+      "sha256_before": "69f2377620d62d1e7cfeae14476173e3d6b9c2827b362188cedb6b1b5f7b9efb"
+    },
+    {
+      "old_path": "backend/nm/core/tool_offers.py",
+      "path": "nm/legal_brain/tool_offers.py",
+      "sha256_before": "d17a82f57ad69f8bf09eaec200c74b1eca5d326463ed1d40f07800cd3ad7e04e"
+    },
+    {
+      "old_path": "backend/nm/core/tool_sources.py",
+      "path": "nm/legal_brain/tool_sources.py",
+      "sha256_before": "ddc33e2a4d8ebffe3d4e9b23ab9ba35506e67fa04bb679405ddad35ab97d9e04"
+    },
+    {
+      "old_path": "backend/nm/core/tools.py",
+      "path": "nm/legal_brain/tools.py",
+      "sha256_before": "2d9a160c7d69aa2784f07ffbcf9dd69df813344fdb39fcbb75b012fa9a488420"
+    },
+    {
+      "old_path": "backend/nm/core/turn.py",
+      "path": "nm/legal_brain/turn.py",
+      "sha256_before": "395e9d91982ee359899dbc95da9b683b3223e7214337bcc7314c83e001562669"
+    },
+    {
+      "old_path": "backend/nm/core/verifier.py",
+      "path": "nm/legal_brain/verifier.py",
+      "sha256_before": "347be237e5c4b1cd4abc09a97a6bdd0236097d36633b6f5bb4ae73d53b959e00"
+    },
+    {
+      "old_path": "backend/nm/core/work_receipts.py",
+      "path": "nm/legal_brain/work_receipts.py",
+      "sha256_before": "3e339ccd008f0b5e47a8f842d1f3a18984839a81c66bbd630551585e5456cefc"
+    },
+    {
+      "old_path": "backend/nm/core/worker.py",
+      "path": "nm/shared/worker.py",
+      "sha256_before": "76d31a49aebd0fa842a6fa75f96d82301c5d7f7967edf17fc5389909a2cdf48a"
+    },
+    {
+      "old_path": "backend/nm/core/working_explanation.py",
+      "path": "nm/legal_brain/working_explanation.py",
+      "sha256_before": "751864ed92f7b7cb8385d8a3452206af752f111cf4c51d95309bb8cc79477cb7"
+    },
+    {
+      "old_path": "backend/nm/core/working_record.py",
+      "path": "nm/legal_brain/working_record.py",
+      "sha256_before": "986c171a43e8e4182d87308659c5335684cf406271f80008c466dcf4514fb5ba"
+    },
+    {
+      "old_path": "backend/nm/core/working_scope.py",
+      "path": "nm/legal_brain/working_scope.py",
+      "sha256_before": "e2b5cb32f967344e9453ad56d952ea1eeb2a028d7f87d02aace15c447f350df5"
+    },
+    {
+      "old_path": "backend/nm/core/write_tools.py",
+      "path": "nm/work_the_file/write_tools.py",
+      "sha256_before": "fa6cddfe8fa524ec5bb1231acfefaf2d91d806432d1b13f71d514d2d55a5e2dc"
+    },
+    {
+      "old_path": "backend/nm/domain/account_confirmation.py",
+      "path": "nm/arrive/account_confirmation_contracts.py",
+      "sha256_before": "a8c0aee0e89a5a9301d70aadc27becf8dc1b6896c2cd1c76eac793515ed80226"
+    },
+    {
+      "old_path": "backend/nm/domain/action.py",
+      "path": "nm/act/action_contracts.py",
+      "sha256_before": "14eb34e481710e3fe3654e068847861a5842b97f995d28a824605bd29282a69b"
+    },
+    {
+      "old_path": "backend/nm/domain/advice.py",
+      "path": "nm/advise/advice_contracts.py",
+      "sha256_before": "adcfd5975379f3f8640881e094393d3341c9f48750081def5a3b90dac0bc295d"
+    },
+    {
+      "old_path": "backend/nm/domain/advice_decision.py",
+      "path": "nm/advise/advice_decision_contracts.py",
+      "sha256_before": "72c74317009ab2ec184ceb6bc85116cb953a3110be14131149fe328f750e28fd"
+    },
+    {
+      "old_path": "backend/nm/domain/advocate.py",
+      "path": "nm/arrive/advocate_contracts.py",
+      "sha256_before": "64bda18a0dd63281dbdafa27d39f1f6ee6625cf8006833fb45fdffd4427c7654"
+    },
+    {
+      "old_path": "backend/nm/domain/advocate_memory.py",
+      "path": "nm/legal_brain/advocate_memory_contracts.py",
+      "sha256_before": "f61a3eb056a035c12bdd1ee0c742691f4cfd1d038a3a33be09780bd1b51cbfcc"
+    },
+    {
+      "old_path": "backend/nm/domain/answer.py",
+      "path": "nm/advise/answer_contracts.py",
+      "sha256_before": "ad7ec1dcbf020c108be1a09b16e716074075af2b28e09d16f7d0fa11e59dc719"
+    },
+    {
+      "old_path": "backend/nm/domain/attempts.py",
+      "path": "nm/arrive/attempts_contracts.py",
+      "sha256_before": "45922d8b36e9add65d80bb924fab5c86596ef9f3b148e3b01163b7610de27f64"
+    },
+    {
+      "old_path": "backend/nm/domain/authority.py",
+      "path": "nm/shared/authority_contracts.py",
+      "sha256_before": "eceb6d5e2adfda36031104a0109f7e4552b13abceb0c1f1836d33443611fc97c"
+    },
+    {
+      "old_path": "backend/nm/domain/binding.py",
+      "path": "nm/open_matter/binding_contracts.py",
+      "sha256_before": "31763d101d00988b25871ff2c926ed2f11231802f3a94888babe557aa892c666"
+    },
+    {
+      "old_path": "backend/nm/domain/brief.py",
+      "path": "nm/advise/brief_contracts.py",
+      "sha256_before": "fed5d0ee47e9c0f7b1985cb329f18367d9aceff71b460eadc813a98440182078"
+    },
+    {
+      "old_path": "backend/nm/domain/budget.py",
+      "path": "nm/shared/budget_contracts.py",
+      "sha256_before": "fa4e4e876ba181338abb3d2d4b5761e072db7b52630fc761a873c3cc852879e4"
+    },
+    {
+      "old_path": "backend/nm/domain/capacity.py",
+      "path": "nm/open_matter/capacity_contracts.py",
+      "sha256_before": "b7888a9030b8e35d7beb0bddef877c8863ee819f4c723c761a45716f42427cc3"
+    },
+    {
+      "old_path": "backend/nm/domain/citation.py",
+      "path": "nm/legal_brain/citation_contracts.py",
+      "sha256_before": "b0f40b97c2bc5bef6480ecfcdc1c407015496e9ffb52f208ab4f3c0b980704a0"
+    },
+    {
+      "old_path": "backend/nm/domain/clock.py",
+      "path": "nm/shared/clock_contracts.py",
+      "sha256_before": "e3e3e1a59acb33bc2ea4aebf569e3ffd8eec957316d557b297681343d850e7fd"
+    },
+    {
+      "old_path": "backend/nm/domain/closure.py",
+      "path": "nm/close/closure_contracts.py",
+      "sha256_before": "ba12cf597df21eef2a8b04fc87c08df153de1442a548967f1d4d35e5e645a521"
+    },
+    {
+      "old_path": "backend/nm/domain/commission.py",
+      "path": "nm/open_matter/commission_contracts.py",
+      "sha256_before": "87bb336c2f02a5dae2cee711324f6f603021309a752d510a308ec17d4e25c488"
+    },
+    {
+      "old_path": "backend/nm/domain/coverage.py",
+      "path": "nm/legal_brain/coverage_contracts.py",
+      "sha256_before": "b8b204f995294c7e7bfcccb1d0456277582297cfc95ceabbd593f23862ffdb8d"
+    },
+    {
+      "old_path": "backend/nm/domain/curation.py",
+      "path": "nm/legal_brain/curation_contracts.py",
+      "sha256_before": "da011fd6f1eb496f09ef66793cce4299c85410fd19c34be087e5a10a503e45bc"
+    },
+    {
+      "old_path": "backend/nm/domain/decision.py",
+      "path": "nm/advise/decision_contracts.py",
+      "sha256_before": "18d0b8d019fbdea4b7855dcc24c6c677571e5a8f4e941b877731d1b797782c97"
+    },
+    {
+      "old_path": "backend/nm/domain/delegation.py",
+      "path": "nm/legal_brain/delegation_contracts.py",
+      "sha256_before": "63e1b56450728f088d7ce408be381f5b4e96ac7e3b9cb001b57a62af0cc872c4"
+    },
+    {
+      "old_path": "backend/nm/domain/deployment.py",
+      "path": "nm/shared/deployment_contracts.py",
+      "sha256_before": "acbd118bdb48afa134d665e50311f658eeff775d7c2f3e226b065cce0ec3019b"
+    },
+    {
+      "old_path": "backend/nm/domain/dictation.py",
+      "path": "nm/open_matter/dictation_contracts.py",
+      "sha256_before": "87e3059594571c5c8fde48a90609c8c0cd2735a992bba77a53998184236028b0"
+    },
+    {
+      "old_path": "backend/nm/domain/drafting.py",
+      "path": "nm/act/drafting_contracts.py",
+      "sha256_before": "957378e4bf5c3f45f19467ff0732e58ccbdf0a0d76b93cade2a6d4361cdb2184"
+    },
+    {
+      "old_path": "backend/nm/domain/egress.py",
+      "path": "nm/shared/egress_contracts.py",
+      "sha256_before": "3708b3022dffdf8aaf8e79458edc1e8fc42774a024cb212c6bbee847a18086d2"
+    },
+    {
+      "old_path": "backend/nm/domain/emergency.py",
+      "path": "nm/open_matter/emergency_contracts.py",
+      "sha256_before": "e6ef7f2e4220b57ed0e56b245a5e68e8ea2c5f9ec497a2bf2c557b735521dc73"
+    },
+    {
+      "old_path": "backend/nm/domain/engagement.py",
+      "path": "nm/open_matter/engagement_contracts.py",
+      "sha256_before": "95b18e382592717298015893aab596103489d504818f5450c1894fb9dde29729"
+    },
+    {
+      "old_path": "backend/nm/domain/event_observation.py",
+      "path": "nm/work_the_file/event_observation_contracts.py",
+      "sha256_before": "10f9ffd2e61f643653d8df6ed0f3a595a4734132babc0041a63973537c867ac2"
+    },
+    {
+      "old_path": "backend/nm/domain/external_ai.py",
+      "path": "nm/shared/external_ai_contracts.py",
+      "sha256_before": "fbd05a89d66b285aa61d8c44753dfe97bce494044bdc2f6f88d3af9285ad02f2"
+    },
+    {
+      "old_path": "backend/nm/domain/fee_calculation.py",
+      "path": "nm/legal_brain/fee_calculation_contracts.py",
+      "sha256_before": "2495234a637cc1298022ef59c8c3bcf87bf6dfd7da44a7d357669006186f3517"
+    },
+    {
+      "old_path": "backend/nm/domain/file_mutation.py",
+      "path": "nm/work_the_file/file_mutation_contracts.py",
+      "sha256_before": "079de59ac7800d3f1dfdd20d69bec441b05f989bbb79453cd6a8e2e4da427b91"
+    },
+    {
+      "old_path": "backend/nm/domain/gates.py",
+      "path": "nm/shared/gates_contracts.py",
+      "sha256_before": "35aa30c5298b80e072c524f49fabd6171cb6a66c87bc3a764a4636aaa72f886b"
+    },
+    {
+      "old_path": "backend/nm/domain/handover.py",
+      "path": "nm/carry/handover_contracts.py",
+      "sha256_before": "9576bc17073f7f84cf6b5626ec451bbe70702249604f7290ff3d8f374421e9ae"
+    },
+    {
+      "old_path": "backend/nm/domain/identity.py",
+      "path": "nm/shared/identity_contracts.py",
+      "sha256_before": "e59123fd2b979265d4ce4d157260c73e95d4d944d66225eff9c9662b57812e50"
+    },
+    {
+      "old_path": "backend/nm/domain/incident.py",
+      "path": "nm/shared/incident_contracts.py",
+      "sha256_before": "00f17f3c0dbfa96489199ddbb46b781420e076aa7fb8e5e8ab9aa74221aff3db"
+    },
+    {
+      "old_path": "backend/nm/domain/intake.py",
+      "path": "nm/open_matter/intake_contracts.py",
+      "sha256_before": "b84facf1cfaec35e110b0b04bce91b10eee45870cb8b856f42798800e8b7c3e9"
+    },
+    {
+      "old_path": "backend/nm/domain/interest_calculation.py",
+      "path": "nm/legal_brain/interest_calculation_contracts.py",
+      "sha256_before": "c2302155bebfba35ebd69b007329d8a35334fa484df6532307fad337ad8595e2"
+    },
+    {
+      "old_path": "backend/nm/domain/issue.py",
+      "path": "nm/legal_brain/issue_contracts.py",
+      "sha256_before": "633c5e9cb07de7906453d8821eaf0ff8e65a73f91c19698dc4bb84192f51a460"
+    },
+    {
+      "old_path": "backend/nm/domain/lead.py",
+      "path": "nm/legal_brain/lead_contracts.py",
+      "sha256_before": "fd90901ce8c9f966215effc98401ca2eb0d1c64d02f327d25c6c345e7af6f3af"
+    },
+    {
+      "old_path": "backend/nm/domain/legal_review.py",
+      "path": "nm/shared/legal_review_contracts.py",
+      "sha256_before": "346a8b123579611dbe3075fdf3472a9a80bd58f508dfbeb6ba3e7e026b167fc0"
+    },
+    {
+      "old_path": "backend/nm/domain/loop.py",
+      "path": "nm/legal_brain/loop_contracts.py",
+      "sha256_before": "906e163d9fe6eddbe727e74024305ef44b510efe2313d8e4547cd668f37541da"
+    },
+    {
+      "old_path": "backend/nm/domain/mail.py",
+      "path": "nm/arrive/mail_contracts.py",
+      "sha256_before": "bc9f407a1c5de3c517d2aecef58c2c452c3740fba3e45327eacbaf49d0c4fc15"
+    },
+    {
+      "old_path": "backend/nm/domain/matter.py",
+      "path": "nm/work_the_file/matter_contracts.py",
+      "sha256_before": "d59133912ec691cb25cdcef3bf43100a941adf9db0c69a50665df465bfa14baf"
+    },
+    {
+      "old_path": "backend/nm/domain/media.py",
+      "path": "nm/open_matter/media_contracts.py",
+      "sha256_before": "f47051b2aa8005888c9cf83577133bf53486757b4623b5df80ee6c10c2f4d4cf"
+    },
+    {
+      "old_path": "backend/nm/domain/media_policy.py",
+      "path": "nm/open_matter/media_policy_contracts.py",
+      "sha256_before": "f51fe459876490af2b2a885ca1000eb36c2b9f63173914f94118515832d8e680"
+    },
+    {
+      "old_path": "backend/nm/domain/metrics.py",
+      "path": "nm/shared/metrics_contracts.py",
+      "sha256_before": "4ddbe1d88377cd5c71e2c46841a651c9aa4c69e7c55589fc1150911ada22505c"
+    },
+    {
+      "old_path": "backend/nm/domain/names.py",
+      "path": "nm/shared/names_contracts.py",
+      "sha256_before": "5c5580b6ebbd4a1a454620f610963713fa5f0208b7836dddc9b49fe2927d76ad"
+    },
+    {
+      "old_path": "backend/nm/domain/opening.py",
+      "path": "nm/open_matter/opening_contracts.py",
+      "sha256_before": "209ee3ac9526b096ce03e76ae9219e16dd7aeb8020d0482071fd0f8569890ee7"
+    },
+    {
+      "old_path": "backend/nm/domain/operation.py",
+      "path": "nm/shared/operation_contracts.py",
+      "sha256_before": "52e97061c792548a63be3fe11aa08d9b4f4ba7e7fefd5f9b09aa1626c9907b22"
+    },
+    {
+      "old_path": "backend/nm/domain/options.py",
+      "path": "nm/advise/options_contracts.py",
+      "sha256_before": "809a1e5fe8e3b06836236d1269f1788f48138de3768d121653d9135454fbc3ff"
+    },
+    {
+      "old_path": "backend/nm/domain/professional_access.py",
+      "path": "nm/arrive/professional_access_contracts.py",
+      "sha256_before": "8370017bc70a2582ea2e9027900e2f7fa3167727a0054cec8e3f803aea5e835d"
+    },
+    {
+      "old_path": "backend/nm/domain/proof.py",
+      "path": "nm/legal_brain/proof_contracts.py",
+      "sha256_before": "39386b1fd864f6909d4184f5aedf60874cda210cd3af384412f2ac38762baa61"
+    },
+    {
+      "old_path": "backend/nm/domain/quotable.py",
+      "path": "nm/legal_brain/quotable_contracts.py",
+      "sha256_before": "986c50d33cb34c713eb88719708729e7b833d5c4098623dcb1451ab0661dc3dc"
+    },
+    {
+      "old_path": "backend/nm/domain/reads.py",
+      "path": "nm/legal_brain/reads_contracts.py",
+      "sha256_before": "aedf7afb33d937d0ce4d31eadc01f0e82ae72a8af9281fb8baf9b795966b1f60"
+    },
+    {
+      "old_path": "backend/nm/domain/register.py",
+      "path": "nm/legal_brain/register_contracts.py",
+      "sha256_before": "4fd239de700dc17280fd7a36095c628e961b3b94ac4300708fca364bf704ea6a"
+    },
+    {
+      "old_path": "backend/nm/domain/release.py",
+      "path": "nm/shared/release_contracts.py",
+      "sha256_before": "2bf418c17653529cc6bb3d069ba435d98ae141140f444882b1a9456ba97bd083"
+    },
+    {
+      "old_path": "backend/nm/domain/replay_capture.py",
+      "path": "nm/legal_brain/replay_capture_contracts.py",
+      "sha256_before": "c5cafe51d14ba0525dad9890ed716e9dfb21b939fb7c41a6abf1cc161a09da48"
+    },
+    {
+      "old_path": "backend/nm/domain/requirements.py",
+      "path": "nm/legal_brain/requirements_contracts.py",
+      "sha256_before": "88cb868b17c4eb409212d65b53314e464f2f9c252370eeba566b9abb95994a4f"
+    },
+    {
+      "old_path": "backend/nm/domain/reservation.py",
+      "path": "nm/advise/reservation_contracts.py",
+      "sha256_before": "9871fbae966c85612f8936991a84f7cd1960fa702a7dc3c22679b52e0470c96a"
+    },
+    {
+      "old_path": "backend/nm/domain/restore.py",
+      "path": "nm/shared/restore_contracts.py",
+      "sha256_before": "71ace01af7c6234552796b820b7cd6f28de1fee8538b6e6cf5211db961f38605"
+    },
+    {
+      "old_path": "backend/nm/domain/retention.py",
+      "path": "nm/close/retention_contracts.py",
+      "sha256_before": "f365bfde07da6e4c90e25025938df44eb333a24bcd5f50b764deb6bc77a02367"
+    },
+    {
+      "old_path": "backend/nm/domain/review.py",
+      "path": "nm/shared/review_contracts.py",
+      "sha256_before": "50ceb635937e25cad9cacfcc44237c6e771beb156936f492b466c5e02427d09a"
+    },
+    {
+      "old_path": "backend/nm/domain/service.py",
+      "path": "nm/carry/service_contracts.py",
+      "sha256_before": "607e0b32ed8905c51bd5b9c8770c0637314fc6cc4adcc2e5d0edd73e7e4dbf98"
+    },
+    {
+      "old_path": "backend/nm/domain/source_excerpt.py",
+      "path": "nm/legal_brain/source_excerpt_contracts.py",
+      "sha256_before": "c98ba4382999fd39b57af6472e1786b3b396a32794464637c9928d37a093c224"
+    },
+    {
+      "old_path": "backend/nm/domain/spoken.py",
+      "path": "nm/shared/spoken_contracts.py",
+      "sha256_before": "e806825f473dfedd1dcb4f2df48d73373bfbfe5cd593cb8253452421df1780f5"
+    },
+    {
+      "old_path": "backend/nm/domain/summary.py",
+      "path": "nm/work_the_file/summary_contracts.py",
+      "sha256_before": "ac517a85bb75231fbbfc912768a649df96425afb43a9a4bc1d3aa8b622555b49"
+    },
+    {
+      "old_path": "backend/nm/domain/text.py",
+      "path": "nm/shared/text_contracts.py",
+      "sha256_before": "59a84560c3ad97bca96de232f6bf62571897ada47a4c005ff55bfc75bfd32196"
+    },
+    {
+      "old_path": "backend/nm/domain/tiers.py",
+      "path": "nm/legal_brain/tiers_contracts.py",
+      "sha256_before": "af9c72192c0268061ed268358f6888cd45bffb1109211b44840a8c0c6b67ca40"
+    },
+    {
+      "old_path": "backend/nm/domain/traceability.py",
+      "path": "nm/shared/traceability_contracts.py",
+      "sha256_before": "70ecd1179d083a285edfc7f6fa04dd0cc5bbc885da9b3fd4bf850ca3b59d57f0"
+    },
+    {
+      "old_path": "backend/nm/domain/turn_receipt.py",
+      "path": "nm/advise/turn_receipt_contracts.py",
+      "sha256_before": "c70ee9b0570cef7fa0b6a3259366d1d01548804b3708aa4f41b2dd1317ce9024"
+    },
+    {
+      "old_path": "backend/nm/domain/urgency.py",
+      "path": "nm/work_the_file/urgency_contracts.py",
+      "sha256_before": "fd980227a7ded0b21e36f18018520304679835bdbef983f27c7264cf738e18e8"
+    },
+    {
+      "old_path": "backend/nm/domain/witness.py",
+      "path": "nm/act/witness_contracts.py",
+      "sha256_before": "5fcf81da0251e00bd9bc61237dfe7a7fecaab78f62bce5636bf5e7eb26c49a31"
+    },
+    {
+      "old_path": "backend/nm/domain/working_record.py",
+      "path": "nm/legal_brain/working_record_contracts.py",
+      "sha256_before": "0eb821c83b9a8635f68f447b055c000664c99f53ba7a15fa50e79c1c60afc393"
+    },
+    {
+      "old_path": "backend/nm/edge/advocate_memory_routes.py",
+      "path": "nm/legal_brain/advocate_memory_routes_api.py",
+      "sha256_before": "4a18915a0e4d70077bd8046014b7f5a22d1c498f5e38d1bec12360537f30e903"
+    },
+    {
+      "old_path": "backend/nm/edge/api.py",
+      "path": "nm/app/api.py",
+      "sha256_before": "0b245128c96c481373ce2de36ea97ce286764992e7c663253ce40a10f6054789"
+    },
+    {
+      "old_path": "backend/nm/edge/brain_preview.py",
+      "path": "nm/legal_brain/brain_preview_api.py",
+      "sha256_before": "ebeb20e3252ebc3644be7c279f386d346bd3d5581780fcc4e19da630bf855eea"
+    },
+    {
+      "old_path": "backend/nm/edge/document_reading.py",
+      "path": "nm/open_matter/document_reading_api.py",
+      "sha256_before": "cb016e08dd69d53c2d0221dae2de7390614dcc0a34830ef0fcfa0243408ce92e"
+    },
+    {
+      "old_path": "backend/nm/edge/documents.py",
+      "path": "nm/open_matter/documents_api.py",
+      "sha256_before": "2f3e0a6147c86d1938f2e26eed37ed3a7dcce0ea0943b62262d40f27562b175b"
+    },
+    {
+      "old_path": "backend/nm/edge/loop_progress.py",
+      "path": "nm/legal_brain/loop_progress_api.py",
+      "sha256_before": "18ed36123b76ade68801886fff1fad18a494397048af37a3b8c6ec20b857701a"
+    },
+    {
+      "old_path": "backend/nm/edge/original_documents.py",
+      "path": "nm/work_the_file/original_documents_api.py",
+      "sha256_before": "5cb6777b6248789890344a6fcc73498dbd84314609ffd26f20d96a22414f68b7"
+    },
+    {
+      "old_path": "backend/nm/edge/preview_seen.py",
+      "path": "nm/legal_brain/preview_seen_api.py",
+      "sha256_before": "7766711d3a9aa28e241a35a66bfc456b615b5285be9b7574be7c8f7589243af9"
+    },
+    {
+      "old_path": "backend/nm/edge/projections.py",
+      "path": "nm/work_the_file/projections_api.py",
+      "sha256_before": "c6f42f2cace05d594a773ffb62716a00f0571124634969a7807f6cbc4b5c251e"
+    },
+    {
+      "old_path": "backend/nm/edge/reviewed_preview.py",
+      "path": "nm/legal_brain/reviewed_preview_api.py",
+      "sha256_before": "69c07512466470d188ed349df5ff27339582605955c4a367c044e90748d8975e"
+    },
+    {
+      "old_path": "backend/nm/edge/transcripts.py",
+      "path": "nm/open_matter/transcripts_api.py",
+      "sha256_before": "343a9dd249d9ab1c40ea437950912f3628db37b20ec52fd8c8f99af35b0757ea"
+    },
+    {
+      "old_path": "backend/nm/edge/uploads.py",
+      "path": "nm/open_matter/uploads_api.py",
+      "sha256_before": "c3221a216f8fe1a09758af6529bcb19b8ea7fd58805d91f4f1562562688a8231"
+    },
+    {
+      "old_path": "backend/nm/knowledge/acquisition.py",
+      "path": "nm/legal_brain/acquisition_sources.py",
+      "sha256_before": "428dc95e25579054b48377cf4aed09509f993f4b010c03fae73dd68256d638da"
+    },
+    {
+      "old_path": "backend/nm/knowledge/artefact.py",
+      "path": "nm/legal_brain/artefact_sources.py",
+      "sha256_before": "5c8dc9e8112350c5e5085a5a712db95d87499c4434c592084e2835d62d6c0986"
+    },
+    {
+      "old_path": "backend/nm/knowledge/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_sources.py",
+      "sha256_before": "c2da56869710b4f276d0209dd9442fb26143d6c7212da1ae74c408756dab3519"
+    },
+    {
+      "old_path": "backend/nm/knowledge/citator.py",
+      "path": "nm/legal_brain/citator_sources.py",
+      "sha256_before": "4e6c94f4bcde5bc0aeefe722fd22fc0260433d6637e70865a27e959ed838779d"
+    },
+    {
+      "old_path": "backend/nm/knowledge/coverage.py",
+      "path": "nm/legal_brain/coverage_sources.py",
+      "sha256_before": "833206af2cbb44e3ce5c69f22740e9df36c94f58741c56d9f07cbd1683f190c7"
+    },
+    {
+      "old_path": "backend/nm/knowledge/elements.py",
+      "path": "nm/legal_brain/elements_sources.py",
+      "sha256_before": "2188e2b322d1f99aa0534fc9ea7cf0c0a6a15216a48026c3e012301945fc1921"
+    },
+    {
+      "old_path": "backend/nm/knowledge/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_sources.py",
+      "sha256_before": "6aadfc2cb04e029ce12a4e3f487f5e6ee0494c3e783d4ae85f1d09f8a8a0be0e"
+    },
+    {
+      "old_path": "backend/nm/knowledge/governing_law.py",
+      "path": "nm/legal_brain/governing_law_sources.py",
+      "sha256_before": "6e9b4c23080e87afd06d6358599a5be6626c6716fc279724cb6e6fad77760708"
+    },
+    {
+      "old_path": "backend/nm/knowledge/identity.py",
+      "path": "nm/legal_brain/identity_sources.py",
+      "sha256_before": "88b16c7a8744f76f0f9547d4a2594886e612e389c812297097759408be8b68b5"
+    },
+    {
+      "old_path": "backend/nm/knowledge/institution.py",
+      "path": "nm/legal_brain/institution_sources.py",
+      "sha256_before": "fc5652ef98e27c56dd8edef1b60c361870339b8ff3a9200b321c0549a6f40192"
+    },
+    {
+      "old_path": "backend/nm/knowledge/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_sources.py",
+      "sha256_before": "f8ef726339fb25b3b25f86048924f3c0312740843c197605dee5eaf3d4f4f38a"
+    },
+    {
+      "old_path": "backend/nm/knowledge/jurisdiction.py",
+      "path": "nm/legal_brain/jurisdiction_sources.py",
+      "sha256_before": "931ab6711b76f0f94075036f8ca706a3e6e2352e16eed91cbeec2b76b242a1ba"
+    },
+    {
+      "old_path": "backend/nm/knowledge/manifest.py",
+      "path": "nm/legal_brain/manifest_sources.py",
+      "sha256_before": "d3eb2458c5c1f11a6308a2cf7c0370e804564d7ac5b23748bb7d7c227ae09c16"
+    },
+    {
+      "old_path": "backend/nm/knowledge/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_sources.py",
+      "sha256_before": "3fb342797d3ea121e455ad7001fbb21247f544d599712fa7c5600c9f7f4506d0"
+    },
+    {
+      "old_path": "backend/nm/knowledge/provenance.py",
+      "path": "nm/legal_brain/provenance_sources.py",
+      "sha256_before": "3e7a278c7e967d0a5fc145ca01177255cf4613de8f0f2928c670141ca6c40779"
+    },
+    {
+      "old_path": "backend/nm/knowledge/provision_revision.py",
+      "path": "nm/legal_brain/provision_revision_sources.py",
+      "sha256_before": "a183ee7889128ce11ab13a55064f2b5b7725b9ab397a2dd33a818741ed7c2d4e"
+    },
+    {
+      "old_path": "backend/nm/knowledge/resolution.py",
+      "path": "nm/legal_brain/resolution_sources.py",
+      "sha256_before": "af950b291e68853b30037fc27820d737771c137e32f07f9601bc81be57aa154d"
+    },
+    {
+      "old_path": "backend/nm/knowledge/source_registry.py",
+      "path": "nm/legal_brain/source_registry_sources.py",
+      "sha256_before": "3977f61c699d93ee294dfaef021c52274962d4628aa689263257b047f5a7faa4"
+    },
+    {
+      "old_path": "backend/nm/ports/authority_weight.py",
+      "path": "nm/legal_brain/authority_weight_port.py",
+      "sha256_before": "48ee36a694fa20f0a4397dceb61138582f5e607fbed0d13593e501a993f6f48b"
+    },
+    {
+      "old_path": "backend/nm/ports/coverage.py",
+      "path": "nm/legal_brain/coverage_port.py",
+      "sha256_before": "90f777b69484613cf1615b3fadbed7f59c0888aa8c2e34e05b1013997a9e0b2d"
+    },
+    {
+      "old_path": "backend/nm/ports/directory.py",
+      "path": "nm/arrive/directory_port.py",
+      "sha256_before": "4ba6fb2645d7d9eea37441aa5dbf281b71fc7bd9b77a5cbd754c30b1415b3043"
+    },
+    {
+      "old_path": "backend/nm/ports/document_text.py",
+      "path": "nm/open_matter/document_text_port.py",
+      "sha256_before": "593150e5d150e98d6ee40501011e0d69a27668164f8b19791dcabb2ca7c8c0b6"
+    },
+    {
+      "old_path": "backend/nm/ports/elements.py",
+      "path": "nm/legal_brain/elements_port.py",
+      "sha256_before": "e0d09b93189a689b2848c138797875ffc35c35eab8af90815a30e10400be1f85"
+    },
+    {
+      "old_path": "backend/nm/ports/evidence.py",
+      "path": "nm/legal_brain/evidence_port.py",
+      "sha256_before": "68492891e75566724098c9c718e97d36fb507594566cb6cd7dd94a4786d99c42"
+    },
+    {
+      "old_path": "backend/nm/ports/filing_requirement.py",
+      "path": "nm/legal_brain/filing_requirement_port.py",
+      "sha256_before": "ef1cddc738460d46c673f9754c1a163551785a339d0402ec766c9c1b151d81d6"
+    },
+    {
+      "old_path": "backend/nm/ports/generations.py",
+      "path": "nm/legal_brain/generations_port.py",
+      "sha256_before": "352b2aecc182d2f5535b5c112dcfa0eb4c32844a4127c5d44f3d935a6f65e608"
+    },
+    {
+      "old_path": "backend/nm/ports/governing_law.py",
+      "path": "nm/legal_brain/governing_law_port.py",
+      "sha256_before": "d82f6d95a3353f1fb44cadc63fb30895d5728abea97d8225d1e7d1937c1c2a79"
+    },
+    {
+      "old_path": "backend/nm/ports/institution.py",
+      "path": "nm/legal_brain/institution_port.py",
+      "sha256_before": "71169a2598919250ab6e5cbed7d6b6ae81a43ae52c09063dff499959cfac69da"
+    },
+    {
+      "old_path": "backend/nm/ports/interim_relief.py",
+      "path": "nm/legal_brain/interim_relief_port.py",
+      "sha256_before": "527bb7645c0f7e7d644e419c8450d936d67b93da82a31ef797fabef1611d9e0f"
+    },
+    {
+      "old_path": "backend/nm/ports/loop_log.py",
+      "path": "nm/legal_brain/loop_log_port.py",
+      "sha256_before": "9a59dd75c64f4ec8d80de0752a231bfd3988685c4141b5f0b350cafa25594de6"
+    },
+    {
+      "old_path": "backend/nm/ports/mail.py",
+      "path": "nm/arrive/mail_port.py",
+      "sha256_before": "5b1f8ea1ccfa295ae4b70da3ccbcd82eb7a43d3168bd20c5c69bd1a7df3623c9"
+    },
+    {
+      "old_path": "backend/nm/ports/matter_documents.py",
+      "path": "nm/open_matter/matter_documents_port.py",
+      "sha256_before": "42e772688e8a4cb2d365cbbcc94066db3cab8ce10519f3c75b9bdf9adba8b1d0"
+    },
+    {
+      "old_path": "backend/nm/ports/model.py",
+      "path": "nm/shared/model_port.py",
+      "sha256_before": "12a8cbef88282eef6aa0f5e5790028fc970969ded39afd09e76b8ad2cce3e0a4"
+    },
+    {
+      "old_path": "backend/nm/ports/practice_playbooks.py",
+      "path": "nm/legal_brain/practice_playbooks_port.py",
+      "sha256_before": "aa58edcc592f1600986a4247c9ffb7224e8fae4a0ca1b30f7b8e5e1826526bb1"
+    },
+    {
+      "old_path": "backend/nm/ports/principles.py",
+      "path": "nm/legal_brain/principles_port.py",
+      "sha256_before": "e39976a5bb6054b1da797b9f511b4d98ed07bfd9092eff271238c84d2a731c69"
+    },
+    {
+      "old_path": "backend/nm/ports/procedural_period.py",
+      "path": "nm/legal_brain/procedural_period_port.py",
+      "sha256_before": "5417bd314741bf3ad5b7f96e2e155a4ef8e4e803c2712304e86cf0956d138c4a"
+    },
+    {
+      "old_path": "backend/nm/ports/search.py",
+      "path": "nm/legal_brain/search_port.py",
+      "sha256_before": "5167e4ede5d03114eaebbe617effe1d87db4e6c5acae506dd210505651dc0725"
+    },
+    {
+      "old_path": "backend/nm/ports/storage_errors.py",
+      "path": "nm/shared/storage_errors_port.py",
+      "sha256_before": "45d4dc27d3c0fff60f2ac33052a47e379ecc7da140e3d06a95b82072b103176c"
+    },
+    {
+      "old_path": "backend/nm/ports/store.py",
+      "path": "nm/shared/store_port.py",
+      "sha256_before": "3b9b4e7ba2f1b415cbd28c4b1631998afe0b4dad175990f3ffa087b942fa716b"
+    },
+    {
+      "old_path": "backend/nm/ports/transactional.py",
+      "path": "nm/shared/transactional_port.py",
+      "sha256_before": "61a70326d7655e216043db5719fad5838a909e2be2ba021d38d471098e7d694d"
+    },
+    {
+      "old_path": "backend/nm/ports/transcription.py",
+      "path": "nm/open_matter/transcription_port.py",
+      "sha256_before": "1b90a2d997366646edd84ad87ed640e16df90ef8323b5d4b0c746fa7f8346f74"
+    },
+    {
+      "old_path": "backend/nm/ports/upload.py",
+      "path": "nm/open_matter/upload_port.py",
+      "sha256_before": "ad99f48749061bc2532bd10bc2057f26f607908984a1d9e70fc0b39e846bb9c8"
+    },
+    {
+      "old_path": "frontend/app.css",
+      "path": "nm/app/app.css",
+      "sha256_before": "13e339ba62031fab849071ca911f50fbc4cfd0a7823e2862a18eb6a292562fa7"
+    },
+    {
+      "old_path": "frontend/app.js",
+      "path": "nm/app/app.js",
+      "sha256_before": "9c24ebd3f181cab95cb55739a334b104ca6fa1a6c009bb3108a5b0dcc17168db"
+    },
+    {
+      "old_path": "frontend/index.html",
+      "path": "nm/app/index.html",
+      "sha256_before": "7b46702f5671dc93bcf35484e8744d0ee4033dd15a2098572dcfa0ca48873577"
+    },
+    {
+      "old_path": "frontend/brain-preview.html",
+      "path": "nm/legal_brain/brain-preview.html",
+      "sha256_before": "93301673be5b44dc627b91b469e213666171635cbe2bdf930d77df842aa23cd5"
+    },
+    {
+      "old_path": "frontend/brain-preview.js",
+      "path": "nm/legal_brain/brain-preview.js",
+      "sha256_before": "37cb36ef2e526a5d497d4adb5c682479b7f1d5828d4565f7067fd315c01c7195"
+    },
+    {
+      "old_path": "frontend/source-reader.js",
+      "path": "nm/legal_brain/source-reader.js",
+      "sha256_before": "c908daecda1746467d3617e4f1657b50372cfa9efb5b3f7433af8df93111daff"
+    },
+    {
+      "old_path": "frontend/loop-progress.js",
+      "path": "nm/legal_brain/loop-progress.js",
+      "sha256_before": "4f3af7aa9f577a2c98d13ebfdb158869a2a71e8db45283f210c30e81ce08a625"
+    },
+    {
+      "old_path": "frontend/matter-workspace.css",
+      "path": "nm/legal_brain/matter-workspace.css",
+      "sha256_before": "6b90594e858c3d8cc8e70413393878ed918c319b5c0df82cb68c9c47881105bf"
+    },
+    {
+      "old_path": "frontend/matter-workspace.js",
+      "path": "nm/legal_brain/matter-workspace.js",
+      "sha256_before": "6edf92f3bfd79930e5d1936fe4f52a485ed3dd68d18dacab16e81bd8768b0a4c"
+    },
+    {
+      "old_path": "frontend/advocate-preferences.js",
+      "path": "nm/legal_brain/advocate-preferences.js",
+      "sha256_before": "9fea79b82feb2caf30cf8fe985cd37cf904af73b7ce8c334a3152755450d5f46"
+    },
+    {
+      "old_path": "frontend/draft-vault.js",
+      "path": "nm/arrive/draft-vault.js",
+      "sha256_before": "5e2ee6b91749340cd04104792674c32c9a31ece65e3eb77130dc0132c6157180"
+    },
+    {
+      "old_path": "frontend/dictation-worklet.js",
+      "path": "nm/open_matter/dictation-worklet.js",
+      "sha256_before": "8e9c4addc8ef8e7bd40b27340bf7e7f1dfa48e132b5ffc4c8f8c52c86b4b7ac3"
+    },
+    {
+      "old_path": "frontend/intake-materials.css",
+      "path": "nm/open_matter/intake-materials.css",
+      "sha256_before": "ab505169288c84a0bbae251a8ee2d6757008245c4a642953e9c3c1b7f03fd563"
+    },
+    {
+      "old_path": "frontend/intake-materials.js",
+      "path": "nm/open_matter/intake-materials.js",
+      "sha256_before": "e0174d3f5cdadbbe689ae5af49400cddbad4f53ff6acff9d056bdf9a96f0f1ac"
+    },
+    {
+      "old_path": "backend/operations/enrol.py",
+      "path": "operations/enrol.py",
+      "sha256_before": "28d3182571b8d99db4f4ccbfa7ed067f2d62826ed7d978bdd018d8ad61168115"
+    },
+    {
+      "old_path": "backend/operations/invite.py",
+      "path": "operations/invite.py",
+      "sha256_before": "5b466a864bad0b559b04dc6f2e93f7fd5234237d544eef7f6036df5e135ce2b2"
+    },
+    {
+      "old_path": "backend/operations/migrate_store.py",
+      "path": "operations/migrate_store.py",
+      "sha256_before": "f4b8363eecfccf173be8dd46714d5c6321915c8b982784c63f7b385aee87e50a"
+    },
+    {
+      "old_path": "backend/operations/outbox.py",
+      "path": "operations/outbox.py",
+      "sha256_before": "5dfbf659377b530cdfe5b4bb79f91011197f51207ab54ca90ca9c96b9093b42a"
+    },
+    {
+      "old_path": "backend/operations/professional_approval.py",
+      "path": "operations/professional_approval.py",
+      "sha256_before": "aaed638f03b33ca3c9e5ead65841e598ea6ca56080168962007c00f850a732a1"
+    },
+    {
+      "old_path": "backend/operations/rekey_matter_store.py",
+      "path": "operations/rekey_matter_store.py",
+      "sha256_before": "78f3e06020b5261faddd7ec0719ef1520256dac494329487b8fc552790401b8e"
+    },
+    {
+      "old_path": "pipeline/acquisition/build_eval_frame.py",
+      "path": "pipeline/build_eval_frame.py",
+      "sha256_before": "a818f8dc75b3eae371e00b837be069acaa1dbaf8dba473e43ae8437219196f54"
+    },
+    {
+      "old_path": "pipeline/acquisition/fetch_judgments.py",
+      "path": "pipeline/fetch_judgments.py",
+      "sha256_before": "4f2bebba5c287556c2fba733511e862e1a1f438f440f35d0fdd8a4521d034b1b"
+    },
+    {
+      "old_path": "pipeline/acquisition/inventory_legal_sources.py",
+      "path": "pipeline/inventory_legal_sources.py",
+      "sha256_before": "7a2f1daab0304cd5e185ccd16bf27e7a99b58b32a5b87422939889994ddbb9ad"
+    },
+    {
+      "old_path": "pipeline/acquisition/label_eval_documents.py",
+      "path": "pipeline/label_eval_documents.py",
+      "sha256_before": "be73496d06559ee3107f8d294c3ea6821c70022bf1cf356308cce606bde3d879"
+    },
+    {
+      "old_path": "pipeline/acquisition/reconcile_acquisition.py",
+      "path": "pipeline/reconcile_acquisition.py",
+      "sha256_before": "f9f7668d419e9ff0acd02935c8bfaa6d0ff572feb24c60ab1bc92e207f3c16e3"
+    },
+    {
+      "old_path": "pipeline/acquisition/scrape_judgments.py",
+      "path": "pipeline/scrape_judgments.py",
+      "sha256_before": "2273609b11fe6b58fe06195886378b4ea69ff5eec8efe0d12d4741c55229095d"
+    },
+    {
+      "old_path": "pipeline/indexing/build_authority_index.py",
+      "path": "pipeline/build_authority_index.py",
+      "sha256_before": "9d344ec7fadc7a13029f82cf4a184007803618c0dcedab4e6a13106316169cd9"
+    },
+    {
+      "old_path": "pipeline/indexing/build_identity_index.py",
+      "path": "pipeline/build_identity_index.py",
+      "sha256_before": "39f0ff991bf47b6ec83b65f6555bb18a4e2f966d13d7712b27c8b7bd4d535e85"
+    },
+    {
+      "old_path": "pipeline/indexing/classify_paragraphs.py",
+      "path": "pipeline/classify_paragraphs.py",
+      "sha256_before": "191bf8ea9ab76195f805930bec555ad4bf335fe332452aaba46041bad4bb962d"
+    },
+    {
+      "old_path": "pipeline/quality/audit_labels.py",
+      "path": "pipeline/audit_labels.py",
+      "sha256_before": "3d24d1b7cd086a8589272793943abbfc8d634436ee8bbbae6691281c51f4c53d"
+    },
+    {
+      "old_path": "pipeline/quality/measure.py",
+      "path": "pipeline/measure.py",
+      "sha256_before": "3504b7ffc96f704a61c04234648761a507d8242c17a7d1a96398fd439915bd2f"
+    },
+    {
+      "old_path": "pipeline/quality/probe_gaps.py",
+      "path": "pipeline/probe_gaps.py",
+      "sha256_before": "d18d821285e61fa485e84c5715c2f1a84f13a5722b87e9e5ef1d45cc7b8a68c8"
+    },
+    {
+      "old_path": "pipeline/quality/read_stability.py",
+      "path": "pipeline/read_stability.py",
+      "sha256_before": "eb987d85d1fffce385c847da565bdd97795b8ccbd3f81c0d682b4c0a57420042"
+    },
+    {
+      "old_path": "pipeline/quality/recall.py",
+      "path": "pipeline/recall.py",
+      "sha256_before": "11374d313a151966a72e848b288117e40ccb12913437b8da77f9cb3f074a7120"
+    },
+    {
+      "old_path": "pipeline/quality/releasegate.py",
+      "path": "pipeline/releasegate.py",
+      "sha256_before": "9961234c57053ad936a1fbb3b2e55455e070fded129127384a2dc2c41a90af28"
+    },
+    {
+      "old_path": "pipeline/quality/verify_set.py",
+      "path": "pipeline/verify_set.py",
+      "sha256_before": "3bb80053156ea1b9bd1a6394c40bce3c4c48b64ef0f8b5062882cafe2b1ff589"
+    }
+  ],
+  "package_notes": [
+    {
+      "old_path": "backend/nm/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/documents/__init__.py",
+      "body": "\"\"\"Bounded, local document readers. They do not clear quarantine or establish facts.\"\"\"\n",
+      "sha256_before": "f9949949b651117c5c12e0b29d8d7acccccc18b7d2476a5992bde3b23a83f07c"
+    },
+    {
+      "old_path": "backend/nm/adapters/evidence/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/knowledge/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/mail/__init__.py",
+      "body": "\"\"\"Account mail adapters. Implementation Plan F-A-03.\"\"\"\n",
+      "sha256_before": "c5e1692679b0cd5d07cd95b64d538faebd2eea91fa6b7a0d2d09c56abd807d0c"
+    },
+    {
+      "old_path": "backend/nm/adapters/model/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/search/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/adapters/speech/__init__.py",
+      "body": "\"\"\"Speech adapters. Implementation Plan F-C-02.\"\"\"\n",
+      "sha256_before": "a45e3abdf909bec580cea811b40a87734bdec0f47ace07f16f769bd59d7d2446"
+    },
+    {
+      "old_path": "backend/nm/adapters/store/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/bootstrap/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/core/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/domain/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/drafting/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/edge/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/infrastructure/__init__.py",
+      "body": "\"\"\"Restricted local infrastructure shared by concrete I/O implementations.\"\"\"\n",
+      "sha256_before": "45856bb8cbb15ae54b181442b07a447fb437fa9aa6b8daf7ed38b1d7e8887495"
+    },
+    {
+      "old_path": "backend/nm/knowledge/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/obs/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "old_path": "backend/nm/ports/__init__.py",
+      "body": "",
+      "sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

@@ -7,13 +7,14 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from nm.adapters.store.documents import SealedDocumentStore
-from nm.adapters.store.envelope import KeyUnavailable
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.postgres import PostgresMatterStore
-from nm.adapters.store.uploads import SealedUploadStore
-from nm.domain.matter import Matter
-from nm.ports.store import StaleWrite
+
+from nm.shared.store_documents import SealedDocumentStore
+from nm.shared.store_envelope import KeyUnavailable
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_port import StaleWrite
+from nm.shared.store_postgres import PostgresMatterStore
+from nm.shared.store_uploads import SealedUploadStore
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 
@@ -187,7 +188,7 @@ def test_postgres_provisional_creation_rolls_back_if_sealing_refuses(tmp_path, m
 
 def test_every_product_sealing_writer_declares_its_creation_authority():
     """Enumerate the entire backend so a fifth sibling cannot hide."""
-    backend = Path(__file__).resolve().parents[1] / "backend" / "nm"
+    backend = Path(__file__).resolve().parents[1] / "nm"
     calls = {}
     for path in backend.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8-sig"))
@@ -200,8 +201,8 @@ def test_every_product_sealing_writer_declares_its_creation_authority():
             assert len(declared) == 1, (relative, node.lineno, "implicit key creation")
             calls.setdefault(relative, []).append(ast.unparse(declared[0]))
     assert calls == {
-        "adapters/store/file_store.py": ["create_key"],
-        "adapters/store/postgres.py": ["expected_version == 0"],
-        "adapters/store/uploads.py": ["False"],
-        "adapters/store/documents.py": ["False"],
+        "shared/store_file_store.py": ["create_key"],
+        "shared/store_postgres.py": ["expected_version == 0"],
+        "shared/store_uploads.py": ["False"],
+        "shared/store_documents.py": ["False"],
     }, "a changed sealing population needs an explicit custody review"

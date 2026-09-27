@@ -29,9 +29,10 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from nm.adapters.search.authority import AuthorityIndexSearch
-from nm.ports.evidence import SourceDocument
-from nm.ports.search import CaseExpansion, Coverage
+
+from nm.legal_brain.evidence_port import SourceDocument
+from nm.legal_brain.search_authority import AuthorityIndexSearch
+from nm.legal_brain.search_port import CaseExpansion, Coverage
 
 pytestmark = pytest.mark.class_a
 
@@ -130,12 +131,12 @@ def test_a_window_cannot_claim_more_than_the_document():
 # ====================================== the order, product-wide ====
 
 def test_no_reader_orders_a_source_by_a_string_key():
-    """THE POPULATION IS EVERY SQL STRING IN backend/nm. Paragraphs and
+    """THE POPULATION IS EVERY SQL STRING IN nm. Paragraphs and
     provisions have a stored order (`rowid`, `pos`); a locator, chunk id or
     section number sorts as text, and text puts 1001 before 101."""
     string_keys = re.compile(r"order\s+by\s+[^;\"']*\b(chunk_id|locator|section_number)\b", re.I)
     offenders = []
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Constant) and isinstance(node.value, str) \
                     and string_keys.search(node.value):

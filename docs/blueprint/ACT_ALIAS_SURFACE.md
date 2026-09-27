@@ -2,7 +2,7 @@
 
 **Status:** specified, not built. Needs a `BK-` registration before implementation
 (§9). Measured 20 September 2026 against the 1,000-document evaluation set drawn
-by `pipeline/acquisition/build_eval_frame.py`.
+by `pipeline/build_eval_frame.py`.
 
 ---
 

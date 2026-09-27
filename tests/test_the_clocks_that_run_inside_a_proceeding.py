@@ -25,12 +25,12 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core import deadlines
-from nm.core.turn import TurnInput
-from nm.domain.matter import Role
-from nm.knowledge import procedural_period as curated
-from nm.ports.procedural_period import Bindingness, Extension, Track
 
+from nm.legal_brain import procedural_period_sources as curated
+from nm.legal_brain.procedural_period_port import Bindingness, Extension, Track
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file import deadlines
+from nm.work_the_file.matter_contracts import Role
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

@@ -7,7 +7,7 @@ before the first switch.
 
 ONE OWNER FOR EACH PART. The thresholds are now rows RG-30 to RG-38 of
 assurance/specification/release.yaml, where release.yaml says a threshold
-lives, scored by pipeline/quality/releasegate.py (NOT MEASURED until the
+lives, scored by pipeline/releasegate.py (NOT MEASURED until the
 held-out populations are graded). Writing them into the sheet as well would be
 the rule-in-two-places shape CLAUDE.md refuses, so LB-40's 'Pass thresholds'
 cell points at the rows; the severity scale and the populations stay in LB-40's
@@ -57,7 +57,7 @@ PLAN_SET = {
         f"APPROVED by the owner, {TODAY}. The thresholds are stated once, as {ROWS} -- critical findings, major "
         "findings, unsupported release, excessive refusal, independent judgment under pressure, question burden, "
         "comprehension, cost and latency per satisfactorily completed task, and every required capability "
-        "assessed. Each is blocking and scored by pipeline/quality/releasegate.py as PASS, FAIL or NOT MEASURED; "
+        "assessed. Each is blocking and scored by pipeline/releasegate.py as PASS, FAIL or NOT MEASURED; "
         "NOT MEASURED fails like FAIL, and a row the scorer has no measurement for is reported NOT MEASURED, never "
         "dropped. Relative improvement over the pipeline offsets none of them (LB-138). The time targets per kind "
         "of turn remain the owner's to set before the first switch."),

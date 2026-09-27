@@ -5,11 +5,12 @@ from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace as NS  # noqa: N814 -- compact SDK-shaped fixture
 
 import pytest
-from nm.adapters.model.call_budget import MODEL, CallBudget
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.domain.external_ai import ModelPermissionRefused
-from nm.ports.model import ConfigurationError, Prompt, ProviderUnavailable, Tier
+
+from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_call_budget import MODEL, CallBudget
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_port import ConfigurationError, Prompt, ProviderUnavailable, Tier
 
 pytestmark = pytest.mark.class_a
 
@@ -62,7 +63,7 @@ def test_missing_usage_is_not_a_free_call(tmp_path):
 
 
 def test_accounting_happens_before_truncated_response_is_rejected(tmp_path):
-    from nm.ports.model import OutputTruncated
+    from nm.shared.model_port import OutputTruncated
 
     path = tmp_path / "budget.db"
     budget = CallBudget(path, "25")
@@ -103,7 +104,7 @@ def test_permission_refusal_precedes_reservation_and_wire(tmp_path):
 
 
 def test_retry_must_fund_a_new_attempt_without_releasing_the_unknown_one(tmp_path, monkeypatch):
-    from nm.adapters.model import openai_adapter
+    from nm.shared import model_openai_adapter as openai_adapter
 
     path = tmp_path / "budget.db"
     budget = CallBudget(path, "0.03")

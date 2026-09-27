@@ -37,7 +37,8 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.domain.matter import (
+
+from nm.work_the_file.matter_contracts import (
     Certainty,
     Fact,
     Matter,
@@ -107,7 +108,7 @@ def test_two_dates_for_one_sentence_are_both_kept():
     `chronology.conflicts` was written to prevent, arriving one layer below
     where it looks for it.
     """
-    from nm.core import chronology
+    from nm.work_the_file import chronology
 
     m, _ = _matter().recording(_fact(on=date(1984, 4, 15)))
     m, _ = m.recording(_fact(on=date(2024, 4, 15)))

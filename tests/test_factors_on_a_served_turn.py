@@ -2,7 +2,7 @@
 
 WHY A SEPARATE FILE FROM `test_factors.py`
 --------------------------------------------
-That file proves `backend/nm/core/factors.py` is right. This proves the TURN reaches
+That file proves `nm/legal_brain/factors.py` is right. This proves the TURN reaches
 it, retrieves the section, applies the factor, and puts a moved date in front
 of the advocate.
 
@@ -26,10 +26,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.turn import TurnInput
-from nm.domain.matter import Provenance
-from nm.ports.evidence import Coverage, EvidencePort, EvidenceResult
 
+from nm.legal_brain.evidence_port import Coverage, EvidencePort, EvidenceResult
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file.matter_contracts import Provenance
 from tests.test_turn_contract import build, finding
 
 pytestmark = pytest.mark.class_a

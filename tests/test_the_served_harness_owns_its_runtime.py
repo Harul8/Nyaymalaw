@@ -6,11 +6,11 @@ import shutil
 from pathlib import Path
 
 import pytest
-from nm.bootstrap import composition
-from nm.ports.evidence import Coverage
-from nm.ports.model import ConfigurationError, Prompt, Tier
 
 from assurance.journeys.served import KEY, served
+from nm.app import composition
+from nm.legal_brain.evidence_port import Coverage
+from nm.shared.model_port import ConfigurationError, Prompt, Tier
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +30,7 @@ def spec_root(tmp_path):
 def restore_served_application(monkeypatch):
     # create_app currently owns one process-global ASGI application. This
     # suite is serial and makes no claim of concurrent ASGI-box isolation.
-    from nm.edge import api
+    from nm.app import api
     monkeypatch.setattr(api, "_application", api._application)
 
 

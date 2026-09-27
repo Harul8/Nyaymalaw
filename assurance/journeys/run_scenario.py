@@ -42,12 +42,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
 
 utf8_console()
 
-from nm.domain.identity import source_fingerprint  # noqa: E402
+from nm.shared.identity_contracts import source_fingerprint  # noqa: E402
 
 CORPUS = ROOT / "legal_database" / "vector_store" / "chunks.db"
 BASE = "http://127.0.0.1:8078"
@@ -308,9 +308,9 @@ def _mint_scenario_advocate(advocate: str) -> tuple[str, str]:
     THE PASSWORD IS NEVER PRINTED AND NEVER WRITTEN. It exists for the length
     of this process, which is all a fixture needs.
     """
-    from nm.bootstrap.composition import Application
-    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
-    from nm.ports.directory import AlreadyEnrolled
+    from nm.app.composition import Application
+    from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol
+    from nm.arrive.directory_port import AlreadyEnrolled
 
     try:
         app = Application()
@@ -347,7 +347,7 @@ def _mint_scenario_advocate(advocate: str) -> tuple[str, str]:
 def _generated_password() -> str:
     """Long, and satisfying `advocate.enrol`'s four character classes.
 
-    Built here rather than imported from `backend/operations/enrol.py`, which PRINTS what
+    Built here rather than imported from `operations/enrol.py`, which PRINTS what
     it generates -- correct for a person who has to type it later, wrong for
     a fixture nobody should ever see.
     """

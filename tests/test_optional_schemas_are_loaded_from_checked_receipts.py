@@ -6,14 +6,18 @@ from dataclasses import asdict, replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.model.replay import ReplayModel, records_from_loop
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_context import ContextPolicy, ContextRefused, ContextSession, assemble_brief
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.tool_discovery import discovery_tools
-from nm.core.tool_offers import OfferRefused
-from nm.core.tools import (
+
+from nm.legal_brain.brain_context import (
+    ContextPolicy,
+    ContextRefused,
+    ContextSession,
+    assemble_brief,
+)
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.loop_contracts import LoopMode, StepKind, StopReason
+from nm.legal_brain.tool_discovery import discovery_tools
+from nm.legal_brain.tool_offers import OfferRefused
+from nm.legal_brain.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -26,10 +30,18 @@ from nm.core.tools import (
     foundation_tools,
     object_schema,
 )
-from nm.domain.loop import LoopMode, StepKind, StopReason
-from nm.domain.matter import Matter
-from nm.ports.model import Prompt, ProviderUnavailable, Tier, ToolCall, ToolDefinition, ToolMessage
-
+from nm.shared.model_port import (
+    Prompt,
+    ProviderUnavailable,
+    Tier,
+    ToolCall,
+    ToolDefinition,
+    ToolMessage,
+)
+from nm.shared.model_replay import ReplayModel, records_from_loop
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.work_the_file.matter_contracts import Matter
 from tests.test_brain_context_is_a_checked_file_projection import snapshot
 from tests.test_the_loop_records_work_before_using_it import _limits, _response
 
@@ -157,7 +169,7 @@ def test_forged_or_changed_inspection_cannot_load_any_schema(tmp_path, changed):
     brain, matter, _ = setup(tmp_path)
     state = brain.registry.offer_state()
     call = ToolCall("inspection", "inspect_tool", {"name": "optional_read"})
-    from nm.domain.loop import LoopIdentity, digest
+    from nm.legal_brain.loop_contracts import LoopIdentity, digest
 
     identity = LoopIdentity(matter.id, "advocate", "turn", digest("prompt"),
         brain.principles.load().version, brain.registry.version, matter.version, LoopMode.SYNTHETIC)
@@ -184,7 +196,7 @@ def test_loading_history_survives_checked_compaction_not_an_authored_state_flag(
     session = ContextSession(brain.principles.load(), brain.registry.definitions,
         assemble_brief(matter, advocate_id="advocate"), provider="scripted", model="recorded-v1",
         policy=ContextPolicy(max_tokens=100000), tool_offer=offer)
-    from nm.domain.loop import LoopIdentity, digest
+    from nm.legal_brain.loop_contracts import LoopIdentity, digest
 
     identity = LoopIdentity(matter.id, "advocate", "turn", digest("prompt"),
         brain.principles.load().version, brain.registry.version, matter.version, LoopMode.SYNTHETIC)
@@ -220,7 +232,7 @@ def test_replay_uses_each_exact_loaded_offer_and_changed_offer_cannot_consume_re
             tuple(ToolCall(**call) for call in row["calls"]), row["call_id"])
             for row in payload["messages"])
         if payload is starts[0]:
-            from nm.ports.model import SchemaViolation
+            from nm.shared.model_port import SchemaViolation
 
             with pytest.raises(SchemaViolation):
                 replay.tool_call(Prompt(**payload["prompt"]), brain.registry.definitions,
@@ -235,7 +247,7 @@ def test_actual_request_size_reduces_without_changing_the_budget_or_cutting_data
     brain.model.tool_call.return_value = question()
     output = run(brain, matter)
     assert output.reason is StopReason.QUESTION
-    from nm.ports.model import estimate_tokens, tool_request_text
+    from nm.shared.model_port import estimate_tokens, tool_request_text
 
     payload = next(event.payload for event in output.record.events
                    if event.kind is StepKind.MODEL_STARTED)
@@ -268,7 +280,7 @@ def test_unknown_provider_result_retains_reservation_and_exact_retry_does_not_di
 
 
 def test_schema_loading_waits_for_a_durable_receipt_and_interruption_is_not_redispatched(tmp_path):
-    from nm.ports.store import StaleWrite
+    from nm.shared.store_port import StaleWrite
 
     brain, matter, invoked = setup(tmp_path)
     brain.model.tool_call.side_effect = [inspect(), question()]
@@ -308,8 +320,8 @@ def test_a_loader_receipt_refused_after_the_handler_does_not_load_the_schema(tmp
 @pytest.mark.parametrize("mutation", ["added", "removed", "changed", "missing"])
 def test_replay_refuses_a_per_dispatch_offer_that_does_not_follow_sealed_loading(
         tmp_path, mutation):
-    from nm.domain.loop import LoopEvent, LoopRecord
-    from nm.ports.model import SchemaViolation
+    from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord
+    from nm.shared.model_port import SchemaViolation
 
     brain, matter, _ = setup(tmp_path)
     brain.model.tool_call.side_effect = [inspect(), question()]
@@ -338,7 +350,7 @@ def test_replay_refuses_a_per_dispatch_offer_that_does_not_follow_sealed_loading
 
 
 def test_loader_metadata_is_typed_and_cannot_turn_a_write_into_an_initial_loader():
-    from nm.domain.authority import Act
+    from nm.shared.authority_contracts import Act
 
     definition = ToolDefinition("write", "Record a checked change.", object_schema({}))
     with pytest.raises(ValueError):

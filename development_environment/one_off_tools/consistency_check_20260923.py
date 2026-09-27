@@ -5,7 +5,7 @@
 
 WHY THIS EXISTS
 ---------------
-`nm.core.consistency` asks a model whether a proposed step CONTRADICTS a fact
+`nm.legal_brain.consistency` asks a model whether a proposed step CONTRADICTS a fact
 the same answer computed. A `contradicted` verdict withholds the step. Across
 the live matters of 22-23 September it returned `contradicted` on 27 of 33
 calls, and G-CONSISTENT withheld the advocate's next step on 16 of 23 turns.
@@ -50,7 +50,7 @@ from assurance.common._console import utf8_console  # noqa: E402
 utf8_console()
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
+sys.path[:0] = [str(ROOT), str(ROOT )]
 os.environ.pop("SSLKEYLOGFILE", None)
 
 EVIDENCE = ROOT / "docs" / "backlog" / "evidence" / "legal-brain-20260922"
@@ -220,9 +220,9 @@ def _without_unresolved_limitation(user: str) -> str:
 
 def _limitation_gate(adapter, user: str, step: str) -> bool:
     """True when G-LIMITATION would withhold this step, through the real code."""
-    from nm.core import step_dependency
-    from nm.core.conversation import guided
-    from nm.ports.model import Tier
+    from nm.legal_brain import step_dependency
+    from nm.legal_brain.conversation import guided
+    from nm.shared.model_port import Tier
 
     facts = user.split("THE COMPUTED FACTS:\n", 1)[1].split("\n\n", 1)[0]
     lim = next((l for l in facts.splitlines() if l.strip().startswith("limitation\t")), "")
@@ -261,7 +261,7 @@ def _split(user: str) -> tuple[str, frozenset[str]]:
 
 
 def _candidate_contradicted(data: dict, step: str, offered: frozenset[str]) -> bool:
-    from nm.domain.text import fold
+    from nm.shared.text_contracts import fold
     claim_id = (data.get("claim_id") or "").strip()
     quoted = (data.get("quoted") or "").strip()
     return bool(claim_id in offered and quoted and fold(quoted) in fold(step)
@@ -269,7 +269,7 @@ def _candidate_contradicted(data: dict, step: str, offered: frozenset[str]) -> b
 
 
 def cases() -> list[tuple[str, str, str, frozenset[str], str]]:
-    from nm.core import consistency
+    from nm.legal_brain import consistency
     out = []
     for row in json.loads((EVIDENCE / "consistency-population.json").read_text(encoding="utf8")):
         # A RECORD CUT AT 4,000 CHARACTERS IS NOT WHAT PRODUCTION SENT. The
@@ -293,7 +293,7 @@ def cases() -> list[tuple[str, str, str, frozenset[str], str]]:
 def measure(run: bool) -> int:
     from dataclasses import replace
 
-    from nm.core import consistency
+    from nm.legal_brain import consistency
 
     population = cases()
     if not run:
@@ -302,11 +302,11 @@ def measure(run: bool) -> int:
         print("--dry-run made no provider call.")
         return 0
 
-    from nm.adapters.model.call_budget import CallBudget
-    from nm.adapters.model.config import load, load_dotenv
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.core.conversation import guided
-    from nm.ports.model import Prompt, Tier
+    from nm.shared.model_call_budget import CallBudget
+    from nm.shared.model_config import load, load_dotenv
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.legal_brain.conversation import guided
+    from nm.shared.model_port import Prompt, Tier
 
     load_dotenv(ROOT / ".env")
     if TIER == "judge":
@@ -373,7 +373,7 @@ def measure(run: bool) -> int:
         if VARIANT == "candidate":
             hit = _candidate_contradicted(data, step, offered)
         elif VARIANT == "extraction":
-            from nm.domain.text import fold
+            from nm.shared.text_contracts import fold
             cid = (data.get("claim_id") or "").strip()
             quoted = (data.get("quoted") or "").strip()
             hit = bool(cid in offered and quoted and fold(quoted) in fold(step))

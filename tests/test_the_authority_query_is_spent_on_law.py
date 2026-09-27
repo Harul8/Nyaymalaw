@@ -32,8 +32,9 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.ports.evidence import EvidenceNeed
+
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import EvidenceNeed
 
 pytestmark = pytest.mark.class_a
 
@@ -99,7 +100,7 @@ def test_an_unestablished_cause_adds_nothing():
 def test_the_subject_words_come_from_the_products_vocabulary_not_model_text():
     """`cause_of_action` is a CauseOfAction value -- the closed list -- so
     nothing a model wrote reaches the query through this route."""
-    from nm.domain.matter import CauseOfAction
+    from nm.work_the_file.matter_contracts import CauseOfAction
     for cause in CauseOfAction:
         subject = CorpusEvidenceAdapter._subject_terms(_need("x", cause=cause.value))
         for word in subject:

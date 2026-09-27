@@ -3,8 +3,8 @@
 The `.feature` files under `tests/features/arrive/` are GENERATED from the column
 "Scenarios (Given / When / Then)" of the Implementation Plan's Arrive rows, which state
 each row's Must do and Must never so they can be read against the product owner's words
-in column C. This module binds every step to the real page (`frontend/index.html`,
-`frontend/app.js`, `frontend/app.css`) and to the served routes through the shared
+in column C. This module binds every step to the real page (`nm/app/index.html`,
+`nm/app/app.js`, `nm/app/app.css`) and to the served routes through the shared
 `client` fixture.
 
 ONE RULE, ONE OWNER. Where a rule already has a checker elsewhere in the suite --
@@ -27,8 +27,10 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from nm.adapters.store.directory import RETIRED_RECOVERY_FIELDS
-from nm.domain.advocate import (
+from pytest_bdd import given, parsers, scenarios, then, when
+
+import tests.test_the_page_and_the_script_agree as page_contract
+from nm.arrive.advocate_contracts import (
     PASSWORD_RESET_MINUTES,
     PRIVACY_NOTICE_VERSION,
     SESSION_HOURS,
@@ -38,9 +40,7 @@ from nm.domain.advocate import (
     enrol,
     utcnow,
 )
-from pytest_bdd import given, parsers, scenarios, then, when
-
-import tests.test_the_page_and_the_script_agree as page_contract
+from nm.arrive.store_directory import RETIRED_RECOVERY_FIELDS
 from tests.registration import CONSENT
 from tests.test_account_access_and_workspace import (
     _frontend,
@@ -103,7 +103,7 @@ def gate_html(page: str) -> str:
 
 
 def _script() -> str:
-    return (ROOT / "frontend" / "app.js").read_text(encoding="utf8")
+    return (ROOT / "nm/app/app.js").read_text(encoding="utf8")
 
 
 def _function(script: str, name: str) -> str:
@@ -115,7 +115,7 @@ def _function(script: str, name: str) -> str:
 
 @given("the sign-in page", target_fixture="sign_in_page")
 def the_sign_in_page() -> str:
-    return (ROOT / "frontend" / "index.html").read_text(encoding="utf8")
+    return (ROOT / "nm/app/index.html").read_text(encoding="utf8")
 
 
 @given("the page script", target_fixture="page_script")
@@ -126,7 +126,7 @@ def the_page_script() -> str:
 @given("the page stylesheet", target_fixture="stylesheet")
 def the_page_stylesheet() -> str:
     """Comments stripped: a value inside a comment is not a declaration."""
-    return re.sub(r"/\*.*?\*/", "", (ROOT / "frontend" / "app.css").read_text(encoding="utf8"),
+    return re.sub(r"/\*.*?\*/", "", (ROOT / "nm/app/app.css").read_text(encoding="utf8"),
                   flags=re.S)
 
 
@@ -169,7 +169,7 @@ def one_row_under_sign_in(sign_in_page, context):
     after = re.sub(r"<!--.*?-->", "", after, flags=re.S).lstrip()
     assert after.startswith('<div class="login-alt login-alt-split">'), after[:120]
     context["row"] = after[:after.index("</div>")]
-    style = re.sub(r"/\*.*?\*/", "", (ROOT / "frontend" / "app.css").read_text(encoding="utf8"),
+    style = re.sub(r"/\*.*?\*/", "", (ROOT / "nm/app/app.css").read_text(encoding="utf8"),
                    flags=re.S)
     rule_ = re.search(r"\.login-alt-split\s*\{([^}]*)\}", style)
     assert rule_ and "display: flex" in rule_.group(1) \
@@ -445,7 +445,7 @@ def link_is_single_use(client, context):
 
 @when("the link is used 31 minutes later")
 def use_link_late(client, context, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
 
     minutes = PASSWORD_RESET_MINUTES + 1
     assert minutes == 31, "the scenario's wording no longer matches the link lifetime"
@@ -766,7 +766,7 @@ def one_way_to_conceal(page_script):
 @pytest.fixture
 def clock(monkeypatch):
     """The served routes' clock, which the scenario moves forward."""
-    from nm.edge import api
+    from nm.app import api
 
     start = utcnow()
     now = [start]
@@ -951,7 +951,7 @@ def cards_shrink(stylesheet):
 
 @given("the page", target_fixture="app_page")
 def the_page() -> str:
-    return (ROOT / "frontend" / "index.html").read_text(encoding="utf8")
+    return (ROOT / "nm/app/index.html").read_text(encoding="utf8")
 
 
 def ribbon_html(page: str) -> str:
@@ -1348,11 +1348,11 @@ def opening_a_matter_resumes_it(page_script):
 
 
 def _frontend_file(name: str) -> str:
-    return (ROOT / "frontend" / name).read_text(encoding="utf8")
+    return (ROOT / "nm" / name).read_text(encoding="utf8")
 
 
 def _backend_file(relative: str) -> str:
-    return (ROOT / "backend" / "nm" / relative).read_text(encoding="utf8")
+    return (ROOT / "nm" / relative).read_text(encoding="utf8")
 
 
 def _composer(page: str) -> str:
@@ -1420,7 +1420,7 @@ class _Transcriber:
         self.heard = []
 
     def transcribe(self, audio, media_type):
-        from nm.domain.dictation import Transcript
+        from nm.open_matter.dictation_contracts import Transcript
 
         self.heard.append((audio, media_type))
         return Transcript(text="We act for the plaintiff.", language="en", seconds=2.0,
@@ -1474,8 +1474,8 @@ def words_back_and_nothing_kept(client, context, speech):
 
 @then("it went through the recorded local speech processor")
 def through_the_local_speech_processor(wired):
-    from nm.bootstrap.egress_policy import TRANSCRIPTION_PROCESSOR, egress_policy
-    from nm.domain.egress import Sink
+    from nm.shared.egress_contracts import Sink
+    from nm.shared.egress_policy import TRANSCRIPTION_PROCESSOR, egress_policy
 
     policed = wired.transcriber
     assert policed.sink is Sink.TRANSCRIPTION
@@ -1489,7 +1489,7 @@ def through_the_local_speech_processor(wired):
 def dictate_without_the_model(client, wired, context, monkeypatch):
     import sys
 
-    from nm.adapters.speech.local_whisper import LocalWhisper
+    from nm.open_matter.speech_local_whisper import LocalWhisper
 
     monkeypatch.setitem(sys.modules, "faster_whisper", None)
     monkeypatch.setattr(wired.transcriber, "inner", LocalWhisper(model="tiny"))
@@ -1629,7 +1629,7 @@ def send_two_frames(client, context):
 
 @then("the words heard so far come back after each frame")
 def words_after_each_frame(context, live_speech):
-    from nm.domain.dictation import LIVE_SAMPLE_RATE
+    from nm.open_matter.dictation_contracts import LIVE_SAMPLE_RATE
 
     assert context["opened"] == {"live": True}
     assert [row["words"] for row in context["heard"]] == ["word1", "word1 word2"]
@@ -1652,7 +1652,7 @@ def no_live_audio_stored(client, live_speech):
 
 @when("the live speech model is not downloaded and an advocate dictates")
 def live_model_missing(client, wired, context, monkeypatch, tmp_path):
-    from nm.adapters.speech.vosk_live import VoskLive
+    from nm.open_matter.speech_vosk_live import VoskLive
 
     monkeypatch.setattr(wired.live_dictation, "inner",
                         VoskLive(model_dir=tmp_path / "no-model-here"))

@@ -135,14 +135,14 @@ PLAN_CELLS = {
                           "LB-170). Clauses are owned through their row -- the sheet does not map clauses to "
                           "criteria one by one."},
     "LB-120": {
-        "Evidence references": "backend/nm/knowledge/governing_law.py; tests/test_which_code_governs_this_matter.py; "
+        "Evidence references": "nm/legal_brain/governing_law_sources.py; tests/test_which_code_governs_this_matter.py; "
                                "tests/test_a_governing_answer_carries_its_rule.py",
         "Test date / environment": RUN,
         "Remaining gaps": "The table and port are built and tested but deliberately unwired: no criminal cause exists "
                           "in the closed vocabulary. Each answer now carries the succession it applied (27 September "
                           "2026)."},
     "LB-122": {
-        "Evidence references": "backend/nm/knowledge/authority_weight.py; backend/nm/knowledge/identity.py; "
+        "Evidence references": "nm/legal_brain/authority_weight_sources.py; nm/legal_brain/identity_sources.py; "
                                "tests/test_which_authority_this_court_must_follow.py; "
                                "tests/test_a_state_is_never_read_from_its_reason.py",
         "Test date / environment": RUN,
@@ -150,14 +150,14 @@ PLAN_CELLS = {
                           "no longer read from a sentence (B-169). References to a larger bench and per incuriam are "
                           "not detected."},
     "LB-149": {
-        "Evidence references": "backend/nm/ports/search.py; backend/nm/ports/evidence.py; "
+        "Evidence references": "nm/legal_brain/search_port.py; nm/legal_brain/evidence_port.py; "
                                "tests/test_a_page_says_it_is_one.py",
         "Test date / environment": RUN,
         "Remaining gaps": "A case expansion pages in stored order with a cursor tied to the index build, and a "
                           "stored document reads in windows that say what they left out (B-171, B-172). Nothing "
                           "clears spent results."},
     "LB-154": {
-        "Evidence references": "backend/nm/domain/curation.py; backend/nm/ports/search.py; backend/nm/ports/evidence.py",
+        "Evidence references": "nm/legal_brain/curation_contracts.py; nm/legal_brain/search_port.py; nm/legal_brain/evidence_port.py",
         "Test date / environment": RUN,
         "Remaining gaps": "No envelope, registry or tool rules exist yet. The assessment values the envelope maps "
                           "are in place and kept apart -- Coverage, ResolutionState and Curation -- and the reads "
@@ -165,7 +165,7 @@ PLAN_CELLS = {
                           "B-168, B-171)."},
     "LB-156": {
         "Build status": "In progress",
-        "Evidence references": "backend/nm/knowledge/manifest.py; backend/nm/adapters/evidence/corpus.py; "
+        "Evidence references": "nm/legal_brain/manifest_sources.py; nm/legal_brain/corpus_evidence.py; "
                                "tests/test_a_named_act_is_read_and_never_replaced.py",
         "Test date / environment": RUN,
         "Remaining gaps": "Beneath the tools, built 27 September 2026: Manifest.identify (exact names only) is "
@@ -175,8 +175,8 @@ PLAN_CELLS = {
                           "(slice 2, P50)."},
     "LB-157": {
         "Build status": "In progress",
-        "Evidence references": "backend/nm/ports/search.py; backend/nm/adapters/search/authority.py; "
-                               "backend/nm/knowledge/authority_weight.py; "
+        "Evidence references": "nm/legal_brain/search_port.py; nm/legal_brain/search_authority.py; "
+                               "nm/legal_brain/authority_weight_sources.py; "
                                "tests/test_an_exact_read_says_why_it_found_nothing.py; "
                                "tests/test_a_page_says_it_is_one.py; tests/test_what_a_read_held_back_is_said.py",
         "Test date / environment": RUN,
@@ -186,8 +186,8 @@ PLAN_CELLS = {
                           "tools; no find_contrary_authority."},
     "LB-159": {
         "Build status": "In progress",
-        "Evidence references": "backend/nm/domain/curation.py; backend/nm/knowledge/interim_relief.py; "
-                               "backend/nm/knowledge/procedural_period.py; "
+        "Evidence references": "nm/legal_brain/curation_contracts.py; nm/legal_brain/interim_relief_sources.py; "
+                               "nm/legal_brain/procedural_period_sources.py; "
                                "tests/test_a_curated_table_says_what_it_does_not_cover.py",
         "Test date / environment": RUN,
         "Remaining gaps": "Every curated table answers whether it examined a key -- curated, withheld, not curated "

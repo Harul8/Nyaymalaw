@@ -10,7 +10,7 @@ examined and found to require nothing:
 * the procedural-period table, asked about a known role with no row, listed
   EVERY period as undecided, as though the role were unknown.
 
-Four tables answered that one question four ways. `nm.domain.curation` is the
+Four tables answered that one question four ways. `nm.legal_brain.curation_contracts` is the
 one answer: every table keyed on a closed vocabulary says CURATED, WITHHELD,
 NOT_CURATED or KEY_NOT_ESTABLISHED for every key.
 
@@ -26,6 +26,7 @@ THE RULES, each asserted below:
 """
 from __future__ import annotations
 
+import ast
 import enum
 import importlib
 import inspect
@@ -34,23 +35,50 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.knowledge.procedural_period import CuratedProceduralPeriods
-from nm.core import thresholds
-from nm.core.turn import TurnEngine
-from nm.domain.curation import Curation
-from nm.domain.matter import CauseOfAction, Role
-from nm.knowledge import institution, procedural_period
-from nm.ports.institution import Against
-from nm.ports.procedural_period import Track
+
+from assurance.common.module_roles import load_module_roles, source_module
+from assurance.gate.layercheck import imported_names
+from nm.legal_brain import institution_sources as institution
+from nm.legal_brain import procedural_period_sources as procedural_period
+from nm.legal_brain import thresholds
+from nm.legal_brain.curation_contracts import Curation
+from nm.legal_brain.institution_port import Against
+from nm.legal_brain.procedural_period_adapter import CuratedProceduralPeriods
+from nm.legal_brain.procedural_period_port import Track
+from nm.legal_brain.turn import TurnEngine
+from nm.work_the_file.matter_contracts import CauseOfAction, Role
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _curated_adapters():
+    """Concrete adapters actually reading the knowledge plane, not filename pairs."""
+    layout = load_module_roles()
+    known = frozenset(layout.roles)
+    classes = []
+    for path in layout.sources_for_roles("adapters"):
+        name = source_module(path)
+        dependencies = imported_names(ast.parse(path.read_text(encoding="utf8")),
+                                      module=name, known=known)
+        if not any(layout.roles.get(dependency) == "knowledge" for dependency, _ in dependencies):
+            continue
+        module = importlib.import_module(name)
+        classes.extend(cls for cls in vars(module).values()
+                       if inspect.isclass(cls) and cls.__module__ == name)
+    return classes
+
+
+def _serves(protocol, adapter):
+    members = [name for name, value in vars(protocol).items()
+               if not name.startswith("_") and callable(value)]
+    return bool(members) and all(callable(getattr(adapter, name, None)) for name in members)
+
+
 def _keyed_ports():
     """Every port the CURATION PLANE serves -- a module under
-    backend/nm/adapters/knowledge -- with a method whose first argument is a
+    nm/adapters/knowledge -- with a method whose first argument is a
     closed vocabulary (an Enum): a table keyed on that vocabulary.
 
     The first version scanned every port and caught `ModelPort`, whose
@@ -58,13 +86,13 @@ def _keyed_ports():
     makes a table is being served by the knowledge plane, so that is the
     population -- read from the directory, not listed here."""
     found = []
-    for path in sorted((ROOT / "backend" / "nm" / "adapters" / "knowledge").glob("*.py")):
-        if path.stem == "__init__":
-            continue
-        module = importlib.import_module(f"nm.ports.{path.stem}")
+    adapters = _curated_adapters()
+    for path in load_module_roles().sources_for_roles("ports"):
+        module = importlib.import_module(source_module(path))
         for name, cls in vars(module).items():
             if not (inspect.isclass(cls) and getattr(cls, "_is_protocol", False)
-                    and cls.__module__ == module.__name__):
+                    and cls.__module__ == module.__name__
+                    and any(_serves(cls, adapter) for adapter in adapters)):
                 continue
             for member_name, member in vars(cls).items():
                 if member_name.startswith("_") or not callable(member):
@@ -92,9 +120,7 @@ def test_the_population_is_the_product_not_a_list():
 def test_every_keyed_table_answers_coverage_for_every_key(module, port, key):
     protocol = getattr(importlib.import_module(module), port)
     assert "coverage" in vars(protocol), f"{port} cannot be asked whether it covers a key"
-    adapters = importlib.import_module(f"nm.adapters.knowledge.{module.rsplit('.', 1)[1]}")
-    served = [c for c in vars(adapters).values()
-              if inspect.isclass(c) and c.__module__ == adapters.__name__]
+    served = [adapter for adapter in _curated_adapters() if _serves(protocol, adapter)]
     assert served, f"no adapter serves {port}"
     for adapter in served:
         instance = adapter()

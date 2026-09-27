@@ -5,8 +5,9 @@ import json
 from pathlib import Path
 
 import pytest
-from nm.domain.media import MediaKind, Processor, Quarantine, admitted
-from nm.domain.media_policy import ContractUnreadable, Route, load, refuse_request
+
+from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, admitted
+from nm.open_matter.media_policy_contracts import ContractUnreadable, Route, load, refuse_request
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]

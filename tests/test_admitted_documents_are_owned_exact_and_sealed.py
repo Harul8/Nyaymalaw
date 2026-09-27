@@ -12,17 +12,9 @@ from unittest.mock import Mock
 
 import pytest
 from cryptography.fernet import Fernet
-from nm.adapters.documents.local import LocalDocumentText
-from nm.adapters.store.documents import SealedDocumentStore
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.sealing import MatterSealer
-from nm.core import retention as rt
-from nm.core.tool_catalogue import catalogue_tools
-from nm.core.tools import Assessment, Availability, Boundary, ToolContext, ToolRegistry
-from nm.domain.loop import LoopIdentity, LoopMode, digest
-from nm.domain.matter import Matter
-from nm.domain.media import Quarantine
-from nm.domain.retention import (
+
+from nm.close import retention as rt
+from nm.close.retention_contracts import (
     AssetRef,
     Copy,
     Hold,
@@ -32,12 +24,30 @@ from nm.domain.retention import (
     RetentionState,
     Tombstone,
 )
-from nm.edge.documents import DocumentService
-from nm.edge.uploads import UploadService
-from nm.ports.document_text import DocumentFormat, ExtractionResult, LocatedText, TextState
-from nm.ports.matter_documents import DocumentReadInstruction, DocumentRefused, QuarantineRead
-from nm.ports.model import ToolCall
-from nm.ports.store import StaleWrite
+from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, digest
+from nm.legal_brain.tool_catalogue import catalogue_tools
+from nm.legal_brain.tools import Assessment, Availability, Boundary, ToolContext, ToolRegistry
+from nm.open_matter.document_local import LocalDocumentText
+from nm.open_matter.document_text_port import (
+    DocumentFormat,
+    ExtractionResult,
+    LocatedText,
+    TextState,
+)
+from nm.open_matter.documents_api import DocumentService
+from nm.open_matter.matter_documents_port import (
+    DocumentReadInstruction,
+    DocumentRefused,
+    QuarantineRead,
+)
+from nm.open_matter.media_contracts import Quarantine
+from nm.open_matter.uploads_api import UploadService
+from nm.shared.model_port import ToolCall
+from nm.shared.store_documents import SealedDocumentStore
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_port import StaleWrite
+from nm.shared.store_sealing import MatterSealer
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 WORDS = "The recorded date is 4 March 2026. Amount ₹10000. Straße."

@@ -24,7 +24,8 @@ import inspect
 import json
 
 import pytest
-from nm.adapters.store.directory import FileDirectory
+
+from nm.arrive.store_directory import FileDirectory
 
 pytestmark = pytest.mark.class_a
 
@@ -32,8 +33,8 @@ pytestmark = pytest.mark.class_a
 def _enrolled(tmp_path, key: str):
     from datetime import datetime, timezone
 
-    from nm.domain.advocate import AdvocateIdentity, Enrolment
-    from nm.domain.advocate import enrol as make_credential
+    from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment
+    from nm.arrive.advocate_contracts import enrol as make_credential
 
     d = FileDirectory(tmp_path, key=key)
     d.enrol(Enrolment(
@@ -85,9 +86,9 @@ def test_a_record_sealed_before_the_change_still_opens_and_migrates(tmp_path):
     """
     from datetime import datetime, timezone
 
-    from nm.adapters.store.file_store import _Cipher
-    from nm.domain.advocate import AdvocateIdentity, Enrolment
-    from nm.domain.advocate import enrol as make_credential
+    from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment
+    from nm.arrive.advocate_contracts import enrol as make_credential
+    from nm.shared.store_file_store import _Cipher
 
     d = FileDirectory(tmp_path, key="the-old-key")
     d.enrol(Enrolment(
@@ -124,7 +125,7 @@ def test_the_migration_never_converts_what_it_could_not_read(tmp_path):
 def test_client_material_still_needs_the_key():
     """THE BOUND. Unsealing the DIRECTORY must not have unsealed anything
     holding client material."""
-    from nm.adapters.store import file_store
+    from nm.shared import store_file_store as file_store
 
     src = inspect.getsource(file_store.FileMatterStore)
     assert "self._cipher.encrypt" in src, (

@@ -24,7 +24,8 @@ failure: forty offline tests passing while every served turn crashed.
 from __future__ import annotations
 
 import pytest
-from nm.bootstrap.composition import SharedSealRefused, _refuse_a_shared_seal
+
+from nm.app.composition import SharedSealRefused, _refuse_a_shared_seal
 
 pytestmark = pytest.mark.class_a
 
@@ -115,9 +116,9 @@ def test_the_refusal_says_what_to_do_and_in_which_order():
 def _rekey():
     import importlib.util
 
-    from nm.bootstrap.composition import ROOT
+    from nm.app.composition import ROOT
     spec = importlib.util.spec_from_file_location(
-        "_rekey", ROOT / "backend" / "operations" / "rekey_matter_store.py")
+        "_rekey", ROOT / "operations/rekey_matter_store.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -136,7 +137,7 @@ def test_the_rekey_tool_tells_sealed_from_open_from_unreadable():
     whole store because the directory's audit trails are tab-separated text,
     deliberately unsealed since BK-22. Both halves are asserted here.
     """
-    from nm.adapters.store.file_store import _Cipher
+    from nm.shared.store_file_store import _Cipher
     mod = _rekey()
     ours, theirs = _Cipher("the-old-key"), _Cipher("somebody-elses-key")
 

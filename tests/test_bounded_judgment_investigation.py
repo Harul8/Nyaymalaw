@@ -3,9 +3,10 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.core import investigation as lane
-from nm.ports.evidence import Coverage, EvidenceResult
-from nm.ports.model import ProviderUnavailable, SchemaViolation
+
+from nm.legal_brain import investigation as lane
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.shared.model_port import ProviderUnavailable, SchemaViolation
 
 pytestmark = pytest.mark.class_a
 
@@ -143,7 +144,7 @@ def test_fresh_retrieval_cannot_renew_the_shared_round_budget():
 def test_semantic_intent_is_delegated_without_a_production_phrase_gate():
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
     source = inspect.getsource(TurnEngine._derive)
     assert '_wants_authority' not in source
     assert '_investigate' in source
@@ -160,9 +161,8 @@ def test_semantic_intent_is_delegated_without_a_production_phrase_gate():
 def test_the_served_engine_executes_a_proposal_and_persists_its_limit(tmp_path):
     from datetime import date
 
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
+    from nm.shared.model_scripted import ScriptedModelAdapter
     from tests.test_turn_contract import _Evidence, _model_config, build
 
     proposed = []
@@ -201,9 +201,8 @@ def test_the_served_engine_executes_a_proposal_and_persists_its_limit(tmp_path):
 def test_invalid_model_proposal_does_not_bypass_the_served_turn(tmp_path):
     from datetime import date
 
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
+    from nm.shared.model_scripted import ScriptedModelAdapter
     from tests.test_turn_contract import _Evidence, _model_config, build
 
     searches = []

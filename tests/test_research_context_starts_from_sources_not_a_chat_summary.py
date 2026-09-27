@@ -6,7 +6,9 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.core.brain_context import (
+
+from nm.advise.turn_receipt_contracts import fingerprint
+from nm.legal_brain.brain_context import (
     AssessmentState,
     ContextPolicy,
     ContextRefused,
@@ -16,11 +18,9 @@ from nm.core.brain_context import (
     UncertaintyDimension,
     assemble_brief,
 )
-from nm.core.research_context import ResearchFinding, ResearchSession, ResearchTask
-from nm.core.verifier import EvidenceSpan
-from nm.domain.turn_receipt import fingerprint
-from nm.ports.model import ToolCall, ToolMessage
-
+from nm.legal_brain.research_context import ResearchFinding, ResearchSession, ResearchTask
+from nm.legal_brain.verifier import EvidenceSpan
+from nm.shared.model_port import ToolCall, ToolMessage
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture, snapshot, tools
 from tests.test_independent_claim_verifier import finding
 
@@ -91,8 +91,7 @@ def test_actual_controlled_runner_dispatches_the_fresh_task_source_context_not_a
     tmp_path, changed_request, generation
 ):
     """Real sealed-store caller with a scripted provider; never client acceptance."""
-    from nm.domain.loop import LoopIdentity, LoopMode, StopReason, digest
-
+    from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
     from tests.test_the_controlled_brain_is_actually_wired import _brain
     from tests.test_the_loop_records_work_before_using_it import PROMPT, _limits, _response
 

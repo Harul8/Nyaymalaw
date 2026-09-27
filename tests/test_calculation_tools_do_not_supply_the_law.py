@@ -6,23 +6,30 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core import limitation, premise
-from nm.core.calculation_tools import (
+
+from nm.legal_brain import limitation, premise
+from nm.legal_brain.calculation_tools import (
     CalculationSource,
     LimitationInputs,
     ReviewedFactor,
     calculation_snapshot,
     calculation_tools,
 )
-from nm.core.tool_sources import source_envelope
-from nm.core.tools import Assessment, Availability, Boundary, ToolContext, ToolRefused, ToolRegistry
-from nm.domain.loop import LoopEvent, LoopIdentity, LoopMode, StepKind, digest
-from nm.domain.matter import Basis, Fact, Matter, Posture, Provenance, Role, Thread
-from nm.ports.evidence import Coverage, EvidenceResult
-from nm.ports.model import SchemaViolation, ToolCall
-
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.loop_contracts import LoopEvent, LoopIdentity, LoopMode, StepKind, digest
+from nm.legal_brain.tool_sources import source_envelope
+from nm.legal_brain.tools import (
+    Assessment,
+    Availability,
+    Boundary,
+    ToolContext,
+    ToolRefused,
+    ToolRegistry,
+)
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.work_the_file.matter_contracts import Basis, Fact, Matter, Posture, Provenance, Role, Thread
 from tests.test_independent_claim_verifier import finding
 
 pytestmark = pytest.mark.class_a

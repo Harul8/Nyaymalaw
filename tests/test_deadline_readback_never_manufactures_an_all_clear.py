@@ -5,11 +5,11 @@ import copy
 from datetime import date
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.deadlines import read_matter
-from nm.domain.matter import Matter, Thread
-from nm.edge.api import application
 
+from nm.app.api import application
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.deadlines import read_matter
+from nm.work_the_file.matter_contracts import Matter, Thread
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -21,7 +21,7 @@ KNOWN = {"thread": "thr_window", "kind": "listed_hearing", "source": "Supplied l
 
 def _seed(client, monkeypatch, threads):
     actor = client.get("/api/session").json()["advocate"]["id"]
-    monkeypatch.setattr("nm.edge.projections.forum_today", lambda: TODAY)
+    monkeypatch.setattr("nm.work_the_file.projections_api.forum_today", lambda: TODAY)
 
     def forbidden(*args, **kwargs):
         raise AssertionError("saved deadline readback reached model-backed routing")

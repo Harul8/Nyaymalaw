@@ -11,7 +11,7 @@ every commit.
 Measured that morning: 2,963 nodes, 2,572 embedding rows, **132 non-File nodes
 with no vector** -- every function, class and test added since 9 September.
 `_refuse_a_shared_seal`, `SharedSealRefused`, `_refuse_an_unauthorised_enrolment`,
-`Screen.uncovered` and all eleven members of `backend/nm/domain/media.py` were among
+`Screen.uncovered` and all eleven members of `nm/open_matter/media_contracts.py` were among
 them.
 
 The query *"the seal on client files must not be shared with any other

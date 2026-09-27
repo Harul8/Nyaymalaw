@@ -21,13 +21,14 @@ import pathlib
 import re
 
 import pytest
-from nm.domain.advocate import PRIVACY_NOTICE_VERSION
+
+from nm.arrive.advocate_contracts import PRIVACY_NOTICE_VERSION
 
 pytestmark = pytest.mark.class_a
 
-WEB = pathlib.Path(__file__).resolve().parents[1] / "frontend"
-HTML = (WEB / "index.html").read_text(encoding="utf-8")
-SCRIPT = (WEB / "app.js").read_text(encoding="utf-8")
+WEB = pathlib.Path(__file__).resolve().parents[1] / "nm"
+HTML = (WEB / "app/index.html").read_text(encoding="utf-8")
+SCRIPT = (WEB / "app/app.js").read_text(encoding="utf-8")
 
 #: `$('literal')` only. A template literal is built at runtime -- `pane-${p}`
 #: names four elements and no scanner can tell which -- so those are out of
@@ -104,7 +105,7 @@ def test_every_password_reveal_is_a_button_and_not_a_submit():
 #: the comment explaining that `.gate` is at 100 -- and reported the banner as
 #: stacking at 100 when it is declared at 200. A value inside a comment is not
 #: a declaration, and a check that cannot tell the difference is reading prose.
-STYLE = re.sub(r"/\*.*?\*/", "", (WEB / "app.css").read_text(encoding="utf-8"),
+STYLE = re.sub(r"/\*.*?\*/", "", (WEB / "app/app.css").read_text(encoding="utf-8"),
                flags=re.S)
 
 

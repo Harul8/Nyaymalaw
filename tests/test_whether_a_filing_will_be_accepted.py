@@ -23,11 +23,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-from nm.core import thresholds
-from nm.core.turn import TurnInput
-from nm.knowledge import filing_requirement as curated
-from nm.ports.filing_requirement import Requirement, SourceState
 
+from nm.legal_brain import filing_requirement_sources as curated
+from nm.legal_brain import thresholds
+from nm.legal_brain.filing_requirement_port import Requirement, SourceState
+from nm.legal_brain.turn import TurnInput
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

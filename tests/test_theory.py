@@ -14,7 +14,8 @@ None of the three is wrong on its face. All three are short.
 from __future__ import annotations
 
 import pytest
-from nm.core.adversarial import (
+
+from nm.legal_brain.adversarial import (
     Attack,
     Coordinate,
     Exposure,
@@ -26,7 +27,7 @@ from nm.core.adversarial import (
     unanswered,
     unvaried,
 )
-from nm.core.theory import (
+from nm.legal_brain.theory import (
     Argument,
     Stance,
     Theory,
@@ -35,8 +36,8 @@ from nm.core.theory import (
     unaccounted,
     undeclared,
 )
-from nm.domain.matter import Side
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Side
 
 pytestmark = pytest.mark.class_a
 

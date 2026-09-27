@@ -1,6 +1,6 @@
 """EVERY LIVE DESTINATION CONSULTS THE POLICY. BK-85-AC1. P06.
 
-`backend/nm/domain/egress.py` decides. This is about whether the decision is actually
+`nm/shared/egress_contracts.py` decides. This is about whether the decision is actually
 IN FRONT of every destination the product has -- which is a different question,
 and the one CLAUDE.md section 8 says every external review found the product
 failing: *a guard that is right in the core and wrong in the composition root
@@ -8,15 +8,16 @@ is not a guard.*
 
 THE HARD HALF IS THE SINKS WITH NO DESTINATION
 ------------------------------------------------
-Seven sinks are declared. Measured on 11 September 2026, three have a live
-destination and four do not: MEDIA has no processing adapter, BACKUP and SUPPORT
-have no implementation, and `backend/nm/obs/` holds nothing but an empty `__init__`.
+Sinks are declared independently of folder names. MEDIA is now reached through
+the separately policed local document reader. BACKUP, SUPPORT and TELEMETRY
+remain without concrete sink invocations. Their absence is measured over the
+whole product source, not over the former empty layer directories.
 
 A file that reported "all seven sinks policed" would be reporting an EMPTY
 POPULATION AS A PASS -- the shape this repository has paid for repeatedly, and
 the one the brief for this packet names first. So each absent sink is declared
 absent here WITH THE EVIDENCE OF ITS ABSENCE, measured against the filesystem,
-and the day somebody adds `backend/nm/obs/telemetry.py` this file goes red and says
+and the day somebody adds a telemetry sink invocation this file goes red and says
 the new destination needs policing. That is the same discipline as
 `test_the_docs_do_not_outlive_the_artefact`: a claim about an artefact is a
 claim about the filesystem and is measured there.
@@ -31,13 +32,15 @@ WHAT IS ASSERTED
 """
 from __future__ import annotations
 
+import ast
 import inspect
 import pathlib
 
 import pytest
-from nm.adapters.policed_port import PolicedPort, port_methods
-from nm.adapters.search.policed import PolicedSearch
-from nm.domain.egress import (
+
+from nm.legal_brain.evidence_port import Coverage
+from nm.legal_brain.search_policed import PolicedSearch
+from nm.shared.egress_contracts import (
     DataClass,
     EgressRefused,
     Gatekeeper,
@@ -45,8 +48,8 @@ from nm.domain.egress import (
     Processor,
     Sink,
 )
-from nm.ports.evidence import Coverage
-from nm.ports.store import StorePort
+from nm.shared.policed_port_adapter import PolicedPort, port_methods
+from nm.shared.store_port import StorePort
 
 pytestmark = pytest.mark.class_a
 
@@ -276,18 +279,24 @@ def test_the_composition_root_polices_every_live_destination():
     """CLAUDE.md section 8. A policy module with a green suite and no caller
     refuses nothing, and that is how every defect the first external review
     found reached a served turn."""
-    from nm.bootstrap import composition
+    from nm.app import composition
 
     source = inspect.getsource(composition.Application.__init__)
     for wrapper in ("PolicedPort(", "PolicedSearch(", "PolicedModel("):
         assert wrapper in source, f"the composition root does not use {wrapper}"
-    assert source.count("PolicedPort(") == 6, (
-        "matter metadata, the roster directory, original-byte upload storage, "
-        "account mail, dictation and its live words are distinct destinations "
-        "and each must be wrapped")
-    for port in ("StorePort", "DirectoryPort", "UploadPort", "MailPort", "TranscriptionPort",
-                 "LiveTranscriptionPort"):
-        assert f"port={port}" in source, f"the {port} destination is not policed"
+    import ast
+    import textwrap
+
+    calls = [node for node in ast.walk(ast.parse(textwrap.dedent(source)))
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+             and node.func.id == "PolicedPort"]
+    ports = [keyword.value.id for call in calls for keyword in call.keywords
+             if keyword.arg == "port" and isinstance(keyword.value, ast.Name)]
+    expected = {"StorePort", "DirectoryPort", "UploadPort", "MailPort", "TranscriptionPort",
+                "LiveTranscriptionPort", "DocumentTextPort", "DocumentDerivativePort"}
+    assert ports and len(ports) == len(calls) == len(set(ports)), (
+        "Every actual wrapper must declare its unique port destination")
+    assert set(ports) == expected, "The served destination inventory must remain fully policed"
     assert "Gatekeeper(" in source, (
         "each wrapper builds its own decision point, so refusals land in "
         "different places and no audit holds the whole story")
@@ -295,13 +304,13 @@ def test_the_composition_root_polices_every_live_destination():
 
 def test_the_live_inventory_records_every_processor_the_root_names():
     """The file this installation actually runs under, not a fixture."""
-    from nm.bootstrap.composition import (
+    from nm.app.composition import (
         INDEX_PROCESSOR,
         OUTBOX_PROCESSOR,
         STORAGE_PROCESSOR,
         TRANSCRIPTION_PROCESSOR,
     )
-    from nm.bootstrap.egress_policy import egress_policy
+    from nm.shared.egress_policy import egress_policy
 
     policy = egress_policy(ROOT)
     recorded = {p.processor_id for p in policy.processors}
@@ -320,37 +329,32 @@ def test_the_live_inventory_records_every_processor_the_root_names():
 
 #: Sinks with a live destination, and the module that polices it.
 POLICED: dict[Sink, str] = {
-    Sink.MODEL: "backend/nm/adapters/model/policed.py",
-    Sink.STORAGE: "backend/nm/adapters/policed_port.py",
-    Sink.INDEX: "backend/nm/adapters/search/policed.py",
+    Sink.MODEL: "nm/shared/model_policed.py",
+    Sink.STORAGE: "nm/shared/policed_port_adapter.py",
+    Sink.INDEX: "nm/legal_brain/search_policed.py",
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
-    Sink.MAIL: "backend/nm/bootstrap/composition.py",
+    Sink.MAIL: "nm/app/composition.py",
     # Dictation (F-C-02) is wired through the generic `PolicedPort` the same way.
-    Sink.TRANSCRIPTION: "backend/nm/bootstrap/composition.py",
+    Sink.TRANSCRIPTION: "nm/app/composition.py",
+    Sink.MEDIA: "nm/app/composition.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim
 #: about the filesystem, measured against the filesystem. When one of these
 #: stops holding, the product has grown a destination and this file says so.
 ABSENT: dict[Sink, tuple[str, str]] = {
-    Sink.MEDIA: (
-        "backend/nm/adapters/media",
-        "no media processing adapter exists; the reached domain admission "
-        "record keeps uploaded originals quarantined. Original-byte storage "
-        "uses the separately policed UploadPort, not a media processor"),
     Sink.BACKUP: (
-        "backend/nm/adapters/backup",
+        "Sink.BACKUP",
         "no backup writer exists; `local-disk` is approved for the purpose so "
         "that the first one is admitted rather than invented"),
     Sink.SUPPORT: (
-        "backend/nm/adapters/support",
+        "Sink.SUPPORT",
         "no support-access path exists; BK-85-AC6 owns it and is not in this "
         "packet"),
     Sink.TELEMETRY: (
-        "backend/nm/obs",
-        "holds an empty __init__ and nothing else, so there is no diagnostic "
-        "destination to police"),
+        "Sink.TELEMETRY",
+        "no concrete diagnostic sink invocation is installed"),
 }
 
 
@@ -380,23 +384,36 @@ def unpoliced_sinks(root: pathlib.Path) -> list[str]:
 
     ONE PROBE, read by the sweep and by its control. A control that re-states
     the logic proves the restatement works; the first draft of this file
-    asserted `"nm.domain.media" not in {}`, which is a check that cannot fail
+    asserted `"nm.open_matter.media_contracts" not in {}`, which is a check that cannot fail
     -- B-049 wearing my own handwriting.
     """
     found: list[str] = []
 
-    for sink in (Sink.MEDIA, Sink.BACKUP, Sink.SUPPORT):
-        if (root / ABSENT[sink][0]).exists():
-            found.append(
-                f"{ABSENT[sink][0]} now exists, so {sink.value} has a "
-                f"destination and nothing polices it")
-
-    obs = root / ABSENT[Sink.TELEMETRY][0]
-    extra = sorted(f.name for f in obs.glob("*.py") if f.name != "__init__.py")
-    if extra:
-        found.append(
-            f"backend/nm/obs now holds {extra}, so telemetry has a destination and "
-            f"privileged text can reach it unpoliced")
+    # Journey filenames cannot define an absent destination. Inspect actual
+    # typed sink uses in calls over the entire physical product population.
+    # The policy's pure NEVER vocabulary is not a destination invocation.
+    approved_media = {POLICED[Sink.MEDIA], "nm/open_matter/document_permission.py"}
+    for path in sorted((root / "nm").rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        relative = path.relative_to(root).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf8"))
+        aliases = {"Sink"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                aliases.update(alias.asname or alias.name for alias in node.names
+                               if alias.name == "Sink")
+        used = set()
+        for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+            used.update(node.attr for node in ast.walk(call)
+                        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+                        and node.value.id in aliases)
+        for sink in ABSENT:
+            if sink.name in used:
+                found.append(f"{relative}: {sink.value} destination is declared absent "
+                             "and unpoliced")
+        if Sink.MEDIA.name in used and relative not in approved_media:
+            found.append(f"{relative}: media destination is outside its declared policed owners")
     return found
 
 
@@ -423,13 +440,10 @@ def test_the_absence_check_can_see_every_destination_that_could_appear(tmp_path)
     probe that can see telemetry and is blind to support does not pass as a
     working control.
     """
-    (tmp_path / "backend" / "nm" / "adapters" / "media").mkdir(parents=True)
-    (tmp_path / "backend" / "nm" / "adapters" / "backup").mkdir(parents=True)
-    (tmp_path / "backend" / "nm" / "adapters" / "support").mkdir(parents=True)
-    obs = tmp_path / "backend" / "nm" / "obs"
-    obs.mkdir(parents=True)
-    (obs / "__init__.py").write_text("", encoding="utf8")
-    (obs / "telemetry.py").write_text("# ships crash reports", encoding="utf8")
+    source = tmp_path / "nm/work_the_file"
+    source.mkdir(parents=True)
+    for sink in (Sink.MEDIA, Sink.BACKUP, Sink.SUPPORT, Sink.TELEMETRY):
+        (source / f"{sink.value}.py").write_text(f"send(sink=Sink.{sink.name})", encoding="utf8")
 
     found = unpoliced_sinks(tmp_path)
     assert len(found) == 4, found
@@ -446,8 +460,8 @@ def test_a_quarantine_domain_record_is_not_a_media_processing_destination(tmp_pa
     No UNWIRED exemption is supplied: the actual adapter's absence is checked.
     Planting that adapter immediately changes the verdict.
     """
-    (tmp_path / "backend" / "nm" / "domain").mkdir(parents=True)
-    (tmp_path / "backend" / "nm" / "domain" / "media.py").write_text("", encoding="utf8")
+    (tmp_path / "nm/open_matter").mkdir(parents=True)
+    (tmp_path / "nm/open_matter/media_contracts.py").write_text("", encoding="utf8")
     assert unpoliced_sinks(tmp_path) == []
-    (tmp_path / "backend" / "nm" / "adapters" / "media").mkdir(parents=True)
+    (tmp_path / "nm/open_matter/processor.py").write_text("send(sink=Sink.MEDIA)", encoding="utf8")
     assert len(unpoliced_sinks(tmp_path)) == 1

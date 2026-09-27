@@ -2,7 +2,7 @@
 
 WHAT WAS MEASURED, 6 September 2026
 ------------------------------------
-Six `_fold` functions in `backend/nm/`, and they were not the same function:
+Six `_fold` functions in `nm/`, and they were not the same function:
 
     chronology, dispute, posture   words only  ── identical, three copies
     grounding                      words only, plus the `vs`/`v` pivot
@@ -28,13 +28,13 @@ other copy is, it is what makes a second copy impossible.
 
 The same mechanism `tests/test_citation_patterns.py` uses for provision
 patterns, drawing its population from the WHOLE package rather than from a
-list — a list would not have contained `backend/nm/domain/decision.py`, which was
+list — a list would not have contained `nm/advise/decision_contracts.py`, which was
 three days old when this was written.
 
 THE BOUND
 ----------
 A caller may need MORE normalisation than the base and that is not a second
-copy — `nm.core.grounding._citation_fold` folds `vs` and `versus` to `v`,
+copy — `nm.legal_brain.grounding._citation_fold` folds `vs` and `versus` to `v`,
 which is right for a case name and wrong for an advocate's sentence. What it
 may not do is define its own base, so the rule is that it must CALL `fold`.
 """
@@ -47,7 +47,7 @@ import pytest
 
 pytestmark = pytest.mark.class_a
 
-PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "backend" / "nm"
+PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "nm"
 
 #: The one module allowed to define the base. Its docstring carries the
 #: argument; this carries the enforcement.
@@ -81,7 +81,7 @@ def _calls(node: ast.AST) -> set[str]:
 
 
 def folds_defined(sources) -> list[tuple[str, str, bool]]:
-    """Every function in `backend/nm/` whose name says it folds text.
+    """Every function in `nm/` whose name says it folds text.
 
     Returned as (module, function, calls_the_base) so the caller decides what
     is permitted -- the scan does not encode the exception, the assertion does.
@@ -120,10 +120,10 @@ def test_only_one_module_defines_the_base_fold():
     and changed nothing, so the test is about the BODY.
     """
     offenders = [(mod, name) for mod, name, calls_base in folds_defined(_sources())
-                 if not calls_base and mod != "backend/nm/domain/text.py"]
+                 if not calls_base and mod != "nm/shared/text_contracts.py"]
     assert not offenders, (
         f"these define their own text fold instead of calling "
-        f"`nm.domain.text.fold`: {offenders}. Six of these existed on "
+        f"`nm.shared.text_contracts.fold`: {offenders}. Six of these existed on "
         f"6 September 2026 and two of them disagreed with the other four "
         f"about whether a question mark makes two sentences different.")
 
@@ -133,8 +133,8 @@ def test_the_base_fold_is_where_it_says_it_is():
     nothing -- if `fold` were renamed or moved, the check above would go
     quietly green with no fold anywhere."""
     defined = folds_defined(_sources())
-    assert ("backend/nm/domain/text.py", "fold", False) in defined, (
-        f"`nm.domain.text.fold` is not where the rule says it is: {defined}")
+    assert ("nm/shared/text_contracts.py", "fold", False) in defined, (
+        f"`nm.shared.text_contracts.fold` is not where the rule says it is: {defined}")
 
 
 def test_nothing_else_compiles_the_word_pattern():
@@ -144,7 +144,7 @@ def test_nothing_else_compiles_the_word_pattern():
     one in a `def`."""
     assert not word_patterns(_sources()), (
         f"these compile the base fold's own word pattern: "
-        f"{word_patterns(_sources())}. Use `nm.domain.text.fold`.")
+        f"{word_patterns(_sources())}. Use `nm.shared.text_contracts.fold`.")
 
 
 # =============================== the bound ==================================
@@ -158,8 +158,8 @@ def test_a_composition_on_the_base_is_permitted():
     vs the reply" with "the notice v the reply", so it is right that it lives
     in `grounding` and wrong that it would live in `text`.
     """
-    from nm.core.grounding import _citation_fold
-    from nm.domain.text import fold
+    from nm.legal_brain.grounding import _citation_fold
+    from nm.shared.text_contracts import fold
 
     assert _citation_fold("Rao vs Sunkara") == _citation_fold("Rao v Sunkara")
     assert fold("Rao vs Sunkara") != fold("Rao v Sunkara"), (
@@ -180,7 +180,7 @@ def test_the_scan_catches_a_planted_fold(tmp_path):
         'def _fold(text):\n'
         '    return " ".join((text or "").lower().split())\n')
     found = folds_defined([(PACKAGE / "planted.py", planted)])
-    assert found == [("backend/nm/planted.py", "_fold", False)], found
+    assert found == [("nm/planted.py", "_fold", False)], found
 
 
 def test_the_scan_catches_a_fold_renamed_to_hide(tmp_path):
@@ -198,4 +198,4 @@ def test_the_scan_catches_a_fold_renamed_to_hide(tmp_path):
 def test_the_pattern_scan_catches_a_planted_regex():
     planted = ast.parse('import re\n_W = re.compile(r"[a-z0-9]+")\n')
     assert word_patterns([(PACKAGE / "planted.py", planted)]) \
-        == ["backend/nm/planted.py"]
+        == ["nm/planted.py"]

@@ -49,7 +49,7 @@ utf8_console()
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 
 os.environ.pop("SSLKEYLOGFILE", None)  # Norton's keylog path aborts the first TLS call
 
@@ -64,7 +64,7 @@ VARIANT = "baseline"
 #: limitation period on requesting a charge sheet. A harness that measures a
 #: prompt the product does not send measures something else.
 def _context() -> str:
-    from nm.core import step_dependency
+    from nm.legal_brain import step_dependency
     return step_dependency.position_context(
         ours=True,
         why=("the date of the last acknowledgement is unresolved, so whether "
@@ -150,7 +150,7 @@ URGENCY_RULE = (
 
 
 def measure(run: bool) -> int:
-    from nm.core import step_dependency
+    from nm.legal_brain import step_dependency
 
     if not run:
         print(f"{len(CASES)} labelled steps; {sum(1 for _, l, _ in CASES if l == 'dependent')} "
@@ -162,11 +162,11 @@ def measure(run: bool) -> int:
 
     from dataclasses import replace
 
-    from nm.adapters.model.call_budget import CallBudget
-    from nm.adapters.model.config import load, load_dotenv
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.core.conversation import guided
-    from nm.ports.model import Tier
+    from nm.shared.model_call_budget import CallBudget
+    from nm.shared.model_config import load, load_dotenv
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.legal_brain.conversation import guided
+    from nm.shared.model_port import Tier
 
     # THE SAME LEDGER AS THE LIVE MATTERS, so this spend is counted with theirs
     # and capped by the same maximum. A measurement outside the ledger is the

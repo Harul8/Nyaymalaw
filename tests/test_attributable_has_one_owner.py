@@ -2,13 +2,13 @@
 
 `("ratio", "reasoning", "order")` was written out, by hand, in six places:
 
-    backend/nm/adapters/evidence/corpus.py   what a Finding may be built from
-    pipeline/indexing/build_authority_index.py   what goes INTO the searchable index
-    pipeline/quality/releasegate.py             what RG-04 counts as retrievable
+    nm/legal_brain/corpus_evidence.py   what a Finding may be built from
+    pipeline/build_authority_index.py   what goes INTO the searchable index
+    pipeline/releasegate.py             what RG-04 counts as retrievable
     development_environment/one_off_tools/find_goldens2.py           which judgments qualify as
     anchors
-    pipeline/quality/verify_set.py              the same, for the golden set
-    pipeline/indexing/classify_paragraphs.py     what the classifier eval scores
+    pipeline/verify_set.py              the same, for the golden set
+    pipeline/classify_paragraphs.py     what the classifier eval scores
 
 All six agreed on the day this was written, which is exactly why nobody
 noticed. Two of them are load-bearing against each other: the index builder
@@ -18,13 +18,13 @@ criterion scoring an index it is not describing -- B-044 verbatim, where a
 zero from the wrong key read as absence and reached the advocate.
 
 CLAUDE.md §4 asks the question this file answers: not "where is the other
-copy" but WHAT MAKES A SECOND COPY IMPOSSIBLE. `backend/nm/ports/evidence.py` owns
+copy" but WHAT MAKES A SECOND COPY IMPOSSIBLE. `nm/legal_brain/evidence_port.py` owns
 the mapping; `ATTRIBUTABLE_LABELS` is derived from it and never authored; and
 this refuses the seventh copy at the build.
 
-THE POPULATION IS THE WHOLE PRODUCT, not one package. `backend/nm/` and `tools/` are
+THE POPULATION IS THE WHOLE PRODUCT, not one package. `nm/` and `tools/` are
 both scanned, because five of the six copies were in `tools/` and a checker
-scoped to `backend/nm/` would have found exactly one of them.
+scoped to `nm/` would have found exactly one of them.
 """
 from __future__ import annotations
 
@@ -32,9 +32,9 @@ import ast
 from pathlib import Path
 
 import pytest
-from nm.ports.evidence import ATTRIBUTABLE_LABELS, ParaKind, kind_for_corpus_label
 
 from assurance.common.homes import tooling_sources
+from nm.legal_brain.evidence_port import ATTRIBUTABLE_LABELS, ParaKind, kind_for_corpus_label
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,7 +42,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FINGERPRINT = {"ratio", "reasoning", "order"}
 
 #: The one module allowed to write them down.
-OWNER = Path("backend") / "nm" / "ports" / "evidence.py"
+OWNER = Path("nm/legal_brain/evidence_port.py")
 
 
 def _literal_label_sets(tree: ast.AST) -> list[int]:
@@ -68,7 +68,7 @@ def _literal_label_sets(tree: ast.AST) -> list[int]:
 
 
 def _sources() -> list[Path]:
-    files = [*(ROOT / "backend" / "nm").rglob("*.py"), *tooling_sources()]
+    files = [*(ROOT / "nm").rglob("*.py"), *tooling_sources()]
     assert len(files) > 40, f"only {len(files)} files scanned -- the walk is broken"
     return files
 

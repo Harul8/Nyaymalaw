@@ -6,9 +6,9 @@ import os
 from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
-from nm.adapters.store import uploads
-from nm.adapters.store.file_store import FileMatterStore
 
+from nm.shared import store_uploads as uploads
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -56,7 +56,7 @@ def test_device_namespace_is_not_treated_as_a_filesystem_upload_root():
 
 
 def test_actual_directory_link_cannot_redirect_original_reads_or_writes(tmp_path):
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     store = FileMatterStore(tmp_path / "store", key=KEY)
     store.commit(Matter(id="m_inside", advocate_id="owner", title="Inside", version=1),
@@ -93,7 +93,7 @@ def test_actual_directory_link_cannot_redirect_original_reads_or_writes(tmp_path
 
 
 def test_parent_creation_during_resolution_preserves_one_storage_identity(tmp_path, monkeypatch):
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     store = FileMatterStore(tmp_path / "store", key=KEY)
     store.commit(Matter(id="m_race", advocate_id="owner", title="Race", version=1),

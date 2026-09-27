@@ -4,13 +4,17 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.core.brain_assessment import AssessmentRefused, AssessmentService, captured_retrievals
-from nm.core.brain_release import IndependentReview, prepare_claims
-from nm.core.output_checks import BoundarySubjects, OutputSubjects
-from nm.core.verifier import VerifiedRelease, release_verified
-from nm.domain.loop import LoopEvent, LoopRecord, StepKind
-from nm.ports.evidence import Coverage
 
+from nm.legal_brain.brain_assessment import (
+    AssessmentRefused,
+    AssessmentService,
+    captured_retrievals,
+)
+from nm.legal_brain.brain_release import IndependentReview, prepare_claims
+from nm.legal_brain.evidence_port import Coverage
+from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord, StepKind
+from nm.legal_brain.output_checks import BoundarySubjects, OutputSubjects
+from nm.legal_brain.verifier import VerifiedRelease, release_verified
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import response
 

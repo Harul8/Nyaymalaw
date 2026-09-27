@@ -6,10 +6,10 @@ from dataclasses import replace
 import pytest
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
-from nm.core.brain_release import ReviewRefused
-from nm.core.reviewed_preview import MARKER, ReviewedPreviewService
-from nm.edge.reviewed_preview import router
 
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.reviewed_preview import MARKER, ReviewedPreviewService
+from nm.legal_brain.reviewed_preview_api import router
 from tests.test_reviewed_private_preview_checks_saved_words import ready
 
 pytestmark = pytest.mark.class_a

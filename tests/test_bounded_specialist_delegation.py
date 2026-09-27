@@ -23,8 +23,9 @@ packet and nothing here runs them.
 from __future__ import annotations
 
 import pytest
-from nm.core.delegation import Ledger, accept, admit, whole_task_clean
-from nm.domain.delegation import (
+
+from nm.legal_brain.delegation import Ledger, accept, admit, whole_task_clean
+from nm.legal_brain.delegation_contracts import (
     Finding,
     Mandate,
     MandateDelta,

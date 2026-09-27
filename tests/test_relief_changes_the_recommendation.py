@@ -34,14 +34,14 @@ import re
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import SCRIPTED_READS, ScriptedModelAdapter
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import consistency
-from nm.core import relief as relief_r
-from nm.core.premise import Basis
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.answer import ElementKind
 
+from nm.advise import relief as relief_r
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain import consistency
+from nm.legal_brain.premise import Basis
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_factors_on_a_served_turn import _Corpus
 from tests.test_turn_contract import KEY, _model_config, briefed
 

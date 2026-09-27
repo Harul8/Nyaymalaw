@@ -1,6 +1,6 @@
 """NOTHING REACHES A PROVIDER THAT THE POLICY DID NOT PERMIT. BK-85-AC1. P06.
 
-`backend/nm/domain/egress.py` decides. This is about whether the decision is actually
+`nm/shared/egress_contracts.py` decides. This is about whether the decision is actually
 IN FRONT of the thing it governs — which is a different question, and the one
 CLAUDE.md §8 says every external review found the product failing: *a guard
 that is right in the core and wrong in the composition root is not a guard.*
@@ -24,9 +24,10 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-from nm.adapters.model.policed import EgressRefused, PolicedModel
-from nm.bootstrap.egress_policy import egress_policy
-from nm.domain.egress import DataClass, Policy, Processor, Sink
+
+from nm.shared.egress_contracts import DataClass, Policy, Processor, Sink
+from nm.shared.egress_policy import egress_policy
+from nm.shared.model_policed import EgressRefused, PolicedModel
 
 pytestmark = pytest.mark.class_a
 
@@ -161,7 +162,7 @@ def test_the_composition_root_puts_the_policy_in_front_of_the_provider():
     reached a served turn."""
     import inspect
 
-    from nm.bootstrap import composition
+    from nm.app import composition
 
     source = inspect.getsource(composition.Application.__init__)
     assert "PolicedModel(" in source, (
@@ -228,7 +229,7 @@ def test_the_policy_answers_the_whole_port_it_wraps():
     `ModelResult`, and building one here would test the fixture. The wiring
     order is asserted above; the served path is exercised by every turn test.
     """
-    from nm.ports.model import ModelPort
+    from nm.shared.model_port import ModelPort
 
     required = [name for name in dir(ModelPort)
                 if not name.startswith("_")]

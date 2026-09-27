@@ -20,8 +20,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-from nm.knowledge import governing_law as curated
-from nm.ports.governing_law import Limb, Pending
+
+from nm.legal_brain import governing_law_sources as curated
+from nm.legal_brain.governing_law_port import Limb, Pending
 
 pytestmark = pytest.mark.class_a
 

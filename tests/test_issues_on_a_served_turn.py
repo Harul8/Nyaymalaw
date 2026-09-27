@@ -16,12 +16,12 @@ import re
 from datetime import date
 
 import pytest
-from nm.core.turn import TurnInput
-from nm.domain.answer import ElementKind
-from nm.domain.issue import Disposition, DispositionState, Effect, Issue, IssueKind
-from nm.domain.matter import Side
-from nm.domain.quotable import Quotable
 
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain.issue_contracts import Disposition, DispositionState, Effect, Issue, IssueKind
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file.matter_contracts import Side
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -70,7 +70,7 @@ def test_a_served_turn_puts_issues_in_front_of_the_advocate(tmp_path):
     reached the answer, and none of it means anything if none did."""
     findings = _findings(_run(tmp_path, FOR_PLAINTIFF))
     assert findings, (
-        "no issue reached the answer. `backend/nm/domain/issue.py` had a complete "
+        "no issue reached the answer. `nm/legal_brain/issue_contracts.py` had a complete "
         "unit suite and no production caller for three slices.")
 
 
@@ -128,7 +128,7 @@ def test_an_issue_the_reading_offered_and_the_product_refused_is_disclosed(
     discarded by a filter that decided what was relevant enough — with a
     better excuse attached.
     """
-    from nm.core import issues
+    from nm.legal_brain import issues
 
     read = issues.read(
         {"issues": [{"statement": "An issue from nowhere",
@@ -144,7 +144,7 @@ def test_one_refused_issue_does_not_discard_the_others():
     """THE MEASURED DEFECT WEARING A DIFFERENT HAT. A per-read refusal would
     be a filter with a good excuse: four sound issues lost because a fifth was
     not quotable."""
-    from nm.core import issues
+    from nm.legal_brain import issues
 
     account = "Goods were supplied against invoices and were never paid for."
     read = issues.read({"issues": [
@@ -168,7 +168,7 @@ def test_a_parked_issue_is_visible_rather_than_deleted():
     with its reason. This asserts the line renders, since a disposition
     nobody reads is a deletion with extra steps.
     """
-    from nm.domain.issue import classify, considered_not_pursued
+    from nm.legal_brain.issue_contracts import classify, considered_not_pursued
 
     spotted = (Issue(thread="th_1", statement="A point not worth running",
                      kind=IssueKind.SUBSTANTIVE, runs_against=Side.MOVING),)
@@ -183,7 +183,7 @@ def test_a_parked_issue_is_visible_rather_than_deleted():
 def test_nothing_spotted_is_a_different_answer_from_nothing_read():
     """THREE STATES. "No issues on this file" and "nobody read it for issues"
     are different sentences, and only one of them is a finding."""
-    from nm.core import issues
+    from nm.legal_brain import issues
 
     none_spotted = issues.read({"issues": []}, "th_1",
                                Quotable(file="an account"))

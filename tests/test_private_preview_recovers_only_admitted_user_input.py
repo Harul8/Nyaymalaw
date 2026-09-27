@@ -2,10 +2,10 @@
 from dataclasses import replace
 
 import pytest
-from nm.core.original_instruction import OriginalInstruction
-from nm.core.reviewed_preview import ReviewedPreview
-from nm.domain.loop import digest
 
+from nm.legal_brain.loop_contracts import digest
+from nm.legal_brain.reviewed_preview import ReviewedPreview
+from nm.work_the_file.original_instruction import OriginalInstruction
 from tests.test_private_brain_transport_cannot_approve_or_release_itself import (
     PRIVATE,
     path,

@@ -27,13 +27,14 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.core.worker import (
+
+from nm.shared.operation_contracts import Operation, OutboxEntry, Outcome, request_digest
+from nm.shared.worker import (
     AmbiguousEffect,
     JobResult,
     JobRunner,
 )
-from nm.domain.matter import Matter
-from nm.domain.operation import Operation, OutboxEntry, Outcome, request_digest
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 
@@ -100,7 +101,7 @@ class _Store:
         return self.operations.get(idempotency_key)
 
     def renew_outbox(self, workspace_id, entry, *, lease_seconds):
-        from nm.ports.transactional import LeaseLost
+        from nm.shared.transactional_port import LeaseLost
 
         held = self.rows.get(entry.entry_id)
         if (workspace_id != entry.workspace_id or held is None
@@ -282,7 +283,7 @@ def test_a_missing_outcome_writer_refuses_before_an_effect():
 
 
 def test_an_expired_claim_cannot_settle_after_another_worker_claims():
-    from nm.ports.transactional import LeaseLost
+    from nm.shared.transactional_port import LeaseLost
 
     runner, store, _, _ = _fixture()
     old = store.claim_outbox(WS, worker="old", lease_seconds=30)[0]
@@ -488,7 +489,7 @@ def test_the_runner_never_promises_exactly_once():
     quotes in a design review."""
     import inspect
 
-    import nm.core.worker as worker
+    import nm.shared.worker as worker
 
     source = inspect.getsource(worker)
     assert "EXACTLY-ONCE EXTERNAL DELIVERY. It does not exist" in source

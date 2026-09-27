@@ -123,7 +123,10 @@ if (progress) {
     ids.add(entry.id);
     if (Object.keys(entry).sort().join(',') !== 'evidence,gaps,id,progress,verification') throw new Error('Unknown progress fields');
     if ([entry.progress, entry.evidence, entry.gaps].some(value => typeof value !== 'string' || !value.trim())) throw new Error('Empty progress evidence');
-    if (entry.verification !== 'Controlled checks passed; acceptance incomplete') throw new Error('This build record cannot self-certify acceptance');
+    if (!['Controlled checks passed; acceptance incomplete',
+          'Live diagnostic reproduced; fix pending'].includes(entry.verification)) {
+      throw new Error('This build record cannot self-certify acceptance');
+    }
     const old = String(bb[byId.get(entry.id)][9] ?? '');
     if (old.includes(progress.record)) throw new Error(`Progress already recorded: ${entry.id}`);
     append(entry.id, 10, `${progress.record}: ${entry.progress} Acceptance remains incomplete. Normal client cutover is not authorised.`);

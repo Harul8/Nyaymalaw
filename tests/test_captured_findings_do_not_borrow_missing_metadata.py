@@ -7,8 +7,8 @@ from copy import deepcopy
 from datetime import date
 
 import pytest
-from nm.ports.evidence import Finding, Origin
 
+from nm.legal_brain.evidence_port import Finding, Origin
 from tests.test_independent_claim_verifier import finding
 
 pytestmark = pytest.mark.class_a

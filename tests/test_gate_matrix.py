@@ -14,7 +14,8 @@ own construction rules cannot be broken by the next person to add a gate.
 from __future__ import annotations
 
 import pytest
-from nm.domain.gates import (
+
+from nm.shared.gates_contracts import (
     GATES,
     Gate,
     Persistence,
@@ -24,8 +25,8 @@ from nm.domain.gates import (
     gate,
     withholding,
 )
-from nm.domain.metrics import TurnMetrics
-from nm.domain.traceability import refuses
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 

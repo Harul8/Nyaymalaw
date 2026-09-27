@@ -35,12 +35,15 @@ import pathlib
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain import summary as matter_memory
-from nm.domain.answer import ElementKind
-from nm.domain.matter import (
+
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file import summary_contracts as matter_memory
+from nm.work_the_file.matter_contracts import (
     AskedQuestion,
     Basis,
     Matter,
@@ -49,9 +52,6 @@ from nm.domain.matter import (
     Side,
     Thread,
 )
-from nm.domain.quotable import Quotable
-from nm.domain.traceability import refuses
-
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -252,7 +252,7 @@ def test_a_long_account_keeps_what_this_turn_is_about():
 
 
 def _fact(statement: str):
-    from nm.domain.matter import Fact, Provenance
+    from nm.work_the_file.matter_contracts import Fact, Provenance
     return Fact.create(statement=statement,
                        provenance=Provenance(kind="advocate_statement",
                                              turn="t"))
@@ -413,7 +413,7 @@ def test_an_act_named_earlier_is_carried_by_exact_title_only(tmp_path):
     said. An exact title is their instruction. A keyword hit across four turns
     is a guess with more evidence behind it than any single turn could supply.
     """
-    from nm.knowledge.manifest import ActBasis, Manifest
+    from nm.legal_brain.manifest_sources import ActBasis, Manifest
 
     manifest = Manifest.load(
         pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
@@ -455,7 +455,7 @@ def test_a_narrative_takes_the_latest_provision_and_a_question_the_first():
     keep answering about the first, forever — and be correct about a provision
     nobody asked about.
     """
-    from nm.domain.citation import last_wanted_section, wanted_section
+    from nm.legal_brain.citation_contracts import last_wanted_section, wanted_section
 
     account = ("turn 1: this is about section 6 of the Specific Relief Act\n"
                "turn 4: now I am asking about section 53A")
@@ -490,7 +490,7 @@ def test_our_own_question_can_never_settle_a_posture():
     CHECKS AGAINST WHAT THE PERSON WROTE, NEVER AGAINST WHAT WE COMPOSED. It is
     the same rule as `test_composed_text_is_not_a_citation`, one layer up.
     """
-    from nm.core.posture import interpret
+    from nm.legal_brain.posture import interpret
 
     ours = ("Whose side are we on in this matter — do we act for the party "
             "moving, or the party answering?")
@@ -575,7 +575,7 @@ def test_a_descriptor_that_names_nobody_is_not_recorded():
     The rule is GRAMMAR, not a vocabulary list. A phrase whose only content
     word is a noun of representation names nobody, however it is inflected.
     """
-    from nm.core.posture import interpret, names_nobody
+    from nm.legal_brain.posture import interpret, names_nobody
 
     for junk in ("our client", "my client", "the client", "client",
                  "the party", "his client", "them"):
@@ -626,7 +626,7 @@ def test_the_role_read_never_fires_without_first_person_representation():
     names two parties and speaks of neither in the first person, so it does not
     fire, and the reinstatement defect stays impossible.
     """
-    from nm.core.posture import speaks_of_the_representation
+    from nm.legal_brain.posture import speaks_of_the_representation
 
     assert not speaks_of_the_representation(
         "the landlord has issued a quit notice to the tenant")
@@ -650,7 +650,7 @@ def test_an_out_of_vocabulary_role_is_blanked_not_coerced():
     one provider: `strict` is off, and `claimant` -- outside an eleven-value
     enum -- reached the core once already.
     """
-    from nm.core.posture import interpret_role
+    from nm.legal_brain.posture import interpret_role
 
     role, why = interpret_role({"role": "claimant", "why": "the workman"})
     assert role is None, "an invented role was accepted"
@@ -720,8 +720,8 @@ def test_every_declared_schema_is_satisfiable_when_nothing_was_established():
     Derived from the declared schemas rather than a list of them, so a schema
     added in a later slice is covered the day it is written.
     """
-    from nm.core import posture as reader
-    from nm.ports.model import SchemaViolation, require_schema
+    from nm.legal_brain import posture as reader
+    from nm.shared.model_port import SchemaViolation, require_schema
 
     schemas = {n: getattr(reader, n) for n in dir(reader)
                if n.endswith("_SCHEMA")
@@ -816,7 +816,7 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
     That is backwards: an unverifiable guess is exactly the case where the
     advocate has no other signal that the wrong Act was read.
     """
-    from nm.knowledge.manifest import ActBasis, Manifest
+    from nm.legal_brain.manifest_sources import ActBasis, Manifest
 
     manifest = Manifest.load(
         pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
@@ -833,7 +833,7 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
     # And the note reaches the disclosure on every outcome, not only success.
     import inspect
 
-    from nm.adapters.evidence import corpus
+    from nm.legal_brain import corpus_evidence as corpus
 
     body = inspect.getsource(corpus.CorpusEvidenceAdapter.fetch)
     returns = body.count("return EvidenceResult(")
@@ -865,9 +865,8 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     turn succeeded, and the test failed on `turns_applied` — telling me the
     fixture was wrong rather than the product.
     """
-    from nm.core.turn import TurnRefused
-    from nm.ports.evidence import Coverage, EvidenceResult
-
+    from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+    from nm.legal_brain.turn import TurnRefused
     from tests.test_turn_contract import finding
 
     store = FileMatterStore(tmp_path, key=KEY)
@@ -918,13 +917,13 @@ def test_the_account_budget_stays_a_fraction_of_the_window_it_must_fit_in():
     The account appears in about ten prompts a turn, so it has to stay a
     fraction of the window rather than most of it.
 
-    This lives in the tests because it CROSSES A LAYER: `nm.domain.summary`
+    This lives in the tests because it CROSSES A LAYER: `nm.work_the_file.summary_contracts`
     may not import the adapter that knows the window, and the two numbers
     would otherwise drift with nothing watching. A test is allowed to know
     both.
     """
-    from nm.adapters.model.config import CONTEXT_BUDGET
-    from nm.ports.model import Tier
+    from nm.shared.model_config import CONTEXT_BUDGET
+    from nm.shared.model_port import Tier
 
     #: Characters per token, deliberately pessimistic. English averages ~4;
     #: 3 assumes worse-than-average text so the check errs toward refusing a
@@ -965,7 +964,7 @@ def test_a_served_side_blind_turn_still_derives_what_does_not_turn_on_the_side(
     blocked turn spends nothing would pass with the checklist removed from the
     product entirely, which is the state this test exists to refuse.
     """
-    from nm.domain.metrics import TurnMetrics
+    from nm.shared.metrics_contracts import TurnMetrics
 
     def calls(*, blocked: bool) -> int:
         recorder = _Recorder()

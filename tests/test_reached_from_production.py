@@ -45,7 +45,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 #: Modules nothing imports BY DESIGN. Each with the reason.
 ENTRY_POINTS: dict[str, str] = {
-    "nm.bootstrap.main": "the process entry point — nothing imports a main",
+    "nm.app.main": "the process entry point — nothing imports a main",
 }
 
 #: Modules BUILT AND NOT YET WIRED, each with what will wire it.
@@ -71,7 +71,7 @@ UNWIRED: dict[str, str] = {
     # whether a proceeding was pending at commencement. Until then the table
     # is exercised by its own suite and reaches no advocate, which is the
     # honest state and is declared here rather than implied by silence.
-    "nm.adapters.knowledge.governing_law":
+    "nm.legal_brain.governing_law_adapter":
         "LB-120: no criminal cause exists in the closed CauseOfAction "
         "vocabulary, so no served turn can reach it. Wired by a criminal "
         "cause plus the offence-date and pending-proceeding reads.",
@@ -89,7 +89,7 @@ UNWIRED: dict[str, str] = {
     # index digest and a bound provider on a deployment. None exists, and the
     # gate's own verdict for this build is ENGINEERING COMPLETE, RELEASE
     # WITHHELD.
-    "nm.domain.release": (
+    "nm.shared.release_contracts": (
         "P41's release manifest and release gate. Driven by "
         "`tests/test_the_release_gate_fails_closed.py`; it is wired by a "
         "release operator freezing a manifest against a deployment. A served "
@@ -98,7 +98,7 @@ UNWIRED: dict[str, str] = {
     # with accountable people against a configured pilot -- `production_measure`
     # on BK-85-AC5 and BK-88-AC3, both NOT RUN because there are no such people
     # and no such pilot.
-    "nm.domain.incident": (
+    "nm.shared.incident_contracts": (
         "P40's incident rehearsal record: scenario, rota, reviewed clocks, "
         "containment authority, evidence custody and notification decisions. "
         "Driven by `tests/test_a_rehearsal_is_evidence_about_people.py` "
@@ -106,7 +106,7 @@ UNWIRED: dict[str, str] = {
         "a timed tabletop, which is the production_measure that stays NOT RUN "
         "on both its criteria. A served turn must never reach it -- an "
         "advocate's turn has no business opening an incident record."),
-    "nm.domain.restore": (
+    "nm.shared.restore_contracts": (
         "P38's restore, isolation and rollback rules. Driven by the rehearsal "
         "harness in `tests/test_a_restore_cannot_revive_what_was_taken_away.py` "
         "against synthetic infrastructure; it is wired by an operator command "
@@ -116,7 +116,7 @@ UNWIRED: dict[str, str] = {
     # P35's review harness, and this one may never be wired -- which is the
     # honest statement rather than a deferral.
     #
-    # `nm.domain.legal_review` records a QUALIFIED PERSON'S judgement about
+    # `nm.shared.legal_review_contracts` records a QUALIFIED PERSON'S judgement about
     # served advice. Nothing in a turn produces one, and nothing should: a
     # served path from this product into a counsel review would be this
     # product writing the review. What will "wire" it is a review actually
@@ -124,10 +124,10 @@ UNWIRED: dict[str, str] = {
     # whose `approvals` and `evidence` are both empty -- at which point its
     # record is read by whoever reports BK-67, not by a turn.
     #
-    # `nm.domain.review` is NOT listed: `legal_review` imports it, so it is
+    # `nm.shared.review_contracts` is NOT listed: `legal_review` imports it, so it is
     # reached, and listing it would be a declaration covering a module that
     # does not need one.
-    "nm.domain.legal_review": (
+    "nm.shared.legal_review_contracts": (
         "P35's qualified-review record. It is written BY a person and read by "
         "whoever reports BK-67-AC1 to AC4 and BK-91-AC4; no turn produces one "
         "and none should, because a served path from the product into its own "
@@ -138,57 +138,57 @@ UNWIRED: dict[str, str] = {
     # P07/P22 built the mechanisms; wiring each is its own step, and these say
     # WHICH step rather than leaving modules that run on no turn.
     #
-    # `nm.domain.egress` WAS HERE AND IS NOT. P06 wired it into the composition
+    # `nm.shared.egress_contracts` WAS HERE AND IS NOT. P06 wired it into the composition
     # root -- `PolicedModel` in front of `TracedModel` -- and
     # `test_no_declaration_outlives_its_wiring` refused the stale declaration
     # the moment it did. That is the build gate's third outcome applied one
     # level up: a declaration that outlives what it was written for covers the
     # next unwired module silently.
-    "nm.core.worker": (
-        "P11's job lifecycle. `nm.bootstrap.composition` runs it once the "
+    "nm.shared.worker": (
+        "P11's job lifecycle. `nm.app.composition` runs it once the "
         "store it reads owes work -- which needs P10's outbox, and P10 is "
         "unproven for want of a PostgreSQL server. The lifecycle itself is "
         "exercised end to end against a reference store; what is unproven is "
         "that the rows survive a process death, not that the leases, retries "
         "and reconciliation behave."),
-    "nm.adapters.store.postgres": (
+    "nm.shared.store_postgres": (
         "P10's transactional store, and DELIBERATELY not the live writer. "
-        "`nm.bootstrap.composition` wires it when BK-83-AC1 carries "
+        "`nm.app.composition` wires it when BK-83-AC1 carries "
         "integration evidence from a real server AND P12's migration "
         "rehearsal has been run and approved -- two live writers is the "
         "defect P12 exists to prevent, not a configuration option. No "
         "PostgreSQL is reachable on this machine, so the adapter is built and "
         "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
         "the registry honest about."),
-    # `nm.core.premise` WAS HERE. P22 wired it on 12 September 2026:
-    # `nm.core.turn._premises` builds the three premises before the
+    # `nm.legal_brain.premise` WAS HERE. P22 wired it on 12 September 2026:
+    # `nm.legal_brain.turn._premises` builds the three premises before the
     # arithmetic, `assess` blocks on an unestablished one and marks an
     # inferred accrual CONDITIONAL, and the digest travels onto the register
     # and the cover. The declaration went the moment the import landed, as
     # `test_no_declaration_outlives_its_wiring` requires.
-    # `nm.core.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
-    # it on 12 September 2026: `nm.core.turn` observes the file after ADMIT-B,
+    # `nm.work_the_file.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
+    # it on 12 September 2026: `nm.legal_brain.turn` observes the file after ADMIT-B,
     # settles every value it derives against its inputs, and the projections
     # refuse to present a stale one as current. The declaration went the
     # moment the import landed, as `test_no_declaration_outlives_its_wiring`
     # requires -- a declaration that outlives its wiring is the next unwired
     # module's hiding place.
-    # `nm.domain.reads` WAS HERE. It is wired as of 5 September 2026 -- not by
+    # `nm.legal_brain.reads_contracts` WAS HERE. It is wired as of 5 September 2026 -- not by
     # the tier escalation it was built for, which still needs a hard-tier
     # model, but by the general form of B-088: a DECISIVE read that answers
     # with nothing fires G-READ, and the model port asks the table which reads
     # those are. A table built for one purpose earning its keep at another is
     # worth noting; a table that stayed unwired until its original purpose was
     # affordable would have been six unguarded reads in the meantime.
-    "nm.core.quarantine":
+    "nm.open_matter.quarantine":
         "B4. Deliberate — the conflict screen that quarantines is slice 10 "
         "and is declared unbuilt in the gate matrix.",
-    "nm.core.intake":
+    "nm.open_matter.intake":
         "C6. The historical document-reading helper is still unwired. "
-        "The served nm.edge.uploads path accepts sealed original-byte "
+        "The served nm.open_matter.uploads_api path accepts sealed original-byte "
         "receipts through MediaAdmission, but does not invoke this helper "
         "or claim extraction. Full reading and correction remain unbuilt.",
-    "nm.domain.tiers":
+    "nm.legal_brain.tiers_contracts":
         "S0's tier vocabulary. Consulted by the model config through the "
         "environment rather than by import.",
 }
@@ -197,13 +197,13 @@ UNWIRED: dict[str, str] = {
 def _sources() -> list[pathlib.Path]:
     """Every module file that still exists WHEN ITS BYTES ARE READ.
 
-    Other checks in this suite plant probe modules under `backend/nm/` and remove them,
+    Other checks in this suite plant probe modules under `nm/` and remove them,
     so a walk can hand back a path that is gone a moment later. Skipping it is
     right: a file that no longer exists is not an orphan, and a scan that
     crashes on a neighbour's probe is a scan people run less often.
     """
     out = []
-    for p in (ROOT / "backend" / "nm").rglob("*.py"):
+    for p in (ROOT / "nm").rglob("*.py"):
         if "__pycache__" in p.parts:
             continue
         try:
@@ -215,12 +215,12 @@ def _sources() -> list[pathlib.Path]:
 
 
 def _modules() -> set[str]:
-    return {".".join(p.relative_to(ROOT / "backend").with_suffix("").parts)
+    return {".".join(p.relative_to(ROOT ).with_suffix("").parts)
             for p in _sources() if p.name != "__init__.py"}
 
 
 def _reached_from_production() -> set[str]:
-    """Modules imported by another module inside `backend/nm/`.
+    """Modules imported by another module inside `nm/`.
 
     `from nm.core import chronology` binds a SUBMODULE, not an attribute of
     `nm.core`, and the first version of this scan counted only `node.module` —
@@ -229,10 +229,10 @@ def _reached_from_production() -> set[str]:
     of alarm is one people learn to overrule.
     """
     sources = _sources()
-    mods = {".".join(p.relative_to(ROOT / "backend").with_suffix("").parts) for p in sources}
+    mods = {".".join(p.relative_to(ROOT ).with_suffix("").parts) for p in sources}
     reached: set[str] = set()
     for p in sources:
-        me = ".".join(p.relative_to(ROOT / "backend").with_suffix("").parts)
+        me = ".".join(p.relative_to(ROOT ).with_suffix("").parts)
         try:
             tree = ast.parse(p.read_text(encoding="utf8"))
         except OSError:
@@ -269,7 +269,7 @@ def test_every_module_is_reached_from_production_or_declared_unwired():
                   if m not in ENTRY_POINTS and m not in UNWIRED]
 
     assert not undeclared, (
-        "these modules are imported by nothing in `backend/nm/` — they run on no "
+        "these modules are imported by nothing in `nm/` — they run on no "
         "served turn, however green their tests are:\n  "
         + "\n  ".join(undeclared)
         + "\n\nWire it, or declare it in UNWIRED with what will wire it. A "
@@ -299,11 +299,11 @@ def test_no_declaration_outlives_its_wiring():
 def test_the_scan_can_see_an_unreached_module():
     """THE POSITIVE CONTROL. A scan over a tree whose modules all happen to be
     imported proves nothing about the scan."""
-    probe = ROOT / "backend" / "nm" / "core" / "_unreached_probe.py"
+    probe = ROOT / "nm" / "work_the_file" / "_unreached_probe.py"
     probe.write_text("VALUE = 1\n", encoding="utf8")
     try:
         orphans = _modules() - _reached_from_production()
-        assert "nm.core._unreached_probe" in orphans, (
+        assert "nm.work_the_file._unreached_probe" in orphans, (
             "the scan did not see a module nothing imports")
     finally:
         probe.unlink()
@@ -315,7 +315,7 @@ def test_the_scan_can_see_an_unreached_module():
 #: because nothing else in the build knows it: `features.yaml` names slices and
 #: evals, and the module tree names files, and no edge connects them.
 #: ONE MODULE MAY CARRY SEVERAL FEATURES, and the first version of this map
-#: allowed only one. `backend/nm/core/adversarial.py` holds both the adversarial pass
+#: allowed only one. `nm/legal_brain/adversarial.py` holds both the adversarial pass
 #: (D7) and salvage (D8) — it named D7, and D8, the one feature whose status
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
@@ -325,59 +325,59 @@ OWNER: dict[str, tuple[str, ...]] = {
     # Article lookup. Named against D4 rather than given a feature of its own,
     # because what it adds is a condition on reading the right provision and
     # not a new promise to the advocate.
-    "nm.adapters.knowledge.governing_law": ("D4",),
+    "nm.legal_brain.governing_law_adapter": ("D4",),
     # P38's restore serves the persistence promise the store makes -- one
     # matter, versioned and sealed -- so it is named against I1 rather than
     # given a feature of its own. What it adds is that the promise survives
     # being put back, which is a property of the write and not a new promise
     # to the advocate.
-    "nm.domain.restore": ("I1",),
+    "nm.shared.restore_contracts": ("I1",),
     # P40's rehearsal is about the operation that keeps the matter available
     # and confidential when something goes wrong, so it is named against the
     # persistence promise rather than given a feature of its own: what it adds
     # is that the promise survives an incident, which is a property of the
     # operation and not a new promise to the advocate.
-    "nm.domain.incident": ("I1",),
+    "nm.shared.incident_contracts": ("I1",),
     # P41's gate decides whether the SERVED PRODUCT may be released at all, so
     # it is named against the turn contract every enabled feature runs through
     # rather than against a feature of its own. A release gate with a feature
     # of its own would be a feature that could be marked done.
-    "nm.domain.release": ("I1",),
+    "nm.shared.release_contracts": ("I1",),
     # P35's qualified-review record reviews THE ADVICE AS SERVED, so it is
     # named against the feature that produces it rather than given one of its
     # own -- and against E5, because what the record keeps beyond a score is
     # the disagreement and the reservations. BK-67-AC1's words are that no
     # counsel-facing feature conforms without review with *material
     # reservations kept visible*; E2 and E5 are where those live.
-    "nm.domain.legal_review": ("E2", "E5"),
+    "nm.shared.legal_review_contracts": ("E2", "E5"),
     # P06/P07/P22's mechanisms, each named against the feature whose contract
     # it serves, so the status check below covers them instead of skipping
     # three modules that run on no turn.
-    "nm.domain.egress": ("I1",),
-    "nm.adapters.store.envelope": ("I1",),
+    "nm.shared.egress_contracts": ("I1",),
+    "nm.shared.store_envelope": ("I1",),
     # P10's transactional store serves the same persistence contract the
     # file store does -- one matter, versioned and sealed -- so it is named
     # against I1 rather than given a feature of its own. What it adds is
     # atomicity across three records, which is a property of the write and
     # not a new promise to the advocate.
-    "nm.adapters.store.postgres": ("I1",),
+    "nm.shared.store_postgres": ("I1",),
     # P11's worker publishes what a turn accepted, so it serves the turn
     # contract rather than a promise of its own.
-    "nm.core.worker": ("I1",),
-    "nm.core.premise": ("D2",),
+    "nm.shared.worker": ("I1",),
+    "nm.legal_brain.premise": ("D2",),
     # P18's currency ledger answers A3's re-orientation promise -- what moved
     # since the advocate was last here, and what they may still rely on -- so
     # it is named against A3 rather than given a feature of its own. The
     # cascade it extends already carries A3's `@implements`.
-    "nm.core.dependency": ("A3",),
+    "nm.work_the_file.dependency": ("A3",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether
     # this module is still unwired instead of skipping it.
-    "nm.domain.media": ("C6",),
-    "nm.core.quarantine": ("B4",),
-    "nm.core.screens": ("B2", "B3", "B5", "B6"),
-    "nm.core.intake": ("C6",),
+    "nm.open_matter.media_contracts": ("C6",),
+    "nm.open_matter.quarantine": ("B4",),
+    "nm.open_matter.screens": ("B2", "B3", "B5", "B6"),
+    "nm.open_matter.intake": ("C6",),
 }
 
 
@@ -465,7 +465,7 @@ def test_every_unwired_module_names_a_feature_that_exists():
     assert not missing, f"OWNER names features that do not exist: {missing}"
 
     unowned = sorted(m for m in UNWIRED
-                     if m not in OWNER and not m.startswith("nm.domain.tiers"))
+                     if m not in OWNER and not m.startswith("nm.legal_brain.tiers_contracts"))
     assert not unowned, (
         f"these modules are UNWIRED and name no feature, so the status check "
         f"above skips them entirely: {unowned}")
@@ -490,20 +490,20 @@ def test_every_unwired_module_names_a_feature_that_exists():
 #: A declaration whose reason has gone is deleted; the defect it named is not.
 UNTYPED: dict[str, str] = {
     "TurnRoute":
-        "B1. NAMING DRIFT — represented by `nm.core.route.ReadRoute`: its "
+        "B1. NAMING DRIFT — represented by `nm.legal_brain.route.ReadRoute`: its "
         "`route`, `mode` and `statement` fields are the contract's route, mode "
-        "and stated reading. Implementation owner: `backend/nm/core/route.py`, wired "
-        "by `backend/nm/core/turn.py::_read_route`.",
+        "and stated reading. Implementation owner: `nm/legal_brain/route.py`, wired "
+        "by `nm/legal_brain/turn.py::_read_route`.",
     "ConflictScreen":
-        "B3. GENERIC REPRESENTATION — `nm.core.conflict.screen` produces "
-        "`nm.core.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
+        "B3. GENERIC REPRESENTATION — `nm.open_matter.conflict.screen` produces "
+        "`nm.open_matter.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
         "and release fields carry the declared screen. Implementation owners: "
-        "`backend/nm/core/conflict.py` and `backend/nm/core/screens.py`.",
+        "`nm/open_matter/conflict.py` and `nm/open_matter/screens.py`.",
     "CompetenceAssessment":
         "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
-        "`nm.core.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
+        "`nm.open_matter.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
         "and the recorded release model is `screens.Release`. Implementation "
-        "owners: `backend/nm/core/turn.py` and `backend/nm/core/screens.py`.",
+        "owners: `nm/legal_brain/turn.py` and `nm/open_matter/screens.py`.",
     "Reorientation":
         "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
         "`cascade` being UNWIRED: nothing composes a re-orientation.",
@@ -513,12 +513,12 @@ UNTYPED: dict[str, str] = {
     "SessionSeal":
         "I1. GENUINELY ABSENT — zero mentions.",
     "ThresholdMap":
-        "D1. NAMING DRIFT — `backend/nm/core/thresholds.py` defines `Threshold` and "
+        "D1. NAMING DRIFT — `nm/legal_brain/thresholds.py` defines `Threshold` and "
         "the map is a plain dict. Either the PRD names the dict or the code "
         "names the type; today neither points at the other.",
     "LimitationComputation":
         "D2. NAMING DRIFT — implemented as `Limitation` in "
-        "`backend/nm/core/limitation.py`. The contract is met and the name is not.",
+        "`nm/legal_brain/limitation.py`. The contract is met and the name is not.",
 }
 
 
@@ -549,7 +549,7 @@ def test_every_produces_contract_has_a_type_or_is_declared_untyped():
     nothing in the build could see it, because the only check over PRODUCES
     starts from Appendix E's ten schemas rather than from the clauses.
 
-    Four of the seven had ZERO mentions in `backend/nm/`. One of those is
+    Four of the seven had ZERO mentions in `nm/`. One of those is
     `AdvocateIdentity`, so the product had no notion of who was using it beyond
     a string in a query parameter.
     """
@@ -558,7 +558,7 @@ def test_every_produces_contract_has_a_type_or_is_declared_untyped():
     undeclared = sorted(f"{fid}: {n}" for n, fid in missing.items()
                         if n not in UNTYPED)
     assert not undeclared, (
-        "these features declare a PRODUCES type that `backend/nm/` does not define:"
+        "these features declare a PRODUCES type that `nm/` does not define:"
         "\n  " + "\n  ".join(undeclared)
         + "\n\nImplement it, rename one side to match the other, or declare it "
           "in UNTYPED with which of those it needs.")
@@ -569,7 +569,7 @@ def test_no_untyped_declaration_outlives_its_type():
     known = _declared_types()
     landed = sorted(n for n in UNTYPED if n in known)
     assert not landed, (
-        f"these are declared UNTYPED and `backend/nm/` now defines them: {landed}. "
+        f"these are declared UNTYPED and `nm/` now defines them: {landed}. "
         f"Delete the declaration.")
 
     produced = _produced_types()

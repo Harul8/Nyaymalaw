@@ -15,7 +15,7 @@ register -- because the check answered on a PROXY: a package directory on the
 import path is not a library that runs.
 
 Three sites decided such a question, in two adapters, by `find_spec`. The fix is
-one mechanism, `nm.adapters.optional`, and this file is what keeps it one:
+one mechanism, `nm.shared.optional_adapter`, and this file is what keeps it one:
 
 * nothing else in the product may look at the import path, so a fourth site
   cannot reappear beside it; and
@@ -23,7 +23,7 @@ one mechanism, `nm.adapters.optional`, and this file is what keeps it one:
   not installed, or installed and unimportable with the reason.
 
 The population for both is drawn from the code: every module under
-`backend/nm/`, and every speech adapter that reports readiness, so an adapter
+`nm/`, and every speech adapter that reports readiness, so an adapter
 added to a sibling module tomorrow is covered without this file being edited.
 """
 from __future__ import annotations
@@ -31,23 +31,24 @@ from __future__ import annotations
 import ast
 import importlib
 import inspect
-import pkgutil
 from pathlib import Path
 
 import pytest
-from nm.adapters import optional
+
+from assurance.common.module_roles import source_module, sources_for_roles
+from nm.shared import optional_adapter as optional
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
 #: The one module permitted to ask the import path anything.
-OWNER = Path("backend/nm/adapters/optional.py")
+OWNER = Path("nm/shared/optional_adapter.py")
 
 
 def _import_path_lookups() -> list[str]:
     """Every call to `find_spec` in the product, wherever it is spelled."""
     found: list[str] = []
-    for file in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for file in sorted((ROOT / "nm").rglob("*.py")):
         if "__pycache__" in file.parts:
             continue
         for node in ast.walk(ast.parse(file.read_text(encoding="utf8"))):
@@ -62,12 +63,13 @@ def _import_path_lookups() -> list[str]:
 
 def _speech_adapters() -> list[tuple[object, type]]:
     """Every speech adapter class that answers `/api/health`, found by import."""
-    package = importlib.import_module("nm.adapters.speech")
     out: list[tuple[object, type]] = []
-    for info in pkgutil.iter_modules(list(package.__path__)):
-        module = importlib.import_module(f"nm.adapters.speech.{info.name}")
+    for path in sources_for_roles("adapters"):
+        module = importlib.import_module(source_module(path))
         for _, cls in inspect.getmembers(module, inspect.isclass):
-            if cls.__module__ == module.__name__ and callable(getattr(cls, "readiness", None)):
+            if (cls.__module__ == module.__name__ and callable(getattr(cls, "readiness", None))
+                    and any(callable(getattr(cls, member, None))
+                            for member in ("listen", "transcribe"))):
                 out.append((module, cls))
     return out
 
@@ -75,7 +77,7 @@ def _speech_adapters() -> list[tuple[object, type]]:
 def test_the_scan_can_see_the_product():
     """A guard on the guards below: an empty population passes both."""
     assert _import_path_lookups(), (
-        "not one import-path lookup was found in backend/nm/ -- the scan below "
+        "not one import-path lookup was found in nm/ -- the scan below "
         "would then be asserting nothing over nothing")
     assert len(_speech_adapters()) >= 2, (
         "fewer than two speech adapters were discovered; the readiness rule "
@@ -93,7 +95,7 @@ def test_only_one_module_may_ask_the_import_path():
               if not site.startswith(OWNER.as_posix())]
     assert not strays, (
         "these decide something from the import path instead of from "
-        "`nm.adapters.optional`:\n  " + "\n  ".join(strays)
+        "`nm.shared.optional_adapter`:\n  " + "\n  ".join(strays)
         + f"\n\n{OWNER.as_posix()} is the only module permitted to. Use "
           "`library(name)` for availability, or `library_path(name)` for a "
           "path lookup that must not import.")

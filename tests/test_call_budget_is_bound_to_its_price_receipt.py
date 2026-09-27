@@ -6,8 +6,9 @@ import sqlite3
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.model.call_budget import MODEL, CallBudget
-from nm.ports.model import ConfigurationError, ProviderUnavailable
+
+from nm.shared.model_call_budget import MODEL, CallBudget
+from nm.shared.model_port import ConfigurationError, ProviderUnavailable
 
 pytestmark = pytest.mark.class_a
 

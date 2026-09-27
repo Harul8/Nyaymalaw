@@ -25,12 +25,12 @@ from __future__ import annotations
 import json
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.matter import Matter, Provenance
-from nm.domain.traceability import refuses
 
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Matter, Provenance
 from tests.test_turn_contract import KEY, _Evidence, briefed, build
 
 pytestmark = pytest.mark.class_a
@@ -194,7 +194,7 @@ def test_no_path_admits_a_document_fact_without_binding_it_to_a_thread():
     import ast
     import pathlib
 
-    root = pathlib.Path(__file__).resolve().parents[1] / "backend" / "nm"
+    root = pathlib.Path(__file__).resolve().parents[1] / "nm"
     offenders: list[str] = []
     for path in sorted(root.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf8"))
@@ -388,7 +388,7 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
     today's code.
 
     That is defect shape S11 exactly, and it is the same argument
-    `backend/nm/knowledge/artefact.py` makes about the dense index: the ONLY reason
+    `nm/legal_brain/artefact_sources.py` makes about the dense index: the ONLY reason
     that 437MB artefact was knowably unusable is that it shipped an
     `identity.json`. A run that cannot say what it ran against is the same
     artefact wearing a different hat.
@@ -399,7 +399,7 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
     """
     import json as _json
 
-    from pipeline.quality import releasegate
+    from pipeline import releasegate
 
     record = tmp_path / "eval_results.json"
     record.write_text(_json.dumps({
@@ -441,8 +441,8 @@ def test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list(tmp_path, cl
     Found by sweeping all 29 exception handlers for this shape, not by anyone
     hitting it.
     """
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.edge.projections import matter_list_projection
+    from nm.shared.store_file_store import FileMatterStore
+    from nm.work_the_file.projections_api import matter_list_projection
 
     store = FileMatterStore(tmp_path, key=KEY)
     good = Matter.create(advocate_id="adv", title="a readable matter")
@@ -597,9 +597,9 @@ def test_a_passed_deadline_is_on_the_board_and_not_among_the_upcoming():
     """
     from datetime import date, timedelta
 
-    from nm.core.deadlines import Deadline, DeadlineKind, DeadlineStatus
-    from nm.domain.matter import Thread
-    from nm.edge.projections import board_projection
+    from nm.work_the_file.deadlines import Deadline, DeadlineKind, DeadlineStatus
+    from nm.work_the_file.matter_contracts import Thread
+    from nm.work_the_file.projections_api import board_projection
 
     today = date(2026, 8, 31)
     thread = Thread.create("the possession suit")

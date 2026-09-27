@@ -580,7 +580,7 @@ add("LB-35", 4,
     f"{P}: COST PER TURN BECOMES A RELEASE ROW. The loop multiplies calls -- a full attack per dispute, a verifier "
     "call per claim, research sub-loops, a cross-matter pass -- and the budgets in this row, LB-69 and LB-128 "
     "are all OPEN. A cost-per-turn row is added to assurance/specification/release.yaml, scored PASS / FAIL / NOT "
-    "MEASURED by pipeline/quality/releasegate.py like every other row, estimated from replay call counts times "
+    "MEASURED by pipeline/releasegate.py like every other row, estimated from replay call counts times "
     "price before slice 3 serves a live turn (LB-138) and re-measured on each golden comparison. NOT MEASURED "
     "blocks exactly like FAIL.")
 add("LB-35", 10, f"{P}: cost per turn proposed as a release row. Not approved until the owner reviews it.")
@@ -719,7 +719,7 @@ NEW = {
         "LB-168-AC4: a stamp-duty defect is surfaced with its cure, and correcting the instrument's date reopens "
         "it.",
         "LB-16 (authenticity, admissibility and weight), LB-19, LB-48, LB-159, LB-165; "
-        "backend/nm/core/evidence_item.py (the inventory already carries admissibility as its own facet, not "
+        "nm/work_the_file/evidence_item.py (the inventory already carries admissibility as its own facet, not "
         "assessed by default, and the model is not asked to decide it). CORPUS, MEASURED 26 September 2026: "
         "the_indian_stamp_act_1899 (475 chunks), two Indian Stamp (Andhra Pradesh Amendment) Acts, "
         "the_registration_act_1908 (320 chunks) with the Andhra Pradesh Rules under it, "
@@ -765,7 +765,7 @@ NEW = {
         "rejection ground, with the valuation workings (LB-125).\n"
         "LB-169-AC4: every requirement result names its curated_from source.",
         "F-F-02 (the drafter brief) and F-F-03 (draft, and verify the draft), inside which these checks run; "
-        "LB-23, LB-124, LB-125; backend/nm/domain/drafting.py and backend/nm/core/drafting.py (the drafting "
+        "LB-23, LB-124, LB-125; nm/act/drafting_contracts.py and nm/act/drafting.py (the drafting "
         "package, which keeps drafting readiness apart from filing readiness). CORPUS, MEASURED 26 September "
         "2026: the_code_of_civil_procedure_1908 (2,901 chunks in chunks.db) and the Code of Civil Procedure "
         "(Telangana) Second Amendment Act, 1953 (7 chunks) are held; state amendments to the Orders are checked "
@@ -806,7 +806,7 @@ NEW = {
         "identifiable' from 'not held'.\n"
         "LB-170-AC4: every local source in the manifest carries a check that its text is the adaptation it is "
         "named as.",
-        "LB-121, LB-124, LB-125, LB-169; pipeline/manifest.yaml; backend/nm/knowledge/manifest.py (exact "
+        "LB-121, LB-124, LB-125, LB-169; pipeline/manifest.yaml; nm/legal_brain/manifest_sources.py (exact "
         "resolution); the L.4 header; docs/BASELINE.md, to be updated with these holdings. Raised in the 25 "
         "September review ('CPC state amendments and the Telangana High Court rules, 0 mentions'), never "
         "answered. OPEN: whether each source applies in Telangana as adapted; which further High Court rules are "
@@ -815,10 +815,10 @@ NEW = {
 }
 AFTER = "LB-125"
 STATUS = {
-    "LB-168": ("In progress", "backend/nm/core/evidence_item.py; tests/test_inventory_on_a_served_turn.py",
+    "LB-168": ("In progress", "nm/work_the_file/evidence_item.py; tests/test_inventory_on_a_served_turn.py",
                "The evidence inventory keeps existence, admissibility and weight apart, admissibility not assessed "
                "by default; no curated admissibility conditions exist, so nothing assesses it."),
-    "LB-169": ("Not started", "backend/nm/domain/drafting.py; backend/nm/core/drafting.py",
+    "LB-169": ("Not started", "nm/act/drafting_contracts.py; nm/act/drafting.py",
                "The drafting package exists; no pleading requirement from Order VI, VII or VIII is checked "
                "against a draft."),
     "LB-170": ("Not started", "pipeline/manifest.yaml",

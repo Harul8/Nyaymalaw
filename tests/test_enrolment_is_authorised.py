@@ -12,9 +12,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
-from nm.adapters.store.directory import FileDirectory
-from nm.domain import attempts
-from nm.domain.advocate import (
+
+from nm.arrive import attempts_contracts as attempts
+from nm.arrive.advocate_contracts import (
     AdvocateIdentity,
     canonical_id,
     enrol,
@@ -22,7 +22,8 @@ from nm.domain.advocate import (
     token_fingerprint,
     utcnow,
 )
-from nm.ports.directory import AlreadyEnrolled, InvitationRefused
+from nm.arrive.directory_port import AlreadyEnrolled, InvitationRefused
+from nm.arrive.store_directory import FileDirectory
 
 pytestmark = pytest.mark.class_a
 
@@ -177,9 +178,8 @@ def test_only_a_fingerprint_of_the_invitation_is_stored(client):
 
 def test_the_operator_tool_issues_the_bound_identity_and_prints_the_token_once(
         monkeypatch, capsys):
-    from nm.bootstrap import composition
-
-    from backend.operations import invite as command
+    from operations import invite as command
+    from nm.app import composition
 
     issued = []
 

@@ -23,8 +23,9 @@ import sqlite3
 import typing
 
 import pytest
-from nm.adapters.search.authority import AuthorityIndexSearch
-from nm.ports.search import (
+
+from nm.legal_brain.search_authority import AuthorityIndexSearch
+from nm.legal_brain.search_port import (
     CaseIdentityRead,
     CorpusSearchPort,
     PassageRead,
@@ -75,7 +76,7 @@ def test_an_index_that_cannot_be_read_is_unavailable_not_empty(tmp_path):
 
 def test_a_refused_read_is_never_reported_as_a_missing_paragraph(tmp_path):
     """The measured case: the index is fine and the READ was refused."""
-    from nm.adapters.search.policed import PolicedSearch
+    from nm.legal_brain.search_policed import PolicedSearch
     inner = AuthorityIndexSearch(_index(tmp_path))
     policed = PolicedSearch.__new__(PolicedSearch)
     policed.inner = inner
@@ -102,7 +103,7 @@ def test_the_attach_route_reads_the_state_not_availability():
     import ast
     import textwrap
 
-    from nm.edge import api
+    from nm.app import api
     tree = ast.parse(textwrap.dedent(inspect.getsource(api.attach_source)))
     reads = {(n.value.id, n.attr) for n in ast.walk(tree)
              if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)}

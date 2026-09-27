@@ -35,8 +35,9 @@ and the refusal must name the stale source version rather than saying no.
 from __future__ import annotations
 
 import pytest
-from nm.core import cascade
-from nm.core.dependency import (
+
+from nm.work_the_file import cascade
+from nm.work_the_file.dependency import (
     REWORK_LIMIT,
     Currency,
     InputKind,

@@ -17,7 +17,7 @@ THE MEASURED DEFECTS, 27 September 2026.
 THE RULES, each asserted below:
 
 * the denylist is consulted in exactly one place, `_screen`, which returns
-  what it held back -- the population is every reference in backend/nm;
+  what it held back -- the population is every reference in nm;
 * no caller discards that count;
 * a provision, an Act document and a judgment document each say what they
   held back, and a provision held back entirely is NOT_HELD with the reason.
@@ -31,14 +31,15 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.knowledge.manifest import Manifest, ManifestEntry
-from nm.ports.evidence import Coverage
+
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import Coverage
+from nm.legal_brain.manifest_sources import Manifest, ManifestEntry
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "backend" / "nm" / "adapters" / "evidence" / "corpus.py"
+ADAPTER = ROOT / "nm/legal_brain/corpus_evidence.py"
 
 
 def _corpus(tmp_path: Path, denied: list[str]) -> CorpusEvidenceAdapter:
@@ -103,7 +104,7 @@ def test_a_judgment_document_counts_what_it_held_back(tmp_path):
 
 def _functions_reaching(name: str) -> set[str]:
     reaching = set()
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for fn in ast.walk(tree):
             if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):

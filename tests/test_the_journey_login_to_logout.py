@@ -78,7 +78,7 @@ def journey(tmp_path_factory):
 
     sys.path.insert(0, str(ROOT))
 
-    sys.path.insert(0, str(ROOT / "backend"))
+    sys.path.insert(0, str(ROOT ))
     from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey")
@@ -344,7 +344,7 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
         page, journey, width, height):
     """THE COUNTEREXAMPLE BK-32 IS OPEN FOR, reproduced rather than described.
 
-    `frontend/app.css` line 308: `@media (max-width: 820px) { .rail {display:none} }`
+    `nm/app/app.css` line 308: `@media (max-width: 820px) { .rail {display:none} }`
     The rail IS the matter navigator, and below 820px there is no other way to
     reach the list -- `#back` returns to it, but only from inside a matter.
 
@@ -544,7 +544,7 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     assert page.input_value("#message") == ""
     assert page.get_attribute("#pane-advise", "data-matter-id") == answer["matter_id"]
 
-    from nm.domain.turn_receipt import release_index
+    from nm.advise.turn_receipt_contracts import release_index
 
     saved = journey["box"].application.store.load(answer["matter_id"])
     assert saved is not None and saved.advocate_id == journey["advocate"]
@@ -560,7 +560,7 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     assert receipt.validated_answer().elements
     held = receipt.answer["elements"]
     assert len(held) == len(answer["elements"])
-    from nm.domain.source_excerpt import SourceExcerpt
+    from nm.legal_brain.source_excerpt_contracts import SourceExcerpt
 
     for recorded, served in zip(held, answer["elements"], strict=True):
         recorded = dict(recorded)

@@ -22,7 +22,7 @@ something else. Same rule each time: A RESULT MUST NAME THE THING IT IS ABOUT.
 
 WHY THIS DIGEST IS THE CHECKED-TREE IDENTITY
 ---------------------------------------------
-`nm.domain.identity.source_fingerprint` covers `nm` and `tests`, because it
+`nm.shared.identity_contracts.source_fingerprint` covers `nm` and `tests`, because it
 answers "what code is this process running". The file that broke was in
 `assurance/specification/`, which the gate checks and the server never runs -- so that digest
 would not have moved, and this check would have passed on the very commit that

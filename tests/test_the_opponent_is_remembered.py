@@ -5,8 +5,8 @@ THE MEASURED DEFECT
 `Posture.opponent` was declared, typed, persisted, and written by NOTHING. Two
 consumers read it, and both had a fallback:
 
-    backend/nm/edge/projections.py   "against": posture.opponent or "unknown"
-    backend/nm/domain/summary.py     omits the line when it is empty
+    nm/work_the_file/projections_api.py   "against": posture.opponent or "unknown"
+    nm/work_the_file/summary_contracts.py     omits the line when it is empty
 
 So an advocate who wrote "we act for the plaintiff against Sharma" saw
 `against: unknown` on the record for the life of the matter, and every model
@@ -28,10 +28,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core import posture
-from nm.core.turn import TurnInput
-from nm.domain.quotable import Quotable
 
+from nm.legal_brain import posture
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnInput
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -104,7 +104,7 @@ def test_the_opponent_reaches_the_record(tmp_path):
 def test_the_record_shown_to_the_advocate_says_who_they_are_against(tmp_path):
     """The projection is what an advocate actually reads. It had `unknown`
     hard-wired into it by a field nothing filled."""
-    from nm.edge import projections
+    from nm.work_the_file import projections_api as projections
 
     engine, store = build(tmp_path)
     out = engine.run(TurnInput(
@@ -146,7 +146,7 @@ def test_the_summary_carries_the_opponent_into_the_next_call(tmp_path):
     """The account is what every downstream model call sees. An opponent on
     the record and absent from the account is memory the product holds and
     does not use, which is the leak this was found inside."""
-    from nm.domain import summary
+    from nm.work_the_file import summary_contracts as summary
 
     engine, store = build(tmp_path)
     out = engine.run(TurnInput(

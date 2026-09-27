@@ -2,9 +2,10 @@
 from dataclasses import replace
 
 import pytest
-from nm.core import cascade
-from nm.core.output_checks import OutputSubjects, run_output_checks
-from nm.domain.matter import Matter, Thread
+
+from nm.legal_brain.output_checks import OutputSubjects, run_output_checks
+from nm.work_the_file import cascade
+from nm.work_the_file.matter_contracts import Matter, Thread
 
 pytestmark = pytest.mark.class_a
 

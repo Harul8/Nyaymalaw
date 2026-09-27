@@ -27,7 +27,8 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-from nm.domain.media_policy import (
+
+from nm.open_matter.media_policy_contracts import (
     ContractUnreadable,
     Route,
     load,
@@ -68,7 +69,7 @@ def test_an_unreadable_contract_refuses_rather_than_permitting_everything(
 def test_the_policy_module_does_not_restate_the_lists():
     """One owner. A literal list of the prohibited operations in this module
     would be the second copy."""
-    source = (ROOT / "backend" / "nm" / "domain" / "media_policy.py").read_text(
+    source = (ROOT / "nm/open_matter/media_policy_contracts.py").read_text(
         encoding="utf8")
     body = source.split('"""', 2)[-1]          # past the module docstring
     for operation in ("voice_identity", "voiceprint_creation_or_matching",

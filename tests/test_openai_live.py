@@ -13,9 +13,10 @@ Run it on purpose:
 from __future__ import annotations
 
 import pytest
-from nm.adapters.model.config import load, load_dotenv
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.ports.model import Prompt, Tier
+
+from nm.shared.model_config import load, load_dotenv
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_port import Prompt, Tier
 
 pytestmark = pytest.mark.class_c
 
@@ -65,7 +66,7 @@ def test_structured_output_matches_the_shape_the_adapter_assumes(adapter):
 
 def test_the_judge_tier_resolves_to_a_different_model(adapter):
     """Tenet P4, verified against the live configuration rather than asserted."""
-    from nm.adapters.model.config import load as reload
+    from nm.shared.model_config import load as reload
     cfg = reload()
     if not cfg.configured(Tier.JUDGE):
         pytest.skip("judge tier not configured")

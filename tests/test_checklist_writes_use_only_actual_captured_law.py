@@ -2,15 +2,15 @@
 from dataclasses import replace
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.source_writes import SourceRequirementMutation, source_write_tools
-from nm.core.tools import PreparedToolResult
-from nm.domain.file_mutation import FileMutation
-from nm.domain.loop import LoopLimits, StepKind, StopReason
-from nm.domain.matter import Thread
-from nm.domain.requirements import Force, Requirement, State, checklist
-from nm.ports.model import ToolCall
 
+from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist
+from nm.legal_brain.source_writes import SourceRequirementMutation, source_write_tools
+from nm.legal_brain.tools import PreparedToolResult
+from nm.shared.model_port import ToolCall
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.file_mutation_contracts import FileMutation
+from nm.work_the_file.matter_contracts import Thread
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import finding
 from tests.test_the_loop_records_work_before_using_it import _response
@@ -115,7 +115,7 @@ def test_requirement_proposals_cannot_certify_answers_or_delete_prior_work(tmp_p
 
 
 def test_the_atomic_writer_refuses_an_arbitrary_subclass_that_skips_validation(tmp_path):
-    from nm.domain.loop import LoopEvent
+    from nm.legal_brain.loop_contracts import LoopEvent
 
     store, brain, outcome, prepared = _run(tmp_path)
 

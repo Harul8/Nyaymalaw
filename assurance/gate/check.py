@@ -251,7 +251,7 @@ def main() -> int:
     # half-edited state and went red, `pytest (all local)` ran ten minutes
     # later against the finished state and went green, and the gate printed
     # CHECK OK over two failures. Another had a pytest running concurrently,
-    # which planted `backend/nm/core/_trace_probe.py` and removed it while pylint was
+    # which planted `nm/core/_trace_probe.py` and removed it while pylint was
     # parsing it -- so the gate went red on a file that does not exist.
     #
     # A GATE THAT SHARES A WORKING TREE WITH ANYTHING ELSE MEASURES NOTHING,
@@ -288,7 +288,7 @@ def main() -> int:
     ok, _ = step("speccheck", [py, "assurance/gate/speccheck.py"])
     results.append(("speccheck", ok))
     prints.append(("speccheck", verification_fingerprint()))
-    ok, out = step("ruff", [py, "-m", "ruff", "check", "backend", *TOOLING_HOMES, "tests"])
+    ok, out = step("ruff", [py, "-m", "ruff", "check", "nm", *TOOLING_HOMES, "tests"])
     captured["ruff"] = out
     results.append(("ruff", ok))
     prints.append(("ruff", verification_fingerprint()))
@@ -297,7 +297,7 @@ def main() -> int:
     ok, out = step(
         "pylint E0601,E0606",
         [py, "-m", "pylint", "--disable=all", "--enable=E0601,E0606",
-         "--score=n", "backend/nm"],
+         "--score=n", "nm"],
     )
     captured["pylint"] = out
     results.append(("pylint", ok))

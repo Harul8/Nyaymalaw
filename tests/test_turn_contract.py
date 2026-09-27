@@ -13,17 +13,9 @@ import pathlib
 from datetime import date
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.store.file_store import EncryptionNotConfigured, FileMatterStore
-from nm.core.posture import interpret
-from nm.core.turn import TurnEngine, TurnInput, TurnRefused, classify_route
-from nm.domain.answer import Element, ElementKind, Route, Signal
-from nm.domain.matter import Basis, Matter, Posture, Role, Side, Thread
-from nm.domain.quotable import Quotable
-from nm.domain.traceability import refuses
-from nm.knowledge.resolution import accrual_trigger_for as corpus_trigger
-from nm.ports.evidence import (
+
+from nm.advise.answer_contracts import Element, ElementKind, Route, Signal
+from nm.legal_brain.evidence_port import (
     Binding,
     Coverage,
     EvidencePort,
@@ -33,8 +25,17 @@ from nm.ports.evidence import (
     SourceKind,
     Treatment,
 )
-from nm.ports.model import Tier
-from nm.ports.store import StaleWrite
+from nm.legal_brain.posture import interpret
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.resolution_sources import accrual_trigger_for as corpus_trigger
+from nm.legal_brain.turn import TurnEngine, TurnInput, TurnRefused, classify_route
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.store_file_store import EncryptionNotConfigured, FileMatterStore
+from nm.shared.store_port import StaleWrite
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Basis, Matter, Posture, Role, Side, Thread
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -198,7 +199,7 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # `test_an_unmeasured_installation_says_so_rather_than_implying_coverage`
     # measure a measured one, which is the test passing on the opposite of
     # its own subject.
-    from nm.knowledge.coverage import CoverageProfile
+    from nm.legal_brain.coverage_sources import CoverageProfile
     profile = (CoverageProfile.load(ROOT / "assurance" / "specification" / "coverage.yaml")
                if coverage else None)
     # LB-121's CURATED PRE-INSTITUTION TABLE, wired because the composition
@@ -206,12 +207,12 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # tests a deployment that does not ship (CLAUDE.md section 8), and the
     # `statutory_notice` row is exactly the kind of difference that would hide
     # here and appear on a served turn.
-    from nm.adapters.knowledge.filing_requirement import (
+    from nm.legal_brain.filing_requirement_adapter import (
         CuratedFilingRequirements,
     )
-    from nm.adapters.knowledge.institution import CuratedPreInstitution
-    from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
-    from nm.adapters.knowledge.procedural_period import (
+    from nm.legal_brain.institution_adapter import CuratedPreInstitution
+    from nm.legal_brain.interim_relief_adapter import CuratedInterimRelief
+    from nm.legal_brain.procedural_period_adapter import (
         CuratedProceduralPeriods,
     )
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
@@ -235,7 +236,7 @@ def confirmed(engine, store, turn: TurnInput, *, trigger: str,
     deadline. A rule about a DEFINITIVE window -- a by-when, a passed bar, a
     correction reaching the deadline -- is reached only through the advocate,
     and this is that path at the engine, recorded exactly as
-    `POST .../premises/accrual_rule` records it (`nm.edge.api.state_premise`).
+    `POST .../premises/accrual_rule` records it (`nm.app.api.state_premise`).
 
     ONE HELPER, so the tests that need a confirmed accrual cannot each invent
     a different way of getting one. `trigger` names the event, never a date:
@@ -244,7 +245,7 @@ def confirmed(engine, store, turn: TurnInput, *, trigger: str,
     """
     from dataclasses import replace
 
-    from nm.domain.matter import new_id
+    from nm.work_the_file.matter_contracts import new_id
 
     first = engine.run(turn)
     matter = store.load(first.matter.id)
@@ -764,7 +765,7 @@ def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
 # ============ BK-2 — the screens reach the advocate =========================
 
 def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path):
-    """BK-2. `backend/nm/core/screens.py` has been complete since slice 6 -- four
+    """BK-2. `nm/open_matter/screens.py` has been complete since slice 6 -- four
     states, `unscreened` drawing its population from the KINDS, an express
     emergency exception -- and nothing produced a `Screen`.
 
@@ -775,7 +776,7 @@ def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path)
     invisible where it matters, which is §9: the third state must be visible
     in the OUTPUT and not only in the type.
     """
-    from nm.core.screens import ScreenKind
+    from nm.open_matter.screens import ScreenKind
 
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(
@@ -790,7 +791,7 @@ def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path)
     # was checked -- which is `unscreened`'s own argument for drawing its
     # population from the vocabulary, and it holds whether the screens cleared
     # or not.
-    from nm.core.screens import from_stored
+    from nm.open_matter.screens import from_stored
     saved_screens = from_stored(out.matter.screens)
     assert {s.kind for s in saved_screens} == set(ScreenKind)
     assert all(s.detail or s.not_assessed_because for s in saved_screens)
@@ -871,7 +872,7 @@ def test_every_answer_in_the_run_carries_the_trailing_disclosures(tmp_path):
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     #: Answer constructions that legitimately carry no trailing rows,
     #: by the text that identifies them, with the reason.
@@ -928,7 +929,7 @@ def test_the_admit_decision_goes_through_the_module(tmp_path):
     and the one that matters would be the hard-coded one."""
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._run_screens)
     assert "may_admit_substance" in body

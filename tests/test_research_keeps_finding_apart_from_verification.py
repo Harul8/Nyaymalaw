@@ -7,8 +7,9 @@ their inputs, and each planted negative is the criterion's own.
 from __future__ import annotations
 
 import pytest
-from nm.core import research as rs
-from nm.ports.evidence import Binding, Coverage
+
+from nm.legal_brain import research as rs
+from nm.legal_brain.evidence_port import Binding, Coverage
 
 pytestmark = pytest.mark.class_a
 

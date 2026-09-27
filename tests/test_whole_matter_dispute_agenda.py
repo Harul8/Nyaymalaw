@@ -4,17 +4,18 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.adapters.model.scripted import SCRIPTED_READS
-from nm.core import briefing, dispute_agenda, posture
-from nm.core.dispute import Described, interpret
-from nm.core.screens import Screen, ScreenKind, ScreenState
-from nm.core.threading import _with_identifiers, bind
-from nm.core.turn import ScreenResult, TurnInput, _with_screens
-from nm.domain.answer import Element, ElementKind
-from nm.domain.matter import Basis, Fact, Matter, Posture, Provenance, Role, Thread
-from nm.domain.quotable import Quotable
-from nm.domain.summary import DERIVED_SECTIONS
 
+from nm.advise.answer_contracts import Element, ElementKind
+from nm.legal_brain import briefing, posture
+from nm.legal_brain.dispute import Described, interpret
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.threading import _with_identifiers, bind
+from nm.legal_brain.turn import ScreenResult, TurnInput, _with_screens
+from nm.open_matter.screens import Screen, ScreenKind, ScreenState
+from nm.shared.model_scripted import SCRIPTED_READS
+from nm.work_the_file import dispute_agenda
+from nm.work_the_file.matter_contracts import Basis, Fact, Matter, Posture, Provenance, Role, Thread
+from nm.work_the_file.summary_contracts import DERIVED_SECTIONS
 from tests.test_matter_memory import _engine, _Recorder
 
 pytestmark = pytest.mark.class_a
@@ -103,7 +104,7 @@ def test_a_retrieved_trigger_cannot_certify_a_model_selected_event(tmp_path, eve
     from datetime import date
     from types import SimpleNamespace
 
-    from nm.core import premise
+    from nm.legal_brain import premise
 
     engine, _ = _engine(tmp_path, _Recorder())
     dated = [replace(fact(f"Recorded event {i}"), date=date(2020 + i, 2, 3))

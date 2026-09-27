@@ -38,14 +38,15 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.knowledge.manifest import (
+
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import Coverage, EvidenceNeed, EvidenceResult
+from nm.legal_brain.manifest_sources import (
     ActBasis,
     Manifest,
     ManifestEntry,
     title_without_year,
 )
-from nm.ports.evidence import Coverage, EvidenceNeed, EvidenceResult
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
@@ -257,9 +258,9 @@ def test_held_not_found_is_only_ever_said_on_the_manifests_word():
     declares the provision as intended coverage and retrieval did not return
     it'. A result built HELD_NOT_FOUND anywhere else claims a search ran and
     failed without the one fact that makes that claim. The population is
-    every module in backend/nm."""
+    every module in nm."""
     offenders, seen = [], 0
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         for line, guarded in _held_not_found_sites(ast.parse(path.read_text(encoding="utf-8"))):
             seen += 1
             if not guarded:

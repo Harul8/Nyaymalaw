@@ -6,18 +6,18 @@ from dataclasses import replace
 import pytest
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
-from nm.core.brain_finalization import SavedCheckReader
-from nm.core.brain_release import ReviewRefused
-from nm.core.interaction_review import InteractionReviewService
-from nm.core.interaction_subject import InteractionSubjectOwner
-from nm.core.preview_display import displayed_questions
-from nm.core.preview_seen import PreviewSeenService
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits, LoopMode
-from nm.edge.preview_seen import router
-from nm.ports.model import ToolCall
-from nm.ports.store import StaleWrite
 
+from nm.legal_brain.brain_finalization import SavedCheckReader
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.interaction_review import InteractionReviewService
+from nm.legal_brain.interaction_subject import InteractionSubjectOwner
+from nm.legal_brain.loop_contracts import LoopLimits, LoopMode
+from nm.legal_brain.preview_display import displayed_questions
+from nm.legal_brain.preview_seen import PreviewSeenService
+from nm.legal_brain.preview_seen_api import router
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall
+from nm.shared.store_port import StaleWrite
 from tests.test_independent_claim_verifier import premise
 from tests.test_interaction_words_require_an_independent_exact_review import InteractionJudge
 from tests.test_reviewed_private_preview_checks_saved_words import (
@@ -189,8 +189,8 @@ def test_changed_display_receipts_do_not_become_authenticated_question_history(t
 
 @pytest.mark.parametrize("what", ["dispatch", "spend", "downgrade", "stop", "offer"])
 def test_historical_question_review_requires_actual_dispatch_spend_and_identity(tmp_path, what):
-    from nm.core.preview_display import interaction_text
-    from nm.domain.loop import LoopEvent, LoopRecord
+    from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord
+    from nm.legal_brain.preview_display import interaction_text
 
     store, _, _, _, _, _ = _question(tmp_path)
     matter = store.load("mat_loop")

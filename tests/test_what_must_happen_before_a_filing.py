@@ -16,14 +16,14 @@ as satisfied, and an unestablished key is never reported as inapplicable.
 from __future__ import annotations
 
 import pytest
-from nm.core import thresholds
-from nm.core.turn import TurnInput
-from nm.domain.citation import provision_label
-from nm.domain.curation import Curation
-from nm.domain.matter import CauseOfAction
-from nm.knowledge import institution as curated
-from nm.ports.institution import Against
 
+from nm.legal_brain import institution_sources as curated
+from nm.legal_brain import thresholds
+from nm.legal_brain.citation_contracts import provision_label
+from nm.legal_brain.curation_contracts import Curation
+from nm.legal_brain.institution_port import Against
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file.matter_contracts import CauseOfAction
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -190,10 +190,9 @@ def test_an_unwired_installation_keeps_the_maps_own_reason(tmp_path):
     """AN ABSENT PORT IS NOT A FINDING. With no curated table the row must read
     exactly as it did before this work existed -- never as one that looked and
     found nothing (CLAUDE.md section 9)."""
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.core.turn import TurnEngine
-
+    from nm.legal_brain.turn import TurnEngine
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
     engine = briefed(TurnEngine(
@@ -216,7 +215,7 @@ def test_a_threshold_with_its_own_renderer_is_not_said_twice(tmp_path):
     Declared rather than written inline, so the next threshold to get a
     dedicated renderer is an entry in that set rather than a duplicated line.
     """
-    from nm.core.turn import _THRESHOLDS_RENDERED_ELSEWHERE
+    from nm.legal_brain.turn import _THRESHOLDS_RENDERED_ELSEWHERE
 
     assert thresholds.Threshold.LIMITATION in _THRESHOLDS_RENDERED_ELSEWHERE
 

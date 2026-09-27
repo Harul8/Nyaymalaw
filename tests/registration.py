@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from nm.domain.advocate import PRIVACY_NOTICE_VERSION
+from nm.arrive.advocate_contracts import PRIVACY_NOTICE_VERSION
 
 CONSENT = {"notice_version": PRIVACY_NOTICE_VERSION, "agreed": True, "adult": True}
 

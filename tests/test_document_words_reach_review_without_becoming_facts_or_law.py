@@ -7,23 +7,24 @@ from datetime import date
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core import dependency, grounding
-from nm.core.brain_assessment import AssessmentRefused, AssessmentService
-from nm.core.brain_finalization import FinalizationService, SavedCheckReader
-from nm.core.brain_publication import PrivatePublicationService
-from nm.core.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.matter_support import REFERENCE_KEYS, captured_documents
-from nm.core.tool_catalogue import catalogue_tools
-from nm.core.tools import Boundary, foundation_tools
-from nm.core.verifier import IndependentVerifier
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits, LoopMode
-from nm.ports.matter_documents import DocumentRefused
-from nm.ports.model import ToolCall
 
+from nm.legal_brain import grounding
+from nm.legal_brain.brain_assessment import AssessmentRefused, AssessmentService
+from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.brain_publication import PrivatePublicationService
+from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.loop_contracts import LoopLimits, LoopMode
+from nm.legal_brain.matter_support import REFERENCE_KEYS, captured_documents
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.tool_catalogue import catalogue_tools
+from nm.legal_brain.tools import Boundary, foundation_tools
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.open_matter.matter_documents_port import DocumentRefused
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.work_the_file import dependency
 from tests.test_admitted_documents_are_owned_exact_and_sealed import (
     WORDS,
     analyse,
@@ -213,7 +214,7 @@ def test_document_identity_changes_only_its_actual_dependency_closure(tmp_path):
 @pytest.mark.parametrize("mutation", ["missing_dispatch", "changed_snapshot", "wrong_actor_source",
                                       "established_fact", "repeated_return"])
 def test_document_capture_refuses_incomplete_or_changed_receipts(tmp_path, mutation):
-    from nm.domain.loop import StepKind
+    from nm.legal_brain.loop_contracts import StepKind
 
     _, _, outcome, _, _, _, _ = _case(tmp_path)
     events = list(outcome.record.events)

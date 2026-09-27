@@ -6,16 +6,16 @@ from datetime import date
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.core.brain_assessment import AssessmentRefused, AssessmentService
-from nm.core.brain_finalization import FinalizationService, SavedCheckReader
-from nm.core.brain_release import ReviewRefused, captured_findings, prepare_claims
-from nm.core.verifier import EvidencePackage
-from nm.domain.budget import Spend
-from nm.domain.loop import LoopLimits, StepKind, StopReason
-from nm.ports.model import Prompt, Tier, ToolCall
 
+from nm.legal_brain.brain_assessment import AssessmentRefused, AssessmentService
+from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.brain_release import ReviewRefused, captured_findings, prepare_claims
+from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.verifier import EvidencePackage
+from nm.shared.budget_contracts import Spend
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import Prompt, Tier, ToolCall
+from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_the_loop_records_work_before_using_it import _response
 

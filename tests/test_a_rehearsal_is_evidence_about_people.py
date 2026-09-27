@@ -31,7 +31,8 @@ import inspect
 import pathlib
 
 import pytest
-from nm.domain.incident import (
+
+from nm.shared.incident_contracts import (
     Applicability,
     Authority,
     Contact,
@@ -143,7 +144,7 @@ def test_the_reviewed_clocks_are_read_from_the_declared_contract():
 
 def test_no_reporting_period_is_written_into_the_module():
     """The population is the module's own source, not one function."""
-    from nm.domain import incident
+    from nm.shared import incident_contracts as incident
 
     source = inspect.getsource(incident)
     body = source.split('"""', 2)[-1]

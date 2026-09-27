@@ -31,7 +31,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 
 from tests.test_the_journey_login_to_logout import _intake as _opening_intake  # noqa: E402
 from tests.test_the_journey_login_to_logout import _start_matter  # noqa: E402
@@ -43,9 +43,8 @@ BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
 
 @pytest.fixture(scope="module")
 def journey(tmp_path_factory):
-    from nm.adapters.search.authority import AuthorityIndexSearch
-
     from assurance.journeys.served import PASSWORD, running
+    from nm.legal_brain.search_authority import AuthorityIndexSearch
     from tests import synthetic_index as syn
 
     root = tmp_path_factory.mktemp("journey-search")

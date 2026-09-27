@@ -5,7 +5,8 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
-from nm.core import screens
+
+from nm.open_matter import screens
 
 pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 9, 12, 10, tzinfo=timezone.utc)
@@ -22,7 +23,7 @@ def _request(**extra):
 
 @pytest.mark.parametrize("value", ["", " \t\n", None, 7, True, ["advice"], {"answer": "advice"}])
 def test_supplied_nontext_or_blank_instruction_cannot_create_a_matter(client, value):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     response = client.post("/api/turn", json=_request(release={"scope": value}))
     assert response.status_code == 422
@@ -62,7 +63,7 @@ def test_attributed_legacy_date_and_server_timestamp_keep_capture_usable(at):
 
 
 def _malformed_served_witness(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     app = application()
     monkeypatch.setattr(app.engine, "_clock", lambda: NOW)
@@ -104,7 +105,7 @@ def test_bypassing_the_shared_scope_guard_breaks_the_served_witness(client, monk
 
 
 def test_real_stored_screens_reach_the_emergency_consumer_without_losing_state(client):
-    from nm.edge.api import _outstanding_screens, application
+    from nm.app.api import _outstanding_screens, application
 
     response = client.post("/api/turn", json=_request(release={"scope": "invoice advice"}))
     assert response.status_code == 200
@@ -121,7 +122,7 @@ def test_real_stored_screens_reach_the_emergency_consumer_without_losing_state(c
 
 @pytest.mark.parametrize("change", ["missing", "unknown", "duplicate", "state", "release"])
 def test_malformed_persisted_screen_never_becomes_a_clearance(change):
-    from nm.adapters.store.file_store import _enc
+    from nm.shared.store_file_store import _enc
 
     record = _enc(screens.Screen(kind=screens.ScreenKind.CONFLICT,
                                  state=screens.ScreenState.CLEAR))

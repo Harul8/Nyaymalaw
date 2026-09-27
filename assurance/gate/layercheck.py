@@ -29,11 +29,17 @@ import sys  # noqa: E402
 
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
 from assurance.common._console import utf8_console  # noqa: E402
+from assurance.common.module_roles import (  # noqa: E402
+    LayoutError,
+    ModuleRoles,
+    classify_sources,
+    load_module_roles,
+    source_module,
+)
 
 utf8_console()
-SRC = ROOT / "backend" / "nm"
+SRC = ROOT / "nm"
 
 # layer -> the layers it may import from (in addition to the standard library)
 ALLOWED: dict[str, set[str]] = {
@@ -78,50 +84,69 @@ IO_PACKAGES = {
 IO_ALLOWED_LAYERS = {"adapters", "knowledge", "edge", "obs", "bootstrap"}
 
 
-def layer_of(path: Path) -> str | None:
-    rel = path.relative_to(SRC).parts
-    return rel[0] if len(rel) > 1 or path.name != "__init__.py" else None
+def layer_of(path: Path, *, layout: ModuleRoles | None = None) -> str:
+    current = layout or load_module_roles(root=ROOT)
+    return current.role(source_module(path, root=current.root))
 
 
-def imported_names(tree: ast.AST) -> list[tuple[str, int]]:
+def imported_names(tree: ast.AST, *, module: str = "", package: bool = False,
+                   known: frozenset[str] = frozenset()) -> list[tuple[str, int]]:
     out: list[tuple[str, int]] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for a in node.names:
                 out.append((a.name, node.lineno))
         elif isinstance(node, ast.ImportFrom):
-            if node.level:  # relative import -- stays inside its own package
-                continue
-            if node.module:
-                out.append((node.module, node.lineno))
+            if node.level:
+                parent = module.split(".") if package else module.split(".")[:-1]
+                if node.level > len(parent):
+                    out.append(("nm.__invalid_relative_import__", node.lineno))
+                    continue
+                parent = parent[:len(parent) - node.level + 1]
+                base = ".".join(parent + ([node.module] if node.module else []))
+            else:
+                base = node.module or ""
+            if base:
+                out.append((base, node.lineno))
+                # `from package import module` reaches the child's role, not
+                # merely the empty package initializer's classification.
+                for alias in node.names:
+                    candidate = f"{base}.{alias.name}"
+                    if candidate in known:
+                        out.append((candidate, node.lineno))
     return out
 
 
-def main() -> int:
+def check(layout: ModuleRoles) -> tuple[int, list[str]]:
     violations: list[str] = []
     checked = 0
-
-    for path in sorted(SRC.rglob("*.py")):
-        layer = layer_of(path)
-        if layer is None or layer not in ALLOWED:
+    known = frozenset(layout.roles)
+    for module, path in sorted(layout.paths.items()):
+        layer = layout.role(module)
+        if layer not in ALLOWED:
+            violations.append(f"{module}: unknown architectural role {layer!r}")
             continue
         checked += 1
         try:
             tree = ast.parse(path.read_text(encoding="utf8"), filename=str(path))
-        except SyntaxError as exc:
-            violations.append(f"{path.relative_to(ROOT)}: cannot parse -- {exc}")
+        except (OSError, UnicodeError, SyntaxError) as exc:
+            violations.append(f"{path.relative_to(layout.root)}: cannot parse -- {exc}")
             continue
 
-        rel = path.relative_to(ROOT)
-        for name, lineno in imported_names(tree):
+        rel = path.relative_to(layout.root)
+        for name, lineno in imported_names(
+            tree, module=module, package=path.name == "__init__.py", known=known,
+        ):
             root_pkg = name.split(".")[0]
 
             if root_pkg == "nm":
-                parts = name.split(".")
-                target = parts[1] if len(parts) > 1 else None
+                if name not in known:
+                    violations.append(f"{rel}:{lineno} unclassified imported module {name}")
+                    continue
+                target = layout.role(name)
                 if target and target not in ALLOWED[layer]:
                     violations.append(
-                        f"{rel}:{lineno}  nm.{layer} may not import nm.{target}  "
+                        f"{rel}:{lineno}  nm.{layer} may not import nm.{target} ({name})  "
                         f"(allowed: {', '.join(sorted(ALLOWED[layer]))})")
                 continue
 
@@ -130,7 +155,20 @@ def main() -> int:
                     f"{rel}:{lineno}  nm.{layer} may not import {root_pkg!r} -- "
                     f"I/O and provider clients belong in nm.adapters")
 
-    print(f"layercheck: {checked} module(s) in backend/nm/")
+    if not checked:
+        violations.append("source population is empty")
+    return checked, violations
+
+
+def main(*, roles: dict[str, str] | None = None, root: Path | None = None) -> int:
+    base = root or ROOT
+    try:
+        layout = (load_module_roles(root=base) if roles is None
+                  else classify_sources(root=base, roles=roles))
+        checked, violations = check(layout)
+    except LayoutError as exc:
+        checked, violations = 0, [str(exc)]
+    print(f"layercheck: {checked} module(s) in nm/")
     if violations:
         print(f"\n{len(violations)} VIOLATION(S)\n")
         for v in violations:

@@ -6,9 +6,27 @@ from datetime import date
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import dependency
-from nm.core.file_mutation import (
+
+from nm.legal_brain.issue_contracts import (
+    Disposition,
+    DispositionState,
+    Issue,
+    IssueKind,
+    from_stored,
+)
+from nm.legal_brain.loop_contracts import StopReason
+from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.legal_brain.tools import (
+    Boundary,
+    PreparedToolResult,
+    ToolContext,
+    ToolRefused,
+    ToolRegistry,
+)
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file import dependency
+from nm.work_the_file.file_mutation import (
     MutationRefused,
     prepare_admission,
     prepare_correction,
@@ -16,14 +34,9 @@ from nm.core.file_mutation import (
     prepare_issue,
     prepare_requirement_answer,
 )
-from nm.core.tools import Boundary, PreparedToolResult, ToolContext, ToolRefused, ToolRegistry
-from nm.core.write_tools import write_tools
-from nm.domain.file_mutation import FileMutation
-from nm.domain.issue import Disposition, DispositionState, Issue, IssueKind, from_stored
-from nm.domain.loop import StopReason
-from nm.domain.matter import Certainty, Fact, Matter, Provenance, Side, Thread
-from nm.domain.requirements import Force, Requirement, State, checklist, key
-from nm.ports.model import SchemaViolation, ToolCall
+from nm.work_the_file.file_mutation_contracts import FileMutation
+from nm.work_the_file.matter_contracts import Certainty, Fact, Matter, Provenance, Side, Thread
+from nm.work_the_file.write_tools import write_tools
 
 pytestmark = pytest.mark.class_a
 TODAY = date(2026, 9, 27)

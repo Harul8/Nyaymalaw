@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _sources():
-    return [p for p in (ROOT / "backend" / "nm").rglob("*.py")
+    return [p for p in (ROOT / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
 
 
@@ -38,7 +38,7 @@ def _code(path: pathlib.Path) -> str:
     """
     import sys
     sys.path.insert(0, str(ROOT))
-    sys.path.insert(0, str(ROOT / "backend"))
+    sys.path.insert(0, str(ROOT ))
     from assurance.gate.trace import _without_prose
 
     return _without_prose(path.read_text(encoding="utf-8"))
@@ -54,7 +54,7 @@ def test_the_forum_date_crosses_at_the_forums_midnight():
     day short, and `expired(turn.today)` decides whether the salvage pass runs
     at all.
     """
-    from nm.domain.clock import today
+    from nm.shared.clock_contracts import today
 
     # 18:29 UTC is still the 30th at the forum; 18:30 is the 1st.
     assert today(datetime(2026, 9, 30, 18, 29, tzinfo=timezone.utc)) == date(2026, 9, 30)
@@ -66,11 +66,11 @@ def test_nothing_in_the_product_asks_the_machine_what_day_it_is():
     """THE SWEEP. `date.today()` means "the date where this process happens to
     be running", which is not a fact about the matter.
 
-    `backend/nm/domain/clock.py` is the one place allowed to read a wall clock, and it
+    `nm/shared/clock_contracts.py` is the one place allowed to read a wall clock, and it
     reads it in UTC and converts."""
     offenders = []
     for path in _sources():
-        if path.name == "clock.py":
+        if path == ROOT / "nm/shared/clock_contracts.py":
             continue
         src = path.read_text(encoding="utf-8")
         for n, line in enumerate(src.splitlines(), 1):
@@ -80,7 +80,7 @@ def test_nothing_in_the_product_asks_the_machine_what_day_it_is():
     assert not offenders, (
         "these ask the machine what day it is instead of the forum:\n  "
         + "\n  ".join(offenders)
-        + "\n\nUse `nm.domain.clock.today()`. A server keeping UTC is a day "
+        + "\n\nUse `nm.shared.clock_contracts.today()`. A server keeping UTC is a day "
           "behind India from 18:30 UTC, and a limitation date is the most "
           "consequential number this product produces.")
 
@@ -91,9 +91,9 @@ def test_the_clock_needs_no_timezone_database():
     database that Windows does not ship, raising on some machines and working
     on others. A clock correct on the developer's laptop and raising in
     production is worse than no clock."""
-    assert "ZoneInfo" not in _code(ROOT / "backend" / "nm" / "domain" / "clock.py"), (
+    assert "ZoneInfo" not in _code(ROOT / "nm/shared/clock_contracts.py"), (
         "the clock depends on a system timezone database")
-    from nm.domain.clock import IST
+    from nm.shared.clock_contracts import IST
     assert IST.utcoffset(None) == timedelta(hours=5, minutes=30)
 
 
@@ -106,7 +106,7 @@ def test_the_jurisdiction_has_one_owner():
     retrieval and the binding computation is S9 with a silent wrong answer."""
     offenders = []
     for path in _sources():
-        if path.name == "clock.py":
+        if path == ROOT / "nm/shared/clock_contracts.py":
             continue
         src = path.read_text(encoding="utf-8")
         for n, line in enumerate(src.splitlines(), 1):
@@ -115,7 +115,7 @@ def test_the_jurisdiction_has_one_owner():
                 offenders.append(f"{path.relative_to(ROOT).as_posix()}:{n}")
     assert not offenders, (
         "the forum is written out instead of imported:\n  "
-        + "\n  ".join(offenders) + "\n\nUse `nm.domain.clock.FORUM`.")
+        + "\n  ".join(offenders) + "\n\nUse `nm.shared.clock_contracts.FORUM`.")
 
 
 # ==================== BK-16 — the cipher does not downgrade ===============
@@ -131,7 +131,7 @@ def test_the_cipher_refuses_to_downgrade_without_being_told():
     Keystream XOR under a key every matter shares is trivially broken: two
     ciphertexts XORed together cancel the keystream.
     """
-    src = (ROOT / "backend" / "nm" / "adapters" / "store" / "file_store.py").read_text(
+    src = (ROOT / "nm/shared/store_file_store.py").read_text(
         encoding="utf-8")
     body = src[src.index("except ImportError:"):src.index("def encrypt")]
     assert "raise EncryptionNotConfigured" in body, (
@@ -145,7 +145,7 @@ def test_the_cipher_refuses_to_downgrade_without_being_told():
 def test_a_missing_key_is_still_a_hard_failure():
     """The rule that was already right, kept. An unset key must never become a
     silent no-op writing privileged client material in plaintext."""
-    from nm.adapters.store.file_store import EncryptionNotConfigured, _Cipher
+    from nm.shared.store_file_store import EncryptionNotConfigured, _Cipher
 
     with pytest.raises(EncryptionNotConfigured):
         _Cipher("")
@@ -158,7 +158,7 @@ def test_a_missing_key_is_still_a_hard_failure():
 def test_no_guard_in_the_product_is_an_assert():
     """`python -O` DELETES EVERY ASSERT.
 
-    All three in `backend/nm/` were load-bearing: that `may_admit_substance` still
+    All three in `nm/` were load-bearing: that `may_admit_substance` still
     refuses an unscreened matter, and both halves of `spoken.complete()`. The
     last two were written under a docstring promising a missing phrase is an
     ImportError rather than a surprise in a served turn -- false under `-O`,
@@ -188,7 +188,7 @@ def test_a_missing_phrase_raises_rather_than_asserts():
     the failure it was standing in for."""
     from enum import Enum, nonmember
 
-    from nm.domain.spoken import Spoken
+    from nm.shared.spoken_contracts import Spoken
 
     class _Gappy(Spoken, str, Enum):
         FINE = "fine"
@@ -211,7 +211,7 @@ def test_the_session_cookie_is_secure_when_the_connection_is():
     development would have too. A default that needs a flag to work is one
     somebody sets permanently.
     """
-    src = (ROOT / "backend" / "nm" / "edge" / "api.py").read_text(encoding="utf-8")
+    src = (ROOT / "nm/app/api.py").read_text(encoding="utf-8")
     assert "secure=secure" in src, "the cookie no longer sets `secure` at all"
     assert 'request.url.scheme == "https"' in src, (
         "`secure` is no longer derived from the connection")
@@ -232,7 +232,7 @@ def test_a_missing_index_count_is_none_and_not_zero():
     CLAUDE.md's worked example is this shape: `table.get(kind, 0.0)` made
     every unlisted atom type score worse than every listed one.
     """
-    src = _code(ROOT / "backend" / "nm" / "adapters" / "search" / "authority.py")
+    src = _code(ROOT / "nm/legal_brain/search_authority.py")
     assert "rows.get(key, 0)" not in src, (
         "a missing count reads as zero again")
     assert "def num(key: str) -> int | None:" in src, (
@@ -246,18 +246,18 @@ def test_a_missing_index_count_is_none_and_not_zero():
 # identically -- and one did, on every commit for weeks (B-049).
 #
 # ONE PLANTER, THREE PROBES. Three copies of write-then-unlink would be
-# three chances to leave a probe module behind in `backend/nm/`, where every other
+# three chances to leave a probe module behind in `nm/`, where every other
 # sweep in this suite would then trip over it.
 
 
 @contextlib.contextmanager
 def _planted(name: str, body: str):
-    """A real module under `backend/nm/`, removed however the block exits.
+    """A real module under `nm/`, removed however the block exits.
 
-    UNDER `backend/nm/` BECAUSE THAT IS WHERE THE SWEEPS LOOK. A fixture anywhere
+    UNDER `nm/` BECAUSE THAT IS WHERE THE SWEEPS LOOK. A fixture anywhere
     else would prove the matcher works, not that the walk reaches it.
     """
-    path = ROOT / "backend" / "nm" / "core" / ("_" + name + "_probe.py")
+    path = ROOT / "nm" / "work_the_file" / ("_" + name + "_probe.py")
     path.write_text(body + chr(10), encoding="utf8")
     try:
         yield path

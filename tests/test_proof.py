@@ -14,7 +14,8 @@ So every test here that checks the restraint also checks the bound.
 from __future__ import annotations
 
 import pytest
-from nm.core.proof import (
+
+from nm.legal_brain.proof import (
     Burden,
     ProofPosition,
     ProofStatus,
@@ -23,8 +24,8 @@ from nm.core.proof import (
     unclosed,
     uncovered,
 )
-from nm.domain.matter import Basis, Posture, Role, Side
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Basis, Posture, Role, Side
 
 pytestmark = pytest.mark.class_a
 
@@ -268,7 +269,7 @@ def test_existence_admissibility_and_weight_are_three_separate_questions():
     question again. Collapsing any two produces an item that reads as settled
     when one was never asked.
     """
-    from nm.core.evidence_item import (
+    from nm.work_the_file.evidence_item import (
         Admissibility,
         EvidenceItem,
         Existence,
@@ -318,7 +319,7 @@ def test_an_item_at_risk_with_no_preservation_step_is_reported():
     """
     from datetime import date as _date
 
-    from nm.core.evidence_item import (
+    from nm.work_the_file.evidence_item import (
         EvidenceItem,
         Existence,
         Form,
@@ -357,7 +358,7 @@ def test_an_item_at_risk_with_no_preservation_step_is_reported():
     # nothing about it because there IS an instruction, so without a separate
     # check the two failures are indistinguishable to everyone except the
     # document, which is gone either way.
-    from nm.core.evidence_item import undelivered
+    from nm.work_the_file.evidence_item import undelivered
     assert undelivered((stepped,)) == ("the original agreement of sale",)
     assert undelivered((exposed,)) == (), "no instruction is not an unissued one"
 
@@ -375,7 +376,7 @@ def test_a_photocopy_is_not_the_document():
     """C7. One `form` string that does not distinguish them makes the s.65
     secondary-evidence position invisible — and that position is the whole
     answer on a file where the original sits with the opponent's brother."""
-    from nm.core.evidence_item import Form
+    from nm.work_the_file.evidence_item import Form
 
     assert Form.ORIGINAL is not Form.PHOTOCOPY
     assert Form.CERTIFIED_COPY is not Form.PHOTOCOPY
@@ -388,7 +389,7 @@ def test_a_photocopy_is_not_the_document():
 def test_a_thing_that_does_not_exist_carries_no_admissibility_position():
     """The collapse C7 separates the three questions to prevent. Admissibility
     of what?"""
-    from nm.core.evidence_item import Admissibility, EvidenceItem, Existence
+    from nm.work_the_file.evidence_item import Admissibility, EvidenceItem, Existence
 
     with pytest.raises(ValueError) as exc:
         EvidenceItem(what="the missing receipt", existence=Existence.ABSENT,
@@ -406,8 +407,7 @@ def test_the_served_turn_records_a_characterisation_of_the_client(tmp_path):
     """
     from datetime import date as _date
 
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path, responses={

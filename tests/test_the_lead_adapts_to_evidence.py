@@ -22,9 +22,10 @@ model's investigation.
 from __future__ import annotations
 
 import pytest
-from nm.core import lead
-from nm.core.delegation import Ledger
-from nm.domain.delegation import (
+
+from nm.legal_brain import lead
+from nm.legal_brain.delegation import Ledger
+from nm.legal_brain.delegation_contracts import (
     Finding,
     Mandate,
     MandateDelta,
@@ -33,7 +34,7 @@ from nm.domain.delegation import (
     Role,
     Task,
 )
-from nm.domain.lead import Action, EpistemicStatus, Plan
+from nm.legal_brain.lead_contracts import Action, EpistemicStatus, Plan
 
 pytestmark = pytest.mark.class_a
 

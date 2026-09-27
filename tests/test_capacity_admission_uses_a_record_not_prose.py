@@ -4,9 +4,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from nm.core import screens
-from nm.domain.capacity import Capacity, CapacityPosition
-from nm.domain.traceability import refuses
+
+from nm.open_matter import screens
+from nm.open_matter.capacity_contracts import Capacity, CapacityPosition
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 9, 12, 10, tzinfo=timezone.utc)
@@ -23,7 +24,7 @@ def _request(**extra):
 
 
 def _saved(client, response):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     assert response.status_code == 200, response.text
     matter_id = response.json()["matter_id"]
@@ -40,7 +41,7 @@ def _capacity_screen(matter):
 @refuses("B6", 1)
 @pytest.mark.parametrize("state", list(Capacity))
 def test_each_explicit_state_reaches_the_actual_served_admission(client, monkeypatch, state):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     engine = application().engine
     monkeypatch.setattr(engine, "_clock", lambda: NOW)
@@ -116,9 +117,8 @@ def test_two_competing_capacity_representations_are_refused(client):
 
 
 def test_uncertainty_reopens_capacity_and_preserves_the_prior_assessment(client, monkeypatch):
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.edge.api import application
-
+    from nm.app.api import application
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY
 
     engine = application().engine
@@ -177,7 +177,7 @@ def test_future_or_damaged_stored_clearance_is_not_current():
 
 
 def test_capacity_can_be_corrected_after_opening_without_a_model_call(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
     first = _saved(client, client.post('/api/turn', json=_request(capacity={
         'state': 'not_assessed', 'basis': 'Not yet assessed.'})))
     receipt = first.turn_receipts

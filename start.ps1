@@ -5,7 +5,7 @@
 
         powershell -ExecutionPolicy Bypass -File start.ps1
 
-    THERE IS ONE SERVER, NOT TWO. `nm.bootstrap.main` serves the API and the
+    THERE IS ONE SERVER, NOT TWO. `nm.app.main` serves the API and the
     advocate UI from the same process -- `/api/...` and the `/static` mount
     with the `/` index -- so there is one thing to start and one port to wait
     on. A script that pretended to start two would leave whoever read it
@@ -114,14 +114,14 @@ if ($env:NM_MATTER_KEY) {
 }
 
 # ---- start it -------------------------------------------------------------
-# THE BACKEND PACKAGE LIVES UNDER backend/. `nm` is not installed into the
+# THE JOURNEY PACKAGE LIVES AT THE CHECKOUT ROOT. `nm` is not installed into the
 # interpreter, deliberately: an editable install would make every worktree
 # import the MAIN checkout's code. The path is set for this process only.
-$env:PYTHONPATH = (Join-Path $root "backend") + [IO.Path]::PathSeparator + $root
-Write-Host "  starting  python -m nm.bootstrap.main --port $Port"
+$env:PYTHONPATH = $root
+Write-Host "  starting  python -m nm.app.main --port $Port"
 $server = Start-Process -FilePath "python" `
-    -ArgumentList "-m", "nm.bootstrap.main", "--port", "$Port" `
-    -WorkingDirectory $root -PassThru
+    -ArgumentList "-m", "nm.app.main", "--port", "$Port" `
+    -WorkingDirectory $root -WindowStyle Hidden -PassThru
 
 # ---- wait for it to actually answer ---------------------------------------
 #
@@ -138,7 +138,7 @@ for ($i = 0; $i -lt 100; $i++) {
         Write-Host ""
         Write-Host "  the server exited immediately (code $($server.ExitCode))." -ForegroundColor Red
         Write-Host "  run it in the foreground to see why:" -ForegroundColor Red
-        Write-Host "    python -m nm.bootstrap.main --port $Port"
+        Write-Host "    python -m nm.app.main --port $Port"
         exit 1
     }
     $probe = New-Object System.Net.Sockets.TcpClient

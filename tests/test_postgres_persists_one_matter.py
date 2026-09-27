@@ -39,17 +39,18 @@ import os
 import uuid
 
 import pytest
-from nm.adapters.store.postgres import PostgresMatterStore
-from nm.adapters.store.sealing import MatterSealer
-from nm.domain.matter import Matter
-from nm.domain.operation import (
+
+from nm.shared.operation_contracts import (
     Operation,
     OutboxEntry,
     OutboxRefused,
     request_digest,
 )
-from nm.ports.store import StaleWrite
-from nm.ports.transactional import OperationConflict, TenantMismatch
+from nm.shared.store_port import StaleWrite
+from nm.shared.store_postgres import PostgresMatterStore
+from nm.shared.store_sealing import MatterSealer
+from nm.shared.transactional_port import OperationConflict, TenantMismatch
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = [
     pytest.mark.postgres,
@@ -275,7 +276,7 @@ def test_a_reused_connection_carries_no_tenant_context_between_transactions(stor
 def test_every_persisted_field_survives_a_round_trip(store):
     """Compared against the file store's own encoder, so the two adapters
     cannot disagree about the shape of one matter."""
-    from nm.adapters.store.file_store import _enc
+    from nm.shared.store_file_store import _enc
 
     matter = _matter()
     store.commit_accepted(matter, expected_version=0, operation=_operation(matter, "k-fields"))
@@ -288,9 +289,8 @@ def test_every_persisted_field_survives_a_round_trip(store):
 
 
 def test_worker_outcomes_and_unknown_reconciliation_survive_adapter_restart(store):
-    from nm.core.worker import AmbiguousEffect, JobRunner
-    from nm.domain.operation import Outcome
-
+    from nm.shared.operation_contracts import Outcome
+    from nm.shared.worker import AmbiguousEffect, JobRunner
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()
@@ -319,10 +319,9 @@ def test_worker_outcomes_and_unknown_reconciliation_survive_adapter_restart(stor
 
 
 def test_database_cancellation_and_fencing_are_durable(store):
-    from nm.core.worker import JobRunner
-    from nm.domain.operation import Outcome
-    from nm.ports.transactional import LeaseLost
-
+    from nm.shared.operation_contracts import Outcome
+    from nm.shared.transactional_port import LeaseLost
+    from nm.shared.worker import JobRunner
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()
@@ -363,9 +362,8 @@ def test_database_cancellation_and_fencing_are_durable(store):
 
 
 def test_database_unknown_aggregate_keeps_cancellation_visible_to_sibling_jobs(store):
-    from nm.core.worker import JobRunner
-    from nm.domain.operation import Outcome
-
+    from nm.shared.operation_contracts import Outcome
+    from nm.shared.worker import JobRunner
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()

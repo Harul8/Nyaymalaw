@@ -17,9 +17,9 @@ GS-03 was tagged `S2` and GS-04 `S1` -- both in the `smoke` suite, which is
 declared to run on EVERY COMMIT. Neither can run at all:
 
     GS-03  needs the jurisdiction boundary. `G-COMPETENCE` is built=False.
-    GS-04  needs document intake. `nm.core.intake` is declared UNWIRED in
+    GS-04  needs document intake. `nm.open_matter.intake` is declared UNWIRED in
            `tests/test_reached_from_production.py` and there is no upload
-           endpoint in `backend/nm/edge/api.py`.
+           endpoint in `nm/app/api.py`.
 
 So the smoke suite has claimed coverage of the jurisdiction boundary and the
 prompt-injection defence since slice 1, and had neither. That is worse than an
@@ -101,7 +101,7 @@ def test_the_drift_check_can_see_a_disagreement():
 WAITS_ON: dict[str, str] = {
     "GS-03": "G-COMPETENCE is built=False -- the jurisdiction boundary has no "
              "mechanism, so the corpus limit cannot be named to the advocate",
-    "GS-04": "nm.core.intake is declared UNWIRED and backend/nm/edge/api.py has no "
+    "GS-04": "nm.open_matter.intake is declared UNWIRED and nm/app/api.py has no "
              "upload endpoint, so a document cannot reach the product at all",
 }
 

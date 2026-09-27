@@ -7,16 +7,21 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.core.brain_context import ContextPolicy, ContextRefused, ContextSession, assemble_brief
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.original_instruction import InstructionRefused, prior_instructions
-from nm.core.tools import Boundary, foundation_tools
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
-from nm.domain.matter import Thread
-from nm.ports.model import ToolCall, estimate_tokens
 
+from nm.legal_brain.brain_context import (
+    ContextPolicy,
+    ContextRefused,
+    ContextSession,
+    assemble_brief,
+)
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.tools import Boundary, foundation_tools
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall, estimate_tokens
+from nm.work_the_file.matter_contracts import Thread
+from nm.work_the_file.original_instruction import InstructionRefused, prior_instructions
 from tests.test_reviewed_private_preview_checks_saved_words import changed_payload
 from tests.test_the_loop_records_work_before_using_it import _response, _setup
 

@@ -24,7 +24,8 @@ failure since it was written.
 from __future__ import annotations
 
 import pytest
-from nm.core.premise import (
+
+from nm.legal_brain.premise import (
     REQUIRED,
     SUFFICIENT,
     Basis,
@@ -35,7 +36,7 @@ from nm.core.premise import (
     blocks,
     invalidated,
 )
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 

@@ -35,7 +35,7 @@ SECTION = "Indian practice layer"
 #: each row rather than restated six times.
 MECHANISM = (
     "ONE MECHANISM, SHARED: a curated table per rule family in "
-    "backend/nm/knowledge/, built the way nm.knowledge.resolution.Edge already "
+    "nm/knowledge/, built the way nm.legal_brain.resolution_sources.Edge already "
     "is for Limitation Articles, every row carrying curated_from and the type "
     "refusing a row without it. The table IDENTIFIES on an exact key (cause, "
     "date, court, relief) and never by fuzzy match; the model APPLIES it to "
@@ -206,7 +206,7 @@ ROWS = [
 
         "For each relied-on judgment record: its court, bench strength and date; "
         "its relationship to this forum -- binding, persuasive or not binding, "
-        "through the existing nm.knowledge.jurisdiction relationship extended by "
+        "through the existing nm.legal_brain.jurisdiction_sources relationship extended by "
         "bench strength; the proposition it is relied on for, marked ratio or "
         "obiter, with its paragraph; and its subsequent treatment where the "
         "corpus establishes one. Where two co-equal benches conflict, say so and "
@@ -390,7 +390,7 @@ ROWS = [
         "LB-125-AC3: correcting the claimed amount across a tier boundary "
         "reopens both the forum and the fee.",
 
-        "LB-20/121; threshold owners -- nm.core.thresholds already carries "
+        "LB-20/121; threshold owners -- nm.legal_brain.thresholds already carries "
         "VALUATION, COURT_FEES and JURISDICTION as not assessed, and this row is "
         "what would assess them. CORPUS: NEITHER THE COURT-FEES AND SUITS "
         "VALUATION ACT AS APPLIED IN TELANGANA NOR THE TELANGANA CIVIL COURTS "

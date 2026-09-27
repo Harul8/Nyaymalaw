@@ -28,7 +28,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from nm.adapters.store.envelope import (
+
+from nm.shared.store_envelope import (
     CrossMatterAccess,
     KeyUnavailable,
     LocalKeyRing,
@@ -36,11 +37,11 @@ from nm.adapters.store.envelope import (
     WrappedKeyUnreadable,
     rewrap_all,
 )
-from nm.adapters.store.file_store import (
+from nm.shared.store_file_store import (
     EncryptionNotConfigured,
     FileMatterStore,
 )
-from nm.domain.matter import Matter
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 

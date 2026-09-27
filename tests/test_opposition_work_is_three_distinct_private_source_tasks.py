@@ -5,18 +5,18 @@ import copy
 from dataclasses import replace
 
 import pytest
-from nm.core.opposition_work import (
+
+from nm.legal_brain.loop_contracts import LoopEvent, LoopLimits, StepKind, StopReason, digest
+from nm.legal_brain.opposition_work import (
     OppositionRequest,
     case_basis,
     opposition_status_tool,
     reusable_work,
     status_for_work,
 )
-from nm.core.tools import ToolRefused
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopEvent, LoopLimits, StepKind, StopReason, digest
-from nm.ports.model import ToolCall
-
+from nm.legal_brain.tools import ToolRefused
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall
 from tests.test_independent_claim_verifier import finding
 from tests.test_nested_research_has_one_budget_and_one_writer import setup
 from tests.test_the_loop_records_work_before_using_it import _response

@@ -18,7 +18,7 @@ import pytest
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "frontend" / "app.js"
+SCRIPT = ROOT / "nm/app/app.js"
 STORAGE = re.compile(r"(localStorage|sessionStorage)\s*\.\s*(\w+)")
 
 
@@ -43,7 +43,7 @@ def test_the_script_never_writes_to_browser_storage_at_all():
     """A BLANKET RULE. Scoping it to "secrets" needs a judgement at every future
     call site; nothing in this product needs to persist across a tab close."""
     writes = storage_writes(_script())
-    assert not writes, f"frontend/app.js touches browser storage: {writes}"
+    assert not writes, f"nm/app/app.js touches browser storage: {writes}"
 
 
 def test_the_storage_sweep_can_see_a_planted_write():

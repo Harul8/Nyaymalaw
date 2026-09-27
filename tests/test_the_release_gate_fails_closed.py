@@ -9,7 +9,7 @@ against one critical row would release this product over a legal defect, and
 the arithmetic would look responsible while it did.
 
 And the one that comes before it: a gate that could sign its own approval.
-There is no function in `backend/nm/domain/release.py` that creates an `Approval`
+There is no function in `nm/shared/release_contracts.py` that creates an `Approval`
 without being handed one, and this suite asserts that from the source rather
 than from a promise.
 
@@ -25,7 +25,8 @@ from __future__ import annotations
 import inspect
 
 import pytest
-from nm.domain.release import (
+
+from nm.shared.release_contracts import (
     IDENTITIES,
     REQUIRED_APPROVALS,
     REQUIRED_PORTFOLIOS,
@@ -294,7 +295,7 @@ def test_nothing_in_this_module_creates_an_approval():
     """*Do not create a release approval record on behalf of the user.* A gate
     that could sign its own release is the check that cannot fail, holding the
     last decision anybody makes about this product."""
-    from nm.domain import release
+    from nm.shared import release_contracts as release
 
     for name in ("refuse_release", "verdict", "projection"):
         source = inspect.getsource(getattr(release, name))

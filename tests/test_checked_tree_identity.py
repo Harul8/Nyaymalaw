@@ -28,7 +28,7 @@ pytestmark = pytest.mark.class_a
     "docs/Nyaymalaw_PRD.docx",            # authoritative rendered PRD
     "docs/backlog/known_failures.yaml",   # control registry
     "docs/backlog/steps.yaml",            # journey registry
-    "frontend/app.js",                         # served product
+    "nm/app/app.js",                         # served product
     ".github/workflows/class-a.yml",       # CI workflow/configuration
     "pyproject.toml",                     # Python/gate configuration
     "tests/js/render_turn_partition.mjs", # Class-A JavaScript helper
@@ -59,7 +59,7 @@ def test_a_new_suffix_does_not_fall_out_of_a_covered_tree(tmp_path):
 def _unframed_python_digest(root: pathlib.Path) -> str:
     """The replaced path+content construction, retained only as the control."""
     digest = hashlib.sha256()
-    for path in sorted((root / "backend" / "nm").rglob("*.py")):
+    for path in sorted((root / "nm").rglob("*.py")):
         digest.update(path.relative_to(root).as_posix().encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -69,12 +69,12 @@ def test_path_and_content_boundaries_are_collision_safe(tmp_path):
     left = tmp_path / "left"
     right = tmp_path / "right"
     for root in (left, right):
-        (root / "backend" / "nm").mkdir(parents=True)
+        (root / "nm").mkdir(parents=True)
 
-    (left / "backend" / "nm" / "a.py").write_bytes(b"")
-    (left / "backend" / "nm" / "b.py").write_bytes(b"backend/nm/b.py\n")
-    (right / "backend" / "nm" / "a.py").write_bytes(b"backend/nm/b.py")
-    (right / "backend" / "nm" / "b.py").write_bytes(b"\n")
+    (left / "nm" / "a.py").write_bytes(b"")
+    (left / "nm" / "b.py").write_bytes(b"nm/b.py\n")
+    (right / "nm" / "a.py").write_bytes(b"nm/b.py")
+    (right / "nm" / "b.py").write_bytes(b"\n")
 
     assert _unframed_python_digest(left) == _unframed_python_digest(right), (
         "the control no longer constructs the old boundary collision")
@@ -343,8 +343,8 @@ def test_two_unchanged_scoped_runs_remain_valid_but_never_become_full(
             ("BK-1-AC1",), "planted",
         )],
     )
-    (tmp_path / "backend" / "nm").mkdir(parents=True)
-    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / "nm").mkdir(parents=True)
+    (tmp_path / "nm" / "a.py").write_text("x = 1\n", encoding="utf-8")
 
     for _ in range(2):
         gatestamp.record(kind="scoped", waived=["KF-1"], baseline=baseline)
@@ -395,7 +395,7 @@ def test_scoped_stamp_waivers_must_equal_the_registered_population(
             ("BK-1-AC1",), "different",
         )],
     )
-    (tmp_path / "backend" / "nm").mkdir(parents=True)
+    (tmp_path / "nm").mkdir(parents=True)
     gatestamp.record(
         evidence.verification_fingerprint(tmp_path), kind="scoped",
         waived=["KF-1"], baseline="a" * 64,
@@ -414,7 +414,7 @@ def test_stamp_reader_cannot_self_certify_from_its_cli(tmp_path, monkeypatch):
 
 def test_the_running_gate_voids_a_non_python_input_mutation(
         tmp_path, monkeypatch, capsys):
-    planted = tmp_path / "frontend" / "app.js"
+    planted = tmp_path / "nm/app/app.js"
     planted.parent.mkdir(parents=True)
     planted.write_text("before\n", encoding="utf-8")
     calls = 0

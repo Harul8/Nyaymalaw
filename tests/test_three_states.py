@@ -132,7 +132,7 @@ CLOSED: dict[str, str] = {
     "Force": (
         "HOW NECESSARY a source-bound requirement is -- required or "
         "strengthening -- and a requirement exists only where the read stated "
-        "one. `nm.core.requirements.read` DROPS a row whose force is "
+        "one. `nm.legal_brain.requirements.read` DROPS a row whose force is "
         "missing or unrecognised and counts it in `Reading.dropped`, so no "
         "requirement ever carries a force nobody established; a third member "
         "meaning 'unclear' would keep a requirement the source did not "
@@ -188,7 +188,7 @@ CLOSED: dict[str, str] = {
         "a vocabulary of ATTEMPTS, not an outcome. Somebody always chose what "
         "they were trying to do -- there is no unknown act a person could be "
         "attempting -- and the three-state answer lives in "
-        "`nm.domain.authority.Standing`, whose NOT_ESTABLISHED is exactly the "
+        "`nm.shared.authority_contracts.Standing`, whose NOT_ESTABLISHED is exactly the "
         "'nobody recorded this person's capacity' case. Adding a fourth member "
         "here would give callers an act to pass when they mean they do not "
         "know, and `permits` would then have to guess what it was."),
@@ -201,10 +201,10 @@ CLOSED: dict[str, str] = {
         "a destination vocabulary, not an outcome. There is no unknown sink a "
         "dispatch could be sent to -- a route names where it is going or it is "
         "refused before a sink is chosen, and that refusal lives in "
-        "`nm.domain.egress.refuse` rather than in this enum."),
+        "`nm.shared.egress_contracts.refuse` rather than in this enum."),
     "DataClass": (
         "the unclassified state is the EMPTY SET, not a member. "
-        "`nm.domain.egress.refuse` refuses a dispatch declaring no data "
+        "`nm.shared.egress_contracts.refuse` refuses a dispatch declaring no data "
         "classes at all -- an UNCLASSIFIED member would be a value a producer "
         "could pick and dispatch under, which is the opposite of what the "
         "absence means here."),
@@ -391,7 +391,7 @@ def test_the_third_state_is_a_value_and_never_a_null():
     `basis=None`. It worked, and nothing forced a consumer to handle it —
     which is what `None` costs and a member does not.
     """
-    from nm.knowledge.manifest import ActBasis, Resolution
+    from nm.legal_brain.manifest_sources import ActBasis, Resolution
 
     assert ActBasis.NOT_RESOLVED in list(ActBasis)
     assert Resolution(None).basis is ActBasis.NOT_RESOLVED, (
@@ -458,7 +458,7 @@ def test_every_metric_field_survives_into_the_persisted_record():
     """
     import dataclasses
 
-    from nm.domain.metrics import TurnMetrics
+    from nm.shared.metrics_contracts import TurnMetrics
 
     m = TurnMetrics(turn_id="t", matter_id="m")
     written = _keys_at_any_depth(m.as_dict())
@@ -476,7 +476,7 @@ def test_the_metric_scan_can_see_an_unserialised_field():
     proves nothing about the scan."""
     import dataclasses
 
-    from nm.domain.metrics import TurnMetrics
+    from nm.shared.metrics_contracts import TurnMetrics
 
     written = _keys_at_any_depth(TurnMetrics(turn_id="t", matter_id="m").as_dict())
     planted = "zz_never_serialised"

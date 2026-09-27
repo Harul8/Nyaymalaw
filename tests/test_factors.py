@@ -23,10 +23,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core import factors
-from nm.core.limitation import FactorKind
-from nm.domain.matter import Fact, Provenance
-from nm.domain.quotable import Quotable
+
+from nm.legal_brain import factors
+from nm.legal_brain.limitation import FactorKind
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.work_the_file.matter_contracts import Fact, Provenance
 
 pytestmark = pytest.mark.class_a
 
@@ -253,7 +254,7 @@ def test_the_turn_fetches_exactly_the_sections_this_read_needs():
     """THE SECOND COPY, found by the advocate asking why two of every three
     evidence rounds went to the same two sections.
 
-    `backend/nm/core/turn.py` carried the literal `("18", "19")` while `SECTION_FOR`
+    `nm/legal_brain/turn.py` carried the literal `("18", "19")` while `SECTION_FOR`
     here held the same numbers. The failure that sets up is silent: add a
     third kind to `READS`, and the turn goes on fetching two sections,
     `provisions.get(SECTION_FOR[kind])` returns None, and the new factor is
@@ -262,8 +263,8 @@ def test_the_turn_fetches_exactly_the_sections_this_read_needs():
     """
     import inspect
 
-    from nm.core import factors
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain import factors
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._factors)
     assert "factor_reader.sections_needed()" in body, (
@@ -287,8 +288,8 @@ def test_a_kind_added_to_the_read_is_fetched_without_touching_the_turn():
     A third kind declared here must change what the turn fetches. If it does
     not, the two are still separate lists that happen to agree today.
     """
-    from nm.core import factors
-    from nm.core.limitation import FactorKind
+    from nm.legal_brain import factors
+    from nm.legal_brain.limitation import FactorKind
 
     was_reads, was_map = factors.READS, dict(factors.SECTION_FOR)
     try:
@@ -315,8 +316,8 @@ def test_the_kinds_not_read_are_still_declared_not_assessed():
     decision, and this asserts it is still a decision rather than a gap that
     grew: the schema may not offer a kind the read cannot support.
     """
-    from nm.core import factors
-    from nm.core.limitation import FactorKind
+    from nm.legal_brain import factors
+    from nm.legal_brain.limitation import FactorKind
 
     offered = set(factors.FACTOR_SCHEMA["properties"]["kind"]["enum"]) - {"none", "cannot_tell"}
     assert offered == {k.value for k in factors.READS}, (

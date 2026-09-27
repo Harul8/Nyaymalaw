@@ -8,7 +8,16 @@ from dataclasses import replace
 
 import pytest
 from fastapi import HTTPException
-from nm.core.loop_progress import (
+
+from nm.legal_brain.loop_contracts import (
+    LoopEvent,
+    LoopIdentity,
+    LoopMode,
+    LoopRecord,
+    StepKind,
+    StopReason,
+)
+from nm.legal_brain.loop_progress import (
     InvalidProgressCursor,
     cursor_at,
     progress,
@@ -16,8 +25,7 @@ from nm.core.loop_progress import (
     resume_position,
     sse_frame,
 )
-from nm.domain.loop import LoopEvent, LoopIdentity, LoopMode, LoopRecord, StepKind, StopReason
-from nm.domain.matter import Matter
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 SECRET = "PRIVATE MODEL DELIBERATION AND UNRELEASED LEGAL CONCLUSION"
@@ -47,7 +55,7 @@ def add(record, kind, payload):
 
 
 def save(client, record):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter = Matter(
         id=record.identity.matter_id,
@@ -234,7 +242,7 @@ def test_actual_sse_resume_uses_correlated_cursor_without_replaying_prior_stages
 
 
 def test_route_refuses_a_record_transplanted_between_matters(client):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     record = work(matter_id="different_matter")
     foreign = Matter(
@@ -255,7 +263,7 @@ def test_route_refuses_a_record_transplanted_between_matters(client):
 
 def collect_stream(*, disconnect_after=None, revoke_after=None, owner_lost_after=None):
     """Drive the actual route generator so buffering cannot hide its checks."""
-    from nm.edge.loop_progress import router
+    from nm.legal_brain.loop_progress_api import router
 
     record = work()
     count = [0]

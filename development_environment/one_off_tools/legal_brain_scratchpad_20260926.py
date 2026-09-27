@@ -90,7 +90,7 @@ ROWS = {
         "LB-139-AC2: a section set aside shows its reason, labelled as NM's judgment.\n"
         "LB-139-AC3: a scratch pad reopened the next day shows the same steps it showed live.\n"
         "LB-139-AC4: the panel is closed by default and opens on phone and desktop.",
-        "LB-128, LB-140, LB-142, LB-163, LB-164; LB-70, LB-82, LB-86; frontend/matter-workspace.js (the "
+        "LB-128, LB-140, LB-142, LB-163, LB-164; LB-70, LB-82, LB-86; nm/legal_brain/matter-workspace.js (the "
         "existing matter board); test_no_enum_value_reaches_the_advocate. Streaming does not exist today: "
         "/api/turn returns one finished answer.",
     ], SAVED),
@@ -179,7 +179,7 @@ ROWS = {
         "LB-164-AC1: the events streamed for a turn equal, in order, the events saved with it.\n"
         "LB-164-AC2: a client that reconnects mid-turn receives every later event exactly once.\n"
         "LB-164-AC3: a failed turn keeps its log up to the failure.",
-        "LB-128, LB-139, LB-143, LB-146; backend/nm/edge/api.py (/api/turn is request-response today).",
+        "LB-128, LB-139, LB-143, LB-146; nm/app/api.py (/api/turn is request-response today).",
     ], SAVED),
     "LB-165": ("L.7", [
         "The answer, dispute by dispute: passages, evidence, case, arguments, the other side, how to strengthen",
@@ -229,7 +229,7 @@ ROWS = {
         "with its reason.\n"
         "LB-166-AC2: answering on the board updates the dispute and removes the item.\n"
         "LB-166-AC3: a detail marked unobtainable is not asked again, and the analysis states the limit.",
-        "LB-05, LB-111, LB-117, LB-140, LB-142; G-GAP; frontend/matter-workspace.js (the existing board, "
+        "LB-05, LB-111, LB-117, LB-140, LB-142; G-GAP; nm/legal_brain/matter-workspace.js (the existing board, "
         "with dispute rows and a need per dispute).",
     ], PASSES),
 }

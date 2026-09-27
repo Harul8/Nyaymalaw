@@ -4,9 +4,9 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.core import cascade, screens
-from nm.core.brain_assessment import AssessmentService
-from nm.core.brain_evaluation import (
+
+from nm.legal_brain.brain_assessment import AssessmentService
+from nm.legal_brain.brain_evaluation import (
     ANSWER_REPAIR_OWNERS,
     CheckFeedback,
     EvaluationService,
@@ -14,17 +14,18 @@ from nm.core.brain_evaluation import (
     completed_child_within_grant,
     dispatch_steps,
 )
-from nm.core.output_checks import (
+from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.loop_contracts import LoopLimits, StepKind
+from nm.legal_brain.output_checks import (
     BoundarySubjects,
     OutputSubjects,
     run_boundary_checks,
     run_output_checks,
 )
-from nm.domain.budget import Budget, Spend
-from nm.domain.coverage import CoveragePosition, CoverageState
-from nm.domain.loop import LoopLimits, StepKind
-from nm.ports.model import ToolCall, Usage
-
+from nm.open_matter import screens
+from nm.shared.budget_contracts import Budget, Spend
+from nm.shared.model_port import ToolCall, Usage
+from nm.work_the_file import cascade
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import response
 from tests.test_the_loop_records_work_before_using_it import _response

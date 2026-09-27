@@ -30,9 +30,10 @@ question worth asking.
 from __future__ import annotations
 
 import pytest
-from nm.core import dispute
-from nm.domain.matter import Thread
-from nm.domain.quotable import Quotable
+
+from nm.legal_brain import dispute
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.work_the_file.matter_contracts import Thread
 
 pytestmark = pytest.mark.class_a
 

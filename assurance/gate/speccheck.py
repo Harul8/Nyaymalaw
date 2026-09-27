@@ -155,7 +155,7 @@ def check_required_fields(rep: Report, features: list) -> None:
 def check_gates(rep: Report, text: str, gates: list) -> None:
     """SC9 -- every gate id in the document resolves to the registry.
 
-    The matrix itself is RENDERED from `backend/nm/domain/gates.py`, so it cannot
+    The matrix itself is RENDERED from `nm/shared/gates_contracts.py`, so it cannot
     drift. What can drift is prose elsewhere in the document referring to a
     gate by name -- and a reference to a gate that does not exist is worse than
     no reference, because it reads as a promise that something is guarded.
@@ -164,7 +164,7 @@ def check_gates(rep: Report, text: str, gates: list) -> None:
     for m in re.finditer(r"\bG-[A-Z]{3,}\b", text):
         if m.group(0) not in known:
             rep.fail("SC9", f"the PRD names gate {m.group(0)}, which is not in "
-                            f"backend/nm/domain/gates.py")
+                            f"nm/shared/gates_contracts.py")
 
 
 def check_schemas(rep: Report, features: list, schemas: list) -> None:

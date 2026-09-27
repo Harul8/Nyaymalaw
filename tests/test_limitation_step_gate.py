@@ -4,15 +4,15 @@ import json
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import SCRIPTED_READS, ScriptedModelAdapter
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import limitation, step_dependency
-from nm.core.turn import TurnEngine
-from nm.domain.answer import ElementKind
-from nm.domain.matter import Side
-from nm.domain.metrics import TurnMetrics
-from nm.ports.model import ModelError
 
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain import limitation, step_dependency
+from nm.legal_brain.turn import TurnEngine
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_port import ModelError
+from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Side
 from tests.test_turn_contract import KEY, _Evidence, _model_config
 
 pytestmark = pytest.mark.class_a
@@ -44,7 +44,7 @@ def test_served_refusal_removes_old_recommendation_and_survives_reload(client, m
     assert "not released a limitation-dependent" in client.get(
         f"/api/matters/{matter_id}/transcript").text
     # Read the real saved aggregate too; a renderer-only refusal is insufficient.
-    from nm.edge.api import application
+    from nm.app.api import application
     saved = application().store.load(matter_id)
     assert saved.threads
     assert all(not thread.recommendation for thread in saved.threads)

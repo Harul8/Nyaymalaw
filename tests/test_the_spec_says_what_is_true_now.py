@@ -59,7 +59,7 @@ from assurance.gate.trace import (
     expired_awaiting,
     implementation_discrepancies,
 )
-from pipeline.quality import releasegate
+from pipeline import releasegate
 
 pytestmark = pytest.mark.class_a
 
@@ -482,7 +482,7 @@ def test_zero_population_and_tested_without_evals_are_never_pass():
     assert empty.state == AssessmentState.NOT_ASSESSED
 
     feature = {"id": "A1", "status": "tested", "historical_eval_ids": []}
-    _t3, t4 = assess_status_support([feature], {"A1": ["backend/nm/example.py"]}, set())
+    _t3, t4 = assess_status_support([feature], {"A1": ["nm/example.py"]}, set())
     assert t4.state == AssessmentState.FAIL
     assert t4.issues == ("A1 is marked 'tested' but declares no eval ids",)
 

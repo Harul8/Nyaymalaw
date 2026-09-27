@@ -103,13 +103,13 @@ def _restart(client, tmp_path):
     would return the same process; this builds another.
     """
     from fastapi.testclient import TestClient
-    from nm.adapters.model.config import ModelConfig, TierConfig
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.bootstrap.composition import Application
-    from nm.bootstrap.main import create_app
-    from nm.ports.model import Tier
 
+    from nm.app.composition import Application
+    from nm.app.main import create_app
+    from nm.shared.model_config import ModelConfig, TierConfig
+    from nm.shared.model_port import Tier
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, briefed
 
     config = ModelConfig(tiers={
@@ -139,7 +139,7 @@ def _restart(client, tmp_path):
 
 
 def _names(matter_id: str, client) -> dict:
-    from nm.core.dependency import names_for
+    from nm.work_the_file.dependency import names_for
 
     board = client.get(f"/api/matters/{matter_id}").json()
     assert board["threads"], "the turn opened no thread"
@@ -412,16 +412,16 @@ def test_planted_serving_the_old_figure_as_current_is_refused(client):
     showing that the unwired projection leads with the stale date and the
     wired one refuses to.
     """
-    from nm.core.dependency import Ledger, presentable
-    from nm.edge.api import _register_of
-    from nm.edge.projections import _thread_row
+    from nm.app.api import _register_of
+    from nm.work_the_file.dependency import Ledger, presentable
+    from nm.work_the_file.projections_api import _thread_row
 
     out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
     _correct_the_date(client, matter_id)
 
-    from nm.edge.api import application
+    from nm.app.api import application
     matter = application().store.load(matter_id)
     register = _register_of(matter)
     thread = matter.threads[0]

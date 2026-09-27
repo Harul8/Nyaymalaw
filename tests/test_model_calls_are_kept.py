@@ -27,12 +27,12 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import KEEP, Call, TracedModel, read_name
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.ports.model import ModelPort, Prompt, Tier
 
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_port import ModelPort, Prompt, Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import KEEP, Call, TracedModel, read_name
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -137,7 +137,7 @@ def test_a_long_prompt_says_that_it_was_clipped():
     long = "x" * (KEEP + 500)
     traced._keep(Call(ordinal=1, kind="structured", read="dates",
                       tier="routine", model="m", provider="p", latency_ms=1))
-    from nm.adapters.model.traced import _clip
+    from nm.shared.model_traced import _clip
     clipped = _clip(long)
     assert len(clipped) < len(long)
     assert "not kept" in clipped, clipped

@@ -27,10 +27,9 @@ from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from nm.adapters.mail.outbox import FileOutbox
-from nm.adapters.store.directory import FileDirectory
-from nm.domain import attempts
-from nm.domain.advocate import (
+
+from nm.arrive import attempts_contracts as attempts
+from nm.arrive.advocate_contracts import (
     PASSWORD_RESET_MINUTES,
     AccountSecurity,
     AdvocateIdentity,
@@ -41,9 +40,10 @@ from nm.domain.advocate import (
     token_fingerprint,
     utcnow,
 )
-from nm.domain.mail import MailMessage, password_reset_mail
-from nm.ports.directory import AccountBusy
-
+from nm.arrive.directory_port import AccountBusy
+from nm.arrive.mail_contracts import MailMessage, password_reset_mail
+from nm.arrive.mail_outbox import FileOutbox
+from nm.arrive.store_directory import FileDirectory
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -170,7 +170,7 @@ def test_a_link_resets_the_password_once_and_ends_every_session(client):
 
 
 def test_used_superseded_unknown_and_expired_links_have_one_refusal(client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
 
     _register(client)
     assert _forgot(client).status_code == 202
@@ -224,7 +224,7 @@ def test_no_token_or_new_password_is_written_anywhere_in_the_clear(client):
 
 
 def test_a_configured_public_url_wins_over_the_request_host(client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
 
     _register(client)
     monkeypatch.setattr(api.application(), "environment",
@@ -238,7 +238,7 @@ def test_a_configured_public_url_wins_over_the_request_host(client, monkeypatch)
 
 
 def test_a_mailbox_channel_without_a_public_url_sends_nothing(client, monkeypatch, caplog):
-    from nm.edge import api
+    from nm.app import api
 
     class Mailbox:
         delivers_to_mailbox = True
@@ -284,7 +284,7 @@ def test_failed_links_are_limited_per_source(client):
 
 
 def test_the_reset_doors_refuse_a_foreign_or_missing_origin(client):
-    from nm.edge import api
+    from nm.app import api
 
     _register(client)
     with TestClient(api.app) as raw:
@@ -364,7 +364,7 @@ def test_the_outbox_is_sealed_and_names_no_address(tmp_path):
 
 
 def test_messages_with_the_same_wall_clock_instant_keep_send_order(tmp_path, monkeypatch):
-    from nm.adapters.mail import outbox as module
+    from nm.arrive import mail_outbox as module
 
     instant = utcnow()
     class FrozenClock:

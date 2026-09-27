@@ -10,7 +10,7 @@ transcribed by Whisper large-v3. This script fetches only the live model.
 WHY THIS IS A SCRIPT AND NOT A README LINE
 --------------------------------------------
 `NM_DICTATION_LIVE_MODEL` and the `.nm/models` location are decided in
-`nm.bootstrap.composition`. A hand-typed download that unzips somewhere else
+`nm.app.composition`. A hand-typed download that unzips somewhere else
 leaves `readiness()` reporting NO MODEL with the model sitting on disk -- a
 document's claim about an artefact, disagreeing with the filesystem. So the
 destination is read from the same default the product reads.
@@ -42,7 +42,7 @@ os.environ.pop("SSLKEYLOGFILE", None)
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 
 DEFAULT_MODEL = "vosk-model-small-en-in-0.4"
 SOURCE = "https://alphacephei.com/vosk/models/{name}.zip"
@@ -55,7 +55,7 @@ def destination() -> Path:
 
 
 def readiness() -> str:
-    from nm.adapters.speech.vosk_live import VoskLive
+    from nm.open_matter.speech_vosk_live import VoskLive
 
     return VoskLive(model_dir=destination()).readiness()
 

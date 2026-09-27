@@ -19,15 +19,8 @@ made the same separation for material. A matter archived is still held.
 from __future__ import annotations
 
 import pytest
-from nm.domain.closure import (
-    CLOSURE_FIELDS,
-    ClosureRecord,
-    Lifecycle,
-    Obligation,
-    refuse_closure,
-    reopen_checks,
-)
-from nm.domain.handover import (
+
+from nm.carry.handover_contracts import (
     SUMMARY_FIELDS,
     Assessed,
     CaseSummary,
@@ -36,6 +29,14 @@ from nm.domain.handover import (
     accept,
     decline,
     offer,
+)
+from nm.close.closure_contracts import (
+    CLOSURE_FIELDS,
+    ClosureRecord,
+    Lifecycle,
+    Obligation,
+    refuse_closure,
+    reopen_checks,
 )
 
 pytestmark = pytest.mark.class_a

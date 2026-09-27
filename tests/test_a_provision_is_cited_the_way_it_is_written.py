@@ -6,7 +6,7 @@ answer served this as the authority it rested on:
     Limitation Act, 1963 s.Article_64 — "For possession of immovable property
     based on previous possession"
 
-`s.Article_64`. Four sites in `nm.adapters.evidence.corpus` built the reference
+`s.Article_64`. Four sites in `nm.legal_brain.corpus_evidence` built the reference
 as `f"{act} s.{section}"`, hard-coding the prefix for every provision — and the
 corpus's `section_number` column holds `Article_64` for a schedule article
 exactly as it holds `53A` for a section. It also holds the storage underscore,
@@ -23,7 +23,7 @@ and Rules, a constitution is Articles throughout. A unit that NAMES its own
 kind is rendered as it names itself; only a bare designation — `53A`, `138` —
 is a section and takes `s.`.
 
-OWNED BY `nm.domain.citation`, because CLAUDE.md section 4 puts every
+OWNED BY `nm.legal_brain.citation_contracts`, because CLAUDE.md section 4 puts every
 provision-reference pattern in that module and `test_citation_patterns.py`
 fails the build on a second one. `SECTION` and `ARTICLE` there already know the
 two are different; a renderer elsewhere that did not would be that second
@@ -35,7 +35,8 @@ import ast
 import pathlib
 
 import pytest
-from nm.domain.citation import provision_label
+
+from nm.legal_brain.citation_contracts import provision_label
 
 pytestmark = pytest.mark.class_a
 
@@ -137,12 +138,12 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
     #: THE OWNER IS WHERE THE PREFIX IS ALLOWED TO EXIST. `provision_label`
     #: builds `s.<unit>` for the bare designations that really are sections --
     #: that is the whole job. Exempting it is the same line `test_one_fold.py`
-    #: draws around `nm.domain.text.fold`: the rule is ONE definition, not
+    #: draws around `nm.shared.text_contracts.fold`: the rule is ONE definition, not
     #: none.
-    owner = "backend/nm/domain/citation.py"
+    owner = "nm/legal_brain/citation_contracts.py"
 
     found: list[str] = []
-    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "nm").rglob("*.py")):
         rel = path.relative_to(ROOT).as_posix()
         if rel == owner:
             continue
@@ -157,4 +158,4 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
         "prefix belongs to the unit's KIND -- an Act is not made only of "
         "sections, and `s.Article_64` was served to an advocate as the "
         "authority an answer rested on.\n\n"
-        "Use `nm.domain.citation.provision_label`:\n  " + "\n  ".join(found))
+        "Use `nm.legal_brain.citation_contracts.provision_label`:\n  " + "\n  ".join(found))

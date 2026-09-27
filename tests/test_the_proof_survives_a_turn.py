@@ -38,18 +38,18 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.knowledge.elements import CuratedElements
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import proof_read
-from nm.core.turn import TurnEngine, TurnInput, TurnMetrics
-from nm.domain import proof as domain_proof
-from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side, Thread
-from nm.domain.proof import Burden, ProofPosition, ProofStatus, Standard
-from nm.domain.quotable import Quotable
-from nm.knowledge.elements import elements_for
 
+from nm.legal_brain import proof_contracts as domain_proof
+from nm.legal_brain import proof_read
+from nm.legal_brain.elements_adapter import CuratedElements
+from nm.legal_brain.elements_sources import elements_for
+from nm.legal_brain.proof_contracts import Burden, ProofPosition, ProofStatus, Standard
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnEngine, TurnInput, TurnMetrics
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Basis, CauseOfAction, Posture, Role, Side, Thread
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -177,13 +177,13 @@ def test_a_position_that_is_not_held_has_no_material_to_withdraw():
 # =============================== the store ==================================
 
 def test_positions_come_back_from_the_store_typed(tmp_path):
-    """`Thread.proof` is untyped because `nm.domain.proof` would be a cycle,
+    """`Thread.proof` is untyped because `nm.legal_brain.proof_contracts` would be a cycle,
     so the store returns plain dicts. Left implicit, the next turn would merge
     dicts against positions, match nothing, and every element would look
     freshly unassessed every turn — this defect arriving through its repair,
     which is what happened to the issues."""
     store = FileMatterStore(tmp_path, key=KEY)
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     matter = Matter.create(advocate_id="adv_1", title="t")
     thread = replace(Thread.create(label="t"),

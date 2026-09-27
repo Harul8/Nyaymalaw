@@ -64,7 +64,7 @@ class Served:
         later phase fails for a reason that is not its own.
         `test_an_advocate_can_register.py` owns that route.
         """
-        from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+        from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol
 
         if not (self.root / "advocates" / f"{advocate_id}.nm").exists():
             self.directory.enrol(Enrolment(
@@ -79,13 +79,13 @@ class Served:
 def served(root: Path, *, responses: dict | None = None,
            evidence=None, model=None, search=None) -> Served:
     """The real composition root, wired to a temporary encrypted store."""
-    from nm.adapters.model.config import ModelConfig, TierConfig
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.directory import FileDirectory
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.bootstrap.composition import Application
-    from nm.bootstrap.main import create_app
-    from nm.ports.model import Tier
+    from nm.app.composition import Application
+    from nm.app.main import create_app
+    from nm.arrive.store_directory import FileDirectory
+    from nm.shared.model_config import ModelConfig, TierConfig
+    from nm.shared.model_port import Tier
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
 
     # THE SYNTHETIC PROFILE, DEFAULTED HERE AND NOT READ FROM A `.env`.
     #

@@ -1,4 +1,4 @@
-"""EVERY FUNCTION IN `backend/nm/` IS REACHED, or it is not an enforcement.
+"""EVERY FUNCTION IN `nm/` IS REACHED, or it is not an enforcement.
 
 WHY
 ---
@@ -8,7 +8,7 @@ enforcement of thread identity — *"enforced by the constructor and by
 inline. That is B-050, and it is the shape `assurance/gate/trace.py` T8 catches for
 gates: something declared as the enforcement that no code path consults.
 
-Gates have a checker. Functions did not. Sweeping all 214 in `backend/nm/` found three
+Gates have a checker. Functions did not. Sweeping all 214 in `nm/` found three
 more of exactly it:
 
     TreatmentState.usable_alone  "may this carry a proposition alone" — while
@@ -53,7 +53,7 @@ REACHED_ELSEWHERE = {
     #
     # RE-MEASURED 23 September 2026: eleven routes added since the last entry,
     # each checked to be `@app.*`-registered and each named here with its
-    # caller. Ten have a BROWSER caller in `frontend/app.js` (or
+    # caller. Ten have a BROWSER caller in `nm/app/app.js` (or
     # `source-reader.js`) as a string literal this scan cannot see:
     # registration and password recovery, sessions and activity, the AI
     # data-sharing permission, draft protection, and the saved source reader.
@@ -108,7 +108,7 @@ REACHED_ELSEWHERE = {
     # first version of this row had exactly that.
     "sessions", "revoke_sessions",
     # P13's four. Registered the same way, and with a BROWSER caller too --
-    # the cover and commission panels in `frontend/app.js`. The note above about
+    # the cover and commission panels in `nm/app/app.js`. The note above about
     # `search` applies here in reverse: these have distinctive names, so the
     # sweep sees them as dead and the declaration is what tells it otherwise.
     "matter_cover", "get_commission", "set_commission", "concede",
@@ -124,7 +124,7 @@ REACHED_ELSEWHERE = {
     # P18's two, registered the same way, and both with a BROWSER caller: the
     # Case file pane's Correct control posts the correction and the pane reads
     # the ledger. The sweep sees neither call because both are template
-    # literals in `frontend/app.js`, which is the same blindness as `sessions`.
+    # literals in `nm/app/app.js`, which is the same blindness as `sessions`.
     "correct_fact", "get_dependencies",
     # P21's five, registered the same way, each with a BROWSER caller on the
     # search pane (`runResearchRound`, `expandCase`, `attachParagraph`).
@@ -154,10 +154,10 @@ REACHED_ELSEWHERE = {
 
 
 def _defined() -> dict[str, tuple[str, int]]:
-    """Every function and method defined under `backend/nm/`, with where it lives."""
+    """Every function and method defined under `nm/`, with where it lives."""
     out: dict[str, tuple[str, int]] = {}
     protocols: set[str] = set()
-    for f in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for f in sorted((ROOT / "nm").rglob("*.py")):
         if "__pycache__" in f.parts:
             continue
         tree = ast.parse(f.read_text(encoding="utf8"))
@@ -176,18 +176,184 @@ def _defined() -> dict[str, tuple[str, int]]:
     return {k: v for k, v in out.items() if k not in protocols}
 
 
-def _referenced() -> collections.Counter:
-    """Every name used anywhere in the repository's Python."""
-    used: collections.Counter = collections.Counter()
-    for top in ("backend", "tests", *TOOLING):
-        for f in (ROOT / top).rglob("*.py"):
-            if "__pycache__" in f.parts:
-                continue
-            for node in ast.walk(ast.parse(f.read_text(encoding="utf8"))):
-                if isinstance(node, ast.Name):
-                    used[node.id] += 1
-                elif isinstance(node, ast.Attribute):
-                    used[node.attr] += 1
+def _local_nodes(scope):
+    """Scope declarations, without borrowing a nested function's bindings."""
+    def descend(node):
+        yield node
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            for child in ast.iter_child_nodes(node):
+                yield from descend(child)
+
+    body = scope.body if not isinstance(scope, ast.Lambda) else [scope.body]
+    for node in body:
+        yield from descend(node)
+
+
+def _qualified(node, bindings):
+    if isinstance(node, ast.Name):
+        return bindings.get(node.id)
+    if isinstance(node, ast.Attribute):
+        parent = _qualified(node.value, bindings)
+        return f"{parent}.{node.attr}" if parent else None
+    return None
+
+
+def _scope_bindings(scope, inherited, module):
+    """Only single, stable source bindings provide extra caller evidence."""
+    nodes = tuple(_local_nodes(scope))
+    declarations = collections.defaultdict(list)
+    for node in nodes:
+        if isinstance(node, ast.ImportFrom):
+            target = node.module or ""
+            if node.level:
+                parents = module.split(".")[:-node.level]
+                target = ".".join([*parents, *target.split(".")]) if parents else ""
+            for item in node.names:
+                if item.name != "*":
+                    declarations[item.asname or item.name].append(
+                        f"{target}.{item.name}" if target else None)
+        elif isinstance(node, ast.Import):
+            for item in node.names:
+                declarations[item.asname or item.name.split(".")[0]].append(
+                    item.name if item.asname else item.name.split(".")[0])
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            declarations[node.id].append(None)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            declarations[node.name].append(None)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            declarations[node.name].append(None)
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            for name in node.names:
+                declarations[name].extend((None, None))
+    if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        args = scope.args
+        for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg):
+            if arg is not None:
+                declarations[arg.arg].append(None)
+    bindings = dict(inherited)
+    bindings.update({name: values[0] if len(values) == 1 else None
+                     for name, values in declarations.items()})
+    routers = {}
+    for node in nodes:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target, value = node.targets[0], node.value
+        elif isinstance(node, ast.AnnAssign):
+            target, value = node.target, node.value
+        else:
+            continue
+        if (isinstance(target, ast.Name) and len(declarations[target.id]) == 1
+                and isinstance(value, ast.Call)
+                and _qualified(value.func, bindings) == "fastapi.APIRouter"):
+            routers[target.id] = node.lineno
+    exposed = set()
+    for node in nodes:
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Name):
+            if node.value.id in routers:
+                exposed.add(node.value.id)
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+              and node.func.attr == "include_router"):
+            supplied = [*node.args, *(kw.value for kw in node.keywords if kw.arg == "router")]
+            exposed.update(value.id for value in supplied
+                           if isinstance(value, ast.Name) and value.id in routers)
+    return bindings, {name: routers[name] for name in exposed}
+
+
+_ROUTE_METHODS = frozenset({
+    "get", "put", "post", "delete", "patch", "head", "options", "trace",
+    "api_route", "websocket", "websocket_route",
+})
+
+
+class _CallerReferences(ast.NodeVisitor):
+    """Resolve actual alias calls and bounded local APIRouter registrations.
+
+    Registration is source evidence, not proof of deployed/authenticated use.
+    Existing name/attribute counts and authored exemptions remain unchanged.
+    """
+    def __init__(self, tree, module, owned_callables):
+        self.used = collections.Counter()
+        self.module = module
+        self.owned_callables = owned_callables
+        self.bindings, self.routers = _scope_bindings(tree, {}, module)
+
+    def visit_Name(self, node):
+        self.used[node.id] += 1
+
+    def visit_Attribute(self, node):
+        self.used[node.attr] += 1
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            canonical = _qualified(node.func, self.bindings)
+            if canonical in self.owned_callables:
+                self.used[canonical.rsplit(".", 1)[-1]] += 1
+        self.generic_visit(node)
+
+    def _function(self, node):
+        for decorator in node.decorator_list:
+            if (isinstance(decorator, ast.Call)
+                    and isinstance(decorator.func, ast.Attribute)
+                    and isinstance(decorator.func.value, ast.Name)
+                    and decorator.func.attr in _ROUTE_METHODS
+                    and self.routers.get(decorator.func.value.id, float("inf"))
+                    < decorator.lineno):
+                paths = (list(decorator.args[:1]) or
+                         [kw.value for kw in decorator.keywords if kw.arg == "path"])
+                if len(paths) == 1 and isinstance(paths[0], ast.Constant):
+                    if type(paths[0].value) is str:
+                        self.used[node.name] += 1
+            self.visit(decorator)
+        self.visit(node.args)
+        if node.returns is not None:
+            self.visit(node.returns)
+        self._body(node)
+
+    def visit_FunctionDef(self, node):
+        self._function(node)
+
+    def visit_AsyncFunctionDef(self, node):
+        self._function(node)
+
+    def _body(self, node):
+        previous = self.bindings, self.routers
+        self.bindings, self.routers = _scope_bindings(node, self.bindings, self.module)
+        for child in node.body:
+            self.visit(child)
+        self.bindings, self.routers = previous
+
+    def visit_ClassDef(self, node):
+        for child in (*node.decorator_list, *node.bases, *node.keywords):
+            self.visit(child)
+        self._body(node)
+
+    def visit_Lambda(self, node):
+        self.visit(node.args)
+        previous = self.bindings, self.routers
+        self.bindings, self.routers = _scope_bindings(node, self.bindings, self.module)
+        self.visit(node.body)
+        self.bindings, self.routers = previous
+
+
+def _referenced(sources=None, *, root=ROOT) -> collections.Counter:
+    """Every original source population, plus actual import/registration paths."""
+    paths = sources if sources is not None else (
+        f for top in ("nm", "tests", *TOOLING)
+        for f in (root / top).rglob("*.py") if "__pycache__" not in f.parts)
+    trees = {}
+    for path in paths:
+        parts = path.relative_to(root).with_suffix("").parts
+        if parts[-1] == "__init__":
+            parts = parts[:-1]
+        trees[".".join(parts)] = ast.parse(path.read_text(encoding="utf8"))
+    owned_callables = frozenset(
+        f"{module}.{node.name}" for module, tree in trees.items() if module.startswith("nm.")
+        for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
+    used = collections.Counter()
+    for module, tree in trees.items():
+        reader = _CallerReferences(tree, module, owned_callables)
+        reader.visit(tree)
+        used.update(reader.used)
     return used
 
 
@@ -210,7 +376,7 @@ def test_no_function_in_the_product_is_defined_and_never_reached():
             if name not in REACHED_ELSEWHERE and used[name] == 0]
 
     assert not dead, (
-        "these are defined in backend/nm/ and referenced nowhere:\n  "
+        "these are defined in nm/ and referenced nowhere:\n  "
         + "\n  ".join(dead)
         + "\n\nEither give it a caller, delete it, or add it to "
           "REACHED_ELSEWHERE with the reason a scan cannot see the call. A "

@@ -6,7 +6,7 @@ boundary exists before the pipeline that must pass through it. A control
 written after its subject is a control written around whatever the subject
 already does.
 
-THE RULE. Nothing in `backend/nm/core` -- the layer that reasons -- may accept audio,
+THE RULE. Nothing in `nm/core` -- the layer that reasons -- may accept audio,
 video, images, recordings or uploaded bytes. It may accept a
 `MediaAdmission`: a typed record of what was taken in, for what purpose, on
 whose authority, in what quarantine state, processed by whom, derived from
@@ -14,7 +14,7 @@ what. The bytes stay behind the boundary.
 
 THE POPULATION IS EMPTY TODAY AND THIS TEST IS NOT VACUOUS
 ------------------------------------------------------------
-Zero media-shaped entry points exist in `backend/nm/core`, so a sweep asserting "none
+Zero media-shaped entry points exist in `nm/core`, so a sweep asserting "none
 of them is unguarded" would pass by having nothing to check -- the exact
 failure this repository has now recorded against sweeps, journey phases, CSS
 rules and its own linter. So the scanner is proved on PLANTED source in both
@@ -45,13 +45,13 @@ MEDIA_WORDS = ("audio", "video", "image", "photo", "recording", "voice",
 #: The word that makes a name safe: it is the admission, not the material.
 ADMITTED = ("admission", "admitted")
 
-#: The layer that reasons. `backend/nm/adapters` is where bytes legitimately live --
+#: The layer that reasons. `nm/adapters` is where bytes legitimately live --
 #: an adapter that decodes an upload is doing its job. The boundary is the
 #: line between that and the code which draws legal conclusions.
-REASONING = ("backend/nm/core", "backend/nm/domain", "backend/nm/knowledge")
+REASONING = ("core", "domain", "knowledge")
 
 #: The boundary module itself. See the assertion in the sweep.
-EXEMPT = frozenset({"backend/nm/domain/media.py"})
+EXEMPT = frozenset({"nm/open_matter/media_contracts.py"})
 
 
 def media_shaped_parameters(source: str) -> list[str]:
@@ -121,8 +121,9 @@ def test_the_scanner_leaves_an_admission_alone():
 
 def test_no_reasoning_function_accepts_media():
     """THE SWEEP. Every module in the layers that draw legal conclusions."""
-    files = [p for layer in REASONING
-             for p in (ROOT / layer).rglob("*.py")
+    from assurance.common.module_roles import sources_for_roles
+
+    files = [p for p in sources_for_roles(*REASONING)
              if "__pycache__" not in p.parts
              and p.relative_to(ROOT).as_posix() not in EXEMPT]
 
@@ -149,7 +150,7 @@ def test_no_reasoning_function_accepts_media():
     assert not offenders, (
         "these draw legal conclusions and accept media rather than an "
         "admission:\n  " + "\n  ".join(offenders)
-        + "\n\nMedia reaches reasoning as `nm.domain.media.MediaAdmission` -- "
+        + "\n\nMedia reaches reasoning as `nm.open_matter.media_contracts.MediaAdmission` -- "
           "what was taken in, for what purpose, on whose authority, in what "
           "quarantine state, processed by whom. The bytes stay behind the "
           "boundary. See BK-69.")
@@ -162,7 +163,7 @@ def test_the_boundary_refuses_what_it_says_it_refuses():
     nothing CALLS it wrongly, and this proves it would refuse if something
     did -- two different claims, and only the pair is worth anything.
     """
-    from nm.domain.media import MediaKind, Quarantine, admitted
+    from nm.open_matter.media_contracts import MediaKind, Quarantine, admitted
 
     unchecked = admitted("m1", MediaKind.AUDIO, purpose="the account",
                          authority="the client",
@@ -188,7 +189,7 @@ def test_an_admission_cannot_be_built_without_purpose_or_authority():
     """REFUSED, NOT REPAIRED. A default here is a decision this function has
     no standing to make: 'the advocate' as an authority makes an unauthorised
     recording indistinguishable from an authorised one."""
-    from nm.domain.media import MediaKind, Quarantine, admitted
+    from nm.open_matter.media_contracts import MediaKind, Quarantine, admitted
 
     for kwargs, missing in (
         ({"media_id": "", "purpose": "p", "authority": "a"}, "identified"),

@@ -22,7 +22,8 @@ rewrite, and a rewrite scheduled after a deadline does not happen.
 from __future__ import annotations
 
 import pytest
-from nm.adapters.store.envelope import (
+
+from nm.shared.store_envelope import (
     CrossMatterAccess,
     KeyUnavailable,
     LocalKeyRing,
@@ -265,7 +266,7 @@ def test_no_wrapping_path_xors_anything():
     import ast
     import inspect
 
-    import nm.adapters.store.envelope as envelope
+    import nm.shared.store_envelope as envelope
 
     tree = ast.parse(inspect.getsource(envelope.LocalKeyRing))
     guilty = [

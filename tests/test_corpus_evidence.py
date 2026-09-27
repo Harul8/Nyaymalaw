@@ -17,10 +17,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.bootstrap.composition import ROOT
-from nm.knowledge.manifest import Manifest
-from nm.ports.evidence import Coverage, EvidenceNeed
+
+from nm.app.composition import ROOT
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
+from nm.legal_brain.manifest_sources import Manifest
 
 pytestmark = pytest.mark.class_c
 
@@ -155,7 +156,7 @@ def test_coverage_is_a_union_and_a_single_store_figure_is_refused(adapter):
     """
     import sqlite3
 
-    from nm.knowledge.manifest import Manifest
+    from nm.legal_brain.manifest_sources import Manifest
 
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     entry = manifest.act("Specific Relief Act, 1963")

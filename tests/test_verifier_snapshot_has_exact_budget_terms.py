@@ -1,7 +1,8 @@
 """The approved independent model has exact, non-free, versioned cost terms."""
 import pytest
-from nm.adapters.model.config import TierConfig, load, require_priced_snapshot
-from nm.ports.model import ConfigurationError, Tier
+
+from nm.shared.model_config import TierConfig, load, require_priced_snapshot
+from nm.shared.model_port import ConfigurationError, Tier
 
 pytestmark = pytest.mark.class_a
 

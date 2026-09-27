@@ -15,10 +15,10 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.ports.model import (
+
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
     ModelResult,
@@ -28,6 +28,7 @@ from nm.ports.model import (
     Tier,
     TierUnavailable,
 )
+from nm.shared.model_scripted import ScriptedModelAdapter
 
 pytestmark = pytest.mark.class_a
 
@@ -262,7 +263,7 @@ def test_openai_rate_limit_beyond_the_bound_surfaces_as_typed():
 
 def test_openai_content_refusal_is_not_reported_as_a_finding():
     a = OpenAIModelAdapter(_config(), client=_FakeOpenAI("", finish_reason="content_filter"))
-    from nm.ports.model import ContentRefused
+    from nm.shared.model_port import ContentRefused
     with pytest.raises(ContentRefused):
         a.complete(Prompt(user="describe the assault"), Tier.ROUTINE)
 

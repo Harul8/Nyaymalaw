@@ -7,10 +7,10 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.core.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.domain.loop import StepKind, StopReason
-from nm.ports.model import Prompt, Tier, ToolCall
 
+from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.shared.model_port import Prompt, Tier, ToolCall
 from tests.test_checklist_classification_is_independently_reviewed import (
     current_fixture_source,
     run_conversation,

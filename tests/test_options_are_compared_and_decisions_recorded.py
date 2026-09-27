@@ -18,9 +18,10 @@ and none of them is the client's instruction.
 from __future__ import annotations
 
 import pytest
-from nm.core import options as op
-from nm.domain import advice_decision as ad
-from nm.domain.options import (
+
+from nm.advise import advice_decision_contracts as ad
+from nm.advise import options as op
+from nm.advise.options_contracts import (
     Certainty,
     Comparison,
     Figure,
@@ -119,7 +120,7 @@ def test_the_projection_renders_every_figure_through_the_same_owner():
 
 
 def test_proportionality_never_removes_a_route_from_the_comparison():
-    """E3's NEVER, and `nm.core.relief` keeps proportionality out of its
+    """E3's NEVER, and `nm.advise.relief` keeps proportionality out of its
     `_DELIVERS` set for the same reason: a disproportionate route the client
     insists on is still their decision to take."""
     served = op.comparison_projection(compare(

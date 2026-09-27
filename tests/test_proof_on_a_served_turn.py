@@ -2,7 +2,7 @@
 
 WHAT WAS MISSING, AND FOR HOW LONG
 ------------------------------------
-`backend/nm/domain/proof.py` has carried D5's whole contract since slice 7. A position
+`nm/legal_brain/proof_contracts.py` has carried D5's whole contract since slice 7. A position
 cannot be HELD without material, cannot be OBTAINABLE without saying what would
 obtain it, cannot be ABSENT without naming the dead end, and `uncovered` draws
 its population from the ELEMENTS so the coverage gate cannot certify itself.
@@ -15,8 +15,8 @@ constructs in production.
 
 THE DIVISION OF LABOUR IS THE DESIGN, AND THESE TEST IT SEPARATELY
 --------------------------------------------------------------------
-    the LAW    what a cause requires   `backend/nm/knowledge/elements.py`, curated
-    the FILE   what is held for each   `backend/nm/core/proof_read.py`, read + guarded
+    the LAW    what a cause requires   `nm/legal_brain/elements_sources.py`, curated
+    the FILE   what is held for each   `nm/legal_brain/proof_read.py`, read + guarded
 
 A model asked "what are the elements of specific performance" answers
 plausibly and differently every call. If the element list came back from the
@@ -29,17 +29,17 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.knowledge.elements import CuratedElements
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import proof, proof_read
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side
-from nm.domain.proof import ProofPosition, ProofStatus, Standard
-from nm.domain.quotable import Quotable
-from nm.knowledge.elements import ELEMENTS, WITHHELD, elements_for, why_not
 
+from nm.legal_brain import proof, proof_read
+from nm.legal_brain.elements_adapter import CuratedElements
+from nm.legal_brain.elements_sources import ELEMENTS, WITHHELD, elements_for, why_not
+from nm.legal_brain.proof_contracts import ProofPosition, ProofStatus, Standard
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Basis, CauseOfAction, Posture, Role, Side
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -350,7 +350,7 @@ def test_a_cause_with_no_curated_elements_names_the_reason(tmp_path):
     """A refusal that says only "not assessed" leaves the advocate unable to
     tell a decision from a gap."""
     engine, _ = _engine(tmp_path)
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
 
     thread = replace(Thread.create(label="t"),
                      posture=Posture(role=Role.COMPLAINANT, basis=Basis.STATED))
@@ -368,15 +368,15 @@ def test_a_cause_with_no_curated_elements_names_the_reason(tmp_path):
 
 
 def _metrics():
-    from nm.core.turn import TurnMetrics
+    from nm.legal_brain.turn import TurnMetrics
     return TurnMetrics(turn_id="turn_1", matter_id="mat_1")
 
 
 def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
-    """THE WHOLE POINT. Every refusal in `backend/nm/domain/proof.py` was correct for
+    """THE WHOLE POINT. Every refusal in `nm/legal_brain/proof_contracts.py` was correct for
     a slice and none of it ran, because nothing constructed a position."""
     engine, _ = _engine(tmp_path)
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
 
     thread = replace(Thread.create(label="t"),
                      posture=Posture(role=Role.PLAINTIFF, basis=Basis.STATED))
@@ -430,7 +430,7 @@ def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
 
 def test_a_gap_on_our_side_is_named(tmp_path):
     engine, _ = _engine(tmp_path)
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
 
     thread = replace(Thread.create(label="t"),
                      posture=Posture(role=Role.PLAINTIFF, basis=Basis.STATED))

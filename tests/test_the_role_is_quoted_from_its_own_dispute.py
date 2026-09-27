@@ -30,9 +30,10 @@ THE RULE, in two halves, and the second is the one that makes the first safe:
 from __future__ import annotations
 
 import pytest
-from nm.core import posture
-from nm.domain.matter import Basis, Role
-from nm.domain.quotable import Quotable
+
+from nm.legal_brain import posture
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.work_the_file.matter_contracts import Basis, Role
 
 pytestmark = pytest.mark.class_a
 

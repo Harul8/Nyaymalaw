@@ -5,11 +5,11 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.core.source_excerpt import capture
-from nm.domain.answer import Element, ElementKind
-from nm.domain.turn_receipt import answer_payload
-from nm.ports.evidence import SourceDocument
 
+from nm.advise.answer_contracts import Element, ElementKind
+from nm.advise.turn_receipt_contracts import answer_payload
+from nm.legal_brain.evidence_port import SourceDocument
+from nm.legal_brain.source_excerpt import capture
 from tests.test_conversation_recovery_journey import reopen
 from tests.test_opening_journey import saved
 from tests.test_the_journey_login_to_logout import BRIEF, _advise, _open_matter

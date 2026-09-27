@@ -9,9 +9,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.deadlines import Deadline, DeadlineKind
-from nm.domain.matter import Basis, Matter, Posture, Role, Thread
-from nm.edge.projections import board_projection
+
+from nm.work_the_file.deadlines import Deadline, DeadlineKind
+from nm.work_the_file.matter_contracts import Basis, Matter, Posture, Role, Thread
+from nm.work_the_file.projections_api import board_projection
 
 pytestmark = pytest.mark.class_a
 
@@ -45,7 +46,7 @@ def test_a_screen_that_was_never_run_is_not_reported_as_clear():
     section, which is true and useless to a receiving advocate. The state
     says ON THIS FILE nothing has screened it, which is what they need.
     """
-    from nm.domain import summary as matter_memory
+    from nm.work_the_file import summary_contracts as matter_memory
 
     s = matter_memory.build(_matter_with(Thread.create(label="a dispute")))
     doc = s.as_dict() if hasattr(s, "as_dict") else None
@@ -69,7 +70,7 @@ def test_an_unassessed_file_lists_no_gate_as_advocate_work():
     consults, and `assurance/gate/trace.py` T9 already fails the build if something
     does. What this asserts is the rendering side.
     """
-    from nm.domain.gates import GATES
+    from nm.shared.gates_contracts import GATES
 
     # All gates are implemented now. Test the stronger current contract over
     # every registered gate, rather than relying on an extinct unbuilt subset.
@@ -138,7 +139,7 @@ def test_the_board_and_the_answer_derive_from_the_same_matter():
     This asserts the property that makes them unable to disagree: changing the
     matter changes both, and nothing is cached between them.
     """
-    from nm.domain import summary as matter_memory
+    from nm.work_the_file import summary_contracts as matter_memory
 
     t = Thread.create(label="the possession matter")
     m = _matter_with(t)

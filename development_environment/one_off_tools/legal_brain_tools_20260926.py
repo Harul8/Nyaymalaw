@@ -152,8 +152,8 @@ NEW_ROWS = {
         "file is refused.\n"
         "LB-155-AC3: read_turn returns an earlier turn word for word after a "
         "compaction.",
-        "backend/nm/domain/matter.py (Matter, Thread, facts), "
-        "backend/nm/domain/summary.py, backend/nm/edge/uploads.py; LB-142, "
+        "nm/work_the_file/matter_contracts.py (Matter, Thread, facts), "
+        "nm/work_the_file/summary_contracts.py, nm/open_matter/uploads_api.py; LB-142, "
         "LB-145, LB-150, LB-152.",
     ],
     "LB-156": [
@@ -184,9 +184,9 @@ NEW_ROWS = {
         "the Evidence Act or the TPA.\n"
         "LB-156-AC3: read_provision for a 2025 offence under a repealed code "
         "returns the replacing code's provision with the reason.",
-        "backend/nm/knowledge/manifest.py (exact resolution), the evidence port "
-        "(fetch), backend/nm/knowledge/governing_law.py, "
-        "backend/nm/domain/citation.py; LB-13, LB-14, LB-107, LB-120, LB-137.",
+        "nm/legal_brain/manifest_sources.py (exact resolution), the evidence port "
+        "(fetch), nm/legal_brain/governing_law_sources.py, "
+        "nm/legal_brain/citation_contracts.py; LB-13, LB-14, LB-107, LB-120, LB-137.",
     ],
     "LB-157": [
         "Case-law tools: find, read, resolve, weigh",
@@ -221,7 +221,7 @@ NEW_ROWS = {
         "LB-157-AC3 (planted): find_contrary_authority on a proposition with a "
         "known contrary Supreme Court ruling returns it.",
         "The search port (search, discover, expand, passage, resolve, treatment, "
-        "case_identity); backend/nm/knowledge/citator.py, jurisdiction.py, "
+        "case_identity); nm/legal_brain/citator_sources.py, jurisdiction.py, "
         "identity.py, authority_weight.py; LB-101, LB-106, LB-122.",
     ],
     "LB-158": [
@@ -251,8 +251,8 @@ NEW_ROWS = {
         "a hand-checked table.\n"
         "LB-158-AC3: court_fee returns 'not assessed' and names the missing "
         "schedule.",
-        "backend/nm/core/limitation.py and deadlines.py; "
-        "backend/nm/knowledge/filing_requirement.py, procedural_period.py; "
+        "nm/legal_brain/limitation.py and deadlines.py; "
+        "nm/legal_brain/filing_requirement_sources.py, procedural_period.py; "
         "LB-20, LB-114, LB-124, LB-125, LB-144.",
     ],
     "LB-159": [
@@ -281,7 +281,7 @@ NEW_ROWS = {
         "LB-159-AC2 (planted): interim_test for an uncurated relief returns 'no "
         "curated table', not the injunction test.\n"
         "LB-159-AC3: every table result names its curated_from source.",
-        "backend/nm/knowledge/elements.py, resolution.py, institution.py, "
+        "nm/legal_brain/elements_sources.py, resolution.py, institution.py, "
         "interim_relief.py, procedural_period.py, filing_requirement.py, "
         "governing_law.py; LB-120-125, LB-148.",
     ],
@@ -312,7 +312,7 @@ NEW_ROWS = {
         "LB-160-AC2: research over a long judgment returns only findings with "
         "locators.\n"
         "LB-160-AC3: oppose on a draft that ignores a limitation bar raises it.",
-        "backend/nm/domain/gates.py, backend/nm/core/consistency.py; LB-131, "
+        "nm/shared/gates_contracts.py, nm/legal_brain/consistency.py; LB-131, "
         "LB-136, LB-140, LB-141.",
     ],
     "LB-161": [
@@ -348,7 +348,7 @@ NEW_ROWS = {
         "before approval.\n"
         "LB-161-AC3: a question already answered on the file is not asked "
         "again.",
-        "Matter.asked, action_proposals, service; backend/nm/core/service.py; "
+        "Matter.asked, action_proposals, service; nm/carry/service.py; "
         "LB-05, LB-31, LB-130, LB-132, LB-133.",
     ],
     "LB-162": [

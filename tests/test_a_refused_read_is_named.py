@@ -51,13 +51,13 @@ import re
 from datetime import date
 
 import pytest
-from nm.adapters.knowledge.elements import CuratedElements
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.ports.model import ModelError
 
+from nm.legal_brain.elements_adapter import CuratedElements
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_port import ModelError
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed, confirmed
 
 pytestmark = pytest.mark.class_a
@@ -182,8 +182,7 @@ REACHED_BY: dict[str, str] = {
 
 def _refuse_independent_claim():
     """The new dispatcher is not a fictional brief through the legacy engine."""
-    from nm.core.verifier import IndependentVerifier
-
+    from nm.legal_brain.verifier import IndependentVerifier
     from tests.test_independent_claim_verifier import Judge, package
 
     subject = package()
@@ -333,7 +332,7 @@ def test_every_declared_read_is_driven_here():
     that reaches it — which is the work, and the alternative is a feature
     that covers fourteen fifteenths of its own population and says nothing.
     """
-    declared = {m for p in (ROOT / "backend" / "nm").rglob("*.py")
+    declared = {m for p in (ROOT / "nm").rglob("*.py")
                 if "__pycache__" not in p.parts
                 for m in re.findall(r'"x-nm-read":\s*"([a-z_]+)"',
                                     p.read_text(encoding="utf-8"))}

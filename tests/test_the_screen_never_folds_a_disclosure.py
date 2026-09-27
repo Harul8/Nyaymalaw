@@ -6,7 +6,7 @@ material collapsed behind a row that opens in one click. That last part is what
 this file exists to bound.
 
 **B-128 WAS EXACTLY THIS DEFECT, THREE DAYS OLD WHEN THE SCREEN CHANGED.**
-`backend/nm/core/screens.py` fired `G-UNSCREENED` into the metrics and the advocate saw
+`nm/open_matter/screens.py` fired `G-UNSCREENED` into the metrics and the advocate saw
 nothing; the fix put five screen rows into the answer's bytes. A redesign that
 folds `disclosure` elements by default undoes it at the last inch -- the bytes
 are served, and the advocate still cannot see them. §9 says the third state
@@ -15,7 +15,7 @@ different word.
 
 TWO HALVES, AND THE SECOND ONE RUNS THE CODE
 ----------------------------------------------
-The checks that read `frontend/app.js` as TEXT are structural: they hold if the
+The checks that read `nm/app/app.js` as TEXT are structural: they hold if the
 partition is right and the rendering then does something else with the result.
 They are cheap, they name the exact predicate, and they are not sufficient.
 
@@ -43,17 +43,18 @@ import pathlib
 import re
 
 import pytest
-from nm.domain.answer import Element, ElementKind, Signal
-from nm.domain.brief import section_of
+
+from nm.advise.answer_contracts import Element, ElementKind, Signal
+from nm.advise.brief_contracts import section_of
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-WEB = ROOT / "frontend"
+WEB = ROOT / "nm"
 
 
 def _app_js() -> str:
-    return (WEB / "app.js").read_text(encoding="utf-8")
+    return (WEB / "app/app.js").read_text(encoding="utf-8")
 
 
 def renderer_signal_cases() -> list[dict]:
@@ -144,7 +145,7 @@ def test_the_advocates_own_words_are_still_marked_as_theirs():
     src = _app_js()
     assert "said-row" in src, "the advocate's own words are no longer set apart"
 
-    css = (WEB / "app.css").read_text(encoding="utf-8")
+    css = (WEB / "app/app.css").read_text(encoding="utf-8")
     assert ".said-row" in css and "justify-content: flex-end" in css, (
         "the bubble has no styling, so the advocate's words render as another "
         "paragraph of the product's prose")
@@ -154,7 +155,7 @@ def test_a_disclosure_still_looks_different_from_an_assertion():
     """The rule that predates the redesign and survives it. "Here is the law"
     and "here is what I could not establish" rendered identically is how a gap
     becomes a finding in the reader's memory."""
-    css = (WEB / "app.css").read_text(encoding="utf-8")
+    css = (WEB / "app/app.css").read_text(encoding="utf-8")
     assert ".el.disclosure" in css
     assert "border-left-style: dashed" in css, (
         "a disclosure is no longer visually distinct from an assertion")
@@ -166,7 +167,7 @@ def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
     """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
 
     Every assertion before this one reads the partition's predicate out of
-    `frontend/app.js`. That is real and it is structural: it holds if the filter is
+    `nm/app/app.js`. That is real and it is structural: it holds if the filter is
     correct and the rendering then does something else with the result — puts
     the disclosures in the fold by a different route, or drops them.
 

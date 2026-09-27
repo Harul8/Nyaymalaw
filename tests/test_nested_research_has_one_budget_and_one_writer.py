@@ -5,8 +5,10 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.core.nested_research import ResearchDispatcher
-from nm.core.tools import (
+
+from nm.legal_brain.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.legal_brain.nested_research import ResearchDispatcher
+from nm.legal_brain.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -19,10 +21,8 @@ from nm.core.tools import (
     ToolOutcome,
     object_schema,
 )
-from nm.domain.budget import Budget, Spend
-from nm.domain.loop import LoopLimits, StepKind, StopReason
-from nm.ports.model import ProviderUnavailable, ToolCall, ToolDefinition
-
+from nm.shared.budget_contracts import Budget, Spend
+from nm.shared.model_port import ProviderUnavailable, ToolCall, ToolDefinition
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture
 from tests.test_independent_claim_verifier import finding
 from tests.test_the_controlled_brain_is_actually_wired import _brain
@@ -122,7 +122,7 @@ def test_real_parent_dispatch_shares_spend_and_never_creates_a_second_writer(tmp
     assert brain.run(matter_id="mat_loop", turn_id="nested-1", message="Assess the first dispute.",
                      selected_issue_ids=("dispute_one",), limits=LIMITS) == output
     assert model.tool_call.call_count == 4  # Replay cannot spend or dispatch again.
-    from nm.core.brain_release import captured_findings
+    from nm.legal_brain.brain_release import captured_findings
 
     assert captured_findings(output) == (finding(),)
 
@@ -205,7 +205,7 @@ def test_interrupted_parent_reservation_is_charged_and_child_is_not_repeated(tmp
 
 @pytest.mark.parametrize("changed", ["grant", "refund", "steps", "children"])
 def test_parent_rejects_forged_child_accounting(changed):
-    from nm.core.loop import _checked_child_budget
+    from nm.legal_brain.loop import _checked_child_budget
 
     grant = DelegationGrant(LIMITS.budget, POLICY)
     budget = grant.budget.spend_on(Spend(children=1, tokens=10, cost_usd=0.01))
@@ -240,10 +240,9 @@ def test_child_model_and_tool_steps_count_against_parent_ceiling(tmp_path):
 
 
 def test_a_late_source_append_never_replaces_the_fresh_admitted_prefix():
-    from nm.core.brain_context import ContextRefused
-    from nm.core.research_context import ResearchFinding
-    from nm.core.verifier import EvidenceSpan
-
+    from nm.legal_brain.brain_context import ContextRefused
+    from nm.legal_brain.research_context import ResearchFinding
+    from nm.legal_brain.verifier import EvidenceSpan
     from tests.test_research_context_starts_from_sources_not_a_chat_summary import fixture
 
     session = fixture(sources=(), captured=())

@@ -17,22 +17,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.adapters.evidence.corpus import EXAMINED_CEILING
-from nm.core.cause import interpret
-from nm.domain.matter import CauseOfAction
-from nm.domain.quotable import Quotable
-from nm.domain.traceability import refuses
-from nm.knowledge.resolution import (
-    CODE_TITLES,
-    CORRESPONDS,
-    LIMITATION_ARTICLE,
-    Correspondence,
-    Edge,
-    article_for,
-    corresponding,
-    governs,
-)
-from nm.ports.evidence import (
+
+from nm.legal_brain.cause import interpret
+from nm.legal_brain.corpus_evidence import EXAMINED_CEILING
+from nm.legal_brain.evidence_port import (
     Binding,
     EvidenceNeed,
     EvidencePort,
@@ -42,6 +30,19 @@ from nm.ports.evidence import (
     SourceKind,
     Treatment,
 )
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.resolution_sources import (
+    CODE_TITLES,
+    CORRESPONDS,
+    LIMITATION_ARTICLE,
+    Correspondence,
+    Edge,
+    article_for,
+    corresponding,
+    governs,
+)
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import CauseOfAction
 
 pytestmark = pytest.mark.class_a
 
@@ -296,9 +297,8 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
     scanned the source for `limit 40` and failed on the comment explaining the
     fix, which is what a source scan is worth.
     """
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
-
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.manifest_sources import Manifest
     from tests.test_retrieval_trust_boundaries import index
 
     body = ("the doctrine of adverse possession requires animus possidendi "
@@ -332,9 +332,8 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
 def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
     """THE POSITIVE CONTROL. A disclosure that fires on every answer teaches
     the advocate to ignore it, which costs more than it buys."""
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
-
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.manifest_sources import Manifest
     from tests.test_retrieval_trust_boundaries import index
 
     body = ("the doctrine of adverse possession requires animus possidendi "
@@ -372,8 +371,8 @@ def test_the_turn_routes_a_determinate_question_without_a_named_provision(
     So this drives the REAL adapter — manifest, chunk store, routing — with a
     question that names no provision at all.
     """
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(
         "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
@@ -405,8 +404,8 @@ def test_a_provision_the_advocate_named_outranks_the_graph(tmp_path):
     do, and the mirror of the defect where keyword scoring outvoted a named
     Act on `possession`.
     """
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(
         "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
@@ -429,8 +428,7 @@ def test_the_engine_sets_the_cause_so_the_graph_can_be_consulted(tmp_path):
     fills it on a served turn, because every other test here would pass with
     the wiring absent.
     """
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     seen: list[str | None] = []

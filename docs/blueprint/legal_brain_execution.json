@@ -217,10 +217,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -253,10 +253,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -289,10 +289,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -325,10 +325,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -361,10 +361,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "PORT"
@@ -396,10 +396,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "PORT"
@@ -431,10 +431,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "PORT"
@@ -474,14 +474,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "LOOP",
@@ -522,14 +522,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "LOOP",
@@ -570,14 +570,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "LOOP",
@@ -618,14 +618,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "LOOP",
@@ -658,11 +658,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/adapters/model/replay.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py"
+              "nm/shared/model_replay.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py"
             ],
             "modules": [
               "REPLAY",
@@ -695,11 +695,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/adapters/model/replay.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py"
+              "nm/shared/model_replay.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py"
             ],
             "modules": [
               "REPLAY",
@@ -732,11 +732,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/adapters/model/replay.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py"
+              "nm/shared/model_replay.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py"
             ],
             "modules": [
               "REPLAY",
@@ -769,11 +769,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/adapters/model/replay.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/domain/loop.py",
-              "backend/nm/ports/loop_log.py",
-              "backend/nm/adapters/store/loop_log.py"
+              "nm/shared/model_replay.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/loop_contracts.py",
+              "nm/legal_brain/loop_log_port.py",
+              "nm/shared/store_loop_log.py"
             ],
             "modules": [
               "REPLAY",
@@ -810,18 +810,18 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/source_writes.py"
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/source_writes.py"
             ],
             "modules": [
               "CONTEXT",
@@ -859,18 +859,18 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/source_writes.py"
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/source_writes.py"
             ],
             "modules": [
               "CONTEXT",
@@ -908,18 +908,18 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/source_writes.py"
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/source_writes.py"
             ],
             "modules": [
               "CONTEXT",
@@ -957,18 +957,18 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/source_writes.py"
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/source_writes.py"
             ],
             "modules": [
               "CONTEXT",
@@ -1006,8 +1006,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -1043,8 +1043,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -1080,8 +1080,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -1337,13 +1337,13 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1376,13 +1376,13 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1415,13 +1415,13 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1454,12 +1454,12 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1492,12 +1492,12 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1530,12 +1530,12 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1568,12 +1568,12 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/ports/model.py",
-              "backend/nm/adapters/model/openai_adapter.py",
-              "backend/nm/adapters/model/anthropic_adapter.py",
-              "backend/nm/adapters/model/scripted.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/shared/model_port.py",
+              "nm/shared/model_openai_adapter.py",
+              "nm/shared/model_anthropic_adapter.py",
+              "nm/shared/model_scripted.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1610,23 +1610,23 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/brain_context.py",
-              "backend/nm/core/source_writes.py",
-              "backend/nm/core/grounded_file_tools.py",
-              "backend/nm/domain/event_observation.py",
-              "backend/nm/domain/matter.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/source_writes.py",
+              "nm/legal_brain/grounded_file_tools.py",
+              "nm/work_the_file/event_observation_contracts.py",
+              "nm/work_the_file/matter_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1666,23 +1666,23 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/brain_context.py",
-              "backend/nm/core/source_writes.py",
-              "backend/nm/core/grounded_file_tools.py",
-              "backend/nm/domain/event_observation.py",
-              "backend/nm/domain/matter.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/source_writes.py",
+              "nm/legal_brain/grounded_file_tools.py",
+              "nm/work_the_file/event_observation_contracts.py",
+              "nm/work_the_file/matter_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1722,23 +1722,23 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/domain/file_mutation.py",
-              "backend/nm/core/file_mutation.py",
-              "backend/nm/core/write_tools.py",
-              "backend/nm/ports/document_text.py",
-              "backend/nm/adapters/documents/local.py",
-              "backend/nm/adapters/documents/isolation.py",
-              "backend/nm/domain/media_policy.py",
-              "backend/nm/domain/media.py",
-              "backend/nm/core/requirements.py",
-              "backend/nm/domain/requirements.py",
-              "backend/nm/core/brain_context.py",
-              "backend/nm/core/source_writes.py",
-              "backend/nm/core/grounded_file_tools.py",
-              "backend/nm/domain/event_observation.py",
-              "backend/nm/domain/matter.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/work_the_file/file_mutation_contracts.py",
+              "nm/work_the_file/file_mutation.py",
+              "nm/work_the_file/write_tools.py",
+              "nm/open_matter/document_text_port.py",
+              "nm/open_matter/document_local.py",
+              "nm/open_matter/document_isolation.py",
+              "nm/open_matter/media_policy_contracts.py",
+              "nm/open_matter/media_contracts.py",
+              "nm/legal_brain/requirements.py",
+              "nm/legal_brain/requirements_contracts.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/source_writes.py",
+              "nm/legal_brain/grounded_file_tools.py",
+              "nm/work_the_file/event_observation_contracts.py",
+              "nm/work_the_file/matter_contracts.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1786,9 +1786,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1833,9 +1833,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1880,9 +1880,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1927,9 +1927,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -1966,9 +1966,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2005,9 +2005,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2044,9 +2044,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2083,9 +2083,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/calculation_tools.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/calculation_tools.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2122,9 +2122,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/calculation_tools.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/calculation_tools.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2161,9 +2161,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/calculation_tools.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/calculation_tools.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2212,9 +2212,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2263,9 +2263,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2314,9 +2314,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2373,14 +2373,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -2439,14 +2439,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -2505,14 +2505,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -2555,10 +2555,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2599,10 +2599,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2643,10 +2643,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -2679,8 +2679,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tool_discovery.py",
-              "backend/nm/core/tools.py"
+              "nm/legal_brain/tool_discovery.py",
+              "nm/legal_brain/tools.py"
             ],
             "modules": [
               "CAPABILITY_DISCOVERY"
@@ -2712,8 +2712,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tool_discovery.py",
-              "backend/nm/core/tools.py"
+              "nm/legal_brain/tool_discovery.py",
+              "nm/legal_brain/tools.py"
             ],
             "modules": [
               "CAPABILITY_DISCOVERY"
@@ -2949,9 +2949,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_evaluation.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_evaluation.py"
             ],
             "modules": [
               "REVIEW",
@@ -2984,9 +2984,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_evaluation.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_evaluation.py"
             ],
             "modules": [
               "REVIEW",
@@ -3019,9 +3019,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_evaluation.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_evaluation.py"
             ],
             "modules": [
               "REVIEW",
@@ -3054,8 +3054,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3087,8 +3087,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3120,8 +3120,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3153,8 +3153,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3186,8 +3186,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3219,8 +3219,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3252,8 +3252,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3285,8 +3285,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3318,8 +3318,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "REVIEW"
@@ -3375,14 +3375,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -3441,14 +3441,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -3507,14 +3507,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "REVIEW",
@@ -3549,11 +3549,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3587,11 +3587,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3625,11 +3625,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3663,11 +3663,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3701,11 +3701,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3739,11 +3739,11 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py",
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py",
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "REVIEW",
@@ -3984,8 +3984,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4025,8 +4025,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4066,8 +4066,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4107,8 +4107,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4148,8 +4148,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4185,8 +4185,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4222,8 +4222,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4259,8 +4259,8 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/loop_progress.py",
-              "backend/nm/edge/loop_progress.py"
+              "nm/legal_brain/loop_progress.py",
+              "nm/legal_brain/loop_progress_api.py"
             ],
             "modules": [
               "PROGRESS"
@@ -4481,10 +4481,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4517,10 +4517,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4553,10 +4553,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4589,10 +4589,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4625,14 +4625,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4665,14 +4665,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4705,14 +4705,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4745,10 +4745,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4781,10 +4781,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4817,10 +4817,10 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py"
             ],
             "modules": [
@@ -4853,14 +4853,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4893,14 +4893,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4933,14 +4933,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -4973,9 +4973,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_discovery.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_discovery.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -5008,9 +5008,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_discovery.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_discovery.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -5043,9 +5043,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_discovery.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_discovery.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -5078,9 +5078,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_catalogue.py",
-              "backend/nm/core/tool_discovery.py"
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_catalogue.py",
+              "nm/legal_brain/tool_discovery.py"
             ],
             "modules": [
               "READ_TOOLS",
@@ -5113,14 +5113,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5153,14 +5153,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5193,14 +5193,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5233,14 +5233,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5273,14 +5273,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5313,14 +5313,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5353,14 +5353,14 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/research_context.py"
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/research_context.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5393,9 +5393,9 @@
           "implementation": {
             "state": "planned",
             "paths": [
-              "backend/nm/domain/summary.py",
-              "backend/nm/domain/matter.py",
-              "backend/nm/core/context.py"
+              "nm/work_the_file/summary_contracts.py",
+              "nm/work_the_file/matter_contracts.py",
+              "nm/core/context.py"
             ],
             "modules": [],
             "remaining": "Approved advocate-level memory with inspect/edit/delete and separation from matter facts is not implemented; context is not memory."
@@ -5425,9 +5425,9 @@
           "implementation": {
             "state": "planned",
             "paths": [
-              "backend/nm/domain/summary.py",
-              "backend/nm/domain/matter.py",
-              "backend/nm/core/context.py"
+              "nm/work_the_file/summary_contracts.py",
+              "nm/work_the_file/matter_contracts.py",
+              "nm/core/context.py"
             ],
             "modules": [],
             "remaining": "Approved advocate-level memory with inspect/edit/delete and separation from matter facts is not implemented; context is not memory."
@@ -5457,9 +5457,9 @@
           "implementation": {
             "state": "planned",
             "paths": [
-              "backend/nm/domain/summary.py",
-              "backend/nm/domain/matter.py",
-              "backend/nm/core/context.py"
+              "nm/work_the_file/summary_contracts.py",
+              "nm/work_the_file/matter_contracts.py",
+              "nm/core/context.py"
             ],
             "modules": [],
             "remaining": "Approved advocate-level memory with inspect/edit/delete and separation from matter facts is not implemented; context is not memory."
@@ -5493,16 +5493,16 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5541,16 +5541,16 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5589,16 +5589,16 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_context.py",
-              "backend/nm/adapters/principles_file.py",
-              "backend/nm/ports/principles.py",
-              "backend/nm/core/principles_generated.py",
+              "nm/legal_brain/brain_context.py",
+              "nm/legal_brain/principles_file_adapter.py",
+              "nm/legal_brain/principles_port.py",
+              "nm/legal_brain/principles_generated.py",
               "development_environment/developer_tooling/principles_codegen.py",
-              "backend/nm/core/research_context.py",
-              "backend/nm/core/nested_research.py",
-              "backend/nm/core/loop.py",
-              "backend/nm/core/tools.py",
-              "backend/nm/core/tool_sources.py"
+              "nm/legal_brain/research_context.py",
+              "nm/legal_brain/nested_research.py",
+              "nm/legal_brain/loop.py",
+              "nm/legal_brain/tools.py",
+              "nm/legal_brain/tool_sources.py"
             ],
             "modules": [
               "CONTEXT",
@@ -5805,9 +5805,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "ASSESSMENT",
@@ -5840,9 +5840,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "ASSESSMENT",
@@ -5875,9 +5875,9 @@
           "implementation": {
             "state": "partial",
             "paths": [
-              "backend/nm/core/brain_assessment.py",
-              "backend/nm/core/verifier.py",
-              "backend/nm/core/brain_release.py"
+              "nm/legal_brain/brain_assessment.py",
+              "nm/legal_brain/verifier.py",
+              "nm/legal_brain/brain_release.py"
             ],
             "modules": [
               "ASSESSMENT",
@@ -5916,7 +5916,7 @@
             "paths": [
               "assurance/control_plane/brain_scope.py",
               "assurance/control_plane/requirement_owners.py",
-              "backend/nm/adapters/model/replay.py"
+              "nm/shared/model_replay.py"
             ],
             "modules": [
               "READINESS",
@@ -5955,7 +5955,7 @@
             "paths": [
               "assurance/control_plane/brain_scope.py",
               "assurance/control_plane/requirement_owners.py",
-              "backend/nm/adapters/model/replay.py"
+              "nm/shared/model_replay.py"
             ],
             "modules": [
               "READINESS",
@@ -5994,7 +5994,7 @@
             "paths": [
               "assurance/control_plane/brain_scope.py",
               "assurance/control_plane/requirement_owners.py",
-              "backend/nm/adapters/model/replay.py"
+              "nm/shared/model_replay.py"
             ],
             "modules": [
               "READINESS",
@@ -6033,7 +6033,7 @@
             "paths": [
               "assurance/control_plane/brain_scope.py",
               "assurance/control_plane/requirement_owners.py",
-              "backend/nm/adapters/model/replay.py"
+              "nm/shared/model_replay.py"
             ],
             "modules": [
               "READINESS",
@@ -6069,10 +6069,10 @@
       "id": "PORT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/ports/model.py",
-        "backend/nm/adapters/model/openai_adapter.py",
-        "backend/nm/adapters/model/anthropic_adapter.py",
-        "backend/nm/adapters/model/scripted.py"
+        "nm/shared/model_port.py",
+        "nm/shared/model_openai_adapter.py",
+        "nm/shared/model_anthropic_adapter.py",
+        "nm/shared/model_scripted.py"
       ],
       "checks": [
         "tests/test_tool_calling_port_contract.py::test_identical_tool_proposals_are_normalised_on_every_provider"
@@ -6088,10 +6088,10 @@
       "id": "LOOP",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/loop.py",
-        "backend/nm/domain/loop.py",
-        "backend/nm/ports/loop_log.py",
-        "backend/nm/adapters/store/loop_log.py"
+        "nm/legal_brain/loop.py",
+        "nm/legal_brain/loop_contracts.py",
+        "nm/legal_brain/loop_log_port.py",
+        "nm/shared/store_loop_log.py"
       ],
       "checks": [
         "tests/test_the_loop_records_work_before_using_it.py::test_a_checked_proposal_has_a_saved_start_for_every_operation"
@@ -6107,7 +6107,7 @@
       "id": "REPLAY",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/adapters/model/replay.py"
+        "nm/shared/model_replay.py"
       ],
       "checks": [
         "tests/test_model_replay_uses_the_saved_loop_journal.py::test_two_real_saved_calls_replay_after_a_store_restart_without_network"
@@ -6123,10 +6123,10 @@
       "id": "CONTEXT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/brain_context.py",
-        "backend/nm/adapters/principles_file.py",
-        "backend/nm/ports/principles.py",
-        "backend/nm/core/principles_generated.py",
+        "nm/legal_brain/brain_context.py",
+        "nm/legal_brain/principles_file_adapter.py",
+        "nm/legal_brain/principles_port.py",
+        "nm/legal_brain/principles_generated.py",
         "development_environment/developer_tooling/principles_codegen.py"
       ],
       "checks": [
@@ -6143,8 +6143,8 @@
       "id": "READ_TOOLS",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/tools.py",
-        "backend/nm/core/tool_catalogue.py"
+        "nm/legal_brain/tools.py",
+        "nm/legal_brain/tool_catalogue.py"
       ],
       "checks": [
         "tests/test_legal_brain_tool_catalogue.py::test_catalogue_reads_the_current_transaction_inside_the_actual_controlled_loop"
@@ -6160,7 +6160,7 @@
       "id": "SOURCE_CAPTURE",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/tool_sources.py"
+        "nm/legal_brain/tool_sources.py"
       ],
       "checks": [
         "tests/test_all_source_tools_capture_the_same_review_contract.py::test_curated_primary_reads_reach_the_exact_saved_proposal_and_independent_judge"
@@ -6176,11 +6176,11 @@
       "id": "LOCAL_TEXT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/ports/document_text.py",
-        "backend/nm/adapters/documents/local.py",
-        "backend/nm/adapters/documents/isolation.py",
-        "backend/nm/domain/media_policy.py",
-        "backend/nm/domain/media.py"
+        "nm/open_matter/document_text_port.py",
+        "nm/open_matter/document_local.py",
+        "nm/open_matter/document_isolation.py",
+        "nm/open_matter/media_policy_contracts.py",
+        "nm/open_matter/media_contracts.py"
       ],
       "checks": [
         "tests/test_local_document_text.py::test_pdf_text_and_missing_text_pages_are_distinct_or_reader_is_explicitly_unavailable"
@@ -6196,9 +6196,9 @@
       "id": "ATOMIC_WRITES",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/domain/file_mutation.py",
-        "backend/nm/core/file_mutation.py",
-        "backend/nm/core/write_tools.py"
+        "nm/work_the_file/file_mutation_contracts.py",
+        "nm/work_the_file/file_mutation.py",
+        "nm/work_the_file/write_tools.py"
       ],
       "checks": [
         "tests/test_checked_file_mutations.py::test_actual_controlled_loop_applies_assertion_and_receipt_in_one_saved_version"
@@ -6214,8 +6214,8 @@
       "id": "REVIEW",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/verifier.py",
-        "backend/nm/core/brain_release.py"
+        "nm/legal_brain/verifier.py",
+        "nm/legal_brain/brain_release.py"
       ],
       "checks": [
         "tests/test_claims_reach_the_independent_review_from_the_saved_loop.py::test_actual_saved_sources_reach_a_distinct_judge_and_final_words_remain_exact"
@@ -6231,7 +6231,7 @@
       "id": "ASSESSMENT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/brain_assessment.py"
+        "nm/legal_brain/brain_assessment.py"
       ],
       "checks": [
         "tests/test_final_assessment_uses_actual_loop_receipts.py::test_actual_saved_review_assembles_exact_candidate_without_invented_checks"
@@ -6247,8 +6247,8 @@
       "id": "PROGRESS",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/loop_progress.py",
-        "backend/nm/edge/loop_progress.py"
+        "nm/legal_brain/loop_progress.py",
+        "nm/legal_brain/loop_progress_api.py"
       ],
       "checks": [
         "tests/test_saved_loop_progress_is_not_an_advice_transport.py::test_saved_stages_are_actually_served_with_authentication_and_owned_scope"
@@ -6281,7 +6281,7 @@
       "id": "BOUNDED_PRIVATE_REPAIR",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/brain_evaluation.py"
+        "nm/legal_brain/brain_evaluation.py"
       ],
       "checks": [
         "tests/test_private_repairs_keep_the_original_instruction_and_whole_budget.py::test_failed_inference_returns_to_author_then_rechecks_exact_repaired_words"
@@ -6297,7 +6297,7 @@
       "id": "FRESH_RESEARCH_CONTEXT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/research_context.py"
+        "nm/legal_brain/research_context.py"
       ],
       "checks": [
         "tests/test_research_context_starts_from_sources_not_a_chat_summary.py::test_actual_controlled_runner_dispatches_the_fresh_task_source_context_not_a_parent_summary"
@@ -6313,11 +6313,11 @@
       "id": "NESTED_RESEARCH",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/nested_research.py",
-        "backend/nm/core/research_context.py",
-        "backend/nm/core/loop.py",
-        "backend/nm/core/tools.py",
-        "backend/nm/core/tool_sources.py"
+        "nm/legal_brain/nested_research.py",
+        "nm/legal_brain/research_context.py",
+        "nm/legal_brain/loop.py",
+        "nm/legal_brain/tools.py",
+        "nm/legal_brain/tool_sources.py"
       ],
       "checks": [
         "tests/test_nested_research_has_one_budget_and_one_writer.py::test_real_parent_dispatch_shares_spend_and_never_creates_a_second_writer",
@@ -6336,10 +6336,10 @@
       "id": "AUTOMATIC_CONTEXT",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/brain_context.py",
-        "backend/nm/core/loop.py",
-        "backend/nm/core/nested_research.py",
-        "backend/nm/core/research_context.py"
+        "nm/legal_brain/brain_context.py",
+        "nm/legal_brain/loop.py",
+        "nm/legal_brain/nested_research.py",
+        "nm/legal_brain/research_context.py"
       ],
       "checks": [
         "tests/test_automatic_compaction_retains_the_checked_file_not_a_story.py::test_actual_lead_request_compacts_only_when_its_outgoing_bytes_need_it",
@@ -6359,12 +6359,12 @@
       "id": "CAPABILITY_DISCOVERY",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/tool_discovery.py",
-        "backend/nm/core/tools.py",
-        "backend/nm/core/tool_offers.py",
-        "backend/nm/core/brain_context.py",
-        "backend/nm/core/loop.py",
-        "backend/nm/adapters/model/replay.py"
+        "nm/legal_brain/tool_discovery.py",
+        "nm/legal_brain/tools.py",
+        "nm/legal_brain/tool_offers.py",
+        "nm/legal_brain/brain_context.py",
+        "nm/legal_brain/loop.py",
+        "nm/shared/model_replay.py"
       ],
       "checks": [
         "tests/test_discovery_cannot_invent_capability_or_change_the_guide.py::test_discovery_is_the_actual_registry_not_a_second_catalogue",
@@ -6391,8 +6391,8 @@
       "id": "SOURCED_CALCULATIONS",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/calculation_tools.py",
-        "backend/nm/core/tool_catalogue.py"
+        "nm/legal_brain/calculation_tools.py",
+        "nm/legal_brain/tool_catalogue.py"
       ],
       "checks": [
         "tests/test_calculation_tools_do_not_supply_the_law.py::test_compute_limitation_uses_current_fact_and_exact_saved_primary_source",
@@ -6411,14 +6411,14 @@
       "id": "CONVERSATIONAL_CHECKLIST",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/requirements.py",
-        "backend/nm/domain/requirements.py",
-        "backend/nm/core/file_mutation.py",
-        "backend/nm/domain/file_mutation.py",
-        "backend/nm/core/write_tools.py",
-        "backend/nm/core/brain_context.py",
-        "backend/nm/core/tool_catalogue.py",
-        "backend/nm/core/source_writes.py"
+        "nm/legal_brain/requirements.py",
+        "nm/legal_brain/requirements_contracts.py",
+        "nm/work_the_file/file_mutation.py",
+        "nm/work_the_file/file_mutation_contracts.py",
+        "nm/work_the_file/write_tools.py",
+        "nm/legal_brain/brain_context.py",
+        "nm/legal_brain/tool_catalogue.py",
+        "nm/legal_brain/source_writes.py"
       ],
       "checks": [
         "tests/test_checklist_context_uses_the_conversation_not_a_new_activity.py::test_existing_information_is_applied_in_the_actual_loop_without_an_extra_user_activity",
@@ -6439,11 +6439,11 @@
       "id": "GROUNDED_FRESH_FILE",
       "scope": "controlled_foundation_only",
       "paths": [
-        "backend/nm/core/grounded_file_tools.py",
-        "backend/nm/domain/event_observation.py",
-        "backend/nm/domain/matter.py",
-        "backend/nm/core/brain_context.py",
-        "backend/nm/core/tool_catalogue.py"
+        "nm/legal_brain/grounded_file_tools.py",
+        "nm/work_the_file/event_observation_contracts.py",
+        "nm/work_the_file/matter_contracts.py",
+        "nm/legal_brain/brain_context.py",
+        "nm/legal_brain/tool_catalogue.py"
       ],
       "checks": [
         "tests/test_new_file_roles_and_dates_are_source_bound.py::test_actual_application_registry_can_record_fresh_event_observations",

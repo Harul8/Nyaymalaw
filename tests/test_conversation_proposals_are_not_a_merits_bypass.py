@@ -3,20 +3,20 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_context import assemble_brief
-from nm.core.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.core.conversational_proposal import (
+
+from nm.legal_brain.brain_context import assemble_brief
+from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.conversational_proposal import (
     MAX_CONVERSATION_CHARACTERS,
     ConversationalProposal,
 )
-from nm.core.loop_progress import project_event, sse_frame
-from nm.core.tools import Assessment, Boundary, ToolContext, ToolRefused
-from nm.core.verifier import IndependentVerifier
-from nm.domain.budget import Budget
-from nm.domain.loop import StepKind, StopReason
-from nm.ports.model import SchemaViolation, ToolCall
-
+from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.legal_brain.loop_progress import project_event, sse_frame
+from nm.legal_brain.tools import Assessment, Boundary, ToolContext, ToolRefused
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_controlled_brain_composition_keeps_the_account_boundary import _scope
 from tests.test_independent_claim_verifier import Judge
 from tests.test_the_loop_records_work_before_using_it import _limits, _response

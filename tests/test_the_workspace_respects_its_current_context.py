@@ -825,8 +825,7 @@ def test_http_success_without_revocation_confirmation_stays_unconfirmed(page, jo
 def test_a_protective_retry_discloses_saved_history_without_releasing_expired_permission(
     page, journey, monkeypatch,
 ):
-    from nm.domain.advocate import utcnow
-
+    from nm.arrive.advocate_contracts import utcnow
     from tests.test_professional_approval_is_separate_from_account_access import (
         approve_fixture_account,
     )

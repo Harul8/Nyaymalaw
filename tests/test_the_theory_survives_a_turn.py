@@ -41,13 +41,13 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import theory as theory_reader
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.traceability import refuses
 
+from nm.legal_brain import theory as theory_reader
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.traceability_contracts import refuses
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -99,7 +99,7 @@ def test_it_comes_back_from_the_store_typed(tmp_path):
     """A DEFECT WITH A DELAY ON IT, caught within the minute.
 
     `Thread.theory` is typed `object` because `nm.domain` may not import
-    `nm.core.theory` — domain holds the state, core holds the reading of it —
+    `nm.legal_brain.theory` — domain holds the state, core holds the reading of it —
     so the generic decoder hands back a plain dict. The value round-trips
     fine, and the NEXT turn touches `.theme` on a dict and the whole revision
     path fails.

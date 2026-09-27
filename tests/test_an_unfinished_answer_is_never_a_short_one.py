@@ -24,7 +24,8 @@ the advocate's cancellation -- with each bounded at a call site or not at all.
 from __future__ import annotations
 
 import pytest
-from nm.domain.budget import (
+
+from nm.shared.budget_contracts import (
     STAGES,
     Budget,
     Completion,
@@ -58,7 +59,7 @@ def test_silence_about_how_it_stopped_is_not_a_claim_that_it_finished():
 def test_a_model_result_defaults_to_not_established():
     """The DEFAULT is the honest one. An adapter that says nothing must not
     thereby say the answer finished."""
-    from nm.ports.model import ModelResult, Tier, Usage
+    from nm.shared.model_port import ModelResult, Tier, Usage
 
     got = ModelResult(text="something", data=None, tier=Tier.ROUTINE,
                       provider="p", model="m",
@@ -87,7 +88,7 @@ def test_the_finish_reason_table_covers_the_population_and_its_absence(
     """AN UNRECOGNISED REASON IS NOT ESTABLISHED, never complete. A provider
     that adds a stop reason tomorrow must not have it read as finished by a
     table written today."""
-    from nm.adapters.model.openai_adapter import _completion_of
+    from nm.shared.model_openai_adapter import _completion_of
 
     assert _completion_of(reason) is expected
 
@@ -100,8 +101,8 @@ def test_the_adapter_refuses_a_length_limited_response_that_parses():
     The JSON here is valid and satisfies the schema. Nothing downstream could
     tell; the finish reason is the only evidence there is.
     """
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.ports.model import OutputTruncated, Prompt, Tier
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.shared.model_port import OutputTruncated, Prompt, Tier
 
     adapter = OpenAIModelAdapter(_config(), client=_Client("length"))
     with pytest.raises(OutputTruncated, match="unfinished, not short"):
@@ -115,8 +116,8 @@ def test_the_adapter_refuses_a_length_limited_response_that_parses():
 def test_the_same_response_with_a_normal_stop_is_returned():
     """THE POSITIVE CONTROL. A check that refused every response would be
     turned off within a week."""
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.ports.model import Prompt, Tier
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.shared.model_port import Prompt, Tier
 
     adapter = OpenAIModelAdapter(_config(), client=_Client("stop"))
     got = adapter.structured(Prompt(system="s", user="u"),
@@ -134,8 +135,8 @@ def test_a_text_read_is_covered_by_the_same_check():
     """*both text and structured reads*, in the criterion's own words. The
     text path is the one where truncation is most obvious to a human and
     least visible to a program."""
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.ports.model import OutputTruncated, Prompt, Tier
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.shared.model_port import OutputTruncated, Prompt, Tier
 
     adapter = OpenAIModelAdapter(_config(), client=_Client("length"))
     with pytest.raises(OutputTruncated):
@@ -189,8 +190,8 @@ class _Client:
 
 def _config():
     """The real config shape, so the adapter runs its real path."""
-    from nm.adapters.model.config import ModelConfig, TierConfig
-    from nm.ports.model import Tier
+    from nm.shared.model_config import ModelConfig, TierConfig
+    from nm.shared.model_port import Tier
 
     return ModelConfig(tiers={
         t: TierConfig(t, "openai", "gpt-test", "not-a-real-key", None)
@@ -219,7 +220,7 @@ def test_the_one_read_funnel_refuses_before_returning():
     covered without its author knowing this rule exists."""
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     source = inspect.getsource(TurnEngine._read)
     assert "refuse_partial" in source
@@ -232,8 +233,8 @@ def test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise():
     """The mechanism BK-29-AC1 asks for already exists; this keeps it. A read
     that quotes gets room proportional to what it was shown, and a read whose
     answer is a fixed shape gets a number stated once, in one table."""
-    from nm.core import ceiling
-    from nm.ports.model import Prompt
+    from nm.legal_brain import ceiling
+    from nm.shared.model_port import Prompt
 
     short = Prompt(system="s", user="a brief")
     long = Prompt(system="s", user="a brief " * 400)
@@ -243,8 +244,8 @@ def test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise():
 
 
 def test_an_unlisted_read_gets_the_floor_and_not_an_invented_number():
-    from nm.core import ceiling
-    from nm.ports.model import Prompt
+    from nm.legal_brain import ceiling
+    from nm.shared.model_port import Prompt
 
     assert ceiling.for_read("a_read_nobody_listed", Prompt(system="s", user="u"),
                             echoes=False) == ceiling.FLOOR
@@ -254,8 +255,8 @@ def test_the_derived_ceiling_is_bounded_at_both_ends():
     """The floor stops a one-line brief producing a ceiling too small for the
     JSON around an empty answer; the cap stops a pasted judgment producing a
     request the provider refuses."""
-    from nm.core import ceiling
-    from nm.ports.model import Prompt
+    from nm.legal_brain import ceiling
+    from nm.shared.model_port import Prompt
 
     assert ceiling.for_echo(Prompt(system="", user="x")) == ceiling.FLOOR
     assert ceiling.for_echo(Prompt(system="", user="x " * 100000)) == ceiling.CAP

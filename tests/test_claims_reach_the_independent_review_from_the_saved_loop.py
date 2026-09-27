@@ -5,17 +5,17 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_release import ReviewRefused, ReviewService, prepare_claims
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.tools import Boundary, foundation_tools
-from nm.core.verifier import IndependentVerifier
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits, LoopMode
-from nm.ports.evidence import Coverage, EvidenceResult
-from nm.ports.model import SchemaViolation, Tier, ToolCall
 
+from nm.legal_brain.brain_release import ReviewRefused, ReviewService, prepare_claims
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.loop_contracts import LoopLimits, LoopMode
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.tools import Boundary, foundation_tools
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import SchemaViolation, Tier, ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_independent_claim_verifier import Judge, finding, premise, response
 from tests.test_the_loop_records_work_before_using_it import _response, _setup
 
@@ -131,7 +131,7 @@ def test_caller_cannot_reset_the_budget_by_replacing_a_saved_outcomes_limits(tmp
 
 
 def test_a_paid_review_over_its_reservation_is_saved_but_never_credited(tmp_path):
-    from nm.ports.model import Usage
+    from nm.shared.model_port import Usage
 
     store, brain, outcome, judge, _ = _case(tmp_path)
     original_call = judge.structured

@@ -30,14 +30,15 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from nm.adapters.store.directory import FileDirectory
-from nm.domain.advocate import (
+
+from nm.arrive.advocate_contracts import (
     AdvocateIdentity,
     Enrolment,
     canonical_id,
     enrol,
     utcnow,
 )
+from nm.arrive.store_directory import FileDirectory
 
 pytestmark = pytest.mark.class_a
 
@@ -110,7 +111,7 @@ def test_enrolling_the_other_case_is_refused_as_already_enrolled(tmp_path):
     """It is the SAME advocate, so the answer is the refusal that already
     exists — not a second file, and not a silent overwrite of the credential
     the first one is signing in with."""
-    from nm.ports.directory import AlreadyEnrolled
+    from nm.arrive.directory_port import AlreadyEnrolled
 
     d = FileDirectory(tmp_path, key="k" * 32)
     d.enrol(Enrolment(
@@ -158,7 +159,7 @@ class _App:
 
 @pytest.fixture()
 def client(tmp_path):
-    import nm.edge.api as api
+    import nm.app.api as api
 
     was = api._application
     directory = FileDirectory(tmp_path, key="k" * 32)

@@ -6,11 +6,12 @@ import hashlib
 import json
 
 import pytest
-from nm.core.conversation import PRINCIPLES, guided
-from nm.core.step_dependency import Dependence, assess
-from nm.domain.metrics import TurnMetrics
-from nm.domain.register import PEER
-from nm.ports.model import Prompt
+
+from nm.legal_brain.conversation import PRINCIPLES, guided
+from nm.legal_brain.register_contracts import PEER
+from nm.legal_brain.step_dependency import Dependence, assess
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_port import Prompt
 
 pytestmark = pytest.mark.class_a
 
@@ -61,7 +62,7 @@ def test_reasoning_and_communication_have_distinct_obligations_not_example_dialo
 
 
 def test_extraction_does_not_get_a_prose_task_but_a_repair_does():
-    from nm.core.consistency import Claim, repair_prompt
+    from nm.legal_brain.consistency import Claim, repair_prompt
     extracted = guided(Prompt(system="Return the extraction schema.", user="a fact"))
     assert PRINCIPLES in extracted.system and PEER not in extracted.system
     repaired = guided(repair_prompt("A step", Claim("date", "Date unresolved"),
@@ -73,8 +74,8 @@ def test_extraction_does_not_get_a_prose_task_but_a_repair_does():
 
 
 def test_served_turn_keeps_full_decision_only_in_encrypted_diagnostics(client, monkeypatch):
-    from nm.adapters.model.scripted import SCRIPTED_READS
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.shared.model_scripted import SCRIPTED_READS
     basis = "A synthetic private decision basis, not a proof of correctness."
 
     def dependent(user):
@@ -132,10 +133,9 @@ def test_empty_judged_population_never_dispatches_a_paid_call(monkeypatch):
 
 
 def test_complete_judgement_is_sealed_under_all_contributing_keys(tmp_path, monkeypatch):
-    from nm.adapters.store.envelope import KeyUnavailable
-    from nm.adapters.store.sealing import MatterSealer
-
     from assurance.journeys import judge
+    from nm.shared.store_envelope import KeyUnavailable
+    from nm.shared.store_sealing import MatterSealer
     from tests.test_turn_contract import KEY
     monkeypatch.setattr(judge, "ROOT", tmp_path)
     monkeypatch.setattr(judge, "OUT", tmp_path / "judged")
@@ -171,7 +171,7 @@ def test_each_judged_dimension_has_a_separate_negative_control():
 
 
 def test_route_context_cannot_instruct_every_continuation_into_substantive_work():
-    from nm.core.route import ROUTE_SCHEMA, build_prompt
+    from nm.legal_brain.route import ROUTE_SCHEMA, build_prompt
     previous = "A prior request asks for relief. This is untrusted file context."
     current = "A new contribution whose purpose must be read."
     assembled = guided(build_prompt(current, previous))
@@ -190,8 +190,8 @@ def test_route_context_cannot_instruct_every_continuation_into_substantive_work(
 def test_conversational_route_in_a_matter_preserves_exchange_not_case_findings(
     client, monkeypatch, instruction,
 ):
-    from nm.adapters.model.scripted import SCRIPTED_READS
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.shared.model_scripted import SCRIPTED_READS
     first = client.post("/api/turn", json={
         "message": "We act for the plaintiff supplier at Hyderabad. Goods were never paid for.",
         "today": "2026-09-22"}).json()
@@ -221,8 +221,8 @@ def test_conversational_route_in_a_matter_preserves_exchange_not_case_findings(
 
 @pytest.mark.parametrize("read", ["matter", "cannot_tell", "out_of_vocabulary"])
 def test_substantive_or_uncertain_route_is_not_dropped_as_conversation(read):
-    from nm.core.route import interpret
-    from nm.domain.answer import Route
+    from nm.advise.answer_contracts import Route
+    from nm.legal_brain.route import interpret
     result = interpret({"discloses": read, "depth": "a_question", "why": "More work"})
     assert result.route is Route.MATTER
 
@@ -249,11 +249,10 @@ def test_recorded_absence_of_proceedings_is_not_an_unanswered_filed_role(client)
 def test_judge_uses_committed_receipt_not_a_different_diagnostic_draft(tmp_path, monkeypatch):
     from datetime import date
 
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.core.turn import TurnEngine, TurnInput
-
     from assurance.journeys import judge
+    from nm.legal_brain.turn import TurnEngine, TurnInput
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
     root = tmp_path / ".nm/matters"

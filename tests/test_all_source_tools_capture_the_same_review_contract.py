@@ -6,15 +6,15 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.knowledge.institution import CuratedPreInstitution
-from nm.core.brain_release import captured_findings
-from nm.core.tool_catalogue import PracticeTables, catalogue_tools
-from nm.core.tool_sources import capture_document, source_envelope
-from nm.core.tools import Boundary, ToolContext, foundation_tools
-from nm.core.verifier import EvidencePackage, EvidenceSpan, IndependentVerifier
-from nm.ports.evidence import Coverage, EvidenceResult, SourceDocument, SourceKind
-from nm.ports.model import Tier, ToolCall
 
+from nm.legal_brain.brain_release import captured_findings
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument, SourceKind
+from nm.legal_brain.institution_adapter import CuratedPreInstitution
+from nm.legal_brain.tool_catalogue import PracticeTables, catalogue_tools
+from nm.legal_brain.tool_sources import capture_document, source_envelope
+from nm.legal_brain.tools import Boundary, ToolContext, foundation_tools
+from nm.legal_brain.verifier import EvidencePackage, EvidenceSpan, IndependentVerifier
+from nm.shared.model_port import Tier, ToolCall
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import Judge, finding
 from tests.test_legal_brain_tool_catalogue import ARGS, fixture, invoke
@@ -44,7 +44,7 @@ def test_curated_primary_reads_reach_the_exact_saved_proposal_and_independent_ju
             "premise_ids": ["fact_1"], "contrary": [], "depends_on": [],
         }]})), provider="scripted", model="scripted:author"),
     ]
-    from nm.domain.loop import LoopLimits
+    from nm.legal_brain.loop_contracts import LoopLimits
 
     outcome = brain.run(matter_id="mat_loop", turn_id="curated-primary-turn",
                        message="Read the pre-institution condition and explain it.",
@@ -92,7 +92,7 @@ def test_exact_authority_text_is_captured_but_unknown_legal_metadata_cannot_pass
     registry, context, *_ = fixture()
     result = invoke(registry, context, name)
     assert result.data["captured_windows"][0]["text"] == "Original words"
-    from nm.ports.evidence import Finding
+    from nm.legal_brain.evidence_port import Finding
 
     captured = Finding.from_record(json.loads(result.wire())["data"]["findings"][0])
     assert captured.span == "Original words" and captured.supports is None

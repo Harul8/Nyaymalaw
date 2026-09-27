@@ -13,7 +13,7 @@ ends mid-word, and confirming the premise is the entire mechanism by which a
 wrong accrual is meant to be caught. Correcting it in four words is impossible
 if it cannot be read.
 
-WHY THIS IS A SCAN AND NOT A FIX AT THAT LINE. Forty-two sites in `backend/nm/` cut
+WHY THIS IS A SCAN AND NOT A FIX AT THAT LINE. Forty-two sites in `nm/` cut
 prose to a character count when this was written, and thirty-six of them fed a
 sentence somebody reads. Not one of them was written by a person ignoring a
 rule; they were written by people who each needed to shorten a statement and
@@ -22,7 +22,7 @@ had nowhere to find the answer. That is the exact history of
 patterns, and the answer is the same one: an owner, and a scan that refuses a
 second way of doing it.
 
-THE TWO THINGS A BARE SLICE GETS WRONG are stated on `nm.domain.text.snippet`.
+THE TWO THINGS A BARE SLICE GETS WRONG are stated on `nm.shared.text_contracts.snippet`.
 Briefly: it counts characters where the unit is words, and it does not mark the
 elision -- so a shortened statement renders as the whole statement, which is
 CLAUDE.md §9's absent-reads-as-complete in the one place the advocate is being
@@ -75,9 +75,9 @@ PROSE = frozenset({
 #: above it -- an exemption that drifts onto a different line is worse than no
 #: exemption, because it silently permits whatever lands there next.
 EXEMPT: dict[tuple[str, str], str] = {
-    ("backend/nm/core/turn.py", "element.text[:400]"):
+    ("nm/legal_brain/turn.py", "element.text[:400]"):
         "a fragment kept to seed a retrieval, never rendered",
-    ("backend/nm/core/turn.py", "read.described[:6]"):
+    ("nm/legal_brain/turn.py", "read.described[:6]"):
         "a tuple of descriptors, not text; caught only by what it is called",
 }
 
@@ -209,7 +209,7 @@ def sweep(root: pathlib.Path) -> tuple[list[str], set[tuple[str, str]], int]:
     -- and the sweep is where an exemption keyed wrongly, or a population that
     silently walks nothing, would swallow every offender there is.
     """
-    files = [p for p in (root / "backend" / "nm").rglob("*.py")
+    files = [p for p in (root / "nm").rglob("*.py")
              if "__pycache__" not in p.parts]
     offenders: list[str] = []
     seen_exempt: set[tuple[str, str]] = set()
@@ -236,7 +236,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
       degraded to the expression alone, six of them would quietly excuse every
       module in the product.
     """
-    core = tmp_path / "backend" / "nm" / "core"
+    core = tmp_path / "nm" / "work_the_file"
     core.mkdir(parents=True)
     (core / "clean.py").write_text(
         "x = snippet(fact.statement, 70)\n", encoding="utf-8")
@@ -246,7 +246,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
 
     (core / "planted.py").write_text("y = fact.statement[:70]\n", encoding="utf-8")
     offenders, _seen, _count = sweep(tmp_path)
-    assert offenders == ["backend/nm/core/planted.py:1  fact.statement[:70]"], (
+    assert offenders == ["nm/work_the_file/planted.py:1  fact.statement[:70]"], (
         f"the sweep did not report the planted cut; it reported {offenders}")
 
     borrowed = next(expr for _path, expr in EXEMPT)
@@ -260,7 +260,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
 def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
     """THE SWEEP, over the whole package.
 
-    The population is drawn from `backend/nm/` rather than from the modules that were
+    The population is drawn from `nm/` rather than from the modules that were
     known to be wrong, because the site added tomorrow is in a sibling module
     -- which is precisely how the fold count went from three to six.
     """
@@ -273,7 +273,7 @@ def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
         "these cut a sentence to a character count:\n  "
         + "\n  ".join(offenders)
         + "\n\nA sentence is made of words and an advocate reads the result. "
-          "`nm.domain.text.snippet(text, limit)` cuts on the last word that "
+          "`nm.shared.text_contracts.snippet(text, limit)` cuts on the last word that "
           "fits and marks the elision, so the shortening is visible and the "
           "remainder is not silently reported as absent.")
 
@@ -292,10 +292,10 @@ def test_the_owner_is_actually_used():
     were deleted rather than moved, and it would pass identically if `snippet`
     were never called at all -- which is how a rule becomes an aspiration."""
     callers = {p.relative_to(ROOT).as_posix()
-               for p in (ROOT / "backend" / "nm").rglob("*.py")
+               for p in (ROOT / "nm").rglob("*.py")
                if "__pycache__" not in p.parts
                and "snippet(" in p.read_text(encoding="utf-8")}
-    callers.discard("backend/nm/domain/text.py")
+    callers.discard("nm/shared/text_contracts.py")
     assert len(callers) >= 12, (
         f"only {sorted(callers)} shorten prose through the owner. Thirty-six "
         f"cuts across fourteen modules were moved onto it; if that has "

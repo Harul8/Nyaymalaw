@@ -5,17 +5,17 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.core import dependency
-from nm.core.brain_assessment import AssessmentService
-from nm.core.brain_finalization import FinalizationService, SavedCheckReader
-from nm.core.brain_release import ReviewRefused
-from nm.domain.loop import StepKind
-from nm.domain.matter import Certainty, FactBasis, Thread
-from nm.ports.evidence import Binding, Treatment
-from nm.ports.model import ProviderUnavailable, Tier
 
+from nm.legal_brain.brain_assessment import AssessmentService
+from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.evidence_port import Binding, Treatment
+from nm.legal_brain.loop_contracts import StepKind
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import ProviderUnavailable, Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.work_the_file import dependency
+from nm.work_the_file.matter_contracts import Certainty, FactBasis, Thread
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import finding
 
@@ -194,7 +194,7 @@ def test_an_unreadable_transcript_leaves_prior_derived_checks_unassessed(tmp_pat
     store.transcripts_for = lambda *_: (_ for _ in ()).throw(OSError("Unavailable history"))
     result = finalizer.prepare(outcome, review)
     assert not result.subjects.derivation_history.observed
-    from nm.core.output_checks import run_output_checks
+    from nm.legal_brain.output_checks import run_output_checks
 
     checks = {row.gate_id: row for row in run_output_checks(result.subjects)}
     assert checks["G-CONSERVE"].assessed is None

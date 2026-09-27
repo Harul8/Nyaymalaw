@@ -10,7 +10,8 @@ shorter.
 from __future__ import annotations
 
 import pytest
-from nm.domain.issue import (
+
+from nm.legal_brain.issue_contracts import (
     Disposition,
     DispositionState,
     Effect,
@@ -21,8 +22,8 @@ from nm.domain.issue import (
     considered_not_pursued,
     facet,
 )
-from nm.domain.matter import Basis, Posture, Role, Side
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Basis, Posture, Role, Side
 
 pytestmark = pytest.mark.class_a
 

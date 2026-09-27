@@ -6,30 +6,25 @@ from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.knowledge.elements import CuratedElements
-from nm.adapters.knowledge.filing_requirement import CuratedFilingRequirements
-from nm.adapters.knowledge.governing_law import CuratedGoverningLaw
-from nm.adapters.knowledge.institution import CuratedPreInstitution
-from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
-from nm.adapters.knowledge.procedural_period import CuratedProceduralPeriods
-from nm.core.tool_catalogue import PracticeTables, catalogue_tools
-from nm.core.tools import (
-    Assessment,
-    Availability,
-    Boundary,
-    ToolContext,
-    ToolOutcome,
-    ToolRefused,
-    ToolRegistry,
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
+from nm.legal_brain.authority_weight_port import Weighed
+from nm.legal_brain.elements_adapter import CuratedElements
+from nm.legal_brain.evidence_port import (
+    Coverage,
+    EvidenceResult,
+    SourceDocument,
+    Treatment,
+    TreatmentState,
 )
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.loop import LoopIdentity, LoopMode, digest
-from nm.domain.matter import Fact, Matter, Provenance, Thread
-from nm.domain.turn_receipt import TurnReceipt, answer_payload
-from nm.ports.authority_weight import Weighed
-from nm.ports.evidence import Coverage, EvidenceResult, SourceDocument, Treatment, TreatmentState
-from nm.ports.model import SchemaViolation, ToolCall
-from nm.ports.search import (
+from nm.legal_brain.filing_requirement_adapter import CuratedFilingRequirements
+from nm.legal_brain.governing_law_adapter import CuratedGoverningLaw
+from nm.legal_brain.institution_adapter import CuratedPreInstitution
+from nm.legal_brain.interim_relief_adapter import CuratedInterimRelief
+from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, digest
+from nm.legal_brain.procedural_period_adapter import CuratedProceduralPeriods
+from nm.legal_brain.search_port import (
     CaseDiscovery,
     CaseExpansion,
     CaseHit,
@@ -40,6 +35,18 @@ from nm.ports.search import (
     PassageRead,
     ResolutionState,
 )
+from nm.legal_brain.tool_catalogue import PracticeTables, catalogue_tools
+from nm.legal_brain.tools import (
+    Assessment,
+    Availability,
+    Boundary,
+    ToolContext,
+    ToolOutcome,
+    ToolRefused,
+    ToolRegistry,
+)
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
 
 pytestmark = pytest.mark.class_a
 ALLOW = Boundary(True, "controlled test admission")
@@ -214,9 +221,8 @@ def test_exact_file_read_refuses_other_actor_or_stale_file_and_keeps_committed_w
 
 
 def test_catalogue_reads_the_current_transaction_inside_the_actual_controlled_loop(tmp_path):
-    from nm.core.tools import ToolRegistry
-    from nm.domain.loop import StopReason
-
+    from nm.legal_brain.loop_contracts import StopReason
+    from nm.legal_brain.tools import ToolRegistry
     from tests.test_the_controlled_brain_is_actually_wired import _brain
     from tests.test_the_loop_records_work_before_using_it import _limits, _response
 

@@ -29,11 +29,11 @@ import re
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 
+from nm.legal_brain.turn import TurnEngine, TurnInput, TurnRefused
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -130,7 +130,7 @@ def test_a_derived_value_keeps_its_key_and_gains_a_label():
     make two threads' limitations collide, which is a worse defect wearing a
     friendlier name.
     """
-    from nm.core import cascade
+    from nm.work_the_file import cascade
 
     d = cascade.Derived(name="limitation on thr_380e2b97f5a6", value="2027-04-15",
                         from_facts=("f1",), shown="the limitation on 'the sale'")
@@ -146,7 +146,7 @@ def test_a_derivation_with_no_label_falls_back_to_its_key():
     """An older transcript carries no label, and inventing one would show the
     advocate a string the earlier turn never used. The key is worse to read
     and it is TRUE, which is the right way round."""
-    from nm.core import cascade
+    from nm.work_the_file import cascade
 
     d = cascade.Derived(name="limitation on thr_380e2b97f5a6", value="2027-04-15",
                         from_facts=("f1",))

@@ -4,10 +4,10 @@ WHAT WAS ALREADY BUILT, MEASURED BEFORE ANYTHING WAS WRITTEN. The plan row was
 drafted from a count of mentions in the plan, not from the code, and the code
 already had four of the five pieces:
 
-    binding by court      `nm.knowledge.jurisdiction.binding_status`   BUILT
-    subsequent treatment  `nm.knowledge.citator`                       BUILT
+    binding by court      `nm.legal_brain.jurisdiction_sources.binding_status`   BUILT
+    subsequent treatment  `nm.legal_brain.citator_sources`                       BUILT
     ratio versus obiter   `Finding` / G-ATTRIB                         BUILT
-    bench strength        `nm.knowledge.identity.supersedes`           BUILT
+    bench strength        `nm.legal_brain.identity_sources.supersedes`           BUILT
     any of it reaching the advocate when two authorities disagree      NOT
 
 `supersedes` had no production caller -- its only callers were tests. Every
@@ -19,11 +19,11 @@ the RULE is not restated: it is applied where it already lives.
 from __future__ import annotations
 
 import pytest
-from nm.core.turn import TurnInput
-from nm.knowledge import authority_weight as curated
-from nm.knowledge.identity import CaseIdentity
-from nm.ports.authority_weight import Standing, Weighed, Weighing
 
+from nm.legal_brain import authority_weight_sources as curated
+from nm.legal_brain.authority_weight_port import Standing, Weighed, Weighing
+from nm.legal_brain.identity_sources import CaseIdentity
+from nm.legal_brain.turn import TurnInput
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -79,7 +79,7 @@ def test_this_module_states_no_hierarchy_rule_of_its_own():
     for own_rule in ("bench_size >", "bench_size <", "tier >", "tier <",
                      "Tier.", "supreme", "Supreme"):
         assert own_rule not in source, (
-            f"{own_rule!r} appears in nm.knowledge.authority_weight, which "
+            f"{own_rule!r} appears in nm.legal_brain.authority_weight_sources, which "
             f"means the hierarchy rule has a second home")
     assert "supersedes(" in source, "the one owner is not consulted at all"
 
@@ -178,14 +178,13 @@ def _authority(case_id: str, title: str) -> object:
     correctly never weighed -- so a served test built on it would exercise the
     early return and prove nothing about the ranking.
     """
-    from nm.ports.evidence import (
+    from nm.legal_brain.evidence_port import (
         Binding,
         ParaKind,
         SourceKind,
         Treatment,
         TreatmentState,
     )
-
     from tests.test_turn_contract import finding
 
     return finding(
@@ -205,11 +204,10 @@ def _authority(case_id: str, title: str) -> object:
 
 
 def _run(tmp_path, weigher):
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.core.turn import TurnEngine
-    from nm.ports.evidence import Coverage, EvidenceResult
-
+    from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+    from nm.legal_brain.turn import TurnEngine
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import (
         KEY,
         _Evidence,

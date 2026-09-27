@@ -36,15 +36,15 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain import issue as issue_domain
-from nm.domain.issue import Issue, IssueKind
-from nm.domain.matter import Side
-from nm.domain.quotable import Quotable
 
+from nm.legal_brain import issue_contracts as issue_domain
+from nm.legal_brain.issue_contracts import Issue, IssueKind
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Side
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -122,8 +122,8 @@ def test_an_issue_survives_a_read_that_forgets_it(tmp_path):
 
 
 def test_they_come_back_from_the_store_typed(tmp_path):
-    """`Thread.issues` is untyped because `nm.domain.issue` imports
-    `nm.domain.matter`, so the store returns plain dicts. Left implicit, the
+    """`Thread.issues` is untyped because `nm.legal_brain.issue_contracts` imports
+    `nm.work_the_file.matter_contracts`, so the store returns plain dicts. Left implicit, the
     next turn would merge dicts against Issues, match nothing, and every issue
     would look new every turn — this defect arriving through its own repair.
     """
@@ -157,7 +157,7 @@ def test_the_same_question_asked_twice_is_one_issue():
 def test_the_standing_issue_wins_a_match():
     """It carries a disposition a fresh read knows nothing about. Overwriting
     it would be the deletion again, wearing an update's clothes."""
-    from nm.domain.issue import Disposition, DispositionState
+    from nm.legal_brain.issue_contracts import Disposition, DispositionState
 
     standing = replace(
         _issue("Was notice served?"),
@@ -197,7 +197,7 @@ def test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept():
 def test_the_read_is_shown_what_is_already_on_the_thread():
     """Without this the read cannot restate anything — it does not know what
     is there, so every phrasing is a new issue."""
-    from nm.core.issues import build_prompt
+    from nm.legal_brain.issues import build_prompt
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
@@ -229,7 +229,7 @@ def test_a_restated_question_does_not_become_a_second_issue():
     any similarity test — which is why NOTHING HERE COMPARES SENTENCES. The
     read is shown the thread and names the id.
     """
-    from nm.core.issues import read
+    from nm.legal_brain.issues import read
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
@@ -249,7 +249,7 @@ def test_an_id_the_thread_does_not_hold_is_dropped():
     anyway; one pointing at ANOTHER thread's issue would merge two threads'
     work. Both are the silent direction, so the id is checked against what
     this thread actually holds."""
-    from nm.core.issues import read
+    from nm.legal_brain.issues import read
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,

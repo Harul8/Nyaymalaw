@@ -6,11 +6,12 @@ from copy import deepcopy
 from unittest.mock import Mock
 
 import pytest
-from nm.bootstrap.evaluation_models import VerifierOnly
-from nm.core.brain_finalization import CheckRead
-from nm.core.brain_release import ReviewRefused
-from nm.core.conversation import PRINCIPLES
-from nm.core.interaction_review import (
+
+from nm.legal_brain.brain_finalization import CheckRead
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.conversation import PRINCIPLES
+from nm.legal_brain.evaluation_models import VerifierOnly
+from nm.legal_brain.interaction_review import (
     COMMUNICATION_UNIT_REVIEW_SCHEMA,
     CRITERIA,
     InteractionReviewService,
@@ -21,11 +22,10 @@ from nm.core.interaction_review import (
     interpret_unit_review,
     whole_text_unit,
 )
-from nm.domain.budget import Completion, Spend
-from nm.domain.external_ai import ModelPermissionRefused
-from nm.domain.register import PEER
-from nm.ports.model import ModelResult, Prompt, Tier, Usage
-
+from nm.legal_brain.register_contracts import PEER
+from nm.shared.budget_contracts import Completion, Spend
+from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_port import ModelResult, Prompt, Tier, Usage
 from tests.test_interaction_words_require_an_independent_exact_review import (
     InteractionJudge,
     _case,
@@ -190,7 +190,7 @@ def test_a_valid_historic_proof_is_read_with_its_original_contract(tmp_path):
     assert reviewed.check_turn_id.endswith(":check:communication")
 
 
-@pytest.mark.parametrize("version", [True, False, "2", 0, 4, None])
+@pytest.mark.parametrize("version", [True, False, "2", 0, 8, None])
 def test_protocol_versions_are_closed_owned_integers(tmp_path, version):
     _, _, _, _, old = _case(tmp_path)
     with pytest.raises(ValueError):

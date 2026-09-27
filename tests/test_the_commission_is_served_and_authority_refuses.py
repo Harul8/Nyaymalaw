@@ -251,10 +251,10 @@ def _provision_deciding(matter_id, **overrides):
     from dataclasses import replace
     from datetime import timedelta
 
-    from nm.domain.advocate import utcnow
-    from nm.domain.authority import ActingAs, bind_authority
-    from nm.domain.commission import Commission
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.arrive.advocate_contracts import utcnow
+    from nm.open_matter.commission_contracts import Commission
+    from nm.shared.authority_contracts import ActingAs, bind_authority
 
     store = application().store
     matter = store.load(matter_id)
@@ -320,7 +320,7 @@ def test_decision_replay_is_one_receipt_and_reused_key_conflicts(client):
 
 
 def test_a_material_instruction_reopens_persisted_scope_not_just_a_flag(client):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     _record(client, matter_id, _full_body())
@@ -337,7 +337,7 @@ def test_a_material_instruction_reopens_persisted_scope_not_just_a_flag(client):
 
 
 def test_decision_and_refusal_write_failure_never_claim_success(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     _record(client, matter_id, _full_body())
@@ -435,7 +435,7 @@ def test_signing_out_removes_access_to_the_new_routes(client):
 
 
 def test_two_sequential_forms_cannot_overwrite_newer_instructions(client):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     path = f"/api/matters/{matter_id}/commission"
@@ -464,7 +464,7 @@ def test_two_sequential_forms_cannot_overwrite_newer_instructions(client):
 
 @pytest.mark.parametrize("precondition", [None, True, False, "1", -1, 1.0, [], {}])
 def test_commission_writes_require_a_real_observed_version(client, precondition):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     before = application().store.load(matter_id)
@@ -477,7 +477,7 @@ def test_commission_writes_require_a_real_observed_version(client, precondition)
 
 
 def test_a_future_version_is_not_permission_to_overwrite_the_present(client):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     before = application().store.load(matter_id)
@@ -490,7 +490,7 @@ def test_a_future_version_is_not_permission_to_overwrite_the_present(client):
 def test_a_change_after_the_observed_version_check_still_meets_store_cas(client, monkeypatch):
     from dataclasses import replace
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id = _matter(client)
     path = f"/api/matters/{matter_id}/commission"

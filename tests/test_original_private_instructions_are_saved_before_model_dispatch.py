@@ -2,15 +2,15 @@
 from __future__ import annotations
 
 import pytest
-from nm.core.original_instruction import (
+
+from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord, StepKind, StopReason
+from nm.shared.model_port import Prompt, ProviderUnavailable, ToolCall
+from nm.work_the_file.original_instruction import (
     InstructionRefused,
     OriginalInstruction,
     capture_original_instruction,
     read_original_instruction,
 )
-from nm.domain.loop import LoopEvent, LoopRecord, StepKind, StopReason
-from nm.ports.model import Prompt, ProviderUnavailable, ToolCall
-
 from tests.test_reviewed_private_preview_checks_saved_words import changed_payload
 from tests.test_the_loop_records_work_before_using_it import PROMPT, _limits, _response, _setup
 

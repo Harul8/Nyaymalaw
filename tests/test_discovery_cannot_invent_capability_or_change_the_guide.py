@@ -5,13 +5,14 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.core.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.core.tool_discovery import discovery_tools
-from nm.core.tools import Boundary, ToolContext, ToolRefused, foundation_tools
-from nm.domain.loop import LoopIdentity, LoopMode
-from nm.domain.matter import Matter
-from nm.ports.model import SchemaViolation, ToolCall
-from nm.ports.principles import PrinciplesSnapshot
+
+from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode
+from nm.legal_brain.principles_port import PrinciplesSnapshot
+from nm.legal_brain.tool_discovery import discovery_tools
+from nm.legal_brain.tools import Boundary, ToolContext, ToolRefused, foundation_tools
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 

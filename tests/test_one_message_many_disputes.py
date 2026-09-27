@@ -41,11 +41,12 @@ because `nobody counted` and `one dispute` are still different facts.
 from __future__ import annotations
 
 import pytest
-from nm.core import dispute
-from nm.core.dispute import Described, interpret
-from nm.core.threading import bind
-from nm.domain.matter import Fact, Matter, Provenance
-from nm.domain.quotable import Quotable
+
+from nm.legal_brain import dispute
+from nm.legal_brain.dispute import Described, interpret
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.threading import bind
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 
 
 def _matter() -> Matter:

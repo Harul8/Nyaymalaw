@@ -3,14 +3,14 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_release import ReviewService
-from nm.core.interaction_review import COMMUNICATION_UNIT_REVIEW_SCHEMA, CRITERIA
-from nm.core.preview_display import displayed_questions
-from nm.core.verifier import IndependentVerifier
-from nm.domain.budget import Completion
-from nm.ports.model import ModelResult, Tier, Usage
 
+from nm.legal_brain.brain_release import ReviewService
+from nm.legal_brain.interaction_review import COMMUNICATION_UNIT_REVIEW_SCHEMA, CRITERIA
+from nm.legal_brain.preview_display import displayed_questions
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import ModelResult, Tier, Usage
+from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_interaction_words_require_an_independent_exact_review import InteractionJudge
 from tests.test_private_brain_transport_cannot_approve_or_release_itself import (
     PRIVATE,
@@ -103,7 +103,7 @@ def test_malformed_historic_numeric_review_remains_failed_even_after_version_two
     assert author.tool_call.call_count == 1 and sum(len(j.prompts) for j in judges) == 1
 
 
-@pytest.mark.parametrize("version", [True, False, 0, 4, "2", None])
+@pytest.mark.parametrize("version", [True, False, 0, 8, "2", None])
 def test_trusted_grant_cannot_select_an_unknown_or_false_like_review_protocol(client, version):
     app, _, _, _ = approved(client)
     with pytest.raises(ValueError):

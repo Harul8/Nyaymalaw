@@ -5,7 +5,7 @@
 // a structural one: it holds if the filter is right and the rendering does
 // something else with the result.
 //
-// This runs the ACTUAL `renderTurn` from `frontend/app.js` against a stub DOM and
+// This runs the ACTUAL `renderTurn` from `nm/app/app.js` against a stub DOM and
 // asks the question the advocate cares about — is a disclosure ever inside a
 // collapsed <details>? — which no amount of reading the source can answer.
 //
@@ -104,7 +104,7 @@ const context = {
 };
 context.globalThis = context;
 vm.createContext(context);
-vm.runInContext(rendererSource, context, { filename: "frontend/app.js" });
+vm.runInContext(rendererSource, context, { filename: "nm/app/app.js" });
 
 // ------------------------------------------------------------- the facts ---
 // Python supplies EVERY actual Signal member via the domain enum. No copied

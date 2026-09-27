@@ -22,12 +22,12 @@ Raising every ceiling moves the cliff without removing it and leaves sixteen
 call sites each choosing a number. CLAUDE.md §4's question is not *where is
 the other copy* but *what makes a second copy impossible*, and the answer is
 that a call site cannot name a ceiling at all: `TurnEngine._read` takes the
-read's KEY, and `backend/nm/core/ceiling.py` decides.
+read's KEY, and `nm/legal_brain/ceiling.py` decides.
 
 WHAT THIS FILE REFUSES
 ------------------------
 The seventeenth. A `max_tokens=` literal added to a structured read in
-`backend/nm/core/` fails the build, and a read the product makes that has not
+`nm/core/` fails the build, and a read the product makes that has not
 declared whether it echoes fails with it.
 """
 from __future__ import annotations
@@ -36,13 +36,15 @@ import ast
 import pathlib
 
 import pytest
-from nm.core import ceiling
-from nm.domain import reads
+
+from assurance.common.module_roles import classify_sources, sources_for_roles
+from nm.legal_brain import ceiling
+from nm.legal_brain import reads_contracts as reads
+from tests.source_role_fixtures import role_tree
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CORE = ROOT / "backend" / "nm" / "core"
 
 #: Calls that may still name a ceiling, and why. `complete()` returns PROSE --
 #: one imperative sentence, one rewritten step, one courtesy line -- and its
@@ -52,10 +54,10 @@ CORE = ROOT / "backend" / "nm" / "core"
 PROSE_CALLS = frozenset({"complete"})
 
 
-def structured_ceilings() -> list[str]:
-    """Every `max_tokens=` on a STRUCTURED read in `backend/nm/core/`, from the AST."""
+def structured_ceilings(files=None) -> list[str]:
+    """Every `max_tokens=` on a STRUCTURED read in `nm/core/`, from the AST."""
     found: list[str] = []
-    for path in sorted(CORE.rglob("*.py")):
+    for path in (sources_for_roles("core") if files is None else files):
         if "__pycache__" in path.parts:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -71,7 +73,7 @@ def structured_ceilings() -> list[str]:
                 # A LITERAL is the defect. A call to the owner is the fix.
                 if isinstance(kw.value, ast.Constant):
                     found.append(
-                        f"{path.relative_to(ROOT).as_posix()}:{node.lineno} "
+                        f"{path.as_posix()}:{node.lineno} "
                         f"names max_tokens={kw.value.value}")
     return found
 
@@ -86,7 +88,7 @@ def test_no_structured_read_names_its_own_ceiling():
         "quotes has an output the size of its input, and a constant there "
         "fails by TRUNCATION -- a parse error, so the read is lost rather "
         "than short. Call `TurnEngine._read(prompt, schema, key)` and let "
-        "`backend/nm/core/ceiling.py` decide:\n  " + "\n  ".join(offenders))
+        "`nm/legal_brain/ceiling.py` decide:\n  " + "\n  ".join(offenders))
 
 
 def test_every_read_declares_whether_it_echoes():
@@ -125,7 +127,7 @@ def test_every_registered_non_scaling_read_has_an_explicit_budget():
 
 
 def test_theory_population_and_exact_posture_quotations_receive_scaling_budgets():
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
     short = Prompt(user='A short account.')
     long = Prompt(user='An adverse fact with its own unresolved reason. ' * 100)
     for key in ('theory', 'posture'):
@@ -140,7 +142,7 @@ def test_theory_population_and_exact_posture_quotations_receive_scaling_budgets(
 def test_an_echoing_read_gets_more_room_for_a_longer_brief():
     """THE POINT OF THE ROW. The dispute read's 200 was fine until the brief
     grew, and nothing about the ceiling knew the brief had grown."""
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
 
     short = Prompt(system="s" * 200, user="u" * 400)
     long_ = Prompt(system="s" * 200, user="u" * 12000)
@@ -154,7 +156,7 @@ def test_an_echoing_read_gets_more_room_for_a_longer_brief():
 def test_a_fixed_read_is_unmoved_by_a_longer_brief():
     """THE BOUND. A route decision is a verdict; scaling it with the brief
     would spend tokens on every long file for nothing."""
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
 
     short = Prompt(system="s" * 200, user="u" * 400)
     long_ = Prompt(system="s" * 200, user="u" * 12000)
@@ -166,7 +168,7 @@ def test_a_fixed_read_is_unmoved_by_a_longer_brief():
 def test_the_floor_and_the_cap_both_hold():
     """A one-line brief still gets room for the JSON around an empty answer,
     and a pasted judgment cannot ask for an unbounded completion."""
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
 
     tiny = Prompt(system="", user="hi")
     huge = Prompt(system="s" * 1000, user="u" * 400000)
@@ -179,7 +181,7 @@ def test_an_undeclared_read_gets_the_floor_and_not_a_guess():
     """The safe direction for a read nobody listed. It is never reached --
     `test_reads_registry` fails the build first -- and if it were, a floor is
     a bounded failure and an invented number is an unbounded one."""
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
 
     assert ceiling.for_read("no_such_read", Prompt(system="", user="x"),
                             echoes=False) == ceiling.FLOOR
@@ -187,33 +189,27 @@ def test_an_undeclared_read_gets_the_floor_and_not_a_guess():
 
 # ======================================================== positive controls ==
 
-def test_the_scan_can_see_a_planted_ceiling():
+def test_the_scan_can_see_a_planted_ceiling(tmp_path):
     """A CONTROL ON THE SWEEP. One that found nothing would pass the rule
     above while reading nothing -- which is how sixteen literals survived
     every check in this repository."""
-    planted = CORE / "_ceiling_probe.py"
-    planted.write_text(
+    roles = role_tree(tmp_path,
         "def f(model, prompt, schema, tier):\n"
         "    return model.structured(prompt, schema, tier, max_tokens=200)\n",
-        encoding="utf8")
-    try:
-        found = structured_ceilings()
-        assert any("_ceiling_probe.py" in f for f in found), (
-            f"the scan did not see a planted literal: {found}")
-    finally:
-        planted.unlink()
+    )
+    files = classify_sources(root=tmp_path, roles=roles).sources_for_roles("core")
+    found = structured_ceilings(files)
+    assert any("probe.py" in f and "max_tokens=200" in f for f in found), (
+        f"the scan did not see a planted literal: {found}")
 
 
-def test_the_scan_ignores_a_prose_completion():
+def test_the_scan_ignores_a_prose_completion(tmp_path):
     """AND THE BOUND ON THE CONTROL. `complete()` returns one sentence and
     may state a ceiling; a sweep that failed on it would be refusing correct
     code, which is how a check gets switched off."""
-    planted = CORE / "_ceiling_probe.py"
-    planted.write_text(
+    roles = role_tree(tmp_path,
         "def f(model, prompt, tier):\n"
         "    return model.complete(prompt, tier, max_tokens=120)\n",
-        encoding="utf8")
-    try:
-        assert not any("_ceiling_probe.py" in f for f in structured_ceilings())
-    finally:
-        planted.unlink()
+    )
+    files = classify_sources(root=tmp_path, roles=roles).sources_for_roles("core")
+    assert structured_ceilings(files) == []

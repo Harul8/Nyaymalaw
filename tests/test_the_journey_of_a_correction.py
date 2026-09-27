@@ -59,7 +59,7 @@ def journey(tmp_path_factory):
 
     sys.path.insert(0, str(ROOT))
 
-    sys.path.insert(0, str(ROOT / "backend"))
+    sys.path.insert(0, str(ROOT ))
     from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-correction")
@@ -205,7 +205,7 @@ def test_phase_1_a_brief_puts_a_current_deadline_on_the_board(page, journey):
     assert "stale" not in board, "the board reads stale before anything moved"
 
     matter = _the_matter(journey)
-    from nm.core.dependency import Ledger
+    from nm.work_the_file.dependency import Ledger
     ledger = Ledger.from_stored(matter.dependencies)
     assert ledger.nodes, "the served turn wrote no ledger"
     assert not ledger.stale(), [n.name for n in ledger.stale()]
@@ -247,7 +247,7 @@ def test_phase_3_a_correction_without_a_reason_does_not_submit(page, journey):
                   "f.dispatchEvent(new Event('submit', {cancelable: true}))")
     page.wait_for_timeout(300)
     matter = _the_matter(journey)
-    from nm.core.dependency import Ledger
+    from nm.work_the_file.dependency import Ledger
     assert not Ledger.from_stored(matter.dependencies).stale(), (
         "a correction with no reason reached the file")
 
@@ -289,7 +289,7 @@ def test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale(page, j
 
     # AND THE STORE AGREES WITH THE SCREEN.
     matter = _the_matter(journey)
-    from nm.core.dependency import Ledger, names_for
+    from nm.work_the_file.dependency import Ledger, names_for
     ledger = Ledger.from_stored(matter.dependencies)
     names = names_for(matter.threads[0].id)
     assert {n.name for n in ledger.stale()} == {names.limitation, names.deadline}

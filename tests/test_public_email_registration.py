@@ -14,17 +14,17 @@ from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from nm.adapters.store.directory import FileDirectory
-from nm.domain import attempts
-from nm.domain.advocate import (
+
+from nm.arrive import attempts_contracts as attempts
+from nm.arrive.advocate_contracts import (
     AdvocateIdentity,
     Enrolment,
     enrol,
     registration_email,
     utcnow,
 )
-from nm.ports.directory import AlreadyEnrolled, RegistrationUnavailable
-
+from nm.arrive.directory_port import AlreadyEnrolled, RegistrationUnavailable
+from nm.arrive.store_directory import FileDirectory
 from tests.test_password_reset_by_email import reset_link_for
 from tests.test_turn_contract import KEY
 
@@ -237,7 +237,7 @@ def test_public_email_preserves_distinct_usable_mailboxes(offered, expected):
 
 def test_public_registration_admission_counts_successes_and_survives_restart(
         client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
 
     now = utcnow()
     monkeypatch.setattr(api, "utcnow", lambda: now)
@@ -288,7 +288,7 @@ def test_public_registration_refuses_unreadable_admission(client, damage):
 
 def test_public_registration_refuses_failed_durable_admission_before_hashing(
         client, monkeypatch):
-    import nm.domain.advocate as advocate
+    import nm.arrive.advocate_contracts as advocate
 
     def cannot_write(path, blob):
         raise OSError("synthetic admission storage failure")
@@ -344,7 +344,7 @@ def test_public_admissions_cannot_turn_concurrent_creation_into_overwrite(tmp_pa
 
 
 def test_public_registration_capacity_never_evicts_live_admissions(tmp_path, monkeypatch):
-    import nm.adapters.store.directory as storage
+    import nm.arrive.store_directory as storage
 
     monkeypatch.setattr(storage, "REGISTRATION_MAX_RECORDS", 2)
     directory = FileDirectory(tmp_path, key=KEY)
@@ -365,7 +365,7 @@ def test_public_registration_capacity_never_evicts_live_admissions(tmp_path, mon
     {"Origin": "https://foreign.example", "Referer": "http://testserver/"},
 ])
 def test_public_registration_refuses_foreign_or_missing_origin(client, headers):
-    from nm.edge import api
+    from nm.app import api
 
     # This client has no browser-header fixture: absence must remain absent.
     with TestClient(api.app) as raw:
@@ -496,7 +496,8 @@ def test_password_reset_uses_the_same_new_password_bound_without_spending_the_li
 
 def test_validation_callback_is_registered_on_the_served_application(client):
     from fastapi.exceptions import RequestValidationError
-    from nm.edge import api
+
+    from nm.app import api
 
     assert client.app.exception_handlers[RequestValidationError] is api.invalid_request
     secret = "Do-not-return-this-private-value-87"
@@ -515,8 +516,7 @@ def test_validation_callback_is_registered_on_the_served_application(client):
 def test_an_unreadable_professional_predecessor_cannot_reach_the_update(client, monkeypatch):
     from dataclasses import replace
 
-    from nm.domain.professional_access import ProfessionalApproval
-
+    from nm.arrive.professional_access_contracts import ProfessionalApproval
     from tests.test_professional_approval_is_separate_from_account_access import (
         approve_fixture_account,
     )

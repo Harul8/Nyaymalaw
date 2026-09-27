@@ -27,8 +27,9 @@ import pathlib
 
 import pytest
 import yaml
-from nm.core.dependency import Currency, InputKind, Ledger, Rest, invalidate
-from nm.core.hearing import (
+
+from nm.act.drafting_contracts import Claim, DrafterBrief, Provenance, Readiness
+from nm.act.hearing import (
     NO_LOCATOR,
     PACK_SECTIONS,
     REQUIRED_SECTIONS,
@@ -45,11 +46,7 @@ from nm.core.hearing import (
     stale,
     unlocated,
 )
-from nm.domain.authority import ActingAs
-from nm.domain.commission import Commission, Deadline, Party, WorkProduct
-from nm.domain.drafting import Claim, DrafterBrief, Provenance, Readiness
-from nm.domain.handover import Assessed
-from nm.domain.witness import (
+from nm.act.witness_contracts import (
     EXPERT_FIELDS,
     WITNESS_FIELDS,
     Availability,
@@ -59,6 +56,10 @@ from nm.domain.witness import (
     refuse_leading,
     refuse_scripting,
 )
+from nm.carry.handover_contracts import Assessed
+from nm.open_matter.commission_contracts import Commission, Deadline, Party, WorkProduct
+from nm.shared.authority_contracts import ActingAs
+from nm.work_the_file.dependency import Currency, InputKind, Ledger, Rest, invalidate
 
 pytestmark = pytest.mark.class_a
 
@@ -382,7 +383,7 @@ def test_readiness_never_reaches_a_filing_state():
 
 
 def test_the_projection_says_this_is_not_an_accomplished_act():
-    from nm.core.hearing import projection
+    from nm.act.hearing import projection
 
     shown = projection(_pack())
     assert "rather than an accomplished step" in shown["said"]
@@ -416,7 +417,7 @@ def test_the_concession_boundary_travels_with_the_in_court_view():
 def test_no_function_in_the_module_concatenates_the_three_buckets():
     """STRUCTURAL, over the compiled module rather than its prose -- three
     checks in this build have matched a docstring and passed for it."""
-    import nm.core.hearing as mod
+    import nm.act.hearing as mod
 
     source = pathlib.Path(mod.__file__).read_text(encoding="utf-8")
     for pair in ('verified"] +', 'uncertain"] +', '"verified"]+'):

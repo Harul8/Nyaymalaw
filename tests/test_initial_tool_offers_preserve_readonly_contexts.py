@@ -2,8 +2,9 @@
 from dataclasses import replace
 
 import pytest
-from nm.core.tool_offers import OfferRefused, ToolOfferState
-from nm.ports.model import ToolDefinition, require_tool_request
+
+from nm.legal_brain.tool_offers import OfferRefused, ToolOfferState
+from nm.shared.model_port import ToolDefinition, require_tool_request
 
 pytestmark = pytest.mark.class_a
 

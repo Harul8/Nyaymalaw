@@ -5,12 +5,18 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
-from nm.adapters.store.directory import FileDirectory
-from nm.adapters.store.pending_accounts import PendingAccounts
-from nm.domain.account_confirmation import CODE_ATTEMPTS, ConfirmationRefused
-from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol, registration_consent, utcnow
-from nm.ports.directory import RegistrationUnavailable
 
+from nm.arrive.account_confirmation_contracts import CODE_ATTEMPTS, ConfirmationRefused
+from nm.arrive.advocate_contracts import (
+    AdvocateIdentity,
+    Enrolment,
+    enrol,
+    registration_consent,
+    utcnow,
+)
+from nm.arrive.directory_port import RegistrationUnavailable
+from nm.arrive.store_directory import FileDirectory
+from nm.arrive.store_pending_accounts import PendingAccounts
 from tests.registration import CONSENT
 from tests.test_turn_contract import KEY
 
@@ -42,7 +48,7 @@ def confirmation_code(client, email=EMAIL):
 
 
 def enable_local_registration(monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
     app = application()
     monkeypatch.setattr(app, 'environment', {
         **app.environment, 'NM_PUBLIC_REGISTRATION': 'local-test', 'NM_MODEL_PROVIDER': 'scripted'})
@@ -182,7 +188,7 @@ def test_correction_invalidates_only_the_owned_pending_code(pending):
 
 
 def test_interrupted_account_publication_leaves_no_partial_login(pending, monkeypatch):
-    from nm.adapters.store import directory as store
+    from nm.arrive import store_directory as store
     directory, now, request = pending
     response = directory.begin_pending_registration(request, now)
     real_link = store.os.link
@@ -199,7 +205,7 @@ def test_interrupted_account_publication_leaves_no_partial_login(pending, monkey
 
 
 def test_registration_is_disabled_without_delivery(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
     monkeypatch.setattr(application(), 'environment', {'NM_MODEL_PROVIDER': 'scripted'})
     assert client.get('/api/account-capabilities').json()['public_registration'] is False
     assert request_registration(client).status_code == 503
@@ -208,7 +214,7 @@ def test_registration_is_disabled_without_delivery(client, monkeypatch):
 
 
 def test_full_pending_population_reports_unavailable_without_activating(client, monkeypatch):
-    from nm.adapters.store import pending_accounts
+    from nm.arrive import store_pending_accounts as pending_accounts
     enable_local_registration(monkeypatch)
     monkeypatch.setattr(pending_accounts, 'MAX_PENDING', 1)
     assert request_registration(client).status_code == 202

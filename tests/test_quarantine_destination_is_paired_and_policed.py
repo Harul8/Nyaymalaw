@@ -11,14 +11,14 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from nm.adapters.policed_port import PolicedPort
-from nm.bootstrap.document_permission import build_quarantine
-from nm.bootstrap.egress_policy import egress_policy
-from nm.domain.egress import DataClass, EgressRefused, Gatekeeper, Policy, Processor, Sink
-from nm.domain.media import Quarantine
-from nm.ports.document_text import DocumentFormat
-from nm.ports.matter_documents import QuarantinePort, QuarantineRead
 
+from nm.open_matter.document_permission import build_quarantine
+from nm.open_matter.document_text_port import DocumentFormat
+from nm.open_matter.matter_documents_port import QuarantinePort, QuarantineRead
+from nm.open_matter.media_contracts import Quarantine
+from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Policy, Processor, Sink
+from nm.shared.egress_policy import egress_policy
+from nm.shared.policed_port_adapter import PolicedPort
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -111,7 +111,7 @@ def test_every_inspect_call_is_policed_with_actual_bytes_and_both_data_classes()
 
 
 def application(tmp_path, **kwargs):
-    from nm.bootstrap.composition import Application
+    from nm.app.composition import Application
 
     return Application(
         environment={
@@ -146,7 +146,7 @@ def test_actual_application_cannot_inject_a_raw_checker_under_missing_or_unrevie
 
 
 def test_actual_application_retains_policed_checker_in_request_bound_service(tmp_path, monkeypatch):
-    from nm.bootstrap import composition
+    from nm.app import composition
 
     # A unit-test-only reviewed recipient, not an authored production approval.
     local = egress_policy(ROOT)

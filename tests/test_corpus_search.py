@@ -20,11 +20,12 @@ import inspect
 import sqlite3
 
 import pytest
-from nm.adapters.search import authority
-from nm.adapters.search.authority import AuthorityIndexSearch
-from nm.domain.traceability import refuses
-from nm.ports.evidence import Coverage, Origin
-from nm.ports.search import CorpusSearch, IndexIdentity, SearchHit
+
+from nm.legal_brain import search_authority as authority
+from nm.legal_brain.evidence_port import Coverage, Origin
+from nm.legal_brain.search_authority import AuthorityIndexSearch
+from nm.legal_brain.search_port import CorpusSearch, IndexIdentity, SearchHit
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 
@@ -179,7 +180,7 @@ def test_the_search_surface_cannot_identify_an_act():
     this surface has no way to return an Act at all, so the exact-match path
     is the only path an Act can come down.
     """
-    from nm.ports.search import CorpusSearchPort
+    from nm.legal_brain.search_port import CorpusSearchPort
 
     methods = [n for n in dir(CorpusSearchPort) if not n.startswith("_")]
     # P21 GREW THIS SURFACE, and the population is re-registered rather than
@@ -284,7 +285,7 @@ def test_no_route_turns_a_search_hit_into_a_fact_on_a_matter():
     Asserted on the ROUTE TABLE rather than on the search module, because the
     danger is a convenience endpoint added next to it later.
     """
-    from nm.edge import api
+    from nm.app import api
 
     search_writes = [
         r for r in api.app.routes
@@ -311,7 +312,7 @@ def test_no_route_turns_a_search_hit_into_a_fact_on_a_matter():
         elif isinstance(node, ast.Import):
             reached.update(a.name for a in node.names)
     forbidden = sorted(m for m in reached
-                       if m.startswith(("nm.domain.matter", "nm.ports.store",
+                       if m.startswith(("nm.work_the_file.matter_contracts", "nm.shared.store_port",
                                         "nm.adapters.store")))
     assert not forbidden, (
         f"the search adapter imports {forbidden}. It reads an index and "

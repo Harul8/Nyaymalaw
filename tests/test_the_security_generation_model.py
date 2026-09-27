@@ -25,13 +25,14 @@ import pathlib
 import textwrap
 
 import pytest
-from nm.adapters.store.directory import FileDirectory
-from nm.domain.advocate import AccountSecurity, AdvocateIdentity, Enrolment, enrol
+
+from nm.arrive.advocate_contracts import AccountSecurity, AdvocateIdentity, Enrolment, enrol
+from nm.arrive.store_directory import FileDirectory
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "backend" / "nm" / "adapters" / "store" / "directory.py"
+ADAPTER = ROOT / "nm/arrive/store_directory.py"
 
 #: The key whose write is an account-security event.
 MATERIAL = ("credential",)

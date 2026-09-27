@@ -147,7 +147,7 @@ NEW_ROWS = {
         "resting on it is marked for review.\n"
         "LB-142-AC3: an inferred premise is stored as inferred and names its "
         "basis.",
-        "Matter, Thread and Fact in backend/nm/domain; the dependency ledger; "
+        "Matter, Thread and Fact in nm/domain; the dependency ledger; "
         "LB-07, LB-08, LB-29, LB-49, LB-58.",
     ]),
     "LB-143": ("L.4", [
@@ -181,7 +181,7 @@ NEW_ROWS = {
         "LB-143-AC3 (planted): an answer citing a provision its step log never "
         "retrieved is refused.",
         "LB-62, LB-63, LB-102, LB-128, LB-132; the professional access checks "
-        "in backend/nm/core.",
+        "in nm/core.",
     ]),
     "LB-144": ("L.3", [
         "Every number and date comes from a tool",
@@ -207,7 +207,7 @@ NEW_ROWS = {
         "produced it.\n"
         "LB-144-AC3: a computation on an inferred premise is labelled "
         "conditional, never definitive.",
-        "backend/nm/core/limitation.py and deadlines.py; G-PREMISE, G-CASCADE; "
+        "nm/legal_brain/limitation.py and deadlines.py; G-PREMISE, G-CASCADE; "
         "LB-20, LB-114, LB-124, LB-125.",
     ]),
     "LB-145": ("L.5", [
@@ -244,7 +244,7 @@ NEW_ROWS = {
         "LB-145-AC3: a turn whose scratchpad outgrows its budget keeps every "
         "locator through compaction.",
         "LB-07, LB-49, LB-58, LB-135; memory.advocate_words; "
-        "backend/nm/domain/summary.py.",
+        "nm/work_the_file/summary_contracts.py.",
     ]),
     "LB-146": ("L.8", [
         "Record, replay and compare: the loop tested on every commit",

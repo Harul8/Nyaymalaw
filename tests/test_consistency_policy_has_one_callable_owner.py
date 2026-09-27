@@ -3,10 +3,11 @@
 from types import SimpleNamespace
 
 import pytest
-from nm.core import consistency
-from nm.core.turn import TurnEngine
-from nm.domain.metrics import TurnMetrics
-from nm.ports.model import Completion, ModelError, ModelResult, Usage
+
+from nm.legal_brain import consistency
+from nm.legal_brain.turn import TurnEngine
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_port import Completion, ModelError, ModelResult, Usage
 
 pytestmark = pytest.mark.class_a
 CLAIMS = (consistency.Claim("typed_position", "The recorded outcome remains unresolved."),)

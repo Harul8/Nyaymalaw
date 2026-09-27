@@ -4,11 +4,12 @@ import smtplib
 import ssl
 
 import pytest
-from nm.adapters.mail.gmail import GMAIL_PROCESSOR, GmailMail
-from nm.bootstrap.composition import build_mail
-from nm.bootstrap.egress_policy import egress_policy
-from nm.domain.egress import Gatekeeper
-from nm.domain.mail import confirmation_mail
+
+from nm.app.composition import build_mail
+from nm.arrive.mail_contracts import confirmation_mail
+from nm.arrive.mail_gmail import GMAIL_PROCESSOR, GmailMail
+from nm.shared.egress_contracts import Gatekeeper
+from nm.shared.egress_policy import egress_policy
 
 pytestmark = pytest.mark.class_a
 
@@ -112,7 +113,7 @@ def test_replacing_local_access_token_is_used_on_next_send(transport):
 def test_composition_does_not_treat_configuration_as_processor_approval(tmp_path, transport):
     from pathlib import Path
 
-    from nm.domain.egress import EgressRefused
+    from nm.shared.egress_contracts import EgressRefused
 
     _, _, observed, _ = transport
     gate = Gatekeeper(

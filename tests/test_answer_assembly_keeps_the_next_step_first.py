@@ -4,9 +4,10 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.model.scripted import SCRIPTED_READS
-from nm.core.turn import _with_screens
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.legal_brain.turn import _with_screens
+from nm.shared.model_scripted import SCRIPTED_READS
 
 pytestmark = pytest.mark.class_a
 

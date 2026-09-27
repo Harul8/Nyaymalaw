@@ -25,7 +25,8 @@ from __future__ import annotations
 import inspect
 
 import pytest
-from nm.domain.binding import (
+
+from nm.open_matter.binding_contracts import (
     Basis,
     SourceBinding,
     rebind,
@@ -62,7 +63,7 @@ def test_nothing_in_the_binding_module_is_ever_given_a_list_of_threads():
     one -- the same argument `retention.request` makes by taking no state and
     `advice.maturity_of` makes by taking no maturity.
     """
-    from nm.domain import binding
+    from nm.open_matter import binding_contracts as binding
 
     for name, fn in vars(binding).items():
         if not callable(fn) or name.startswith("_") or not inspect.isfunction(fn):
@@ -128,7 +129,7 @@ def test_rebinding_reports_the_old_thread_and_does_not_invalidate_anything():
     """P28's ledger owns invalidation. A second path marking things stale from
     here would be two answers to *is this still true* -- the §4 defect on the
     subject where disagreement is most expensive."""
-    from nm.domain import binding
+    from nm.open_matter import binding_contracts as binding
 
     # WHAT THE MODULE CAN REACH, not what its prose mentions. A first version
     # grepped the source and failed on the docstring explaining this very
@@ -137,7 +138,7 @@ def test_rebinding_reports_the_old_thread_and_does_not_invalidate_anything():
     reachable = {n for n in dir(binding) if not n.startswith("__")}
     assert "invalidate" not in reachable and "dependency" not in reachable, (
         f"the binding module can reach {reachable & {'invalidate', 'dependency'}}; "
-        f"it reports what moved and nm.core.dependency decides what that "
+        f"it reports what moved and nm.work_the_file.dependency decides what that "
         f"reaches")
     assert binding.__name__.startswith("nm.domain"), (
         "a domain module importing core would invert the layering that keeps "
@@ -179,8 +180,8 @@ def test_a_rebinding_makes_exactly_the_old_threads_advice_reopen():
     """THE JOIN P25 IS FOR: attribution, corrected, invalidating the derived
     state that rested on it -- through P18's ledger, driven by P28, with no
     third mechanism in between."""
-    from nm.core import reassessment as ra
-    from nm.core.dependency import InputKind, Ledger, Rest
+    from nm.advise import reassessment as ra
+    from nm.work_the_file.dependency import InputKind, Ledger, Rest
 
     led = ra.record_advice(
         Ledger(), thread_id="t1", position="sue on the delivery note",

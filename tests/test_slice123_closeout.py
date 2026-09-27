@@ -20,12 +20,9 @@ from __future__ import annotations
 import json
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.gates import GATES, Response
-from nm.domain.traceability import refuses
-from nm.ports.evidence import (
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.legal_brain.evidence_port import (
     Coverage,
     EvidencePort,
     EvidenceResult,
@@ -33,8 +30,11 @@ from nm.ports.evidence import (
     SourceKind,
     Treatment,
 )
-from nm.ports.store import StaleWrite
-
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.gates_contracts import GATES, Response
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_port import StaleWrite
+from nm.shared.traceability_contracts import refuses
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed, build, finding
 
 pytestmark = pytest.mark.class_a
@@ -57,7 +57,7 @@ def test_a_turn_commits_atomically_and_the_commit_precedes_emission(tmp_path):
     engine = briefed(TurnEngine(
         store=_RefusingStore(tmp_path, key=KEY),
         evidence=_Evidence(),
-        model=__import__("nm.adapters.model.scripted", fromlist=["x"])
+        model=__import__("nm.shared.model_scripted", fromlist=["x"])
         .ScriptedModelAdapter(_model_config(),
                               responses={"__default__": "File within the window."})))
 
@@ -96,7 +96,7 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatc
     guards a corpus that does not exist yet, and the way to test either is to
     drive it rather than to wait for it.
     """
-    from nm.core import turn as turn_module
+    from nm.legal_brain import turn as turn_module
 
     class _Exhausting(EvidencePort):
         """Every fetch succeeds, so only the BOUND can stop the turn."""
@@ -155,7 +155,7 @@ def test_a_named_provision_does_not_spend_the_wandering_budget(tmp_path):
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._factors)
     assert "exploratory=False" in body, (
@@ -170,7 +170,7 @@ def test_a_named_provision_is_still_counted(tmp_path):
     bound stop matching reality."""
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._fetch)
     assert "metrics.evidence_rounds += 1" in src
@@ -217,7 +217,7 @@ def test_nothing_is_released_except_through_the_byte_boundary(client):
     """
     import inspect
 
-    from nm.edge import api
+    from nm.app import api
 
     source = inspect.getsource(api)
     assert "StreamingResponse" not in source and "EventSource" not in source, (
@@ -310,7 +310,7 @@ def test_a_finding_cannot_be_built_without_what_makes_it_auditable():
     # para_kind and treatment have NO DEFAULT: omitting them is a TypeError.
     import inspect
 
-    from nm.ports.evidence import Finding
+    from nm.legal_brain.evidence_port import Finding
     params = inspect.signature(Finding).parameters
     for field in ("locator", "span", "binding", "binding_for", "binding_reason",
                   "para_kind", "treatment", "supports"):
@@ -336,7 +336,7 @@ def test_a_proposition_carries_a_finding_and_an_inference_never_does():
     could NOT be established is marked `disclosure`, and the grounding gate
     holds asserting elements to their findings while leaving disclosures alone.
     """
-    from nm.core import grounding
+    from nm.legal_brain import grounding
 
     retrieved = (finding(),)          # Limitation Act Article 65
 

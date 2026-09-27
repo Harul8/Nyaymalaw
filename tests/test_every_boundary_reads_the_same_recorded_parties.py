@@ -4,9 +4,10 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.core.parties import on_file
-from nm.core.turn import TurnEngine
-from nm.domain.matter import Matter, Posture, Thread
+
+from nm.legal_brain.parties import on_file
+from nm.legal_brain.turn import TurnEngine
+from nm.work_the_file.matter_contracts import Matter, Posture, Thread
 
 pytestmark = pytest.mark.class_a
 

@@ -98,7 +98,7 @@ NEW_COLS = [
     "REVIEW BY RISK, in this order: (1) use it as an advocate -- put matters the owner knows well through "
     "the product and read the answers as a senior reads a junior's draft; every wrong answer becomes a "
     "golden case (LB-146); (2) the legal tables -- counsel review of every curated entry in "
-    "backend/nm/knowledge (elements, limitation edges, pre-institution conditions, governing code, interim "
+    "nm/knowledge (elements, limitation edges, pre-institution conditions, governing code, interim "
     "tests, procedural periods, filing requirements), each curated_from checked against the actual section "
     "or judgment, because no test can catch a rule that is legally wrong; (3) the rules -- the test names "
     "read as a rulebook, and the gate matrix; (4) that the controls bite -- the mutation tool breaks the code "

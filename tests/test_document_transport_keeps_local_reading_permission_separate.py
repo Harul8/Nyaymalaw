@@ -10,9 +10,10 @@ import hashlib
 from dataclasses import replace
 
 import pytest
-from nm.domain.media import Quarantine
-from nm.ports.document_text import DocumentFormat
-from nm.ports.matter_documents import QuarantineRead
+
+from nm.open_matter.document_text_port import DocumentFormat
+from nm.open_matter.matter_documents_port import QuarantineRead
+from nm.open_matter.media_contracts import Quarantine
 
 pytestmark = pytest.mark.class_a
 WORDS = "The original records payment on 4 March 2026. Amount ₹10000. Straße."

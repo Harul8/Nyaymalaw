@@ -80,7 +80,7 @@
           "kind": "existing"
         },
         {
-          "path": "pipeline/quality/releasegate.py",
+          "path": "pipeline/releasegate.py",
           "kind": "existing"
         },
         {
@@ -228,27 +228,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/directory.py",
+          "path": "nm/arrive/directory_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/store/directory.py",
+          "path": "nm/arrive/store_directory.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/advocate.py",
+          "path": "nm/arrive/advocate_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
@@ -456,19 +456,19 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         }
       ],
@@ -600,19 +600,19 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model/config.py",
+          "path": "nm/shared/model_config.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model/traced.py",
+          "path": "nm/shared/model_traced.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/obs",
+          "path": "nm/obs",
           "kind": "existing"
         }
       ],
@@ -666,15 +666,15 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "backend/nm/adapters/store/file_store.py",
+          "path": "nm/shared/store_file_store.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "backend/operations/rekey_matter_store.py",
+          "path": "operations/rekey_matter_store.py",
           "kind": "existing"
         }
       ],
@@ -766,19 +766,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/directory.py",
+          "path": "nm/arrive/directory_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/store/directory.py",
+          "path": "nm/arrive/store_directory.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
@@ -881,7 +881,7 @@
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
@@ -953,23 +953,23 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/store.py",
+          "path": "nm/shared/store_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/store/file_store.py",
+          "path": "nm/shared/store_file_store.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         }
       ],
@@ -1029,19 +1029,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/store.py",
+          "path": "nm/shared/store_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         }
       ],
@@ -1101,11 +1101,11 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/adapters/store/file_store.py",
+          "path": "nm/shared/store_file_store.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports/store.py",
+          "path": "nm/shared/store_port.py",
           "kind": "existing"
         },
         {
@@ -1168,23 +1168,23 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/engagement.py",
+          "path": "nm/open_matter/engagement_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/decision.py",
+          "path": "nm/advise/decision_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/screens.py",
+          "path": "nm/open_matter/screens.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -1254,19 +1254,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/conflict.py",
+          "path": "nm/open_matter/conflict.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/screens.py",
+          "path": "nm/open_matter/screens.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/engagement.py",
+          "path": "nm/open_matter/engagement_contracts.py",
           "kind": "existing"
         },
         {
@@ -1274,7 +1274,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/route.py",
+          "path": "nm/legal_brain/route.py",
           "kind": "existing"
         }
       ],
@@ -1347,15 +1347,15 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/media.py",
+          "path": "nm/open_matter/media_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/quarantine.py",
+          "path": "nm/open_matter/quarantine.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
@@ -1426,23 +1426,23 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/media.py",
+          "path": "nm/open_matter/media_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         }
       ],
@@ -1504,39 +1504,39 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/proof.py",
+          "path": "nm/legal_brain/proof_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/chronology.py",
+          "path": "nm/work_the_file/chronology.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/evidence_item.py",
+          "path": "nm/work_the_file/evidence_item.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/posture.py",
+          "path": "nm/legal_brain/posture.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/threading.py",
+          "path": "nm/legal_brain/threading.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -1599,15 +1599,15 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/cascade.py",
+          "path": "nm/work_the_file/cascade.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
@@ -1615,7 +1615,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/dependency.py",
+          "path": "nm/work_the_file/dependency.py",
           "kind": "existing"
         },
         {
@@ -1623,23 +1623,23 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         },
         {
@@ -1659,7 +1659,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/casefile.py",
+          "path": "nm/work_the_file/casefile.py",
           "kind": "existing"
         },
         {
@@ -1721,23 +1721,23 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/identity.py",
+          "path": "nm/legal_brain/identity_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/manifest.py",
+          "path": "nm/legal_brain/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "pipeline/indexing/build_identity_index.py",
+          "path": "pipeline/build_identity_index.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/source_registry.py",
+          "path": "nm/legal_brain/source_registry_sources.py",
           "kind": "planned"
         },
         {
-          "path": "pipeline/acquisition/inventory_legal_sources.py",
+          "path": "pipeline/inventory_legal_sources.py",
           "kind": "planned"
         },
         {
@@ -1805,23 +1805,23 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/knowledge/artefact.py",
+          "path": "nm/legal_brain/artefact_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/manifest.py",
+          "path": "nm/legal_brain/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/evidence/corpus.py",
+          "path": "nm/legal_brain/corpus_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/search/authority.py",
+          "path": "nm/legal_brain/search_authority.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         }
       ],
@@ -1888,71 +1888,71 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/search.py",
+          "path": "nm/legal_brain/search_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports/evidence.py",
+          "path": "nm/legal_brain/evidence_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/search/authority.py",
+          "path": "nm/legal_brain/search_authority.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/evidence/corpus.py",
+          "path": "nm/legal_brain/corpus_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/resolution.py",
+          "path": "nm/legal_brain/resolution_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/citator.py",
+          "path": "nm/legal_brain/citator_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/research.py",
+          "path": "nm/legal_brain/research.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/citation.py",
+          "path": "nm/legal_brain/citation_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/identity.py",
+          "path": "nm/legal_brain/identity_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/manifest.py",
+          "path": "nm/legal_brain/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/dependency.py",
+          "path": "nm/work_the_file/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/search/policed.py",
+          "path": "nm/legal_brain/search_policed.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "pipeline/indexing/build_identity_index.py",
+          "path": "pipeline/build_identity_index.py",
           "kind": "existing"
         },
         {
@@ -1964,15 +1964,15 @@
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         },
         {
@@ -2076,59 +2076,59 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/accrual.py",
+          "path": "nm/legal_brain/accrual.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/limitation.py",
+          "path": "nm/legal_brain/limitation.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/deadlines.py",
+          "path": "nm/work_the_file/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/thresholds.py",
+          "path": "nm/legal_brain/thresholds.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/proof.py",
+          "path": "nm/legal_brain/proof.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/premise.py",
+          "path": "nm/legal_brain/premise.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/dependency.py",
+          "path": "nm/work_the_file/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         },
         {
@@ -2218,51 +2218,51 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/proof.py",
+          "path": "nm/legal_brain/proof.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/theory.py",
+          "path": "nm/legal_brain/theory.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/thresholds.py",
+          "path": "nm/legal_brain/thresholds.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/answer.py",
+          "path": "nm/advise/answer_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/adversarial.py",
+          "path": "nm/legal_brain/adversarial.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/issues.py",
+          "path": "nm/legal_brain/issues.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/issue.py",
+          "path": "nm/legal_brain/issue_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/relief.py",
+          "path": "nm/advise/relief.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/consistency.py",
+          "path": "nm/legal_brain/consistency.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/gates.py",
+          "path": "nm/shared/gates_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
@@ -2337,43 +2337,43 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/intake.py",
+          "path": "nm/open_matter/intake.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/gaps.py",
+          "path": "nm/legal_brain/gaps.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/brief.py",
+          "path": "nm/advise/brief_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/briefing.py",
+          "path": "nm/legal_brain/briefing.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
@@ -2454,23 +2454,23 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/intake.py",
+          "path": "nm/open_matter/intake.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/media.py",
+          "path": "nm/open_matter/media_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -2541,27 +2541,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/answer.py",
+          "path": "nm/advise/answer_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/brief.py",
+          "path": "nm/advise/brief_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/grounding.py",
+          "path": "nm/legal_brain/grounding.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -2630,27 +2630,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/decision.py",
+          "path": "nm/advise/decision_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/answer.py",
+          "path": "nm/advise/answer_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/theory.py",
+          "path": "nm/legal_brain/theory.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -2714,19 +2714,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/cascade.py",
+          "path": "nm/work_the_file/cascade.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/decision.py",
+          "path": "nm/advise/decision_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         }
       ],
@@ -2790,27 +2790,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/drafting",
+          "path": "nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/decision.py",
+          "path": "nm/advise/decision_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/drafting.py",
+          "path": "nm/act/drafting_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/core/drafting.py",
+          "path": "nm/act/drafting.py",
           "kind": "planned"
         }
       ],
@@ -2876,27 +2876,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/drafting",
+          "path": "nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/decision.py",
+          "path": "nm/advise/decision_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports",
+          "path": "nm/ports",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/action.py",
+          "path": "nm/act/action_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/core/action.py",
+          "path": "nm/act/action.py",
           "kind": "planned"
         }
       ],
@@ -2961,43 +2961,43 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/drafting",
+          "path": "nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/theory.py",
+          "path": "nm/legal_brain/theory.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/proof.py",
+          "path": "nm/legal_brain/proof.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/engagement.py",
+          "path": "nm/open_matter/engagement_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/witness.py",
+          "path": "nm/act/witness_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/core/hearing.py",
+          "path": "nm/act/hearing.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/dependency.py",
+          "path": "nm/work_the_file/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         }
       ],
@@ -3070,35 +3070,35 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/summary.py",
+          "path": "nm/work_the_file/summary_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/deadlines.py",
+          "path": "nm/work_the_file/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/projections.py",
+          "path": "nm/work_the_file/projections_api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/handover.py",
+          "path": "nm/carry/handover_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/closure.py",
+          "path": "nm/close/closure_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/core/handover.py",
+          "path": "nm/carry/handover.py",
           "kind": "planned"
         }
       ],
@@ -3165,19 +3165,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/media.py",
+          "path": "nm/open_matter/media_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports/store.py",
+          "path": "nm/shared/store_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/store/file_store.py",
+          "path": "nm/shared/store_file_store.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         }
       ],
@@ -3249,7 +3249,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/review.py",
+          "path": "nm/shared/review_contracts.py",
           "kind": "planned"
         }
       ],
@@ -3331,11 +3331,11 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/legal_review.py",
+          "path": "nm/shared/legal_review_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/review.py",
+          "path": "nm/shared/review_contracts.py",
           "kind": "existing"
         }
       ],
@@ -3408,15 +3408,15 @@
       ],
       "boundaries": [
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.css",
+          "path": "nm/app/app.css",
           "kind": "existing"
         },
         {
-          "path": "frontend/index.html",
+          "path": "nm/app/index.html",
           "kind": "existing"
         },
         {
@@ -3428,19 +3428,19 @@
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/spoken.py",
+          "path": "nm/shared/spoken_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/authority.py",
+          "path": "nm/shared/authority_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/reassessment.py",
+          "path": "nm/advise/reassessment.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/hearing.py",
+          "path": "nm/act/hearing.py",
           "kind": "existing"
         }
       ],
@@ -3516,39 +3516,39 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/adapters/model/_budget.py",
+          "path": "nm/shared/model_budget.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model/traced.py",
+          "path": "nm/shared/model_traced.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/budget.py",
+          "path": "nm/shared/budget_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/ports/model.py",
+          "path": "nm/shared/model_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model/openai_adapter.py",
+          "path": "nm/shared/model_openai_adapter.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model/scripted.py",
+          "path": "nm/shared/model_scripted.py",
           "kind": "existing"
         }
       ],
@@ -3632,19 +3632,19 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/restore.py",
+          "path": "nm/shared/restore_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/operations/migrate_store.py",
+          "path": "operations/migrate_store.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/store/envelope.py",
+          "path": "nm/shared/store_envelope.py",
           "kind": "existing"
         }
       ],
@@ -3722,7 +3722,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/bootstrap/composition.py",
+          "path": "nm/app/composition.py",
           "kind": "existing"
         },
         {
@@ -3730,15 +3730,15 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/deployment.py",
+          "path": "nm/shared/deployment_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/egress.py",
+          "path": "nm/shared/egress_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/media_policy.py",
+          "path": "nm/open_matter/media_policy_contracts.py",
           "kind": "existing"
         },
         {
@@ -3817,7 +3817,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/incident.py",
+          "path": "nm/shared/incident_contracts.py",
           "kind": "planned"
         },
         {
@@ -3910,15 +3910,15 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/release.py",
+          "path": "nm/shared/release_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/deployment.py",
+          "path": "nm/shared/deployment_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "pipeline/quality/measure.py",
+          "path": "pipeline/measure.py",
           "kind": "planned"
         }
       ],
@@ -4228,23 +4228,23 @@
       ],
       "boundaries": [
         {
-          "path": "pipeline/acquisition/fetch_judgments.py",
+          "path": "pipeline/fetch_judgments.py",
           "kind": "existing"
         },
         {
-          "path": "pipeline/acquisition/scrape_judgments.py",
+          "path": "pipeline/scrape_judgments.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/manifest.py",
+          "path": "nm/legal_brain/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/acquisition.py",
+          "path": "nm/legal_brain/acquisition_sources.py",
           "kind": "existing"
         },
         {
-          "path": "pipeline/acquisition/reconcile_acquisition.py",
+          "path": "pipeline/reconcile_acquisition.py",
           "kind": "existing"
         },
         {
@@ -4256,7 +4256,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/source_registry.py",
+          "path": "nm/legal_brain/source_registry_sources.py",
           "kind": "existing"
         },
         {
@@ -4322,39 +4322,39 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/core/conflict.py",
+          "path": "nm/open_matter/conflict.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/deadlines.py",
+          "path": "nm/work_the_file/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/engagement.py",
+          "path": "nm/open_matter/engagement_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports",
+          "path": "nm/ports",
           "kind": "existing"
         },
         {
-          "path": "frontend/app.js",
+          "path": "nm/app/app.js",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/service.py",
+          "path": "nm/carry/service_contracts.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/core/service.py",
+          "path": "nm/carry/service.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         }
       ],
@@ -4418,23 +4418,23 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "backend/nm/core",
+          "path": "nm/core",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain",
+          "path": "nm/domain",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports",
+          "path": "nm/ports",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters",
+          "path": "nm/adapters",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge",
+          "path": "nm/edge",
           "kind": "existing"
         },
         {
@@ -4442,11 +4442,11 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/lead.py",
+          "path": "nm/legal_brain/lead_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/lead.py",
+          "path": "nm/legal_brain/lead.py",
           "kind": "existing"
         },
         {
@@ -4518,23 +4518,23 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "backend/nm/core",
+          "path": "nm/core",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain",
+          "path": "nm/domain",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/ports",
+          "path": "nm/ports",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters",
+          "path": "nm/adapters",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge",
+          "path": "nm/edge",
           "kind": "existing"
         },
         {
@@ -4542,11 +4542,11 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/delegation.py",
+          "path": "nm/legal_brain/delegation_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/delegation.py",
+          "path": "nm/legal_brain/delegation.py",
           "kind": "existing"
         },
         {
@@ -4619,27 +4619,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/knowledge/governing_law.py",
+          "path": "nm/legal_brain/governing_law_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/institution.py",
+          "path": "nm/legal_brain/institution_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/interim_relief.py",
+          "path": "nm/legal_brain/interim_relief_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/procedural_period.py",
+          "path": "nm/legal_brain/procedural_period_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/filing_requirement.py",
+          "path": "nm/legal_brain/filing_requirement_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/identity.py",
+          "path": "nm/legal_brain/identity_sources.py",
           "kind": "existing"
         }
       ],
@@ -4648,7 +4648,7 @@
         "The owner's selection of rows, and a practising Telangana advocate's counsel review of every entry."
       ],
       "outputs": [
-        "Curated tables in backend/nm/knowledge with curated_from on every entry, each behind a port and adapter.",
+        "Curated tables in nm/knowledge with curated_from on every entry, each behind a port and adapter.",
         "A counsel-review record per table before any dependent criterion is signed off."
       ],
       "steps": [
@@ -4704,27 +4704,27 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports/model.py",
+          "path": "nm/shared/model_port.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/adapters/model",
+          "path": "nm/adapters/model",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/loop.py",
+          "path": "nm/legal_brain/loop.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/adapters/model/anthropic_adapter.py",
+          "path": "nm/shared/model_anthropic_adapter.py",
           "kind": "planned"
         },
         {
-          "path": "backend/nm/adapters/model/replay.py",
+          "path": "nm/shared/model_replay.py",
           "kind": "planned"
         }
       ],
@@ -4793,19 +4793,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/ports",
+          "path": "nm/ports",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/knowledge/manifest.py",
+          "path": "nm/legal_brain/manifest_sources.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/edge/uploads.py",
+          "path": "nm/open_matter/uploads_api.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/tools.py",
+          "path": "nm/legal_brain/tools.py",
           "kind": "planned"
         }
       ],
@@ -4870,19 +4870,19 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/gates.py",
+          "path": "nm/shared/gates_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/grounding.py",
+          "path": "nm/legal_brain/grounding.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/consistency.py",
+          "path": "nm/legal_brain/consistency.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/verifier.py",
+          "path": "nm/legal_brain/verifier.py",
           "kind": "planned"
         }
       ],
@@ -4944,17 +4944,17 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "backend/nm/edge/api.py",
+          "path": "nm/app/api.py",
           "kind": "existing"
         },
         {
-          "path": "frontend/matter-workspace.js",
+          "path": "nm/legal_brain/matter-workspace.js",
           "kind": "existing"
         }
       ],
       "inputs": [
         "The saved step log (P49) and the citation detector on every channel (P51).",
-        "The matter board in frontend/matter-workspace.js."
+        "The matter board in nm/legal_brain/matter-workspace.js."
       ],
       "outputs": [
         "A server-sent-events endpoint beside /api/turn, and a collapsible scratch-pad panel, closed by default, saved with each turn."
@@ -5008,15 +5008,15 @@
       ],
       "boundaries": [
         {
-          "path": "backend/nm/domain/summary.py",
+          "path": "nm/work_the_file/summary_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/domain/matter.py",
+          "path": "nm/work_the_file/matter_contracts.py",
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/context.py",
+          "path": "nm/core/context.py",
           "kind": "planned"
         }
       ],
@@ -5084,7 +5084,7 @@
           "kind": "existing"
         },
         {
-          "path": "backend/nm/core/turn.py",
+          "path": "nm/legal_brain/turn.py",
           "kind": "existing"
         }
       ],

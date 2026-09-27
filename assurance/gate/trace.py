@@ -47,7 +47,7 @@ from assurance.common._console import utf8_console  # noqa: E402
 
 utf8_console()
 SPEC = ROOT / "assurance" / "specification"
-SRC = ROOT / "backend" / "nm"
+SRC = ROOT / "nm"
 TESTS = ROOT / "tests"
 RESULTS = ROOT / ".nm" / "eval_results.json"
 CURRENT_STATUS = ROOT / "docs" / "backlog" / "status.yaml"
@@ -216,12 +216,12 @@ def gate_consultations() -> dict[str, list[str]]:
     A string scan, deliberately. An AST walk would have to model every way a
     gate id can reach `metrics.fire` -- a constant, a lookup, a mapping like
     `_GROUNDING_STATE` -- and the ways it cannot see are exactly the ways a
-    real call site hides. `backend/nm/domain/gates.py` is excluded because it is the
+    real call site hides. `nm/shared/gates_contracts.py` is excluded because it is the
     registry: it names every gate by definition.
 
     OVER THE CODE AND NOT THE PROSE. Comments and docstrings are stripped
     first, because a module that EXPLAINS why it is not a gate was being
-    read as consulting one -- `backend/nm/domain/engagement.py` opens by saying it
+    read as consulting one -- `nm/open_matter/engagement_contracts.py` opens by saying it
     is not `G-SCOPE`, and T9 failed on the sentence that makes the file
     comprehensible. A check that makes it illegal to write about a gate is
     a check people route around.

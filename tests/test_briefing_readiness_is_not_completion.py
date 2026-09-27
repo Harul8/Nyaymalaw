@@ -18,10 +18,11 @@ LIVE gaps, so the briefing is not a fixed questionnaire.
 from __future__ import annotations
 
 import pytest
-from nm.core import briefing
-from nm.domain.lead import Action
-from nm.domain.matter import Matter
-from nm.domain.traceability import refuses
+
+from nm.legal_brain import briefing
+from nm.legal_brain.lead_contracts import Action
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 
@@ -99,8 +100,7 @@ def test_pause_and_resume_survive_and_do_not_answer():
 
 
 def test_paused_needs_round_trip_through_the_store(tmp_path):
-    from nm.adapters.store.file_store import FileMatterStore
-
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY
 
     store = FileMatterStore(tmp_path, key=KEY)
@@ -200,7 +200,7 @@ def test_a_paused_gap_stops_the_loop_and_blocks_completion(tmp_path):
     claiming intake done."""
     from dataclasses import replace
 
-    from nm.core.gaps import Gap, GapKind
+    from nm.legal_brain.gaps import Gap, GapKind
 
     c = _client(tmp_path)
     mid, ver, _ = _open_matter(c)

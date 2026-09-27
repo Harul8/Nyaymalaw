@@ -65,9 +65,9 @@ The two BM25 parameter files declare 414,710 bare-Act documents and 1,015,780 ca
 
 ### 2.3 What the running source is configured to read
 
-`backend/nm/bootstrap/composition.py` constructs the evidence adapter using the configured corpus directory or the repository's `legal_database/vector_store`, the curated manifest, the authority index and the identity index. Environment overrides can change these paths, so deployed health must report the effective values and identities.
+`nm/app/composition.py` constructs the evidence adapter using the configured corpus directory or the repository's `legal_database/vector_store`, the curated manifest, the authority index and the identity index. Environment overrides can change these paths, so deployed health must report the effective values and identities.
 
-The inspected `backend/nm/adapters/evidence/corpus.py` reads provisions from `chunks.db`, unions configured Act identifier patterns, uses the corpus citator and `.nm/identity.db`, and reads judgment search from `.nm/authority.db`. `backend/nm/adapters/search/authority.py` also uses that authority FTS index. Therefore the large legacy FAISS files are not evidence that these inspected runtime paths are performing dense retrieval. This is a bounded statement about the inspected composition and adapters, not an exhaustive assertion about every possible script or deployment.
+The inspected `nm/legal_brain/corpus_evidence.py` reads provisions from `chunks.db`, unions configured Act identifier patterns, uses the corpus citator and `.nm/identity.db`, and reads judgment search from `.nm/authority.db`. `nm/legal_brain/search_authority.py` also uses that authority FTS index. Therefore the large legacy FAISS files are not evidence that these inspected runtime paths are performing dense retrieval. This is a bounded statement about the inspected composition and adapters, not an exhaustive assertion about every possible script or deployment.
 
 The code has valuable safeguards: exact-source concepts, named searched stores, absent-versus-unavailable states, identity records, denylist handling and no silent authority fallback to a different whole-corpus scan. Preserve those contracts during migration.
 

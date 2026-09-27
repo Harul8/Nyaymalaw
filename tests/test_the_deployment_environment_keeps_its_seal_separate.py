@@ -10,8 +10,9 @@ from __future__ import annotations
 import os
 
 import pytest
-from nm.adapters.model.config import load_dotenv
-from nm.bootstrap.composition import ROOT, _refuse_a_shared_seal
+
+from nm.app.composition import ROOT, _refuse_a_shared_seal
+from nm.shared.model_config import load_dotenv
 
 
 def test_the_real_environment_does_not_share_its_seal():

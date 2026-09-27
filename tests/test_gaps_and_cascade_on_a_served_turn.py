@@ -20,13 +20,13 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.core import cascade
-from nm.core import evidence_item as inventory
-from nm.core import gaps as gap_queue
-from nm.core.turn import TurnInput
-from nm.domain.answer import ElementKind
 
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain import gaps as gap_queue
+from nm.legal_brain.turn import TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.work_the_file import cascade
+from nm.work_the_file import evidence_item as inventory
 from tests.test_turn_contract import _model_config, build, confirmed
 
 pytestmark = pytest.mark.class_a
@@ -343,8 +343,8 @@ def test_a_derivation_that_produced_nothing_records_no_row():
     this turn" look like an ordinary value that happens to be small, and
     `lost` would never see it.
     """
-    from nm.core.turn import _record
-    from nm.domain.matter import Thread
+    from nm.legal_brain.turn import _record
+    from nm.work_the_file.matter_contracts import Thread
 
     thread = Thread.create(label="a thread")
     rows: list = []
@@ -424,7 +424,7 @@ def test_the_cascade_counts_what_the_thread_holds_not_what_the_turn_showed():
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._derive)
     for what, held in (("issues", 'concluded.get("issues"'),
@@ -449,7 +449,7 @@ def test_a_derivation_that_really_vanishes_is_still_reported():
     false alarm it replaced -- the alarm was noise, and silence here is the
     forgetting this whole mechanism exists to find.
     """
-    from nm.core import cascade
+    from nm.work_the_file import cascade
 
     before = (cascade.Derived(name="evidence on thr_1", shown="evidence",
                               value="2", from_facts=(),

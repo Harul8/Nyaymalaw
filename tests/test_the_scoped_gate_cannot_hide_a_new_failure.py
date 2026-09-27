@@ -30,7 +30,7 @@ _PRODUCES = (
 _PYTEST = f"""
 =================================== FAILURES ===================================
 _______ test_every_produces_contract_has_a_type_or_is_declared_untyped ________
-E       AssertionError: these features declare a PRODUCES type that `backend/nm/` does not define:
+E       AssertionError: these features declare a PRODUCES type that `nm/` does not define:
 E           B1: TurnRoute
 E           B3: ConflictScreen
 E           B4: CompetenceAssessment
@@ -175,7 +175,7 @@ Found 1 error.
 
 def test_an_extra_pylint_failure_blocks():
     output = (
-        "backend/nm/core/probe.py:7:4: E0601: Using variable 'answer' before assignment "
+        "nm/core/probe.py:7:4: E0601: Using variable 'answer' before assignment "
         "(used-before-assignment)\n"
     )
     verdict = compare([], {"pylint": observed("pylint", output, failed=True)},

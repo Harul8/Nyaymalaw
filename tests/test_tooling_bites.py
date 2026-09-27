@@ -24,6 +24,8 @@ from pathlib import Path
 import pytest
 
 from assurance.common.homes import TOOLING, tooling_sources
+from assurance.gate.layercheck import main as layercheck_main
+from tests.source_role_fixtures import role_tree
 
 pytestmark = pytest.mark.class_a
 
@@ -60,42 +62,29 @@ def test_layercheck_passes_on_the_real_tree():
     assert "LAYERCHECK OK" in r.stdout
 
 
-def test_layercheck_rejects_core_importing_an_adapter(tmp_path):
+def test_layercheck_rejects_core_importing_an_adapter(tmp_path, capsys):
     """THE COUNTEREXAMPLE: the import that quietly destroys the class-A cadence."""
-    offender = ROOT / "backend" / "nm" / "core" / "_layercheck_probe.py"
-    offender.write_text(
-        "from nm.adapters import anything  # noqa: F401\n", encoding="utf8")
-    try:
-        r = run("layercheck.py")
-        assert r.returncode == 1, "layercheck did NOT reject core -> adapters"
-        assert "may not import nm.adapters" in r.stdout
-        assert "_layercheck_probe.py" in r.stdout
-    finally:
-        offender.unlink()
+    roles = role_tree(tmp_path, "from nm.shared.target import anything\n")
+    assert layercheck_main(root=tmp_path, roles=roles) == 1
+    result = capsys.readouterr().out
+    assert "may not import nm.adapters" in result
+    assert "probe.py" in result
 
 
-def test_layercheck_rejects_a_provider_client_in_core():
+def test_layercheck_rejects_a_provider_client_in_core(tmp_path, capsys):
     """THE COUNTEREXAMPLE: a model client reachable from the pure core."""
-    offender = ROOT / "backend" / "nm" / "core" / "_provider_probe.py"
-    offender.write_text("import openai  # noqa: F401\n", encoding="utf8")
-    try:
-        r = run("layercheck.py")
-        assert r.returncode == 1, "layercheck did NOT reject openai in core"
-        assert "'openai'" in r.stdout
-        assert "belong in nm.adapters" in r.stdout
-    finally:
-        offender.unlink()
+    roles = role_tree(tmp_path, "import openai\n")
+    assert layercheck_main(root=tmp_path, roles=roles) == 1
+    result = capsys.readouterr().out
+    assert "'openai'" in result
+    assert "belong in nm.adapters" in result
 
 
-def test_layercheck_allows_core_importing_ports():
+def test_layercheck_allows_core_importing_ports(tmp_path, capsys):
     """The rule must permit what it is supposed to permit."""
-    ok = ROOT / "backend" / "nm" / "core" / "_allowed_probe.py"
-    ok.write_text("from nm.ports import model  # noqa: F401\n", encoding="utf8")
-    try:
-        r = run("layercheck.py")
-        assert r.returncode == 0, f"layercheck wrongly rejected core -> ports:\n{r.stdout}"
-    finally:
-        ok.unlink()
+    roles = role_tree(tmp_path, "from nm.shared.target import model\n", target_role="ports")
+    assert layercheck_main(root=tmp_path, roles=roles) == 0
+    assert "LAYERCHECK OK" in capsys.readouterr().out
 
 
 # --------------------------------------------------------------------------
@@ -124,9 +113,9 @@ def test_trace_accepts_the_freshly_regenerated_spec():
 
 def test_trace_rejects_an_implements_naming_no_feature():
     """T2 COUNTEREXAMPLE: code claiming a feature id the spec does not contain."""
-    offender = ROOT / "backend" / "nm" / "core" / "_trace_probe.py"
+    offender = ROOT / "nm" / "work_the_file" / "_trace_probe.py"
     offender.write_text(textwrap.dedent("""
-        from nm.domain.traceability import implements
+        from nm.shared.traceability_contracts import implements
 
         @implements("ZZ-99")
         def not_a_real_feature():
@@ -185,7 +174,7 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
     spec = ROOT / "assurance" / "specification" / "features.yaml"
     backup = tmp_path / "features.yaml"
     _copy_bytes(spec, backup)
-    probe = ROOT / "backend" / "nm" / "core" / "_tested_probe.py"
+    probe = ROOT / "nm" / "work_the_file" / "_tested_probe.py"
     try:
         text = spec.read_text(encoding="utf8")
         import json
@@ -231,7 +220,7 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
 
         # Satisfy T3 so the failure we observe is unambiguously T4.
         probe.write_text(textwrap.dedent(f"""
-            from nm.domain.traceability import implements
+            from nm.shared.traceability_contracts import implements
 
             @implements({target_id!r})
             def probe():
@@ -396,7 +385,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     So a mutation with an anchor the source does not contain is planted, and
     the SAME function has to report it.
     """
-    planted = [("a mutation whose line no longer exists", "backend/nm/core/turn.py",
+    planted = [("a mutation whose line no longer exists", "nm/legal_brain/turn.py",
                 "    def _a_method_no_rename_ever_produced(self):",
                 "x", "some_test", "E-000")]
     reported = _stale_anchors(planted)
@@ -404,7 +393,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
 
     # AND A FILE THAT IS GONE ENTIRELY is a different failure with its own
     # message -- a rename of the module, not of the line.
-    moved = [("a mutation whose module moved", "backend/nm/core/no_such_module.py",
+    moved = [("a mutation whose module moved", "nm/core/no_such_module.py",
               "anything", "x", "some_test", "E-000")]
     assert "does not exist" in _stale_anchors(moved)[0]
 
@@ -412,7 +401,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     # happened. Presence alone passed it: both mutations ran, mutated the
     # wrong line, and were reported as SURVIVED -- which reads as a weak test
     # and was really an anchor that had stopped being specific.
-    ambiguous = [("a mutation whose anchor is not unique", "backend/nm/core/turn.py",
+    ambiguous = [("a mutation whose anchor is not unique", "nm/legal_brain/turn.py",
                   "        return None", "x", "some_test", "E-000")]
     reported = _stale_anchors(ambiguous)
     assert reported and "matches" in reported[0], (
@@ -436,8 +425,8 @@ def test_the_served_process_reports_which_code_it_loaded():
     server matches perfectly while serving yesterday's code, so the check would
     pass exactly when it needed to fail.
     """
-    import nm.edge.api as api
-    from nm.domain.identity import source_fingerprint
+    import nm.app.api as api
+    from nm.shared.identity_contracts import source_fingerprint
 
     assert not api.SERVING.startswith("unknown"), api.SERVING
 
@@ -483,9 +472,8 @@ def test_the_fingerprint_has_one_owner():
     Two digests would agree until the day they did not, and the disagreement
     would look like a code change rather than like a bug in the checker.
     """
-    from nm.domain.identity import source_fingerprint
-
     import assurance.common._fingerprint as shim
+    from nm.shared.identity_contracts import source_fingerprint
 
     assert shim.source_fingerprint is source_fingerprint
     src = Path(shim.__file__).read_text(encoding="utf8")
@@ -496,18 +484,18 @@ def test_the_fingerprint_has_one_owner():
 def test_a_fingerprint_notices_a_changed_source_file(tmp_path):
     """THE POSITIVE CONTROL. A digest that never changes would let every stale
     server pass, and it would look exactly like this one."""
-    from nm.domain.identity import source_fingerprint
+    from nm.shared.identity_contracts import source_fingerprint
 
-    (tmp_path / "backend" / "nm").mkdir(parents=True)
+    (tmp_path / "nm").mkdir(parents=True)
     (tmp_path / "tests").mkdir()
-    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1", encoding="utf8")
+    (tmp_path / "nm" / "a.py").write_text("x = 1", encoding="utf8")
     before = source_fingerprint(tmp_path)
 
-    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 2", encoding="utf8")
+    (tmp_path / "nm" / "a.py").write_text("x = 2", encoding="utf8")
     assert source_fingerprint(tmp_path) != before, "content change not seen"
 
     # A NEW FILE COUNTS TOO — the S4 wiring was mostly new modules.
-    (tmp_path / "backend" / "nm" / "b.py").write_text("x = 2", encoding="utf8")
+    (tmp_path / "nm" / "b.py").write_text("x = 2", encoding="utf8")
     assert source_fingerprint(tmp_path) != before, "an added module not seen"
 
     # AND A MISSING TREE IS NOT SILENTLY SKIPPED. Digesting nothing would make
@@ -684,10 +672,9 @@ def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
     Two questions, two digests. Conflating them is the defect the whole tool
     is about, arriving inside it.
     """
-    from nm.domain.identity import FINGERPRINTED
-
     from assurance.control_plane.evidence import IDENTITY_MANIFEST
     from assurance.gate.gatestamp import CHECKED
+    from nm.shared.identity_contracts import FINGERPRINTED
 
     assert CHECKED[0] == ".", (
         "the gate identity is not rooted at the repository, so an effective "
@@ -703,8 +690,8 @@ def test_the_gate_stamp_notices_a_tree_that_moved(tmp_path):
     is worse than none: it would make the pre-commit hook a formality."""
     from assurance.gate import gatestamp
 
-    (tmp_path / "backend" / "nm").mkdir(parents=True)
-    planted = tmp_path / "backend" / "nm" / "a.py"
+    (tmp_path / "nm").mkdir(parents=True)
+    planted = tmp_path / "nm" / "a.py"
 
     planted.write_text("x = 1" + chr(10), encoding="utf8")
     before = gatestamp.tree_digest(tmp_path)
@@ -726,8 +713,8 @@ def test_an_absent_tree_is_not_read_as_unchanged(tmp_path):
     result about the wrong thing."""
     from assurance.gate import gatestamp
 
-    (tmp_path / "backend" / "nm").mkdir(parents=True)
-    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1" + chr(10), encoding="utf8")
+    (tmp_path / "nm").mkdir(parents=True)
+    (tmp_path / "nm" / "a.py").write_text("x = 1" + chr(10), encoding="utf8")
     without = gatestamp.tree_digest(tmp_path)
 
     (tmp_path / "assurance" / "specification").mkdir(parents=True)
@@ -844,7 +831,7 @@ def test_the_model_scan_can_see_a_runner_that_would_spend():
     """S11. A scan over a module that happens to import none of these proves
     nothing about the scan."""
     planted = ast.parse(chr(10).join((
-        "from nm.bootstrap.composition import Application",
+        "from nm.app.composition import Application",
         "def go():",
         "    return Application().engine",
     )) + chr(10))
@@ -910,7 +897,7 @@ def test_a_failing_step_names_what_failed():
     what the gate already knew.
     """
     sys.path.insert(0, str(ROOT))
-    sys.path.insert(0, str(ROOT / "backend"))
+    sys.path.insert(0, str(ROOT ))
     from assurance.gate.check import _why
 
     proc = subprocess.run(
@@ -1033,7 +1020,7 @@ def test_the_child_is_told_to_write_utf8():
 
 def test_a_killed_mutation_run_is_restored_by_the_next_one(tmp_path):
     """B-127. A run under `timeout 420` was killed between the write and the
-    restore, and `backend/nm/edge/projections.py` kept `"bounded_by": "thread_count"`
+    restore, and `nm/work_the_file/projections_api.py` kept `"bounded_by": "thread_count"`
     where the product says `"matter_count"`. Every check after it was about
     mutated code.
 
@@ -1047,14 +1034,14 @@ def test_a_killed_mutation_run_is_restored_by_the_next_one(tmp_path):
 
     from assurance.gate import mutate
 
-    target = ROOT / "backend" / "nm" / "edge" / "projections.py"
+    target = ROOT / "nm/work_the_file/projections_api.py"
     original = target.read_text(encoding="utf8")
     was_marker = (mutate.IN_FLIGHT.read_text(encoding="utf8")
                   if mutate.IN_FLIGHT.exists() else None)
     try:
         mutate.IN_FLIGHT.parent.mkdir(parents=True, exist_ok=True)
         mutate.IN_FLIGHT.write_text(json.dumps({
-            "file": "backend/nm/edge/projections.py", "label": "planted",
+            "file": "nm/work_the_file/projections_api.py", "label": "planted",
             "original": original}), encoding="utf8")
         target.write_text(
             original.replace('"matter_count"', '"thread_count"', 1),
@@ -1112,9 +1099,8 @@ def test_the_scenario_runner_mints_its_own_advocate(
     that stops working.
     """
     monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path))
-    from nm.bootstrap.composition import Application
-
     from assurance.journeys.run_scenario import _mint_scenario_advocate
+    from nm.app.composition import Application
 
     password, note = _mint_scenario_advocate("adv_probe")
     assert password, note
@@ -1150,10 +1136,9 @@ def test_it_refuses_to_re_enrol_an_advocate_that_exists(
 def test_the_generated_password_satisfies_the_rule_it_will_be_checked_against():
     """A generator that cannot satisfy the rule it enrols against is the
     two-owners defect with the owners one function apart -- which
-    `backend/operations/enrol.py` already paid for once."""
-    from nm.domain.advocate import enrol
-
+    `operations/enrol.py` already paid for once."""
     from assurance.journeys.run_scenario import _generated_password
+    from nm.arrive.advocate_contracts import enrol
 
     for _ in range(20):
         enrol(_generated_password())  # raises if it does not satisfy the rule
@@ -1184,7 +1169,7 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
 
     `gate_consultations` string-scans every source line, which made it
     illegal to write ABOUT a gate -- and the sentence it failed on was the
-    single most useful one in `backend/nm/domain/engagement.py`, the one that
+    single most useful one in `nm/open_matter/engagement_contracts.py`, the one that
     separates the section from the control.
 
     ALL THREE FORMS ARE PLANTED AND THE FIRST IS THE IMPORTANT ONE.
@@ -1192,10 +1177,10 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
     would have turned T9 into a check that cannot fail -- the defect it
     was fixing, wearing the other face.
 
-    A REAL FILE UNDER `backend/nm/`, because the scan walks that tree. A fixture
+    A REAL FILE UNDER `nm/`, because the scan walks that tree. A fixture
     anywhere else would prove the parser works, not that the scan looks.
     """
-    planted = ROOT / "backend" / "nm" / "core" / "_gate_scan_probe.py"
+    planted = ROOT / "nm" / "work_the_file" / "_gate_scan_probe.py"
     planted.write_text(chr(10).join(body) + chr(10), encoding="utf8")
     try:
         from assurance.gate.trace import gate_consultations

@@ -22,17 +22,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: The advocate service's Python package. The package NAME stays `nm`; only its
-#: directory moved, so no import changed.
-BACKEND_PACKAGE = "backend/nm"
+#: The advocate service's package at the owning repository root. Architectural
+#: roles come from the manifest, not the new journey directory names.
+BACKEND_PACKAGE = "nm"
 
-#: The advocate UI the backend mounts at `/`.
-FRONTEND = "frontend"
+#: Compatibility root for co-located browser sources. A specific served asset
+#: is resolved through browser_assets(), never by appending its URL basename.
+FRONTEND = "nm"
 
 #: Every top-level home a repository path can start with. A check that reads paths
 #: out of prose (the defect register names its checks that way) matches on this
 #: tuple, so a path under a new home is recognised rather than silently skipped.
-HOMES = ("backend", "frontend", "pipeline", "assurance", "docs", "tests",
+# Historic backend/frontend prefixes remain recognizable in dated references;
+# they are not current production or browser scan populations.
+HOMES = ("nm", "operations", "backend", "frontend", "pipeline", "assurance", "docs", "tests",
          "development_environment")
 
 #: Every home of repository tooling -- what `tools/` held before the move. A sweep
@@ -49,7 +52,7 @@ TOOLING = (
     "assurance/common",
     "assurance/hooks",
     "pipeline",
-    "backend/operations",
+    "operations",
     "development_environment/one_off_tools",
     "development_environment/developer_tooling",
 )
@@ -61,3 +64,26 @@ def tooling_sources(pattern: str = "*.py") -> list[Path]:
         path for home in TOOLING for path in (ROOT / home).rglob(pattern)
         if path.is_file() and "__pycache__" not in path.parts
     )
+
+
+def production_sources(*, root: Path = ROOT) -> list[Path]:
+    """The full physical source population, never a former layer directory."""
+    from assurance.common.module_roles import source_files
+
+    return list(source_files(root=root))
+
+
+def browser_assets(*, root: Path = ROOT) -> dict[str, Path]:
+    """Every actual served URL basename and its co-located source owner."""
+    from assurance.common.module_roles import LayoutError, load_module_roles
+
+    assets = dict(load_module_roles(root=root).assets)
+    if not assets or any(not path.is_file() or path.is_symlink()
+                         or root.resolve() not in path.resolve().parents
+                         for path in assets.values()):
+        raise LayoutError("served browser source population is missing or escapes its root")
+    return assets
+
+
+def browser_sources(*, root: Path = ROOT) -> list[Path]:
+    return sorted(set(browser_assets(root=root).values()))

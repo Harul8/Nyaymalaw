@@ -6,13 +6,14 @@ import hashlib
 from dataclasses import replace
 
 import pytest
-from nm.domain.intake import MAX_CHUNK_BYTES, MAX_UPLOAD_BYTES
+
+from nm.open_matter.intake_contracts import MAX_CHUNK_BYTES, MAX_UPLOAD_BYTES
 
 pytestmark = pytest.mark.class_a
 
 
 def _application():
-    from nm.edge.api import application
+    from nm.app.api import application
 
     return application()
 
@@ -71,9 +72,8 @@ def test_upload_first_is_real_without_a_placeholder_brief_or_a_model_call(client
 
 
 def test_original_resumes_after_adapter_restart_with_real_digest_and_held_locator(client, tmp_path):
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.edge.uploads import UploadService
-
+    from nm.open_matter.uploads_api import UploadService
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY
 
     data = b"%PDF-1.7\nSYNTHETIC-NOT-A-VALID-PDF\n"
@@ -245,7 +245,7 @@ def test_wrong_declared_hash_is_failed_integrity_not_received(client):
 def test_failed_cas_leaves_old_receipt_and_only_unreferenced_sealed_bytes(
     client, tmp_path, monkeypatch
 ):
-    from nm.ports.store import StaleWrite
+    from nm.shared.store_port import StaleWrite
 
     matter_id = _shell(client)
     row = _begin(client, matter_id, b"PRIVATE-SYNTHETIC")
@@ -288,14 +288,13 @@ def test_object_io_failure_and_corruption_never_publish_success(client, monkeypa
 
 
 def test_original_objects_cannot_be_overwritten_or_decrypted_under_another_matter(tmp_path):
-    from nm.adapters.store.envelope import CrossMatterAccess
-    from nm.adapters.store.file_store import FileMatterStore
-
+    from nm.shared.store_envelope import CrossMatterAccess
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY
 
     store = FileMatterStore(tmp_path, key=KEY)
     # Custody belongs to an actual initial matter, never to an upload writer.
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     store.commit(Matter(id="m_one", advocate_id="owner", title="Upload custody", version=1),
                  expected_version=0)
@@ -315,7 +314,7 @@ def test_original_objects_cannot_be_overwritten_or_decrypted_under_another_matte
 
 @pytest.mark.parametrize("method", ["put", "read"])
 def test_each_original_byte_port_method_is_policed_before_its_adapter(client, monkeypatch, method):
-    from nm.domain.egress import EgressRefused, Gatekeeper, Policy
+    from nm.shared.egress_contracts import EgressRefused, Gatekeeper, Policy
 
     wrapper = _application().uploads.objects
     called = []
@@ -331,7 +330,7 @@ def test_each_original_byte_port_method_is_policed_before_its_adapter(client, mo
 
 
 def test_receipt_metadata_capacity_is_bounded_independently_of_declared_bytes(client, monkeypatch):
-    import nm.edge.uploads as uploads
+    import nm.open_matter.uploads_api as uploads
 
     matter_id = _shell(client)
     row = _begin(client, matter_id, b"abc")
@@ -380,10 +379,9 @@ def test_real_concurrent_chunk_writers_cannot_overwrite_the_accepted_receipt(
         client, tmp_path, refused_bytes):
     from threading import Barrier
 
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.edge.uploads import UploadService
-    from nm.ports.store import StaleWrite
-
+    from nm.open_matter.uploads_api import UploadService
+    from nm.shared.store_file_store import FileMatterStore
+    from nm.shared.store_port import StaleWrite
     from tests.test_turn_contract import KEY
 
     matter_id = _shell(client)
@@ -434,8 +432,8 @@ def test_real_concurrent_chunk_writers_cannot_overwrite_the_accepted_receipt(
 
 
 def test_new_upload_first_shell_is_not_overwritable_by_another_expected_zero_commit(client):
-    from nm.domain.matter import Matter
-    from nm.ports.store import StaleWrite
+    from nm.shared.store_port import StaleWrite
+    from nm.work_the_file.matter_contracts import Matter
 
     matter_id = _shell(client)
     store = _application().store

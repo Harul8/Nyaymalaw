@@ -1,10 +1,10 @@
 """A sealed stopped outcome is public metadata, never private or completed prose."""
 import pytest
-from nm.core.reviewed_preview import STOPPED_MESSAGES
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits, StopReason
-from nm.ports.model import ProviderUnavailable
 
+from nm.legal_brain.loop_contracts import LoopLimits, StopReason
+from nm.legal_brain.reviewed_preview import STOPPED_MESSAGES
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ProviderUnavailable
 from tests.test_reviewed_private_preview_checks_saved_words import (
     changed_payload,
     read,

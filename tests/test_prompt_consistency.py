@@ -14,16 +14,18 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from nm.core import adversarial, chronology, posture, theory
-from nm.core.conversation import PRINCIPLES, guided
-from nm.core.date_resolution import resolve
-from nm.core.turn import _with_screens
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.matter import Basis, Fact, Posture, Provenance, Role, Side, Thread
-from nm.domain.metrics import TurnMetrics
-from nm.domain.quotable import Quotable
-from nm.domain.register import PEER
-from nm.ports.model import Prompt
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.legal_brain import adversarial, posture, theory
+from nm.legal_brain.conversation import PRINCIPLES, guided
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.register_contracts import PEER
+from nm.legal_brain.turn import _with_screens
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_port import Prompt
+from nm.work_the_file import chronology
+from nm.work_the_file.date_resolution import resolve
+from nm.work_the_file.matter_contracts import Basis, Fact, Posture, Provenance, Role, Side, Thread
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +51,10 @@ SITES = {
     "interaction_review:build_evidence_prompt",
     "interaction_review:build_prompt",
     "interaction_review:build_unit_prompt",
+    "interaction_review:build_work_prompt",
+    "interaction_review:build_quote_prompt",
+    "interaction_review:build_work_reference_prompt",
+    "interaction_review:build_premise_prompt",
     "issues:build_prompt",
     "nested_research:run",
     "parties:build_prompt",
@@ -63,12 +69,16 @@ SITES = {
     "turn:_recommend",
     "turn:_courtesy",
     "verifier:verification_prompt",
+    "working_scope:_request",
+    "working_explanation:_rationale_request",
 }
 
 
-def _sites(root):
+def _sites(root=None):
+    from assurance.common.module_roles import original_stem, sources_for_roles
+
     found = {}
-    for path in root.glob("*.py"):
+    for path in (root.glob("*.py") if root is not None else sources_for_roles("core")):
         for fn in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 count = sum(
@@ -80,12 +90,13 @@ def _sites(root):
                     for n in ast.walk(fn)
                 )
                 if count:
-                    found[f"{path.stem}:{fn.name}"] = count
+                    stem = path.stem if root is not None else original_stem(path)
+                    found[f"{stem}:{fn.name}"] = count
     return found
 
 
 def test_all_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
-    found = _sites(ROOT / "backend/nm/core")
+    found = _sites()
     assert found == dict.fromkeys(SITES, 1), found
     # This guard can fail: neither an empty scope nor a new call is a green pass.
     assert _sites(tmp_path) != dict.fromkeys(SITES, 1)
@@ -99,9 +110,11 @@ def test_all_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
 
 
 def test_composed_systems_have_one_policy_owner_and_no_known_conflicting_rules():
+    from assurance.common.module_roles import current_module
+
     reviewed = []
     for name in sorted({site.split(":")[0] for site in SITES}):
-        module = importlib.import_module(f"nm.core.{name}")
+        module = importlib.import_module(current_module(f"nm.core.{name}"))
         for key, value in vars(module).items():
             if key.endswith("SYSTEM") and isinstance(value, str):
                 system = guided(Prompt(system=value, user="source data")).system
@@ -123,8 +136,7 @@ def test_composed_systems_have_one_policy_owner_and_no_known_conflicting_rules()
 
 
 def test_dispatched_interaction_checker_has_exact_data_and_current_owned_guidance(tmp_path):
-    from nm.core.interaction_review import COMMUNICATION_REVIEW_SCHEMA, CRITERIA
-
+    from nm.legal_brain.interaction_review import COMMUNICATION_REVIEW_SCHEMA, CRITERIA
     from tests.test_interaction_words_require_an_independent_exact_review import _case
 
     _, _, outcome, judge, service = _case(tmp_path, text="Understood.", message="Thank you.")
@@ -165,7 +177,7 @@ def test_dispatched_interaction_checker_has_exact_data_and_current_owned_guidanc
 
 def _controlled_prompt_problems(prompt, messages, *, expected_user, file_words):
     """Review actual dispatched author bytes, not an artificially guided copy."""
-    from nm.core.brain_context import UncertaintyDimension
+    from nm.legal_brain.brain_context import UncertaintyDimension
 
     errors = []
     system = prompt.system or ""
@@ -205,8 +217,8 @@ def _controlled_prompt_problems(prompt, messages, *, expected_user, file_words):
 
 def _research_prompt_problems(prompt, definitions, messages, *, kind, question, issues):
     """Review the real child prefix/task boundaries, not another assembled prompt."""
-    from nm.core.brain_context import UncertaintyDimension
-    from nm.core.opposition_work import PASSES
+    from nm.legal_brain.brain_context import UncertaintyDimension
+    from nm.legal_brain.opposition_work import PASSES
 
     errors = []
     if prompt.system.count(PRINCIPLES) != 1 or prompt.system.count(PEER) != 1:
@@ -249,9 +261,8 @@ def _research_prompt_problems(prompt, definitions, messages, *, kind, question, 
     "research", "oppose", "oppose_early", "oppose_full", "oppose_matter"])
 def test_actual_research_and_opposition_dispatch_has_reviewed_reasoning_and_communication(kind,
                                                                                        tmp_path):
-    from nm.domain.loop import StopReason
-    from nm.ports.model import ToolCall
-
+    from nm.legal_brain.loop_contracts import StopReason
+    from nm.shared.model_port import ToolCall
     from tests.test_nested_research_has_one_budget_and_one_writer import finish as generic_finish
     from tests.test_opposition_work_is_three_distinct_private_source_tasks import (
         args,
@@ -295,8 +306,7 @@ def test_actual_research_and_opposition_dispatch_has_reviewed_reasoning_and_comm
 
 
 def _actual_controlled_prompt(tmp_path):
-    from nm.ports.model import ToolCall
-
+    from nm.shared.model_port import ToolCall
     from tests.test_the_controlled_brain_is_actually_wired import _brain
     from tests.test_the_loop_records_work_before_using_it import _limits, _response
 
@@ -383,7 +393,7 @@ def test_controlled_prompt_review_rejects_missing_disciplines_or_file_boundary(t
 
 def _verifier_prompt_problems(prompt, schema, *, expected_payload):
     """The independent critic has a separate data/review task, not a chat task."""
-    from nm.core.verifier import VERIFY_SYSTEM
+    from nm.legal_brain.verifier import VERIFY_SYSTEM
 
     errors = []
     if prompt.system != VERIFY_SYSTEM or prompt.operation != "independent_claim_verification":
@@ -414,8 +424,7 @@ def _verifier_prompt_problems(prompt, schema, *, expected_payload):
 
 
 def _actual_verifier_prompt():
-    from nm.core.verifier import EvidenceSpan, IndependentVerifier
-
+    from nm.legal_brain.verifier import EvidenceSpan, IndependentVerifier
     from tests.test_independent_claim_verifier import Judge, finding, package
 
     contrary = finding(
@@ -448,10 +457,10 @@ def _actual_verifier_prompt():
 
 
 def test_private_verifier_prompt_carries_evidence_reason_and_unknown_without_author_instructions():
-    from nm.domain.register import STRUCTURED_ONLY
+    from nm.legal_brain.register_contracts import STRUCTURED_ONLY
 
     assert "verifier:verification_prompt" in SITES
-    assert "backend/nm/core/verifier.py::VERIFY_SYSTEM" in STRUCTURED_ONLY
+    assert "nm/legal_brain/verifier.py::VERIFY_SYSTEM" in STRUCTURED_ONLY
     prompt, schema, payload = _actual_verifier_prompt()
     assert _verifier_prompt_problems(prompt, schema, expected_payload=payload) == []
     for principle in (
@@ -617,8 +626,7 @@ def test_invalid_cross_dispute_output_is_never_a_clean_bill(bad):
 
 
 def test_exposure_uses_substantive_positions_and_labels_its_output(tmp_path, monkeypatch):
-    from nm.adapters.model.scripted import SCRIPTED_READS
-
+    from nm.shared.model_scripted import SCRIPTED_READS
     from tests.test_adversarial_on_a_served_turn import build
 
     engine, _ = build(tmp_path)
@@ -674,7 +682,7 @@ def test_exposure_uses_substantive_positions_and_labels_its_output(tmp_path, mon
 
 
 def test_scripted_exposure_double_reaches_a_positive_case_using_current_schema():
-    from nm.adapters.model.scripted import scripted_exposure
+    from nm.shared.model_scripted import scripted_exposure
 
     prompt = adversarial.build_exposure_prompt((("thr_a", "Recovery"), ("thr_b", "Cheque")))
     assert json.loads(scripted_exposure(prompt.user))["exposures"], (
@@ -772,8 +780,8 @@ def test_purpose_allows_a_finding_without_fabricating_action_but_not_a_block_byp
 def test_purpose_reaches_the_served_answer_and_history_without_fabricating_a_recommendation(
     client, monkeypatch, mode
 ):
-    from nm.adapters.model.scripted import SCRIPTED_READS, ScriptedModelAdapter
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
 
     monkeypatch.setitem(
         SCRIPTED_READS,
@@ -837,8 +845,9 @@ def _descriptions(value):
 
 
 def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
-    from nm.core import accrual, evidence_item, factors, issues, proof_read
-    from nm.ports.model import on_the_wire
+    from nm.legal_brain import accrual, factors, issues, proof_read
+    from nm.shared.model_port import on_the_wire
+    from nm.work_the_file import evidence_item
 
     schemas = []
     forbidden = (
@@ -850,7 +859,9 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
         "the site engineer",
     )
     for name in sorted({site.split(":")[0] for site in SITES}):
-        for key, schema in vars(importlib.import_module(f"nm.core.{name}")).items():
+        from assurance.common.module_roles import current_module
+
+        for key, schema in vars(importlib.import_module(current_module(f"nm.core.{name}"))).items():
             if key.endswith("SCHEMA") and isinstance(schema, dict):
                 descriptions = list(_descriptions(on_the_wire(schema)))
                 for description in descriptions:
@@ -872,13 +883,27 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
     # historic numeric coverage remains independently owned and scanned.
     # Protocol three adds mandatory owned citation roles without replacing
     # either historical read. All three remain in the reviewed population.
-    assert len(schemas) == 26, schemas
+    # Protocol four binds real attempted work; all historic schemas remain.
+    # Protocol six adds typed execution references without replacing any
+    # exact-word or historical communication contract.
+    # Protocol seven adds a separately owned material-premise inventory; all
+    # six historical contracts remain present and checked, not replaced.
+    # Working scope adds one actual read owner; its imported reference fragment
+    # is not a second standalone read. Keep the population nonempty and exact.
+    # The private explanation wording is a distinct independently owned read,
+    # not a waiver of source, scope or final publication checks.
+    assert len(schemas) == 32, schemas
+    assert ("working_explanation", "WORKING_RATIONALE_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_REVIEW_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_UNIT_REVIEW_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_EVIDENCE_REVIEW_SCHEMA") in schemas
+    assert ("interaction_review", "COMMUNICATION_WORK_REVIEW_SCHEMA") in schemas
+    assert ("interaction_review", "COMMUNICATION_QUOTE_REVIEW_SCHEMA") in schemas
+    assert ("interaction_review", "COMMUNICATION_WORK_REFERENCE_SCHEMA") in schemas
+    assert ("interaction_review", "COMMUNICATION_PREMISE_REVIEW_SCHEMA") in schemas
     assert ("verifier", "VERIFICATION_SCHEMA") in schemas
     assert ("requirements", "SCHEMA") in schemas
-    from nm.core import dispute, requirements
+    from nm.legal_brain import dispute, requirements
 
     assert dispute.DISPUTE_SCHEMA["properties"]["requirement_answers"] is requirements.ANSWER_ROWS
     assert ("dispute", "DISPUTE_SCHEMA") in schemas
@@ -903,8 +928,7 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
 
 @pytest.mark.parametrize("value", [None, "false", 0, {}])
 def test_unknown_writing_never_becomes_an_oral_admission_or_a_legal_negative(value):
-    from nm.core import factors
-
+    from nm.legal_brain import factors
     from tests.test_factors import S18
 
     statement = "The other party admitted the outstanding amount."
@@ -945,10 +969,9 @@ def test_explicit_filing_progresses_but_inferred_progress_and_side_reversal_do_n
 def test_advice_repair_must_be_complete_before_it_can_be_used(tmp_path, monkeypatch, completion):
     from dataclasses import replace
 
-    from nm.core.consistency import Claim
-    from nm.domain.budget import Completion
-    from nm.ports.model import Tier
-
+    from nm.legal_brain.consistency import Claim
+    from nm.shared.budget_contracts import Completion
+    from nm.shared.model_port import Tier
     from tests.test_adversarial_on_a_served_turn import build
 
     engine, _ = build(tmp_path)
@@ -970,7 +993,7 @@ def test_advice_repair_must_be_complete_before_it_can_be_used(tmp_path, monkeypa
 def test_no_proceeding_does_not_force_a_filed_role_for_source_only_explanation(
     client, monkeypatch, role, mode
 ):
-    from nm.adapters.model.scripted import SCRIPTED_READS
+    from nm.shared.model_scripted import SCRIPTED_READS
 
     message = (
         "I act for Client A. No proceeding has been instituted. Explain the relevant provisions."
@@ -1016,7 +1039,7 @@ def test_no_proceeding_does_not_force_a_filed_role_for_source_only_explanation(
 
 
 def test_an_advisory_issue_can_be_admitted_without_a_court_or_an_opponent():
-    from nm.core import issues
+    from nm.legal_brain import issues
 
     statement = "I need advice on the proposed agreement before execution."
     result = issues.read(

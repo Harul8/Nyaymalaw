@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from nm.ports.model import (
+
+from nm.shared.model_port import (
     ConfigurationError,
     Prompt,
     SchemaViolation,
@@ -87,8 +88,7 @@ def test_unknown_or_invalid_snapshot_pricing_cannot_be_a_free_external_call(
 ):
     from dataclasses import replace
 
-    from nm.adapters.model.config import PRICES, ModelConfig
-
+    from nm.shared.model_config import PRICES, ModelConfig
     from tests.test_tool_calling_port_contract import TOOL, factory
 
     model, calls = factory(provider)
@@ -106,9 +106,8 @@ def test_unknown_or_invalid_snapshot_pricing_cannot_be_a_free_external_call(
 def test_bad_openai_cache_detail_retains_known_ordinary_token_spend(cached):
     from types import SimpleNamespace as Namespace
 
-    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-    from nm.ports.model import ProviderUnavailable
-
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+    from nm.shared.model_port import ProviderUnavailable
     from tests.test_tool_calling_port_contract import config
 
     cfg = config("openai").for_tier(Tier.ROUTINE)

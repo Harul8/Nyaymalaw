@@ -20,14 +20,14 @@ Each has a named refusal here rather than a comment somewhere.
 
 WHAT IS DRIVEN RATHER THAN REBUILT
 ------------------------------------
-`backend/nm/domain/egress.py` already owns region, purpose, processor and sink policy,
+`nm/shared/egress_contracts.py` already owns region, purpose, processor and sink policy,
 and the inventory it enforces is the REAL `docs/blueprint/processors.yaml`
-read through `backend/nm/bootstrap/egress_policy.py` -- a synthetic policy would prove
-that the checker compiles. `backend/nm/domain/media_policy.py` owns the prohibited-
-processing contract. `backend/nm/adapters/store/sealing.py` owns matter-scoped key
-derivation and `backend/nm/edge/uploads.py` owns the served ownership check.
-`backend/nm/domain/retention.py` owns what makes a deletion claim false, and
-`backend/nm/domain/metrics.py` owns which fields reach a plaintext file. None of them
+read through `nm/shared/egress_policy.py` -- a synthetic policy would prove
+that the checker compiles. `nm/open_matter/media_policy_contracts.py` owns the prohibited-
+processing contract. `nm/shared/store_sealing.py` owns matter-scoped key
+derivation and `nm/open_matter/uploads_api.py` owns the served ownership check.
+`nm/close/retention_contracts.py` owns what makes a deletion claim false, and
+`nm/shared/metrics_contracts.py` owns which fields reach a plaintext file. None of them
 is reimplemented, because a second copy of "may this leave the country" is one
 that will disagree.
 
@@ -44,7 +44,8 @@ import json
 import pathlib
 
 import pytest
-from nm.domain.deployment import (
+
+from nm.shared.deployment_contracts import (
     POPULATIONS,
     AccessRequest,
     Assessed,
@@ -256,7 +257,7 @@ def test_the_composition_root_asks_this_module_rather_than_comparing_values():
     keeps its own policy about WHICH names count as credentials, and asks this
     module the value question.
     """
-    from nm.bootstrap import composition
+    from nm.app import composition
 
     source = inspect.getsource(composition._refuse_a_shared_seal)
     assert "shares_value_with" in source
@@ -443,13 +444,13 @@ def test_an_unreadable_clock_cannot_clear_an_expiry():
 # ====== 7. BK-85-AC1 -- egress fails closed on the REAL inventory ==========
 
 def _policy():
-    from nm.bootstrap.egress_policy import egress_policy
+    from nm.shared.egress_policy import egress_policy
 
     return egress_policy(ROOT)
 
 
 def _route(**kw):
-    from nm.domain.egress import DataClass, Route, Sink
+    from nm.shared.egress_contracts import DataClass, Route, Sink
 
     base = dict(sink=Sink.MODEL, processor_id="scripted", purpose=Sink.MODEL,
                 data_classes=(DataClass.CLIENT_MATTER,), size_bytes=1024)
@@ -460,7 +461,7 @@ def _route(**kw):
 def test_the_configured_inventory_permits_the_processor_it_recorded():
     """THE POSITIVE CONTROL, on the REAL `docs/blueprint/processors.yaml`.
     A policy that refused everything would satisfy every test below it."""
-    from nm.domain.egress import refuse
+    from nm.shared.egress_contracts import refuse
 
     assert refuse(_route(), _policy()) == []
 
@@ -468,7 +469,7 @@ def test_the_configured_inventory_permits_the_processor_it_recorded():
 def test_an_unapproved_processor_fails_closed_on_the_real_inventory():
     """*enable a foreign processor* -- and an unlisted one is not a processor
     nobody wrote a rule for, it is one nobody approved."""
-    from nm.domain.egress import refuse
+    from nm.shared.egress_contracts import refuse
 
     why = refuse(_route(processor_id="openai"), _policy())
     assert why and "not in the reviewed inventory" in why[0]
@@ -478,7 +479,7 @@ def test_a_foreign_region_processor_is_refused_until_a_review_names_it():
     """The real inventory has no foreign processor, so the refusal is driven
     against a policy that does -- and the empty `approved_foreign_regions` of
     the real one is asserted beside it, which is the fact that matters."""
-    from nm.domain.egress import (
+    from nm.shared.egress_contracts import (
         DataClass,
         Policy,
         Processor,
@@ -498,7 +499,7 @@ def test_privileged_text_may_never_reach_diagnostic_telemetry():
     """BK-85-AC1'S MUTATION: *send privileged text through diagnostic
     telemetry*. The two sinks are declared once, in the owner, and the refusal
     holds *whatever the inventory says*."""
-    from nm.domain.egress import (
+    from nm.shared.egress_contracts import (
         NEVER_CLIENT_MATERIAL,
         DataClass,
         Policy,
@@ -518,7 +519,7 @@ def test_privileged_text_may_never_reach_diagnostic_telemetry():
 
 
 def test_the_home_region_is_india_and_it_is_declared_once():
-    from nm.domain.egress import HOME_REGION
+    from nm.shared.egress_contracts import HOME_REGION
 
     assert HOME_REGION == "in"
     assert all(row.region == HOME_REGION for row in _policy().processors)
@@ -527,7 +528,7 @@ def test_the_home_region_is_india_and_it_is_declared_once():
 def test_the_refusal_audit_line_carries_no_client_material():
     """*a content-free audit identifies the refusal.* A message quoting what
     it refused to send defeats the control it is part of."""
-    from nm.domain.egress import audit_line, refuse
+    from nm.shared.egress_contracts import audit_line, refuse
 
     route = _route(processor_id="openai")
     line = audit_line(route, refuse(route, _policy()))
@@ -542,9 +543,9 @@ def test_a_support_account_cannot_open_an_unrelated_matter():
     matter*, driven through the SERVED entry path rather than a copy of it."""
     import tempfile
 
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.domain.matter import Matter, MatterId
-    from nm.edge.uploads import UploadRefused, UploadService
+    from nm.open_matter.uploads_api import UploadRefused, UploadService
+    from nm.shared.store_file_store import FileMatterStore
+    from nm.work_the_file.matter_contracts import Matter, MatterId
 
     with tempfile.TemporaryDirectory() as tmp:
         store = FileMatterStore(pathlib.Path(tmp), key="a-test-seal-value")
@@ -561,7 +562,7 @@ def test_a_worker_holding_one_matters_key_cannot_read_another():
     """*bypass the shared gateway from a worker.* There is no check to
     forget: the matter id is an input to the derivation, so the wrong key
     does not open the record."""
-    from nm.adapters.store.envelope import (
+    from nm.shared.store_envelope import (
         CrossMatterAccess,
         LocalKeyRing,
         new_data_key,
@@ -593,7 +594,7 @@ def test_a_secret_bearing_artifact_is_found_by_the_same_digest_question():
 def test_a_gate_detail_quoting_the_matter_never_reaches_the_plaintext_file():
     """BK-42-AC8'S MUTATION: *place privileged content in a log.* Driven
     through the projection `file_store.record_metrics` actually writes."""
-    from nm.domain.metrics import TurnMetrics
+    from nm.shared.metrics_contracts import TurnMetrics
 
     privileged = "the agreement is dated 15 April 1984 and the client says"
     metrics = TurnMetrics(turn_id="t1", matter_id="m1")
@@ -608,7 +609,7 @@ def test_a_gate_detail_quoting_the_matter_never_reaches_the_plaintext_file():
 
 def test_a_deletion_cannot_be_claimed_complete_while_a_copy_is_outstanding():
     """*retain an unauthorised derivative after a deletion claim.*"""
-    from nm.domain.retention import (
+    from nm.close.retention_contracts import (
         AssetRef,
         Copy,
         RequestedAction,
@@ -640,7 +641,7 @@ def test_a_deletion_whose_copies_are_resolved_does_complete():
     lifecycle, and the advocate is owed the finished answer."""
     from dataclasses import replace
 
-    from nm.domain.retention import (
+    from nm.close.retention_contracts import (
         AssetRef,
         Copy,
         RequestedAction,
@@ -676,7 +677,7 @@ def test_media_preflight_refuses_before_bytes_leave_the_boundary():
     """*The media preflight must refuse before any bytes leave the controlled
     boundary.* `refuse_request` takes the ROUTE -- it cannot be called after
     the send, because it is never given anything to send."""
-    from nm.domain import media_policy
+    from nm.open_matter import media_policy_contracts as media_policy
 
     parameters = inspect.signature(media_policy.refuse_request).parameters
     assert list(parameters) == ["route", "contract"]
@@ -688,7 +689,7 @@ def test_media_preflight_refuses_before_bytes_leave_the_boundary():
 def test_the_prohibited_operations_are_read_from_the_declared_contract():
     """ONE OWNER. A second list of what may not be done to a recording is one
     that will disagree with the first."""
-    from nm.domain.media_policy import load
+    from nm.open_matter.media_policy_contracts import load
 
     contract = load(ROOT)
     for banned in ("voice_identity", "voiceprint_creation_or_matching",
@@ -699,7 +700,7 @@ def test_the_prohibited_operations_are_read_from_the_declared_contract():
 
 
 def test_a_prohibited_operation_is_refused_before_the_call_is_made():
-    from nm.domain.media_policy import Route, load, refuse_request
+    from nm.open_matter.media_policy_contracts import Route, load, refuse_request
 
     contract = load(ROOT)
     approved = sorted(contract.allowed)[0]
@@ -715,7 +716,7 @@ def test_an_unavoidable_background_operation_rejects_the_route():
     """*enable a prohibited processor capability on the deployed
     configuration.* What is approved is the operation AND its configuration,
     so a vendor that scores affect anyway is refused even unasked."""
-    from nm.domain.media_policy import Route, load, refuse_request
+    from nm.open_matter.media_policy_contracts import Route, load, refuse_request
 
     contract = load(ROOT)
     approved = sorted(contract.allowed)[0]
@@ -726,7 +727,7 @@ def test_an_unavoidable_background_operation_rejects_the_route():
 
 
 def test_an_unknown_configuration_is_denied_rather_than_assumed_benign():
-    from nm.domain.media_policy import Route, load, refuse_request
+    from nm.open_matter.media_policy_contracts import Route, load, refuse_request
 
     contract = load(ROOT)
     approved = sorted(contract.allowed)[0]
@@ -739,7 +740,7 @@ def test_an_unknown_configuration_is_denied_rather_than_assumed_benign():
 def test_a_forbidden_field_nested_in_a_response_is_found():
     """BK-88-AC4'S MUTATION: *inject a prohibited nested response field into
     the real configured path.* A top-level check finds the top level."""
-    from nm.domain.media_policy import refuse_response
+    from nm.open_matter.media_policy_contracts import refuse_response
 
     allow = frozenset({"transcript", "segments", "text", "start"})
     clean = refuse_response(
@@ -757,7 +758,7 @@ def test_a_forbidden_field_nested_in_a_response_is_found():
 def test_the_rejected_value_is_never_carried_in_the_refusal():
     """A message saying *rejected `speaker_emotion` = "distressed"* has
     persisted the exact inference the rejection existed to prevent."""
-    from nm.domain.media_policy import refuse_response
+    from nm.open_matter.media_policy_contracts import refuse_response
 
     verdict = refuse_response(
         {"transcript": "words", "speaker_emotion": "distressed"},

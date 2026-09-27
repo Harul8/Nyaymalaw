@@ -6,10 +6,10 @@ new question exemption is introduced. Separate semantic review still applies.
 import json
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.core.brain_context import ContextRefused
-from nm.domain.register import PEER
 
+from nm.legal_brain.brain_context import ContextRefused
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.register_contracts import PEER
 from tests.test_owned_guidance_keeps_the_file_not_unrecorded_impressions import (
     context,
     recorded_file,

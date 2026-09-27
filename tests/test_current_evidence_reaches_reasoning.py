@@ -4,13 +4,20 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.core.conversation import with_evidence
-from nm.core.turn import TurnInput
-from nm.domain.budget import Completion
-from nm.ports.evidence import Binding, Coverage, EvidenceResult, ParaKind, SourceKind, Treatment
-from nm.ports.model import Prompt
 
+from nm.legal_brain.conversation import with_evidence
+from nm.legal_brain.evidence_port import (
+    Binding,
+    Coverage,
+    EvidenceResult,
+    ParaKind,
+    SourceKind,
+    Treatment,
+)
+from nm.legal_brain.turn import TurnInput
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import Prompt
+from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_turn_contract import _Evidence, _model_config, build, finding
 
 pytestmark = pytest.mark.class_a

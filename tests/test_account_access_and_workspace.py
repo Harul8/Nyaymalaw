@@ -18,8 +18,9 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
-from nm.adapters.store.directory import RETIRED_RECOVERY_FIELDS, FileDirectory
-from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol, utcnow
+
+from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol, utcnow
+from nm.arrive.store_directory import RETIRED_RECOVERY_FIELDS, FileDirectory
 
 pytestmark = pytest.mark.class_a
 
@@ -68,7 +69,7 @@ def test_sign_in_cannot_cross_an_account_claim(client):
     crashed = """
 import os
 import sys
-from nm.adapters.store.directory import FileDirectory
+from nm.arrive.store_directory import FileDirectory
 claim = FileDirectory(sys.argv[1], key='test-key')._claim_account(sys.argv[2])
 assert claim is not None
 os._exit(0)
@@ -126,8 +127,8 @@ def test_active_workspace_reaches_the_masthead_before_matter_rendering(client):
     })
     assert login.json()["workspace"]["label"] == "Harul Chambers"
 
-    page = (ROOT / "frontend" / "index.html").read_text(encoding="utf8")
-    script = (ROOT / "frontend" / "app.js").read_text(encoding="utf8")
+    page = (ROOT / "nm/app/index.html").read_text(encoding="utf8")
+    script = (ROOT / "nm/app/app.js").read_text(encoding="utf8")
     show = script.index("function showApplication(advocate, workspace, professionalApproval)")
     workspace = script.index("$('workspace-name').textContent", show)
     matters = script.index("showMatterList();", show)
@@ -195,7 +196,7 @@ def recovery_code_sites(sources: dict[str, str], page: str, script: str,
     for name, source in sorted(sources.items()):
         hits = sorted(i for i in _identifiers(ast.parse(source)) if RETIRED.search(i))
         sites.extend(f"{name}: {hit}" for hit in hits)
-    for name, text in (("frontend/index.html", page), ("frontend/app.js", script)):
+    for name, text in (("nm/app/index.html", page), ("nm/app/app.js", script)):
         if re.search(r"recovery[ _-]?code|/api/recover\b|reauth-|/api/reauthenticate",
                      text, re.I):
             sites.append(f"{name} still offers a recovery code")
@@ -203,21 +204,21 @@ def recovery_code_sites(sources: dict[str, str], page: str, script: str,
 
 
 def _product_sources() -> dict[str, str]:
-    homes = [ROOT / "backend" / "nm", ROOT / "backend" / "operations"]
+    homes = [ROOT / "nm", ROOT / "operations"]
     return {path.relative_to(ROOT).as_posix(): path.read_text(encoding="utf8")
             for home in homes for path in sorted(home.rglob("*.py"))
             if "__pycache__" not in path.parts}
 
 
 def _served_paths() -> list[str]:
-    from nm.edge.api import app
+    from nm.app.api import app
 
     return [route.path for route in app.routes if isinstance(route, APIRoute)]
 
 
 def _frontend() -> tuple[str, str]:
-    return ((ROOT / "frontend" / "index.html").read_text(encoding="utf8"),
-            (ROOT / "frontend" / "app.js").read_text(encoding="utf8"))
+    return ((ROOT / "nm/app/index.html").read_text(encoding="utf8"),
+            (ROOT / "nm/app/app.js").read_text(encoding="utf8"))
 
 
 def test_no_route_screen_or_code_path_offers_a_recovery_code():
@@ -235,14 +236,14 @@ def test_the_recovery_code_sweep_sees_each_planted_return():
     sources = _product_sources()
     page, script = _frontend()
     paths = _served_paths()
-    planted_code = {**sources, "backend/nm/planted.py": (
+    planted_code = {**sources, "nm/planted.py": (
         "def issue():\n    return {'recovery_codes': []}\n")}
     assert recovery_code_sites(planted_code, page, script, paths)
     assert recovery_code_sites(sources, page + '<a id="use-a-recovery-code">', script, paths)
     assert recovery_code_sites(sources, page, script + "api('/api/recover')", paths)
     assert recovery_code_sites(sources, page + '<form id="reauth-form">', script, paths)
     assert recovery_code_sites(sources, page, script, [*paths, "/api/recover"])
-    retired_only = {"backend/nm/retired.py": (
+    retired_only = {"nm/retired.py": (
         "RETIRED_RECOVERY_FIELDS = ('recovery_codes', 'recovery_generation')\n")}
     assert recovery_code_sites(retired_only, "", "", []) == [], (
         "the list that removes retired material is itself reported")

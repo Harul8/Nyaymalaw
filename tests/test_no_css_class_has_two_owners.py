@@ -2,7 +2,7 @@
 
 THE DEFECT, FOUND BY THE BK-30 BROWSER HARNESS ON ITS FIRST REAL RUN
 ----------------------------------------------------------------------
-`frontend/app.css` defined `.gate` twice, for two unrelated things:
+`nm/app/app.css` defined `.gate` twice, for two unrelated things:
 
     line 231   a GATE FIRING inside an answer -- `G-COVERAGE · disclose · …`,
                a small inline row in the conversation;
@@ -29,7 +29,7 @@ WHY THIS TEST AND NOT "BE CAREFUL WITH CLASS NAMES"
 CLAUDE.md §4 asks the question this file is the answer to: not *where is the
 other copy* but *what makes a second copy impossible?* The same question was
 answered for provision-reference patterns by `tests/test_citation_patterns.py`
--- `backend/nm/domain/citation.py` is the only module permitted to define one, and a
+-- `nm/legal_brain/citation_contracts.py` is the only module permitted to define one, and a
 scan fails the build on a second.
 
 This is that rule for the stylesheet. A class may be declared in one place.
@@ -51,9 +51,11 @@ import re
 
 import pytest
 
+from assurance.common.homes import browser_sources
+
 pytestmark = pytest.mark.class_a
 
-WEB = pathlib.Path(__file__).resolve().parents[1] / "frontend"
+WEB = pathlib.Path(__file__).resolve().parents[1] / "nm"
 
 #: Class names allowed more than one bare declaration, and why. Empty today,
 #: and that is the point of writing it down: the first entry has to carry a
@@ -121,7 +123,9 @@ def declarations(css: str) -> dict[str, list[str]]:
 
 
 def stylesheets() -> list[pathlib.Path]:
-    return sorted(WEB.rglob("*.css"))
+    sheets = [path for path in browser_sources() if path.suffix == ".css"]
+    assert sheets, "the served stylesheet population must not disappear"
+    return sheets
 
 
 # ==================================================================== the rule ==
@@ -151,8 +155,8 @@ def test_the_sign_in_gate_is_addressed_by_its_id():
     """THE SPECIFIC HALF, kept because the general rule above would also pass
     if somebody re-collided `.gate` and added it to EXEMPT without reading
     what it costs. The overlay is ONE element; it has an id; it uses it."""
-    css = _strip_comments((WEB / "app.css").read_text(encoding="utf-8"))
-    html = (WEB / "index.html").read_text(encoding="utf-8")
+    css = _strip_comments((WEB / "app/app.css").read_text(encoding="utf-8"))
+    html = (WEB / "app/index.html").read_text(encoding="utf-8")
 
     assert re.search(r"(^|\})\s*#gate\s*\{", css), (
         "the sign-in overlay is no longer addressed by its id")
@@ -172,7 +176,7 @@ def test_the_scan_finds_the_classes_that_are_there():
     """A control on the PARSER. A `declarations()` that returned nothing would
     pass the rule while reading nothing, which is exactly how the defect it
     was written for survived every check in this repository."""
-    found = declarations((WEB / "app.css").read_text(encoding="utf-8"))
+    found = declarations((WEB / "app/app.css").read_text(encoding="utf-8"))
     assert len(found) > 20, f"the scan found almost no classes: {sorted(found)}"
     assert "gate" in found, "the class this test exists for is not seen at all"
     assert len(found["gate"]) == 1, (

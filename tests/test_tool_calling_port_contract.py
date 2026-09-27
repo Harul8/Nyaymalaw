@@ -11,16 +11,14 @@ import json
 from types import SimpleNamespace as NS  # noqa: N814 -- SDK-shaped fixture
 
 import pytest
-from nm.adapters.model.anthropic_adapter import AnthropicModelAdapter
-from nm.adapters.model.call_budget import MODEL, CallBudget
-from nm.adapters.model.config import PERMITTED_PROVIDERS, ModelConfig, TierConfig
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.adapters.model.policed import PolicedModel
-from nm.adapters.model.replay import RecordingModel, ReplayModel
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.domain.egress import EgressRefused, Policy
-from nm.ports.model import (
+
+from nm.shared.egress_contracts import EgressRefused, Policy
+from nm.shared.model_anthropic_adapter import AnthropicModelAdapter
+from nm.shared.model_call_budget import MODEL, CallBudget
+from nm.shared.model_config import PERMITTED_PROVIDERS, ModelConfig, TierConfig
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_policed import PolicedModel
+from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
     OutputTruncated,
@@ -34,6 +32,9 @@ from nm.ports.model import (
     require_schema,
     validate_tool_history,
 )
+from nm.shared.model_replay import RecordingModel, ReplayModel
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
 
 pytestmark = pytest.mark.class_a
 

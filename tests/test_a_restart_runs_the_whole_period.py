@@ -21,7 +21,8 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from nm.core.limitation import (
+
+from nm.legal_brain.limitation import (
     Factor,
     FactorKind,
     Period,
@@ -29,7 +30,7 @@ from nm.core.limitation import (
     expiry_from,
     run_period,
 )
-from nm.domain.matter import FactId, Side
+from nm.work_the_file.matter_contracts import FactId, Side
 
 pytestmark = pytest.mark.class_a
 
@@ -82,9 +83,9 @@ def test_ninety_days_from_the_first_of_march_is_the_thirtieth_of_may():
 
 def test_period_arithmetic_has_one_owner_across_the_product():
     """A second copy of 'lay a period over a date' is how the days went missing.
-    Drawn from every module under backend/nm, not from limitation.py alone."""
+    Drawn from every module under nm, not from limitation.py alone."""
     owners = []
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for fn in ast.walk(tree):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -93,5 +94,5 @@ def test_period_arithmetic_has_one_owner_across_the_product():
                      if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
             if {"add_years", "add_months"} <= calls:
                 owners.append(f"{path.relative_to(ROOT).as_posix()}::{fn.name}")
-    assert owners == ["backend/nm/core/limitation.py::run_period"], (
+    assert owners == ["nm/legal_brain/limitation.py::run_period"], (
         f"period arithmetic is written in more than one place: {owners}")

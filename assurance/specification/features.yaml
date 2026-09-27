@@ -15,9 +15,9 @@ features:
   delivered_by:
   - BK-31
   declared_in:
-  - backend/nm/adapters/mail/outbox.py
-  - backend/nm/adapters/store/directory.py
-  - backend/nm/edge/api.py
+  - nm/app/api.py
+  - nm/arrive/mail_outbox.py
+  - nm/arrive/store_directory.py
   does:
   - 'Establish and hold the authenticated account identity and its server-owned workspace. Public email/password
     signup needs no invitation: canonical email is the initial display identity; unprovided enrolment,
@@ -92,7 +92,7 @@ features:
   - BK-32
   - BK-33
   declared_in:
-  - backend/nm/edge/projections.py
+  - nm/work_the_file/projections_api.py
   does:
   - 'With no matters: one invitation to brief, in an advocate''s register.'
   - '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads**
@@ -144,11 +144,11 @@ features:
   delivered_by:
   - BK-33
   declared_in:
-  - backend/nm/core/cascade.py
-  - backend/nm/core/dependency.py
-  - backend/nm/core/gaps.py
-  - backend/nm/core/turn.py
-  - backend/nm/domain/decision.py
+  - nm/advise/decision_contracts.py
+  - nm/legal_brain/gaps.py
+  - nm/legal_brain/turn.py
+  - nm/work_the_file/cascade.py
+  - nm/work_the_file/dependency.py
   does:
   - On resumption, recompute **every deadline status first**, before anything else, and compare against
     the stored category.
@@ -184,8 +184,8 @@ features:
   delivered_by:
   - BK-38
   declared_in:
-  - backend/nm/core/research.py
-  - backend/nm/edge/api.py
+  - nm/app/api.py
+  - nm/legal_brain/research.py
   does:
   - Permit authenticated research without an active matter. Placing a result requires a deliberate choice
     of an authorised target matter; browsing never silently creates or modifies one.
@@ -245,8 +245,8 @@ features:
   delivered_by:
   - BK-93
   declared_in:
-  - backend/nm/core/route.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/route.py
+  - nm/legal_brain/turn.py
   does:
   - Classify the opening message on **what it discloses**, and state the reading in one line so the advocate
     can correct it.
@@ -291,7 +291,7 @@ features:
   delivered_by:
   - BK-53
   declared_in:
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
   does:
   - 'Screen every applicable urgency class, **every turn**: limitation and filing dates; hearings and
     orders; arrest or liberty risk; personal safety; child safety; injunction or status-quo need; asset
@@ -337,8 +337,8 @@ features:
   delivered_by:
   - BK-34
   declared_in:
-  - backend/nm/core/screens.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
+  - nm/open_matter/screens.py
   does:
   - Take **names only** and screen against the firm-wide registry before any substance is retained.
   - 'Where substance arrives before clearance: think, answer within the permitted pre-clearance scope,
@@ -379,7 +379,7 @@ features:
   delivered_by:
   - BK-34
   declared_in:
-  - backend/nm/core/quarantine.py
+  - nm/open_matter/quarantine.py
   does:
   - 'Record a competence assessment on the matter: jurisdiction, practice area, language, and known corpus
     coverage for what the matter needs.'
@@ -420,7 +420,7 @@ features:
   delivered_by:
   - BK-34
   declared_in:
-  - backend/nm/core/screens.py
+  - nm/open_matter/screens.py
   does:
   - Record who the client is, who may instruct, who decides, the scope and its exclusions, confidentiality,
     communications, fees and likely disbursements, document custody, termination rights and the complaints
@@ -462,8 +462,8 @@ features:
   delivered_by:
   - BK-53
   declared_in:
-  - backend/nm/core/turn.py
-  - backend/nm/domain/capacity.py
+  - nm/legal_brain/turn.py
+  - nm/open_matter/capacity_contracts.py
   does:
   - 'Record a capacity position on any decision that becomes authority: assessed, not assessed, or in
     doubt.'
@@ -499,7 +499,7 @@ features:
   delivered_by:
   - BK-54
   declared_in:
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
   does:
   - Let the advocate give an uninterrupted account in text, files or optional voice, subject to necessary
     emergency and confidentiality interventions. Do not require every field before listening.
@@ -591,7 +591,7 @@ features:
   delivered_by:
   - BK-94
   declared_in:
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
   does:
   - For every thread establish who the parties are and which side the client is on, **before resolving
     any provision**.
@@ -636,9 +636,9 @@ features:
   delivered_by:
   - BK-94
   declared_in:
-  - backend/nm/core/threading.py
-  - backend/nm/core/turn.py
-  - backend/nm/domain/matter.py
+  - nm/legal_brain/threading.py
+  - nm/legal_brain/turn.py
+  - nm/work_the_file/matter_contracts.py
   does:
   - Give every thread a **stable id, generated once and never derived from its label**. The label is a
     display name and may change freely.
@@ -680,7 +680,7 @@ features:
   delivered_by:
   - BK-94
   declared_in:
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
   does:
   - Build a date chart **per thread before any opinion on that thread**. Every entry carries the date,
     the event, its source, and whether it is documented or asserted.
@@ -721,7 +721,7 @@ features:
   delivered_by:
   - BK-54
   declared_in:
-  - backend/nm/core/intake.py
+  - nm/open_matter/intake.py
   does:
   - '**Read the material.** Intake includes documents, PDFs, images/scans, supported structured files,
     uploaded audio/video and optional live voice. Publish a tested capability matrix of format, language,
@@ -784,8 +784,8 @@ features:
   delivered_by:
   - BK-94
   declared_in:
-  - backend/nm/core/evidence_item.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/turn.py
+  - nm/work_the_file/evidence_item.py
   does:
   - Inventory what exists, who holds it, original or copy, authenticity, completeness, metadata, custody
     and admissibility.
@@ -826,14 +826,14 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/adapters/knowledge/filing_requirement.py
-  - backend/nm/adapters/knowledge/institution.py
-  - backend/nm/adapters/knowledge/interim_relief.py
-  - backend/nm/core/thresholds.py
-  - backend/nm/core/turn.py
-  - backend/nm/knowledge/filing_requirement.py
-  - backend/nm/knowledge/institution.py
-  - backend/nm/knowledge/interim_relief.py
+  - nm/legal_brain/filing_requirement_adapter.py
+  - nm/legal_brain/filing_requirement_sources.py
+  - nm/legal_brain/institution_adapter.py
+  - nm/legal_brain/institution_sources.py
+  - nm/legal_brain/interim_relief_adapter.py
+  - nm/legal_brain/interim_relief_sources.py
+  - nm/legal_brain/thresholds.py
+  - nm/legal_brain/turn.py
   does:
   - 'Check, per thread: jurisdiction, forum, standing, maintainability, **limitation**, statutory notice
     and preconditions, valuation, court fees, arbitration or ADR clauses, territorial and pecuniary competence,
@@ -872,9 +872,9 @@ features:
   delivered_by:
   - BK-35
   declared_in:
-  - backend/nm/core/factors.py
-  - backend/nm/core/limitation.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/factors.py
+  - nm/legal_brain/limitation.py
+  - nm/legal_brain/turn.py
   does:
   - 'Produce, per thread: the **Article** relied on, cited to retrieved text; the accrual event and why;
     the period; each factor that extends, restarts or excludes time, **expressly applied or expressly
@@ -936,11 +936,11 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/adapters/knowledge/authority_weight.py
-  - backend/nm/adapters/knowledge/procedural_period.py
-  - backend/nm/core/deadlines.py
-  - backend/nm/core/turn.py
-  - backend/nm/knowledge/procedural_period.py
+  - nm/legal_brain/authority_weight_adapter.py
+  - nm/legal_brain/procedural_period_adapter.py
+  - nm/legal_brain/procedural_period_sources.py
+  - nm/legal_brain/turn.py
+  - nm/work_the_file/deadlines.py
   does:
   - 'Hold every deadline on the file in one register: limitation, statutory notice windows, appeal and
     revision periods, objection periods, listed court dates, and **factual urgency that no statute creates**
@@ -980,12 +980,12 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/adapters/evidence/corpus.py
-  - backend/nm/adapters/knowledge/governing_law.py
-  - backend/nm/core/cause.py
-  - backend/nm/core/turn.py
-  - backend/nm/knowledge/governing_law.py
-  - backend/nm/knowledge/resolution.py
+  - nm/legal_brain/cause.py
+  - nm/legal_brain/corpus_evidence.py
+  - nm/legal_brain/governing_law_adapter.py
+  - nm/legal_brain/governing_law_sources.py
+  - nm/legal_brain/resolution_sources.py
+  - nm/legal_brain/turn.py
   does:
   - Translate the matter into propositions and issues, ranked by consequence and uncertainty. **Research
     what changes the advice first.**
@@ -1025,11 +1025,11 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/adapters/knowledge/elements.py
-  - backend/nm/core/proof.py
-  - backend/nm/core/proof_read.py
-  - backend/nm/core/turn.py
-  - backend/nm/knowledge/elements.py
+  - nm/legal_brain/elements_adapter.py
+  - nm/legal_brain/elements_sources.py
+  - nm/legal_brain/proof.py
+  - nm/legal_brain/proof_read.py
+  - nm/legal_brain/turn.py
   does:
   - 'Decompose each cause, defence and remedy into elements. **Every element carries three things: who
     must prove it, to what standard, and with what material.**'
@@ -1071,8 +1071,8 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/core/theory.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/theory.py
+  - nm/legal_brain/turn.py
   does:
   - State **exactly one case theory per thread, in one sentence** — what happened and why we win. A theme
     a judge could repeat back, a factual account consistent with the record, the legal theory that converts
@@ -1124,8 +1124,8 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/core/adversarial.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/adversarial.py
+  - nm/legal_brain/turn.py
   does:
   - Run **across the whole file, after per-thread analysis is complete** — not as a step inside each thread.
   - 'For each thread: the case the other side will run, **on the grounds they will run it**, and our answer
@@ -1168,8 +1168,8 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/core/adversarial.py
-  - backend/nm/core/turn.py
+  - nm/legal_brain/adversarial.py
+  - nm/legal_brain/turn.py
   does:
   - Treat a claim as a set of coordinates — **party, cause, relief, forum, timing, procedure, burden**
     — and ask which coordinate can move. Almost every "you lose" is the failure of one of them, not of
@@ -1217,9 +1217,9 @@ features:
   delivered_by:
   - BK-95
   declared_in:
-  - backend/nm/core/issues.py
-  - backend/nm/core/turn.py
-  - backend/nm/domain/issue.py
+  - nm/legal_brain/issue_contracts.py
+  - nm/legal_brain/issues.py
+  - nm/legal_brain/turn.py
   does:
   - 'Give every issue **facets, not a single track**: `kind` (threshold, substantive, procedural); `effect`
     (supports, opposes, neutral) **derived from posture**; `proof` (the D5 position); `disposition`; `urgency`
@@ -1297,8 +1297,8 @@ features:
   delivered_by:
   - BK-96
   declared_in:
-  - backend/nm/core/relief.py
-  - backend/nm/core/turn.py
+  - nm/advise/relief.py
+  - nm/legal_brain/turn.py
   does:
   - Compare viable routes by objective, legality, evidence, cost, timing, risk, leverage and enforceability.
   - '**Choose a position, and explain why the alternatives lose.**'
@@ -1820,7 +1820,7 @@ features:
   delivered_by:
   - BK-40
   declared_in:
-  - backend/nm/adapters/store/file_store.py
+  - nm/shared/store_file_store.py
   does:
   - End the session leaving nothing confidential outside the sealed store.
   - Hold matter state encrypted at rest, keyed outside the repository.

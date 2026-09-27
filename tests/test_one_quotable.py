@@ -36,7 +36,7 @@ import pytest
 
 pytestmark = pytest.mark.class_a
 
-PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "backend" / "nm"
+PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "nm"
 HOME = PACKAGE / "domain" / "quotable.py"
 
 
@@ -57,7 +57,7 @@ def _rel(path) -> str:
 def containment_guards(sources) -> list[tuple[str, int]]:
     """`fold(a) in fold(b)` — the exact shape all seven guards used.
 
-    Both sides folded with the BASE fold. `nm.core.grounding` asks a different
+    Both sides folded with the BASE fold. `nm.legal_brain.grounding` asks a different
     question with `_citation_fold` — is this quotation in the retrieved
     authority — and is not swept by this, which is why the check is on the
     call and not on the word "in".
@@ -115,7 +115,7 @@ def test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value():
     handing the prompt one thing and the guard another has to work at it.
 
     Population from the package: any module with BOTH a prompt builder and a
-    reader. `backend/nm/core/quarantine.py` added tomorrow is covered tomorrow.
+    reader. `nm/open_matter/quarantine.py` added tomorrow is covered tomorrow.
     """
     sources = _sources()
     builders = functions_named(sources, "build_prompt")
@@ -162,10 +162,10 @@ def test_the_six_reads_are_actually_covered():
         for mod, fns in functions_named(sources, needle).items():
             readers.setdefault(mod, []).extend(fns)
 
-    for mod in ("backend/nm/core/cause.py", "backend/nm/core/posture.py",
-                "backend/nm/core/chronology.py", "backend/nm/core/dispute.py",
-                "backend/nm/core/issues.py", "backend/nm/core/factors.py",
-                "backend/nm/core/evidence_item.py"):
+    for mod in ("nm/legal_brain/cause.py", "nm/legal_brain/posture.py",
+                "nm/work_the_file/chronology.py", "nm/legal_brain/dispute.py",
+                "nm/legal_brain/issues.py", "nm/legal_brain/factors.py",
+                "nm/work_the_file/evidence_item.py"):
         assert any("quotable" in _params(f) for f in builders.get(mod, [])), (
             f"{mod} builds a prompt that does not carry what may be quoted")
         assert any("quotable" in _params(f) for f in readers.get(mod, [])), (
@@ -181,11 +181,11 @@ def test_the_scan_catches_a_planted_hand_guard():
                         '    if fold(said) not in fold(account):\n'
                         '        return None\n')
     assert containment_guards([(PACKAGE / "planted.py", planted)]) \
-        == [("backend/nm/planted.py", 2)]
+        == [("nm/planted.py", 2)]
 
 
 def test_the_scan_leaves_a_different_question_alone():
-    """THE BOUND. `nm.core.grounding` asks whether a quotation is in the
+    """THE BOUND. `nm.legal_brain.grounding` asks whether a quotation is in the
     RETRIEVED AUTHORITY, which is a different question with a different right
     answer, and folds with `_citation_fold`. A scan that swept it would push
     the citation pivot into the base fold to satisfy itself."""
@@ -202,8 +202,8 @@ def test_the_scan_catches_a_prompt_and_a_guard_that_disagree():
     sources = [(PACKAGE / "planted.py", tree)]
     builders = functions_named(sources, "build_prompt")
     readers = functions_named(sources, "interpret")
-    assert any("quotable" in _params(f) for f in builders["backend/nm/planted.py"])
-    assert not any("quotable" in _params(f) for f in readers["backend/nm/planted.py"])
+    assert any("quotable" in _params(f) for f in builders["nm/planted.py"])
+    assert not any("quotable" in _params(f) for f in readers["nm/planted.py"])
 
 
 # ============================== the behaviour ===============================
@@ -211,7 +211,7 @@ def test_the_scan_catches_a_prompt_and_a_guard_that_disagree():
 def test_the_prompt_says_what_the_guard_will_take():
     """END TO END, on one value: the block names the section, and `accepts`
     takes exactly what the block put in it."""
-    from nm.domain.quotable import CONTEXT_HEADING, WORDS_HEADING, Quotable
+    from nm.legal_brain.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING, Quotable
 
     q = Quotable(turn="the cheque bounced on 3 March",
                  file="We act for the payee.",
@@ -231,7 +231,7 @@ def test_nothing_quotable_is_said_rather_than_left_silent():
     """AN ABSENT INPUT MUST NEVER READ AS PERMISSION. A read handed nothing
     quotable and told nothing about it quotes the context and is refused for
     doing what the prompt implied."""
-    from nm.domain.quotable import NOTHING_HEADING, Quotable
+    from nm.legal_brain.quotable_contracts import NOTHING_HEADING, Quotable
 
     q = Quotable(context="only our own rendering")
     assert NOTHING_HEADING in q.block()
@@ -243,7 +243,7 @@ def _matter_with_three_facts():
     from dataclasses import replace
     from datetime import date
 
-    from nm.domain.matter import (
+    from nm.work_the_file.matter_contracts import (
         Certainty,
         Fact,
         Matter,
@@ -270,7 +270,7 @@ def _matter_with_three_facts():
 
 def _duplicated(file_text: str, context: str) -> int:
     """Words the prompt carries TWICE: sentences in both blocks."""
-    from nm.domain.text import fold
+    from nm.shared.text_contracts import fold
 
     return sum(len(fold(line).split()) for line in file_text.splitlines()
                if fold(line) and fold(line) in fold(context))
@@ -291,7 +291,7 @@ def test_a_read_that_cannot_use_the_stamps_is_not_shown_them_twice():
     Measured here rather than on a fixture, because a fixture-based count
     would go on passing whatever the product does.
     """
-    from nm.domain import summary as matter_memory
+    from nm.work_the_file import summary_contracts as matter_memory
 
     matter = _matter_with_three_facts()
     memory = matter_memory.build(matter, matter.threads[0].id,
@@ -317,7 +317,7 @@ def test_the_issue_read_keeps_the_account_and_the_reason_is_recorded():
     difference between paying it and not noticing it is this test.
     """
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
     issues = turn[turn.index("def _issues("):]
     issues = issues[:issues.index("\n    @implements")]
     assert "context=account" in issues, (
@@ -333,7 +333,7 @@ def test_the_reads_that_take_notes_say_which_they_take():
     `memory.account` is a decision, and a decision with no reason beside it
     reads as an inconsistency to whoever finds it next."""
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
     # THE NOTES, HOWEVER THEY ARE PREFIXED. The cause read now puts a line
     # scoping it to the active dispute ahead of them (79e2da5), which is the
     # same trade with an instruction in front -- counting the exact
@@ -348,7 +348,7 @@ def test_the_refusal_says_which_of_the_three_things_went_wrong():
     """Nothing quoted, nothing to check against, and a span that is not
     theirs are three different facts, and the advocate acts differently on
     each."""
-    from nm.domain.quotable import Quotable
+    from nm.legal_brain.quotable_contracts import Quotable
 
     q = Quotable(turn="we act for the payee")
     assert "nothing quoted" in q.refusal("")

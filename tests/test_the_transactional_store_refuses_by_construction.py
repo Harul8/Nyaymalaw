@@ -33,8 +33,9 @@ import inspect
 import re
 
 import pytest
-from nm.adapters.store import postgres as pg
-from nm.domain.operation import (
+
+from nm.shared import store_postgres as pg
+from nm.shared.operation_contracts import (
     Operation,
     OutboxEntry,
     OutboxRefused,
@@ -42,7 +43,7 @@ from nm.domain.operation import (
     refuse_outbox,
     request_digest,
 )
-from nm.ports.transactional import TenantMismatch, TransactionalStorePort
+from nm.shared.transactional_port import TenantMismatch, TransactionalStorePort
 
 pytestmark = pytest.mark.class_a
 
@@ -163,7 +164,7 @@ def test_asking_this_store_for_another_workspaces_operation_is_refused():
 def test_the_sealed_matter_carries_exactly_the_returned_database_version():
     import json
 
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     class Sealer:
         payload = None

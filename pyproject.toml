@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # The model adapters. Deliberately optional and per-provider: nothing in
-# backend/nm/core may import any of these, and layercheck fails the build if it does.
+# No core-role journey file may import these; layercheck refuses that dependency.
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
 knowledge = ["openpyxl>=3.1"]
@@ -81,12 +81,12 @@ ragas = [
 annotation = ["label-studio==1.23.0"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend/nm"]
+packages = ["nm"]
 
 [tool.pytest.ini_options]
-# The backend package lives under backend/; the assurance, pipeline and
-# development tooling are imported from the repository root.
-pythonpath = [".", "backend"]
+# The journey-first nm package, assurance, pipeline and developer tooling
+# are imported from this checkout's root, never another worktree's backend.
+pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"
 markers = [
@@ -129,7 +129,7 @@ ignore = ["N818"]
 # Hand-verified regex tables. Reflowing a regex is a change that fails
 # SILENTLY, and this project has already lost time to exactly that.
 "development_environment/one_off_tools/find_goldens2.py" = ["E501"]
-"pipeline/quality/verify_set.py" = ["E501"]
+"pipeline/verify_set.py" = ["E501"]
 
 [tool.pylint.messages_control]
 # The rename sweep. pyflakes does not find these, and a stale call site after a

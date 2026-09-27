@@ -31,15 +31,15 @@ import json
 import pathlib
 
 import pytest
-from nm.adapters.store.envelope import (
+
+from nm.shared.store_envelope import (
     LocalKeyRing,
     WrappedKey,
     WrappedKeyUnreadable,
 )
-from nm.adapters.store.file_store import FileMatterStore
-from nm.domain.matter import Matter
-
-from backend.operations.rekey_matter_store import (
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Matter
+from operations.rekey_matter_store import (
     ENVELOPE,
     KEY_RECORD,
     OPEN,

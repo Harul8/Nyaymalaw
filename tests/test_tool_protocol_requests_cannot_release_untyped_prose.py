@@ -9,13 +9,13 @@ protocol, never silently downgraded to an optional plain-text answer.
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.model.anthropic_adapter import AnthropicModelAdapter
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.core.loop import LoopRunner
-from nm.domain.loop import StepKind, StopReason
-from nm.ports.model import Tier, ToolCall, ToolMessage
 
+from nm.legal_brain.loop import LoopRunner
+from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.shared.model_anthropic_adapter import AnthropicModelAdapter
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_port import Tier, ToolCall, ToolMessage
+from nm.shared.model_traced import TracedModel
 from tests.test_the_loop_records_work_before_using_it import PROMPT as LOOP_PROMPT
 from tests.test_the_loop_records_work_before_using_it import _limits, _setup
 from tests.test_tool_calling_port_contract import ARGS, PROMPT, TOOL, config, factory

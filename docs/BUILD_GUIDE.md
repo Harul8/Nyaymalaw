@@ -119,7 +119,7 @@ remains unproved.
 | What is true now and what evidence supports it? | `docs/backlog/status.yaml` |
 | Why does the work exist and what was observed? | `docs/BACKLOG.md` |
 | What defines expert advocacy, working states, advice maturity and roles? | `docs/backlog/professional.json` |
-| Which condition blocks, withholds or discloses? | `backend/nm/domain/gates.py`, exported to `assurance/specification/gates.yaml` |
+| Which condition blocks, withholds or discloses? | `nm/shared/gates_contracts.py`, exported to `assurance/specification/gates.yaml` |
 | Which typed object must be produced? | PRD Appendix E and `assurance/specification/prd/schemas.js` |
 | Which release thresholds bind? | `assurance/specification/release.yaml`; measured results are in `assurance/specification/coverage.yaml` |
 | What does the corpus actually hold? | `docs/BASELINE.md` |

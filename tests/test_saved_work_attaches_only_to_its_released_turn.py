@@ -4,12 +4,12 @@ import copy
 from dataclasses import replace
 
 import pytest
-from nm.core.brain_context import ContextSession, assemble_brief
-from nm.core.loop_progress import links_released_turn, progress, recorded_scope
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.loop import LoopRecord, StepKind, StopReason
-from nm.domain.turn_receipt import TurnReceipt, answer_payload
 
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
+from nm.legal_brain.brain_context import ContextSession, assemble_brief
+from nm.legal_brain.loop_contracts import LoopRecord, StepKind, StopReason
+from nm.legal_brain.loop_progress import links_released_turn, progress, recorded_scope
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture, snapshot
 from tests.test_saved_loop_progress_is_not_an_advice_transport import AT, SECRET, add, base, work
 
@@ -106,7 +106,7 @@ def test_coincident_turn_identity_does_not_claim_a_released_response_link(mutati
 def test_actual_owned_routes_link_only_the_strict_release_and_keep_the_loop_candidate_unreleased(
     client,
 ):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter, record = scoped_work()
     application().store.commit(matter, expected_version=0)

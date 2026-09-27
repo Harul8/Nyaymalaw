@@ -7,7 +7,7 @@ previous build had a hundred good rules and no runner, so they became
 aspirations — and the lesson recorded in CLAUDE.md is that a rule you cannot
 run is not a requirement.
 
-So every schema in `assurance/specification/schemas.yaml` that has a counterpart in `backend/nm/` is
+So every schema in `assurance/specification/schemas.yaml` that has a counterpart in `nm/` is
 checked field by field, and a required field the code does not carry fails the
 build. Schemas whose slice has not been built are reported as unimplemented,
 BY NAME, rather than passing silently — because a contract with no
@@ -22,9 +22,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from nm.domain.matter import Fact, FactBasis, Provenance, Weight
-from nm.domain.professional_access import ProfessionalApproval
-from nm.domain.traceability import refuses
+
+from nm.arrive.professional_access_contracts import ProfessionalApproval
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Fact, FactBasis, Provenance, Weight
 
 pytestmark = pytest.mark.class_a
 
@@ -221,13 +222,13 @@ def test_the_case_summary_section_list_matches_appendix_e():
     compares against is how a change described as global lands in half a
     product, and that has bitten this project twice.
     """
-    from nm.domain.summary import CASE_SUMMARY_SECTIONS
+    from nm.work_the_file.summary_contracts import CASE_SUMMARY_SECTIONS
 
     contract = next((s for s in load() if s["name"] == "CaseSummary"), None)
     assert contract is not None, "CaseSummary is not in assurance/specification/schemas.yaml"
     declared = [f["field"] for f in contract["fields"]]
     assert list(CASE_SUMMARY_SECTIONS) == declared, (
-        "backend/nm/domain/summary.py's section list no longer matches Appendix E. "
+        "nm/work_the_file/summary_contracts.py's section list no longer matches Appendix E. "
         "Whichever is wrong, they cannot both stand: `handover_blockers` is "
         "computed from the code's copy and would then be naming sections the "
         "contract does not have, or silently omitting ones it does.")
@@ -241,7 +242,7 @@ def test_a_partially_built_summary_never_reads_as_a_complete_handover():
     opposite situations, and the second one hands over a file with work
     silently missing from it.
     """
-    from nm.domain.summary import CARRIES, MatterSummary
+    from nm.work_the_file.summary_contracts import CARRIES, MatterSummary
 
     body = MatterSummary(matter_id="m", title="t").as_dict()
     assert body["handover_complete"] is False
@@ -262,7 +263,7 @@ def test_a_partially_built_summary_never_reads_as_a_complete_handover():
     # Every blocker is a real section of the contract, and nothing carried is
     # listed as a blocker. Derived from the code's own two lists, so this
     # cannot be satisfied by a hand-maintained third one.
-    from nm.domain.summary import CASE_SUMMARY_SECTIONS
+    from nm.work_the_file.summary_contracts import CASE_SUMMARY_SECTIONS
 
     assert set(body["handover_blockers"]) <= set(CASE_SUMMARY_SECTIONS)
     assert not (set(body["handover_blockers"]) & CARRIES)

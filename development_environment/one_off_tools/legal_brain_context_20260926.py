@@ -32,7 +32,15 @@ the Implementation Plan sheet. The mechanism and the proof are the
 strengthen tool's, reused rather than copied.
 """
 import importlib.util
+import sys
 from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
 
 _here = Path(__file__).with_name("legal_brain_strengthen_20260926.py")
 _spec = importlib.util.spec_from_file_location("strengthen", _here)
@@ -78,7 +86,7 @@ strengthen.NEW_ROWS = {
         "caught by the prefix comparison.\n"
         "LB-147-AC3: a fact corrected mid-conversation reaches the model as an "
         "appended message, and the earlier message is unchanged.",
-        "LB-128, LB-145; backend/nm/ports/model.py. " + CLAUDE +
+        "LB-128, LB-145; nm/shared/model_port.py. " + CLAUDE +
         "prompt caching, mid-conversation system messages and turn-scoped "
         "reminders. OPEN: the cache hit-rate target, measured on golden runs.",
     ]),

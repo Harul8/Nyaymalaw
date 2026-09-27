@@ -49,10 +49,12 @@ import typing
 from dataclasses import replace
 
 import pytest
-from nm.domain import summary
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.intake import ReadQuality
-from nm.domain.matter import (
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
+from nm.open_matter.intake_contracts import ReadQuality
+from nm.work_the_file import summary_contracts as summary
+from nm.work_the_file.matter_contracts import (
     Basis,
     Certainty,
     Fact,
@@ -63,7 +65,6 @@ from nm.domain.matter import (
     Role,
     Thread,
 )
-from nm.domain.turn_receipt import TurnReceipt, answer_payload
 
 pytestmark = pytest.mark.class_a
 
@@ -420,7 +421,7 @@ def test_a_contested_side_reaches_the_model(tmp_path):
     is doing the exact thing C3 exists to prevent, with the evidence of the
     dispute sitting on its own record.
     """
-    from nm.domain.matter import PostureConflict
+    from nm.work_the_file.matter_contracts import PostureConflict
 
     contested = Posture(role=Role.PLAINTIFF, basis=Basis.STATED,
                         conflicts=(PostureConflict(on_record=Role.PLAINTIFF,
@@ -577,7 +578,7 @@ def test_first_person_language_never_arrives_from_our_own_notes():
     Given a matter where the advocate spoke only of events, it must stay
     false however much this product has written into the account.
     """
-    from nm.core.posture import speaks_of_the_representation
+    from nm.legal_brain.posture import speaks_of_the_representation
 
     fact = Fact(id="f1", statement="a cheque was dishonoured on 3 March",
                 provenance=SAID)
@@ -720,8 +721,8 @@ def test_the_carry_asks_the_same_question_guard_two_asks():
     drift from the guard it has to agree with, and the drift is invisible:
     the carry would admit a sentence guard 2 then refuses, which is the state
     this whole change exists to leave behind."""
-    from nm.core import posture as posture_reader
-    from nm.domain.text import speaks_of_the_representation
+    from nm.legal_brain import posture as posture_reader
+    from nm.shared.text_contracts import speaks_of_the_representation
 
     assert posture_reader.speaks_of_the_representation is (
         speaks_of_the_representation)
@@ -747,7 +748,7 @@ def test_being_unfiled_and_having_a_side_are_asked_for_as_two_facts():
     had written "We want an injunction urgently". Eight threads, one sentence,
     no side, and both matters refused on every turn including the correction.
     """
-    from nm.core.posture import SYSTEM
+    from nm.legal_brain.posture import SYSTEM
 
     assert "TWO DIFFERENT FACTS" in SYSTEM, (
         "the prompt no longer separates whether a proceeding exists from "

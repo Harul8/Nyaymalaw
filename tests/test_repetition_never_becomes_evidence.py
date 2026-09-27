@@ -24,14 +24,15 @@ WHAT IS ASSERTED
 from __future__ import annotations
 
 import pytest
-from nm.core.casefile import (
+
+from nm.open_matter.intake_contracts import ReadQuality
+from nm.work_the_file.casefile import (
     Attribution,
     build,
     one_dispute_stays_one,
     repetition_upgrades,
 )
-from nm.domain.intake import ReadQuality
-from nm.domain.matter import Certainty, Fact, Matter, Provenance
+from nm.work_the_file.matter_contracts import Certainty, Fact, Matter, Provenance
 
 pytestmark = pytest.mark.class_a
 
@@ -117,7 +118,7 @@ def test_an_unextracted_fact_is_unread_rather_than_clear():
 def test_recorded_extraction_quality_and_version_survive_sealed_restart(tmp_path):
     from dataclasses import replace
 
-    from nm.adapters.store.file_store import FileMatterStore
+    from nm.shared.store_file_store import FileMatterStore
 
     key = "casefile-test-key-" + "q" * 32
     store = FileMatterStore(tmp_path, key=key)

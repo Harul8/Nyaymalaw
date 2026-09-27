@@ -2,10 +2,10 @@
 from dataclasses import replace
 
 import pytest
-from nm.core.source_excerpt import capture, document_anchor
-from nm.edge.api import application
-from nm.ports.evidence import SourceDocument
 
+from nm.app.api import application
+from nm.legal_brain.evidence_port import SourceDocument
+from nm.legal_brain.source_excerpt import capture, document_anchor
 from tests.test_saved_source_reader import _seed
 from tests.test_turn_contract import finding
 
@@ -18,8 +18,8 @@ def test_statute_document_uses_registered_title_without_changing_source_identity
         tmp_path, monkeypatch, act_id, title):
     import json
 
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.manifest_sources import Manifest
     adapter = CorpusEvidenceAdapter(tmp_path, Manifest.load('pipeline/manifest.yaml'))
     monkeypatch.setattr(adapter, '_rows', lambda *a: [
         ('Article_52', 'schedule_article', 'c', json.dumps({'full_text': 'Held text.'}))])

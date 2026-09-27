@@ -20,7 +20,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from assurance.common._console import utf8_console  # noqa: E402
 from assurance.control_plane import requirement_owners as owners  # noqa: E402
+
+utf8_console()
 
 MAP = ROOT / "docs/blueprint/legal_brain_execution.json"
 SELECTED_PACKETS = ("P49", "P50", "P51", "P52", "P53", "P54")

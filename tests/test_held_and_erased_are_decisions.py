@@ -27,9 +27,10 @@ while looking like a successful recovery. The tombstones are replayed over it.
 from __future__ import annotations
 
 import pytest
-from nm.core import retention as rt
-from nm.domain import retention as rd
-from nm.domain.traceability import refuses
+
+from nm.close import retention as rt
+from nm.close import retention_contracts as rd
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 

@@ -7,16 +7,8 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.core.verifier import (
-    EvidencePackage,
-    EvidenceSpan,
-    IndependentVerifier,
-    release_verified,
-)
-from nm.domain.matter import Certainty, Fact, FactBasis, Provenance
-from nm.ports.evidence import (
+
+from nm.legal_brain.evidence_port import (
     Binding,
     Finding,
     ParaKind,
@@ -24,7 +16,16 @@ from nm.ports.evidence import (
     Treatment,
     TreatmentState,
 )
-from nm.ports.model import ProviderUnavailable, Tier
+from nm.legal_brain.verifier import (
+    EvidencePackage,
+    EvidenceSpan,
+    IndependentVerifier,
+    release_verified,
+)
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import ProviderUnavailable, Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.work_the_file.matter_contracts import Certainty, Fact, FactBasis, Provenance
 
 pytestmark = pytest.mark.class_a
 
@@ -435,7 +436,7 @@ def test_the_returned_judge_identity_cannot_silently_change_or_self_grade(change
 
 
 def test_model_failures_are_recorded_only_after_a_dispatch_with_exact_receipts():
-    from nm.ports.model import Usage
+    from nm.shared.model_port import Usage
 
     usage = Usage(22, 11, 0.01)
     error = ProviderUnavailable("lost response", usage=usage, retries=2)

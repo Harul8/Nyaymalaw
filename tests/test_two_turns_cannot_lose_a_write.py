@@ -36,9 +36,10 @@ import threading
 from dataclasses import replace
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.domain.matter import Matter
-from nm.ports.store import StaleWrite
+
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_port import StaleWrite
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 

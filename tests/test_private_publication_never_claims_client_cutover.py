@@ -4,14 +4,14 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.brain_assessment import AssessmentService
-from nm.core.brain_publication import PrivatePublicationService
-from nm.core.brain_release import ReviewRefused
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits
-from nm.ports.store import StaleWrite
 
+from nm.legal_brain.brain_assessment import AssessmentService
+from nm.legal_brain.brain_publication import PrivatePublicationService
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.loop_contracts import LoopLimits
+from nm.shared.budget_contracts import Budget
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_port import StaleWrite
 from tests.test_final_checks_are_saved_and_charged_before_use import _setup
 
 pytestmark = pytest.mark.class_a

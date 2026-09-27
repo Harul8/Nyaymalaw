@@ -63,7 +63,7 @@ not an absence of it.
 The distinction is not pedantry, and it cost something. This paragraph used
 to read *"zero Telangana High Court judgements"* — literally true of the
 court LABEL, and false of the product's own decision above, under which every
-one of those 4,280 is a Telangana judgement. `pipeline/quality/releasegate.py` was
+one of those 4,280 is a Telangana judgement. `pipeline/releasegate.py` was
 written from this sentence: RG-01 counted the label, got 0, blocked the
 release, and made G-COVERAGE tell the advocate on every authority turn that
 *no High Court output is held for this jurisdiction.* See defect **B-044**.
@@ -263,8 +263,8 @@ as *section 442* and the other was not. A realistic brief retrieved
 Act the corpus holds in full.
 
 **The lesson is the same one and it is now enforced the same way.** The pattern
-lives in `backend/nm/domain/citation.py`, and `tests/test_citation_patterns.py` fails
-the build if a second one appears anywhere in `backend/nm/`.
+lives in `nm/legal_brain/citation_contracts.py`, and `tests/test_citation_patterns.py` fails
+the build if a second one appears anywhere in `nm/`.
 
 ---
 
@@ -406,7 +406,7 @@ making it useful. The measured intersection is **0.83%**. Wrong by a factor of
 seventeen, because 94.3% of citator keys name cases this corpus does not hold.
 
 > **CHECK `cit-1`:** coverage is an INTERSECTION against what is held, computed
-> by `pipeline/quality/releasegate.py`. A ratio of two set sizes is never reported as
+> by `pipeline/releasegate.py`. A ratio of two set sizes is never reported as
 > coverage, whatever it is labelled.
 
 **What follows for the product, stated plainly.** NM does not verify whether an
@@ -432,9 +432,9 @@ cover 4.9% of attributable paragraphs, concentrated on the Constitution
 authorities interpret this provision* is **not** answerable today for the
 Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
 
-> **CHECK `rg-01`:** these figures are measured by `pipeline/quality/releasegate.py`
+> **CHECK `rg-01`:** these figures are measured by `pipeline/releasegate.py`
 > against `assurance/specification/release.yaml`, written to `assurance/specification/coverage.yaml`, and **read at
-> turn time** by `backend/nm/knowledge/coverage.py`. The release decision and the
+> turn time** by `nm/legal_brain/coverage_sources.py`. The release decision and the
 > advocate-facing disclosure rest on ONE measurement, so they cannot disagree.
 
 ---

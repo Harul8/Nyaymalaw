@@ -36,11 +36,11 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.core import chronology
-from nm.core.turn import TurnInput
-from nm.domain.matter import Fact, Provenance
-from nm.domain.quotable import Quotable
 
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file import chronology
+from nm.work_the_file.matter_contracts import Fact, Provenance
 from tests.test_turn_contract import briefed, build
 
 pytestmark = pytest.mark.class_a
@@ -142,7 +142,7 @@ def test_adding_a_fact_that_is_already_on_the_file_is_refused():
     a second copy, and `chart` kept the un-superseded one — the fix defeated
     by its own write.
     """
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     m = Matter.create(advocate_id="adv_1", title="t").with_fact(OLD)
     with pytest.raises(ValueError, match="already on this matter"):
@@ -152,7 +152,7 @@ def test_adding_a_fact_that_is_already_on_the_file_is_refused():
 def test_amending_replaces_in_place():
     """Position is kept, or an advocate reading their own chronology would
     find it had rearranged itself when something was corrected."""
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     m = (Matter.create(advocate_id="adv_1", title="t")
          .with_fact(OLD).with_fact(NEW))
@@ -162,7 +162,7 @@ def test_amending_replaces_in_place():
 
 
 def test_amending_a_fact_the_matter_does_not_hold_is_refused():
-    from nm.domain.matter import Matter
+    from nm.work_the_file.matter_contracts import Matter
 
     with pytest.raises(ValueError, match="nothing.*to amend"):
         Matter.create(advocate_id="adv_1", title="t").amending(OLD)
@@ -253,10 +253,9 @@ def test_a_missed_correction_becomes_a_blocking_question(tmp_path):
     real one to miss would be waiting on a coincidence.
     """
 
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.core.turn import TurnEngine
-
+    from nm.legal_brain.turn import TurnEngine
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config
 
     class _NeverCorrects(ScriptedModelAdapter):

@@ -9,8 +9,9 @@ and a reservation bounding its worst case.
 from __future__ import annotations
 
 import pytest
-from nm.adapters.model.call_budget import MODEL, CallBudget
-from nm.ports.model import ConfigurationError
+
+from nm.shared.model_call_budget import MODEL, CallBudget
+from nm.shared.model_port import ConfigurationError
 
 pytestmark = pytest.mark.class_a
 

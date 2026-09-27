@@ -26,7 +26,7 @@ from __future__ import annotations
 #: the test is reached, agrees with itself perfectly and reports the editor as
 #: a defect.
 try:
-    from nm.domain.identity import source_fingerprint as _fingerprint
+    from nm.shared.identity_contracts import source_fingerprint as _fingerprint
 
     SESSION_TREE = _fingerprint()
 except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
@@ -239,7 +239,7 @@ def scripted_application_environment(monkeypatch):
 def wired(client):
     """THE APPLICATION THIS TEST'S CLIENT SERVES. Ask for it; never import it.
 
-    A step that does `from nm.edge.api import application` itself gets whatever
+    A step that does `from nm.app.api import application` itself gets whatever
     was wired LAST -- which inside a suite is A PREVIOUS TEST'S application.
     Patching that changes nothing about the app under test, and the patch is
     not lost loudly: the route goes on using the real adapter.
@@ -252,7 +252,7 @@ def wired(client):
     so depending on this fixture makes the order structural instead of
     incidental.
     """
-    from nm.edge.api import application
+    from nm.app.api import application
 
     return application()
 
@@ -267,13 +267,13 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     many guards are checked on the wire.
     """
     from fastapi.testclient import TestClient
-    from nm.adapters.model.config import ModelConfig, TierConfig
-    from nm.adapters.model.scripted import ScriptedModelAdapter
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.bootstrap.composition import Application
-    from nm.bootstrap.main import create_app
-    from nm.ports.model import Tier
 
+    from nm.app.composition import Application
+    from nm.app.main import create_app
+    from nm.shared.model_config import ModelConfig, TierConfig
+    from nm.shared.model_port import Tier
+    from nm.shared.model_scripted import ScriptedModelAdapter
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence
 
     # Long enough for `enrol`, which refuses under twelve characters.
@@ -301,9 +301,9 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     # without authenticating would mean the suite drives a path no advocate
     # can, which is the "correct in the core, wrong on the wire" gap CLAUDE.md
     # §8 is about -- and it is exactly where B-082 lived.
-    from nm.adapters.mail.outbox import FileOutbox
-    from nm.adapters.store.directory import FileDirectory
-    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+    from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol
+    from nm.arrive.mail_outbox import FileOutbox
+    from nm.arrive.store_directory import FileDirectory
 
     directory = FileDirectory(tmp_path, key=KEY)
     # THE FIXTURE'S OWN OUTBOX. Without it the application would compose its
@@ -360,14 +360,14 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
                issued_by: str = INVITED_BY, at=None) -> str:
         """Issue one invitation and return the token, ONCE. BK-31.
 
-        THE SAME CALL THE OPERATOR MAKES. `backend/operations/invite.py` builds an
+        THE SAME CALL THE OPERATOR MAKES. `operations/invite.py` builds an
         `AdvocateIdentity` and hands it to `directory.issue_invitation`, and so
         does this -- so a test drives the real issuing path rather than a
         fixture's idea of it. The identity here must match what the
         registration will offer, because the adapter binds the invitation to
         the whole identity and not merely to the address.
         """
-        from nm.domain.advocate import AdvocateIdentity, canonical_id, utcnow
+        from nm.arrive.advocate_contracts import AdvocateIdentity, canonical_id, utcnow
         canonical = canonical_id(email)
         return directory.issue_invitation(
             AdvocateIdentity(

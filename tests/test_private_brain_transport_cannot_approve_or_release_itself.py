@@ -4,21 +4,21 @@ from datetime import timedelta
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.bootstrap.controlled_evaluations import (
+
+from nm.app import api
+from nm.arrive.advocate_contracts import utcnow
+from nm.legal_brain.brain_release import ReviewService
+from nm.legal_brain.controlled_brain import EvaluationScope
+from nm.legal_brain.controlled_evaluations_composition import (
     ControlledEvaluation,
     EvaluationUnavailable,
     grant_for,
 )
-from nm.core.brain_release import ReviewService
-from nm.core.controlled_brain import EvaluationScope
-from nm.core.verifier import IndependentVerifier
-from nm.domain.advocate import utcnow
-from nm.domain.loop import LoopMode
-from nm.domain.matter import Matter
-from nm.edge import api
-from nm.ports.model import ToolCall
-
+from nm.legal_brain.loop_contracts import LoopMode
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.model_port import ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.work_the_file.matter_contracts import Matter
 from tests.test_independent_claim_verifier import Judge
 from tests.test_the_loop_records_work_before_using_it import _limits, _response
 

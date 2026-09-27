@@ -2,7 +2,7 @@
 
 THE DEFECT THIS FILE IS ABOUT. An advocate asking "can I get an injunction on
 Monday" is asking a different question from "will this suit succeed", and the
-product had only the second. `nm.core.relief` read the FINAL relief on five
+product had only the second. `nm.advise.relief` read the FINAL relief on five
 coordinates -- available, valuable, timely, enforceable, proportionate -- and
 nothing anywhere set out the test an interim order is actually measured
 against. A confident answer to the wrong question is the shape CLAUDE.md
@@ -20,10 +20,11 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-from nm.core import relief as relief_mod
-from nm.core.premise import Basis
-from nm.knowledge import interim_relief as curated
-from nm.ports.interim_relief import InterimRelief, LimbState
+
+from nm.advise import relief as relief_mod
+from nm.legal_brain import interim_relief_sources as curated
+from nm.legal_brain.interim_relief_port import InterimRelief, LimbState
+from nm.legal_brain.premise import Basis
 
 pytestmark = pytest.mark.class_a
 
@@ -297,8 +298,7 @@ def _seeded(tmp_path, *, wired: bool):
     CLAUDE.md section 2 names. So the same file is served both ways and the
     difference is what is asserted.
     """
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, store = build(tmp_path)
@@ -353,8 +353,7 @@ def test_a_matter_with_no_interim_order_stated_says_nothing_about_one(tmp_path):
     """THE QUIET CASE. Most matters carry no interim application, and a
     product that announced the injunction test on every turn would bury the
     turns where it matters."""
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

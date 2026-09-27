@@ -60,6 +60,24 @@ and they are not the bar.
 
 ## Before any code change
 
+### Journey-first source ownership
+
+Production lives in `nm/<journey>/`, with descriptive files rather than nested
+layer folders. Read `docs/PROJECT_STRUCTURE.md` and the relevant phase README.
+`nm/app/main.py` is the entry point; the checkout root is the only import root.
+Browser assets are co-located with their owners and served through the closed
+allowlist in `nm/source_layout.json`, not by exposing the package directory.
+Model-facing tool entry points are `tool_<registered_name>.py`; human-run jobs
+remain in `operations/`, `pipeline/` and `assurance/`.
+
+Physical journey ownership does NOT remove architectural roles. The role map in
+`nm/source_layout.json` and `assurance/common/module_roles.py` preserve dependency
+direction across all phases. Add a new source with an explicit role; never weaken
+the matrix or infer a security role from its journey folder. Original source
+identities and roles are recorded in `assurance/common/journey_layout.json`.
+Generated principles still have one authoring source in `docs/blueprint/`.
+The workbook remains the requirement record, not a claim that a folder is done.
+
 ### 1. Generalised fixes only — and then SWEEP for every other site
 The test: **can you state the fix without naming the specific Act, section,
 case, atom type, or phrase that exposed it?** If not, it is a patch, and the
@@ -88,8 +106,8 @@ The procedure, after any fix:
    from one module.** An enumerator scoped to a module misses the member added
    to a sibling module an hour later — which is exactly what happened to
    `test_every_declared_schema_is_satisfiable_when_nothing_was_established`,
-   written in the morning against `backend/nm/core/posture.py` and already blind to
-   `backend/nm/core/dispute.py` by the afternoon.
+   written in the morning against `nm/legal_brain/posture.py` and already blind to
+   `nm/legal_brain/dispute.py` by the afternoon.
 
 This applies to build fixes, test fixes and stress-test findings alike.
 
@@ -141,8 +159,8 @@ full, and the gate then correctly withheld the turn. Two correct components,
 one useless answer, and the defect living in the gap between them. Every unit
 test passed.
 
-`backend/nm/domain/citation.py` is now the only module permitted to define such a
-pattern, and `tests/test_citation_patterns.py` scans `backend/nm/` and fails the build
+`nm/legal_brain/citation_contracts.py` is now the only module permitted to define such a
+pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
 on a second one.
 
 ### 5. Fuzzy matching may RANK, never IDENTIFY — and never an Act
@@ -213,7 +231,7 @@ in the first draft of §7.1.
 
 | | |
 |---|---|
-| `backend/nm/domain/gates.py` | **THE GATE MATRIX.** Every condition that refuses something, with its RESPONSE (`withhold` / `block` / `disclose`) and its SCOPE (turn / thread / step / need). The turn engine calls `metrics.fire(gate_id, state, detail)` and **obeys what the table returns** — no call site decides for itself |
+| `nm/shared/gates_contracts.py` | **THE GATE MATRIX.** Every condition that refuses something, with its RESPONSE (`withhold` / `block` / `disclose`) and its SCOPE (turn / thread / step / need). The turn engine calls `metrics.fire(gate_id, state, detail)` and **obeys what the table returns** — no call site decides for itself |
 | `assurance/specification/prd/schemas.js` | **APPENDIX E.** The typed PRODUCES contracts, every field with the reason it exists. `assurance/gate/speccheck.py` refuses a PRODUCES clause that contradicts one; `tests/test_produces_contracts.py` refuses a dataclass that does |
 
 **What §7.1 actually says now, precisely:** the TURN is withheld by exactly
@@ -235,12 +253,12 @@ nothing evaluates a condition while something quietly does.
 ## Release gates — coverage is measured, then it BINDS
 
 ```bash
-python pipeline/quality/releasegate.py --write     # measure the corpus, score assurance/specification/release.yaml
+python pipeline/releasegate.py --write     # measure the corpus, score assurance/specification/release.yaml
 ```
 
 `assurance/specification/release.yaml` holds authored thresholds with an owner and a cadence.
-`pipeline/quality/releasegate.py` measures, scores every row **PASS / FAIL / NOT MEASURED**,
-and writes `assurance/specification/coverage.yaml`. `backend/nm/knowledge/coverage.py` reads that same file
+`pipeline/releasegate.py` measures, scores every row **PASS / FAIL / NOT MEASURED**,
+and writes `assurance/specification/coverage.yaml`. `nm/legal_brain/coverage_sources.py` reads that same file
 at turn time, so the release decision and the advocate-facing disclosure
 (`G-COVERAGE`) rest on ONE measurement and cannot disagree.
 
@@ -258,7 +276,7 @@ on every authority turn that *no High Court output is held for this
 jurisdiction.* **4,280 are held, and every one of them binds** — Andhra Pradesh
 High Court judgements are Telangana judgements, which is a standing decision
 recorded in `BASELINE.md` §1.1 and already implemented correctly in
-`backend/nm/knowledge/jurisdiction.py`.
+`nm/legal_brain/jurisdiction_sources.py`.
 
 *Binding is a RELATIONSHIP, not a court name.* A zero from the wrong index
 reads exactly like absence — the trap this file already records against the
@@ -269,7 +287,7 @@ criterion, and the advocate-facing disclosure at the same time (**B-044**).
 
 ## Long jobs — write them, do not run them
 
-`pipeline/indexing/build_authority_index.py` builds the FTS index over 451,548 attributable
+`pipeline/build_authority_index.py` builds the FTS index over 451,548 attributable
 case paragraphs. **It is not run automatically and nothing in the repo triggers
 it.** Until it exists, every authority need returns `NOT_ASSESSED` naming the
 tool (the gate matrix's `G-NOTASSESSED`: a store absent, unopenable or never
@@ -325,7 +343,7 @@ artefacts were surveyed on 29 August 2026 and both were declined:
 
 **The dense index is only knowable as unusable because it shipped an
 `identity.json`.** That is the entire argument for defect shape S11, and it
-is now enforced by `backend/nm/knowledge/artefact.py` — using that real artefact as
+is now enforced by `nm/legal_brain/artefact_sources.py` — using that real artefact as
 the counterexample its test must reject, because a synthetic fixture would
 prove only that the check compiles.
 
@@ -367,10 +385,10 @@ confidently:**
 
 ---
 
-## Repository layout — since 14 September 2026
+## Repository layout — journey-first since 27 September 2026
 
-`backend/nm/` (the `nm` package) and `backend/operations/` · `frontend/` ·
-`pipeline/{acquisition,indexing,quality}` · `assurance/{gate,journeys,control_plane,hooks,specification,common}`
+`nm/<journey>/` (the `nm` package, including co-located browser assets) ·
+`operations/` · flat `pipeline/` · `assurance/{gate,journeys,control_plane,hooks,specification,common}`
 · `docs/` · `tests/` · `development_environment/` (archives, dated reviews, one-off and
 developer tooling, earlier worktrees — kept, not shipped).
 
@@ -379,8 +397,8 @@ developer tooling, earlier worktrees — kept, not shipped).
 hand-written list is how a sweep's population shrinks without anything failing.
 
 `nm` is deliberately not installed: an editable install would make every worktree
-import the main checkout's code. Tests get `backend/` from `pyproject.toml`;
-scripts insert the root and `backend/` themselves. Hooks install by path:
+import the main checkout's code. Tests get the checkout root from `pyproject.toml`;
+scripts insert that root only. No legacy backend import root remains. Hooks install by path:
 `git config core.hooksPath assurance/hooks`.
 
 ## Tooling
@@ -487,9 +505,9 @@ semantic query no matter how the index is rebuilt.
 **THE GRAPH HOLDS TRACKED FILES ONLY, so a file you have just written is not
 in it.** Measured 18 September 2026 against the built graph: **487 of 487**
 tracked `.py`/`.js` files were indexed and **0 of 9 untracked ones** — the whole
-speech stack written that week, `backend/nm/adapters/optional.py`,
+speech stack written that week (historical paths: `backend/nm/adapters/optional.py`,
 `backend/nm/adapters/speech/*`, `backend/nm/domain/dictation.py`,
-`backend/nm/ports/transcription.py`, `frontend/dictation-worklet.js`. Neither
+`backend/nm/ports/transcription.py`, `frontend/dictation-worklet.js`). Neither
 `update` nor a full `build` reaches them; `update --base` is a git diff, and the
 build enumerates the same way.
 

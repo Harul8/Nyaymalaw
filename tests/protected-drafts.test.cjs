@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {webcrypto} = require('node:crypto');
-const {NMDraftVault} = require('../frontend/draft-vault.js');
+const {NMDraftVault} = require('../nm/arrive/draft-vault.js');
 class Storage {
   constructor(){this.data=new Map();}
   get length(){return this.data.size;}

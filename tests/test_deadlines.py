@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-from nm.core.deadlines import (
+
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.deadlines import (
     NEAR_WITHIN,
     Deadline,
     DeadlineKind,
@@ -20,7 +22,6 @@ from nm.core.deadlines import (
     register,
     upcoming,
 )
-from nm.domain.traceability import refuses
 
 pytestmark = pytest.mark.class_a
 

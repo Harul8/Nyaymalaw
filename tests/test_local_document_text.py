@@ -9,10 +9,9 @@ import zipfile
 from dataclasses import replace
 
 import pytest
-from nm.adapters.documents import local
-from nm.adapters.optional import library
-from nm.domain.media import MediaKind, Quarantine, Retention, admitted
-from nm.ports.document_text import (
+
+from nm.open_matter import document_local as local
+from nm.open_matter.document_text_port import (
     AdmittedDocument,
     DocumentFormat,
     ExtractionBounds,
@@ -20,6 +19,8 @@ from nm.ports.document_text import (
     LocatedText,
     TextState,
 )
+from nm.open_matter.media_contracts import MediaKind, Quarantine, Retention, admitted
+from nm.shared.optional_adapter import library
 
 pytestmark = pytest.mark.class_a
 
@@ -131,7 +132,7 @@ def test_unknown_format_does_not_try_a_likely_parser(reader, monkeypatch):
 
 
 def test_the_actual_processing_policy_refuses_before_the_worker_runs(monkeypatch):
-    from nm.domain.media_policy import ProcessingContract, refuse_request
+    from nm.open_matter.media_policy_contracts import ProcessingContract, refuse_request
 
     deny = ProcessingContract(frozenset({"biometrics"}), frozenset({"transcription"}),
                               frozenset({"logs"}))

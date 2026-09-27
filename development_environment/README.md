@@ -22,7 +22,7 @@ wholesale (CLAUDE.md, "Archived — reference, not authority").
 A file is **production** if it is needed to run, prove, release or operate the
 product, and everything else comes here. Two consequences are easy to get wrong:
 
-- *Unreferenced does not mean development.* `pipeline/quality/probe_gaps.py` is
+- *Unreferenced does not mean development.* `pipeline/probe_gaps.py` is
   called by nothing, and CLAUDE.md requires it before any Act is reported absent.
 - *Old does not mean development.* `docs/Nyaymalaw_Project_Plan.xlsx` is the
   original slice plan, and CLAUDE.md still lists it as a live reference; its

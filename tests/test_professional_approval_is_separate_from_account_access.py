@@ -7,8 +7,9 @@ from dataclasses import replace
 from datetime import timedelta
 
 import pytest
-from nm.domain.advocate import utcnow
-from nm.domain.professional_access import ProfessionalApproval, professional_status
+
+from nm.arrive.advocate_contracts import utcnow
+from nm.arrive.professional_access_contracts import ProfessionalApproval, professional_status
 
 pytestmark = pytest.mark.class_a
 
@@ -34,8 +35,7 @@ def approve_fixture_account(directory, account_id="adv_demo", *, now=None,
 
 
 def test_professional_approval_is_durable_attributed_and_compare_and_set(client, tmp_path):
-    from nm.adapters.store.directory import FileDirectory
-
+    from nm.arrive.store_directory import FileDirectory
     from tests.test_turn_contract import KEY
 
     before = client.directory._read("adv_demo")
@@ -102,7 +102,7 @@ def test_untrusted_approval_records_fail_closed(client, mutation):
 
 
 def test_unapproved_account_keeps_ordinary_file_access_but_cannot_declare_exception(client):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     def open_ordinary_file(turn_id):
         response = client.post("/api/turn", json={
@@ -139,8 +139,7 @@ def test_unapproved_account_keeps_ordinary_file_access_but_cannot_declare_except
 
 
 def test_current_approval_does_not_grant_matter_authority(client):
-    from nm.edge.api import application
-
+    from nm.app.api import application
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     approve_fixture_account(client.directory)
@@ -157,9 +156,8 @@ def test_current_approval_does_not_grant_matter_authority(client):
 
 
 def test_revoked_approval_refuses_core_handoff_replay_but_not_safety_revocation(client):
-    from nm.core.turn import TurnInput, TurnRefused
-    from nm.edge.api import application
-
+    from nm.app.api import application
+    from nm.legal_brain.turn import TurnInput, TurnRefused
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     approval = approve_fixture_account(client.directory)
@@ -192,8 +190,7 @@ def test_revoked_approval_refuses_core_handoff_replay_but_not_safety_revocation(
 
 def test_unavailable_profile_reader_refuses_exception_without_blocking_ordinary_turn(
         client, monkeypatch):
-    from nm.edge.api import application
-
+    from nm.app.api import application
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     read_attempts = []
@@ -216,7 +213,7 @@ def test_unavailable_profile_reader_refuses_exception_without_blocking_ordinary_
 
 def test_runtime_failure_of_the_professional_port_cannot_break_login_or_session(
         client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     attempted = []
 
@@ -242,9 +239,8 @@ def test_runtime_failure_of_the_professional_port_cannot_break_login_or_session(
 
 @pytest.mark.parametrize("change", ["missing", "malformed", "expired", "future"])
 def test_live_exception_is_rechecked_against_the_actual_approval_owner(client, monkeypatch, change):
-    from nm.core.turn import TurnInput
-    from nm.edge.api import application
-
+    from nm.app.api import application
+    from nm.legal_brain.turn import TurnInput
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     approval = approve_fixture_account(client.directory, valid_for=timedelta(minutes=30))
@@ -273,7 +269,7 @@ def test_live_exception_is_rechecked_against_the_actual_approval_owner(client, m
         monkeypatch.setattr(engine, "_clock", lambda: instant)
     assert engine.professional_access("adv_demo")["state"] == "unapproved"
     original = application().store.load(matter_id)
-    from nm.domain.emergency import latest
+    from nm.open_matter.emergency_contracts import latest
 
     assert latest(original.emergencies, engine._clock()) is not None, \
         "the declaration itself must remain live to isolate the professional-approval guard"
@@ -292,13 +288,12 @@ def test_live_exception_is_rechecked_against_the_actual_approval_owner(client, m
 
 def test_operator_cli_hashes_the_real_review_artifact_without_exposing_it(
         client, tmp_path, monkeypatch, capsys):
-    from nm.edge.api import application
-
-    from backend.operations.professional_approval import main
+    from nm.app.api import application
+    from operations.professional_approval import main
 
     artifact = tmp_path / "synthetic-review.txt"
     artifact.write_bytes(b"Synthetic operator-reviewed artifact; not an actual qualification")
-    monkeypatch.setattr("nm.bootstrap.composition.Application", lambda: application())
+    monkeypatch.setattr("nm.app.composition.Application", lambda: application())
     expiry = utcnow() + timedelta(days=2)
     assert main(["approve", "--account", "adv_demo", "--operator", "synthetic-reviewer",
                  "--basis", "Synthetic reviewed evidence", "--expected-version", "0",

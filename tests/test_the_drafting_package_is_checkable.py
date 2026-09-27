@@ -22,9 +22,9 @@ So three things, and the third is the one nobody expects to need:
 from __future__ import annotations
 
 import pytest
-from nm.core import drafting as dr
-from nm.domain.advice_decision import AdviceDecision, Disposition, supersede
-from nm.domain.drafting import (
+
+from nm.act import drafting as dr
+from nm.act.drafting_contracts import (
     DECLARED_FIELDS,
     Claim,
     DrafterBrief,
@@ -32,6 +32,7 @@ from nm.domain.drafting import (
     Readiness,
     refuse_filing_claim,
 )
+from nm.advise.advice_decision_contracts import AdviceDecision, Disposition, supersede
 
 pytestmark = pytest.mark.class_a
 

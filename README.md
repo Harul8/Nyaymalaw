@@ -63,17 +63,22 @@ See the [current plan](docs/PLAN.md) and [sign-off playbook](docs/playbooks/SIGN
 
 | Folder | Holds |
 |---|---|
-| `backend/` | The advocate service. `backend/nm/` is the Python package `nm` (domain, ports, core, adapters, knowledge, edge, bootstrap); `backend/operations/` holds commands a person runs against the live service — enrol, invite, professional approval, re-key, store migration |
-| `frontend/` | The advocate UI the backend mounts at `/` |
-| `pipeline/` | The end-to-end legal-knowledge pipeline, run as offline jobs: `acquisition/` → `indexing/` → `quality/`, and the curated Act manifest the server reads |
+| `nm/` | The advocate application, organised into shallow journey folders: Arrive, Open a matter, Legal brain, Work the file, Advise, Act, Carry, Close and Leave; `app/` wires and serves them, `shared/` owns common security and storage |
+| `operations/` | Human-run administration commands: enrolment, invitation, professional approval, outbox, store migration and re-keying; these are not model tools |
+| `pipeline/` | Flat, named offline legal-source acquisition, indexing and quality jobs, plus the curated Act manifest |
 | `assurance/` | How production is proven and permitted: `gate/` (the per-task gate), `journeys/` (served and browser runs), `control_plane/` (backlog, evidence, release obligations, the plan view), `hooks/`, `specification/` (PRD source and generated specs) and `common/`, which declares these homes once |
 | `docs/` | Live documents and the delivery registries |
 | `tests/` | The whole verification suite |
 | `development_environment/` | Archives, dated reviews, one-off and developer tooling, earlier worktrees — kept, not shipped. See its README |
 
+Start with [the journey-first project map](docs/PROJECT_STRUCTURE.md), then the
+README in the phase you want to review. Browser assets live beside their journey
+owners; the server exposes only the explicitly approved browser files, never the
+Python package. Each model tool has a `tool_<registered_name>.py` entry point.
+
 The package is not installed into the interpreter, so a worktree never imports
 another checkout's code. Tests set the path through `pyproject.toml`; scripts
-put the repository root and `backend/` on the path themselves; `start.ps1` sets
+put the repository root on the path themselves; `start.ps1` sets
 `PYTHONPATH` for the server it starts. Run the gate from the root with
 `python assurance/gate/check.py`, and install the hooks by path with
 `git config core.hooksPath assurance/hooks`.

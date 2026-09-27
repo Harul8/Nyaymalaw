@@ -14,7 +14,8 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.limitation import (
+
+from nm.legal_brain.limitation import (
     Applied,
     Factor,
     FactorKind,
@@ -26,8 +27,8 @@ from nm.core.limitation import (
     not_computed,
     period_in,
 )
-from nm.domain.matter import Side
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Side
 
 pytestmark = pytest.mark.class_a
 

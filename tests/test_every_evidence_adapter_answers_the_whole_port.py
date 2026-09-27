@@ -3,7 +3,7 @@
 WHAT THIS WAS WRITTEN FOR, measured 8 September 2026
 ------------------------------------------------------
 The BK-30 journey harness started the real product on a real port, asked for
-`/api/health`, and got a 500. `backend/nm/bootstrap/composition.py` read::
+`/api/health`, and got a 500. `nm/app/composition.py` read::
 
     "corpus": "readable" if self.evidence.available else "NOT READABLE",
     "retrieval": (self.evidence.readiness()
@@ -32,7 +32,7 @@ the defect and fixing the class of defect.
 
 THE DOUBLES ARE IN THE POPULATION, DELIBERATELY
 -------------------------------------------------
-It would be easy to scope this to `backend/nm/` and call it done. The incomplete
+It would be easy to scope this to `nm/` and call it done. The incomplete
 implementation that hid this one for weeks was a TEST DOUBLE: every offline
 turn ran on an object that could not answer half the port, and no test noticed
 because no test asked. That is the same lesson `accrual_trigger` produced
@@ -49,9 +49,9 @@ import inspect
 import pathlib
 
 import pytest
-from nm.ports.evidence import EvidencePort
 
 from assurance.common.homes import tooling_sources
+from nm.legal_brain.evidence_port import EvidencePort
 
 pytestmark = pytest.mark.class_a
 
@@ -79,7 +79,7 @@ def implementations() -> dict[str, type]:
     nine inline doubles that are the reason this test exists.
     """
     found: dict[str, type] = {}
-    for path in sorted(list((ROOT / "backend" / "nm").rglob("*.py"))
+    for path in sorted(list((ROOT / "nm").rglob("*.py"))
                        + list((ROOT / "tests").rglob("*.py"))
                        + tooling_sources()):
         if "__pycache__" in path.parts:
@@ -160,7 +160,7 @@ def test_the_port_declares_every_member_the_product_reaches():
     the object and existed on exactly one adapter.
     """
     reached: set[str] = set()
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         if "__pycache__" in path.parts:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -234,7 +234,7 @@ def test_the_sweep_can_see_the_population():
     assert len(found) > 5, (
         f"the scan found almost no evidence adapters, so the sweep below is "
         f"checking nothing: {sorted(found)}")
-    assert any("backend/nm/adapters/evidence/corpus.py" in k for k in found), (
+    assert any("nm/legal_brain/corpus_evidence.py" in k for k in found), (
         "the scan missed the real adapter")
     assert any(k.startswith("tests/") for k in found), (
         "the scan missed every test double, which is the population that "
@@ -277,7 +277,7 @@ def test_a_real_adapter_overrides_them():
     """The other side of the control: the defaults are a floor, not the
     answer. If the real adapter inherited them silently, health would report
     NOT READABLE on a working corpus and nothing would say why."""
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
 
     # EVERY MEMBER, from the Protocol. This was a list of three written here,
     # and `document` and `read_provision` were added to the port after it --

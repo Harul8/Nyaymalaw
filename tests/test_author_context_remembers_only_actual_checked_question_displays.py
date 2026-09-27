@@ -6,12 +6,17 @@ from copy import deepcopy
 from dataclasses import replace
 
 import pytest
-from nm.core.brain_context import ContextPolicy, ContextRefused, ContextSession, assemble_brief
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits
-from nm.domain.matter import Thread
-from nm.ports.model import ToolCall
 
+from nm.legal_brain.brain_context import (
+    ContextPolicy,
+    ContextRefused,
+    ContextSession,
+    assemble_brief,
+)
+from nm.legal_brain.loop_contracts import LoopLimits
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall
+from nm.work_the_file.matter_contracts import Thread
 from tests.test_private_preview_display_records_only_checked_shown_words import (
     QUESTION,
     _question,
@@ -105,7 +110,7 @@ def test_bounded_context_refuses_oversized_checked_display_history_instead_of_tr
     acknowledge(service)
     matter = store.load("mat_loop")
     plain = assemble_brief(matter, advocate_id="adv_loop")
-    from nm.ports.model import estimate_tokens
+    from nm.shared.model_port import estimate_tokens
 
     policy = ContextPolicy(max_tokens=estimate_tokens(plain.text) + 100, reserve_tokens=99)
     assert assemble_brief(matter, advocate_id="adv_loop", policy=policy).text == plain.text

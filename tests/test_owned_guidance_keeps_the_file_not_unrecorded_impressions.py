@@ -9,12 +9,12 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.core.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.core.tools import Boundary, ToolContext, ToolRefused
-from nm.domain.matter import Fact, Matter, Provenance, Thread
-from nm.ports.model import ToolCall, ToolMessage
 
+from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.tools import Boundary, ToolContext, ToolRefused
+from nm.shared.model_port import ToolCall, ToolMessage
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
 from tests.test_brain_context_is_a_checked_file_projection import tools
 from tests.test_the_loop_records_work_before_using_it import _registry, _setup
 

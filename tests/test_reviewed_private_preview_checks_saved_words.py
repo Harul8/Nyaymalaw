@@ -6,30 +6,30 @@ from datetime import date
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.principles_file import FilePrinciples
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_assessment import AssessmentService
-from nm.core.brain_finalization import FinalizationService, SavedCheckReader
-from nm.core.brain_publication import PrivatePublicationService
-from nm.core.brain_release import ReviewRefused, ReviewService
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.reviewed_preview import MARKER, ReviewedPreviewService
-from nm.core.screens import Screen, ScreenKind, ScreenState
-from nm.core.tools import Boundary, foundation_tools
-from nm.core.verifier import IndependentVerifier
-from nm.domain.authority import Act, ActingAs, permits
-from nm.domain.budget import Budget
-from nm.domain.coverage import CoveragePosition, CoverageState
-from nm.domain.loop import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
-from nm.domain.matter import Matter, Thread
-from nm.ports.evidence import Coverage, EvidenceResult
-from nm.ports.model import Tier, ToolCall
-from nm.ports.store import StaleWrite
 
+from nm.legal_brain.brain_assessment import AssessmentService
+from nm.legal_brain.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.brain_publication import PrivatePublicationService
+from nm.legal_brain.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.reviewed_preview import MARKER, ReviewedPreviewService
+from nm.legal_brain.tools import Boundary, foundation_tools
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.open_matter.screens import Screen, ScreenKind, ScreenState
+from nm.shared.authority_contracts import Act, ActingAs, permits
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import Tier, ToolCall
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.shared.store_port import StaleWrite
+from nm.work_the_file.matter_contracts import Matter, Thread
 from tests.test_independent_claim_verifier import Judge, finding, premise, response
 from tests.test_the_loop_records_work_before_using_it import _response
 

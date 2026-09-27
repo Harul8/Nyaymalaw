@@ -733,7 +733,7 @@ d("B-002", "2026-08-29", "adapters",
   "Adding a second model adapter. The budget logic lived in the first one.",
   "S9 — two owners for one truth",
   "The shared model-port contract suite, run against both adapters",
-  "Extracted backend/nm/adapters/model/_budget.py as the single owner both adapters "
+  "Extracted nm/shared/model_budget.py as the single owner both adapters "
   "call.",
   "Yes — structural. A third adapter cannot reintroduce it.",
   "tests/test_model_port_contract.py runs against every adapter; ALSO SWEPT BY tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home")
@@ -745,7 +745,7 @@ d("B-003", "2026-08-29", "architecture",
   "modules that needed each other.",
   "S9 — dependency direction",
   "assurance/gate/layercheck.py",
-  "Extracted backend/nm/domain/ (imports nothing) and backend/nm/bootstrap/ (the composition "
+  "Extracted nm/domain/ (imports nothing) and nm/bootstrap/ (the composition "
   "root); the edge now receives the application by injection.",
   "Yes — the lint fails the build on any import in the wrong direction.",
   "assurance/gate/layercheck.py, run in assurance/gate/check.py")
@@ -760,7 +760,7 @@ d("B-004", "2026-08-29", "web",
   "Driving the browser, not by any test",
   "An explicit pending branch before the answer exists.",
   "Yes — the branch covers every turn, not one message.",
-  "MANUAL: frontend/app.js — a browser pass. No JS test harness exists, so this is declared as manual rather than pointed at a runner that would not run")
+  "MANUAL: nm/app/app.js — a browser pass. No JS test harness exists, so this is declared as manual rather than pointed at a runner that would not run")
 
 d("B-005", "2026-08-30", "tooling",
   "A NARROWED pytest run rewrote `evals_run` with only that run's ids, after "
@@ -822,8 +822,8 @@ d("B-009", "2026-08-30", "retrieval",
   "not knowing the evidence adapter held a second copy of it.",
   "S9 — two owners for one truth",
   "The first realistic seven-turn scenario, end to end",
-  "One pattern module, backend/nm/domain/citation.py, with both guards; a test scans "
-  "backend/nm/ and fails the build on a second pattern.",
+  "One pattern module, nm/legal_brain/citation_contracts.py, with both guards; a test scans "
+  "nm/ and fails the build on a second pattern.",
   "Yes — and the duplicate is now structurally refused, not just removed.",
   "tests/test_citation_patterns.py; ALSO SWEPT BY tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home")
 
@@ -890,7 +890,7 @@ d("B-014", "2026-08-30", "corpus",
   "Reading three sample records instead of trusting the count",
   "Word boundaries on the verb alternation.",
   "Yes — every verb, every tense.",
-  "pipeline/indexing/build_identity_index.py; sampled in the class-C suite")
+  "pipeline/build_identity_index.py; sampled in the class-C suite")
 
 d("B-015", "2026-08-30", "corpus",
   "DIRECTION. `was overruled by this Court in X` names the OVERRULING case, "
@@ -903,7 +903,7 @@ d("B-015", "2026-08-30", "corpus",
   "Only the unambiguous direction is taken: the citation must PRECEDE the "
   "verb. Recall falls; every surviving record points the right way.",
   "Yes — no case or verb is named in the rule.",
-  "pipeline/indexing/build_identity_index.py; sampled in the class-C suite")
+  "pipeline/build_identity_index.py; sampled in the class-C suite")
 
 d("B-016", "2026-08-30", "retrieval",
   "The Act was resolved by keyword-scoring the WHOLE question, so a brief "
@@ -918,7 +918,7 @@ d("B-016", "2026-08-30", "retrieval",
   "An Act NAMED in the question beats every keyword score; longest title wins.",
   "Yes — matched against every manifest entry's own name, so a new Act is "
   "covered without touching the rule.",
-  "backend/nm/knowledge/manifest.py `_named_in`")
+  "nm/legal_brain/manifest_sources.py `_named_in`")
 
 d("B-017", "2026-08-30", "core",
   "`_fold` did not normalise `vs` to `v`, so a retrieved authority whose ref "
@@ -943,7 +943,7 @@ d("B-018", "2026-08-30", "core",
   "The browser, on the authority path",
   "The span counts: it IS retrieved primary text, which is the promise.",
   "Yes — every finding, every source kind.",
-  "backend/nm/core/grounding.py `_covered_provisions`")
+  "nm/legal_brain/grounding.py `_covered_provisions`")
 
 d("B-019", "2026-08-30", "knowledge",
   "The product's OWN binding explanation read `(Constitution, Art. 141)`. The "
@@ -970,7 +970,7 @@ d("B-020", "2026-08-30", "web",
   "The error carries its structure to the renderer, which shows the gate, the "
   "reason and every gap.",
   "Yes — any refusal, any gate.",
-  "frontend/app.js refusal branch")
+  "nm/app/app.js refusal branch")
 
 d("B-021", "2026-08-30", "web",
   "The conversation column measured 799px in a 514px pane: every answer "
@@ -981,7 +981,7 @@ d("B-021", "2026-08-30", "web",
   "The browser at a narrow width",
   "`main > * { min-width: 0 }` plus explicit wrapping on long tokens.",
   "Yes — any narrow window, any content.",
-  "frontend/app.css")
+  "nm/app/app.css")
 
 d("B-022", "2026-08-30", "measurement",
   "Treatment coverage was reported as '<= 14.5%, an upper bound' — 4,894 "
@@ -994,7 +994,7 @@ d("B-022", "2026-08-30", "measurement",
   "Coverage is an INTERSECTION against what is held, computed by the release "
   "gate.",
   "Yes — the rule is about how coverage is computed, not about the citator.",
-  "docs/BASELINE.md cit-1; pipeline/quality/releasegate.py measure_citator")
+  "docs/BASELINE.md cit-1; pipeline/releasegate.py measure_citator")
 
 d("B-023", "2026-08-30", "tooling",
   "The golden runner's Act matcher scored word overlap. It resolved 'Indian "
@@ -1117,7 +1117,7 @@ d("B-031", "2026-08-30", "core",
   "it must speak of the representation rather than the events — a test on "
   "grammar, which is closed, not on vocabulary, which is not.",
   "Yes — no list of party words exists anywhere in the product now.",
-  "assurance/gate/mutate.py x3 on backend/nm/core/posture.py; tests/test_turn_contract.py")
+  "assurance/gate/mutate.py x3 on nm/legal_brain/posture.py; tests/test_turn_contract.py")
 
 d("B-032", "2026-08-30", "store",
   "ENCODING WAS AUTOMATIC AND DECODING WAS HAND-WRITTEN. `_enc` uses asdict so "
@@ -1280,7 +1280,7 @@ d("B-040", "2026-08-30", "adapters",
   "is false and was never checked.",
   "S11 — a check that cannot fail is not a check",
   "Probing the focused role read, which returned a value outside its own enum",
-  "`require_schema` moved into backend/nm/ports/model.py — the port owns its "
+  "`require_schema` moved into nm/shared/model_port.py — the port owns its "
   "contract — and both adapters call it. The skip is deleted.",
   "Yes — a guard that is right in the double and absent from the real adapter "
   "is not a guard, and a test that skips the production path reports PASS "
@@ -1369,7 +1369,7 @@ d("B-044", "2026-08-30", "release",
   "own standing decision three paragraphs above it, under which every held "
   "Andhra Pradesh judgement IS a Telangana judgement. I measured the words "
   "rather than the decision, and the binding rule in "
-  "backend/nm/knowledge/jurisdiction.py had it right the whole time.",
+  "nm/legal_brain/jurisdiction_sources.py had it right the whole time.",
   "S3 — a zero from the wrong index reads as absence",
   "The user, for the third time: AP HC cases are Telangana cases",
   "RG-01 measures binding-court output — Supreme Court plus the High Court for "
@@ -1401,7 +1401,7 @@ d("B-045", "2026-08-30", "release",
   "Yes — and the rule CLAUDE.md already states: NOT MEASURED exits non-zero "
   "exactly like FAIL, so nine uncomputed criteria is not a stricter gate, it "
   "is a gate nobody can read. Went from 6 pass / 9 unmeasured to 15 pass / 1.",
-  "pipeline/quality/releasegate.py, and tests/test_never_clauses.py::test_a_recorded_run_"
+  "pipeline/releasegate.py, and tests/test_never_clauses.py::test_a_recorded_run_"
   "cannot_vouch_for_code_it_never_saw; ALSO SWEPT BY tests/test_defect_register.py::test_every_check_the_register_names_actually_exists")
 
 d("B-046", "2026-08-30", "edge",
@@ -1493,7 +1493,7 @@ d("B-050", "2026-08-30", "domain",
   "C4 NAMED AN ENFORCEMENT METHOD THAT NOTHING CALLED. Its docstring said "
   "thread identity is \"enforced by the constructor and by "
   "`decisive_identifier_matches`\", and that method had no callers at all — "
-  "`backend/nm/core/threading.bind()` does the matching inline.",
+  "`nm/core/threading.bind()` does the matching inline.",
   "Declaring the feature on the TYPE and writing a method that reads like the "
   "enforcement, while the real logic went where it had to be: the binder "
   "distinguishes one match from many and PROPOSES a merge rather than "
@@ -1546,7 +1546,7 @@ d("B-052", "2026-08-30", "core",
   "thread",
   "`bind` takes a three-state reading. CONTINUES binds; OPENS creates a "
   "thread, stated; CANNOT TELL asks, exactly as rule 6 already does. The read "
-  "is `backend/nm/core/dispute.py`, with the same two guards as the posture read.",
+  "is `nm/legal_brain/dispute.py`, with the same two guards as the posture read.",
   "Yes — the default now follows the asymmetry the module already stated: "
   "never guess toward the merge, because a wrong split is visible and "
   "recoverable and a wrong merge is neither. Multi-thread files are what the "
@@ -1589,7 +1589,7 @@ d("B-054", "2026-08-30", "core",
   "later and re-deciding it there. Both places look right in isolation; only "
   "one of them runs.",
   "S11 — a check that cannot fail is not a check",
-  "Sweeping all 214 functions in backend/nm/ for the shape B-050 had, rather than "
+  "Sweeping all 214 functions in nm/ for the shape B-050 had, rather than "
   "waiting for the next one",
   "`blocking_reason` derives from `usable_alone`, so a fourth treatment state "
   "is refused by default; `turn.py` asks `position.discloses`; `render_text` "
@@ -1747,7 +1747,7 @@ d("B-061", "2026-08-31", "tooling",
   "request arrives describes the working tree, which a stale server matches "
   "perfectly. `run_scenario.py` compares it and REFUSES before the first "
   "paid call, with three states: matching, differing, and could-not-be-asked.",
-  "Yes — `source_fingerprint` moved from `tools/` to `backend/nm/domain/identity.py` "
+  "Yes — `source_fingerprint` moved from `tools/` to `nm/shared/identity_contracts.py` "
   "so the served process can answer for itself; `assurance/common/_fingerprint.py` "
   "re-exports and defines nothing. `tools/` is not shipped, so leaving the "
   "owner there would have degraded the check to `unknown` in exactly the "
@@ -1864,7 +1864,7 @@ d("B-066", "2026-08-31", "tooling",
   "Running RG-21 on approval and reading the exit code rather than the report",
   "The branch returns 1 and prints `NOT MEASURED — 25 scenario(s), none "
   "scored. This is not a pass.`",
-  "Yes — it is the rule `pipeline/quality/releasegate.py` already enforces and that "
+  "Yes — it is the rule `pipeline/releasegate.py` already enforces and that "
   "CLAUDE.md states: NOT MEASURED exits non-zero exactly like FAIL, because a "
   "release criterion nobody computed is the one that gets assumed.",
   "tests/test_tooling_bites.py::test_an_unscored_golden_suite_is_not_reported_as_a_pass")
@@ -1940,7 +1940,7 @@ d("B-069", "2026-08-31", "adapters",
   "title has no responder and fails the build.",
   "Yes — substring matching doing identification is what CLAUDE.md §5 records "
   "as not merely weak but wrong, and the enumerator draws its population from "
-  "`backend/nm/core` so the sixth schema cannot be added without a responder.",
+  "`nm/core` so the sixth schema cannot be added without a responder.",
   "tests/test_provider_independence.py::test_every_schema_is_identified_by_an_exact_key_and_not_a_substring; "
   "tests/test_provider_independence.py::test_the_scripted_provider_answers_every_schema_the_core_declares")
 
@@ -1983,7 +1983,7 @@ d("B-071", "2026-08-31", "adapters",
   "The S5 scenario run, then instrumenting the date read directly. The run "
   "itself only showed `no dated event on this thread`, which is what an "
   "advocate who had genuinely given no date would see.",
-  "Our metadata is namespaced `x-nm-*` and `nm.ports.model.on_the_wire` "
+  "Our metadata is namespaced `x-nm-*` and `nm.shared.model_port.on_the_wire` "
   "strips it at the provider boundary, in the adapter that builds the "
   "request. A future key is covered by adding it to `NM_SCHEMA_KEYS`, not by "
   "remembering to strip it at each adapter.",
@@ -2027,7 +2027,7 @@ d("B-072", "2026-08-31", "core",
 
 d("B-073", "2026-08-31", "core",
   "NOTHING PRODUCES A `Factor`, so no acknowledgment, part payment, exclusion "
-  "or disability ever moves a limitation date. `backend/nm/core/limitation.py` has "
+  "or disability ever moves a limitation date. `nm/legal_brain/limitation.py` has "
   "carried the type since slice 4, with `Factor.finding` required so one "
   "cannot be asserted from memory, and `compute` applies restarts and "
   "extensions correctly — and no call site anywhere builds one. On GS-14 the "
@@ -2299,7 +2299,7 @@ d("B-082", "2026-09-04", "edge",
   "THERE IS NO AUTHENTICATION. `advocate_id` is a non-blank query-string "
   "parameter, and it is the only thing between one advocate's client file and "
   "another's. No password, credential, session or token exists anywhere in "
-  "`backend/nm/` — the search returns zero. A1 stood at `tested`, and its PRODUCES "
+  "`nm/` — the search returns zero. A1 stood at `tested`, and its PRODUCES "
   "contract, `AdvocateIdentity { id, name, enrolment, practice, firm_id }`, "
   "has no class and no field of it anywhere in the product.",
   "E-010's two tests are real and they hold — a 404 that is byte-identical "
@@ -2325,7 +2325,7 @@ d("B-082", "2026-09-04", "edge",
   "Yes — and the general form is the one that matters. Nothing joined a "
   "PRODUCES clause to a type in the code, because the only check over "
   "PRODUCES starts from Appendix E's ten schemas rather than from the "
-  "clauses. Seven features at `tested` declare a type `backend/nm/` does not define; "
+  "clauses. Seven features at `tested` declare a type `nm/` does not define; "
   "four have ZERO mentions.",
   "tests/test_authentication.py::"
   "test_the_turn_request_has_no_field_to_assert_an_identity_with, and "
@@ -2399,7 +2399,7 @@ d("B-085", "2026-09-04", "tooling",
   "longer has the field and never signed in, so every turn would have "
   "returned 401.",
   "A1 moved the advocate off the request and onto a session, and the sweep "
-  "covered `backend/nm/` and `tests/` and NOT `tools/`. CLAUDE.md \u00a71 in one "
+  "covered `nm/` and `tests/` and NOT `tools/`. CLAUDE.md \u00a71 in one "
   "line: stating a fix generally is not the same as applying it generally. "
   "The population for `who calls /api/turn` is the whole repo, not the two "
   "directories I happened to be editing.",
@@ -2431,7 +2431,7 @@ d("B-086", "2026-09-04", "core",
   "the arithmetic silently prefers the older date.",
   "S1 — an absent input reading as success",
   "The GS-15 served run, then reading the matter summary: both 1984-04-15 and "
-  "2024-04-15 on the chart, and `grep superseded_by= backend/nm/` returning nothing.",
+  "2024-04-15 on the chart, and `grep superseded_by= nm/` returning nothing.",
   "FIXED on 4-5 September 2026 and verified ON A SERVED TURN. The date "
   "read carries `corrects`, `superseded_by` is set on the fact it "
   "replaces, and `chronology.chart` excludes superseded facts in ONE "
@@ -2797,7 +2797,7 @@ d("B-095", "2026-09-05", "adapters",
 
 d("B-096", "2026-09-05", "domain",
   "THE MODEL WAS NEVER TOLD THE SIDE WAS IN DISPUTE. `Posture.conflicts` "
-  "appeared NOWHERE in `backend/nm/domain/summary.py`. The board rendered `loud` and "
+  "appeared NOWHERE in `nm/work_the_file/summary_contracts.py`. The board rendered `loud` and "
   "`conflict` from it, so the ADVOCATE saw a warning \u2014 while every "
   "derivation on the same turn reasoned as though the side were settled.",
   "The conflict was written for the BOARD and the account was never asked to "
@@ -3302,7 +3302,7 @@ d("B-108", "2026-09-05", "core",
   "appeared without it \u2014 which is an argument for rerunning a scenario "
   "after a model change rather than assuming a better model is strictly "
   "better.",
-  "`backend/nm/domain/quotable.py`. ONE VALUE GOES TO THE PROMPT AND TO THE GUARD: "
+  "`nm/legal_brain/quotable_contracts.py`. ONE VALUE GOES TO THE PROMPT AND TO THE GUARD: "
   "`block()` renders the labelled section and `accepts()` is the check, off "
   "the same three fields \u2014 `turn` (what the advocate said this turn), "
   "`file` (what they said earlier) and `context` (our rendering, shown and "
@@ -3332,7 +3332,7 @@ d("B-108", "2026-09-05", "core",
   "good enough to exploit it. The general rule: WHERE A CHECK CONSTRAINS AN "
   "ANSWER, THE THING BEING ASKED MUST BE TOLD THE CONSTRAINT, FROM THE SAME "
   "VALUE.",
-  "tests/test_one_quotable.py scans `backend/nm/` by AST and fails on any module "
+  "tests/test_one_quotable.py scans `nm/` by AST and fails on any module "
   "comparing a quotation against text by hand (`fold(a) in fold(b)`), and on "
   "any module whose prompt builder takes the `Quotable` while its reader does "
   "not, or the reverse \u2014 both halves, since one of each is exactly how "
@@ -3366,7 +3366,7 @@ d("B-109", "2026-09-06", "adapters",
   "\u2014 and OUR PROMPT DOES NOT SAY WHICH PART MAY BE QUOTED (B-108). A "
   "stronger model exploits that ambiguity harder.",
   "S7 \u2014 a rule applied outside the case it was written for",
-  "`pipeline/quality/read_stability.py`, built for this question: it replays ONE recorded "
+  "`pipeline/read_stability.py`, built for this question: it replays ONE recorded "
   "call rather than rerunning a scenario. A dates replay is $0.0015 against "
   "$0.018 for a full run, so 30 trials cost four cents and a minute. THE "
   "ADVOCATE ASKED THE RIGHT QUESTION \u2014 \u2018how many runs?\u2019 \u2014 "
@@ -3374,7 +3374,7 @@ d("B-109", "2026-09-06", "adapters",
   "The escalation is WITHDRAWN. The five call sites ask for ROUTINE again, "
   "HARD_TIER_STEPS is empty, and NM_MODEL_HARD is commented out rather than "
   "deleted \u2014 one line to restore once B-108 is fixed. "
-  "`nm.domain.reads.is_decisive` STAYS: it is what makes G-READ fire on a "
+  "`nm.legal_brain.reads_contracts.is_decisive` STAYS: it is what makes G-READ fire on a "
   "decisive read that answers with nothing, which is a separate mechanism "
   "from which model runs it, and conflating them would have made the revert "
   "delete a guard that had nothing to do with the escalation.",
@@ -3384,11 +3384,11 @@ d("B-109", "2026-09-06", "adapters",
   "\u00a77.4.1 states (escalation is earned by a recorded measurement) was "
   "followed to the letter and still produced a regression, because the letter "
   "does not say the measurement must be of CURRENT code. It does now, in "
-  "backend/nm/domain/tiers.py.\n\n"
+  "nm/legal_brain/tiers_contracts.py.\n\n"
   "It is also a caution about \u2018better model\u2019 as a fix: a stronger "
   "model does not fail LESS, it fails DIFFERENTLY, and where a guard was "
   "tuned to the weaker one\u2019s habits the change reads as a regression.",
-  "backend/nm/domain/tiers.py records the round trip \u2014 the entry that was added "
+  "nm/legal_brain/tiers_contracts.py records the round trip \u2014 the entry that was added "
   "and withdrawn, with all three numbers \u2014 and "
   "tests/test_reads_registry.py::"
   "test_no_read_asks_for_the_hard_tier_while_none_is_earned asserts the "
@@ -3427,7 +3427,7 @@ d("B-111", "2026-09-06", "tooling",
   "DIRECTIONS within one hour. One run: the register was edited while the gate "
   "was going, `class_a` saw the half-edited state and went red, `pytest (all "
   "local)` ran ten minutes later against the finished state and went green. "
-  "Another: a pytest running concurrently planted `backend/nm/core/_trace_probe.py` "
+  "Another: a pytest running concurrently planted `nm/core/_trace_probe.py` "
   "and removed it while pylint was parsing it, so the gate went RED ON A FILE "
   "THAT DOES NOT EXIST.",
   "Every stage is a subprocess against the working tree, and nothing recorded "
@@ -3472,7 +3472,7 @@ d("B-112", "2026-09-06", "core",
   "landed hours earlier: `restates` let the READ name an id, and the folded "
   "statement was the fallback for when it did not.",
   "Building B-107\u2019s content check, which needed a fold in "
-  "`nm.domain.matter` \u2014 and asking, before writing a seventh, where the "
+  "`nm.work_the_file.matter_contracts` \u2014 and asking, before writing a seventh, where the "
   "existing one lived. None of the six was written by someone ignoring a "
   "rule. They were written by six people who each needed a fold, found no one "
   "place to get it, and wrote the two-line version.",
@@ -3481,9 +3481,9 @@ d("B-112", "2026-09-06", "core",
   "two implementations run against four sentence pairs, with "
   "`issue.merge(a, b)` returning 2 where `chronology` returned one event. The "
   "package scan written afterwards found TWO MORE the grep had missed \u2014 "
-  "`backend/nm/core/intake.py` and `backend/nm/domain/summary.py` compile the same pattern "
+  "`nm/open_matter/intake.py` and `nm/work_the_file/summary_contracts.py` compile the same pattern "
   "without wrapping it in a `def`.",
-  "`nm.domain.text.fold` is the one definition, with `words` as the "
+  "`nm.shared.text_contracts.fold` is the one definition, with `words` as the "
   "tokenising underneath it for the two callers that want a set. The module "
   "that already owns \u2018this value carries nothing\u2019 now owns "
   "\u2018this is the same text\u2019, which is the same kind of rule.\n\n"
@@ -3499,7 +3499,7 @@ d("B-112", "2026-09-06", "core",
   "strings fold to the same words or they do not; what is removed is "
   "typography, which is not information about whether two sentences say the "
   "same thing.",
-  "tests/test_one_fold.py scans `backend/nm/` by AST and fails on any function whose "
+  "tests/test_one_fold.py scans `nm/` by AST and fails on any function whose "
   "name says it folds and whose body does not CALL `fold` \u2014 the body, "
   "not the name, since renaming the six would have satisfied a name check and "
   "changed nothing \u2014 and on any module outside `text.py` compiling the "
@@ -3526,7 +3526,7 @@ d("B-113", "2026-09-06", "edge",
   "existing test runs on this machine, where the filesystem hides it. A "
   "defect that only appears on the deployment target is invisible to a green "
   "suite by construction.",
-  "`canonical_id` in `nm.domain.advocate` is the one form, and TWO "
+  "`canonical_id` in `nm.arrive.advocate_contracts` is the one form, and TWO "
   "MECHANISMS APPLY IT because neither is sufficient alone. "
   "`AdvocateIdentity` REFUSES a non-canonical id, so a second spelling "
   "cannot be enrolled; `FileDirectory._advocate_path` FOLDS what comes off "
@@ -3588,7 +3588,7 @@ d("B-114", "2026-09-06", "edge",
   "tests/test_a_stale_server_says_so.py \u2014 including both NOT_ASSESSED "
   "paths, because a fingerprint that could not be computed must not read as "
   "\u2018nothing has changed\u2019, which is S1 arriving on the check built "
-  "to catch S1. Proved end to end by planting a file in `backend/nm/`, watching the "
+  "to catch S1. Proved end to end by planting a file in `nm/`, watching the "
   "banner appear on the sign-in screen, and removing it. AND "
   "tests/test_the_page_and_the_script_agree.py asserts the banner outranks "
   "the gate \u2014 which found a flaw in ITSELF first: it read `z-index: 100` "
@@ -3644,7 +3644,7 @@ d("B-115", "2026-09-06", "core",
   "Fixed at three of four sites; the fourth is a recorded cost")
 
 d("B-116", "2026-09-06", "core",
-  "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `backend/nm/domain/proof.py` has carried "
+  "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `nm/legal_brain/proof_contracts.py` has carried "
   "the whole contract since slice 7: a position that cannot be HELD without "
   "material, cannot be OBTAINABLE without saying what would obtain it, cannot "
   "be ABSENT without naming the dead end, and `uncovered` drawing its "
@@ -3660,8 +3660,8 @@ d("B-116", "2026-09-06", "core",
   "resemblance is what made this the next thing to build rather than the "
   "next thing to survey.",
   "THE LAW IS CURATED AND THE FILE IS READ, and that split is the design. "
-  "`backend/nm/knowledge/elements.py` holds what each cause requires, with "
-  "`curated_from` required by the type; `backend/nm/core/proof_read.py` asks the "
+  "`nm/legal_brain/elements_sources.py` holds what each cause requires, with "
+  "`curated_from` required by the type; `nm/legal_brain/proof_read.py` asks the "
   "model only what THIS FILE can do about each one.\n\n"
   "A model asked \u2018what are the elements of specific performance\u2019 "
   "answers plausibly and differently every call. Every position downstream "
@@ -3743,7 +3743,7 @@ d("B-118", "2026-09-06", "core",
   "The sweep obligation, taken rather than waited for: a producer of "
   "per-turn state was added to a product where every sibling is persisted, "
   "so the question was asked before a scenario asked it.",
-  "`Thread.proof`, and `nm.domain.proof.merge` with the asymmetry stated: "
+  "`Thread.proof`, and `nm.legal_brain.proof_contracts.merge` with the asymmetry stated: "
   "SILENCE NEVER OVERWRITES, because a read that did not mention an element "
   "has said nothing about it and nothing is not a finding. A POSITIVE "
   "STATEMENT ALWAYS WINS, including a regression from HELD to ABSENT \u2014 "
@@ -3756,7 +3756,7 @@ d("B-118", "2026-09-06", "core",
   "party can wobble in. It falls to NOT_ASSESSED and never to ABSENT: absent "
   "means nothing identified would establish it, which is a finding nobody "
   "made.",
-  "Yes, and the general rule is the one `backend/nm/core/issues.py` states: a value "
+  "Yes, and the general rule is the one `nm/legal_brain/issues.py` states: a value "
   "that is a FUNCTION of something else is re-derived to stay true, and a "
   "value that is a CONCLUSION somebody reached is persisted, because "
   "re-deriving it does not refresh it \u2014 it discards it whenever the "
@@ -3841,7 +3841,7 @@ d("B-120", "2026-09-06", "core",
   "read alone would ask only about the items that read happened to mention, "
   "so an item that vanished would stop being asked about \u2014 which is the "
   "document going quietly missing that the counterexample is about.",
-  "Yes, and it completes the rule `backend/nm/core/issues.py` states: a value that "
+  "Yes, and it completes the rule `nm/legal_brain/issues.py` states: a value that "
   "is a FUNCTION of something else is re-derived to stay true; a value that "
   "is a CONCLUSION somebody reached, or a THING SOMEBODY DID, is persisted. "
   "The limitation position and the deadline register stay derived under the "
@@ -3922,7 +3922,7 @@ d("B-122", "2026-09-06", "core",
   "The judged re-run itself. THE VERDICT MOVING IS THE FINDING: the judge "
   "stopped quoting the recommendation and the bare Act, which is both fixes "
   "confirmed, and started quoting two reads nobody had touched.",
-  "`backend/nm/domain/register.py` holds ONE clause, and every prompt whose words "
+  "`nm/legal_brain/register_contracts.py` holds ONE clause, and every prompt whose words "
   "reach the advocate carries it. The recommendation’s own wording is "
   "gone — six copies of a sentence drift within a slice, which is what a "
   "register rule cannot survive.\n\n"
@@ -3939,7 +3939,7 @@ d("B-122", "2026-09-06", "core",
   "THE POPULATION IS DECLARED because it cannot be inferred: `theory` "
   "returns a schema whose fields are rendered verbatim and `cause` returns a "
   "schema this product formats, so the same call has different answers. "
-  "Every `*_SYSTEM` constant in `backend/nm/core/` is in one list or the other, and "
+  "Every `*_SYSTEM` constant in `nm/core/` is in one list or the other, and "
   "one in neither fails the build.",
   "Yes — and it is CLAUDE.md §1 in its plainest form. The fix was "
   "STATED generally (‘a peer register is a rule about subject matter’) "
@@ -4009,7 +4009,7 @@ d("B-124", "2026-09-07", "core",
   "and each got ‘Taking this as a question about what I do.’",
   "The advocate asking for a forensic audit of hard-coding, after noticing "
   "the section list. The population came from the code: every module-level "
-  "literal collection in `backend/nm/`.",
+  "literal collection in `nm/`.",
   "S7 — a rule applied outside its case",
   "Driving four realistic phrasings through `classify_route`. Not by a test "
   "— the existing ones used messages the list happens to cover, which is "
@@ -4080,7 +4080,7 @@ d("B-126", "2026-09-07", "core",
   "Reading the function after B-124, and then being told the rule rather "
   "than deriving it. B-124 had COMPOSED the two keyword lists, which fixed "
   "four measured phrasings and left the shape.",
-  "`backend/nm/core/route.py` reads it. Both keyword lists are gone — 27 nouns "
+  "`nm/legal_brain/route.py` reads it. Both keyword lists are gone — 27 nouns "
   "and 5 phrases — and both length rules with them. `classify_route` "
   "survives as the FALLBACK and no longer guesses: with no model there is "
   "nothing to read meaning with, so it takes the safe direction.\n\n"
@@ -4114,7 +4114,7 @@ d("B-126", "2026-09-07", "core",
 d("B-127", "2026-09-07", "tooling",
   "A KILLED MUTATION RUN LEFT A MUTATION APPLIED, and every check after it "
   "was about mutated code. `assurance/gate/mutate.py` was run under `timeout 420`, "
-  "killed between the write and the restore, and `backend/nm/edge/projections.py` "
+  "killed between the write and the restore, and `nm/work_the_file/projections_api.py` "
   "kept `\"bounded_by\": \"thread_count\"` where the product says "
   "`\"matter_count\"`.",
   "Running the mutation suite under a timeout to check one retargeted "
@@ -4148,7 +4148,7 @@ d("B-127", "2026-09-07", "tooling",
 
 d("B-128", "2026-09-07", "turn",
   "THE SCREENS WERE IN THE METRICS AND NOWHERE THE ADVOCATE COULD SEE "
-  "THEM. `backend/nm/core/screens.py` had been complete since slice 6 \u2014 four "
+  "THEM. `nm/open_matter/screens.py` had been complete since slice 6 \u2014 four "
   "states, an express emergency exception, `unscreened` drawing its "
   "population from `ScreenKind` \u2014 and NOTHING IN THE PRODUCT EVER "
   "CONSTRUCTED A SCREEN. `_run_screens` fired `G-UNSCREENED` under a "
@@ -4364,7 +4364,7 @@ d("B-132", "2026-09-07", "edge",
   "product wrote. ONE is an ACTION \u2014 the recommendation is the "
   "model's own prose, governed by `register.PEER`. Six are FINDINGs, "
   "and those were the whole complaint.",
-  "`backend/nm/domain/spoken.py`. The phrase lives ON the enum and `complete()` "
+  "`nm/shared/spoken_contracts.py`. The phrase lives ON the enum and `complete()` "
   "asserts every member has one AT IMPORT, so a member added without a "
   "phrase is an ImportError rather than a surprise in a served turn. "
   "There is NO fallback to `.value`: a fallback is what makes a missing "
@@ -4381,7 +4381,7 @@ d("B-132", "2026-09-07", "edge",
   "and hid what it could not establish; dissolving structure into prose "
   "is that failure, not the cure for it.",
   "Yes \u2014 and the sweep drew its population from every `Element` in "
-  "`backend/nm/`, not from the six found by eye. One `.value` survives and is "
+  "`nm/`, not from the six found by eye. One `.value` survives and is "
   "DECLARED: `cascade.Derived.value` is a `str` holding a derived "
   "quantity, not an enum member, and 'limitation was 2027-04-15' is "
   "already English. Rewriting it would be changing a line because a "
@@ -4402,7 +4402,7 @@ d("B-133", "2026-09-07", "edge",
   "dashed rule AND the 'Not established' label on the way in.",
   "Closing BK-12 by adding the BEHAVIOURAL half of the "
   "disclosure-never-folds rule \u2014 running `renderTurn` under node "
-  "against a stub DOM rather than reading `frontend/app.js` as text.",
+  "against a stub DOM rather than reading `nm/app/app.js` as text.",
   "S11 \u2014 a check that cannot fail",
   "BY MUTATION, AND ONLY BY MUTATION. Deleting `!el.disclosure` from "
   "the partition \u2014 the exact two-character edit the structural "
@@ -4425,8 +4425,8 @@ d("B-133", "2026-09-07", "edge",
 
 d("B-134", "2026-09-07", "turn",
   "TWO COMPLETE MODULES RAN ON EVERY TURN AND THEIR RESULTS WERE THROWN "
-  "AWAY. `backend/nm/core/deadlines.py` is reached TEN times from the turn "
-  "engine and `backend/nm/core/gaps.py` FOUR; neither appeared in `concluded`, "
+  "AWAY. `nm/work_the_file/deadlines.py` is reached TEN times from the turn "
+  "engine and `nm/legal_brain/gaps.py` FOUR; neither appeared in `concluded`, "
   "so nothing persisted and the handover reported both as sections the "
   "product does not build \u2014 on a file where each had been computed "
   "every turn since the brief arrived.",
@@ -4436,14 +4436,14 @@ d("B-134", "2026-09-07", "turn",
   "built-and-discarded.",
   "S1 \u2014 an absent input reading as success",
   "Counted the call sites. `deadlines.` appears ten times in "
-  "`backend/nm/core/turn.py` and `gaps.` four, and neither name is among the "
+  "`nm/legal_brain/turn.py` and `gaps.` four, and neither name is among the "
   "six keys of `concluded`. A module with that many callers is not "
   "unbuilt, which is what made the blocker list wrong rather than "
   "merely incomplete.",
   "Both results go into `concluded`, both are carried to the thread by "
   "name, and `CARRIES` gains both \u2014 blockers 6 to 4.\n\n"
   "PERSISTED, NOT RECOMPUTED AT SUMMARY TIME, and the layer decides it: "
-  "`backend/nm/domain/summary.py` is `domain`, which `assurance/gate/layercheck.py` "
+  "`nm/work_the_file/summary_contracts.py` is `domain`, which `assurance/gate/layercheck.py` "
   "allows to import `domain` and nothing else, and both modules are "
   "`core`. Recomputing there would break the layering or duplicate the "
   "derivation, which is S9.\n\n"
@@ -4555,7 +4555,7 @@ d("B-137", "2026-09-07", "spec",
   "it in one line: the section is a DISCLOSURE and the gate is a CONTROL, "
   "and refusing to carry the section until the gate exists is how the "
   "advocate loses the ability to see that the gate never ran.",
-  "`backend/nm/domain/engagement.py` records the client description and the "
+  "`nm/open_matter/engagement_contracts.py` records the client description and the "
   "disputes \u2014 both already read \u2014 and NAMES the five things "
   "Appendix E wants that nothing records. No new read, no new gate.\n\n"
   "AND IT WAS RECORDED IN THE WRONG PHASE FIRST. Assembled beside the "
@@ -4648,7 +4648,7 @@ d("B-140", "2026-09-07", "tooling",
   "string-scans every source line for a gate id, so a module docstring "
   "saying *this is NOT `G-SCOPE`* was read as consulting it \u2014 and "
   "the trace failed on the single most useful sentence in the file.",
-  "Adding `backend/nm/domain/engagement.py`, whose whole first paragraph exists "
+  "Adding `nm/open_matter/engagement_contracts.py`, whose whole first paragraph exists "
   "to distinguish the section from the gate.",
   "S11 \u2014 a check that cannot fail (inverted: one that cannot pass)",
   "The gate itself: TRACE FAILED, naming a file that consults nothing.",
@@ -4711,7 +4711,7 @@ d("B-142", "2026-09-07", "turn",
   "E-082"),
 d("B-141", "2026-09-07", "docs",
   "A BACKLOG ROW SAID A BUILD ARTEFACT DID NOT EXIST AND IT HAD EXISTED "
-  "FOR EIGHT DAYS. BK-4 read *`pipeline/indexing/build_authority_index.py` has never "
+  "FOR EIGHT DAYS. BK-4 read *`pipeline/build_authority_index.py` has never "
   "been run*. `.nm/authority.db` was built on 30 August 2026 \u2014 1,097 "
   "MB, `partial: no`, 451,548 of 1,015,780 paragraphs \u2014 "
   "`readiness()` reports `authorities: readable`, and a live search "
@@ -4768,7 +4768,7 @@ d("B-143", "2026-09-18", "adapters",
   "downloaded. Nothing in the suite would have caught it: the unit tests "
   "inject a stand-in engine, and health was truthful about everything it "
   "could see.",
-  "backend/nm/adapters/optional.py decides availability by IMPORTING the "
+  "nm/shared/optional_adapter.py decides availability by IMPORTING the "
   "library once and remembering the answer, and reports four states -- "
   "absent, installed and unimportable WITH THE REASON VERBATIM, "
   "importable, and (the caller's own question) importable with no model "
@@ -4778,7 +4778,7 @@ d("B-143", "2026-09-18", "adapters",
   "Yes -- three sites in two adapters decided this from the import path "
   "and all three were swept onto the one mechanism. The population was "
   "enumerated from the code, not from memory, and the check scans the "
-  "whole of `backend/nm/` rather than the speech package, so a fourth "
+  "whole of `nm/` rather than the speech package, so a fourth "
   "site in a sibling module fails the build.",
   "tests/test_a_library_is_available_only_when_it_imports.py::"
   "test_only_one_module_may_ask_the_import_path refuses a second caller "
@@ -4809,7 +4809,7 @@ d("B-144", "2026-09-18", "tooling",
   "was invisible: it needed a working model to show itself.",
   "`conftest.wired` returns the application THIS test's client serves, and "
   "every step that patches or reads a port now takes it instead of "
-  "importing `nm.edge.api.application`.",
+  "importing `nm.app.api.application`.",
   "Yes -- the population is every function pytest invokes (step, fixture "
   "or test), scanned across the whole suite rather than the one file where "
   "it bit. Private helpers called from a test body are excluded with the "
@@ -4841,7 +4841,7 @@ d("B-165", "2026-09-26", "retrieval",
   "store's order, nothing said twice, the head kept whole; both readers call "
   "it. After the fix 3,395 of 3,402 return every atom their store holds.",
   "Yes -- the rule names no Act or atom type, and the scan draws its "
-  "population from every function in backend/nm that reads provision atoms.",
+  "population from every function in nm that reads provision atoms.",
   "tests/test_a_provision_is_read_whole.py::"
   "test_every_reader_of_provision_atoms_assembles_through_the_one_function "
   "fails the build on a reader that does not assemble; "
@@ -4865,7 +4865,7 @@ d("B-166", "2026-09-26", "limitation",
   "restarts from the LATEST restart and runs the whole period through it, "
   "and `compute` takes its date from `expiry_from`.",
   "Yes -- asserted for every unit a period can carry, and the single-owner "
-  "scan covers every function in backend/nm.",
+  "scan covers every function in nm.",
   "tests/test_a_restart_runs_the_whole_period.py::"
   "test_period_arithmetic_has_one_owner_across_the_product fails the build "
   "on a second copy; "
@@ -4885,7 +4885,7 @@ d("B-167", "2026-09-26", "knowledge",
   "hold, and every consumer read the empty tuple as the answer.",
   "S1 -- an absent input reading as success",
   "Asking each of the six keyed tables for every member of its key enum.",
-  "`nm.domain.curation.Curation` -- CURATED, WITHHELD, NOT_CURATED, "
+  "`nm.legal_brain.curation_contracts.Curation` -- CURATED, WITHHELD, NOT_CURATED, "
   "KEY_NOT_ESTABLISHED -- is answered by every keyed table through its port, "
   "and only a CURATED key may produce 'nothing applies'. The turn discloses "
   "an uncurated role as a gap in what is held.",
@@ -4937,7 +4937,7 @@ d("B-169", "2026-09-26", "authority",
   "scan covers every module.",
   "tests/test_a_state_is_never_read_from_its_reason.py::"
   "test_no_state_in_the_product_is_decided_by_a_phrase_in_its_reason scans "
-  "backend/nm; test_the_scan_rejects_the_code_it_replaced is its "
+  "nm; test_the_scan_rejects_the_code_it_replaced is its "
   "counterexample.")
 
 d("B-170", "2026-09-26", "retrieval",
@@ -4990,7 +4990,7 @@ d("B-171", "2026-09-27", "retrieval",
   "tests/test_a_named_act_is_read_and_never_replaced.py::"
   "test_every_read_says_not_assessed_when_the_corpus_cannot_be_read and "
   "test_held_not_found_is_only_ever_said_on_the_manifests_word, which scans "
-  "backend/nm for any HELD_NOT_FOUND not issued on the manifest's word; "
+  "nm for any HELD_NOT_FOUND not issued on the manifest's word; "
   "tests/test_a_page_says_it_is_one.py::test_a_page_that_stopped_early_says_so "
   "and test_a_window_says_where_it_sits_and_what_it_left_out.")
 
@@ -5005,10 +5005,10 @@ d("B-172", "2026-09-27", "retrieval",
   "S9 -- two owners for one truth (the order of a source)",
   "Measuring expansion against stored order while adding paging.",
   "Both readers order by `rowid`, the order the index stored the source in.",
-  "Yes -- no SQL in backend/nm may order a source by a locator, chunk id or "
+  "Yes -- no SQL in nm may order a source by a locator, chunk id or "
   "section number.",
   "tests/test_a_page_says_it_is_one.py::"
-  "test_no_reader_orders_a_source_by_a_string_key scans backend/nm; "
+  "test_no_reader_orders_a_source_by_a_string_key scans nm; "
   "test_paging_reads_every_paragraph_once_in_stored_order plants the "
   "P101/P1001 case.")
 
@@ -5025,7 +5025,7 @@ d("B-173", "2026-09-27", "retrieval",
   "`_screen` is the only consumer of the denylist and returns what it held "
   "back; every read says it. A provision held back entirely is NOT_HELD "
   "with the reason. Health reports ids LISTED, not excluded.",
-  "Yes -- the scan's population is every function in backend/nm reaching "
+  "Yes -- the scan's population is every function in nm reaching "
   "the denylist.",
   "tests/test_what_a_read_held_back_is_said.py::"
   "test_the_denylist_is_consulted_only_by_the_screen and "

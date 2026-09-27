@@ -142,7 +142,7 @@ def _leaks_in(tree: ast.AST, where: str) -> list[str]:
 def _population() -> list[tuple[str, ast.AST]]:
     """EVERY MODULE OF THE PRODUCT. Not one conversation, not one package."""
     out = []
-    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "nm").rglob("*.py")):
         if "__pycache__" in path.parts:
             continue
         out.append((path.relative_to(ROOT).as_posix(),
@@ -162,7 +162,7 @@ def test_no_advocate_facing_renderer_prints_one_of_our_keys():
         leaks += _leaks_in(tree, where)
     assert not leaks, (
         "these renderers put one of this product's own keys in front of an "
-        "advocate. Every thread has a LABEL and `nm.domain.spoken.dispute` "
+        "advocate. Every thread has a LABEL and `nm.shared.spoken_contracts.dispute` "
         "renders it; an advocate cannot answer a question addressed to a "
         "database key:\n  " + "\n  ".join(leaks))
 
@@ -173,8 +173,8 @@ def test_the_population_is_the_whole_product_and_is_not_empty():
     """A sweep over nothing passes. This is what says it looked."""
     population = _population()
     assert len(population) > 100, len(population)
-    assert any(where == "backend/nm/core/turn.py" for where, _ in population)
-    assert any(where.startswith("backend/nm/edge/") for where, _ in population)
+    assert any(where == "nm/legal_brain/turn.py" for where, _ in population)
+    assert any(where.startswith("nm/edge/") for where, _ in population)
 
 
 def test_the_sweep_sees_a_leak_planted_in_a_rarely_exercised_branch():
@@ -247,7 +247,7 @@ def test_the_advocate_facing_ruling_carries_no_account_id():
     """AND THE EXEMPTION DOES NOT LICENSE A SCREEN. `Ruling.said()` is what an
     advocate-facing caller reaches for, and it says the same thing without
     naming a key."""
-    from nm.domain.authority import Act, ActingAs, permits
+    from nm.shared.authority_contracts import Act, ActingAs, permits
 
     said = permits("adv_9f2c11", ActingAs.ADVISING, Act.CONCEDE).said()
     assert "adv_9f2c11" not in said
@@ -260,7 +260,7 @@ def test_the_advocate_facing_ruling_carries_no_account_id():
 def test_an_unlabelled_dispute_is_said_and_never_keyed():
     """The fallback that makes a missing label invisible is the whole shape:
     where no label exists the answer is that there is none."""
-    from nm.domain.spoken import dispute, named
+    from nm.shared.spoken_contracts import dispute, named
 
     assert dispute("") == "an unlabelled dispute"
     assert dispute("   ") == "an unlabelled dispute"
@@ -278,7 +278,7 @@ def test_the_audit_line_is_never_rendered_by_the_product():
     """AND THE EXEMPTION DOES NOT LICENSE A SCREEN.
 
     `as_line` names the actor by account id because a record must. Nothing in
-    `backend/nm/` calls it: the refusal path persists `as_dict`, and the one caller
+    `nm/` calls it: the refusal path persists `as_dict`, and the one caller
     that existed put the audit line straight into a section an advocate reads
     -- J-5's defect arriving through a new door, written in this release by
     the same person who widened this sweep.
@@ -386,8 +386,8 @@ def _names_a_label(expr: ast.expr) -> bool:
 def test_a_held_string_in_prose_is_never_read_as_a_quotation():
     """THE RULE, on the renderer itself: whatever the string holds, the marks
     around it are not ones G-QUOTE reads as quoting retrieved text."""
-    from nm.core.grounding import quoted_spans
-    from nm.domain.spoken import dispute, named
+    from nm.legal_brain.grounding import quoted_spans
+    from nm.shared.spoken_contracts import dispute, named
 
     for label in _LIVE_LABELS:
         for rendered in (named(label), dispute(label),
@@ -402,8 +402,8 @@ def test_a_quotation_the_string_really_carries_is_still_checked():
     """NEGATIVE CONTROL. `named` fixes the DELIMITER and leaves the content
     alone: a double-quoted passage inside the string is a quotation that string
     makes, and hiding it from the gate would be a loosening."""
-    from nm.core.grounding import quoted_spans
-    from nm.domain.spoken import named
+    from nm.legal_brain.grounding import quoted_spans
+    from nm.shared.spoken_contracts import named
 
     inner = 'the notice says "possession shall be handed over forthwith"'
     assert quoted_spans(named(inner)) == [
@@ -415,9 +415,9 @@ def test_the_file_memory_names_a_dispute_without_quoting_it():
     shown a double-quoted label quotes it back, and G-QUOTE withholds."""
     from dataclasses import replace
 
-    from nm.core.grounding import quoted_spans
-    from nm.domain.matter import Thread
-    from nm.domain.summary import _established_on
+    from nm.legal_brain.grounding import quoted_spans
+    from nm.work_the_file.matter_contracts import Thread
+    from nm.work_the_file.summary_contracts import _established_on
 
     thread = replace(Thread.create(label=_LIVE_LABELS[0]),
                      identifiers={"suit_number": "O.S. 12/2026"},
@@ -436,7 +436,7 @@ def test_no_advocate_facing_renderer_delimits_by_repr():
         "these set a held string into prose with `repr`, whose delimiter "
         "turns to DOUBLE quotes on one apostrophe -- which G-QUOTE reads as a "
         "quotation of retrieved text and withholds. Use "
-        "`nm.domain.spoken.named`, or `spoken.dispute` for a thread label:\n  "
+        "`nm.shared.spoken_contracts.named`, or `spoken.dispute` for a thread label:\n  "
         + "\n  ".join(found))
 
 

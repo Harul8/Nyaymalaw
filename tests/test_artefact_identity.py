@@ -14,7 +14,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from nm.knowledge.artefact import ArtefactIdentity, ArtefactRefused
+
+from nm.legal_brain.artefact_sources import ArtefactIdentity, ArtefactRefused
 
 pytestmark = pytest.mark.class_a
 

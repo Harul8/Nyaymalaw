@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NM · Private fictional-matter evaluation</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#24352f;background:#fff}
+    *{box-sizing:border-box}body{margin:0;height:100dvh;display:flex;flex-direction:column;overflow:hidden}button,input,textarea{font:inherit}button,a{touch-action:manipulation}
+    button{border:1px solid #dce3de;border-radius:8px;background:#fff;color:#245b49;padding:8px 12px;cursor:pointer}
+    button:hover{background:#edf4ef}button:disabled{cursor:default;opacity:.55}a{color:#245b49}
+    :focus-visible{outline:3px solid #9fc9b3;outline-offset:3px}[hidden]{display:none!important}
+    .skip{position:absolute;left:12px;top:-80px}.skip:focus{top:12px;z-index:10;background:#fff;padding:12px}
+    .warning{background:#fbf3df;color:#604b1e;border-bottom:1px solid #eadbb6;padding:10px 20px;font-size:13px;flex:none}
+    .shell{display:grid;grid-template-columns:300px minmax(0,1fr);flex:1;min-height:0}
+    aside{background:#f7f5ef;border-right:1px solid #e4e6df;display:flex;flex-direction:column;min-height:0}
+    .brand{display:flex;align-items:center;gap:10px;padding:18px 20px}.mark{background:#1e5847;color:#fff;border-radius:9px;padding:9px;font-family:Georgia,serif}
+    .brand strong{font-family:Georgia,serif;font-size:21px;font-weight:normal}.matter-picker{padding:0 16px 16px}
+    label{display:block;font-size:13px;margin-bottom:6px}input{width:100%;border:1px solid #d7ded8;border-radius:7px;padding:9px;background:#fff}
+    .picker-actions{display:flex;gap:8px;margin-top:8px}.rail{overflow:auto;flex:1;padding:0 16px}
+    h2{font-size:16px;font-weight:600;margin:14px 0 12px}.card{background:#fff;border:1px solid #e1e5df;border-radius:10px;padding:13px;margin-bottom:10px}
+    .card h3{font-size:14px;margin:0 0 8px}.card p,.meta{font-size:12px;line-height:1.55;margin:5px 0;color:#58675e}
+    .checklist{padding-left:16px;font-size:12px;line-height:1.7}.account{border-top:1px solid #e1e5df;padding:14px 18px;font-size:13px;display:flex;justify-content:space-between;gap:10px}
+    main{display:flex;flex-direction:column;min-height:0;min-width:0}.top{display:flex;align-items:center;gap:12px;border-bottom:1px solid #e8ebe6;padding:10px 22px;min-height:44px}
+    .top h1{font-size:16px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:600}
+    .conversation{overflow:auto;flex:1;padding:28px max(24px,calc((100% - 820px)/2));scroll-behavior:smooth}
+    .intro{color:#68766d;line-height:1.7;max-width:660px;margin:8vh auto}.message{margin:0 0 28px;line-height:1.8;overflow-wrap:anywhere}
+    .message p{white-space:pre-wrap;margin:0 0 14px}.message.user{background:#f1f3f1;border-radius:16px;padding:14px 18px;margin-left:12%}
+    .references{font-size:12px;color:#607267;border-top:1px solid #e7ece7;padding-top:10px}.history-label{font-size:12px;color:#718076;margin-bottom:8px}
+    .composer-wrap{padding:14px max(24px,calc((100% - 860px)/2)) 18px}.composer{border:1px solid #dce2dc;border-radius:20px;padding:12px 16px;box-shadow:0 5px 25px #173c2010;background:#fff}
+    textarea{display:block;width:100%;min-height:46px;max-height:180px;resize:none;border:0;outline:none;padding:7px 2px;color:inherit;line-height:1.6}
+    .composer-actions{display:flex;justify-content:space-between;align-items:center;gap:10px}.send{background:#1e5847;color:#fff;border:0}.send:hover{background:#154835}
+    .status{min-height:22px;font-size:13px;line-height:1.5;color:#5e6d63;margin:7px 2px}.aux{display:flex;gap:8px;flex-wrap:wrap}.history button{display:block;width:100%;text-align:left;margin-bottom:6px;font-size:12px}
+    #source-reader{width:min(850px,94vw);max-height:90dvh;border:1px solid #dce2dc;border-radius:14px;padding:20px}#source-reader::backdrop{background:#14251b66}.source-reader-head{display:flex;justify-content:space-between;align-items:center}.source-reader-body{line-height:1.7}#source-text{white-space:pre-wrap;margin:18px 0;overflow-wrap:anywhere}.source-anchor-note{padding:12px;border-left:3px solid #a35a13;background:#fff7e7}.source-reader-foot{border-top:1px solid #dce2dc;padding-top:12px}
+    .signin{margin:30px;max-width:620px;line-height:1.7;overflow:auto}.hint{font-size:11px;color:#768278}.safety{font-size:11px;color:#826b37;margin-top:8px}
+    @media(max-width:760px){.shell{grid-template-columns:210px minmax(0,1fr)}.brand{padding:14px;font-size:14px}.brand strong{font-size:17px}.warning{padding:8px 12px}.top{padding:10px 14px}.conversation{padding:20px 16px}.composer-wrap{padding:12px}.message.user{margin-left:0}}
+    @media(max-width:520px){.shell{grid-template-columns:1fr;grid-template-rows:minmax(110px,28dvh) minmax(0,1fr)}.shell aside{border-right:0;border-bottom:1px solid #ddd}.brand{display:none}.matter-picker{padding:10px;display:flex;gap:8px;align-items:end}.matter-picker label{flex:1;margin:0}.picker-actions{margin:0}.rail{padding:0 10px}.account{padding:8px 10px}.shell main{min-height:0}.top h1{font-size:14px}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#message">Skip to the conversation</a>
+  <div class="warning" id="evaluation-marker">Private fictional-matter evaluation—not client advice or release.</div>
+  <div class="signin" id="signin" hidden><h1>Sign in to continue</h1><p id="signin-message">Use your existing NM session. This separate page never enables an evaluation grant.</p><a href="/">Open NM to sign in</a><button id="check-session" type="button">Check session again</button></div>
+  <div class="shell" id="workspace" hidden>
+    <aside aria-label="Matter board">
+      <div class="brand"><span class="mark" aria-hidden="true">NM</span><strong>Nyaymalaw</strong></div>
+      <form class="matter-picker" id="matter-form"><label>Fictional evaluation matter<input id="matter-id" autocomplete="off" maxlength="160" required></label><div class="picker-actions"><button id="open-matter" type="submit">Open</button></div></form>
+      <div class="rail"><h2>Matter board</h2><div id="matter-board"></div><h2>Saved interactions</h2><div class="history" id="history"></div></div>
+      <div class="account"><span id="account-name"></span><a href="/">Back to NM</a></div>
+    </aside>
+    <main aria-label="Private evaluation conversation">
+      <header class="top"><h1 id="matter-title">Open a fictional evaluation matter</h1><button id="refresh" type="button" disabled>Refresh</button></header>
+      <div class="conversation" id="messages" tabindex="0" aria-label="Checked private conversation"><div class="intro" id="intro">Bring a fictional matter and your instruction. Only independently checked saved wording is displayed here. Unchecked work stays private; this view does not create client advice.</div></div>
+      <div class="composer-wrap"><form class="composer" id="composer"><label for="message" class="hint">Your instruction or brief · fictional material only</label><textarea id="message" rows="1" maxlength="100000" placeholder="Ask a question, clarify the account, or add material." disabled></textarea><div class="composer-actions"><span class="hint">Enter to send · Shift+Enter for a new line</span><button class="send" id="send" type="submit" disabled>Send</button></div></form><div class="status" id="status" role="status" aria-live="polite"></div><div class="aux"><button id="stop-waiting" type="button" hidden>Stop waiting</button><button id="retry" type="button" hidden>Check saved work / retry same instruction</button></div><div class="safety">A trusted, current evaluation approval is required. No approval or data-sharing permission can be supplied from this page.</div></div>
+    </main>
+  </div>
+  <dialog id="source-reader" aria-labelledby="source-title" aria-describedby="source-coverage">
+    <header class="source-reader-head"><h2 id="source-title">Source passage</h2><button type="button" id="source-close" aria-label="Close source reader">Close</button></header>
+    <div class="source-reader-body">
+      <p id="source-coverage">Exact saved retrieved passage · extracted text, not an original facsimile or the complete Act or judgment.</p><p id="source-meta" class="hint"></p>
+      <label for="source-search">Find in loaded passage</label><input id="source-search" type="search" autocomplete="off" maxlength="200"><p id="source-search-result" class="hint" role="status"></p>
+      <button type="button" id="source-return">Return to cited passage</button><blockquote id="source-text" tabindex="-1" aria-label="Saved cited passage"></blockquote>
+      <button type="button" id="source-more" hidden>Load more of this passage</button>
+      <button type="button" id="source-full" hidden>Full document</button><button type="button" id="source-beginning" hidden>Beginning of document</button><button type="button" id="source-passage" hidden>Back to the cited passage only</button><p id="source-anchor-note" class="source-anchor-note" hidden></p>
+      <p>Qualification recorded with the response</p><p id="source-qualification"></p>
+    </div>
+    <footer class="source-reader-foot"><p id="source-status" role="status" aria-live="polite"></p><button type="button" id="source-retry" hidden>Retry this reference</button><button type="button" id="source-copy" disabled>Copy loaded passage with attribution</button></footer>
+  </dialog>
+  <script src="/static/source-reader.js" defer></script>
+  <script src="/static/brain-preview.js" defer></script>
+</body>
+</html>

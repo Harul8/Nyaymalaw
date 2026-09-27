@@ -17,14 +17,15 @@ cleanly when the index has not been built.
 from __future__ import annotations
 
 import pytest
-from nm.domain.traceability import refuses
-from nm.knowledge.identity import (
+
+from nm.legal_brain.identity_sources import (
     CaseIdentity,
     IdentityIndex,
     Precedence,
     Tier,
     supersedes,
 )
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 

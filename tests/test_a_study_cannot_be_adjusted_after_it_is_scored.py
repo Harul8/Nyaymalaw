@@ -23,7 +23,8 @@ favourable number from an unfavourable run.
 from __future__ import annotations
 
 import pytest
-from nm.domain.review import (
+
+from nm.shared.review_contracts import (
     INVALIDATED_BY,
     Disagreement,
     Freeze,

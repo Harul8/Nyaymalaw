@@ -7,10 +7,11 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.bootstrap.evaluation_models import VerifierOnly
-from nm.core.brain_finalization import CheckRead
-from nm.core.brain_release import ReviewRefused, ReviewService
-from nm.core.interaction_review import (
+
+from nm.legal_brain.brain_finalization import CheckRead
+from nm.legal_brain.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.evaluation_models import VerifierOnly
+from nm.legal_brain.interaction_review import (
     COMMUNICATION_EVIDENCE_REVIEW_SCHEMA,
     COMMUNICATION_PROTOCOL_VERSIONS,
     CRITERIA,
@@ -21,11 +22,10 @@ from nm.core.interaction_review import (
     interpret_evidence_review,
     whole_text_unit,
 )
-from nm.core.verifier import IndependentVerifier
-from nm.domain.budget import Completion, Spend
-from nm.domain.external_ai import ModelPermissionRefused
-from nm.ports.model import ModelResult, Prompt, Tier, Usage, require_schema
-
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.budget_contracts import Completion, Spend
+from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_port import ModelResult, Prompt, Tier, Usage, require_schema
 from tests.test_interaction_review_units_are_server_owned import _unit_judgment, _v2_case
 from tests.test_interaction_words_require_an_independent_exact_review import (
     InteractionJudge,
@@ -192,7 +192,7 @@ def test_saved_old_contract_is_never_reinterpreted_or_redispatched_as_version_th
 
 
 def test_protocol_registry_and_verifier_facade_admit_only_exact_bounded_owned_v3_schema():
-    assert COMMUNICATION_PROTOCOL_VERSIONS == (1, 2, 3)
+    assert COMMUNICATION_PROTOCOL_VERSIONS == (1, 2, 3, 4, 5, 6, 7)
     assert communication_contract(3)[0] == "communication_evidence"
     schema = deepcopy(COMMUNICATION_EVIDENCE_REVIEW_SCHEMA)
     for name in CRITERIA:
@@ -230,8 +230,8 @@ def test_actual_schema_accepts_the_extra_words_empty_population_but_no_missing_r
 
 
 def test_actual_application_can_dispatch_read_and_acknowledge_the_distinct_v3_review(client):
-    from nm.adapters.store.loop_log import MatterLoopLog
-    from nm.core.preview_display import displayed_questions
+    from nm.legal_brain.preview_display import displayed_questions
+    from nm.shared.store_loop_log import MatterLoopLog
 
     app, matter, author, _ = approved(client)
     judges = []

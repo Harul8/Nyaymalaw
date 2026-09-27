@@ -6,10 +6,11 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.core import calculation_tools as calculations
-from nm.core.file_mutation import prepare_dispute
-from nm.core.grounded_file_tools import GroundedReadingMutation, grounded_file_tools
-from nm.core.tools import (
+
+from nm.legal_brain import calculation_tools as calculations
+from nm.legal_brain.grounded_file_tools import GroundedReadingMutation, grounded_file_tools
+from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, StepKind, StopReason, digest
+from nm.legal_brain.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -18,13 +19,12 @@ from nm.core.tools import (
     ToolRefused,
     ToolRegistry,
 )
-from nm.core.write_tools import write_tools
-from nm.domain.authority import Act
-from nm.domain.event_observation import EventObservation, event_context
-from nm.domain.loop import LoopIdentity, LoopMode, StepKind, StopReason, digest
-from nm.domain.matter import Basis, Certainty, Matter, Provenance, Role, Thread
-from nm.ports.model import SchemaViolation, ToolCall
-
+from nm.shared.authority_contracts import Act
+from nm.shared.model_port import SchemaViolation, ToolCall
+from nm.work_the_file.event_observation_contracts import EventObservation, event_context
+from nm.work_the_file.file_mutation import prepare_dispute
+from nm.work_the_file.matter_contracts import Basis, Certainty, Matter, Provenance, Role, Thread
+from nm.work_the_file.write_tools import write_tools
 from tests.test_the_controlled_brain_is_actually_wired import _brain
 from tests.test_the_loop_records_work_before_using_it import _limits, _response
 
@@ -172,7 +172,7 @@ def test_earlier_relative_date_cannot_be_reanchored_to_the_new_turn():
 
 
 def test_a_previously_stated_posture_is_not_silently_reversed():
-    from nm.domain.matter import Posture
+    from nm.work_the_file.matter_contracts import Posture
 
     matter, detail = fresh()
     matter = replace(matter, threads=(replace(matter.threads[0], posture=Posture(
@@ -309,9 +309,9 @@ def test_event_currency_tracks_its_own_actual_source_and_retains_conflicting_rea
 def test_event_observations_roundtrip_and_reach_checked_context_and_read_thread(tmp_path):
     from dataclasses import asdict
 
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.core.brain_context import assemble_brief
-    from nm.core.tool_catalogue import catalogue_tools
+    from nm.legal_brain.brain_context import assemble_brief
+    from nm.legal_brain.tool_catalogue import catalogue_tools
+    from nm.shared.store_file_store import FileMatterStore
 
     matter, detail = fresh()
     result = invoke(matter, detail)
@@ -339,7 +339,7 @@ def test_event_observations_roundtrip_and_reach_checked_context_and_read_thread(
 def test_default_calendar_reference_is_the_owned_forum_day_at_utc_midnight(monkeypatch):
     from datetime import datetime, timezone
 
-    import nm.domain.clock as clock
+    import nm.shared.clock_contracts as clock
 
     class FixedDateTime:
         @staticmethod
@@ -395,8 +395,8 @@ def test_actual_application_registry_can_record_fresh_event_observations(client)
     model.tool_call.side_effect = respond
     app.model.inner.inner = model
     brain = _compose(app, scope)
-    from nm.domain.budget import Budget
-    from nm.domain.loop import LoopLimits
+    from nm.legal_brain.loop_contracts import LoopLimits
+    from nm.shared.budget_contracts import Budget
 
     # The actual application loads only the schemas it inspected; the full
     # registered catalogue remains captured, not sent on every request.

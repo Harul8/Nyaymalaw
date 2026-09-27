@@ -6,8 +6,19 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.core import cascade, consistency, dependency, duty, grounding, screens
-from nm.core.output_checks import (
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.legal_brain import consistency, duty, grounding
+from nm.legal_brain.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.evidence_port import (
+    Binding,
+    Coverage,
+    EvidenceNeed,
+    EvidenceResult,
+    ParaKind,
+    SourceKind,
+)
+from nm.legal_brain.output_checks import (
     BoundarySubjects,
     CheckReceipt,
     OutputSubjects,
@@ -21,12 +32,10 @@ from nm.core.output_checks import (
     run_boundary_checks,
     run_output_checks,
 )
-from nm.domain import authority
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.coverage import CoveragePosition, CoverageState
-from nm.domain.gates import Response, Scope
-from nm.ports.evidence import Binding, Coverage, EvidenceNeed, EvidenceResult, ParaKind, SourceKind
-
+from nm.open_matter import screens
+from nm.shared import authority_contracts as authority
+from nm.shared.gates_contracts import Response, Scope
+from nm.work_the_file import cascade, dependency
 from tests.test_independent_claim_verifier import finding, package, verify
 
 pytestmark = pytest.mark.class_a

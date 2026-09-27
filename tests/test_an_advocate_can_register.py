@@ -3,7 +3,7 @@
 THE DECISION THIS REVERSES
 ----------------------------
 The sign-in page used to say, in as many words, that enrolment was not
-self-service and pointed at `backend/operations/enrol.py` — a tool an advocate cannot run.
+self-service and pointed at `operations/enrol.py` — a tool an advocate cannot run.
 The form is available to the advocate, but an operator-issued invitation now
 controls who may use it and fixes the identity and workspace it will create.
 
@@ -55,9 +55,9 @@ class _App:
 
 @pytest.fixture()
 def client(tmp_path):
-    import nm.edge.api as api
-    from nm.adapters.store.directory import FileDirectory
-    from nm.domain.advocate import AdvocateIdentity, canonical_id, utcnow
+    import nm.app.api as api
+    from nm.arrive.advocate_contracts import AdvocateIdentity, canonical_id, utcnow
+    from nm.arrive.store_directory import FileDirectory
 
     was = api._application
     directory = FileDirectory(tmp_path, key="k" * 32)
@@ -195,7 +195,7 @@ def test_the_roster_profile_comes_from_the_invitation(client):
 
 def test_enrolling_the_same_email_twice_is_refused(client):
     """Overwriting would replace a credential without anyone deciding to —
-    the same refusal `backend/operations/enrol.py` already makes, reached through a
+    the same refusal `operations/enrol.py` already makes, reached through a
     different door."""
     assert register(client).status_code == 200
     again = register(client)

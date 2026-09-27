@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.adapters.model.replay import ReplayModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.domain.loop import LoopEvent, LoopRecord, StepKind, digest
-from nm.ports.model import ProviderUnavailable, SchemaViolation, ToolCall, Usage
 
+from nm.legal_brain.loop_contracts import LoopEvent, LoopRecord, StepKind, digest
+from nm.shared.model_port import ProviderUnavailable, SchemaViolation, ToolCall, Usage
+from nm.shared.model_replay import ReplayModel
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_the_loop_records_work_before_using_it import (
     PROMPT,
     _limits,

@@ -7,20 +7,21 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.principles_file import FilePrinciples
-from nm.core.brain_finalization import SavedCheckReader
-from nm.core.brain_release import ReviewRefused
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.core.interaction_review import (
+
+from nm.legal_brain.brain_finalization import SavedCheckReader
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument, SourceKind
+from nm.legal_brain.interaction_review import (
     COMMUNICATION_REVIEW_SCHEMA,
     CRITERIA,
     InteractionReviewService,
 )
-from nm.core.interaction_subject import InteractionSubjectOwner
-from nm.core.tool_sources import capture_document, source_envelope
-from nm.core.tools import (
+from nm.legal_brain.interaction_subject import InteractionSubjectOwner
+from nm.legal_brain.loop_contracts import LoopLimits, LoopMode, StepKind
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.tool_sources import capture_document, source_envelope
+from nm.legal_brain.tools import (
     Boundary,
     OfferRole,
     RegisteredTool,
@@ -28,13 +29,19 @@ from nm.core.tools import (
     foundation_tools,
     object_schema,
 )
-from nm.domain.budget import Budget, Completion
-from nm.domain.loop import LoopLimits, LoopMode, StepKind
-from nm.domain.matter import AskedQuestion, Thread
-from nm.ports.evidence import Coverage, EvidenceResult, SourceDocument, SourceKind
-from nm.ports.model import ModelResult, ProviderUnavailable, Tier, ToolCall, ToolDefinition, Usage
-from nm.ports.store import StaleWrite
-
+from nm.shared.budget_contracts import Budget, Completion
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import (
+    ModelResult,
+    ProviderUnavailable,
+    Tier,
+    ToolCall,
+    ToolDefinition,
+    Usage,
+)
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.store_port import StaleWrite
+from nm.work_the_file.matter_contracts import AskedQuestion, Thread
 from tests.test_independent_claim_verifier import finding, premise
 from tests.test_the_loop_records_work_before_using_it import _response, _setup
 
@@ -416,8 +423,7 @@ def test_changed_incomplete_or_downgraded_checker_identity_remains_unassessed(
 
 
 def test_actual_admitted_document_words_are_checked_without_law_or_fact_promotion(tmp_path):
-    from nm.core.matter_support import REFERENCE_KEYS, captured_documents
-
+    from nm.legal_brain.matter_support import REFERENCE_KEYS, captured_documents
     from tests.test_document_words_reach_review_without_becoming_facts_or_law import (
         _case as document_case,
     )

@@ -28,14 +28,8 @@ import inspect
 import pathlib
 
 import pytest
-from nm.domain.authority import (
-    PERMITTED,
-    Act,
-    ActingAs,
-    Standing,
-    permits,
-)
-from nm.domain.commission import (
+
+from nm.open_matter.commission_contracts import (
     MATERIAL,
     Commission,
     Deadline,
@@ -43,11 +37,18 @@ from nm.domain.commission import (
     WorkProduct,
     material_changes,
 )
+from nm.shared.authority_contracts import (
+    PERMITTED,
+    Act,
+    ActingAs,
+    Standing,
+    permits,
+)
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OWNER = "backend/nm/domain/authority.py"
+OWNER = "nm/shared/authority_contracts.py"
 
 
 # =========================== the third state ================================
@@ -197,7 +198,7 @@ def test_only_one_module_decides_who_may_act():
     what makes a second copy impossible. Four callers ask this question and the
     moment two of them answer it there are two answers."""
     offenders: list[str] = []
-    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "nm").rglob("*.py")):
         relative = path.relative_to(ROOT).as_posix()
         if relative == OWNER:
             continue

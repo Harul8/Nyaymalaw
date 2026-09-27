@@ -23,7 +23,7 @@ import yaml
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
-GATE = ROOT / "pipeline" / "quality" / "releasegate.py"
+GATE = ROOT / "pipeline/releasegate.py"
 RELEASE = ROOT / "assurance" / "specification" / "release.yaml"
 
 

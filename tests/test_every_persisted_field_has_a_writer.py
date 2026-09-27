@@ -58,7 +58,8 @@ import pathlib
 import typing
 
 import pytest
-from nm.domain.matter import Matter
+
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 
@@ -276,7 +277,7 @@ RESERVED: dict[str, str] = {
         "`Provenance.__post_init__` REFUSES a `kind='document'` provenance "
         "without it, so the first document-sourced fact either carries it or "
         "fails loudly. Nothing writes it because nothing produces document "
-        "facts yet -- `nm.core.intake` is declared UNWIRED in "
+        "facts yet -- `nm.open_matter.intake` is declared UNWIRED in "
         "test_reached_from_production.",
     "Provenance.page":
         "The same guard, the same clause. Written or refused together with "
@@ -348,11 +349,11 @@ def test_the_scan_can_see_a_field_nothing_writes():
     """A positive control on the MECHANISM.
 
     A sweep that cannot fail is S11. Planted on the real scan rather than a
-    fixture: a name no code in `backend/nm/` passes as a keyword must come back
+    fixture: a name no code in `nm/` passes as a keyword must come back
     unwritten, or the writer set is matching too broadly and every field looks
     written.
     """
-    written = written_in("backend/nm")
+    written = written_in("nm")
     assert "no_such_field_is_ever_written_anywhere" not in written
     assert "facts" in written, (
         "a field that IS written did not appear, so the scan is not reading "
@@ -367,13 +368,13 @@ def test_every_persisted_field_has_a_writer_or_is_declared_reserved():
     which fields NOTHING writes, which is the only direction that finds
     anything.
     """
-    written = written_in("backend/nm")
+    written = written_in("nm")
     unwritten = [f"{t.__name__}.{f.name}"
                  for t, f in optional_fields() if f.name not in written]
     undeclared = [name for name in unwritten if name not in RESERVED]
 
     assert not undeclared, (
-        "these fields are on the advocate's record and nothing in backend/nm/ ever "
+        "these fields are on the advocate's record and nothing in nm/ ever "
         "writes them. Each reads as a capability and is permanently empty, "
         "which is indistinguishable from the thing not having happened "
         "(S1). Wire it, delete it, or declare it in RESERVED:\n  "
@@ -388,7 +389,7 @@ def test_no_reservation_outlives_its_writer():
     closed. Same arrangement as `UNWIRED` in test_reached_from_production and
     `CLOSED` in test_three_states.
     """
-    attributed, bare = written_precisely("backend/nm")
+    attributed, bare = written_precisely("nm")
     # ATTRIBUTED FIRST, AND THE BARE SET IS THE FALLBACK. A constructor call
     # says which type it writes: `ProofPosition(material=...)` is not a writer
     # of `Fact.material`, and reading the bare name alone said it was -- which

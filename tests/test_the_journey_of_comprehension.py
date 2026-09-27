@@ -16,7 +16,7 @@ failure.
 
     SO THIS IS INSTRUMENTATION, NOT OBSERVATION. Every phase asks whether the
     surface supports the task. None of them records that anybody performed it,
-    and `backend/nm/domain/review.py` refuses a study whose only observations came from
+    and `nm/shared/review_contracts.py` refuses a study whose only observations came from
     a fixture -- which is what these would be if they were offered as one.
 
 BK-66-AC1's and BK-66-AC3's `counsel_review` and `model_eval` stay NOT RUN, and

@@ -11,14 +11,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.search.authority import AuthorityIndexSearch
-from nm.adapters.store.directory import FileDirectory
-from nm.adapters.store.file_store import FileMatterStore
-from nm.bootstrap.composition import INDEX_PROCESSOR, Application
-from nm.knowledge.acquisition import (
+
+from nm.app.composition import INDEX_PROCESSOR, Application
+from nm.arrive.store_directory import FileDirectory
+from nm.legal_brain.acquisition_sources import (
     AcquiredArtifact,
     AcquisitionRoute,
     AcquisitionScope,
@@ -26,8 +22,10 @@ from nm.knowledge.acquisition import (
     select_candidates,
     stage_acquisition,
 )
-from nm.knowledge.artefact import ArtefactLineage
-from nm.knowledge.manifest import (
+from nm.legal_brain.artefact_sources import ArtefactLineage
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import Coverage
+from nm.legal_brain.manifest_sources import (
     CorpusArtefactInput,
     CorpusDependency,
     CorpusPublicationRefused,
@@ -40,8 +38,9 @@ from nm.knowledge.manifest import (
     rollback_corpus,
     withdraw_corpus,
 )
-from nm.knowledge.provenance import Standing, Treatment
-from nm.knowledge.source_registry import (
+from nm.legal_brain.provenance_sources import Standing, Treatment
+from nm.legal_brain.search_authority import AuthorityIndexSearch
+from nm.legal_brain.source_registry_sources import (
     CanonicalSource,
     LegalReview,
     ReviewState,
@@ -51,8 +50,10 @@ from nm.knowledge.source_registry import (
     SourceRegistry,
     SourceVersion,
 )
-from nm.ports.evidence import Coverage
-from nm.ports.model import Tier
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.store_file_store import FileMatterStore
 
 pytestmark = pytest.mark.class_a
 

@@ -2,9 +2,17 @@
 from dataclasses import asdict, fields, replace
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.domain.issue import Disposition, DispositionState, Issue, IssueKind, from_stored, merge
-from nm.domain.matter import Matter, Side, Thread
+
+from nm.legal_brain.issue_contracts import (
+    Disposition,
+    DispositionState,
+    Issue,
+    IssueKind,
+    from_stored,
+    merge,
+)
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import Matter, Side, Thread
 
 pytestmark = pytest.mark.class_a
 

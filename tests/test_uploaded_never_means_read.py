@@ -25,7 +25,8 @@ WHAT IS ASSERTED
 from __future__ import annotations
 
 import pytest
-from nm.domain.intake import (
+
+from nm.open_matter.intake_contracts import (
     Asset,
     AssetState,
     Reading,

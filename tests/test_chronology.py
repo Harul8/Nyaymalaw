@@ -21,16 +21,17 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.chronology import (
+
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.chronology import (
     DateState,
     build_prompt,
     chart,
     conflicts,
     interpret,
 )
-from nm.domain.matter import Certainty, Fact, Provenance
-from nm.domain.quotable import Quotable
-from nm.domain.traceability import refuses
+from nm.work_the_file.matter_contracts import Certainty, Fact, Provenance
 
 pytestmark = pytest.mark.class_a
 

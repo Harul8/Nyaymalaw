@@ -6,14 +6,16 @@ import json
 from dataclasses import replace
 
 import pytest
-from nm.core.brain_context import (
+
+from nm.legal_brain.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,
     assemble_brief,
     saved_source_references,
 )
-from nm.core.tools import (
+from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.legal_brain.tools import (
     Assessment,
     Availability,
     RegisteredTool,
@@ -22,9 +24,13 @@ from nm.core.tools import (
     ToolOutcome,
     object_schema,
 )
-from nm.domain.loop import StepKind, StopReason
-from nm.ports.model import ToolCall, ToolDefinition, ToolMessage, estimate_tokens, tool_request_text
-
+from nm.shared.model_port import (
+    ToolCall,
+    ToolDefinition,
+    ToolMessage,
+    estimate_tokens,
+    tool_request_text,
+)
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture, snapshot, tools
 from tests.test_independent_claim_verifier import finding
 from tests.test_nested_research_has_one_budget_and_one_writer import LIMITS, setup
@@ -162,7 +168,7 @@ def test_contrary_facts_outside_initial_scope_survive_source_projection_and_comp
 
 
 def test_stable_prefix_indexes_schemas_without_paying_for_a_second_schema_copy():
-    from nm.domain.loop import digest
+    from nm.legal_brain.loop_contracts import digest
 
     marker = "FULL_SCHEMA_PROPERTY_IS_SENT_EXACTLY_ONCE"
     definition = ToolDefinition("deep_tool", "A declared tool.", object_schema({
@@ -174,7 +180,7 @@ def test_stable_prefix_indexes_schemas_without_paying_for_a_second_schema_copy()
     prefix = json.loads(context.system.split("TRUSTED TOOL DEFINITIONS\n", 1)[1].split("\n", 1)[0])
     assert prefix == [{"name": definition.name, "description": definition.description,
                        "schema_identity": digest(definition.parameters)}]
-    from nm.ports.model import Prompt
+    from nm.shared.model_port import Prompt
 
     request = tool_request_text(Prompt("Read the file", context.system), (definition,),
                                 context.messages)

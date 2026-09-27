@@ -41,9 +41,10 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.core.turn import EXCERPT, _excerpt, _positions_note, _shortened
-from nm.domain.matter import Side, Thread
-from nm.domain.proof import Burden, ProofPosition, ProofStatus, Standard
+
+from nm.legal_brain.proof_contracts import Burden, ProofPosition, ProofStatus, Standard
+from nm.legal_brain.turn import EXCERPT, _excerpt, _positions_note, _shortened
+from nm.work_the_file.matter_contracts import Side, Thread
 
 pytestmark = pytest.mark.class_a
 
@@ -95,7 +96,7 @@ def test_a_span_short_enough_is_left_whole_and_not_flagged():
 def test_the_ellipsis_is_never_inside_the_quotation_marks():
     """LOAD-BEARING, NOT TYPOGRAPHIC.
 
-    `nm.core.grounding` pulls quoted runs out of an element and looks for them
+    `nm.legal_brain.grounding` pulls quoted runs out of an element and looks for them
     in the retrieved text. An ellipsis inside the quotes would make the
     product fail to find its OWN excerpt and withhold the turn on its own
     rendering — the grounding gate firing on the product's own prose, which is
@@ -104,7 +105,7 @@ def test_the_ellipsis_is_never_inside_the_quotation_marks():
     import pathlib as _p
 
     body = (_p.Path(__file__).resolve().parents[1]
-            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
     assert '"{_excerpt(f.span)}"' in body, (
         "the ground no longer renders an excerpt inside quotes; if that "
         "changed deliberately, the gate interaction has to be re-reasoned")
@@ -116,9 +117,8 @@ def test_the_ellipsis_is_never_inside_the_quotation_marks():
 def test_the_gate_still_verifies_the_shortened_ground():
     """THE SAFETY PROPERTY, checked rather than reasoned about. The whole
     point is that rendering less does not verify less."""
-    from nm.core.grounding import verify_quotes
-    from nm.domain.answer import Element, ElementKind
-
+    from nm.advise.answer_contracts import Element, ElementKind
+    from nm.legal_brain.grounding import verify_quotes
     from tests.test_turn_contract import finding as _finding
 
     span = ARTICLE_14
@@ -186,8 +186,8 @@ def test_the_rule_is_about_subject_matter_and_not_about_tone():
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
-    from nm.domain.register import PEER
+    from nm.legal_brain.register_contracts import PEER
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._recommend)
 
@@ -195,13 +195,13 @@ def test_the_rule_is_about_subject_matter_and_not_about_tone():
     # here first, because the recommendation was the only prompt E-102 had
     # caught. Re-judged on 6 September the judge quoted the theory and the
     # adversarial reads instead -- five more prompts with no register rule at
-    # all -- so the clause moved to `nm.domain.register` and this reaches it.
+    # all -- so the clause moved to `nm.legal_brain.register_contracts` and this reaches it.
     # Six copies of a sentence drift within a slice.
     assert "+ PEER +" in body
     assert "Where the file already holds the material" in PEER
     # REWORDED IN `602e3f0` under the owner-approved PEER policy: an
     # explanation the advocate asked for, or needs to assess the held
-    # material, is now permitted (see `nm.domain.register`'s docstring). The
+    # material, is now permitted (see `nm.legal_brain.register_contracts`'s docstring). The
     # rule this asserts survived the change -- the generic requirement is
     # not restated UNASKED -- and it is the rule, not the old sentence.
     assert "Avoid unsolicited repetition of generic requirements" in PEER

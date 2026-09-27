@@ -7,18 +7,21 @@ so early admission cannot accidentally satisfy the final-boundary controls.
 from dataclasses import replace
 
 import pytest
-from nm.bootstrap.controlled_evaluations import EvaluationUnavailable, _current_admission
-from nm.core.brain_finalization import SavedCheckReader
-from nm.core.brain_release import ReviewRefused
-from nm.core.interaction_review import InteractionReviewService
-from nm.core.interaction_subject import InteractionSubjectOwner
-from nm.core.matter_support import REFERENCE_KEYS, captured_documents
-from nm.core.reviewed_preview import ReviewedPreviewService
-from nm.domain.advocate import utcnow
-from nm.domain.budget import Budget
-from nm.domain.loop import LoopLimits
-from nm.ports.model import ToolCall
 
+from nm.arrive.advocate_contracts import utcnow
+from nm.legal_brain.brain_finalization import SavedCheckReader
+from nm.legal_brain.brain_release import ReviewRefused
+from nm.legal_brain.controlled_evaluations_composition import (
+    EvaluationUnavailable,
+    _current_admission,
+)
+from nm.legal_brain.interaction_review import InteractionReviewService
+from nm.legal_brain.interaction_subject import InteractionSubjectOwner
+from nm.legal_brain.loop_contracts import LoopLimits
+from nm.legal_brain.matter_support import REFERENCE_KEYS, captured_documents
+from nm.legal_brain.reviewed_preview import ReviewedPreviewService
+from nm.shared.budget_contracts import Budget
+from nm.shared.model_port import ToolCall
 from tests.test_document_words_reach_review_without_becoming_facts_or_law import (
     _case as document_case,
 )

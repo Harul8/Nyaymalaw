@@ -10,17 +10,8 @@ recomputing a number that moved.
 from __future__ import annotations
 
 import pytest
-from nm.core.cascade import (
-    Change,
-    Derived,
-    PriorAdvice,
-    advice_at_risk,
-    changes,
-    dependents,
-    report,
-    unresolved_undo,
-)
-from nm.core.gaps import (
+
+from nm.legal_brain.gaps import (
     Gap,
     GapKind,
     Question,
@@ -30,13 +21,23 @@ from nm.core.gaps import (
     rank,
     still_missing,
 )
-from nm.core.quarantine import (
+from nm.open_matter.quarantine import (
     AlreadyReleased,
     Clearance,
     Quarantined,
     reachable_substance,
 )
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.cascade import (
+    Change,
+    Derived,
+    PriorAdvice,
+    advice_at_risk,
+    changes,
+    dependents,
+    report,
+    unresolved_undo,
+)
 
 pytestmark = pytest.mark.class_a
 
@@ -351,8 +352,7 @@ def test_answer_length_is_a_function_of_live_threads_not_turn_number(tmp_path):
     """
     from datetime import date as _date
 
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

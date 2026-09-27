@@ -12,7 +12,7 @@ TWO HALVES, AND ONLY ONE COSTS ANYTHING
 ----------------------------------------
 The STRUCTURAL half is free and runs every commit: the composition root selects
 on the provider string alone, no source file mentions a provider outside
-`backend/nm/adapters`, and the same `TurnInput` runs end to end under the scripted
+`nm/adapters`, and the same `TurnInput` runs end to end under the scripted
 adapter with only an environment variable changed.
 
 The PAID half — the same turn against the live provider, to record the cost and
@@ -29,13 +29,15 @@ import os
 from pathlib import Path
 
 import pytest
-from nm.adapters.model.config import ModelConfig, TierConfig
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.store.file_store import FileMatterStore
-from nm.bootstrap.composition import build_model
-from nm.core.turn import TurnEngine, TurnInput
-from nm.ports.model import Tier
 
+from assurance.common.module_roles import classify_sources, source_module, sources_for_roles
+from nm.app.composition import build_model
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_port import Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.store_file_store import FileMatterStore
+from tests.source_role_fixtures import role_tree
 from tests.test_turn_contract import KEY, _Evidence, briefed
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,29 +98,28 @@ def test_the_composition_root_branches_on_the_provider_string_alone():
 
 
 @pytest.mark.class_a
-def test_no_module_outside_the_adapters_names_a_provider():
+def test_no_module_outside_the_adapters_names_a_provider(files=None):
     """A provider named in core, ports, domain or edge is provider knowledge on
     a path that must not have it — and it makes the switch false quietly."""
     providers = {"openai", "anthropic", "azure", "bedrock", "vertex"}
     offences = []
-    for layer in ("core", "ports", "domain", "edge", "knowledge"):
-        for path in sorted((ROOT / "backend" / "nm" / layer).rglob("*.py")):
-            text = path.read_text(encoding="utf8").lower()
-            for p in providers:
-                if f'"{p}"' in text or f"'{p}'" in text or f"import {p}" in text:
-                    offences.append(f"{path.relative_to(ROOT)} names {p!r}")
+    population = (sources_for_roles("core", "ports", "domain", "edge", "knowledge")
+                  if files is None else files)
+    assert population, "provider-independent source population is empty"
+    for path in population:
+        text = path.read_text(encoding="utf8").lower()
+        for p in providers:
+            if f'"{p}"' in text or f"'{p}'" in text or f"import {p}" in text:
+                offences.append(f"{path} names {p!r}")
     assert not offences, "\n  ".join(offences)
 
 
-def test_the_provider_name_sweep_can_see_a_leak_outside_adapters():
+def test_the_provider_name_sweep_can_see_a_leak_outside_adapters(tmp_path):
     """BK-52. Plant a provider name in the exact package tree swept."""
-    probe = ROOT / "backend" / "nm" / "edge" / "_provider_name_probe.py"
-    probe.write_text("PROVIDER = 'anthropic'\n", encoding="utf8")
-    try:
-        with pytest.raises(AssertionError, match="names 'anthropic'"):
-            test_no_module_outside_the_adapters_names_a_provider()
-    finally:
-        probe.unlink()
+    roles = role_tree(tmp_path, "PROVIDER = 'anthropic'\n", role="edge")
+    files = classify_sources(root=tmp_path, roles=roles).sources_for_roles("edge")
+    with pytest.raises(AssertionError, match="names 'anthropic'"):
+        test_no_module_outside_the_adapters_names_a_provider(files)
 
 
 @pytest.mark.class_a
@@ -127,7 +128,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
     """THE SWITCH, THROWN.
 
     The engine is built twice from two different provider configurations and
-    the same brief run through both. Nothing in `backend/nm/` differs between the two
+    the same brief run through both. Nothing in `nm/` differs between the two
     runs — only the config object, which is what an environment variable
     produces.
 
@@ -136,7 +137,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
     provider served it. What it cannot establish is the cost and latency delta
     against a live provider; that is the paid half below.
     """
-    before = {p: p.read_bytes() for p in sorted((ROOT / "backend" / "nm").rglob("*.py"))}
+    before = {p: p.read_bytes() for p in sorted((ROOT / "nm").rglob("*.py"))}
 
     outputs = {}
     for name, responses in (
@@ -152,7 +153,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
         assert out.answer.elements, f"{name}: no answer"
         assert out.metrics.model_mix, f"{name}: the provider was not recorded"
 
-    after = {p: p.read_bytes() for p in sorted((ROOT / "backend" / "nm").rglob("*.py"))}
+    after = {p: p.read_bytes() for p in sorted((ROOT / "nm").rglob("*.py"))}
     assert before == after, (
         "a source file changed between provider runs -- the switch is not a "
         "configuration change")
@@ -176,7 +177,7 @@ def test_the_live_provider_serves_the_same_turn_and_the_delta_is_recorded(tmp_pa
     standing constraint is per-run approval, and a default that spends is a
     decision nobody made.
     """
-    from nm.adapters.model.config import load, load_dotenv
+    from nm.shared.model_config import load, load_dotenv
 
     load_dotenv(ROOT / ".env")
     config = load()
@@ -205,18 +206,55 @@ def test_the_live_provider_serves_the_same_turn_and_the_delta_is_recorded(tmp_pa
 # ========= every declared schema, answerable by the SECOND provider =========
 
 
-def _declared_schemas() -> dict[str, dict]:
+def _schema_fragments(value):
+    if isinstance(value, dict):
+        yield value
+        for member in value.values():
+            yield from _schema_fragments(member)
+    elif isinstance(value, list):
+        for member in value:
+            yield from _schema_fragments(member)
+
+
+def _registered_arguments(client):
+    """Actual installed tool declarations, not a schema filename exception."""
+    from nm.legal_brain.brain_release import ReviewService
+    from nm.legal_brain.verifier import IndependentVerifier
+    from nm.shared.store_loop_log import MatterLoopLog
+    from tests.test_controlled_brain_composition_keeps_the_account_boundary import _scope
+    from tests.test_independent_claim_verifier import Judge
+
+    app, _matter, scope = _scope(client)
+    reviewer = ReviewService(
+        store=app.store, log=MatterLoopLog(app.store, advocate_id=scope.advocate_id),
+        verifier=IndependentVerifier(Judge()), session_current=lambda: True,
+        cost_ceiling=lambda *_: 0.03)
+    brain = app.controlled_brain_for(
+        scope, session_current=lambda: True, cost_ceiling=lambda *_: 0.03,
+        source_version=app.source_generation_guard().version,
+        table_version="structural-schema-population", reviewer=reviewer)
+    return tuple(fragment for definition in brain.registry.definitions
+                 for fragment in _schema_fragments(definition.parameters))
+
+
+def _read_schema(schema, arguments):
+    # A named read remains a read even if a tool reuses its shape. Untitled
+    # schemas are excluded ONLY when actual installed tool declarations own
+    # that exact complete schema/fragment; arbitrary unknown schemas stay in.
+    return bool(schema.get("x-nm-read")) or not any(schema == arg for arg in arguments)
+
+
+def _declared_schemas(client=None) -> dict[str, dict]:
     """Every `*_SCHEMA` the core declares. The population, from the tree."""
     import importlib
-    import pkgutil
-
-    import nm.core
+    arguments = _registered_arguments(client) if client is not None else ()
     out: dict[str, dict] = {}
-    for mod in pkgutil.iter_modules(nm.core.__path__):
-        m = importlib.import_module(f"nm.core.{mod.name}")
+    for path in sources_for_roles("core"):
+        m = importlib.import_module(source_module(path))
         for name in dir(m):
-            if name.endswith("_SCHEMA") and isinstance(getattr(m, name), dict):
-                out[f"nm.core.{mod.name}.{name}"] = getattr(m, name)
+            if (name.endswith("_SCHEMA") and isinstance(getattr(m, name), dict)
+                    and _read_schema(getattr(m, name), arguments)):
+                out[f"{m.__name__}.{name}"] = getattr(m, name)
     return out
 
 
@@ -245,7 +283,7 @@ def test_the_suite_can_see_the_declared_schemas():
     assert len(found) >= 4, f"only {len(found)} schemas found: {sorted(found)}"
 
 
-def test_every_schema_is_identified_by_an_exact_key_and_not_a_substring():
+def test_every_schema_is_identified_by_an_exact_key_and_not_a_substring(client):
     """DISPATCH WAS A SUBSTRING SEARCH OVER THE SCHEMA'S JSON.
 
     That is fuzzy matching doing IDENTIFICATION, which CLAUDE.md §5 records as
@@ -260,9 +298,9 @@ def test_every_schema_is_identified_by_an_exact_key_and_not_a_substring():
     possible rather than merely unlikely. Same rule as
     `tests/test_citation_patterns.py` applies to Act keywords, one layer down.
     """
-    from nm.adapters.model.scripted import SCRIPTED_READS
+    from nm.shared.model_scripted import SCRIPTED_READS
 
-    declared = _declared_schemas()
+    declared = _declared_schemas(client)
     untitled = [q for q, s in sorted(declared.items())
                 if not (s.get("x-nm-read") or "").strip()]
     assert not untitled, (
@@ -283,7 +321,7 @@ def test_every_schema_is_identified_by_an_exact_key_and_not_a_substring():
         f"declared and unanswerable by the second provider: {missing}")
 
 
-def test_the_scripted_provider_answers_every_schema_the_core_declares():
+def test_the_scripted_provider_answers_every_schema_the_core_declares(client):
     """A SCHEMA THE SECOND PROVIDER CANNOT ANSWER IS A BROKEN TURN, not a
     degraded one.
 
@@ -295,11 +333,11 @@ def test_the_scripted_provider_answers_every_schema_the_core_declares():
     """
     import json
 
-    from nm.adapters.model.scripted import SCRIPTED_READS
-    from nm.ports.model import require_schema
+    from nm.shared.model_port import require_schema
+    from nm.shared.model_scripted import SCRIPTED_READS
 
     unanswerable = []
-    for qualified, schema in sorted(_declared_schemas().items()):
+    for qualified, schema in sorted(_declared_schemas(client).items()):
         responder = SCRIPTED_READS.get(schema.get("x-nm-read") or "")
         if responder is None:
             unanswerable.append(f"{qualified}: no scripted responder")
@@ -319,12 +357,21 @@ def test_the_scripted_provider_answers_every_schema_the_core_declares():
 def test_the_schema_scan_can_see_a_schema_with_no_responder():
     """THE POSITIVE CONTROL. A scan over schemas that all happen to have a
     responder proves nothing about the scan."""
-    from nm.adapters.model.scripted import SCRIPTED_READS
+    from nm.shared.model_scripted import SCRIPTED_READS
 
     planted = {"x-nm-read": "zz_no_responder_claims_this", "type": "object",
                "properties": {"x": {"type": "string"}}, "required": ["x"]}
     assert SCRIPTED_READS.get(planted["x-nm-read"]) is None, (
         "the planted schema matched a responder, so it proves nothing")
+
+
+def test_tool_argument_classification_keeps_unknown_and_registered_read_failures():
+    argument = {"type": "object", "properties": {"tool_value": {"type": "string"}}}
+    unknown = {"type": "object", "properties": {"unknown_read": {"type": "string"}}}
+    named = {**argument, "x-nm-read": "missing_independent_responder"}
+    assert not _read_schema(argument, (argument,))
+    assert _read_schema(unknown, (argument,))
+    assert _read_schema(named, (named,))
 
 
 def test_no_metadata_of_ours_is_sent_to_the_provider():
@@ -344,7 +391,7 @@ def test_no_metadata_of_ours_is_sent_to_the_provider():
     The whole offline suite was green throughout, because the scripted provider
     answers from the key and never validates the way the real one does.
     """
-    from nm.ports.model import NM_SCHEMA_KEYS, on_the_wire
+    from nm.shared.model_port import NM_SCHEMA_KEYS, on_the_wire
 
     for qualified, schema in sorted(_declared_schemas().items()):
         wire = on_the_wire(schema)
@@ -361,7 +408,7 @@ def test_no_metadata_of_ours_is_sent_to_the_provider():
 def test_the_wire_scan_can_see_a_leak():
     """THE POSITIVE CONTROL. `on_the_wire` returning its input unchanged would
     satisfy the test above identically."""
-    from nm.ports.model import on_the_wire
+    from nm.shared.model_port import on_the_wire
 
     planted = {"x-nm-read": "probe", "type": "object",
                "properties": {"a": {"type": "string"}}, "required": ["a"]}
@@ -374,7 +421,7 @@ def test_the_adapter_that_ships_is_the_one_that_strips():
     """B-040's lesson, on a new field: the validator lived in the test double
     and the adapter that ships skipped it, so an `enum` was decoration on the
     production path. The strip has to be where the request is built."""
-    src = (ROOT / "backend" / "nm" / "adapters" / "model" / "openai_adapter.py").read_text(
+    src = (ROOT / "nm/shared/model_openai_adapter.py").read_text(
         encoding="utf8")
     assert "on_the_wire(schema)" in src, (
         "the OpenAI adapter sends the schema verbatim, so any metadata we add "

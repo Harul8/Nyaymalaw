@@ -8,18 +8,24 @@ from datetime import date, timedelta
 from unittest.mock import Mock
 
 import pytest
-from nm.core import brain_context, requirements
-from nm.core.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.core.file_mutation import MutationRefused, prepare_requirement_answer
-from nm.core.tool_catalogue import catalogue_tools
-from nm.core.tools import Boundary, PreparedToolResult, ToolContext, ToolRefused, ToolRegistry
-from nm.core.write_tools import write_tools
-from nm.domain.loop import LoopIdentity, LoopMode, StopReason, digest
-from nm.domain.matter import Fact, Matter, Provenance, Thread
-from nm.domain.register import PEER
-from nm.domain.requirements import Force, Requirement, State, checklist, key
-from nm.ports.model import ToolCall
 
+from nm.legal_brain import brain_context, requirements
+from nm.legal_brain.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.legal_brain.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
+from nm.legal_brain.register_contracts import PEER
+from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.legal_brain.tool_catalogue import catalogue_tools
+from nm.legal_brain.tools import (
+    Boundary,
+    PreparedToolResult,
+    ToolContext,
+    ToolRefused,
+    ToolRegistry,
+)
+from nm.shared.model_port import ToolCall
+from nm.work_the_file.file_mutation import MutationRefused, prepare_requirement_answer
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
+from nm.work_the_file.write_tools import write_tools
 from tests.test_brain_context_is_a_checked_file_projection import snapshot, tools
 
 pytestmark = pytest.mark.class_a

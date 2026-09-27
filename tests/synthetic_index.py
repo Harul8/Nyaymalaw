@@ -1,7 +1,7 @@
 """A SYNTHETIC authority index and identity index, in the real schema. P21.
 
-Two tiny SQLite files with exactly the tables `pipeline/indexing/build_authority_index.py`
-and `pipeline/indexing/build_identity_index.py` create, holding invented judgments about an
+Two tiny SQLite files with exactly the tables `pipeline/build_authority_index.py`
+and `pipeline/build_identity_index.py` create, holding invented judgments about an
 invented proposition. Nothing here is Indian law and nothing here is drawn from
 `legal_database/`: the case names, the citations, the paragraphs and the
 treatment are fixtures, and they say so in their text.
@@ -102,7 +102,7 @@ CASES = (
     ("SYN_1999_NOCITE", SC, 1999, "Unreported Fixture vs Nobody", 1, "author_inline"),
 )
 
-#: (citation_key, case_id) -- keys as `nm.domain.citation.reporter_key` makes them
+#: (citation_key, case_id) -- keys as `nm.legal_brain.citation_contracts.reporter_key` makes them
 CITATIONS = (
     ("1990SYN1", "SYN_1990_MARKER"),
     ("AIR1990SYN1", "SYN_1990_MARKER"),

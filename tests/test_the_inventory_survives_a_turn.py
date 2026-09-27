@@ -40,14 +40,15 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core import evidence_item as inventory
-from nm.core.evidence_item import (
+
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.work_the_file import evidence_item as inventory
+from nm.work_the_file.evidence_item import (
     EvidenceItem,
     Form,
     Holder,
     Preservation,
 )
-from nm.domain.quotable import Quotable
 
 pytestmark = pytest.mark.class_a
 
@@ -225,7 +226,7 @@ def test_the_turn_persists_the_merged_inventory():
     every turn, which passes every test above and changes nothing."""
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._inventory)
     assert 'concluded["evidence"]' in body, (
@@ -258,7 +259,7 @@ def test_what_is_carried_is_not_recited():
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._inventory)
     assert "for item in live:" in body, "the merged list is what is walked"
@@ -272,6 +273,6 @@ def test_what_is_carried_is_not_recited():
 
 
 def test_the_thread_carries_the_field():
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
 
     assert Thread.create(label="t").evidence == ()

@@ -28,7 +28,8 @@ from datetime import timedelta
 from threading import Barrier
 
 import pytest
-from nm.domain.advocate import (
+
+from nm.arrive.advocate_contracts import (
     SESSION_IDLE_MINUTES,
     AdvocateIdentity,
     Credential,
@@ -39,7 +40,7 @@ from nm.domain.advocate import (
     token_fingerprint,
     utcnow,
 )
-from nm.domain.traceability import refuses
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 
@@ -59,7 +60,7 @@ def _identity(advocate_id: str = "adv_1") -> AdvocateIdentity:
 
 
 def _directory(tmp_path, advocate_id: str = "adv_1"):
-    from nm.adapters.store.directory import FileDirectory
+    from nm.arrive.store_directory import FileDirectory
     d = FileDirectory(tmp_path, key="k" * 32)
     d.enrol(Enrolment(identity=_identity(advocate_id),
                       credential=enrol(PASSWORD)))
@@ -70,7 +71,7 @@ def _directory(tmp_path, advocate_id: str = "adv_1"):
 
 @pytest.mark.eval_id("E-010")
 def test_the_identity_carries_every_field_the_contract_names():
-    """A1's PRODUCES had NO CLASS and no field of it anywhere in `backend/nm/`, and the
+    """A1's PRODUCES had NO CLASS and no field of it anywhere in `nm/`, and the
     feature stood at `tested` (B-082)."""
     i = _identity()
     assert set(i.as_dict()) == {"id", "name", "enrolment", "practice",
@@ -89,7 +90,7 @@ def test_the_identifying_fields_may_not_be_blank():
     screen run against a registry of one.
 
     THAT COST IS NOT GONE, IT IS DEFERRED, and the next test is where it now
-    lives. `nm.core.screens` is declared UNWIRED, so nothing live is weakened
+    lives. `nm.open_matter.screens` is declared UNWIRED, so nothing live is weakened
     today — and when the screen is built a blank firm must read NOT_ASSESSED
     and never CLEAR.
     """
@@ -99,7 +100,7 @@ def test_the_identifying_fields_may_not_be_blank():
 
     # EMAIL IS REQUIRED AT THE REGISTRATION DOOR AND NOT ON THE TYPE, and the
     # difference is not an oversight. Every advocate enrolled by
-    # `backend/operations/enrol.py` before the field existed has none, and requiring it on
+    # `operations/enrol.py` before the field existed has none, and requiring it on
     # the type would make those records unreadable. The route that MINTS a new
     # advocate insists on it; the type that reads an old one cannot.
     AdvocateIdentity(**{**_identity().as_dict(), "email": ""})
@@ -337,7 +338,7 @@ def test_a_credential_records_the_cost_it_was_made_with():
     assert c.verify(PASSWORD)
 
     # A credential made at a DIFFERENT cost still verifies against its own.
-    from nm.domain.advocate import _derive
+    from nm.arrive.advocate_contracts import _derive
     salt = c.salt
     old = Credential(algorithm="scrypt", salt=salt, n=2 ** 10,
                      hash=_derive(PASSWORD, salt, 2 ** 10, 8, 1))
@@ -393,7 +394,7 @@ def test_the_turn_request_has_no_field_to_assert_an_identity_with(client):
     who they were and the product wrote that assertion onto the file. There is
     no field now — the mechanism is the absence.
     """
-    from nm.edge.api import TurnRequest
+    from nm.app.api import TurnRequest
 
     assert "advocate_id" not in TurnRequest.model_fields, (
         "the turn request carries an advocate id again. Whoever posts it "
@@ -452,7 +453,7 @@ def test_every_matter_route_requires_a_session(client):
     that would not be in a hand-written list — and it would serve matters to
     anyone who asked.
     """
-    from nm.edge.api import app
+    from nm.app.api import app
 
     client.cookies.clear()
     unguarded = _unguarded_matter_routes(app, client)

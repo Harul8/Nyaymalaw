@@ -1,6 +1,6 @@
 """A DOCUMENT'S CLAIM ABOUT AN ARTEFACT IS A CLAIM ABOUT THE FILESYSTEM.
 
-B-141. `docs/BACKLOG.md` carried BK-4 -- *`pipeline/indexing/build_authority_index.py` has
+B-141. `docs/BACKLOG.md` carried BK-4 -- *`pipeline/build_authority_index.py` has
 never been run* -- for eight days after the index was built. Measured on
 7 September 2026:
 
@@ -135,7 +135,7 @@ def test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk():
 
 
 @pytest.mark.parametrize("stale", [
-    "pipeline/indexing/build_authority_index.py` has never been run",          # B-141
+    "pipeline/build_authority_index.py` has never been run",          # B-141
     "| Semantic search (embeddings) | **NOT WORKING** — see below",  # 9 Sep 2026
     "**Embeddings are deliberately deferred, not forgotten.**",      # 9 Sep 2026
 ])

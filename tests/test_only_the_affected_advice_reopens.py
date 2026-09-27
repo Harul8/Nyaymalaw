@@ -13,16 +13,17 @@ Two failures, and they are opposites:
   that mattered goes past too.
 
 NO SECOND FRESHNESS SYSTEM. Every assertion here runs through P18's
-`nm.core.dependency` -- its `closure`, its `Currency`, its `invalidate`. If
+`nm.work_the_file.dependency` -- its `closure`, its `Currency`, its `invalidate`. If
 P28 had built its own traversal there would be two answers to *is this still
 true*, and the advocate would act on whichever the screen happened to show.
 """
 from __future__ import annotations
 
 import pytest
-from nm.core import reassessment as ra
-from nm.core.dependency import Currency, InputKind, Ledger, Node, Rest
-from nm.domain.advice_decision import AdviceDecision, Disposition, supersede
+
+from nm.advise import reassessment as ra
+from nm.advise.advice_decision_contracts import AdviceDecision, Disposition, supersede
+from nm.work_the_file.dependency import Currency, InputKind, Ledger, Node, Rest
 
 pytestmark = pytest.mark.class_a
 
@@ -169,7 +170,7 @@ def test_p28_reuses_p18s_ledger_and_defines_no_traversal_of_its_own():
     # index into another module for no reason, and the rule would then be
     # protecting the wrong thing.
     assert "closure" not in {n for n in dir(ra) if not n.startswith("__")}, (
-        "nm.core.reassessment imports `closure`; the transitive reach has one "
+        "nm.advise.reassessment imports `closure`; the transitive reach has one "
         "owner and a second caller is a second answer waiting to disagree")
 
     body = inspect.getsource(ra.reopen).split('"""')[-1]
@@ -178,8 +179,8 @@ def test_p28_reuses_p18s_ledger_and_defines_no_traversal_of_its_own():
         "reopen recomputes a reach that `invalidate` already returns")
 
     # AND THE LEDGER IS P18'S, not a local re-declaration of one.
-    assert ra.Ledger.__module__ == "nm.core.dependency"
-    assert ra.Currency.__module__ == "nm.core.dependency"
+    assert ra.Ledger.__module__ == "nm.work_the_file.dependency"
+    assert ra.Currency.__module__ == "nm.work_the_file.dependency"
 
 
 def test_advice_with_no_recorded_inputs_cannot_be_certified_current():
@@ -198,7 +199,7 @@ def test_the_reach_terminates_on_a_ring():
     and a closure that hung on one would take the product down rather than
     reporting the ring. Inherited from P18 and asserted here because P28 is
     what introduces derived-on-derived edges in bulk."""
-    from nm.core.dependency import record
+    from nm.work_the_file.dependency import record
     led = Ledger()
     led = record(led, Node(name="a", value="1", shown="a",
                            rests_on=(Rest(kind=InputKind.DERIVED, id="b",

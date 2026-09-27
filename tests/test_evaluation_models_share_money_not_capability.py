@@ -4,12 +4,13 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.model.config import load
-from nm.bootstrap.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
-from nm.core.verifier import VERIFICATION_SCHEMA
-from nm.domain.advocate import utcnow
-from nm.domain.external_ai import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
-from nm.ports.model import ConfigurationError, Prompt, Tier
+
+from nm.arrive.advocate_contracts import utcnow
+from nm.legal_brain.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
+from nm.legal_brain.verifier import VERIFICATION_SCHEMA
+from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
+from nm.shared.model_config import load
+from nm.shared.model_port import ConfigurationError, Prompt, Tier
 
 pytestmark = pytest.mark.class_a
 

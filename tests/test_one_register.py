@@ -31,7 +31,7 @@ call, different answer.
 
 So the question is ANSWERED FOR EVERY MEMBER instead, which is the arrangement
 `UNWIRED`, `RESERVED`, `NO_REPRODUCTION` and `CLOSED` all use here. The
-population comes from the code — every `*_SYSTEM` constant in `backend/nm/core/` — and
+population comes from the code — every `*_SYSTEM` constant in `nm/core/` — and
 a constant in neither list fails the build, so the seventh prompt cannot be
 added without someone deciding which kind it is.
 """
@@ -41,16 +41,17 @@ import ast
 import pathlib
 
 import pytest
-from nm.domain.register import ADDRESSES_THE_ADVOCATE, PEER, STRUCTURED_ONLY
+
+from assurance.common.module_roles import sources_for_roles
+from nm.legal_brain.register_contracts import ADDRESSES_THE_ADVOCATE, PEER, STRUCTURED_ONLY
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CORE = ROOT / "backend" / "nm" / "core"
 
 
 def system_constants() -> set[str]:
-    """Every module-level prompt constant in `backend/nm/core/`, as `path::NAME`.
+    """Every module-level prompt constant in `nm/core/`, as `path::NAME`.
 
     A prompt is a `*_SYSTEM` or bare `SYSTEM` assigned at module level. That
     is a naming convention, and the alternative — inferring which strings are
@@ -58,7 +59,7 @@ def system_constants() -> set[str]:
     about.
     """
     found: set[str] = set()
-    for path in sorted(CORE.rglob("*.py")):
+    for path in sources_for_roles("core"):
         if "__pycache__" in path.parts:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -92,7 +93,7 @@ def test_no_declaration_names_a_prompt_that_is_gone():
     real = system_constants()
     # The recommendation is built inline in `_recommend` rather than as a
     # module constant, so it is named in the table and cannot be scanned for.
-    inline = {"backend/nm/core/turn.py::recommendation"}
+    inline = {"nm/legal_brain/turn.py::recommendation"}
     stale = sorted(
         (set(ADDRESSES_THE_ADVOCATE) | set(STRUCTURED_ONLY)) - real - inline)
     assert not stale, (
@@ -107,7 +108,7 @@ def test_every_advocate_facing_prompt_carries_the_clause():
     missing = []
     for name in ADDRESSES_THE_ADVOCATE:
         if name.endswith("::recommendation"):
-            body = (ROOT / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            body = (ROOT / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
             if "+ PEER +" not in body:
                 missing.append(name)
             continue
@@ -159,7 +160,7 @@ def test_the_scan_can_see_a_prompt_that_lost_its_clause():
     """
     # (a) a prompt in neither list
     declared = set(ADDRESSES_THE_ADVOCATE) | set(STRUCTURED_ONLY)
-    planted = "backend/nm/core/planted.py::PLANTED_SYSTEM"
+    planted = "nm/core/planted.py::PLANTED_SYSTEM"
     assert planted not in declared
     assert sorted({planted} | system_constants()) != sorted(system_constants()), (
         "the population set did not grow, so the scan cannot see a new prompt")
@@ -210,7 +211,7 @@ def test_the_clause_is_one_string_and_not_six():
     its own wording first, because it was the only prompt E-102 had caught;
     six copies of a sentence drift from each other within a slice, which is
     what a register rule cannot survive."""
-    turn = (ROOT / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+    turn = (ROOT / "nm/legal_brain/turn.py").read_text(encoding="utf-8")
     assert "WHERE THE FILE ALREADY HOLDS THE DOCUMENT A STEP CONCERNS" \
         not in turn, (
             "the recommendation still carries its own copy of the register "

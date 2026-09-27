@@ -25,7 +25,8 @@ otherwise.
 from __future__ import annotations
 
 import pytest
-from nm.domain.legal_review import (
+
+from nm.shared.legal_review_contracts import (
     Approval,
     Arithmetic,
     Comparison,
@@ -38,7 +39,7 @@ from nm.domain.legal_review import (
     refuse_approval,
     withdraw,
 )
-from nm.domain.review import (
+from nm.shared.review_contracts import (
     Freeze,
     Observation,
     Observer,

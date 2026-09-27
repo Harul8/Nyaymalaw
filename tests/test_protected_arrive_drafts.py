@@ -2,8 +2,8 @@
 import base64
 
 import pytest
-from nm.adapters.store.directory import FileDirectory
 
+from nm.arrive.store_directory import FileDirectory
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a

@@ -7,10 +7,20 @@ from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.loop import LoopRunner
-from nm.core.tools import (
+
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.loop import LoopRunner
+from nm.legal_brain.loop_contracts import (
+    LoopEvent,
+    LoopIdentity,
+    LoopLimits,
+    LoopMode,
+    LoopRecord,
+    StepKind,
+    StopReason,
+    digest,
+)
+from nm.legal_brain.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -25,20 +35,8 @@ from nm.core.tools import (
     foundation_tools,
     object_schema,
 )
-from nm.domain.budget import Budget, Completion
-from nm.domain.loop import (
-    LoopEvent,
-    LoopIdentity,
-    LoopLimits,
-    LoopMode,
-    LoopRecord,
-    StepKind,
-    StopReason,
-    digest,
-)
-from nm.domain.matter import Matter
-from nm.ports.evidence import Coverage, EvidenceResult
-from nm.ports.model import (
+from nm.shared.budget_contracts import Budget, Completion
+from nm.shared.model_port import (
     Prompt,
     ProviderUnavailable,
     Tier,
@@ -47,7 +45,10 @@ from nm.ports.model import (
     ToolDefinition,
     Usage,
 )
-from nm.ports.store import StaleWrite
+from nm.shared.store_file_store import FileMatterStore
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.shared.store_port import StaleWrite
+from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 9, 27, tzinfo=timezone.utc)

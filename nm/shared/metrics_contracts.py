@@ -1,0 +1,305 @@
+"""TurnMetrics, and the invariant violations recorded on every turn.
+
+TWO RULES THIS FILE ENFORCES
+----------------------------
+1. Metrics are written even when the turn FAILS. Otherwise the most
+   diagnostically valuable turns -- the ones that crashed -- are the only ones
+   with no record.
+2. Violations land in a STORE, not a log line. A test whose failures are not
+   collected is not a test.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+
+from nm.shared.gates_contracts import Response, gate
+from nm.shared.text_contracts import refuses_blank_text
+
+
+class Phase(str, Enum):
+    ADMIT = "admit"
+    DERIVE = "derive"
+    EMIT = "emit"
+
+
+class Outcome(str, Enum):
+    OK = "ok"
+    BLOCKED = "blocked"          # a gate refused; the block IS the answer
+    GATED = "gated"              # a grounding violation withheld the output
+    FAILED = "failed"
+
+
+@refuses_blank_text("detail")
+@dataclass(frozen=True)
+class Violation:
+    rule: str
+    detail: str
+    gating: bool = False
+
+
+@refuses_blank_text("detail")
+@dataclass(frozen=True)
+class GateFiring:
+    """A gate that fired on this turn, and what the MATRIX said to do about it.
+
+    The response is looked up, never passed in. That is the whole reason the
+    matrix exists: before it, each call site decided for itself whether its
+    condition blocked, withheld or was merely logged, and the specification
+    ended up claiming the product failed closed on one thing while nine others
+    quietly blocked.
+    """
+
+    gate_id: str
+    state: str
+    detail: str
+    response: str
+
+
+@refuses_blank_text()
+@dataclass
+class TurnMetrics:
+    turn_id: str
+    matter_id: str | None = None
+    outcome: Outcome = Outcome.FAILED
+    failed_phase: Phase | None = None
+    failure: str | None = None
+    latency_ms: int = 0
+    llm_calls: int = 0
+    retries: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cached_tokens: int = 0
+    cost_usd: float = 0.0
+    model_mix: dict[str, int] = field(default_factory=dict)
+    tier_downgrades: list[dict[str, str]] = field(default_factory=list)
+    stages: dict[str, int] = field(default_factory=dict)
+    violations: list[Violation] = field(default_factory=list)
+    gates_fired: list[GateFiring] = field(default_factory=list)
+    grounding: dict = field(default_factory=dict)
+    step_assessments: list[dict] = field(default_factory=list)
+    evidence_rounds: int = 0
+    evidence_bound_hit: bool = False
+    route_reads: int = 0
+    """B1 -- is this a matter at all?
+
+    THE FIFTH SETTLING READ, and the first that runs before anything is
+    written. It decides whether there is a file to establish, which is
+    as far from a directive step as a read gets: NON_MATTER writes
+    nothing to any file, so getting it wrong discards the turn.
+
+    It replaced two keyword lists and two length rules on 7 September
+    2026 -- "bail" is one word and a case fact, "hi" is one word and a
+    greeting, and a count cannot tell them apart."""
+    posture_reads: int = 0
+    """Model calls spent READING what the advocate stated, not deriving.
+
+    Reading the posture is what settles the gate; derivation is what the gate
+    exists to prevent. Counting them together makes "nothing was computed
+    behind a closed gate" uncheckable -- a blocked turn legitimately spends one
+    cheap extraction call and must spend nothing else."""
+    binding_reads: int = 0
+    """Model calls spent deciding WHICH THREAD an account belongs to.
+
+    The same category as `posture_reads` and counted separately from it only so
+    each gate's spend is attributable. A turn blocked by G-THREAD has legitimately
+    paid for the read that discovered the ambiguity -- that read is what settles
+    the gate, and refusing to spend it would mean never discovering the second
+    dispute at all."""
+
+    chronology_reads: int = 0
+    """Model calls spent building the DATE CHART.
+
+    An ADMIT-phase read like the other two, and counted apart only so each
+    one's spend is attributable. C5 requires the chart before any opinion on
+    the thread, so it runs before a gate has decided anything -- and a DATE IS
+    NOT SIDE-DEPENDENT: the 15th of April is the 15th of April whichever party
+    you act for, which is the test E-034 actually applies."""
+
+    cause_reads: int = 0
+    duty_reads: int = 0
+    """G-DUTY. Whether the instruction is one that must be refused.
+
+    A SETTLING READ, not a derivation: whether a document may be backdated
+    does not depend on which side we act for, and the read decides whether
+    the turn proceeds at all."""
+    """Model calls spent reading the CAUSE OF ACTION (H3).
+
+    The fourth settling read, and it is one for the same reason a date is: THE
+    CAUSE IS A PROPERTY OF THE DISPUTE, NOT OF THE SIDE. Goods supplied against
+    invoices and never paid for is a goods-sold-price cause whether we act for
+    the seller or the buyer, and the Article it routes to is the same Article
+    either way.
+
+    It runs behind a closed posture gate deliberately. What the gate refuses is
+    the directive step and the authority set; reading back the text of a
+    provision is expressly permitted, and this is what decides WHICH provision
+    to read."""
+
+    @property
+    def settling_reads(self) -> int:
+        """Calls made in ADMIT -- establishing the FILE, not deriving an answer.
+
+        The property every "nothing was computed behind a closed gate" check
+        subtracts. Asserting a flat `llm_calls == 0` conflates the two and has
+        to be relaxed -- rather than tightened -- the moment another read is
+        needed before a gate can decide, which has now happened four times:
+        the posture, the thread binding, the date chart, and the cause of
+        action.
+
+        THE PROPERTY IS WHY THAT WAS A ONE-LINE CHANGE. Each of those four
+        additions would have been an edit at every assertion site had the check
+        been spelled out there, and the fourth was caught by two existing tests
+        the moment the read was added rather than by anybody remembering.
+
+        What belongs here is precisely what is NOT side-dependent. A
+        recommendation is; an authority set is; a date is not; a cause is not."""
+        return (self.route_reads + self.posture_reads
+                + self.binding_reads + self.chronology_reads
+                + self.cause_reads + self.duty_reads)
+
+    def record_call(self, result) -> None:
+        """Every model call counts -- including a streamed one.
+
+        A streamed turn once recorded `llm_calls: 0`, which made an entire turn
+        invisible to the cost baseline.
+        """
+        self.llm_calls += 1
+        self.retries += getattr(result, "retries", 0)
+        self.tokens_in += result.usage.tokens_in
+        self.tokens_out += result.usage.tokens_out
+        self.cached_tokens += result.usage.cached_tokens
+        self.cost_usd += result.usage.cost_usd
+        key = f"{result.provider}/{result.model}"
+        self.model_mix[key] = self.model_mix.get(key, 0) + 1
+        if result.downgraded_from is not None:
+            # A downgrade is NEVER silent.
+            self.tier_downgrades.append(
+                {"from": result.downgraded_from.value, "to": result.tier.value,
+                 "model": key, "read": getattr(result, "read", "") or ""})
+
+    def violate(self, rule: str, detail: str, *, gating: bool = False) -> None:
+        self.violations.append(Violation(rule=rule, detail=detail, gating=gating))
+
+    def fire(self, gate_id: str, state: str, detail: str) -> Response:
+        """Record a gate firing and return what the matrix says to do.
+
+        The caller does NOT decide. It reports the condition and obeys the
+        response, so changing whether something blocks or withholds is a change
+        to one table rather than a hunt through the code for the call site that
+        got it wrong.
+        """
+        g = gate(gate_id)
+        if state not in g.states:
+            raise ValueError(
+                f"{gate_id} has no state {state!r}; its vocabulary is "
+                f"{list(g.states)}. An out-of-vocabulary state is blanked, not "
+                f"accepted (PRD D9).")
+        self.gates_fired.append(
+            GateFiring(gate_id=gate_id, state=state, detail=detail,
+                       response=g.response.value))
+        if g.response is Response.WITHHOLD:
+            self.violate(gate_id, detail, gating=True)
+        return g.response
+
+    @property
+    def gating_violations(self) -> list[Violation]:
+        return [v for v in self.violations if v.gating]
+
+    def as_served(self) -> dict:
+        """THE FULL RECORD, INCLUDING WHY EACH GATE FIRED. Ask for it by name.
+
+        A gate detail is a sentence written for the advocate -- "the period was
+        run from the agreement is dated 15 April 1984 because the cause carries
+        no curated accrual trigger" -- so it necessarily quotes the matter back.
+        That is right in front of the person whose matter it is, over an
+        authenticated matter-scoped response, and it is exactly what the audit
+        panel shows. It is not right in a file.
+
+        `as_dict` is the redacted projection and it is the DEFAULT for that
+        reason: the mistake this splits apart is writing the audit trail to the
+        plaintext metrics directory, and a mistake is only prevented if the
+        safe shape is the one you get by not thinking about it.
+        """
+        return {
+            "turn_id": self.turn_id,
+            "matter_id": self.matter_id,
+            "outcome": self.outcome.value,
+            "failed_phase": self.failed_phase.value if self.failed_phase else None,
+            "failure": self.failure,
+            "latency_ms": self.latency_ms,
+            "llm_calls": self.llm_calls,
+            "retries": self.retries,
+            "tokens": {"in": self.tokens_in, "out": self.tokens_out,
+                       "cached": self.cached_tokens},
+            "cost_usd": round(self.cost_usd, 6),
+            "model_mix": dict(self.model_mix),
+            "tier_downgrades": list(self.tier_downgrades),
+            "stages": dict(self.stages),
+            "evidence_rounds": self.evidence_rounds,
+            "posture_reads": self.posture_reads,
+            "binding_reads": self.binding_reads,
+            "chronology_reads": self.chronology_reads,
+            "route_reads": self.route_reads,
+            "cause_reads": self.cause_reads,
+            "duty_reads": self.duty_reads,
+            "evidence_bound_hit": self.evidence_bound_hit,
+            "gates_fired": [
+                {"gate": g.gate_id, "state": g.state, "response": g.response,
+                 "detail": g.detail}
+                for g in self.gates_fired
+            ],
+            "grounding": dict(self.grounding),
+            "violations": [
+                {"rule": v.rule, "detail": v.detail, "gating": v.gating}
+                for v in self.violations
+            ],
+        }
+
+    #: The fields of `as_served` that carry a sentence ABOUT THE MATTER rather
+    #: than an identifier, a state or a number. Named ONCE, here, so the
+    #: redaction below and any future reader of it do not each decide.
+    #:
+    #: `failure` is deliberately NOT in this tuple. It is our own exception
+    #: text, written for whoever reads the crash, and rule 1 at the top of this
+    #: module is that a turn which crashed must still be diagnosable -- blanking
+    #: it would leave the most valuable records saying nothing. That rests on
+    #: exception messages naming the CODE and not the matter, which is a rule
+    #: about raise sites; an exception that interpolates a client sentence is a
+    #: defect there, and redacting it here would hide it rather than fix it.
+    _FREE_TEXT = ("detail",)
+
+    def as_dict(self) -> dict:
+        """THE PLAINTEXT-SAFE PROJECTION. Everything except the sentences.
+
+        `file_store.record_metrics` writes this to a directory whose whole
+        convention is that its contents are safe to read, and that convention
+        was a COMMENT rather than a control until a limitation turn put the
+        advocate's own words in `turn_<id>.json`: the accrual reason quotes the
+        chronology entry, the chronology entry is what the advocate typed, and
+        `fire` carried it straight through.
+
+        WHY REDACT HERE AND NOT AT EACH CALL SITE. There are thirty-seven gates
+        and every one of them may one day want to say WHICH thing failed, which
+        is the useful half of a detail. A rule that each `fire` must sanitise
+        its own string is a rule that holds until the thirty-eighth gate is
+        added by someone who has not read this file. Subtracting the free text
+        at the one projection that reaches disk holds for gates nobody has
+        written yet -- and it subtracts from `as_served` rather than restating
+        its field list, so the two cannot drift apart.
+
+        The sentence is not lost. It is served to the advocate live, and a
+        withheld turn keeps its reason in the transcript, which is ciphered
+        with the matter key because it is privileged material.
+        """
+        record = self.as_served()
+        # Full candidate assessments never enter either metrics projection:
+        # a refused candidate is not advice. The encrypted transcript retains
+        # the diagnostic record; gate details carry the release explanation.
+        record["gates_fired"] = [
+            {k: v for k, v in g.items() if k not in self._FREE_TEXT}
+            for g in record["gates_fired"]]
+        record["violations"] = [
+            {k: v for k, v in x.items() if k not in self._FREE_TEXT}
+            for x in record["violations"]]
+        return record

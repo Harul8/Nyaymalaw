@@ -43,7 +43,7 @@ pytestmark = pytest.mark.class_a
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 from tests import synthetic_index as syn  # noqa: E402
 
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
@@ -55,9 +55,9 @@ BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
 def _app(tmp_path, *, index_dir=None, missing_index=False):
     """The served product over the synthetic indexes. One TestClient, signed in."""
     from fastapi.testclient import TestClient
-    from nm.adapters.search.authority import AuthorityIndexSearch
 
     from assurance.journeys.served import PASSWORD, served
+    from nm.legal_brain.search_authority import AuthorityIndexSearch
 
     root = tmp_path / "store"
     if missing_index:
@@ -230,7 +230,7 @@ def test_a_resolved_verbatim_passage_attaches_with_five_separate_verdicts(tmp_pa
     assert a["attached_by"] == client.advocate
 
     # THE LEDGER TRACKS IT (P18).
-    from nm.core.dependency import InputKind, Ledger
+    from nm.work_the_file.dependency import InputKind, Ledger
     matter = client.box.application.store.load(matter_id)
     ledger = Ledger.from_stored(matter.dependencies)
     tracked = [t for t in ledger.tracked if t.kind is InputKind.AUTHORITY
@@ -335,9 +335,9 @@ def test_the_record_survives_a_restart_and_keeps_its_budget(tmp_path):
     """EVAL-014: *restart and recover the unfinished research need*; *retry
     within the two-round budget*; the third round is refused with the reason."""
     from fastapi.testclient import TestClient
-    from nm.adapters.search.authority import AuthorityIndexSearch
 
     from assurance.journeys.served import PASSWORD, served
+    from nm.legal_brain.search_authority import AuthorityIndexSearch
 
     client = _app(tmp_path)
     matter_id, version = _matter(client)
@@ -419,8 +419,8 @@ def test_every_search_port_method_is_gated_by_the_policed_wrapper():
     refuses to delegate one it does not define, so a method added to the port
     and forgotten here would raise on first use. This asks the question
     statically, before a route finds out."""
-    from nm.adapters.search.policed import PolicedSearch
-    from nm.ports.search import CorpusSearchPort
+    from nm.legal_brain.search_policed import PolicedSearch
+    from nm.legal_brain.search_port import CorpusSearchPort
 
     port = {n for n in dir(CorpusSearchPort) if not n.startswith("_")}
     defined = {n for n in vars(PolicedSearch) if not n.startswith("_")}
@@ -437,9 +437,9 @@ def test_a_withdrawn_source_version_marks_the_attached_input_withdrawn(tmp_path)
     `withdrawn_sources`, which is what the corpus adapter answers from the
     generation's durable withdrawal events."""
     from fastapi.testclient import TestClient
-    from nm.adapters.search.authority import AuthorityIndexSearch
 
     from assurance.journeys.served import PASSWORD, served
+    from nm.legal_brain.search_authority import AuthorityIndexSearch
     from tests.test_turn_contract import _Evidence
 
     authority, identity = syn.build(tmp_path / "index")
@@ -503,8 +503,7 @@ def test_an_installation_with_no_generation_reports_no_withdrawals_and_says_why(
     installation: the legacy layout has no withdrawal record. The evidence
     port's `readiness()` is where a caller learns whether a generation is
     bound; an empty set is not a clean bill and `clean_bill` never reads it."""
-    from nm.ports.evidence import EvidencePort
-
+    from nm.legal_brain.evidence_port import EvidencePort
     from tests.test_turn_contract import _Evidence
 
     assert EvidencePort.withdrawn_sources(_Evidence()) == frozenset()

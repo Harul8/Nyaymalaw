@@ -6,13 +6,13 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.principles_file import FilePrinciples
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.controlled_brain import ControlledBrain, EvaluationScope
-from nm.domain.loop import LoopMode, StopReason
-from nm.ports.model import ToolCall
-from nm.ports.principles import PrinciplesSnapshot
 
+from nm.legal_brain.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.loop_contracts import LoopMode, StopReason
+from nm.legal_brain.principles_file_adapter import FilePrinciples
+from nm.legal_brain.principles_port import PrinciplesSnapshot
+from nm.shared.model_port import ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_the_loop_records_work_before_using_it import _limits, _response, _setup
 
 pytestmark = pytest.mark.class_a

@@ -41,10 +41,11 @@ citation.
 from __future__ import annotations
 
 import pytest
-from nm.domain.citation import cases_named, provisions_cited
-from nm.domain.gates import GATES
-from nm.domain.traceability import refuses
-from nm.knowledge.jurisdiction import Court, binding_status
+
+from nm.legal_brain.citation_contracts import cases_named, provisions_cited
+from nm.legal_brain.jurisdiction_sources import Court, binding_status
+from nm.shared.gates_contracts import GATES
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 

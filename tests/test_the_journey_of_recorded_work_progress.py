@@ -7,9 +7,9 @@ presentation and resumable receipts, not legal-response quality or release.
 from dataclasses import replace
 
 import pytest
-from nm.domain.loop import StepKind, StopReason
-from nm.domain.matter import Matter
 
+from nm.legal_brain.loop_contracts import StepKind, StopReason
+from nm.work_the_file.matter_contracts import Matter
 from tests.test_saved_loop_progress_is_not_an_advice_transport import SECRET, add, work
 from tests.test_saved_work_attaches_only_to_its_released_turn import scoped_work
 from tests.test_the_journey_login_to_logout import (

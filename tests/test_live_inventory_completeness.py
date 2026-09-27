@@ -1,12 +1,12 @@
 """Structural completeness is separate from source validity and semantic quality."""
 
 import pytest
-from nm.core import dispute
-from nm.core.turn import TurnInput
-from nm.domain.matter import Matter
-from nm.domain.metrics import TurnMetrics
-from nm.domain.quotable import Quotable
 
+from nm.legal_brain import dispute
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnInput
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.work_the_file.matter_contracts import Matter
 from tests.test_matter_memory import _engine, _Recorder
 
 pytestmark = pytest.mark.class_a
@@ -15,7 +15,7 @@ pytestmark = pytest.mark.class_a
 def test_pending_account_survives_clarification_and_is_not_a_new_instruction():
     from dataclasses import replace
 
-    from nm.domain.matter import Fact, Provenance, Thread
+    from nm.work_the_file.matter_contracts import Fact, Provenance, Thread
     old = Fact.create(statement='First event. Second event.',
                       provenance=Provenance(kind='advocate_statement', turn='earlier'))
     m = Matter.create(advocate_id='adv', title='File').with_fact(old)
@@ -36,7 +36,7 @@ def test_pending_account_survives_clarification_and_is_not_a_new_instruction():
 
 
 def test_recovered_spans_keep_the_original_turn_not_the_clarification(tmp_path):
-    from nm.domain.matter import Fact, Provenance
+    from nm.work_the_file.matter_contracts import Fact, Provenance
     engine, _ = _engine(tmp_path, _Recorder())
     old = Fact.create(statement='An earlier unpaid invoice.',
                       provenance=Provenance(kind='advocate_statement', turn='earlier'))
@@ -54,7 +54,7 @@ def test_recovered_spans_keep_the_original_turn_not_the_clarification(tmp_path):
 
 
 def test_opponent_correction_requires_current_exact_words_not_old_file():
-    from nm.core import posture
+    from nm.legal_brain import posture
     text = 'I act for A. Our ownership opponent is B, not C; please correct C.'
     data = dict(states_client=True, role='prospective_claimant', role_basis='stated',
                 client_described_as='A', opponent='B', quoted=text,
@@ -69,8 +69,8 @@ def test_opponent_correction_requires_current_exact_words_not_old_file():
 def test_premise_projection_never_calls_missing_rows_established():
     from dataclasses import replace
 
-    from nm.domain.matter import Thread
-    from nm.edge.projections import premises_projection
+    from nm.work_the_file.matter_contracts import Thread
+    from nm.work_the_file.projections_api import premises_projection
     t = replace(Thread.create(label='Unknown law'), premises=(
         {'kind': 'applicable_law', 'statement': '', 'basis': 'unestablished', 'source': ''},))
     m = Matter.create(advocate_id='adv', title='File').with_thread(t)
@@ -88,8 +88,9 @@ def payload(*spans):
 
 def test_existing_inventory_repair_has_a_fixed_target_population():
     from jsonschema import ValidationError, validate
-    from nm.core.conversation import PRINCIPLES, guided
-    from nm.domain.matter import Thread
+
+    from nm.legal_brain.conversation import PRINCIPLES, guided
+    from nm.work_the_file.matter_contracts import Thread
 
     a, b = Thread.create(label='First'), Thread.create(label='Second')
     q = Quotable(turn='One account. Another account.')
@@ -110,7 +111,7 @@ def test_existing_inventory_repair_has_a_fixed_target_population():
 
 
 def test_repair_keeps_source_supported_new_work_and_refuses_to_drop_it():
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
 
     a = Thread.create(label='Existing dispute')
     q = Quotable(turn='Existing debt. A separate access dispute. I act for A on both.')
@@ -136,7 +137,7 @@ def test_literal_gate_calls_use_the_registered_vocabulary_across_the_product():
     import ast
     from pathlib import Path
 
-    from nm.domain.gates import gate
+    from nm.shared.gates_contracts import gate
 
     def inspect(source):
         seen, bad = [], []
@@ -151,7 +152,7 @@ def test_literal_gate_calls_use_the_registered_vocabulary_across_the_product():
                     bad.append((ident, state))
         return seen, bad
 
-    root = Path(__file__).resolve().parents[1] / 'backend/nm'
+    root = Path(__file__).resolve().parents[1] / 'nm'
     population = []
     for path in root.rglob('*.py'):
         seen, bad = inspect(path.read_text(encoding='utf-8-sig'))
@@ -164,7 +165,7 @@ def test_literal_gate_calls_use_the_registered_vocabulary_across_the_product():
 
 @pytest.mark.parametrize('value', [True, False, None])
 def test_nullable_schema_types_do_not_crash_a_valid_factor_read(value):
-    from nm.ports.model import SchemaViolation, require_schema
+    from nm.shared.model_port import SchemaViolation, require_schema
 
     schema = {'type': 'object', 'properties': {'held': {'type': ['boolean', 'null']}},
               'required': ['held']}
@@ -178,7 +179,8 @@ def test_nullable_schema_types_do_not_crash_a_valid_factor_read(value):
 
 def test_live_research_and_checklist_schemas_restrict_sources_to_supplied_material():
     from jsonschema import ValidationError, validate
-    from nm.core import investigation, requirements
+
+    from nm.legal_brain import investigation, requirements
 
     rows = investigation.catalogue('Assess the supplied record.', 'A payment is disputed.', ())
     schema = investigation.schema_for(rows, 'snapshot')
@@ -266,7 +268,7 @@ def test_dynamic_allocation_contract_requires_all_source_units_and_valid_targets
 
 
 def test_repair_outage_keeps_refusal_instead_of_falling_back_to_partial_admission(tmp_path):
-    from nm.ports.model import ModelError, ModelResult, Usage
+    from nm.shared.model_port import ModelError, ModelResult, Usage
     engine, _ = _engine(tmp_path, _Recorder())
     calls = []
 
@@ -300,7 +302,7 @@ def test_shared_instructions_survive_in_each_disputes_source_bound_spans():
 
 @pytest.mark.parametrize('repair_succeeds', [True, False])
 def test_production_read_repairs_once_or_reports_incomplete(tmp_path, repair_succeeds):
-    from nm.ports.model import ModelResult, Usage
+    from nm.shared.model_port import ModelResult, Usage
 
     text = 'The first subject.\n\nThe second subject.'
     engine, _ = _engine(tmp_path, _Recorder())
@@ -336,7 +338,7 @@ def test_failed_inventory_never_admits_a_subset_as_a_complete_matter(tmp_path):
 
 
 def test_unavailable_first_inventory_cannot_silently_create_one_dispute(tmp_path):
-    from nm.ports.model import ModelError
+    from nm.shared.model_port import ModelError
     engine, _ = _engine(tmp_path, _Recorder())
     def unavailable(*args):
         raise ModelError('unavailable')
@@ -350,7 +352,7 @@ def test_unavailable_first_inventory_cannot_silently_create_one_dispute(tmp_path
 
 
 def test_fixed_inventory_metadata_never_reaches_the_provider():
-    from nm.ports.model import on_the_wire
+    from nm.shared.model_port import on_the_wire
     data = {'x-nm-read': 'dispute', 'x-nm-fixed-inventory': [{'thread_id': 'a'}],
             'type': 'object', 'properties': {}}
     wire = on_the_wire(data)
@@ -359,8 +361,8 @@ def test_fixed_inventory_metadata_never_reaches_the_provider():
 
 
 def test_rent_route_is_specific_and_all_causes_have_definitions():
-    from nm.domain.matter import CAUSE_MEANS, CauseOfAction
-    from nm.knowledge.resolution import article_for
+    from nm.legal_brain.resolution_sources import article_for
+    from nm.work_the_file.matter_contracts import CAUSE_MEANS, CauseOfAction
 
     assert set(CAUSE_MEANS) == set(CauseOfAction) - {CauseOfAction.NOT_ESTABLISHED}
     edge = article_for(CauseOfAction.ARREARS_OF_RENT)
@@ -371,8 +373,8 @@ def test_rent_route_is_specific_and_all_causes_have_definitions():
 
 
 def test_ambiguous_new_work_asks_about_proposals_not_a_nonexistent_board_control():
-    from nm.core.threading import bind
-    from nm.domain.matter import Fact, Provenance, Thread
+    from nm.legal_brain.threading import bind
+    from nm.work_the_file.matter_contracts import Fact, Provenance, Thread
     m = Matter.create(advocate_id='adv', title='File').with_thread(Thread.create(label='Existing'))
     message = 'Additional claim A. Additional claim B.'
     fact = Fact.create(statement=message,
@@ -386,7 +388,7 @@ def test_ambiguous_new_work_asks_about_proposals_not_a_nonexistent_board_control
 
 
 def test_cross_dispute_claims_require_attributed_distinct_premises():
-    from nm.core.adversarial import read_exposures
+    from nm.legal_brain.adversarial import read_exposures
     positions = ({'thread': 'a', 'facts': [{'id': 'f1', 'statement': 'The debt remains due.'}]},
                  {'thread': 'b', 'facts': [
                      {'id': 'f2', 'statement': 'The debt was fully repaid.'}]})
@@ -403,7 +405,7 @@ def test_cross_dispute_claims_require_attributed_distinct_premises():
 def test_opposition_legal_argument_cannot_be_generated_with_no_retrieved_law(tmp_path):
     from types import SimpleNamespace
 
-    from nm.domain.matter import Thread
+    from nm.work_the_file.matter_contracts import Thread
     engine, _ = _engine(tmp_path, _Recorder())
     engine._read = lambda *a: pytest.fail('No legal basis should mean no legal attack generation')
     out = engine._attacks(TurnInput(advocate_id='adv', message='Assess this.'),
@@ -415,9 +417,8 @@ def test_opposition_legal_argument_cannot_be_generated_with_no_retrieved_law(tmp
 def test_consistency_refusal_never_republishes_the_rejected_candidate(client, monkeypatch):
     from dataclasses import replace
 
-    from nm.core.consistency import Verdict
-    from nm.edge.api import application
-
+    from nm.app.api import application
+    from nm.legal_brain.consistency import Verdict
     from tests.test_a_withheld_turn_commits_no_conclusion import BRIEF
 
     engine = application().engine
@@ -445,7 +446,7 @@ def test_consistency_refusal_never_republishes_the_rejected_candidate(client, mo
 
 
 def test_consistency_instructions_preserve_independent_adverse_analysis():
-    from nm.core.consistency import SYSTEM
+    from nm.legal_brain.consistency import SYSTEM
     assert "not advising the opponent" in SYSTEM
     assert "not merely discussing material that may hurt our client" in SYSTEM
 
@@ -459,8 +460,8 @@ def test_inventory_contract_recognises_reorganisation_without_erasing_history():
 def test_research_selectors_preserve_quoted_unicode_text_and_refuse_cross_source():
     import json
 
-    from nm.core import investigation
-    from nm.ports.evidence import Coverage, EvidenceResult
+    from nm.legal_brain import investigation
+    from nm.legal_brain.evidence_port import Coverage, EvidenceResult
 
     text = 'The witness wrote "payment disputed" — not an admission.'
     searches = []
@@ -487,8 +488,8 @@ def test_research_selectors_preserve_quoted_unicode_text_and_refuse_cross_source
 def test_accrual_receives_undated_exclusions_as_well_as_selectable_dates(tmp_path):
     from datetime import date
 
-    from nm.core import accrual
-    from nm.domain.matter import Fact, Provenance
+    from nm.legal_brain import accrual
+    from nm.work_the_file.matter_contracts import Fact, Provenance
 
     dated = Fact.create(statement='A disputed event.', date=date(2026, 8, 5),
                         provenance=Provenance(kind='advocate_statement', turn='old'))

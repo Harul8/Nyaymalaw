@@ -26,17 +26,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
-from nm.core.screens import Capacity as InstructingCapacity
-from nm.core.screens import Engagement as ScreenedEngagement
-from nm.core.screens import (
+
+from nm.open_matter.emergency_contracts import DEFAULT_HOURS, Declaration, latest
+from nm.open_matter.screens import Capacity as InstructingCapacity
+from nm.open_matter.screens import Engagement as ScreenedEngagement
+from nm.open_matter.screens import (
     Screen,
     ScreenKind,
     ScreenState,
     may_admit_substance,
     unscreened,
 )
-from nm.domain.emergency import DEFAULT_HOURS, Declaration, latest
-
 from tests.test_professional_approval_is_separate_from_account_access import approve_fixture_account
 
 pytestmark = pytest.mark.class_a
@@ -74,8 +74,7 @@ def test_malformed_stored_revocation_is_not_absent_and_never_revives_an_older_gr
 def test_unreadable_emergency_history_is_reported_incomplete_through_the_wire(client):
     from dataclasses import replace
 
-    from nm.edge.api import application
-
+    from nm.app.api import application
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     matter_id = _matter(client)
@@ -140,7 +139,7 @@ def test_unavailable_and_not_assessed_read_differently():
 def test_every_screen_state_is_mapped_to_a_gate_state_explicitly():
     """A new enum member falling through `table.get`'s default is how a state
     nobody mapped starts reading as one somebody did."""
-    from nm.core.screens import GATE_FOR
+    from nm.open_matter.screens import GATE_FOR
 
     for kind, (_gate_id, table) in GATE_FOR.items():
         missing = [s.value for s in ScreenState if s not in table]
@@ -332,10 +331,10 @@ def test_capacity_not_in_doubt_with_everything_set_is_reliance_ready():
 
 
 def test_the_two_capacity_vocabularies_are_not_the_same_type():
-    """`nm.core.screens.Capacity` asks whether the client's capacity TO
-    INSTRUCT is in doubt. `nm.domain.authority.ActingAs` asks what part a
+    """`nm.open_matter.screens.Capacity` asks whether the client's capacity TO
+    INSTRUCT is in doubt. `nm.shared.authority_contracts.ActingAs` asks what part a
     person plays. Two enums called `Capacity` would be one word for both."""
-    from nm.domain.authority import ActingAs
+    from nm.shared.authority_contracts import ActingAs
 
     assert InstructingCapacity is not ActingAs
     assert {c.value for c in InstructingCapacity} & {a.value for a in ActingAs} == set()
@@ -356,8 +355,8 @@ def test_emergency_duration_is_bounded_in_the_domain(hours):
 
 def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(client, monkeypatch):
     approve_fixture_account(client.directory)
-    from nm.domain.advocate import utcnow
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.arrive.advocate_contracts import utcnow
 
     created = client.post(
         "/api/turn", json={"message": "we act for the plaintiff about an unpaid invoice"}
@@ -365,7 +364,7 @@ def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(clie
     assert created.status_code == 200, created.text
     matter_id = client.get("/api/matters").json()["matters"][0]["matter_id"]
     instant = utcnow()
-    monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant)
+    monkeypatch.setattr("nm.app.api.utcnow", lambda: instant)
     declared = client.post(
         f"/api/matters/{matter_id}/emergency",
         json={"request_key": "protective-check",
@@ -413,9 +412,9 @@ def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(clie
 
 def test_declared_emergency_never_clears_ordinary_merits_admission(client):
     approve_fixture_account(client.directory)
-    from nm.core.turn import TurnInput
-    from nm.domain.metrics import TurnMetrics
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.legal_brain.turn import TurnInput
+    from nm.shared.metrics_contracts import TurnMetrics
 
     created = client.post(
         "/api/turn", json={"message": "we act for the plaintiff about an invoice"}
@@ -438,8 +437,8 @@ def test_declared_emergency_never_clears_ordinary_merits_admission(client):
 
 def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(client, monkeypatch):
     approve_fixture_account(client.directory)
-    from nm.core.turn import TurnInput
-    from nm.edge.api import application
+    from nm.app.api import application
+    from nm.legal_brain.turn import TurnInput
 
     made = client.post("/api/turn", json={"message": "we act for the plaintiff about an invoice"})
     assert made.status_code == 200
@@ -469,20 +468,19 @@ def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(clien
 
 def _declaration_context(client, monkeypatch):
     approve_fixture_account(client.directory)
-    from nm.domain.advocate import utcnow
-
+    from nm.arrive.advocate_contracts import utcnow
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     matter_id = _matter(client)
     clock = [utcnow()]
-    monkeypatch.setattr("nm.edge.api.utcnow", lambda: clock[0])
+    monkeypatch.setattr("nm.app.api.utcnow", lambda: clock[0])
     return matter_id, f"/api/matters/{matter_id}/emergency", clock
 
 
 def test_declaration_retry_reads_the_original_expiry_and_frozen_screens(client, monkeypatch):
     from dataclasses import replace
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, clock = _declaration_context(client, monkeypatch)
     offer = {"request_key": "one-declaration", "basis": "  A supplied urgent risk  ", "hours": 1}
@@ -508,7 +506,7 @@ def test_declaration_retry_reads_the_original_expiry_and_frozen_screens(client, 
 
 
 def test_expired_declaration_retry_never_renews_but_a_new_explicit_key_can(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, clock = _declaration_context(client, monkeypatch)
     offer = {"request_key": "expired-original", "basis": "Synthetic urgent review", "hours": 1}
@@ -532,7 +530,7 @@ def test_expired_declaration_retry_never_renews_but_a_new_explicit_key_can(clien
 
 
 def test_revocation_preserves_request_identity_and_retry_cannot_revive_it(client, monkeypatch):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, clock = _declaration_context(client, monkeypatch)
     offer = {"request_key": "revoked-original", "basis": "Synthetic risk", "hours": 1}
@@ -559,7 +557,7 @@ def test_revocation_preserves_request_identity_and_retry_cannot_revive_it(client
 
 @pytest.mark.parametrize("changed", [{"basis": "A different danger"}, {"hours": 2}])
 def test_declaration_key_cannot_name_different_instructions(client, monkeypatch, changed):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     offer = {"request_key": "one-offer", "basis": "Original danger", "hours": 1}
@@ -575,7 +573,7 @@ def test_revocation_cannot_end_a_declaration_other_than_the_observed_one(
 ):
     from dataclasses import replace
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, clock = _declaration_context(client, monkeypatch)
     offer = {"request_key": "reviewed", "basis": "Supplied danger", "hours": 1}
@@ -610,7 +608,7 @@ def test_revocation_cannot_end_a_declaration_other_than_the_observed_one(
     ("revoke", "true"), ("revoke", 1), ("revoke", False),
 ])
 def test_revocation_needs_an_explicit_observed_command(client, monkeypatch, field, value):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     assert client.post(path, json={"request_key": "observed", "basis": "Supplied danger"}
@@ -626,7 +624,7 @@ def test_revocation_needs_an_explicit_observed_command(client, monkeypatch, fiel
 def test_legacy_declaration_can_be_ended_only_from_its_observed_reference(client, monkeypatch):
     from dataclasses import replace
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, clock = _declaration_context(client, monkeypatch)
     store = application().store
@@ -646,7 +644,7 @@ def test_legacy_declaration_can_be_ended_only_from_its_observed_reference(client
 
 @pytest.mark.parametrize("key", [None, "", " ", 17, "bad/key", "x" * 101])
 def test_declaration_requires_an_explicit_stable_key_before_writing(client, monkeypatch, key):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     saved = application().store.load(matter_id)
@@ -663,7 +661,7 @@ def test_damaged_saved_declaration_identity_cannot_be_recreated(
 ):
     from dataclasses import replace
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     offer = {"request_key": "damaged-receipt", "basis": "Original danger", "hours": 1}
@@ -682,7 +680,7 @@ def test_concurrent_same_key_declarations_commit_once_and_loser_replays(client, 
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier, Lock
 
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     offer = {"request_key": "contested-key", "basis": "Same supplied danger", "hours": 1}
@@ -718,7 +716,7 @@ def test_concurrent_same_key_declarations_commit_once_and_loser_replays(client, 
 def test_failed_declaration_commit_emits_no_acceptance_and_retry_can_create_once(
     client, monkeypatch,
 ):
-    from nm.edge.api import application
+    from nm.app.api import application
 
     matter_id, path, _ = _declaration_context(client, monkeypatch)
     store = application().store

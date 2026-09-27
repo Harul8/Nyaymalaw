@@ -25,7 +25,7 @@ establish. That is the failure mode of dissolving structure into prose.
 It IS: better sentences inside that structure, and one mechanism that makes
 the identifier version impossible rather than merely absent today.
 
-`backend/nm/domain/spoken.py` holds it. The phrases live ON the enum, and `complete()`
+`nm/shared/spoken_contracts.py` holds it. The phrases live ON the enum, and `complete()`
 asserts every member has one at import -- so a member added without a phrase
 is an ImportError, not a surprise in a served turn. There is no fallback to
 `.value`: a fallback is what makes a missing phrase invisible.
@@ -48,11 +48,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 #: is not computed now" is already English. Rewriting it would be changing a
 #: line because a scan matched it, which is the opposite of drawing the
 #: population from the code.
-ALLOWED = {("backend/nm/core/turn.py", "d.value")}
+ALLOWED = {("nm/legal_brain/turn.py", "d.value")}
 
 
 def _sources():
-    return [p for p in (ROOT / "backend" / "nm").rglob("*.py")
+    return [p for p in (ROOT / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
 
 
@@ -160,7 +160,7 @@ def test_a_missing_phrase_is_an_import_error_and_not_a_transcript():
     """
     from enum import Enum, nonmember
 
-    from nm.domain.spoken import Spoken
+    from nm.shared.spoken_contracts import Spoken
 
     class _Gappy(Spoken, str, Enum):
         FINE = "fine"
@@ -184,7 +184,7 @@ def test_said_has_no_fallback_to_the_value():
     being removed rather than a safety net."""
     import inspect
 
-    from nm.domain.spoken import Spoken
+    from nm.shared.spoken_contracts import Spoken
 
     src = inspect.getsource(Spoken.said.fget)
 
@@ -206,11 +206,11 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
     """A phrase that is the value with its underscores swapped for spaces is
     the same identifier wearing a coat. `balance of probabilities` needs the
     `on the` an advocate would actually write."""
-    from nm.core.evidence_item import Form, Holder
-    from nm.domain.issue import Effect, IssueKind
-    from nm.domain.matter import Side
-    from nm.domain.proof import Standard
-    from nm.ports.evidence import Binding
+    from nm.legal_brain.evidence_port import Binding
+    from nm.legal_brain.issue_contracts import Effect, IssueKind
+    from nm.legal_brain.proof_contracts import Standard
+    from nm.work_the_file.evidence_item import Form, Holder
+    from nm.work_the_file.matter_contracts import Side
 
     # THE ONE MEMBER WHOSE IDENTIFIER IS ALREADY THE ENGLISH, declared
     # rather than special-cased in the rule. "beyond reasonable doubt" is
@@ -235,16 +235,16 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
 # the moment they landed. A checker that always returns [] passes a sweep
 # identically -- and one of them did, on every commit for weeks (B-049).
 #
-# The offender is planted in a REAL file under `backend/nm/`, because both scanners
+# The offender is planted in a REAL file under `nm/`, because both scanners
 # walk the tree. A synthetic fixture would prove the scanner compiles, not
 # that it can see.
 
 def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
     """Plant an Element whose text renders a raw enum value."""
-    planted = ROOT / "backend" / "nm" / "core" / "_speaks_in_identifiers.py"
+    planted = ROOT / "nm" / "work_the_file" / "_speaks_in_identifiers.py"
     planted.write_text(block_of((
-        "from nm.domain.answer import Element, ElementKind",
-        "from nm.domain.matter import Side",
+        "from nm.advise.answer_contracts import Element, ElementKind",
+        "from nm.work_the_file.matter_contracts import Side",
         "",
         "def _leak(side: Side):",
         "    return Element(kind=ElementKind.GROUND,",
@@ -261,7 +261,7 @@ def test_the_phrase_sweep_can_see_underscores_merely_removed():
     """BK-52. Plant the exact lazy-phrase relation the sweep rejects."""
     from enum import Enum, nonmember
 
-    from nm.domain.spoken import Spoken
+    from nm.shared.spoken_contracts import Spoken
 
     class PlantedPhrase(Spoken, str, Enum):
         INTERNAL_WORDS = "internal_words"
@@ -274,11 +274,11 @@ def test_the_phrase_sweep_can_see_underscores_merely_removed():
 
 def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():
     """Plant a `Spoken` enum with no `complete()` call."""
-    planted = ROOT / "backend" / "nm" / "domain" / "_never_completes.py"
+    planted = ROOT / "nm" / "shared" / "_never_completes.py"
     planted.write_text(block_of((
         "from enum import Enum, nonmember",
         "",
-        "from nm.domain.spoken import Spoken",
+        "from nm.shared.spoken_contracts import Spoken",
         "",
         "class Quiet(Spoken, str, Enum):",
         "    A = \"a\"",

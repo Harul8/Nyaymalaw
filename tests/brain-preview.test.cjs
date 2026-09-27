@@ -2,9 +2,57 @@
 'use strict';
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {create, checkedPreview, checkedInstruction, parentLoops} = require('../frontend/brain-preview.js');
+const {create, checkedPreview, checkedInstruction, parentLoops} = require('../nm/legal_brain/brain-preview.js');
 const {createHash, webcrypto} = require('node:crypto');
 const MARKER = 'Private fictional-matter evaluation—not client advice or release.';
+function workingStatus() {
+  return {state: 'work_outstanding', total: 7, checked: 1, inapplicable: 4, not_assessed: 2,
+    closes_matter: false, establishes_facts_or_law: false,
+    operations: [{label: 'Only part of the requested material was available.', state: 'returned'}]};
+}
+function workingExplanation() {
+  return {version: 'working-explanation-v1', state: 'checked_private_rationale',
+    client_ready: false, normal_cutover: false, inventory_identity: 'a'.repeat(64),
+    checks: {expected: 24, present: 24, checked: 24, not_assessed: 0, failed: 0},
+    entries: [{id: 'entry-one', thread_id: 'thread-one', area: 'act_passages',
+      package_identity: 'b'.repeat(64), text: 'Exact checked concise rationale.'}]};
+}
+
+test('working explanations require all actual channel checks and reject scratch fields', () => {
+  const base = {...preview(), working_explanation: workingExplanation()};
+  assert.equal(checkedPreview(base, 'matter_a', 'pv_turn_one').working_explanation.entries.length, 1);
+  for (const mutation of [row => row.client_ready = true, row => row.normal_cutover = true,
+    row => row.checks.checked = 23, row => row.checks.expected = 0,
+    row => row.checks.failed = 1, row => row.state = 'unavailable',
+    row => row.raw_reasoning = 'PRIVATE CANARY', row => row.entries[0].checker_reason = 'PRIVATE CANARY',
+    row => row.entries[0].area = 'made_up', row => row.entries[0].package_identity = '',
+    row => row.entries.push({...row.entries[0]})]) {
+    const changed = structuredClone(base); mutation(changed.working_explanation);
+    assert.throws(() => checkedPreview(changed, 'matter_a', 'pv_turn_one'), /working explanation/);
+  }
+});
+
+test('unavailable working explanation is explicit and has no candidate or fallback words', () => {
+  const row = workingExplanation(); row.state = 'unavailable'; row.entries = [];
+  row.checks = {expected: 24, present: 0, checked: 0, not_assessed: 0, failed: 0};
+  assert.equal(checkedPreview({...preview(), working_explanation: row},
+    'matter_a', 'pv_turn_one').working_explanation.state, 'unavailable');
+});
+
+test('checked rationale renders as text in a collapsed secondary panel without replacing the response', async () => {
+  const f = fixture(); await f.api.start();
+  f.reply((path, options, standard) => {
+    const result = standard(path, options);
+    return path.includes('/brain/reviewed-preview/') && !path.endsWith('/seen')
+      ? {...result, working_explanation: workingExplanation()} : result;
+  });
+  f.elements.message.value = 'Review the available material.'; await f.api.send();
+  const panel = descendants(f.elements.messages).find(row => row.tagName === 'details'
+    && row.children[0]?.textContent === 'Reasons supporting this work');
+  assert.ok(panel); assert.notEqual(panel.open, true);
+  assert.match(panel.textContent, /Exact checked concise rationale/);
+  assert.match(f.elements.messages.textContent, /Exact checked words/);
+});
 class Element {
   constructor(tag = 'div') {
     this.tagName = tag; this.children = []; this.handlers = {};
@@ -27,7 +75,38 @@ function preview(turn = 'pv_turn_one', paragraphs = [{text: 'Exact checked words
     evaluation_only: true, released: false, client_ready: false, marker: MARKER,
     result_state: 'reviewed_private_candidate', paragraphs};
 }
-function fixture() {
+
+test('working status has an exact nonempty population and cannot assert matter closure', () => {
+  const base = {...preview(), working_status: workingStatus()};
+  assert.equal(checkedPreview(base, 'matter_a', 'pv_turn_one').working_status.total, 7);
+  for (const mutation of [row => row.total = 0, row => row.closes_matter = true,
+    row => row.establishes_facts_or_law = true, row => row.raw_thought = 'PRIVATE CANARY',
+    row => row.checked = 99, row => row.state = 'complete_requested_work',
+    row => row.operations[0].raw_result = 'PRIVATE CANARY']) {
+    const changed = structuredClone(base); mutation(changed.working_status);
+    assert.throws(() => checkedPreview(changed, 'matter_a', 'pv_turn_one'), /working-status/);
+  }
+});
+
+test('work record stays collapsed and does not replace natural response paragraphs', async () => {
+  const f = fixture(); await f.api.start(); await f.api.openMatter('matter_a');
+  f.reply((path, options, standard) => {
+    const result = standard(path, options);
+    return path.includes('/brain/reviewed-preview/') && !path.endsWith('/seen')
+      ? {...result, working_status: workingStatus()} : result;
+  });
+  f.elements.message.value = 'Review the available material.';
+  await f.api.send();
+  const article = f.elements.messages.children.find(row => row.children.some(item => item.tagName === 'details'));
+  assert.ok(article);
+  const panel = article.children.find(row => row.tagName === 'details');
+  assert.notEqual(panel.open, true);
+  assert.equal(panel.children[0].textContent, 'Work recorded');
+  assert.match(panel.textContent, /remains outstanding/);
+  assert.match(article.textContent, /Exact checked words/);
+  assert.doesNotMatch(article.textContent, /PRIVATE CANARY/);
+});
+function fixture({sourceReader = null} = {}) {
   const ids = ['status', 'message', 'send', 'refresh', 'open-matter', 'stop-waiting', 'retry',
     'messages', 'history', 'matter-board', 'account-name', 'workspace', 'signin',
     'signin-message', 'matter-title', 'matter-id', 'matter-form', 'composer', 'check-session'];
@@ -38,6 +117,7 @@ function fixture() {
   let clock = 1000, counter = 0, handler = null;
   const win = {setTimeout: fn => { timers.set(++counter, fn); return counter; },
     clearTimeout: id => timers.delete(id), addEventListener: (type, fn) => { events[type] = fn; }};
+  if (sourceReader) win.NmSourceReader = sourceReader;
   const server = {loops: [], version: 2, checked: null, failPost: false, post: null};
   const standard = (path, options) => {
     if (path === '/api/session') return {advocate: {id: 'advocate_a', name: 'Advocate'},
@@ -76,6 +156,44 @@ function fixture() {
 async function opened() { const f = fixture(); await f.api.start(); assert.equal(f.api.state.version, 2); return f; }
 async function retry(f) { await f.elements.retry.fire('click'); while (f.api.state.active) await new Promise(resolve => setImmediate(resolve)); }
 
+function descendants(node) { return [node, ...node.children.flatMap(descendants)]; }
+test('checked private references open the shared reader through exact authenticated source bindings', async () => {
+  const openedSources = [];
+  const reader = {configure() {}, close() {}, open: (...args) => openedSources.push(args)};
+  const f = fixture({sourceReader: reader}); await f.api.start();
+  f.reply((path, options, standard) => path.includes('/sources/')
+    ? {coverage: 'saved_passage', digest: 'a'.repeat(64), label: 'Captured provision', locator: 'source:1'}
+    : standard(path, options));
+  f.elements.message.value = 'Read the source.'; await f.api.send();
+  const button = descendants(f.elements.messages).find(node => node.tagName === 'button'
+    && node.textContent === 'Read retrieved passage 1');
+  assert.ok(button); await button.fire('click');
+  assert.equal(openedSources.length, 1);
+  assert.deepEqual(openedSources[0][4], {privatePreview: true});
+  assert.equal(openedSources[0][1].source.digest, 'a'.repeat(64));
+  const call = f.calls.find(row => row.path.includes('/sources/'));
+  assert.ok(call.path.endsWith('/sources/0?reference=source%3A1'));
+  assert.equal(call.options.credentials, 'same-origin');
+  assert.equal(call.options.cache, 'no-store');
+  const before = f.calls.length; await f.api.openMatter('matter_b');
+  const after = f.calls.length; await button.fire('click');
+  assert.equal(f.calls.length, after); assert.ok(after > before);
+});
+
+test('a malformed source identity cannot open the reader even with checked words', async () => {
+  const openedSources = [];
+  const f = fixture({sourceReader: {configure() {}, close() {}, open: value => openedSources.push(value)}});
+  await f.api.start();
+  f.reply((path, options, standard) => path.includes('/sources/')
+    ? {coverage: 'stored_document', digest: 'unknown', label: 'Unbound source'}
+    : standard(path, options));
+  f.elements.message.value = 'Read the source.'; await f.api.send();
+  const button = descendants(f.elements.messages).find(node => node.tagName === 'button'
+    && node.textContent === 'Read retrieved passage 1');
+  await button.fire('click'); assert.equal(openedSources.length, 0);
+  assert.ok(f.elements.status.textContent.includes('identity could not be verified'));
+});
+
 test('checked wording requires every exact private boundary, never a metadata author claim', () => {
   assert.equal(checkedPreview(preview(), 'matter_a', 'pv_turn_one').paragraphs.length, 1);
   const mutations = [data => {data.matter_id = 'other';}, data => {data.turn_id = 'other';},
@@ -107,7 +225,7 @@ test('real controller clears and shrinks sent input; only checked GET words rend
   assert.equal(f.elements.message.value, ''); assert.equal(f.elements.message.style.height, '46px');
   assert.ok(f.text().includes('<img src=x onerror=alert(1)>'));
   assert.ok(!f.text().includes('PRIVATE CANARY'));
-  assert.ok(f.text().includes('verified private-source reader is not available'));
+  assert.ok(f.text().includes('opaque:source'));
   assert.equal(f.api.state.pending, null);
   const post = f.calls.find(row => row.options.method === 'POST');
   assert.equal(post.options.headers['X-NM-CSRF'], 'csrf-token');
@@ -352,4 +470,32 @@ test('saved terminal review failure resolves transport retry and restores input 
   await f.api.openMatter('matter_a'); await f.elements.history.children[0].fire('click');
   assert.equal(userBubbles(f).length, 1); assert.equal(userBubbles(f)[0].textContent, words);
   assert.ok(f.elements.messages.textContent.includes(message));
+});
+
+test('every declared public failure keeps its reason on reopen without displaying unchecked words', async () => {
+  for (const result_state of ['work_stopped', 'wording_review_failed', 'proposal_binding_failed']) {
+    const f = await opened();
+    const words = 'Original instruction to assess the recorded file';
+    const message = 'The saved response could not be checked; the instruction is preserved.';
+    f.server.loops = [{turn_id: 'saved_turn', terminal: true}];
+    f.server.checked = {...preview('saved_turn'), result_state, paragraphs: [], message,
+      original_instruction: instruction(words), proposed_text: 'UNREVIEWED CANARY'};
+    await f.api.openMatter('matter_a'); await f.elements.history.children[0].fire('click');
+    assert.ok(f.elements.messages.textContent.includes(message), result_state);
+    assert.equal(userBubbles(f)[0].textContent, words);
+    assert.ok(!f.text().includes('UNREVIEWED CANARY'));
+    assert.equal(f.calls.filter(row => row.path.endsWith('/brain/preview')).length, 0);
+    assert.equal(f.calls.filter(row => row.path.endsWith('/seen')).length, 0);
+  }
+});
+
+test('no public-failure state admits unchecked paragraphs or an empty unbounded reason', () => {
+  for (const result_state of ['work_stopped', 'wording_review_failed', 'proposal_binding_failed']) {
+    for (const message of [undefined, null, '', ' ', 7, 'x'.repeat(2001)]) {
+      assert.throws(() => checkedPreview({...preview(), result_state, paragraphs: [], message},
+        'matter_a', 'pv_turn_one'), result_state);
+    }
+    assert.throws(() => checkedPreview({...preview(), result_state, message: 'Public reason'},
+      'matter_a', 'pv_turn_one'), result_state);
+  }
 });

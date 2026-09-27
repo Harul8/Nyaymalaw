@@ -6,8 +6,9 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.knowledge.provenance import Standing, Treatment
-from nm.knowledge.source_registry import (
+
+from nm.legal_brain.provenance_sources import Standing, Treatment
+from nm.legal_brain.source_registry_sources import (
     BindingState,
     CanonicalSource,
     LegalReview,

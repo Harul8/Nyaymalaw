@@ -8,17 +8,17 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
-from nm.adapters.model.openai_adapter import OpenAIModelAdapter
-from nm.adapters.store.directory import FileDirectory
-from nm.bootstrap.model_permission import require_permission, text_policy
-from nm.core.duty import DUTY_SCHEMA
-from nm.domain.advocate import utcnow
-from nm.domain.egress import DataClass, EgressRefused, Route, Sink, refuse
-from nm.domain.external_ai import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
-from nm.edge import api
-from nm.ports.directory import AuthenticationUnavailable
-from nm.ports.model import Prompt, RateLimited, Tier
 
+from nm.app import api
+from nm.app.model_permission import require_permission, text_policy
+from nm.arrive.advocate_contracts import utcnow
+from nm.arrive.directory_port import AuthenticationUnavailable
+from nm.arrive.store_directory import FileDirectory
+from nm.legal_brain.duty import DUTY_SCHEMA
+from nm.shared.egress_contracts import DataClass, EgressRefused, Route, Sink, refuse
+from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
+from nm.shared.model_openai_adapter import OpenAIModelAdapter
+from nm.shared.model_port import Prompt, RateLimited, Tier
 from tests.registration import CONSENT
 from tests.test_model_port_contract import _config, _FakeOpenAI
 from tests.test_public_email_registration import EMAIL, _login, _register
@@ -200,7 +200,7 @@ def test_revocation_is_checked_again_on_transport_retry(client, monkeypatch):
     model = application.engine_for('adv_demo', session_current=lambda: True)._model
     def withdraw(_seconds):
         assert choice(client, False, 1).status_code == 200
-    monkeypatch.setattr('nm.adapters.model.openai_adapter.time.sleep', withdraw)
+    monkeypatch.setattr('nm.shared.model_openai_adapter.time.sleep', withdraw)
     with pytest.raises(ModelPermissionRefused):
         model.complete(Prompt('Synthetic'), Tier.ROUTINE)
     assert len(transport.calls) == 1, 'retry sent bytes after withdrawal'

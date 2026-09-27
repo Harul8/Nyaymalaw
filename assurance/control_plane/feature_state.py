@@ -66,7 +66,7 @@ def implements_map(root: pathlib.Path | None = None) -> dict[str, list[str]]:
     from assurance.gate.trace import SRC, scan_tree
 
     display_root = root or ROOT
-    base = SRC if root is None else root / "backend" / "nm"
+    base = SRC if root is None else root / "nm"
     out: dict[str, list[str]] = {}
     for args, files in scan_tree(base, "implements", display_root=display_root).items():
         if not args:

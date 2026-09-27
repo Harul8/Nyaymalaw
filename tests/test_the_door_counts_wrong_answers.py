@@ -21,7 +21,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from nm.domain import attempts
+
+from nm.arrive import attempts_contracts as attempts
 
 pytestmark = pytest.mark.class_a
 
@@ -108,7 +109,7 @@ def test_an_allowed_attempt_says_nothing_at_all():
 def test_the_limiter_runs_before_the_password_is_verified(client, monkeypatch):
     """The point of a limiter is that the EXPENSIVE part stops happening. A
     guard after the derivation still pays for every guess."""
-    from nm.edge import api
+    from nm.app import api
 
     calls = []
     original = client.directory.authenticate_and_open_session
@@ -133,7 +134,7 @@ def test_the_limiter_runs_before_the_password_is_verified(client, monkeypatch):
 def test_a_refused_attempt_is_429_and_not_401(client):
     """A refusal is NOT a wrong password, and calling it one tells an advocate
     to check credentials that may be perfectly correct."""
-    from nm.edge import api
+    from nm.app import api
 
     for _ in range(attempts.PER_ADVOCATE):
         client.directory.note_failure("adv_demo", "testclient", api.utcnow())
@@ -152,7 +153,7 @@ def test_a_limiter_that_cannot_run_refuses_admission_and_says_so(client, monkeyp
     """
     import inspect
 
-    from nm.adapters.store.directory import FileDirectory
+    from nm.arrive.store_directory import FileDirectory
     reader = inspect.getsource(FileDirectory.failures_since)
     assert "return None" in reader, (
         "the store no longer distinguishes 'could not read' from 'no failures'")
@@ -174,7 +175,7 @@ def test_a_successful_sign_in_adds_nothing_to_the_count():
     """Otherwise an advocate who works all day locks themselves out."""
     import inspect
 
-    from nm.edge import api
+    from nm.app import api
 
     src = inspect.getsource(api.login)
     note = src.index("note_failure")

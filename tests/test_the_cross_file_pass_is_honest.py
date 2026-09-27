@@ -36,8 +36,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from nm.core.adversarial import build_exposure_prompt
-from nm.core.turn import _label_of
+
+from nm.legal_brain.adversarial import build_exposure_prompt
+from nm.legal_brain.turn import _label_of
 
 pytestmark = pytest.mark.class_a
 
@@ -80,8 +81,8 @@ def test_the_exposure_prompt_binds_ids_but_keeps_prose_labelled():
 def test_a_thread_is_named_to_the_advocate_by_its_label():
     # THROUGH THE ONE RENDERER, not `repr`: `repr` double-quotes a label with
     # an apostrophe in it, and G-QUOTE withholds the turn on the product's
-    # own words (`nm.domain.spoken.named`).
-    from nm.domain.spoken import dispute
+    # own words (`nm.shared.spoken_contracts.named`).
+    from nm.shared.spoken_contracts import dispute
 
     labels = {"thr_abc": "Supply of steel"}
     assert _label_of("thr_abc", labels) == dispute("Supply of steel")

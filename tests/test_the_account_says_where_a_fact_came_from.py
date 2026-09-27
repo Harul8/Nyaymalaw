@@ -23,7 +23,7 @@ nothing in the output would look wrong either way.
 
 IT WAS NOT REACHING AN ADVOCATE, AND THAT IS WHY IT WAS FIXED NOW
 -------------------------------------------------------------------
-`nm.core.intake` is UNWIRED, so no document-sourced fact exists yet. Once it
+`nm.open_matter.intake` is UNWIRED, so no document-sourced fact exists yet. Once it
 lands the failure is silent: the first person to notice would be someone
 relying in court on a "documented" fact that was never in a document.
 
@@ -38,8 +38,9 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from nm.domain import summary
-from nm.domain.matter import Basis, Fact, Matter, Posture, Provenance, Role, Thread
+
+from nm.work_the_file import summary_contracts as summary
+from nm.work_the_file.matter_contracts import Basis, Fact, Matter, Posture, Provenance, Role, Thread
 
 pytestmark = pytest.mark.class_a
 

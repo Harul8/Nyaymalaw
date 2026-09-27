@@ -1,6 +1,6 @@
 # THE RELEASE SCORECARD — authored thresholds, measured values.
 #
-# `pipeline/quality/releasegate.py` measures each row and prints PASS / FAIL / NOT MEASURED.
+# `pipeline/releasegate.py` measures each row and prints PASS / FAIL / NOT MEASURED.
 # The third state is not a formality. A scorecard that shows only PASS and FAIL
 # reports a metric nobody has computed as though it were fine, and that is the
 # single most repeated defect shape in this project (S8) applied to the release
@@ -9,7 +9,7 @@
 # WHAT IS AUTHORED HERE AND WHAT IS NOT
 # -------------------------------------
 # The THRESHOLD is a product decision and lives here. The MEASUREMENT is code
-# and lives in `pipeline/quality/releasegate.py`. Nothing in this file is generated, and
+# and lives in `pipeline/releasegate.py`. Nothing in this file is generated, and
 # nothing in it is a measurement — a number here that claims to be measured
 # would be a second copy of a fact the tool already computes.
 #
@@ -154,7 +154,7 @@ scorecard:
       returns HELD_NOT_FOUND naming the index — visibly, never as an empty
       answer.
     threshold: "built, and its source identity matches the corpus VERSION"
-    measured_by: "pipeline/indexing/build_authority_index.py identity record"
+    measured_by: "pipeline/build_authority_index.py identity record"
     owner: "retrieval"
     cadence: "every ingest"
     blocking: true
@@ -168,7 +168,7 @@ scorecard:
       bench coverage at 7.5% against a true 90.2% — on which the
       larger-bench-supersedes rule was declined.
     threshold: ">= 0.85 of judgments carry a parsed bench, and >= 250,000 citation keys"
-    measured_by: "pipeline/indexing/build_identity_index.py identity record"
+    measured_by: "pipeline/build_identity_index.py identity record"
     owner: "corpus"
     cadence: "every ingest"
     blocking: true

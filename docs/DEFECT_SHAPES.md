@@ -75,10 +75,10 @@ an importable library (B-143).
 > **CHECK, added with S1.** A capability is reported as available only by DOING
 > the smallest real version of it — importing the library, opening the file,
 > running the query — never by observing something that usually accompanies it.
-> `backend/nm/adapters/optional.py` is the only module permitted to ask the import
+> `nm/shared/optional_adapter.py` is the only module permitted to ask the import
 > path anything, and
 > `tests/test_a_library_is_available_only_when_it_imports.py` fails the build on a
-> second caller anywhere in `backend/nm/`, and on any speech adapter whose
+> second caller anywhere in `nm/`, and on any speech adapter whose
 > readiness reads as usable while its library is not.
 
 ---
@@ -267,9 +267,9 @@ living in the gap between them.** Every unit test passed. It was found the
 first time seven realistic turns ran end to end, which is the argument for the
 journey portfolio in `JOURNEY.md` §5 restated in one afternoon.
 
-The fix is the CHECK above and not a second hardening: `backend/nm/domain/citation.py`
+The fix is the CHECK above and not a second hardening: `nm/legal_brain/citation_contracts.py`
 is now the only module permitted to define such a pattern, and
-`tests/test_citation_patterns.py` scans `backend/nm/` and fails the build on a second
+`tests/test_citation_patterns.py` scans `nm/` and fails the build on a second
 one. A grep is a weak enforcement mechanism and it is a great deal stronger
 than a memo.
 

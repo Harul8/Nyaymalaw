@@ -38,10 +38,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.turn import TurnInput
-from nm.domain import summary as summary_mod
-from nm.domain.matter import Matter, Thread
 
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file import summary_contracts as summary_mod
+from nm.work_the_file.matter_contracts import Matter, Thread
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -140,7 +140,7 @@ def test_the_assessed_names_come_from_the_derive_phase_and_not_a_second_list():
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._run)
     assert "assessed=tuple(dict.fromkeys(" in src
@@ -179,7 +179,7 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     TWO remain after Phase 4, and each genuinely has no writer:
     `engagement` is B5/G-SCOPE, declared unbuilt in the gate matrix, and
     `reservations` is E5 -- *a disagreement the advocate overruled stays
-    visible and reactivates on a changed fact* -- which nothing in `backend/nm/`
+    visible and reactivates on a changed fact* -- which nothing in `nm/`
     produces.
 
     THE OTHER FOUR WERE NEVER UNBUILT. `deadlines` and `gaps` ran on every
@@ -216,8 +216,8 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
 def test_a_computed_register_reaches_the_handover(tmp_path):
     """PHASE 3'S WHOLE CLAIM, on a served turn.
 
-    `backend/nm/core/deadlines.py` is reached ten times from the turn engine and
-    `backend/nm/core/gaps.py` four. Neither result survived the turn, so the handover
+    `nm/work_the_file/deadlines.py` is reached ten times from the turn engine and
+    `nm/legal_brain/gaps.py` four. Neither result survived the turn, so the handover
     carried no deadlines and no gaps section on a file where both had been
     computed every turn since the brief arrived. Not unbuilt -- built, run,
     and thrown away.
@@ -257,7 +257,7 @@ def test_an_empty_queue_is_a_finding_and_an_absent_one_is_not(tmp_path):
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._derive)
     assert 'concluded["gaps"] = tuple(gaps)' in src, (
@@ -283,7 +283,7 @@ def test_the_persisted_derivation_is_replaced_and_never_merged(tmp_path):
     """
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     # WHITESPACE-COLLAPSED. `authorities=` wraps across two lines, and a
     # line-exact match reported it missing when it was there -- an assertion
@@ -308,7 +308,7 @@ def test_the_screens_carry_five_states_on_every_matter(tmp_path):
     believe the fifth was checked, which is `unscreened`'s own argument for
     drawing from the vocabulary, arriving at the handover.
     """
-    from nm.core.screens import ScreenKind, ScreenState
+    from nm.open_matter.screens import ScreenKind, ScreenState
 
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
@@ -349,7 +349,7 @@ def test_the_screens_are_recorded_even_when_they_refuse_the_matter():
     after it."""
     import inspect
 
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
 
     src = inspect.getsource(TurnEngine._run)
     landed = src.index("matter, screens=screens.screens")
@@ -389,7 +389,7 @@ def test_the_store_round_trips_a_set_in_both_directions():
     identical matters that differ on disk produce a diff nobody can explain,
     and a diff nobody can explain is one nobody trusts.
     """
-    from nm.adapters.store.file_store import _decode, _enc
+    from nm.shared.store_file_store import _decode, _enc
 
     out = _enc(frozenset({"Rao", "Anand"}))
     assert out == ["Anand", "Rao"], f"not sorted, so not stable: {out}"
@@ -420,8 +420,7 @@ def test_a_screen_reloads_as_data_like_every_other_untyped_field(tmp_path):
     Recorded rather than left to be discovered: the day something needs a
     `Screen` back, this is the line that says where the reader goes.
     """
-    from nm.adapters.store.file_store import FileMatterStore
-
+    from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY
 
     engine, _ = build(tmp_path)
@@ -447,7 +446,7 @@ def test_the_engagement_records_who_and_what_and_names_what_it_lacks(tmp_path):
     is B5 at slice 10 and stays there; this is the disclosure that makes its
     absence visible.
     """
-    from nm.domain.engagement import NOT_RECORDED, from_stored
+    from nm.open_matter.engagement_contracts import NOT_RECORDED, from_stored
 
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
@@ -494,7 +493,7 @@ def test_a_reservation_is_reactivated_by_a_fact_and_never_by_a_turn():
     """
     import inspect
 
-    from nm.domain import reservation as res
+    from nm.advise import reservation_contracts as res
 
     r = res.Reservation(position="the provision this rests on: Article 54",
                         because="the cause read as specific performance",
@@ -519,7 +518,7 @@ def test_an_overruled_position_is_recorded_once_and_not_restated():
     """*Disagree once, clearly, then drop it.* The counterexample is the same
     objection on every turn, so recording it twice is the defect in the
     summary rather than in the answer."""
-    from nm.domain import reservation as res
+    from nm.advise import reservation_contracts as res
 
     r = res.Reservation(position="p", because="b", stated_at="t1",
                         overruled_at="t2")
@@ -532,7 +531,7 @@ def test_a_reservation_that_was_never_overruled_cannot_be_built():
     """A live disagreement filed as a reservation is one the advocate never
     saw the product drop -- and it would then be silently excluded from the
     answer, which is the opposite of E5."""
-    from nm.domain import reservation as res
+    from nm.advise import reservation_contracts as res
 
     with pytest.raises(ValueError, match="overruled_at"):
         res.Reservation(position="p", because="b", stated_at="t1",
@@ -542,7 +541,7 @@ def test_a_reservation_that_was_never_overruled_cannot_be_built():
 def test_an_unreactivated_reservation_refuses_to_state_itself():
     """The tone rule has one owner. A reservation that nothing brought back
     has no current finding, and rendering one anyway IS the restatement."""
-    from nm.domain import reservation as res
+    from nm.advise import reservation_contracts as res
 
     r = res.Reservation(position="p", because="b", stated_at="t1",
                         overruled_at="t2")

@@ -3,16 +3,16 @@ from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
-from nm.adapters.store.loop_log import MatterLoopLog
-from nm.core.brain_release import ReviewService
-from nm.core.controlled_brain import EvaluationScope
-from nm.core.verifier import IndependentVerifier
-from nm.domain.external_ai import ModelPermissionRefused
-from nm.domain.loop import LoopMode, StopReason
-from nm.domain.matter import Matter
-from nm.edge import api
-from nm.ports.model import Prompt, Tier, ToolCall
 
+from nm.app import api
+from nm.legal_brain.brain_release import ReviewService
+from nm.legal_brain.controlled_brain import EvaluationScope
+from nm.legal_brain.loop_contracts import LoopMode, StopReason
+from nm.legal_brain.verifier import IndependentVerifier
+from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_port import Prompt, Tier, ToolCall
+from nm.shared.store_loop_log import MatterLoopLog
+from nm.work_the_file.matter_contracts import Matter
 from tests.test_independent_claim_verifier import Judge, finding, premise
 from tests.test_openai_text_permission import bound, choice
 from tests.test_the_loop_records_work_before_using_it import _limits, _response
@@ -89,7 +89,7 @@ def test_scope_is_finite_and_an_ended_session_cannot_compose_the_loop(client):
 
 
 def test_actual_application_assembles_checks_without_forging_missing_owner_subjects(client):
-    from nm.ports.evidence import Coverage, EvidenceResult
+    from nm.legal_brain.evidence_port import Coverage, EvidenceResult, SourceDocument
 
     app, matter, scope = _scope(client)
     held = finding()
@@ -97,13 +97,18 @@ def test_actual_application_assembles_checks_without_forging_missing_owner_subje
     app.store.commit(current, expected_version=matter.version)
     app.evidence.read_provision = Mock(return_value=EvidenceResult(
         Coverage.ANSWERED, (held,), searched_stores=("held",)))
+    # New working-record checks reopen the exact source; the fixture supplies
+    # that real typed read rather than asking an untyped Mock to certify it.
+    app.evidence.document = Mock(return_value=SourceDocument(
+        "read", label=held.ref, store="held", segments=(("1", held.span),),
+        target=0, locator=held.locator, kind=held.source_kind.value))
     author = Mock()
     author.provider = "scripted"
     author.resolved_model.return_value = "recorded-v1"
     author.context_budget.return_value = 100000
     # Composition now dispatches real final-check reads. This fixture must
     # explicitly model their unavailability, not return an untyped Mock.
-    from nm.ports.model import ProviderUnavailable
+    from nm.shared.model_port import ProviderUnavailable
 
     author.structured.side_effect = ProviderUnavailable("Controlled final-check read unavailable")
     author.tool_call.side_effect = [
@@ -121,7 +126,7 @@ def test_actual_application_assembles_checks_without_forging_missing_owner_subje
         verifier=IndependentVerifier(judge), session_current=lambda: True,
         cost_ceiling=lambda *_: 0.03)
     brain = app.controlled_brain_for(scope, session_current=lambda: True,
-        cost_ceiling=lambda *_: 0.03, source_version="checked-source-generation",
+        cost_ceiling=lambda *_: 0.03, source_version=app.source_generation_guard().version,
         table_version="checked-table-generation", reviewer=reviewer)
     assert brain.checklist_review.reviewer is reviewer
     result = brain.evaluate(matter_id=matter.id, turn_id="application-assessment",

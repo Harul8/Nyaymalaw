@@ -16,11 +16,11 @@ limitation positions, two postures, between the same two parties.
 from __future__ import annotations
 
 import pytest
-from nm.core.threading import BindState, bind, identifiers_in
-from nm.core.turn import TurnInput
-from nm.domain.matter import Fact, Matter, Provenance, Role, Thread
-from nm.domain.traceability import refuses
 
+from nm.legal_brain.threading import BindState, bind, identifiers_in
+from nm.legal_brain.turn import TurnInput
+from nm.shared.traceability_contracts import refuses
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Role, Thread
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -277,8 +277,7 @@ def test_a_second_dispute_does_not_inherit_the_first_thread_s_posture(tmp_path):
     The golden set calls multi-thread files THE NORMAL CASE (GS-08, GS-09,
     GS-10, GS-22), and none of them could pass.
     """
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

@@ -6,11 +6,13 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-from nm.adapters.search.authority import AuthorityIndexSearch
-from nm.knowledge import source_registry
-from nm.knowledge.acquisition import ReconciliationState, reconcile_acquisition
-from nm.knowledge.manifest import (
+
+from assurance.gate import layercheck
+from nm.legal_brain import source_registry_sources as source_registry
+from nm.legal_brain.acquisition_sources import ReconciliationState, reconcile_acquisition
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
+from nm.legal_brain.manifest_sources import (
     CorpusDependency,
     CorpusPublicationRefused,
     get_corpus,
@@ -18,11 +20,10 @@ from nm.knowledge.manifest import (
     rollback_corpus,
     withdraw_corpus,
 )
-from nm.knowledge.source_registry import RightsState
-from nm.ports.evidence import Coverage, EvidenceNeed
-
-from assurance.gate import layercheck
-from pipeline.acquisition import fetch_judgments, scrape_judgments
+from nm.legal_brain.search_authority import AuthorityIndexSearch
+from nm.legal_brain.source_registry_sources import RightsState
+from pipeline import fetch_judgments, scrape_judgments
+from tests.source_role_fixtures import role_tree
 from tests.test_acquisition_receipts import _stage
 from tests.test_immutable_corpus_publication import (
     NOW,
@@ -302,35 +303,31 @@ def test_web_selection_uses_explicit_dates_including_recent_uncited_law(tmp_path
 
 
 @pytest.mark.parametrize("layer,statement,expected", [
-    ("domain", "from nm.infrastructure.cleanup import discard", 1),
-    ("core", "from nm.infrastructure.cleanup import discard", 1),
-    ("ports", "from nm.infrastructure.cleanup import discard", 1),
+    ("domain", "from nm.shared.target import discard", 1),
+    ("core", "from nm.shared.target import discard", 1),
+    ("ports", "from nm.shared.target import discard", 1),
     ("infrastructure", "import requests", 1),
-    ("infrastructure", "import nm.core.turn", 1),
-    ("adapters", "from nm.infrastructure.cleanup import discard", 0),
-    ("knowledge", "from nm.infrastructure.cleanup import discard", 0),
+    ("infrastructure", "import nm.shared.target", 1),
+    ("adapters", "from nm.shared.target import discard", 0),
+    ("knowledge", "from nm.shared.target import discard", 0),
     ("infrastructure", "import pathlib", 0),
 ])
 def test_restricted_infrastructure_is_reachable_only_from_concrete_io_layers(
     tmp_path, monkeypatch, layer, statement, expected,
 ):
-    source = tmp_path / "backend" / "nm"
-    destination = source / layer / "probe.py"
-    destination.parent.mkdir(parents=True)
-    destination.write_text(statement)
-    monkeypatch.setattr(layercheck, "ROOT", tmp_path)
-    monkeypatch.setattr(layercheck, "SRC", source)
-    assert layercheck.main() == expected
+    target_role = "core" if statement == "import nm.shared.target" else "infrastructure"
+    roles = role_tree(tmp_path, statement, role=layer, target_role=target_role)
+    assert layercheck.main(root=tmp_path, roles=roles) == expected
 
 
 def test_cleanup_failure_does_not_replace_the_publication_outcome(tmp_path, monkeypatch):
-    from nm.domain.names import discard, discard_tree
+    from nm.shared.names_contracts import discard, discard_tree
 
     def refused(*_args, **_kwargs):
         raise PermissionError("synthetic held-open file")
 
     monkeypatch.setattr(Path, "unlink", refused)
-    monkeypatch.setattr("nm.domain.names.shutil.rmtree", refused)
+    monkeypatch.setattr("nm.shared.names_contracts.shutil.rmtree", refused)
     assert discard(tmp_path / "file") is False
     assert discard_tree(tmp_path / "tree") is False
 
@@ -341,7 +338,7 @@ def test_cleanup_failure_does_not_replace_the_publication_outcome(tmp_path, monk
 def test_tree_cleanup_checks_root_after_a_nested_file_disappears(
     tmp_path, monkeypatch, root_state, expected,
 ):
-    from nm.domain.names import discard_tree
+    from nm.shared.names_contracts import discard_tree
 
     root = tmp_path / "temporary-tree"
     if root_state != "absent":
@@ -350,7 +347,7 @@ def test_tree_cleanup_checks_root_after_a_nested_file_disappears(
     def nested_missing(_path):
         raise FileNotFoundError("synthetic concurrently removed child")
 
-    monkeypatch.setattr("nm.domain.names.shutil.rmtree", nested_missing)
+    monkeypatch.setattr("nm.shared.names_contracts.shutil.rmtree", nested_missing)
     if root_state == "unreadable":
         original = Path.lstat
 

@@ -8,7 +8,7 @@ advocate is told a conflict is a gap, or the reverse, with nothing failing.
 
 THE RULE: a decision is made on a value. No code in the product may branch on
 whether a phrase occurs in a `why`, `reason` or `because` string. The scan's
-population is every module under backend/nm; the counterexample it must reject
+population is every module under nm; the counterexample it must reject
 is the code this replaced.
 """
 from __future__ import annotations
@@ -39,7 +39,7 @@ def _reads_a_state_from_prose(tree: ast.AST) -> list[int]:
 
 def test_no_state_in_the_product_is_decided_by_a_phrase_in_its_reason():
     offenders = []
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         for line in _reads_a_state_from_prose(ast.parse(path.read_text(encoding="utf-8"))):
             offenders.append(f"{path.relative_to(ROOT).as_posix()}:{line}")
     assert offenders == [], f"a state is read from a reason's words: {offenders}"

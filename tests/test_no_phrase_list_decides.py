@@ -3,13 +3,13 @@
 THE AUDIT THAT PRODUCED THIS, 7 September 2026
 ------------------------------------------------
 Asked for a forensic sweep of hard-coding, the population came from the code:
-every module-level literal collection in `backend/nm/`. Most of it is correct and some
+every module-level literal collection in `nm/`. Most of it is correct and some
 of it is REQUIRED —
 
     CURATED     `LIMITATION_ARTICLE`, `ELEMENTS`, `SECTION_FOR`. CLAUDE.md §5
                 mandates these: exact match decides which Act, and fuzzy may
                 never identify. Removing them is the previous build's failure.
-    THE DOUBLE  every `_SCRIPTED_*` list in `backend/nm/adapters/model/scripted.py`.
+    THE DOUBLE  every `_SCRIPTED_*` list in `nm/shared/model_scripted.py`.
                 A test double's whole job is to be scenario-shaped.
     VOCABULARY  enum values, feature ids, format fragments.
 
@@ -48,8 +48,9 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain.answer import Route
+
+from nm.advise.answer_contracts import Route
+from nm.legal_brain.turn import TurnEngine, TurnInput
 
 pytestmark = pytest.mark.class_a
 
@@ -111,7 +112,7 @@ def test_the_route_is_read_and_never_counted():
     words, it need not be a greeting; it can be the actual dispute. Let the
     model decide.* Both lists and both length rules are gone.
     """
-    from nm.core import turn as turn_module
+    from nm.legal_brain import turn as turn_module
 
     src = (pathlib.Path(turn_module.__file__)).read_text(encoding="utf-8")
     code = chr(10).join(ln for ln in src.splitlines()

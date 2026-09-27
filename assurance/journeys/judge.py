@@ -11,7 +11,7 @@ instructing advocate; is capacity raised about the record rather than the
 person.
 
 The judge tier is `gpt-5.1` and the turn engine runs on `gpt-4o-mini`, and
-`nm.adapters.model.config` REFUSES a judge tier that resolves to the model under
+`nm.shared.model_config` REFUSES a judge tier that resolves to the model under
 test. That separation matters most for E-073, where the failure mode IS
 softening: a model asked to rate its own softening shares the blind spot in both
 roles.
@@ -59,7 +59,7 @@ from enum import Enum
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -217,8 +217,8 @@ SCHEMA: dict = {
 
 
 def _model():
-    from nm.adapters.model.config import load, load_dotenv
-    from nm.bootstrap.composition import build_model
+    from nm.app.composition import build_model
+    from nm.shared.model_config import load, load_dotenv
 
     load_dotenv(ROOT / ".env")
     return build_model(load()), load()
@@ -246,7 +246,7 @@ def interpret_judgement(data, material: str, eval_id: str, model: str = "") -> J
 
 def ask(material: str, eval_id: str) -> Judgement:
     """Put one eval's question to the judge about one piece of material."""
-    from nm.ports.model import Tier
+    from nm.shared.model_port import Tier
 
     rubric = RUBRICS[eval_id]
     if not material.strip():
@@ -256,7 +256,7 @@ def ask(material: str, eval_id: str) -> Judgement:
             f"A FAIL LOOKS LIKE:\n{rubric['fail_looks_like']}\n\n"
             f"THE MATERIAL:\n{material}")
     res = model.structured(
-        __import__("nm.ports.model", fromlist=["Prompt"]).Prompt(
+        __import__("nm.shared.model_port", fromlist=["Prompt"]).Prompt(
             system=SYSTEM, user=user),
         SCHEMA, Tier.JUDGE, max_tokens=700)
     return interpret_judgement(res.data, material, eval_id, cfg.for_tier(Tier.JUDGE).model)
@@ -268,7 +268,7 @@ def save_judgement(judgement: Judgement, matter_ids: tuple[str, ...]) -> pathlib
     Paired reviews require both keys to open; erasing either key makes the
     combined review unavailable. No new key may be minted for a deleted matter.
     """
-    from nm.adapters.store.sealing import MatterSealer
+    from nm.shared.store_sealing import MatterSealer
 
     ids = tuple(sorted(set(matter_ids)))
     keys = ROOT / ".nm" / "matters" / "keys"
@@ -329,9 +329,9 @@ def transcript_material(matter_id: str) -> str:
     """The served turns of one matter, as the judge sees them."""
     import os
 
-    from nm.adapters.model.config import load_dotenv
-    from nm.adapters.store.file_store import FileMatterStore
-    from nm.edge.transcripts import project
+    from nm.open_matter.transcripts_api import project
+    from nm.shared.model_config import load_dotenv
+    from nm.shared.store_file_store import FileMatterStore
 
     load_dotenv(ROOT / ".env")
     store = FileMatterStore(ROOT / ".nm" / "matters",

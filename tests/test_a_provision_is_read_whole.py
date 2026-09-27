@@ -30,7 +30,8 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, assemble_section
+
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter, assemble_section
 
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = "The Limitation Act, 1963 . s.18{part}: Effect of acknowledgment in writing."
@@ -89,11 +90,11 @@ def test_every_word_is_the_corpus_own():
 
 @pytest.mark.class_a
 def test_every_reader_of_provision_atoms_assembles_through_the_one_function():
-    """Drawn from every module under backend/nm. A function that queries the
+    """Drawn from every module under nm. A function that queries the
     bare-Act atoms and does not assemble through `assemble_section` is a reader
     that can take one atom -- the defect this file exists for."""
     readers = []
-    for path in (ROOT / "backend" / "nm").rglob("*.py"):
+    for path in (ROOT / "nm").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for fn in ast.walk(tree):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -120,8 +121,8 @@ def corpus():
 def test_every_intended_provision_is_read_whole_from_its_store(corpus):
     """The population is the manifest's whole intended coverage, not a sample."""
     import sys
-    sys.path.insert(0, str(ROOT / "backend"))
-    from nm.knowledge.manifest import Manifest
+    sys.path.insert(0, str(ROOT ))
+    from nm.legal_brain.manifest_sources import Manifest
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     ids = [r[0] for r in corpus.execute(
         "select distinct act_id from chunks where doc_type='bare_act'")]
@@ -168,8 +169,8 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
 ])
 def test_the_measured_sections_reach_the_turn_whole(corpus, question, section, must_hold):
     """Through the served adapter, not the helper alone."""
-    from nm.knowledge.manifest import Manifest
-    from nm.ports.evidence import EvidenceNeed
+    from nm.legal_brain.evidence_port import EvidenceNeed
+    from nm.legal_brain.manifest_sources import Manifest
     adapter = CorpusEvidenceAdapter(CORPUS, Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
     result = adapter.fetch(EvidenceNeed(question=question, governing_date=date(2025, 9, 1),
                                         provision_hint=section))

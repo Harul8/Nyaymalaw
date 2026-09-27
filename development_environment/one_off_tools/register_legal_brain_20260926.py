@@ -287,7 +287,7 @@ PACKET_ROWS = [
            ["P21", "P22"], ["CHOICE-01", "CHOICE-07"], ["submit-turn", "get-advice"],
            ["The retrieved and read-back text of each provision or judgment an entry points to.",
             "The owner's selection of rows, and a practising Telangana advocate's counsel review of every entry."],
-           ["Curated tables in backend/nm/knowledge with curated_from on every entry, each behind a port and "
+           ["Curated tables in nm/knowledge with curated_from on every entry, each behind a port and "
             "adapter.", "A counsel-review record per table before any dependent criterion is signed off."],
            ["Keep one curated table per rule family, identified on an exact key and never by fuzzy match.",
             "Retrieve and read back the provision or judgment behind every entry; the table points to text and "
@@ -302,9 +302,9 @@ PACKET_ROWS = [
             "No criterion relying on a table is signed off before the table's counsel review."],
            "Withdraw an unreviewed or disputed entry to 'no curated table' and keep the retrieval path; never serve "
            "an entry whose source cannot be read back.",
-           ["backend/nm/knowledge/governing_law.py", "backend/nm/knowledge/institution.py",
-            "backend/nm/knowledge/interim_relief.py", "backend/nm/knowledge/procedural_period.py",
-            "backend/nm/knowledge/filing_requirement.py", "backend/nm/knowledge/identity.py"]),
+           ["nm/legal_brain/governing_law_sources.py", "nm/legal_brain/institution_sources.py",
+            "nm/legal_brain/interim_relief_sources.py", "nm/legal_brain/procedural_period_sources.py",
+            "nm/legal_brain/filing_requirement_sources.py", "nm/legal_brain/identity_sources.py"]),
     packet("P49", "M07", "Slice 1 -- the loop foundation: tool calling on every provider, the budgeted runner, the "
                          "step log and replay",
            ["BK-99-AC1", "BK-99-AC3", "BK-99-AC4"],
@@ -326,9 +326,9 @@ PACKET_ROWS = [
             "No loop runs without a budget, and a budget stop is never presented as a finished answer.",
             "A replay proves the harness and the tools, never live model quality."],
            "Keep the switch off: the TurnEngine serves every turn, and recordings and step logs are kept as evidence.",
-           ["backend/nm/ports/model.py", "backend/nm/adapters/model", "backend/nm/core/turn.py"],
-           ["backend/nm/core/loop.py", "backend/nm/adapters/model/anthropic_adapter.py",
-            "backend/nm/adapters/model/replay.py"]),
+           ["nm/shared/model_port.py", "nm/adapters/model", "nm/legal_brain/turn.py"],
+           ["nm/legal_brain/loop.py", "nm/shared/model_anthropic_adapter.py",
+            "nm/shared/model_replay.py"]),
     packet("P50", "M06", "Slice 2 -- tools: the envelope, the registry and the core tools over existing code, with "
                          "born-digital document text",
            ["BK-99-AC2"], ["BK-99-AC2"],
@@ -348,8 +348,8 @@ PACKET_ROWS = [
             "Nothing unextracted is read as searched and empty."],
            "Remove a tool from the registry and return 'not available' to the model; extracted text is a derivative "
            "and the original upload is untouched.",
-           ["backend/nm/ports", "backend/nm/knowledge/manifest.py", "backend/nm/edge/uploads.py"],
-           ["backend/nm/core/tools.py"]),
+           ["nm/ports", "nm/legal_brain/manifest_sources.py", "nm/open_matter/uploads_api.py"],
+           ["nm/legal_brain/tools.py"]),
     packet("P51", "M07", "Slice 3 -- the harness after the loop: checks, boundaries on tool calls, repair and the "
                          "independent verifier",
            ["BK-100-AC1", "BK-100-AC2", "BK-100-AC3", "BK-100-AC4"],
@@ -369,13 +369,13 @@ PACKET_ROWS = [
            ["The model never skips, disables or waives a check.", "A check that cannot run is not assessed, never "
             "passed.", "The author never grades its own claim."],
            "Keep the switch off for any kind of turn whose checks do not all run on the loop path.",
-           ["backend/nm/domain/gates.py", "backend/nm/core/grounding.py", "backend/nm/core/consistency.py"],
-           ["backend/nm/core/verifier.py"]),
+           ["nm/shared/gates_contracts.py", "nm/legal_brain/grounding.py", "nm/legal_brain/consistency.py"],
+           ["nm/legal_brain/verifier.py"]),
     packet("P52", "M09", "Slice 4 -- stream the loop's steps to the scratch pad",
            ["BK-99-AC5"], ["BK-99-AC5"],
            ["P51"], ["CHOICE-02", "CHOICE-06"], [],
            ["The saved step log (P49) and the citation detector on every channel (P51).",
-            "The matter board in frontend/matter-workspace.js."],
+            "The matter board in nm/legal_brain/matter-workspace.js."],
            ["A server-sent-events endpoint beside /api/turn, and a collapsible scratch-pad panel, closed by "
             "default, saved with each turn."],
            ["Stream each step event with its sequence number; resume a reconnecting client from its last number.",
@@ -385,7 +385,7 @@ PACKET_ROWS = [
            ["The stream never shows an event the log does not hold.",
             "No interim line reads as advice or shows an internal identifier."],
            "Hide the panel and show the saved record when the turn ends; the step log is unaffected.",
-           ["backend/nm/edge/api.py", "frontend/matter-workspace.js"]),
+           ["nm/app/api.py", "nm/legal_brain/matter-workspace.js"]),
     packet("P53", "M04", "Slice 7 -- context for long matters: principles, stable prefix, clearing, compaction from "
                          "the file, the research loop and memory",
            ["BK-101-AC1", "BK-101-AC2", "BK-101-AC3", "BK-101-AC4"],
@@ -402,7 +402,7 @@ PACKET_ROWS = [
            ["A summary of the chat never replaces the file as the thing worked from.",
             "No client fact enters the advocate's memory."],
            "Build each request from the file as today; keep the full transcript and step log on the record.",
-           ["backend/nm/domain/summary.py", "backend/nm/domain/matter.py"], ["backend/nm/core/context.py"]),
+           ["nm/work_the_file/summary_contracts.py", "nm/work_the_file/matter_contracts.py"], ["nm/core/context.py"]),
     packet("P54", "M09", "Slice 9 -- compare on the golden set and switch, one kind of turn at a time",
            ["BK-99-AC6"], ["BK-99-AC6"],
            ["P51", "P52", "P53"], ["CHOICE-06", "CHOICE-10"], [],
@@ -419,7 +419,7 @@ PACKET_ROWS = [
            ["No live golden run happens without the owner's approval of that run.",
             "No second live path survives a switch."],
            "Turn the switch back for that kind of turn; pipeline stages are removed only after the switch has held.",
-           ["assurance/journeys/run_goldens.py", "docs/GOLDEN_SET.md", "backend/nm/core/turn.py"]),
+           ["assurance/journeys/run_goldens.py", "docs/GOLDEN_SET.md", "nm/legal_brain/turn.py"]),
 ]
 
 
@@ -498,7 +498,7 @@ def heading(item):
 RECORDS = {
     "BK-98": """Registered 26 September 2026 under LB-43, reconciling the legal-brain rows to the backlog on
 the owner's instruction. The practice-layer rows LB-120 to LB-125 were built on 25 September 2026 as curated
-tables in `backend/nm/knowledge/` (governing law, institution, interim relief, procedural periods, filing
+tables in `nm/knowledge/` (governing law, institution, interim relief, procedural periods, filing
 requirements) with the bench ranking through `identity.supersedes`, each behind a port and adapter and wired in
 the composition root; LB-120 is built but unwired.
 

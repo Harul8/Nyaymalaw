@@ -31,13 +31,13 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.adapters.model.traced import TracedModel
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import TurnEngine, TurnInput
-from nm.domain import decision as decision_domain
-from nm.domain.decision import DecidedBy, Decision
 
+from nm.advise import decision_contracts as decision_domain
+from nm.advise.decision_contracts import DecidedBy, Decision
+from nm.legal_brain.turn import TurnEngine, TurnInput
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.shared.model_traced import TracedModel
+from nm.shared.store_file_store import FileMatterStore
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -223,7 +223,7 @@ def test_the_alternatives_are_read_out_of_the_sentence_the_adapter_writes():
     contract the adapter already keeps, and a second channel for one fact is
     the shape this build refuses. If the wording changes this returns nothing
     — worse than a wrong list, and visibly worse."""
-    from nm.core.turn import _arguable
+    from nm.legal_brain.turn import _arguable
 
     assert _arguable("… routes to X. Also arguable: Article 65; Article 58") \
         == ("Article 65", "Article 58")

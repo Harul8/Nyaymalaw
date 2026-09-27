@@ -52,7 +52,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -209,9 +209,9 @@ def check_authority() -> tuple[list[str], int, int]:
     authority that is not there — which is what the previous build did, and
     what struck three scenarios for a defect that was in the lookup.
     """
-    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
-    from nm.knowledge.manifest import Manifest
-    from nm.ports.evidence import Coverage, EvidenceNeed
+    from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter
+    from nm.legal_brain.evidence_port import Coverage, EvidenceNeed
+    from nm.legal_brain.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(ROOT / "legal_database" / "vector_store",
                                     Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
@@ -343,7 +343,7 @@ def main() -> int:
         # that matters left undone: `check.py` and every other caller read the
         # exit code, not the prose, and RG-21 is a BLOCKING release criterion.
         #
-        # It is the rule `pipeline/quality/releasegate.py` already enforces and the reason
+        # It is the rule `pipeline/releasegate.py` already enforces and the reason
         # CLAUDE.md states it: a release criterion nobody computed is the one
         # that gets assumed.
         print(f"\n  NOT MEASURED — {len(picked)} scenario(s), none scored. This "

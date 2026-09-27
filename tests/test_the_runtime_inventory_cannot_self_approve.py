@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 import yaml
-from nm.adapters.model.scripted import ScriptedModelAdapter
-from nm.bootstrap import egress_policy as policy_loader
-from nm.bootstrap.composition import Application
-from nm.domain.egress import EgressRefused, Sink
-from nm.ports.model import Prompt, Tier
 
+from nm.app.composition import Application
+from nm.shared import egress_policy as policy_loader
+from nm.shared.egress_contracts import EgressRefused, Sink
+from nm.shared.model_port import Prompt, Tier
+from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_turn_contract import _Evidence, _model_config
 
 pytestmark = pytest.mark.class_a
@@ -181,7 +181,7 @@ def test_inventory_restrictions_still_bind_local_recipients(tmp_path):
     policy = policy_loader.egress_policy(tmp_path)
     row = policy.find(document["processors"][0]["processor_id"])
     assert row is not None and row.purposes == (Sink.TELEMETRY,)
-    from nm.domain.egress import DataClass, Route, refuse
+    from nm.shared.egress_contracts import DataClass, Route, refuse
     assert refuse(Route(Sink.MODEL, row.processor_id, Sink.MODEL,
                         (DataClass.CLIENT_MATTER,)), policy)
 

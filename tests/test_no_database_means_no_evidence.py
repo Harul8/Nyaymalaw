@@ -121,7 +121,7 @@ def test_the_adapter_exists_even_though_it_is_unproven():
     """Built and unproven are both true, and the registry must be able to say
     both. A check that refused the claim by deleting the adapter would be
     honest about the evidence and wrong about the work."""
-    from nm.adapters.store.postgres import PostgresMatterStore
+    from nm.shared.store_postgres import PostgresMatterStore
 
     assert hasattr(PostgresMatterStore, "commit_accepted")
     assert not RUN_RECORD.exists(), (

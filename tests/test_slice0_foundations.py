@@ -14,49 +14,42 @@ moves.
 from __future__ import annotations
 
 import ast
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
-from nm.adapters.model.config import TierConfig, load
-from nm.domain.tiers import HARD_TIER_STEPS, PERMITTED
-from nm.domain.traceability import refuses
+
+from assurance.common.module_roles import classify_sources, load_module_roles, sources_for_roles
+from assurance.gate.layercheck import check
+from assurance.gate.layercheck import main as layercheck_main
+from nm.legal_brain.tiers_contracts import HARD_TIER_STEPS, PERMITTED
+from nm.shared.model_config import TierConfig, load
+from nm.shared.traceability_contracts import refuses
+from tests.source_role_fixtures import role_tree
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE = ROOT / "backend" / "nm" / "core"
 
 
 # ============================================== the pure core (E-001/E-004) ==
 
 @pytest.mark.class_a
 @pytest.mark.eval_id("E-001")
-def test_the_core_imports_only_core_ports_and_domain():
+def test_the_core_imports_only_core_ports_and_domain(root=None, roles=None):
     """The class-A cadence is the whole return on a pure core: invariants that
     run every commit in seconds with no corpus and no model. It is lost the
     first time one I/O import lands, quietly, in a change that looks harmless.
     """
-    allowed = {"core", "ports", "domain"}
-    offences = []
-    for path in sorted(CORE.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf8"), filename=str(path))
-        for node in ast.walk(tree):
-            mods = []
-            if isinstance(node, ast.Import):
-                mods = [a.name for a in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
-                mods = [node.module]
-            for m in mods:
-                parts = m.split(".")
-                if parts[0] == "nm" and len(parts) > 1 and parts[1] not in allowed:
-                    offences.append(f"{path.relative_to(ROOT)}: imports nm.{parts[1]}")
+    layout = (load_module_roles(root=ROOT) if roles is None
+              else classify_sources(root=root, roles=roles))
+    assert layout.sources_for_roles("core"), "pure-core source population is empty"
+    _, findings = check(layout)
+    offences = [finding for finding in findings if "nm.core may not import" in finding]
     assert not offences, "\n  ".join(offences)
 
 
 @pytest.mark.class_a
 @refuses("P1", 2)
 @pytest.mark.eval_id("E-004")
-def test_no_model_name_or_provider_client_appears_in_the_core():
+def test_no_model_name_or_provider_client_appears_in_the_core(files=None):
     """THE COUNTEREXAMPLE: a core module importing `openai`, or a step passing
     `model='gpt-4o-mini'`.
 
@@ -72,7 +65,9 @@ def test_no_model_name_or_provider_client_appears_in_the_core():
         r"[\"'](?:gpt|claude|gemini|llama|mistral|o[1-4])[-\w.]*[\"']", re.I)
 
     offences = []
-    for path in sorted(CORE.rglob("*.py")):
+    population = sources_for_roles("core") if files is None else files
+    assert population, "pure-core source population is empty"
+    for path in population:
         text = path.read_text(encoding="utf8")
         tree = ast.parse(text, filename=str(path))
         for node in ast.walk(tree):
@@ -89,45 +84,28 @@ def test_no_model_name_or_provider_client_appears_in_the_core():
     assert not offences, "\n  ".join(offences)
 
 
-def test_the_core_import_sweep_can_see_a_forbidden_layer():
+def test_the_core_import_sweep_can_see_a_forbidden_layer(tmp_path):
     """BK-52. Plant the forbidden import inside the sweep's real tree."""
-    probe = CORE / "_forbidden_layer_probe.py"
-    probe.write_text("from nm.adapters import model\n", encoding="utf8")
-    try:
-        with pytest.raises(AssertionError, match="imports nm.adapters"):
-            test_the_core_imports_only_core_ports_and_domain()
-    finally:
-        probe.unlink()
+    roles = role_tree(tmp_path, "from nm.shared.target import model\n")
+    with pytest.raises(AssertionError, match="may not import nm.adapters"):
+        test_the_core_imports_only_core_ports_and_domain(tmp_path, roles)
 
 
-def test_the_core_provider_sweep_can_see_a_named_provider():
+def test_the_core_provider_sweep_can_see_a_named_provider(tmp_path):
     """BK-52. Plant both provider-client and model-name shapes in core."""
-    probe = CORE / "_named_provider_probe.py"
-    probe.write_text(
-        "import openai\nMODEL = 'gpt-planted-2026-01-01'\n",
-        encoding="utf8",
-    )
-    try:
-        with pytest.raises(AssertionError, match="imports openai"):
-            test_no_model_name_or_provider_client_appears_in_the_core()
-    finally:
-        probe.unlink()
+    roles = role_tree(tmp_path, "import openai\nMODEL = 'gpt-planted-2026-01-01'\n")
+    files = classify_sources(root=tmp_path, roles=roles).sources_for_roles("core")
+    with pytest.raises(AssertionError, match="imports openai"):
+        test_no_model_name_or_provider_client_appears_in_the_core(files)
 
 
 @pytest.mark.class_a
-def test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter():
+def test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter(tmp_path, capsys):
     """The check must BITE, not merely pass on clean code. A lint nobody has
     seen fail is a lint nobody knows the polarity of."""
-    victim = CORE / "_layercheck_probe.py"
-    victim.write_text("from nm.adapters.store.file_store import FileMatterStore\n",
-                      encoding="utf8")
-    try:
-        proc = subprocess.run([sys.executable, "assurance/gate/layercheck.py"],
-                              cwd=ROOT, capture_output=True, text=True)
-    finally:
-        victim.unlink()
-    assert proc.returncode != 0, "layercheck passed a core module importing an adapter"
-    assert "may not import" in proc.stdout
+    roles = role_tree(tmp_path, "from nm.shared.target import FileMatterStore\n")
+    assert layercheck_main(root=tmp_path, roles=roles) != 0
+    assert "may not import nm.adapters" in capsys.readouterr().out
 
 
 # ================================================ model policy (E-004b/c/g) ==
@@ -206,7 +184,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     """
     import re
     uses = []
-    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "nm").rglob("*.py")):
         if path.name in ("config.py", "model.py", "tiers.py", "composition.py"):
             continue          # tier plumbing, not a step requesting one
         text = path.read_text(encoding="utf8")
@@ -222,7 +200,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     undeclared = [u for u in uses if u.rsplit(":", 1)[0] not in PERMITTED]
     assert not undeclared, (
         "these steps request the expensive tier and are not in "
-        "backend/nm/domain/tiers.py with the measurement that justifies them: "
+        "nm/legal_brain/tiers_contracts.py with the measurement that justifies them: "
         + ", ".join(undeclared))
 
     for step in HARD_TIER_STEPS:
@@ -231,9 +209,9 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
 
 @pytest.mark.class_a
 def test_a_hard_tier_promotion_without_a_measurement_cannot_be_declared():
-    from nm.domain.tiers import HardTierStep
+    from nm.legal_brain.tiers_contracts import HardTierStep
     with pytest.raises(ValueError, match="not a measurement"):
-        HardTierStep(step="backend/nm/core/turn.py", measurement="  ",
+        HardTierStep(step="nm/legal_brain/turn.py", measurement="  ",
                      measured_at="2026-08-30", delta="")
 
 
@@ -250,8 +228,7 @@ def test_every_turn_writes_metrics_with_latency_calls_tokens_and_model_mix(tmp_p
     """
     import json
 
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

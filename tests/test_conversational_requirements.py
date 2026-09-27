@@ -5,15 +5,16 @@ from dataclasses import asdict, replace
 from datetime import date
 
 import pytest
-from nm.adapters.model.scripted import SCRIPTED_READS
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core import deadlines, dispute_agenda, requirements
-from nm.core.turn import TurnInput
-from nm.domain import summary
-from nm.domain.matter import Fact, Matter, Provenance, Thread
-from nm.domain.metrics import TurnMetrics
-from nm.domain.requirements import Force, Requirement, State, checklist, key, settled
 
+from nm.legal_brain import requirements
+from nm.legal_brain.requirements_contracts import Force, Requirement, State, checklist, key, settled
+from nm.legal_brain.turn import TurnInput
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_scripted import SCRIPTED_READS
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file import deadlines, dispute_agenda
+from nm.work_the_file import summary_contracts as summary
+from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
 from tests.test_matter_memory import _engine, _Recorder
 from tests.test_turn_contract import KEY, finding
 
@@ -214,7 +215,7 @@ def test_force_is_not_invented_from_document_type(kind, force):
 
 
 def test_session_return_does_not_change_the_idempotent_request_identity():
-    from nm.core.turn import TurnEngine
+    from nm.legal_brain.turn import TurnEngine
     turn = TurnInput(advocate_id='adv', message='These are my instructions',
                      session_reference='old-session')
     assert TurnEngine._offer(turn, 'matter') == TurnEngine._offer(
@@ -242,8 +243,8 @@ def test_successful_empty_read_is_cached_but_changed_text_is_not(tmp_path):
 @pytest.mark.parametrize("failure", ["unavailable", "truncated", "not_established"])
 def test_failed_requirement_read_preserves_existing_rows_answers_and_cache(
         tmp_path, monkeypatch, failure):
-    from nm.domain.budget import Completion
-    from nm.ports.model import ModelError, ModelResult, Tier, Usage
+    from nm.shared.budget_contracts import Completion
+    from nm.shared.model_port import ModelError, ModelResult, Tier, Usage
 
     engine, _ = _engine(tmp_path)
     m = answer(record(), 0, "held", "The current record is available.")
@@ -273,7 +274,7 @@ def test_failed_requirement_read_preserves_existing_rows_answers_and_cache(
 
 
 def test_information_promises_cannot_become_the_nearest_legal_deadline():
-    from nm.edge.projections import cover_projection
+    from nm.work_the_file.projections_api import cover_projection
 
     m = answer(record(), 0, "promised", "I will supply it tomorrow.", due="tomorrow")
     register = deadlines.read_matter(m)

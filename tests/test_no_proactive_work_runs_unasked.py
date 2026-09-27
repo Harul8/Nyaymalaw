@@ -25,9 +25,8 @@ told nothing, because they stopped watching too.
 from __future__ import annotations
 
 import pytest
-from nm.core.conflict import screen
-from nm.core.screens import ScreenState
-from nm.core.service import (
+
+from nm.carry.service import (
     SERVICE_KINDS,
     ServiceJob,
     ServiceRefused,
@@ -40,8 +39,7 @@ from nm.core.service import (
     schedule,
     watch_report,
 )
-from nm.domain.operation import Outcome
-from nm.domain.service import (
+from nm.carry.service_contracts import (
     AuthorityState,
     Notify,
     ServiceAuthority,
@@ -50,6 +48,9 @@ from nm.domain.service import (
     refuse_service,
     revoke,
 )
+from nm.open_matter.conflict import screen
+from nm.open_matter.screens import ScreenState
+from nm.shared.operation_contracts import Outcome
 
 pytestmark = pytest.mark.class_a
 
@@ -225,7 +226,7 @@ def test_a_revocation_records_who_and_when():
 def test_the_authority_is_refused_at_dispatch_as_well_as_at_scheduling():
     """The gap between scheduling and running is exactly where a revoked
     authority keeps sending."""
-    from nm.core.service import may_dispatch
+    from nm.carry.service import may_dispatch
 
     live = _job()
     withdrawn = revoke(_authority(), by="adv_1", at="2026-09-13")
@@ -234,7 +235,7 @@ def test_the_authority_is_refused_at_dispatch_as_well_as_at_scheduling():
 
 
 def test_a_result_arriving_after_revocation_is_recorded_and_not_served():
-    from nm.core.service import may_accept
+    from nm.carry.service import may_accept
 
     withdrawn = revoke(_authority(), by="adv_1", at="2026-09-13")
     why = may_accept(withdrawn, _job(), today=TODAY)
@@ -272,7 +273,7 @@ def test_an_unknown_outcome_with_no_account_of_it_is_refused():
 def test_an_unreadable_stored_outcome_reads_as_unknown_not_completed():
     """A job whose record cannot be read is a job nobody can say reached
     anybody."""
-    from nm.core.service import job_as_dict
+    from nm.carry.service import job_as_dict
 
     row = job_as_dict(record_outcome(_job(), outcome=Outcome.COMPLETED,
                                      receipt="RCT-1"))
@@ -289,7 +290,7 @@ class _Party:
 
 
 class _Parties:
-    """The shape `backend/nm/core/parties.Parties` actually has: names as the advocate
+    """The shape `nm/core/parties.Parties` actually has: names as the advocate
     wrote them, lowercased only for matching."""
 
     def __init__(self, names, matter_id="m1"):
@@ -371,7 +372,7 @@ def test_the_watch_report_names_any_line_that_leaked_a_file():
 def test_the_leak_finder_can_see_a_planted_leak():
     """A POSITIVE CONTROL ON THE FINDER. An empty list from a checker that
     always returns one passes identically -- B-049's shape."""
-    from nm.core.service import restricted_findings
+    from nm.carry.service import restricted_findings
 
     assert restricted_findings(
         "Kiran Steels is adverse here and client on 'Ramesh v Kiran'")

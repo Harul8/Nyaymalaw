@@ -1,7 +1,7 @@
 """A FEATURE CANNOT BE FURTHER ALONG THAN THE GATES THAT ENFORCE IT.
 
 `assurance/specification/features.yaml` carries a status per feature -- decided, built, tested,
-verified live. `backend/nm/domain/gates.py` carries a `built` flag per gate. `trace`
+verified live. `nm/shared/gates_contracts.py` carries a `built` flag per gate. `trace`
 already checks each of those against the CODE:
 
     T3  a feature above `decided` with no implementing code
@@ -50,7 +50,8 @@ import pathlib
 
 import pytest
 import yaml
-from nm.domain.gates import GATES
+
+from nm.shared.gates_contracts import GATES
 
 pytestmark = pytest.mark.class_a
 

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "playbooks": [
+    {
+      "id": "cheque-dishonour", "title": "Cheque dispute preparation",
+      "summary": "Separate the instrument, payment obligation, chronology, parties, procedure and available originals.",
+      "guidance": "Navigation only. Identify what the advocate needs now. Keep each instrument and event distinct; read the instrument, return record, demand and service evidence when held. Seek both the payment basis and contrary evidence. Retrieve exact legislation and judgments before identifying procedural conditions or computing dates; do not take periods or presumptions from this guidance. Flag missing originals and contested dates without substituting an allegation for proof.",
+      "pointers": [{"kind":"act_section","act":"Negotiable Instruments Act, 1881","section":"138","citation":""}]
+    },
+    {
+      "id": "tenancy", "title": "Tenancy dispute preparation",
+      "summary": "Separate possession, contractual terms, payments, termination, parties and the applicable local regime.",
+      "guidance": "Navigation only. Identify the immediate objective and separate each dispute. Inspect the agreement, possession evidence, communications, notices and payment trail when supplied. Establish which jurisdiction and regime need research; do not assume a central or local enactment applies. Distinguish interim protection from final relief. Retrieve exact provisions, local rules and contrary authority before advising on termination, eviction or monetary recovery.",
+      "pointers": [{"kind":"act_section","act":"Transfer of Property Act, 1882","section":"106","citation":""}]
+    },
+    {
+      "id": "partition", "title": "Property and share preparation",
+      "summary": "Separate title, governing succession, claimed shares, possession, arrangements and each requested remedy.",
+      "guidance": "Navigation only. Do not infer a succession regime from names or relationships. Trace title and each asserted transfer or arrangement against the actual documents. Keep ownership, possession, access and income disputes distinct even when parties overlap. Record missing parties, contested documents and alternative factual accounts. Research the applicable legal framework and each remedy independently before addressing shares, limitation or interim relief.",
+      "pointers": []
+    },
+    {
+      "id": "money-recovery", "title": "Payment and recovery preparation",
+      "summary": "Trace the obligation, performance, due dates, acknowledgements, accounts and recoverable amounts separately.",
+      "guidance": "Navigation only. Establish the transaction and the advocate's immediate request. Read agreements, performance records, accounts and communications without treating repeated entries as independent proof. Separate principal, interest, costs and any counterclaim. Retrieve the actual procedural route, limitation source and forum/valuation material before recommending proceedings or presenting a figure. Court fees remain not assessed without the applicable versioned schedule.",
+      "pointers": []
+    },
+    {
+      "id": "bail", "title": "Liberty and bail preparation",
+      "summary": "Identify urgency, custody, allegations, procedural position and the exact governing code before research.",
+      "guidance": "Navigation only. Prioritise a genuine liberty risk while retaining permission and source controls. Inspect available complaint, FIR, custody, remand, charge and prior-order material. Do not substitute a successor code for an expressly named older code; retrieve temporal and transitional provisions. Consider both prosecution and defence material, custody context, conditions and practical preparation using retrieved law. Do not predict judicial conduct or guarantee an outcome.",
+      "pointers": []
+    }
+  ]
+}

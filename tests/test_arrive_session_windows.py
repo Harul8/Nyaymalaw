@@ -7,7 +7,7 @@ pytestmark = pytest.mark.class_a
 
 
 def test_background_reads_cannot_keep_a_session_alive(client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
     start = api.utcnow()
     clock = [start]
     monkeypatch.setattr(api, 'utcnow', lambda: clock[0])
@@ -24,7 +24,7 @@ def test_background_reads_cannot_keep_a_session_alive(client, monkeypatch):
 
 
 def test_user_activity_extends_idle_but_never_absolute_expiry(client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
     start = api.utcnow()
     clock = [start]
     monkeypatch.setattr(api, 'utcnow', lambda: clock[0])
@@ -48,7 +48,7 @@ def test_deleted_account_cannot_use_an_old_session_to_read_private_routes(client
 
 
 def test_unavailable_guessing_controls_refuse_before_deriving_password(client, monkeypatch):
-    from nm.edge import api
+    from nm.app import api
     directory = api.application().directory
     monkeypatch.setattr(directory.inner, 'failures_since', lambda *args: None)
     def must_not_authenticate(*args):
@@ -69,7 +69,7 @@ def test_corrupt_guess_counters_are_not_treated_as_zero_failures(client, content
 
 
 def test_failed_counter_write_never_reports_an_ordinary_bad_password(client, monkeypatch):
-    from nm.ports.directory import AuthenticationUnavailable
+    from nm.arrive.directory_port import AuthenticationUnavailable
     def fail_write(*args):
         raise AuthenticationUnavailable('synthetic write failure with internal details')
     monkeypatch.setattr(client.directory, 'note_failure', fail_write)
@@ -94,7 +94,7 @@ def test_one_selected_session_ends_without_ending_the_others(client):
 
 
 def test_device_description_is_recognisable_but_not_a_claim_of_location(client):
-    from nm.edge import api
+    from nm.app import api
     assert api._client_label('Mozilla Windows Chrome/120 Safari/537 Edg/120') == 'Edge on Windows'
     assert api._client_label('Mozilla Android Chrome/120') == 'Chrome on Android'
     unknown = api._client_label('<script>secret device description</script>')
@@ -106,7 +106,7 @@ def test_device_description_is_recognisable_but_not_a_claim_of_location(client):
 
 
 def test_current_foreign_and_unknown_references_cannot_end_another_account(client):
-    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol, utcnow
+    from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol, utcnow
 
     directory = client.directory
     foreign = 'foreign-session@example.test'
@@ -135,7 +135,7 @@ def test_unreadable_session_inventory_is_not_reported_as_complete(client, conten
 
 
 def test_expired_session_is_labelled_ended_without_read_refresh(client):
-    from nm.domain.advocate import utcnow
+    from nm.arrive.advocate_contracts import utcnow
 
     identity = client.get('/api/session').json()['advocate']['id']
     client.directory.open_session(identity, 'old-device', utcnow() - timedelta(hours=13))
@@ -146,7 +146,7 @@ def test_expired_session_is_labelled_ended_without_read_refresh(client):
 
 
 def test_interrupted_session_replacement_leaves_previous_record_intact(client, monkeypatch):
-    from nm.adapters.store import directory as module
+    from nm.arrive import store_directory as module
 
     selected = client.sign_in(fresh=True)
     row = next(s for s in selected.get('/api/sessions').json()['sessions'] if s['this_one'])

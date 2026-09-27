@@ -25,10 +25,19 @@ import dataclasses
 from datetime import date
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
-from nm.domain.loop import LoopEvent, LoopIdentity, LoopMode, LoopRecord, StepKind, digest
-from nm.domain.matter import (
+
+from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
+from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
+from nm.legal_brain.loop_contracts import (
+    LoopEvent,
+    LoopIdentity,
+    LoopMode,
+    LoopRecord,
+    StepKind,
+    digest,
+)
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.matter_contracts import (
     AskedQuestion,
     Basis,
     Certainty,
@@ -42,7 +51,6 @@ from nm.domain.matter import (
     Thread,
     Weight,
 )
-from nm.domain.turn_receipt import TurnReceipt, answer_payload
 
 pytestmark = pytest.mark.class_a
 
@@ -141,7 +149,7 @@ def _loop_record() -> LoopRecord:
 
 
 def _ledger() -> dict:
-    from nm.core import dependency as dep
+    from nm.work_the_file import dependency as dep
 
     ledger = dep.Ledger()
     ledger, _ = dep.observe(ledger, dep.InputKind.FACT, "fact_1", "d1")
@@ -158,7 +166,7 @@ def _ledger() -> dict:
 
 
 def _research() -> dict:
-    from nm.core import research as rs
+    from nm.legal_brain import research as rs
 
     r = rs.Research(id="res_1", objective="whether the marker was blue",
                    issue="colour at delivery", created_at="2026-09-12",
@@ -194,7 +202,7 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     assert reloaded.threads[0].posture == original.threads[0].posture
     assert reloaded.facts[0] == original.facts[0]
     assert reloaded.threads[0] == original.threads[0]
-    from nm.core.deadlines import read_matter
+    from nm.work_the_file.deadlines import read_matter
 
     register = read_matter(reloaded)
     assert register.assessed == ("thr_1",) and register.unassessed == ()
@@ -209,12 +217,12 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     # THE LEDGER. A currency that does not survive a restart is a currency
     # the restart converts to `current`, which is the defect P18 exists for.
     assert reloaded.dependencies == original.dependencies
-    from nm.core.dependency import Ledger
+    from nm.work_the_file.dependency import Ledger
     assert [n.currency.value for n in Ledger.from_stored(reloaded.dependencies).nodes] == ["stale"]
     # THE RESEARCH RECORD, rebuilt through its own reader: rounds, the
     # adverse search's state and the reliance's five verdicts all survive.
     assert reloaded.research == original.research
-    from nm.core.research import all_from_stored
+    from nm.legal_brain.research import all_from_stored
     (back,) = all_from_stored(reloaded.research)
     assert back.rounds == 1 and back.adverse[0].state.value == "ran"
     assert back.reliances[0].verified_citation is True
@@ -280,7 +288,7 @@ def test_every_persisted_type_is_covered_by_this_file():
     import dataclasses
     import typing
 
-    from nm.domain import matter as domain
+    from nm.work_the_file import matter_contracts as domain
 
     reachable: set[type] = set()
 
@@ -317,7 +325,7 @@ def test_a_served_turn_is_recorded_in_full_and_sealed(tmp_path):
     screen. That is no way to review a conversation a week later, and it is why
     every scenario finding this week had to be caught in the moment.
     """
-    from nm.adapters.store.file_store import FileMatterStore
+    from nm.shared.store_file_store import FileMatterStore
 
     store = FileMatterStore(tmp_path, key="k")
     store.record_turn({
@@ -351,7 +359,7 @@ def test_an_unreadable_transcript_is_reported_rather_than_dropped(tmp_path):
     Same shape as `list_for` reporting an unreadable matter: it carries
     `unreadable` and the reason instead of vanishing.
     """
-    from nm.adapters.store.file_store import FileMatterStore
+    from nm.shared.store_file_store import FileMatterStore
 
     store = FileMatterStore(tmp_path, key="k")
     store.record_turn({"turn_id": "good", "matter_id": "mat_1",
@@ -395,8 +403,7 @@ def test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn(
     """
     from datetime import date as _date
 
-    from nm.core.turn import TurnInput
-
+    from nm.legal_brain.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, store = build(tmp_path)

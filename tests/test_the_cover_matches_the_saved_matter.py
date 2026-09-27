@@ -5,15 +5,19 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-from nm.adapters.store.file_store import FileMatterStore
-from nm.core.deadlines import Deadline, DeadlineKind, read_matter
-from nm.domain.commission import Commission
-from nm.domain.commission import Deadline as InstructionDeadline
-from nm.domain.engagement import Engagement
-from nm.domain.matter import Basis, Matter, Posture, PostureConflict, Role, Thread
-from nm.edge.api import application
-from nm.edge.projections import board_projection, cover_projection, matter_list_projection
 
+from nm.app.api import application
+from nm.open_matter.commission_contracts import Commission
+from nm.open_matter.commission_contracts import Deadline as InstructionDeadline
+from nm.open_matter.engagement_contracts import Engagement
+from nm.shared.store_file_store import FileMatterStore
+from nm.work_the_file.deadlines import Deadline, DeadlineKind, read_matter
+from nm.work_the_file.matter_contracts import Basis, Matter, Posture, PostureConflict, Role, Thread
+from nm.work_the_file.projections_api import (
+    board_projection,
+    cover_projection,
+    matter_list_projection,
+)
 from tests.test_the_matter_cover_tells_ten_files_apart import BRIEF
 from tests.test_turn_contract import KEY
 

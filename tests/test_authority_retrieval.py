@@ -19,11 +19,10 @@ import sqlite3
 from datetime import date
 
 import pytest
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
-from nm.bootstrap.composition import ROOT
-from nm.domain.traceability import refuses
-from nm.knowledge.manifest import Manifest
-from nm.ports.evidence import (
+
+from nm.app.composition import ROOT
+from nm.legal_brain.corpus_evidence import CorpusEvidenceAdapter, default_authority_index
+from nm.legal_brain.evidence_port import (
     Binding,
     Coverage,
     EvidenceNeed,
@@ -31,6 +30,8 @@ from nm.ports.evidence import (
     SourceKind,
     TreatmentState,
 )
+from nm.legal_brain.manifest_sources import Manifest
+from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_c
 
@@ -46,7 +47,7 @@ def adapter():
         pytest.skip("the corpus is not attached")
     if not a.authority_available:
         pytest.skip("the authority index is not built — "
-                    "run python pipeline/indexing/build_authority_index.py")
+                    "run python pipeline/build_authority_index.py")
     return a
 
 
@@ -217,11 +218,11 @@ IDENTITY = ROOT / ".nm" / "identity.db"
 
 @pytest.fixture(scope="module")
 def identity():
-    from nm.knowledge.identity import IdentityIndex
+    from nm.legal_brain.identity_sources import IdentityIndex
     ix = IdentityIndex(IDENTITY)
     if not ix.available:
         pytest.skip("the identity index is not built — "
-                    "run python pipeline/indexing/build_identity_index.py")
+                    "run python pipeline/build_identity_index.py")
     return ix
 
 
@@ -407,7 +408,7 @@ def test_a_ranking_that_rests_on_an_inferred_bench_discloses_it(identity):
     way: when the LOSER's bench was inferred, say it may have been larger."""
     import sqlite3
 
-    from nm.knowledge.identity import Precedence, supersedes
+    from nm.legal_brain.identity_sources import Precedence, supersedes
     con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
     try:
         inferred = con.execute(

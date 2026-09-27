@@ -23,7 +23,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.evidence_item import (
+
+from nm.advise.answer_contracts import ElementKind
+from nm.legal_brain.quotable_contracts import Quotable
+from nm.legal_brain.turn import TurnInput
+from nm.work_the_file.evidence_item import (
     Admissibility,
     EvidenceItem,
     Existence,
@@ -35,10 +39,6 @@ from nm.core.evidence_item import (
     undelivered,
     unpreserved,
 )
-from nm.core.turn import TurnInput
-from nm.domain.answer import ElementKind
-from nm.domain.quotable import Quotable
-
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -84,7 +84,7 @@ def test_an_item_at_risk_with_no_preservation_step_becomes_a_question(tmp_path):
 @pytest.mark.eval_id("E-070")
 def test_the_inventory_reaches_the_advocate_at_all(tmp_path):
     """The wiring, asserted separately. Everything above is meaningless if
-    nothing was inventoried — and `backend/nm/core/evidence_item.py` had a complete
+    nothing was inventoried — and `nm/work_the_file/evidence_item.py` had a complete
     unit suite and no production caller for two slices (B-079)."""
     assert _of(_run(tmp_path), ElementKind.FINDING), "nothing was inventoried"
 
@@ -173,7 +173,7 @@ def test_an_out_of_vocabulary_holder_becomes_unknown_not_an_invented_member():
 
 
 def test_nothing_mentioned_is_a_different_state_from_nothing_read():
-    from nm.core.evidence_item import UNREAD_INVENTORY
+    from nm.work_the_file.evidence_item import UNREAD_INVENTORY
 
     assert read_inventory({"items": []}, Quotable(file="an account")).state == "none_mentioned"
     assert UNREAD_INVENTORY.state == "not_assessed"

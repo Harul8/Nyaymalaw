@@ -46,7 +46,7 @@ PLAN = ROOT / "assurance" / "specification" / "plan" / "build_plan.py"
 #: the register's prose sometimes names a doc or a tool rather than a test, and
 #: those are legitimate checks that still have to exist. The homes come from the
 #: layout's one owner, and a match starts where a path starts -- never inside one --
-#: so `backend/nm/x.py` is not also read as a missing `nm/x.py`.
+#: so `nm/x.py` is not also read as a missing `nm/x.py`.
 PATH = re.compile(r"(?<![\w./-])((?:" + "|".join(HOMES) + r")/[\w./-]+?"
                   r"\.(?:py|md|yaml|js|css|docx|xlsx))(?:::(\w+))?")
 
@@ -201,7 +201,7 @@ def test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at():
         if not (key.startswith("S") and key[1:2].isdigit()):
             continue                       # a one-off shape, described in prose
         # A SHARE MUST BE A FUNCTION. Two defects naming the same FILE are two
-        # fixes that happen to live together, not one mechanism -- `frontend/app.js`
+        # fixes that happen to live together, not one mechanism -- `nm/app/app.js`
         # appeared "shared" by that reading and is nothing of the kind.
         checks = {f"{p}::{f}" for p, f in PATH.findall(row["check"]) if f}
         by_shape[key].append((row["id"], checks))
@@ -471,7 +471,7 @@ def test_no_reproduction_declaration_outlives_its_row():
     A declaration table rots in one direction: the defect is fixed, the entry
     stays, and the next reader believes a gap that has been closed. Same
     arrangement as `UNWIRED` in test_reached_from_production, whose stale
-    `nm.domain.reads` entry failed the build the hour that module was wired.
+    `nm.legal_brain.reads_contracts` entry failed the build the hour that module was wired.
     """
     rows = {r["id"]: r for r in _register()}
     stale = []

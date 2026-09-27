@@ -10,8 +10,10 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from nm.domain.advocate import utcnow
-from nm.domain.urgency import (
+
+from nm.app.api import application
+from nm.arrive.advocate_contracts import utcnow
+from nm.work_the_file.urgency_contracts import (
     UrgencyClass,
     UrgencyReceipt,
     UrgencyRegister,
@@ -20,7 +22,6 @@ from nm.domain.urgency import (
     project,
     read_receipts,
 )
-from nm.edge.api import application
 
 pytestmark = pytest.mark.class_a
 
@@ -87,7 +88,7 @@ def test_nine_real_protective_turns_and_a_fresh_process_preserve_the_same_urgenc
     approve_fixture_account(client.directory)
     matter_id = _matter(client)
     instant = utcnow()
-    monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant)
+    monkeypatch.setattr("nm.app.api.utcnow", lambda: instant)
     engine = application().engine
     monkeypatch.setattr(engine, "_clock", lambda: instant)
     raised = _post(client, matter_id, _offer(client, matter_id))
@@ -114,8 +115,8 @@ def test_nine_real_protective_turns_and_a_fresh_process_preserve_the_same_urgenc
     assert len(stored.emergency_triage) == 9 and stored.facts == before.facts
     from tests.test_turn_contract import KEY
     script = ("import json,sys; from pathlib import Path; "
-              "from nm.adapters.store.file_store import FileMatterStore; "
-              "from nm.domain.urgency import project; "
+              "from nm.shared.store_file_store import FileMatterStore; "
+              "from nm.work_the_file.urgency_contracts import project; "
               "m=FileMatterStore(Path(sys.argv[1]),key=sys.argv[2]).load(sys.argv[3]); "
               "print(json.dumps({'urgency':project(m.urgency_records),'turns':len(m.emergency_triage)}))")
     restarted = subprocess.run([sys.executable, "-c", script, str(application().store._root),
@@ -136,14 +137,14 @@ def test_permission_ending_cannot_resolve_or_hide_a_live_danger(client, monkeypa
     approve_fixture_account(client.directory)
     matter_id = _matter(client)
     instant = utcnow()
-    monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant)
+    monkeypatch.setattr("nm.app.api.utcnow", lambda: instant)
     assert _post(client, matter_id, _offer(client, matter_id)).status_code == 200
     assert _post(client, matter_id, {"request_key": "permission", "basis": "Supplied danger",
                                    "hours": 1}).status_code == 200
     before = application().store.load(matter_id).urgency_records
     view = client.get(f"/api/matters/{matter_id}/emergency").json()
     if end == "expiry":
-        monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant + timedelta(hours=2))
+        monkeypatch.setattr("nm.app.api.utcnow", lambda: instant + timedelta(hours=2))
         # F-A-12: two untouched hours end the session too, so the advocate
         # signs in again at the later time before looking.
         client.sign_in()
@@ -318,8 +319,8 @@ def test_unreadable_resolution_never_defaults_to_a_live_or_cleared_record(client
 
 
 def test_postgres_uses_the_same_complete_urgency_and_receipt_serialization_without_columns():
-    from nm.adapters.store.postgres import _decode, _encode
-    from nm.domain.matter import Matter
+    from nm.shared.store_postgres import _decode, _encode
+    from nm.work_the_file.matter_contracts import Matter
 
     row = UrgencyRegister.raise_manual("urgency-1", _instruction(), "advocate-1", utcnow())
     receipt = UrgencyReceipt(

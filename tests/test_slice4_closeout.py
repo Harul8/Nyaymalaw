@@ -23,10 +23,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from nm.core.turn import TurnInput
-from nm.domain.answer import ElementKind, Signal
-from nm.ports.evidence import Coverage, EvidenceResult
 
+from nm.advise.answer_contracts import ElementKind, Signal
+from nm.legal_brain.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.turn import TurnInput
 from tests.test_turn_contract import _Evidence, build, confirmed, finding
 
 pytestmark = pytest.mark.class_a
@@ -290,9 +290,9 @@ def test_the_board_distinguishes_no_deadline_from_no_register(tmp_path):
     tell. Defect shape S1 again: the absent input produced the shape of a
     clean result.
     """
-    from nm.core.deadlines import Deadline, DeadlineKind
-    from nm.domain.matter import Matter, Thread
-    from nm.edge.projections import board_projection
+    from nm.work_the_file.deadlines import Deadline, DeadlineKind
+    from nm.work_the_file.matter_contracts import Matter, Thread
+    from nm.work_the_file.projections_api import board_projection
 
     matter = Matter.create(advocate_id="adv", title="t")
     thread = Thread.create(label="the possession matter")
@@ -334,9 +334,9 @@ def test_the_matter_list_orders_by_a_deadline_it_actually_holds():
     always fell through to recency and the ordering rule the list exists to
     obey had never once applied. Shape S11: a check that cannot fail.
     """
-    from nm.core.deadlines import Deadline, DeadlineKind
-    from nm.domain.matter import Matter, Thread
-    from nm.edge.projections import matter_list_projection
+    from nm.work_the_file.deadlines import Deadline, DeadlineKind
+    from nm.work_the_file.matter_contracts import Matter, Thread
+    from nm.work_the_file.projections_api import matter_list_projection
 
     def matter_with(title, on):
         m = Matter.create(advocate_id="adv", title=title)
@@ -375,9 +375,9 @@ def test_the_thread_board_puts_the_nearest_window_first():
     docstring, and applied by neither board. `nearest_thread` had a test and
     no production caller, which is the same fact from the other side.
     """
-    from nm.core.deadlines import Deadline, DeadlineKind
-    from nm.domain.matter import Matter, Thread
-    from nm.edge.projections import board_projection
+    from nm.work_the_file.deadlines import Deadline, DeadlineKind
+    from nm.work_the_file.matter_contracts import Matter, Thread
+    from nm.work_the_file.projections_api import board_projection
 
     matter = Matter.create(advocate_id="adv", title="t")
     slow = Thread.create(label="the interesting one")
