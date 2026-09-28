@@ -46,6 +46,7 @@ from nm.legal_brain.reason.requirements_contracts import (
     Outcome,
     Requirement,
     State,
+    applicability_identity,
     facts_identity,
     key,
     restored,
@@ -279,7 +280,7 @@ def not_retrieved() -> Reading:
     return Reading((), 0, "nothing has been retrieved for this dispute yet")
 
 
-def read(data: dict, passages: tuple[Passage, ...]) -> Reading:
+def read(data: dict, passages: tuple[Passage, ...], *, context_identity: str = "") -> Reading:
     """Keep only requirements whose span is verbatim in a supplied passage.
 
     THE SPAN IS CHECKED AGAINST THE PASSAGES THAT WENT IN, not against the
@@ -325,7 +326,8 @@ def read(data: dict, passages: tuple[Passage, ...]) -> Reading:
         seen.add(need.casefold())
         kept.append(Requirement(need=need, why=why, span=span, source=source,
                                 locator=passage.locator, force=force,
-                                source_identity=passage.identity))
+                                source_identity=passage.identity,
+                                context_identity=context_identity))
     return Reading(tuple(kept), dropped,
                    "" if kept else "the retrieved passages supported no requirement")
 
@@ -348,9 +350,11 @@ def merge(held: tuple, reading: Reading) -> tuple:
         if key(found) not in seen:
             seen[key(found)] = len(out)
             out.append(found)
-        elif found.source_identity != out[seen[key(found)]].source_identity:
-            # Revalidation of the same exact clause updates its source identity.
-            # Unrelated rows and the advocate's answer history are untouched.
+        elif (found.source_identity != out[seen[key(found)]].source_identity
+              or found.context_identity != out[seen[key(found)]].context_identity):
+            # Revalidation of the same clause updates source and applicability
+            # identity. Rows absent from the new reading remain on the file as
+            # stale history; they are not silently certified by this read.
             out[seen[key(found)]] = found
     return tuple(out)
 
@@ -424,6 +428,12 @@ def apply_answers(matter, proposals, *, message, turn_id, today, current_only=Tr
                 not isinstance(selected_fact, str) or not selected_fact.strip()):
             continue
         requirement = next(r for r in restored(thread) if key(r) == ident)
+        if (requirement.source_identity or thread.requirement_reads.get(requirement.locator)) \
+                and not requirement.context_identity:
+            continue
+        if (requirement.context_identity
+                and requirement.context_identity != applicability_identity(thread, matter.facts)):
+            continue
         current_source = thread.requirement_reads.get(requirement.locator)
         if current_source and current_source != requirement.source_identity:
             continue
@@ -452,7 +462,7 @@ def apply_answers(matter, proposals, *, message, turn_id, today, current_only=Tr
                 due = date.fromisoformat(old.due) if same_promise and old.due else None
             outcome = Outcome(state, quote, today.isoformat(), facts[0].id,
                               due.isoformat() if due else "", requirement.source_identity,
-                              requires_review)
+                              requires_review, requirement.context_identity)
         except (TypeError, ValueError):
             continue
         outcomes = dict(thread.requirement_outcomes)
@@ -475,19 +485,26 @@ def conversation_context(thread, facts, today, *, resumed=False, records=(),
     if not rows:
         return ""
     due = {key(item.requirement) for item in projection.due_items(today, resumed=resumed)}
+    current_rows = tuple(item for item in rows if item.applicability_current)
+    stale_count = len(rows) - len(current_rows)
+    stale_note = (f"{stale_count} older checklist row(s) need legal-applicability "
+                  "re-review against the changed dispute; they are withheld "
+                  "from question selection, not erased from the file. "
+                  if stale_count else "")
     return ("\n\nCHECKLIST CONTEXT, not a script or permission to act. Answer the "
             "advocate's immediate request first. If useful, weave a proportionate "
             "group of materially decision-changing questions into the response, "
             "chosen by what each answer unlocks, with urgency breaking ties. "
             "Do not ask for held or unavailable items. A promised item is not due "
             "for repetition unless due_now is true or the advocate raises it. "
+            + stale_note +
             "Unknown answers are not an invitation to repeat the same question "
             "without new evidence. Explain unavailable material's purpose and "
             "a source-supported course without it; state when no alternative is "
             "established. No item being unavailable is by itself a legal verdict. "
             "No checklist state proves merits, authenticity, or document access.\n"
             + json.dumps([{**i.rendered(), "due_now": key(i.requirement) in due}
-                          for i in rows], ensure_ascii=False))
+                          for i in current_rows], ensure_ascii=False))
 
 
 def context_projection(thread, facts, today: date, *, resumed=False, records=(),

@@ -7,12 +7,12 @@ from unittest.mock import Mock
 import pytest
 
 from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
-from nm.legal_brain.verify.brain_finalization import SavedCheckReader
-from nm.legal_brain.verify.interaction_review import InteractionReviewService
-from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
 from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
 from nm.legal_brain.reason.working_record import area_id
 from nm.legal_brain.reason.working_record_contracts import AnalysisArea
+from nm.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.legal_brain.verify.interaction_review import InteractionReviewService
+from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
 from nm.shared.budget_contracts import Budget
 from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_communication_premises_require_their_own_assessment import PremiseJudge
@@ -82,7 +82,8 @@ def test_serial_candidate_wording_and_scope_reviews_use_actual_shared_journal_an
     assert result.stop == "interaction_checks_complete_private_candidate"
     assert len(result.working_reviews) == len(result.interaction_reviews) == 1
     assert len(result.working_scope_reviews) == len(result.working_completeness) == 1
-    assert result.working_completeness[0].complete
+    assert not result.working_completeness[0].complete
+    assert not result.working_completeness[0].terminal_ready
     children = store.load("mat_loop").loop_records[1:]
     assert len(children) == 3
     assert ":verify:" in children[0].identity.turn_id
@@ -121,11 +122,12 @@ def test_absent_or_input_only_work_cannot_complete_needed_analysis_after_checked
     assert not store.load("mat_loop").turn_receipts and not result.client_ready
 
 
-def test_narrow_question_can_be_checked_without_seven_forced_analysis_headings(tmp_path):
+def test_narrow_question_is_checked_without_forced_headings_but_remains_open(tmp_path):
     _store, _parent, *_owners, evaluator = composed_working_case(tmp_path)
     result = run_composed_working(evaluator)
     assert result.interaction_reviews[0].checked
-    assert result.working_completeness[0].complete
+    assert not result.working_completeness[0].complete
+    assert not result.working_completeness[0].terminal_ready
     assert all(row.state == "inapplicable" for row in result.working_completeness[0].items)
     assert result.working_reviews[0].annotations == ()
     assert not result.client_ready

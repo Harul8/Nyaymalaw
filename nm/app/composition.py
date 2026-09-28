@@ -459,9 +459,13 @@ class Application:
 
     def checklist_source_current_for(self, matter_id: str, advocate_id: str, *,
                                      expected_version: int,
-                                     session_current: Callable[[], bool]):
+                                     session_current: Callable[[], bool],
+                                     generation_guard=None):
         """Request-bound cached law; missing source evidence never becomes a tick."""
-        from nm.legal_brain.orchestrate.controlled_generations import GenerationUnavailable
+        from nm.legal_brain.orchestrate.controlled_generations import (
+            GenerationGuard,
+            GenerationUnavailable,
+        )
         from nm.legal_brain.retrieve.checklist_sources import bind_source_current
 
         if type(expected_version) is not int or expected_version < 1:
@@ -472,12 +476,17 @@ class Application:
             return bool(matter and matter.advocate_id == advocate_id
                         and matter.version == expected_version)
 
-        try:
-            guard = self.source_generation_guard()
-        except GenerationUnavailable:
-            # The file remains readable. Only source-current certification is
-            # unavailable, and every dependent candidate remains unresolved.
-            return lambda _source, _generation: False
+        if generation_guard is None:
+            try:
+                guard = self.source_generation_guard()
+            except GenerationUnavailable:
+                # The file remains readable. Only source-current certification is
+                # unavailable, and every dependent candidate remains unresolved.
+                return lambda _source, _generation: False
+        elif isinstance(generation_guard, GenerationGuard):
+            guard = generation_guard
+        else:
+            raise ValueError("A checklist source owner needs its actual generation guard")
         return bind_source_current(self.evidence, guard,
             owned_current=owned_current, session_current=session_current)
 

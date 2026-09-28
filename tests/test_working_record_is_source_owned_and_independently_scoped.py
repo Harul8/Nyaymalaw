@@ -9,15 +9,17 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.verify.brain_finalization import SavedCheckReader
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind, digest
 from nm.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.legal_brain.orchestrate.loop_contracts import (
+    LoopLimits,
+    LoopMode,
+    StepKind,
+    StopReason,
+    digest,
+)
 from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
 from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
-from nm.legal_brain.verify.verifier import IndependentVerifier
 from nm.legal_brain.reason.working_record import (
     PROPOSE_TOOL,
     READ_TOOL,
@@ -28,7 +30,16 @@ from nm.legal_brain.reason.working_record import (
     working_record_tools,
 )
 from nm.legal_brain.reason.working_record_contracts import AnalysisArea
-from nm.legal_brain.verify.working_scope import CHECK_NAME, WORKING_SCOPE_SCHEMA, WorkingScopeService
+from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.verify.working_scope import (
+    CHECK_NAME,
+    REQUEST_DEMAND_SCHEMA,
+    WORKING_SCOPE_SCHEMA,
+    WorkingScopeService,
+)
 from nm.shared.budget_contracts import Budget, Completion, Spend
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import ModelResult, Tier, ToolCall, Usage
@@ -105,7 +116,10 @@ def _scope_answer(packet, *, needed=(), covered=()):
 
 
 class ScopeJudge(ScriptedModelAdapter):
-    def __init__(self, mutation=lambda data, _packet: data, *, needed=(), covered=()):
+    def __init__(
+        self, mutation=lambda data, _packet: data, *, needed=(), covered=(),
+        demand_mutation=lambda data, _packet: data,
+    ):
         super().__init__(
             ModelConfig(
                 {Tier.JUDGE: TierConfig(Tier.JUDGE, "scripted", "working-scope-judge", None, None)}
@@ -113,14 +127,45 @@ class ScopeJudge(ScriptedModelAdapter):
         )
         self.prompts, self.mutation = [], mutation
         self.needed, self.covered = needed, covered
+        self.demand_needed = None
+        self.demand_mutation = demand_mutation
 
     def structured(self, prompt, schema, tier, **_kwargs):
-        assert schema == WORKING_SCOPE_SCHEMA and tier is Tier.JUDGE
+        assert schema in (WORKING_SCOPE_SCHEMA, REQUEST_DEMAND_SCHEMA) and tier is Tier.JUDGE
         self.prompts.append(prompt)
         packet = json.loads(prompt.user)
-        data = self.mutation(
-            _scope_answer(packet, needed=self.needed, covered=self.covered), packet
-        )
+        if schema == WORKING_SCOPE_SCHEMA:
+            data = self.mutation(
+                _scope_answer(packet, needed=self.needed, covered=self.covered), packet
+            )
+        else:
+            subject = packet["subject"]
+            original = subject["original_instruction"]
+            needed = self.needed if self.demand_needed is None else self.demand_needed
+            requested_threads = {
+                row["thread_id"]
+                for row in subject["areas"]
+                if row["id"] in needed and row["thread_id"] is not None
+            }
+            requested_threads.update(
+                thread_id
+                for row in subject["needs"]
+                if row["id"] in needed
+                for thread_id in row["thread_ids"]
+            )
+            data = self.demand_mutation(
+                {
+                    "subject_identity": packet["subject_identity"],
+                    "request_identity": digest(original),
+                    "population_assessed": True,
+                    "comprehensive": False,
+                    "requested_thread_ids": sorted(requested_threads),
+                    "needed_ids": list(needed),
+                    "reason": "Independent request-only demand assessment",
+                    "request_quote": original,
+                },
+                packet,
+            )
         return ModelResult(
             None,
             data,
@@ -167,9 +212,11 @@ def _case(
     fact=False,
     candidate_mutation=lambda value: value,
     scope_mutation=lambda data, _packet: data,
+    demand_mutation=lambda data, _packet: data,
     source_current=lambda *_: True,
     verdict=None,
     message="Which rule was read?",
+    terminal="question",
     return_brain=False,
 ):
     store, identity, log, author, _ = _setup(tmp_path)
@@ -235,6 +282,10 @@ def _case(
                 {"inventory_identity": inventory.identity, "entries": [_entry(inventory)]}
             )
             return _response(ToolCall("annotation", PROPOSE_TOOL, proposal))
+        if terminal == "conversation":
+            return _response(
+                ToolCall("terminal", "propose_conversation", {"text": "Understood."})
+            )
         return _response(
             ToolCall("terminal", "ask_advocate", {"question": "Which document records that event?"})
         )
@@ -273,7 +324,7 @@ def _case(
         cost_ceiling=lambda *_: 0.03,
     )
     working = WorkingRecordReviewService(reviewer=reviewer, owner=owner)
-    judge = ScopeJudge(scope_mutation)
+    judge = ScopeJudge(scope_mutation, demand_mutation=demand_mutation)
     reader = SavedCheckReader(
         store=store,
         log=log,
@@ -315,7 +366,8 @@ def test_working_candidates_are_actual_tools_not_author_pass_flags(tmp_path):
         proof.assessed and proof.budget.spend.children == checked.review.budget.spend.children + 1
     )
     complete = working.completeness(outcome, scope_service=scope)
-    assert complete.complete and not complete.client_ready and not complete.released
+    assert not complete.complete and not complete.client_ready and not complete.released
+    assert not complete.terminal_ready
     assert next(row for row in complete.items if row.id == area).state == "checked"
     assert all(row.state == "inapplicable" for row in complete.items if row.id not in {area, need})
     packet = json.loads(judge.prompts[0].user)["subject"]
@@ -324,9 +376,14 @@ def test_working_candidates_are_actual_tools_not_author_pass_flags(tmp_path):
 
 
 def test_missing_needed_work_stays_unassessed_and_narrow_scope_is_proportionate(tmp_path):
-    _, outcome, _, working, scope, judge, _ = _case(tmp_path, source=False, message="Thank you.")
+    _, outcome, _, working, scope, judge, _ = _case(
+        tmp_path, source=False, message="Thank you.", terminal="conversation"
+    )
+    assert outcome.reason is StopReason.CONVERSATION
     narrow = scope.review(outcome)
     assert narrow.assessed and narrow.comprehensive is False
+    assert narrow.model_steps == 2 and len(judge.prompts) == 2
+    assert scope.recorded(outcome) == narrow
     result = working.completeness(outcome, scope_service=scope)
     assert result.complete and all(row.state == "inapplicable" for row in result.items)
     assert not working.recorded(outcome).annotations
@@ -340,6 +397,82 @@ def test_missing_needed_work_stays_unassessed_and_narrow_scope_is_proportionate(
     missing = full_work.completeness(full, scope_service=full_scope)
     assert not missing.complete
     assert next(row for row in missing.items if row.needed).state == "not_assessed"
+
+
+def test_all_inapplicable_scope_cannot_complete_a_question_on_two_disputes(tmp_path):
+    _, outcome, _, working, scope, _, _ = _case(
+        tmp_path,
+        source=False,
+        threads=(Thread("thread_one", "Title dispute"), Thread("thread_two", "Rent dispute")),
+        message=(
+            "Analyse both disputes, the applicable law, the case to prepare, "
+            "and the opposing arguments."
+        ),
+    )
+    assert outcome.reason is StopReason.QUESTION
+    proof = scope.review(outcome)
+    assert proof.comprehensive is False
+    assert all(row.needed is False for row in proof.judgments)
+    result = working.completeness(outcome, scope_service=scope)
+    assert not result.complete
+    assert not result.client_ready and not result.released
+
+
+def test_request_only_demand_disagrees_with_a_vacuous_conversational_scope(tmp_path):
+    _, outcome, _, working, scope, judge, _ = _case(
+        tmp_path,
+        source=False,
+        terminal="conversation",
+        threads=(Thread("thread_one", "Title dispute"), Thread("thread_two", "Rent dispute")),
+        message="Analyse both disputes, the law, the evidence, and the opposing arguments.",
+    )
+    judge.demand_needed = (area_id("thread_one", AnalysisArea.ARGUMENTS),
+                           area_id("thread_two", AnalysisArea.OPPOSITION))
+    proof = scope.review(outcome)
+    assert len(judge.prompts) == 2
+    demand_packet = json.loads(judge.prompts[1].user)["subject"]
+    assert "checked_annotations" not in demand_packet
+    assert "author_response" not in demand_packet
+    assert proof.model_steps == 2
+    assert not proof.assessed
+    result = working.completeness(outcome, scope_service=scope)
+    assert not result.complete and not result.scope_assessed
+    assert all(row.state == "not_assessed" for row in result.items)
+    assert scope.recorded(outcome) == proof
+
+
+def test_unknown_request_demand_cannot_complete_narrow_conversation(tmp_path):
+    _, outcome, _, working, scope, judge, _ = _case(
+        tmp_path, source=False, terminal="conversation", message="Thank you.",
+        demand_mutation=lambda data, _packet: {**data, "population_assessed": None},
+    )
+    proof = scope.review(outcome)
+    assert len(judge.prompts) == 2 and not proof.assessed
+    assert not working.completeness(outcome, scope_service=scope).complete
+    assert scope.recorded(outcome) == proof
+
+
+def test_request_demand_uses_remaining_dispatch_allowance_and_never_assumes_green(tmp_path):
+    _, outcome, _, working, scope, judge, _ = _case(
+        tmp_path, source=False, terminal="conversation", message="Thank you."
+    )
+    proof = scope.review(outcome, max_model_calls=1)
+    assert len(judge.prompts) == 1 and proof.model_steps == 1
+    assert not proof.assessed and not working.completeness(outcome, scope_service=scope).complete
+    assert scope.recorded(outcome) is not None
+    assert len(judge.prompts) == 1  # readback never spends or dispatches
+
+
+def test_request_demand_cannot_support_itself_with_invented_request_words(tmp_path):
+    _, outcome, _, working, scope, judge, _ = _case(
+        tmp_path, source=False, terminal="conversation", message="Thank you.",
+        demand_mutation=lambda data, _packet: {**data, "request_quote": "unowned instruction"},
+    )
+    with pytest.raises(ReviewRefused, match="Request demand differs"):
+        scope.review(outcome)
+    assert len(judge.prompts) == 2
+    with pytest.raises(ReviewRefused, match="Request demand differs"):
+        working.completeness(outcome, scope_service=scope)
 
 
 @pytest.mark.parametrize(

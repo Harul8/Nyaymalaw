@@ -7,17 +7,24 @@ from types import SimpleNamespace
 
 import pytest
 
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
 from nm.legal_brain.reason import requirements
+from nm.legal_brain.reason.requirements_contracts import (
+    Force,
+    Outcome,
+    Requirement,
+    State,
+    checklist,
+    key,
+)
 from nm.legal_brain.verify.brain_assessment import AssessmentService
 from nm.legal_brain.verify.checklist_review import ChecklistReviewService, classifications_for
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.reason.requirements_contracts import Force, Outcome, Requirement, State, checklist, key
 from nm.shared.model_port import ProviderUnavailable, ToolCall
 from nm.work_the_file import deadlines, dispute_agenda, summary
 from nm.work_the_file.matter_contracts import Certainty, Thread
 from nm.work_the_file.write_tools import write_tools
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
-from tests.test_independent_claim_verifier import finding, response
+from tests.test_independent_claim_verifier import finding, premise, response
 from tests.test_the_loop_records_work_before_using_it import _response
 
 pytestmark = pytest.mark.class_a
@@ -34,6 +41,9 @@ def run_conversation(tmp_path, *, answer="held", words="The notice was served ye
                      current_source=PASSAGE.identity, read=True, due="", source_current=None):
     thread = Thread("thr_notice", "Notice dispute", requirements=(NEED,),
                     requirement_reads={NEED.locator: current_source}, chronology=("fact_1",))
+    context = requirements.applicability_identity(thread, (premise(),))
+    thread = replace(thread, requirements=(replace(NEED, context_identity=context),),
+                     requirement_read_contexts={NEED.locator: context})
     store, brain, initial, judge, claim = _case(tmp_path, threads=(thread,),
                                               judged=judged, children=max_children)
     judge.error = error

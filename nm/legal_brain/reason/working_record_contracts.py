@@ -175,10 +175,11 @@ class WorkingCompleteness:
     items: tuple[CompletenessItem, ...]
     scope_assessed: bool
     check_turn_id: str = ""
+    terminal_ready: bool = False
 
     @property
     def complete(self):
-        return self.scope_assessed and all(
+        return self.scope_assessed and self.terminal_ready and all(
             row.needed is not None and (row.needed is False or row.state == "checked")
             for row in self.items
         )

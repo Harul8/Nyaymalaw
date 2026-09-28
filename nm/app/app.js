@@ -1129,9 +1129,12 @@ function renderRequirements(item, row) {
   const list = document.createElement('ul');
   list.className = 'requirement-list';
   for (const need of row.requirements || []) {
-    const mark = REQUIREMENT_MARK[need.state] || REQUIREMENT_MARK.outstanding;
+    const needsRelevanceReview = need.applicability_state === 'review_required';
+    const mark = needsRelevanceReview ? { mark: '?', label: 'legal relevance needs re-review' }
+      : REQUIREMENT_MARK[need.state] || REQUIREMENT_MARK.outstanding;
     const line = document.createElement('li');
-    line.className = `requirement requirement--${need.state}`;
+    line.className = `requirement requirement--${need.state}`
+      + (needsRelevanceReview ? ' requirement--review-required' : '');
     const tick = document.createElement('span');
     tick.className = 'requirement-mark'; tick.textContent = mark.mark;
     // The mark is decorative; the state is in words for anyone who cannot see
@@ -1144,7 +1147,8 @@ function renderRequirements(item, row) {
     line.appendChild(what);
     const state = document.createElement('span');
     state.className = 'requirement-state';
-    state.textContent = need.state === 'promised' && need.due
+    state.textContent = needsRelevanceReview ? 'legal relevance needs re-review'
+      : need.state === 'promised' && need.due
       ? `promised by ${need.due}` : need.state === 'promised'
         ? 'promised — no confirmed date' : mark.label;
     line.appendChild(state);
@@ -1157,7 +1161,9 @@ function renderRequirements(item, row) {
     }
     const basis = document.createElement('p');
     basis.className = 'requirement-basis';
-    basis.textContent = need.basis ? `${need.source} \u00b7 ${need.basis}` : need.source;
+    basis.textContent = (needsRelevanceReview
+      ? 'Previously read passage; relevance to the corrected dispute is not established. '
+      : '') + (need.basis ? `${need.source} \u00b7 ${need.basis}` : need.source);
     line.appendChild(basis);
     const span = document.createElement('blockquote');
     span.className = 'requirement-span';
@@ -1176,10 +1182,14 @@ function renderRequirements(item, row) {
   item.appendChild(list);
   const state = document.createElement('p');
   state.className = 'requirement-summary';
-  // Two different facts, and the board says which it means: asking is finished
-  // when nothing is outstanding; the dispute is finished when nothing is also
-  // merely promised.
-  state.textContent = row.requirements_settled
+  // A changed dispute needs a law-relevance review before any earlier
+  // checklist can be presented as settled, even if no new question is due.
+  const relevanceReviews = row.applicability_review_required || 0;
+  state.textContent = relevanceReviews
+    ? `${relevanceReviews} checklist item${relevanceReviews === 1 ? ' needs' : 's need'} legal relevance re-review`
+      + (row.outstanding_requirements
+        ? `; ${row.outstanding_requirements} still to ask about.` : '.')
+    : row.requirements_settled
     ? 'Checklist follow-up complete on the available record; this is not a decision on the dispute.'
     : row.nothing_to_ask
       ? 'Nothing further to ask; waiting on what was promised.'
@@ -1322,7 +1332,7 @@ function restoredTurn(turn) {
     matter_id: turn.matter_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
-    at: turn.at || '', raw: turn,
+    at: turn.at || '',
   } };
 }
 
@@ -1765,15 +1775,10 @@ function renderTurn(entry) {
       ? `read back from the record · served ${entry.answer.at}`
       : 'read back from the record';
     audit.appendChild(note);
-    // THE RAW TURN, for the review that needs it. BK-39 keeps it and moves
-    // it: prompts, model answers, gates and ids are what this store exists
-    // for, and they are not what an advocate opens History to read.
-    if (entry.answer.raw) {
-      const pre = document.createElement('pre');
-      pre.className = 'recorded-raw';
-      pre.textContent = JSON.stringify(entry.answer.raw, null, 2);
-      audit.appendChild(pre);
-    }
+    // This is the advocate's released answer, not an operator audit view.
+    // Keep diagnostic identities and raw records behind separately authorised
+    // operator access; serialising even the release projection here exposed
+    // internal turn IDs in the ordinary History pane.
     wrap.appendChild(audit);
     return wrap;
   }
@@ -3200,16 +3205,13 @@ function renderIndexLine(d) {
   }
 }
 
-// Where a hit sat in THIS search, in words. Never a measurement.
-//
-// Three bands and no number. Two would make the middle of a result
-// set read as either strong or weak; a number invites exactly the
-// reliance the underlying rank cannot support.
-function rankBand(confidence) {
-  if (typeof confidence !== 'number') return 'rank not recorded';
-  if (confidence >= 0.85) return 'top of this search';
-  if (confidence >= 0.5) return 'mid-ranked here';
-  return 'lower-ranked here';
+// List position is observable; the FTS score is not a calibrated measure of
+// relevance and cannot tell whether a hit is first among these results.
+// A sole hit has no meaningful relative position to display.
+function searchPosition(index, total) {
+  if (!Number.isInteger(index) || !Number.isInteger(total)
+      || index < 0 || total <= 1 || index >= total) return '';
+  return `result ${index + 1} of ${total} shown`;
 }
 
 function renderSearch(d) {
@@ -3244,7 +3246,7 @@ function renderSearch(d) {
   count.textContent = `${d.hit_count} ranked paragraph${d.hit_count === 1 ? '' : 's'}`;
   body.appendChild(count);
 
-  d.hits.forEach((h) => {
+  d.hits.forEach((h, index) => {
     const card = document.createElement('article');
     card.className = 'hit';
 
@@ -3261,16 +3263,11 @@ function renderSearch(d) {
     // exact lookup, and the way that happens is a template that omits this.
     const prov = document.createElement('span');
     prov.className = `pill ${h.origin === 'searched' ? 'searched' : 'resolved'}`;
-    // A BAND, NOT A PERCENTAGE.
-    //
-    // `confidence` is an FTS rank normalised to 0..1, and the
-    // adapter's own docstring says it is comparable only WITHIN one
-    // query. Rendered as `95%` it reads as calibrated confidence in
-    // relevance -- and on a real search the top two hits BOTH showed
-    // 95%, which is precision the number cannot carry. A band says
-    // only what the rank supports: where this paragraph sat against
-    // the others in THIS search.
-    prov.textContent = `${h.origin} · ${rankBand(h.confidence)}`;
+    // Preserve searched-vs-resolved provenance. Do not turn the uncalibrated
+    // index score into a quality band; even tied hits have a definite display
+    // position, while a sole result has nothing to compare against.
+    const position = searchPosition(index, d.hits.length);
+    prov.textContent = position ? `${h.origin} · ${position}` : h.origin;
     head.appendChild(prov);
 
     const text = document.createElement('p');
@@ -3456,7 +3453,7 @@ function renderCases(researchId, discovery) {
       (c.paragraphs_matched ? ` · ${c.paragraphs_matched} paragraph${c.paragraphs_matched === 1 ? '' : 's'} matched` : '');
     const prov = document.createElement('span');
     prov.className = `pill ${c.origin === 'searched' ? 'searched' : 'resolved'}`;
-    prov.textContent = `${c.origin} · ${c.band}`;
+    prov.textContent = c.band ? `${c.origin} · ${c.band}` : c.origin;
     head.append(name, meta, prov);
     const snippet = document.createElement('p');
     snippet.className = 'hit-text'; snippet.textContent = c.snippet || '';
@@ -4299,7 +4296,10 @@ function showApplication(advocate, workspace, professionalApproval) {
   if (draftWaiting) state.workTab = state.draft.matterId ? 'advise' : 'home';
   showTab(draftWaiting ? 'advise' : 'home');
   loadHealth();
-  showMatterList();
+  // The landing page is Home. Loading every matter's checked register here
+  // started a second, overlapping list request when the advocate chose My
+  // work, and did work even when they resumed an already-open file. The list
+  // is read at its actual entry point; it must never reuse an old result.
 
   // Restore the entire original intent, not a new instruction made from its
   // text. Transcript reconciliation may confirm a turn whose acknowledgement

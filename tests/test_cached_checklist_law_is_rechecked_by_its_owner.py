@@ -5,8 +5,8 @@ from unittest.mock import Mock
 import pytest
 
 from nm.app import api
-from nm.legal_brain.retrieve.checklist_sources import bind_source_current
 from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
+from nm.legal_brain.retrieve.checklist_sources import bind_source_current
 from nm.legal_brain.retrieve.evidence_port import SourceDocument
 from nm.work_the_file import projections_api as projections
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
@@ -157,6 +157,57 @@ def test_served_board_and_handover_forward_the_same_live_source_owner(client, mo
     assert client.get(f"/api/matters/{matter.id}").status_code == 200
     assert client.get(f"/api/matters/{matter.id}/summary").status_code == 200
     assert calls == ["board", "summary"]
+
+
+def test_matter_list_uses_one_bound_source_generation_for_all_rows(client, monkeypatch):
+    """One response must neither rehash each row nor mix source generations."""
+    app = api.application()
+    for title in ("First file", "Second file", "Third file"):
+        matter = replace(Matter.create("adv_demo", title), version=1)
+        app.store.commit(matter, expected_version=0)
+    observe = app.source_generation_guard
+    calls = []
+
+    def counted():
+        calls.append(True)
+        return observe()
+
+    monkeypatch.setattr(app, "source_generation_guard", counted)
+    response = client.get("/api/matters")
+    assert response.status_code == 200
+    assert len(response.json()["matters"]) == 3
+    assert len(calls) == 1
+
+
+def test_matter_list_refuses_a_source_change_between_rows(client, monkeypatch, tmp_path):
+    from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
+
+    app = api.application()
+    for title in ("One source world", "Another source world"):
+        matter = replace(Matter.create("adv_demo", title), version=1)
+        app.store.commit(matter, expected_version=0)
+    root, manifest = practice(tmp_path)
+    monkeypatch.setattr(app, "source_generation_guard",
+                        lambda: GenerationGuard(knowledge_root=root, manifest_path=manifest))
+    checked = api._checked_checklists
+    completed = []
+
+    def change_after_first_row(matter, request, **kwargs):
+        projections, source_current, require_current = checked(matter, request, **kwargs)
+
+        def checked_and_changed():
+            require_current()
+            completed.append(matter.id)
+            if len(completed) == 1:
+                manifest.write_text("coverage: changed-between-rows", encoding="utf8")
+
+        return projections, source_current, checked_and_changed
+
+    monkeypatch.setattr(api, "_checked_checklists", change_after_first_row)
+    response = client.get("/api/matters")
+    assert response.status_code == 409
+    assert len(completed) == 1
+    assert "matters" not in response.json()
 
 
 @pytest.mark.parametrize("view", ["board", "cover", "summary", "list"])

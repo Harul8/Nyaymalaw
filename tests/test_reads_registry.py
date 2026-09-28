@@ -60,13 +60,34 @@ def schemas_in_the_product() -> set[str]:
     """
     found: set[str] = set()
     for path in sorted((ROOT / "nm").rglob("*.py")):
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf8"))):
-            if not isinstance(node, ast.Dict):
+        found.update(_schemas_in_source(path.read_text(encoding="utf8")))
+    return found
+
+
+def _schemas_in_source(source: str) -> set[str]:
+    """Resolve module string constants; refuse a marker this sweep cannot name."""
+    tree = ast.parse(source)
+    constants: dict[str, str] = {}
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    constants[target.id] = node.value.value
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for key, value in zip(node.keys, node.values, strict=False):
+            if not (isinstance(key, ast.Constant) and key.value == "x-nm-read"):
                 continue
-            for key, value in zip(node.keys, node.values, strict=False):
-                if (isinstance(key, ast.Constant) and key.value == "x-nm-read"
-                        and isinstance(value, ast.Constant)):
-                    found.add(value.value)
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                found.add(value.value)
+            elif isinstance(value, ast.Name) and value.id in constants:
+                found.add(constants[value.id])
+            else:
+                raise AssertionError(
+                    "An x-nm-read marker cannot be enumerated by the read registry")
     return found
 
 
@@ -79,6 +100,13 @@ def test_the_scan_can_see_the_schemas():
     found = schemas_in_the_product()
     assert len(found) > 10, f"the scan found almost nothing: {sorted(found)}"
     assert "dates" in found and "posture" in found
+
+
+def test_the_scan_resolves_named_markers_and_refuses_unenumerable_ones():
+    assert _schemas_in_source('MARK = "known_read"\nSCHEMA = {"x-nm-read": MARK}') == {
+        "known_read"}
+    with pytest.raises(AssertionError, match="cannot be enumerated"):
+        _schemas_in_source('SCHEMA = {"x-nm-read": runtime_choice()}')
 
 
 def test_every_read_the_product_makes_is_declared():
@@ -181,7 +209,11 @@ def test_a_read_that_is_not_decisive_is_allowed_to_be_empty():
             return _replace(super().structured(prompt, schema, tier, **kw),
                             data={}, text=None)
 
-    traced = TracedModel(inner=Empty(_model_config()))
+    # The scripted adapter has no semantic default for newer independent
+    # reviews. Supply an explicit typed empty response for this test's exact
+    # population; the port under test then decides whether to disclose it.
+    traced = TracedModel(inner=Empty(
+        _model_config(), structured_responses={key: {} for key in ordinary}))
     for key in ordinary:
         traced.structured(Prompt(user="anything at all"),
                           {"x-nm-read": key}, Tier.ROUTINE)

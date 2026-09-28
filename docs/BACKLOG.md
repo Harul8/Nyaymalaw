@@ -9544,6 +9544,43 @@ unfinished. No commit or push was requested at this checkpoint.
 
 ### Plan-first legal-brain engineering reconciliation — IN PROGRESS
 
+#### 28 September code-against-plan continuation — IN PROGRESS
+
+This pass reads the current 170 LB rows in `Before Build` against reachable
+source and tested behaviour, not the workbook's delivery cells or the older
+27 September audit snapshot. The owner-edited workbook and offline review
+files are preserved. Work is divided into independent, general mechanisms;
+each item stays open until the counterexample and affected path pass.
+
+| Plan/owner | Measured defect or limit | Work and acceptance state |
+| --- | --- | --- |
+| LB-106 / BK-38 | Absolute FTS score thresholds were displayed as `top/middle/lower` positions, even for a sole low-score result; that is not a calibrated relevance judgment. | Display correction and singleton/tie/score-change tests pass; actual ordinal and provenance only. Dense/fusion/rerank evaluation remains separate and open. |
+| LB-117/118, LB-163/166 | A changed dispute posture/fact with unchanged passage could reuse a checklist applicability read. | General context-bound invalidation, stale-row projection and re-read pass 129 adjacent tests. The actual board distinguishes review-required law from unanswered facts. This is engineering evidence; varied live semantic quality remains open. |
+| LB-163/165 | A two-dispute comprehensive request was marked `complete_requested_work` after a scope judgment declared all 21 areas/needs inapplicable; no analysis was checked. | Separate saved, budget-bound original-request demand review and terminal consistency now prevent that false completion; focused counterexamples pass. Independent professional/live agreement is not yet established. |
+| BK-39 | History's advocate pane serialised its projected turn as JSON, exposing internal `turn_id`; an old browser assertion clicked a different audit disclosure. | Advocate-pane JSON exposure removed; exact released-answer readback and correct browser disclosure pass. Separately authorised operator forensic access remains open. |
+| BK-33 | The ordered browser cohort stalled at `Loading matters…` after reload. The boot path started a matter-list request before the advocate selected My work, which then started another; per-matter checked projections may also be costly. | Unnecessary boot request removed; per-list source guard construction is shared without relaxing per-matter checks. Isolated tablet phase passed; ordered cohort still stalled, so re-entry remains open. |
+| LB-146 | Capture/replay executes the protected foundation profile, not full composed production tools, context and review, or fresh-world comparison. | Still open; no whole-brain replay claim from foundation tests. |
+| LB-124/125/168–170 | Authenticated court calendar, operative fee schedules, qualified admissibility/pleading/local-law populations remain absent or undecided. | Source/owner admission and professional verification open. Never substitute synthetic or undated law. |
+| LB-141 and client cutover | Components and controls exist, but qualified semantic agreement/error-direction, real complex-matter acceptance and normal-client controlled-brain cutover are unproved. | Open; no expired paid approval, stale evidence or agent assertion may close these. |
+
+Scoped test or browser success below is engineering evidence only, not a
+professional or production release verdict. The live-model grant from the
+earlier run expired; no paid call is authorised by this checkpoint.
+
+#### Journey-order source review — 28 September
+
+The owner asked for a reviewable order and a plain-language opening purpose for
+each source file, without numeric Python package names or a false linear runtime.
+`docs/PROJECT_STRUCTURE.md` now gives positions 01–09, with 03.00–03.08 inside
+Legal brain; the 19 package indexes map every current `nm/` implementation file
+and browser asset to its responsibility. The file inventory reconciles 399
+physical files to 399 index entries, with no missing/extra/duplicate entries;
+576 local map/index links resolve. All 387 `nm/` Python files have an opening
+module summary. Remaining missing opening comments in authored app, assurance
+and test sources were added without changing behavior. These maps are navigation,
+not plan acceptance, runtime sequencing or a declaration that the legal brain
+is complete. Owner-edited workbook/offline review material remains untouched.
+
 Owner instruction: inspect every legal-brain requirement against actual source,
 complete missing/partial engineering before resuming browser submissions. The
 finite audit population is 193 Before Build requirements (23 OM, 170 LB) and

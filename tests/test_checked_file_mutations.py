@@ -7,6 +7,14 @@ from unittest.mock import Mock
 
 import pytest
 
+from nm.legal_brain.orchestrate.loop_contracts import StopReason
+from nm.legal_brain.orchestrate.tools import (
+    Boundary,
+    PreparedToolResult,
+    ToolContext,
+    ToolRefused,
+    ToolRegistry,
+)
 from nm.legal_brain.reason.issue_contracts import (
     Disposition,
     DispositionState,
@@ -14,14 +22,13 @@ from nm.legal_brain.reason.issue_contracts import (
     IssueKind,
     from_stored,
 )
-from nm.legal_brain.orchestrate.loop_contracts import StopReason
-from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
-from nm.legal_brain.orchestrate.tools import (
-    Boundary,
-    PreparedToolResult,
-    ToolContext,
-    ToolRefused,
-    ToolRegistry,
+from nm.legal_brain.reason.requirements_contracts import (
+    Force,
+    Requirement,
+    State,
+    applicability_identity,
+    checklist,
+    key,
 )
 from nm.shared.model_port import SchemaViolation, ToolCall
 from nm.shared.store_file_store import FileMatterStore
@@ -47,7 +54,12 @@ ALLOW = Boundary(True, "controlled attributed test scope")
 def fixture():
     requirement = Requirement("Receipt", "It affects service", "The notice must be served.",
                               "Retrieved Act", "act:1", Force.REQUIRED, "source-version")
-    threads = (Thread("thr_one", "First distinct matter", requirements=(requirement,)),
+    first = Thread("thr_one", "First distinct matter", requirements=(requirement,))
+    context = applicability_identity(first)
+    first = replace(first, requirements=(replace(requirement, context_identity=context),),
+                    requirement_reads={requirement.locator: requirement.source_identity},
+                    requirement_read_contexts={requirement.locator: context})
+    threads = (first,
                Thread("thr_two", "Second independent matter"))
     matter = Matter("mat_one", "adv_one", "Private file", threads=threads, version=7)
     return matter, {"advocate_id": matter.advocate_id, "current_version": matter.version,

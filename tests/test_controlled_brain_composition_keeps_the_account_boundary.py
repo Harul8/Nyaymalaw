@@ -1,16 +1,19 @@
 """The actual application composes the loop without waiving account authority."""
+import json
 from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
 
 from nm.app import api
-from nm.legal_brain.verify.brain_release import ReviewService
 from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import LoopMode, StopReason
+from nm.legal_brain.orchestrate.loop_contracts import LoopMode, StopReason, digest
+from nm.legal_brain.verify.brain_release import ReviewService
 from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
+from nm.shared.budget_contracts import Completion
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import Prompt, Tier, ToolCall
+from nm.shared.model_port import ModelResult, Prompt, Tier, ToolCall, Usage, require_schema
 from nm.shared.store_loop_log import MatterLoopLog
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_independent_claim_verifier import Judge, finding, premise
@@ -33,6 +36,53 @@ def _compose(app, scope, session=lambda: True):
                                    cost_ceiling=lambda *_: 0.03,
                                    source_version="measured-test-generation",
                                    table_version="checked-test-table-generation")
+
+
+def _unassessed_working_scope(packet):
+    """Name the whole current owner population without certifying its coverage."""
+    inventory = packet["subject"]["inventory"]
+    sources = packet["subject"]["quote_sources"]
+    original = sources["original_instruction"]
+    references = {row["reference"]["id"]: row["reference"]
+                  for row in inventory["references"]}
+    words = [{"source_id": "original_instruction", "quote": original}]
+    reason = "This controlled fixture has not independently assessed working scope."
+    judgments = []
+    for row in (*inventory["areas"], *inventory["needs"]):
+        reference_id = (row["reference"]["id"] if "reference" in row
+                        else "thread:" + row["thread_id"] if row["thread_id"] is not None
+                        else "original_instruction")
+        judgments.append({
+            "id": row["id"], "needed": None, "covered": None, "reason": reason,
+            "supporting_words": words, "references": [references[reference_id]],
+            "annotation_ids": [],
+        })
+    data = {
+        "subject_identity": packet["subject_identity"],
+        "request_identity": digest(inventory["original_instruction"]),
+        "population_assessed": None,
+        "comprehensive": {"assessed": None, "reason": reason, "supporting_words": words},
+        "judgments": judgments, "reason": reason,
+    }
+    require_schema(data, WORKING_SCOPE_SCHEMA)
+    return data
+
+
+class ScopeUnassessedJudge(Judge):
+    """Keep real claim judgments while recording no fictional scope verdict."""
+
+    def __init__(self):
+        super().__init__()
+        self.scope_prompts = []
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if schema != WORKING_SCOPE_SCHEMA:
+            return super().structured(prompt, schema, tier, **kwargs)
+        assert tier is Tier.JUDGE and prompt.operation == "working_scope_v1"
+        self.scope_prompts.append(prompt)
+        data = _unassessed_working_scope(json.loads(prompt.user))
+        return ModelResult(None, data, tier, self.provider, self.resolved_model(tier),
+                           Usage(80, 80, 0.02), 1, completion=Completion.COMPLETE)
 
 
 def test_composed_registry_reads_the_current_sealed_version_not_the_starting_one(client):
@@ -120,7 +170,7 @@ def test_actual_application_assembles_checks_without_forging_missing_owner_subje
             "sources": [{"locator": held.locator, "quote": held.span}],
             "premise_ids": ["fact_1"], "contrary": [], "depends_on": []}]}))]
     app.model.inner.inner = author
-    judge = Judge()
+    judge = ScopeUnassessedJudge()
     reviewer = ReviewService(store=app.store,
         log=MatterLoopLog(app.store, advocate_id=scope.advocate_id),
         verifier=IndependentVerifier(judge), session_current=lambda: True,
@@ -129,9 +179,22 @@ def test_actual_application_assembles_checks_without_forging_missing_owner_subje
         cost_ceiling=lambda *_: 0.03, source_version=app.source_generation_guard().version,
         table_version="checked-table-generation", reviewer=reviewer)
     assert brain.checklist_review.reviewer is reviewer
+    limits = _limits()
+    # The actual composed source/currentness and final-check owners run before
+    # scope. Budget this isolated fixture for the entire typed check sequence;
+    # the one shared ledger and every product refusal gate remain enforced.
+    limits = replace(limits, budget=replace(limits.budget, max_ms=90_000,
+                                            max_tokens=100_000),
+                     max_steps=32)
     result = brain.evaluate(matter_id=matter.id, turn_id="application-assessment",
-        message="Assess the notice requirement.", limits=_limits(), max_repairs=0)
-    assert len(result.attempts) == 1 and len(result.assessments) == 1
+        message="Assess the notice requirement.", limits=limits, max_repairs=0)
+    assert len(result.attempts) == 1 and len(result.assessments) == 1, (
+        result.stop, result.limitations, result.budget.spend, len(judge.scope_prompts))
+    assert len(judge.scope_prompts) == 1, (
+        result.stop, result.budget.spend,
+        [(row.population_assessed, row.reason, row.model_steps)
+         for row in result.working_scope_reviews])
+    assert result.working_scope_reviews[0].population_assessed is None
     assessed = result.assessments[0]
     checked = {row.gate_id: row for row in (*assessed.outputs, *assessed.boundaries)}
     assert checked["G-GROUND"].assessed is True
@@ -152,7 +215,7 @@ def test_actual_application_assembles_checks_without_forging_missing_owner_subje
     assert len(starts) == 3
     assert "read_provision" not in {row["name"] for row in starts[0]["tools"]}
     assert "read_provision" in {row["name"] for row in starts[1]["tools"]}
-    assert max(row["reserved_tokens"] for row in starts) <= _limits().budget.max_tokens
+    assert max(row["reserved_tokens"] for row in starts) <= limits.budget.max_tokens
     names = {row.name for row in brain.registry.definitions}
     assert {"compute_limitation", "compute_interest"} <= names
     assert {"research", "oppose", "discover_tools", "inspect_tool", "read_owner_guide"} <= names

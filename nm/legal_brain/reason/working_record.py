@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 
-from nm.legal_brain.orchestrate.loop_contracts import StepKind, digest
+from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason, digest
 from nm.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
@@ -982,4 +982,5 @@ class WorkingRecordReviewService:
             tuple(items),
             proof is not None and proof.assessed,
             proof.check_turn_id if proof is not None else "",
+            outcome.reason in (StopReason.PROPOSAL, StopReason.CONVERSATION),
         )

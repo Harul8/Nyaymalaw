@@ -251,6 +251,24 @@ READS: tuple[Read, ...] = (
          "Coordinate variation. Its routes are already bound to retrieved "
          "citations by the type, so the read cannot manufacture one.",
          echoes=True),
+    Read("working_scope_v1", False,
+         "Independently classifies which owned work the original request needs "
+         "and whether checked annotations cover it. It changes a completeness "
+         "verdict, not a legal date, amount or governing-law selection; unknown "
+         "must remain unassessed. The row population follows the file size.",
+         echoes=True),
+    Read("working_request_demand_v1", False,
+         "A separate original-request demand assessment checks a would-be-complete "
+         "scope verdict without seeing the author's response. It changes the "
+         "completion gate, not a date, amount or legal-source selection; the "
+         "dispute and need populations may grow with the file.",
+         echoes=True),
+    Read("working_explanation_rationale_v1", False,
+         "Independently checks private explanatory text against the exact checked "
+         "package and instruction. Its result withholds unsupported explanation "
+         "but does not establish a deadline, amount or which law is read; entries "
+         "follow the checked package population.",
+         echoes=True),
 )
 
 BY_KEY: dict[str, Read] = {r.key: r for r in READS}

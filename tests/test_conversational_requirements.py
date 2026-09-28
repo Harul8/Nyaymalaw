@@ -6,15 +6,22 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key, settled
 from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.reason.requirements_contracts import (
+    Force,
+    Requirement,
+    State,
+    checklist,
+    key,
+    settled,
+)
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_scripted import SCRIPTED_READS
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file import deadlines, dispute_agenda
 from nm.work_the_file import summary_contracts as summary
-from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
+from nm.work_the_file.matter_contracts import Basis, Fact, Matter, Posture, Provenance, Role, Thread
 from tests.test_matter_memory import _engine, _Recorder
 from tests.test_turn_contract import KEY, finding
 
@@ -145,6 +152,7 @@ def test_saved_json_board_and_handover_agree_after_reopening(tmp_path):
         "outstanding": 3,
         "promised": 0,
         "unavailable": 0,
+        "applicability_review_required": 0,
         "total": 4,
     }
     assert len(dispute_agenda.project(restored)["disputes"][0]["requirements"]) == 4
@@ -230,7 +238,8 @@ def test_successful_empty_read_is_cached_but_changed_text_is_not(tmp_path):
     concluded = {}
     engine._requirements(t, (source,), TurnMetrics(turn_id="test"), concluded=concluded)
     assert concluded["requirement_reads"]
-    t = replace(t, requirement_reads=concluded["requirement_reads"])
+    t = replace(t, requirement_reads=concluded["requirement_reads"],
+                requirement_read_contexts=concluded["requirement_read_contexts"])
     calls = len(model.prompts)
     assert engine._requirements(t, (source,), TurnMetrics(turn_id="test")) is None
     assert len(model.prompts) == calls
@@ -238,6 +247,111 @@ def test_successful_empty_read_is_cached_but_changed_text_is_not(tmp_path):
         t, (replace(source, span=source.span + " Changed."),), TurnMetrics(turn_id="test")
     )
     assert len(model.prompts) == calls + 1
+
+
+@pytest.mark.parametrize("change", ["represented_side", "objective", "corrected_fact"])
+def test_same_source_is_reconsidered_when_this_disputes_material_context_changes(tmp_path, change):
+    model = _Recorder()
+    engine, _ = _engine(tmp_path, model=model)
+    source = finding()
+    old_fact = Fact.create("The notice was served on 4 March.",
+                           Provenance(kind="advocate_statement", turn="old"))
+    original = replace(Thread.create("Notice"),
+                       posture=Posture(Role.PLAINTIFF, Basis.STATED),
+                       objective={"desired_result": "Recover possession"},
+                       chronology=(old_fact.id,))
+    concluded = {}
+    engine._requirements(original, (source,), TurnMetrics(turn_id="first"),
+                         facts=(old_fact,), concluded=concluded)
+    assert concluded["requirement_reads"], "even an empty successful read is cached"
+    original = replace(original, requirement_reads=concluded["requirement_reads"],
+                       requirement_read_contexts=concluded["requirement_read_contexts"])
+    unrelated = replace(Thread.create("Rent"),
+                        posture=original.posture, objective=original.objective,
+                        chronology=(old_fact.id,))
+    other_read = {}
+    engine._requirements(unrelated, (source,), TurnMetrics(turn_id="other"),
+                         facts=(old_fact,), concluded=other_read)
+    unrelated = replace(unrelated, requirement_reads=other_read["requirement_reads"],
+                        requirement_read_contexts=other_read["requirement_read_contexts"])
+    calls = len(model.prompts)
+    assert engine._requirements(original, (source,), TurnMetrics(turn_id="repeat"),
+                                facts=(old_fact,)) is None
+    assert len(model.prompts) == calls, "unchanged successful reads stay cached"
+
+    facts = (old_fact,)
+    if change == "represented_side":
+        changed = replace(original, posture=Posture(Role.DEFENDANT, Basis.STATED))
+    elif change == "objective":
+        changed = replace(original, objective={"desired_result": "Resist possession"})
+    else:
+        new_fact = Fact.create("The notice was not served on 4 March.",
+                               Provenance(kind="advocate_statement", turn="correction"))
+        changed = replace(original, chronology=(*original.chronology, new_fact.id))
+        facts = (replace(old_fact, superseded_by=new_fact.id), new_fact)
+    engine._requirements(changed, (source,), TurnMetrics(turn_id="changed"),
+                         facts=facts, concluded={})
+    assert len(model.prompts) == calls + 1, "the same law may apply differently after a correction"
+    assert engine._requirements(unrelated, (source,), TurnMetrics(turn_id="other-repeat"),
+                                facts=(old_fact,)) is None
+    assert len(model.prompts) == calls + 1, "a separate dispute retains its own current read"
+
+
+def test_old_need_and_answer_stay_on_file_but_do_not_certify_changed_applicability():
+    m = answer(record(), 0, "held", "The dated notice is held.")
+    old = m.threads[0]
+    old = replace(old, posture=Posture(Role.PLAINTIFF, Basis.STATED))
+    original_context = requirements.applicability_identity(old, m.facts)
+    item = replace(old.requirements[0], source_identity="actual-passage-v1",
+                   context_identity=original_context)
+    ident = key(item)
+    original_answer = {
+        **old.requirement_outcomes[ident],
+        "source_identity": "actual-passage-v1",
+        "context_identity": original_context,
+    }
+    old = replace(old, requirements=(item, *old.requirements[1:]),
+                  requirement_reads={item.locator: item.source_identity},
+                  requirement_read_contexts={item.locator: original_context},
+                  requirement_outcomes={ident: original_answer})
+    assert checklist(old, m.facts)[0].state is State.HELD
+
+    changed = replace(old, posture=Posture(Role.DEFENDANT, Basis.STATED))
+    stale = checklist(changed, m.facts)[0]
+    assert stale.state is State.OUTSTANDING
+    assert stale.rendered()["applicability_state"] == "review_required"
+    assert changed.requirement_outcomes[ident] == original_answer
+    assert not requirements.settled(changed, m.facts)
+    questions = requirements.conversation_context(changed, m.facts, TODAY)
+    assert "legal-applicability re-review" in questions
+    assert item.need not in questions, "stale needs cannot become current questions"
+    reviewed_file = m.with_thread(replace(
+        changed, assessed=(*summary.DERIVED_SECTIONS, "review_current")))
+    board = dispute_agenda.project(reviewed_file)["disputes"][0]
+    assert board["status"] == "needs_review"
+    assert board["outstanding_requirements"] == 3  # only the other current rows
+    assert board["applicability_review_required"] == 1
+
+    # A read finding no currently applicable need retains the old row only as
+    # history. A new read finding the same clause still cannot borrow the old
+    # answer without assessing that answer in the changed dispute context.
+    assert (requirements.merge(changed.requirements, requirements.Reading(()))
+            == changed.requirements)
+    current_context = requirements.applicability_identity(changed, m.facts)
+    reread = requirements.merge(changed.requirements, requirements.Reading((
+        replace(item, context_identity=current_context),)))
+    reassessed = replace(changed, requirements=reread,
+                         requirement_read_contexts={item.locator: current_context})
+    assert checklist(reassessed, m.facts)[0].state is State.OUTSTANDING
+    assert reassessed.requirement_outcomes[ident] == original_answer
+    assert checklist(old, m.facts)[0].state is State.HELD
+
+    legacy = replace(old, requirements=(replace(item, context_identity=""),
+                                        *old.requirements[1:]),
+                     requirement_read_contexts={})
+    assert checklist(legacy, m.facts)[0].rendered()["applicability_state"] == "review_required"
+    assert not requirements.settled(legacy, m.facts), (
+        "a source-backed old row with no recorded applicability context cannot be current")
 
 
 @pytest.mark.parametrize("failure", ["unavailable", "truncated", "not_established"])

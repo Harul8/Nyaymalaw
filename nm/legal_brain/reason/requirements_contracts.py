@@ -30,10 +30,12 @@ class Requirement:
     locator: str
     force: Force
     source_identity: str = ""
+    context_identity: str = ""
 
     def __post_init__(self) -> None:
         if any(not isinstance(getattr(self, n), str)
-               for n in ("need", "why", "span", "source", "locator", "source_identity")):
+               for n in ("need", "why", "span", "source", "locator", "source_identity",
+                         "context_identity")):
             raise ValueError("requirement text must be attributable strings")
         if not self.need.strip() or not self.span.strip():
             raise ValueError("a requirement carries what is needed and the words requiring it")
@@ -91,10 +93,11 @@ class Outcome:
     due: str = ""
     source_identity: str = ""
     requires_review: bool = False
+    context_identity: str = ""
 
     def __post_init__(self) -> None:
         if any(not isinstance(getattr(self, n), str)
-               for n in ("basis", "at", "fact", "due", "source_identity")):
+               for n in ("basis", "at", "fact", "due", "source_identity", "context_identity")):
             raise ValueError("an answer has typed provenance")
         if type(self.requires_review) is not bool:
             raise ValueError("A proposed classification records its independent review requirement")
@@ -112,7 +115,8 @@ class Outcome:
     def stored(self) -> dict:
         return {"state": self.state.value, "basis": self.basis, "at": self.at,
                 "fact": self.fact, "due": self.due, "source_identity": self.source_identity,
-                "requires_review": self.requires_review}
+                "requires_review": self.requires_review,
+                "context_identity": self.context_identity}
 
     @classmethod
     def restore(cls, row) -> "Outcome | None":
@@ -122,7 +126,8 @@ class Outcome:
         try:
             return cls(State(row.get("state")), row.get("basis", ""),
                        row.get("at", ""), row.get("fact", ""), row.get("due", ""),
-                       row.get("source_identity", ""), row.get("requires_review", False))
+                       row.get("source_identity", ""), row.get("requires_review", False),
+                       row.get("context_identity", ""))
         except (TypeError, ValueError):
             return None
 
@@ -144,6 +149,42 @@ def classification_identity(requirement, outcome, fact) -> str:
     value = {"requirement": asdict(requirement), "outcome": outcome.stored(), "fact": asdict(fact)}
     raw = json.dumps(value, sort_keys=True, ensure_ascii=False, allow_nan=False,
                      default=lambda item: item.isoformat()).encode("utf8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def applicability_subject(thread, facts=()) -> dict:
+    """Only the current dispute material that can change a law's application.
+
+    Exclude appended answer facts, question history and model-derived
+    assessment sections: those change during ordinary conversation and must
+    not invalidate the very legal need the advocate is answering. A genuine
+    recorded correction has an explicit supersession link and is included,
+    along with its replacement. A new fact without a correction link may
+    inform later analysis, but does not itself claim to reverse the legal
+    applicability previously read. Each thread has its own subject.
+    """
+    recorded = asdict(thread)
+    scoped = {row.id: row for row in facts if row.id in thread.chronology}
+    corrected = {row.id for row in scoped.values() if row.superseded_by is not None}
+    corrected.update(row.superseded_by for row in scoped.values()
+                     if row.superseded_by in scoped)
+    return {
+        "label": thread.label,
+        "identifiers": recorded["identifiers"],
+        "parties": recorded["parties"],
+        "posture": recorded["posture"],
+        "objective": recorded["objective"],
+        "premises_stated": recorded["premises_stated"],
+        "corrections": [asdict(scoped[ident]) for ident in thread.chronology
+                        if ident in corrected and ident in scoped],
+    }
+
+
+def applicability_identity(thread, facts=()) -> str:
+    """Version the legal-need reading against its actual dispute context."""
+    raw = json.dumps(applicability_subject(thread, facts), sort_keys=True,
+                     ensure_ascii=False, allow_nan=False,
+                     default=lambda value: value.isoformat()).encode("utf8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -173,19 +214,24 @@ class Item:
     state: State
     outcome: Outcome | None = None
     independently_reviewed: bool = False
+    applicability_current: bool = True
 
     @property
     def outstanding(self) -> bool:
-        """Grey only. A red with a reason is finished work, not a gap (F-C-13)."""
-        return self.state is State.OUTSTANDING
+        """An answerable grey need, never an old clause pending legal review."""
+        return self.applicability_current and self.state is State.OUTSTANDING
 
     def rendered(self) -> dict:
         r = self.requirement
         return {"key": key(r), "need": r.need, "why": r.why, "force": r.force.value,
                 "source": r.source, "locator": r.locator, "span": r.span,
                 "state": self.state.value,
+                "applicability_state": ("current" if self.applicability_current
+                                        else "review_required"),
                 "proposed_state": self.outcome.state.value if self.outcome else "",
-                "review_state": ("independently_reviewed" if self.independently_reviewed
+                "review_state": ("applicability_review_required"
+                    if not self.applicability_current else
+                    "independently_reviewed" if self.independently_reviewed
                     else "not_assessed" if self.outcome and self.outcome.requires_review
                     else "legacy_structural" if self.outcome else "not_assessed"),
                 "basis": self.outcome.basis if self.outcome else "",
@@ -207,11 +253,19 @@ def checklist(thread, facts=(), *, classifications=()) -> tuple[Item, ...]:
     scoped = {f.id: f for f in facts if f.id in thread.chronology
               and f.superseded_by is None}
     reads = getattr(thread, "requirement_reads", {}) or {}
+    context = applicability_identity(thread, facts)
     if (not isinstance(classifications, tuple)
             or any(not isinstance(row, ClassificationProof) for row in classifications)):
         raise ValueError("Checklist classifications need typed independent receipt proofs")
     certified = {row.subject_identity for row in classifications}
     for requirement in restored(thread):
+        # Old persisted source-backed rows have no applicability fingerprint.
+        # They must not inherit a current legal verdict merely because their
+        # passage identity is unchanged. Source-less legacy structural rows
+        # cannot claim freshness, but retain their old projection vocabulary.
+        source_bound = bool(requirement.source_identity or reads.get(requirement.locator))
+        applicability_current = (requirement.context_identity == context
+                                 if requirement.context_identity else not source_bound)
         recorded = Outcome.restore(outcomes.get(key(requirement)))
         fact = scoped.get(recorded.fact) if recorded else None
         if (recorded and (fact is None or recorded.basis not in fact.statement
@@ -227,11 +281,18 @@ def checklist(thread, facts=(), *, classifications=()) -> tuple[Item, ...]:
             # context. Preserve the old answer, but do not lend it the new
             # source generation. Absence of a read is not a currency verdict.
             recorded = None
-        reviewed = (recorded is not None and (not recorded.requires_review
+        if (recorded and requirement.context_identity
+                and recorded.context_identity != requirement.context_identity):
+            # A current need does not re-certify an old answer merely because
+            # its passage was found again after the dispute changed.
+            recorded = None
+        reviewed = (applicability_current and recorded is not None and
+                    (not recorded.requires_review
             or classification_identity(requirement, recorded, fact) in certified))
         rows.append(Item(requirement,
                          recorded.state if reviewed else State.OUTSTANDING, recorded,
-                         bool(reviewed and recorded.requires_review)))
+                         bool(reviewed and recorded.requires_review),
+                         applicability_current))
     return tuple(rows)
 
 
@@ -274,7 +335,8 @@ class ChecklistProjection:
     @property
     def complete_population(self):
         return (bool(self.rows) and len(self.rows) == self.expected_population
-                and len({key(row.requirement) for row in self.rows}) == len(self.rows))
+                and len({key(row.requirement) for row in self.rows}) == len(self.rows)
+                and all(row.applicability_current for row in self.rows))
 
     @property
     def nothing_to_ask(self):
@@ -291,6 +353,8 @@ class ChecklistProjection:
                 "outstanding": sum(row.outstanding for row in self.rows),
                 "promised": sum(row.state is State.PROMISED for row in self.rows),
                 "unavailable": sum(row.state is State.UNAVAILABLE for row in self.rows),
+                "applicability_review_required": sum(not row.applicability_current
+                                                      for row in self.rows),
                 "total": len(self.rows)}
 
     def due_items(self, today: date, *, resumed=False):

@@ -107,6 +107,9 @@ def test_navigation_is_one_compact_row_with_complete_labels(page, journey, width
         assert tab.evaluate('el => el.scrollWidth <= el.clientWidth')
     if width > 820:
         assert page.locator('#tabs').bounding_box()['height'] <= 42
+        # Matter creation completes before its checked board read is painted.
+        # Wait for the real board, not a fixed delay or an unrelated tab.
+        page.locator('#board-title').wait_for(state='visible')
         assert page.locator('#board-title').is_visible()
     for name, pane in [('Home', 'home'), ('Legal library', 'search'),
                        ('Preparation', 'prepare'), ('My work', 'advise')]:

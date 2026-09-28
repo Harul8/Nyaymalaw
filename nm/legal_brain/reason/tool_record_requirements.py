@@ -17,7 +17,7 @@ from nm.legal_brain.orchestrate.tools import (
     object_schema,
 )
 from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import Requirement
+from nm.legal_brain.reason.requirements_contracts import Requirement, applicability_identity
 from nm.legal_brain.reason.source_writes import (
     _ROW,
     _STRING,
@@ -45,8 +45,10 @@ def build_tool(*, store, source_version) -> RegisteredTool:
         parent = _parent(matter, context.identity.turn_id, context.identity.advocate_id)
         try:
             captured = findings_from_record(parent, source_version=source_version)
-            reading = _reading(args["requirements"], captured)
             old = next(row for row in matter.threads if row.id == args["thread_id"])
+            context_identity = applicability_identity(old, matter.facts)
+            reading = _reading(args["requirements"], captured,
+                               context_identity=context_identity)
             if any(Requirement.restore(row) is None for row in old.requirements):
                 raise ValueError("The earlier checklist is unreadable, not empty.")
             merged = requirements.merge(old.requirements, reading)
@@ -56,6 +58,10 @@ def build_tool(*, store, source_version) -> RegisteredTool:
                 requirement_reads={
                     **old.requirement_reads,
                     **{row.locator: row.source_identity for row in reading.requirements},
+                },
+                requirement_read_contexts={
+                    **old.requirement_read_contexts,
+                    **{row.locator: context_identity for row in reading.requirements},
                 },
             )
             if neutral(asdict(new)) == neutral(asdict(old)):

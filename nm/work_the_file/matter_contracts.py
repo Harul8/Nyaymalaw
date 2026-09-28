@@ -749,6 +749,15 @@ class Thread:
     successful read or removes earlier requirements. Changed text is re-read.
     """
 
+    requirement_read_contexts: dict[str, str] = field(default_factory=dict)
+    """The dispute-applicability subject of each successful locator read.
+
+    Kept separate from ``requirement_reads``: its values must remain exact
+    passage identities for source-generation and independent-review checks.
+    A changed side, objective or scoped fact makes even unchanged law due for
+    reconsideration. The old rows and answers remain available as history.
+    """
+
     checklist_session: str = ""
     """Non-authenticating session reference of the last checklist conversation."""
 

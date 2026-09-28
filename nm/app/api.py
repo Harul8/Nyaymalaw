@@ -994,7 +994,10 @@ def _register_of(matter, *, source_current=None, checklist_projections=None):
                        checklist_projections=checklist_projections)
 
 
-def _checked_checklists(matter, request):
+_GENERATION_NOT_BOUND = object()
+
+
+def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
     """One request-local proof reconstruction, with a final serving boundary.
 
     The immutable projection is not a durable currency cache. Every HTTP read
@@ -1005,13 +1008,18 @@ def _checked_checklists(matter, request):
     from nm.legal_brain.reason import requirements
 
     installed = application()
-    try:
-        generation = installed.source_generation_guard()
-    except GenerationUnavailable:
-        generation = None
-    source_current = installed.checklist_source_current_for(
-        matter.id, matter.advocate_id, expected_version=matter.version,
-        session_current=lambda: _loop_session_current(request, matter.advocate_id))
+    if generation is _GENERATION_NOT_BOUND:
+        try:
+            generation = installed.source_generation_guard()
+        except GenerationUnavailable:
+            generation = None
+    source_current = (
+        installed.checklist_source_current_for(
+            matter.id, matter.advocate_id, expected_version=matter.version,
+            session_current=lambda: _loop_session_current(request, matter.advocate_id),
+            generation_guard=generation)
+        if generation is not None else lambda _source, _version: False
+    )
     projections = requirements.file_projections(matter, source_current=source_current)
 
     def require_current():
@@ -1039,11 +1047,25 @@ def _checked_checklists(matter, request):
 
 def _registers(held, *, request=None) -> dict:
     registers = {}
+    generation = None
+    if request is not None and held:
+        from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
+
+        try:
+            # One generation owns the whole list response. Rebuilding it for
+            # each file both rehashed the same source population twice per
+            # row and allowed a mid-list source change to produce mixed rows.
+            generation = application().source_generation_guard()
+        except GenerationUnavailable:
+            # A readable file is not a source-current certificate. The
+            # per-file projection retains NOT_ASSESSED for dependent rows.
+            pass
     for matter in held:
         if request is None:
             registers[matter.id] = _register_of(matter)
         else:
-            projections, source_current, require_current = _checked_checklists(matter, request)
+            projections, source_current, require_current = _checked_checklists(
+                matter, request, generation=generation)
             registers[matter.id] = _register_of(matter, source_current=source_current,
                                                checklist_projections=projections)
             require_current()
@@ -4309,18 +4331,21 @@ def _discovery_dict(d) -> dict:
             "case_id": c.case_id, "case_name": c.case_name, "court": c.court,
             "year": c.year, "paragraphs_matched": c.paragraphs_matched,
             "snippet": c.snippet, "origin": c.origin.value,
-            "band": _rank_band(c.confidence)} for c in d.cases],
+            "band": _search_position(index, len(d.cases))}
+            for index, c in enumerate(d.cases)],
     }
 
 
-def _rank_band(confidence: float) -> str:
-    """WHERE IT SAT IN THIS SEARCH, never a percentage. The client renders the
-    same three words; a number here would be read as calibrated confidence."""
-    if confidence >= 0.66:
-        return "top of this search"
-    if confidence >= 0.33:
-        return "middle of this search"
-    return "lower in this search"
+def _search_position(index: int, total: int) -> str:
+    """Display the actual position, not an absolute threshold over an FTS score.
+
+    A single case has no comparative position worth displaying. Ties retain
+    their returned order without a claim about calibrated relevance. The
+    original index score remains on the internal CaseHit, not this label.
+    """
+    if type(index) is not int or type(total) is not int or total < 2 or not 0 <= index < total:
+        return ""
+    return f"result {index + 1} of {total} shown"
 
 
 @app.post("/api/matters/{matter_id}/research", dependencies=[CsrfProtected],

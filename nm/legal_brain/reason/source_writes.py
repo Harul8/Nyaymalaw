@@ -16,7 +16,12 @@ from nm.legal_brain.orchestrate.tools import (
     object_schema,
 )
 from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import Force, Requirement, key
+from nm.legal_brain.reason.requirements_contracts import (
+    Force,
+    Requirement,
+    applicability_identity,
+    key,
+)
 from nm.legal_brain.retrieve.tool_sources import findings_from_record
 from nm.work_the_file.file_mutation_contracts import FileMutation, neutral
 
@@ -46,7 +51,7 @@ def _parent(matter, turn_id, advocate_id):
     return records[0]
 
 
-def _reading(rows, captured):
+def _reading(rows, captured, *, context_identity=""):
     found = []
     for row in rows:
         matches = tuple(source for source in captured if source.locator == row["locator"])
@@ -72,7 +77,7 @@ def _reading(rows, captured):
                     }
                 ]
             },
-            (passage,),
+            (passage,), context_identity=context_identity,
         )
         if len(read.requirements) != 1 or read.dropped:
             raise ToolRefused("The existing source-bound requirement owner refused the row.")
@@ -98,7 +103,9 @@ class SourceRequirementMutation(FileMutation):
         super()._thread_projection(
             before,
             replace(
-                after, requirements=before.requirements, requirement_reads=before.requirement_reads
+                after, requirements=before.requirements,
+                requirement_reads=before.requirement_reads,
+                requirement_read_contexts=before.requirement_read_contexts,
             ),
             facts,
         )
@@ -122,7 +129,9 @@ class SourceRequirementMutation(FileMutation):
             }
             for row in self.proposed
         )
-        if _reading(rows, captured).requirements != self.proposed:
+        context_identity = applicability_identity(before, self.before.facts)
+        if _reading(rows, captured,
+                    context_identity=context_identity).requirements != self.proposed:
             raise ValueError("A prepared requirement differs from the captured source read")
         if any(Requirement.restore(row) is None for row in before.requirements):
             raise ValueError("An unreadable earlier checklist cannot silently be erased")
@@ -135,6 +144,12 @@ class SourceRequirementMutation(FileMutation):
         }
         if after.requirement_reads != expected_reads:
             raise ValueError("A source mutation records only the exact captured passage identities")
+        expected_contexts = {
+            **before.requirement_read_contexts,
+            **{row.locator: context_identity for row in self.proposed},
+        }
+        if after.requirement_read_contexts != expected_contexts:
+            raise ValueError("A source mutation records only its current dispute applicability")
 
     def _validate_projection(self):
         if not any(row.id == self.thread_id for row in self.before.threads):
@@ -145,7 +160,9 @@ class SourceRequirementMutation(FileMutation):
             raise ValueError("A source mutation cannot add or remove a dispute")
         for old, new in zip(self.before.threads, self.after.threads, strict=True):
             permitted = (
-                replace(new, requirements=old.requirements, requirement_reads=old.requirement_reads)
+                replace(new, requirements=old.requirements,
+                        requirement_reads=old.requirement_reads,
+                        requirement_read_contexts=old.requirement_read_contexts)
                 if old.id == self.thread_id
                 else new
             )

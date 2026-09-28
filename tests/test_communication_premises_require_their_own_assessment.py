@@ -8,10 +8,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from nm.legal_brain.communicate.preview_display import interaction_text
 from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
+from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
+from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
 from nm.legal_brain.verify.brain_finalization import CheckRead
 from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
 from nm.legal_brain.verify.interaction_review import (
     COMMUNICATION_PREMISE_REVIEW_SCHEMA,
     CRITERIA,
@@ -25,9 +27,8 @@ from nm.legal_brain.verify.interaction_review import (
     interpret_premise_review,
     whole_text_unit,
 )
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
-from nm.legal_brain.communicate.preview_display import interaction_text
 from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
 from nm.shared.budget_contracts import Budget, Completion, Spend
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelResult, Prompt, Tier, ToolCall, Usage, require_schema
@@ -35,6 +36,9 @@ from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_communication_evidence_roles_are_owned import _v3_case
 from tests.test_communication_quotes_are_words_not_selectors import _quote_case
 from tests.test_communication_reviews_see_actual_work import _work_case
+from tests.test_controlled_brain_composition_keeps_the_account_boundary import (
+    _unassessed_working_scope,
+)
 from tests.test_interaction_review_units_are_server_owned import _v2_case
 from tests.test_interaction_words_require_an_independent_exact_review import _case
 from tests.test_private_brain_transport_cannot_approve_or_release_itself import (
@@ -74,7 +78,17 @@ def _premise(packet, *, text=None, kind="factual", form="presupposed", assessed=
 
 
 class PremiseJudge(ReferenceJudge):
+    def __init__(self, mutation=lambda raw, _packet: raw):
+        super().__init__(mutation)
+        self.scope_prompts = []
+
     def structured(self, prompt, schema, tier, **_kwargs):
+        if schema == WORKING_SCOPE_SCHEMA:
+            assert tier is Tier.JUDGE and prompt.operation == "working_scope_v1"
+            self.scope_prompts.append(prompt)
+            data = _unassessed_working_scope(json.loads(prompt.user))
+            return ModelResult(None, data, tier, self.provider, self.resolved_model(tier),
+                               Usage(80, 80, 0.02), 1, completion=Completion.COMPLETE)
         assert schema == COMMUNICATION_PREMISE_REVIEW_SCHEMA and tier is Tier.JUDGE
         self.prompts.append(prompt)
         packet = json.loads(prompt.user)
@@ -437,4 +451,19 @@ def test_actual_private_wire_shows_only_complete_nonmerits_premise_reviews(clien
         assert client.post(f"{preview(matter)}/seen", json={}).status_code == 409
     assert shown.json()["released"] is shown.json()["client_ready"] is False
     assert author.tool_call.call_count == 1 and sum(len(judge.prompts) for judge in judges) == 1
-    assert not app.store.load(matter.id).facts and not app.store.load(matter.id).turn_receipts
+    # A private wording check may exhaust the shared allowance before the
+    # separate scope read. If dispatched, this fixture returns only an exact
+    # typed NOT ASSESSED population, never a completeness approval.
+    scope_prompts = [prompt for judge in judges for prompt in judge.scope_prompts]
+    assert len(scope_prompts) <= 1
+    assert all(prompt.operation == "working_scope_v1" for prompt in scope_prompts)
+    saved = app.store.load(matter.id)
+    scope_children = [row for row in saved.loop_records
+                      if row.identity.turn_id.endswith(":check:working_scope_v1")]
+    assert len(scope_children) == (verdict == "neutral")
+    if scope_children:
+        sealed = scope_children[0].events[-1].payload
+        assert sealed["released"] is False
+        assert sealed["data"] is None or sealed["data"]["population_assessed"] is None
+        assert len(scope_prompts) == (sealed["data"] is not None)
+    assert not saved.facts and not saved.turn_receipts

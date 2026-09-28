@@ -9,12 +9,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.understand import brain_context
-from nm.legal_brain.reason import requirements
-from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
 from nm.legal_brain.communicate.register_contracts import PEER
-from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
 from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
 from nm.legal_brain.orchestrate.tools import (
     Boundary,
@@ -23,6 +19,10 @@ from nm.legal_brain.orchestrate.tools import (
     ToolRefused,
     ToolRegistry,
 )
+from nm.legal_brain.reason import requirements
+from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.legal_brain.understand import brain_context
+from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.file_mutation import MutationRefused, prepare_requirement_answer
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
@@ -44,6 +44,9 @@ def fixture():
                  Provenance("advocate_statement", "other-turn"))
     thread = Thread("one", "One distinct dispute", chronology=(fact.id,), requirements=(clause,),
                     requirement_reads={clause.locator: clause.source_identity})
+    context = requirements.applicability_identity(thread, (fact, other))
+    thread = replace(thread, requirements=(replace(clause, context_identity=context),),
+                     requirement_read_contexts={clause.locator: context})
     matter = Matter("file", "advocate", "Two disputes", version=3, facts=(fact, other),
                     threads=(thread, Thread("two", "Other dispute", chronology=(other.id,))))
     trusted = {"advocate_id": matter.advocate_id, "current_version": matter.version,

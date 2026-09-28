@@ -21,6 +21,7 @@ from nm.legal_brain.reason.requirements import Passage
 from nm.legal_brain.reason.requirements_contracts import (
     ClassificationProof,
     Outcome,
+    applicability_identity,
     classification_identity,
     key,
     restored,
@@ -68,7 +69,11 @@ def _binding(thread, requirement, outcome, facts, parent, *, records=(),
     if (fact is None or fact.id not in thread.chronology or fact.superseded_by is not None
             or fact.provenance.kind != "advocate_statement" or outcome.basis not in fact.statement
             or outcome.source_identity != requirement.source_identity
-            or thread.requirement_reads.get(requirement.locator) != requirement.source_identity):
+            or thread.requirement_reads.get(requirement.locator) != requirement.source_identity
+            or not requirement.context_identity
+            or (requirement.context_identity and
+                (requirement.context_identity != applicability_identity(thread, facts)
+                 or outcome.context_identity != requirement.context_identity))):
         raise ReviewRefused("The proposed classification lost its current attributed fact/source")
     def sources(record):
         result = []

@@ -20,6 +20,7 @@ This module is PURE. It takes ports in and returns a result; it opens nothing.
 """
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, timezone
@@ -72,6 +73,7 @@ from nm.legal_brain.reason import proof_contracts as domain_proof
 from nm.legal_brain.reason import theory as theory_reader
 from nm.legal_brain.reason.elements_port import ElementsPort
 from nm.legal_brain.reason.proof_contracts import ProofStatus
+from nm.legal_brain.reason.requirements_contracts import applicability_subject
 from nm.legal_brain.retrieve import investigation
 from nm.legal_brain.retrieve.authority_weight_port import AuthorityWeightPort, Standing
 from nm.legal_brain.retrieve.coverage_port import CoveragePort
@@ -1285,6 +1287,8 @@ class TurnEngine:
                 requirements=concluded.get(
                     "requirements", thread.requirements),
                 requirement_reads=concluded.get("requirement_reads", thread.requirement_reads),
+                requirement_read_contexts=concluded.get(
+                    "requirement_read_contexts", thread.requirement_read_contexts),
                 requirement_outcomes=concluded.get(
                     "requirement_outcomes", thread.requirement_outcomes),
                 checklist_session=concluded.get("checklist_session", thread.checklist_session),
@@ -3084,6 +3088,9 @@ class TurnEngine:
         thread_for_reply = replace(thread, requirements=concluded.get(
             "requirements", thread.requirements), requirement_reads=concluded.get(
                 "requirement_reads", thread.requirement_reads),
+            requirement_read_contexts=concluded.get(
+                "requirement_read_contexts", thread.requirement_read_contexts),
+            objective=concluded.get("objective", thread.objective),
             requirement_outcomes=concluded.get("requirement_outcomes", thread.requirement_outcomes))
         checklist_note = requirements.conversation_context(thread_for_reply, facts, turn.today,
             resumed=bool(turn.session_reference and thread.checklist_session
@@ -3167,11 +3174,10 @@ class TurnEngine:
         """The checklist for one dispute, or None when there is nothing to read.
 
         Read newly retrieved or changed passages together within this turn.
-        Successful reads, including empty ones, are cached by passage identity,
-        not merely locator. Ordinary replies update answers in the existing
-        dispute read; they do not add a separate checklist-answer model call.
-        Cache invalidation for changed dispute applicability remains an explicit
-        open obligation, not a claim that the text alone determines relevance.
+        Successful reads, including empty ones, are cached by exact passage
+        AND dispute-applicability identity. Ordinary replies update answers in
+        the existing read without another checklist-answer model call. A change
+        of side, objective or scoped file material reconsiders the same law.
 
         A FAILED READ LEAVES THE CHECKLIST ALONE. Returning an empty tuple
         would erase requirements an earlier passage established, and the
@@ -3182,18 +3188,27 @@ class TurnEngine:
         if not quotable:
             return None
         held = requirements.restored(thread)
+        subject_thread = replace(thread, objective=(concluded or {}).get(
+            "objective", thread.objective))
+        context_identity = requirements.applicability_identity(subject_thread, facts)
         passages = tuple(
             requirements.Passage(
                 source=f.ref, text=f.span, locator=f.locator,
                 kind="provision" if f.source_kind is SourceKind.PROVISION else "authority")
             for f in quotable)
         passages = tuple(p for p in passages
-                         if thread.requirement_reads.get(p.locator) != p.identity)
+                         if (thread.requirement_reads.get(p.locator) != p.identity
+                             or thread.requirement_read_contexts.get(p.locator)
+                             != context_identity))
         if not passages:
             return None
         scoped_facts = tuple(f for f in facts if f.id in thread.chronology
                              and f.superseded_by is None
                              and f.provenance.kind == "advocate_statement")
+        subject = applicability_subject(subject_thread, facts)
+        context += "\nCurrent dispute posture, objective and file context:\n" + json.dumps(
+            {name: value for name, value in subject.items() if name != "facts"},
+            ensure_ascii=False, default=lambda value: value.isoformat())
         context += "\nAdvocate facts (quotable for answers):\n" + "\n".join(
             f.statement for f in scoped_facts)
         try:
@@ -3207,7 +3222,8 @@ class TurnEngine:
         if refuse_partial(answer.completion, doing="the requirement reading"):
             metrics.fire("G-MODEL", "unavailable", "The requirement reading was incomplete.")
             return None
-        reading = requirements.read(answer.data or {}, passages)
+        reading = requirements.read(answer.data or {}, passages,
+                                    context_identity=context_identity)
         if reading.dropped:
             # Counted where it can be seen. A reader that keeps inventing
             # requirements looks exactly like a reader finding fewer of them.
@@ -3222,6 +3238,10 @@ class TurnEngine:
                 and isinstance(answer.data.get("requirements"), list) and concluded is not None):
             concluded["requirement_reads"] = {**thread.requirement_reads,
                                              **{p.locator: p.identity for p in passages}}
+            concluded["requirement_read_contexts"] = {
+                **thread.requirement_read_contexts,
+                **{p.locator: context_identity for p in passages},
+            }
         merged = requirements.merge(held, reading)
         if concluded is not None and turn is not None and reading.requirements:
             proposals = []

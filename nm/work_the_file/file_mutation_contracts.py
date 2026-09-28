@@ -61,9 +61,14 @@ def _thread_changes(before: Thread, after: Thread, facts):
             raise ValueError("A newly controlled classification needs independent relevance review")
         requirement = requirements[ident]
         current_source = after.requirement_reads.get(requirement.locator)
+        if (requirement.source_identity or current_source) and not requirement.context_identity:
+            raise ValueError("a source-backed answer needs a reviewed dispute applicability")
         if (outcome.source_identity != requirement.source_identity or (
                 current_source and outcome.source_identity != current_source)):
             raise ValueError("a requirement answer is bound to its current source generation")
+        if (requirement.context_identity and
+                outcome.context_identity != requirement.context_identity):
+            raise ValueError("a requirement answer is bound to its current dispute applicability")
         prior = list(old.get("history", ())) if old else []
         if old:
             prior.append({k: v for k, v in old.items() if k != "history"})

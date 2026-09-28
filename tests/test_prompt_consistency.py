@@ -71,6 +71,7 @@ SITES = {
     "turn:_courtesy",
     "verifier:verification_prompt",
     "working_scope:_request",
+    "working_scope:_demand_request",
     "working_explanation:_rationale_request",
 }
 
@@ -893,7 +894,7 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
     # is not a second standalone read. Keep the population nonempty and exact.
     # The private explanation wording is a distinct independently owned read,
     # not a waiver of source, scope or final publication checks.
-    assert len(schemas) == 32, schemas
+    assert len(schemas) == 33, schemas
     assert ("working_explanation", "WORKING_RATIONALE_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_REVIEW_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_UNIT_REVIEW_SCHEMA") in schemas

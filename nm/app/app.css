@@ -1,3 +1,4 @@
+/* Advocate-facing design system and responsive shell for the journey screens. */
 :root {
   /* Locally available fonts and shared tokens: rendering never sends a
      request to a font service from an advocate's workspace. */
@@ -677,20 +678,6 @@ main.single {
   color: var(--ink-3);
   cursor: pointer;
   font-size: 12px;
-}
-
-.recorded-raw {
-  background: var(--surface-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  font-size: 11.5px;
-  line-height: 1.55;
-  margin-top: 8px;
-  max-height: 420px;
-  overflow: auto;
-  padding: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 @media (max-width: 860px) {
@@ -1483,6 +1470,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .requirement--promised .requirement-mark { color: var(--amber); }
 .requirement--unavailable .requirement-mark { color: var(--signal); }
 .requirement--outstanding .requirement-mark { color: var(--ink-2); }
+.requirement--review-required .requirement-mark { color: var(--amber); }
 .requirement-need { font-size: .82rem; line-height: 1.4; }
 .requirement-state { font-size: .72rem; text-transform: uppercase;
   letter-spacing: .04em; color: var(--ink-2); white-space: nowrap; }

@@ -78,8 +78,14 @@ def project(matter, *, after_thread_id=None, source_current=None,
         # both render as an empty list.
         projection = projections[thread.id]
         checklist = projection.rows
+        applicability_review_required = sum(not i.applicability_current for i in checklist)
+        if status == "reviewed" and applicability_review_required:
+            status, reason = (
+                "needs_review",
+                "The checklist's legal relevance needs review against the changed dispute.",
+            )
         if status == "reviewed" and any(
-                i.state is requirements.State.OUTSTANDING for i in checklist):
+                i.outstanding for i in checklist):
             status, reason = "needs_information", "Some relevant information remains outstanding."
         elif status == "reviewed" and any(
                 i.state is requirements.State.PROMISED for i in checklist):
@@ -95,6 +101,7 @@ def project(matter, *, after_thread_id=None, source_current=None,
                 "requirements": [item.rendered() for item in checklist],
                 "requirements_state": "established" if checklist else "not_established",
                 "outstanding_requirements": sum(1 for item in checklist if item.outstanding),
+                "applicability_review_required": applicability_review_required,
                 "nothing_to_ask": projection.nothing_to_ask,
                 "requirements_settled": projection.settled,
             }

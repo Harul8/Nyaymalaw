@@ -833,9 +833,11 @@ def test_phase_8b_history_is_a_record_and_not_a_json_dump(page, journey):
 
     TWO RENDERERS FOR ONE ANSWER IS S9 and the drift was already real: BK-37
     filed the served answer into sections and History would still have been
-    printing JSON. The assertion is that the record READS like the advice --
-    same headings, same folding -- and that the raw material is still there
-    for the review that needs it.
+    printing JSON. The record must READ like the advice -- same headings and
+    folding -- while the advocate-facing audit disclosure must not bypass the
+    release projection to expose raw prompts, model calls or internal ids.
+    Forensic access belongs in a separately authorised operator audit view;
+    this browser test does not claim that view has been built.
     """
     _open_matter(page, journey, client="History Test Traders")
     _advise(page, BRIEF)
@@ -851,15 +853,20 @@ def test_phase_8b_history_is_a_record_and_not_a_json_dump(page, journey):
     shown = page.inner_text("#pane-history")
     assert page.locator('#pane-history .el > p.body').all_text_contents() == original
     assert page.locator('#pane-history h3.section, #pane-history .el .k').count() == 0
-    # NOT RAW, AND NOT DELETED. The JSON is behind the same door every served
-    # turn already has.
-    assert '"turn_id"' not in shown, (
-        "the raw record is the first thing History shows")
-    page.click("#pane-history details.audit summary")
-    page.wait_for_selector("#pane-history details.audit[open]", timeout=10000)
-    assert '"turn_id"' in page.inner_text("#pane-history"), (
-        "the raw record was deleted rather than filed -- forensic diagnosis "
-        "is what this store is for")
+    # The advocate's History is a released-answer projection, not a route to
+    # the diagnostic archive. Opening its audit disclosure must preserve that
+    # boundary, including material concealed by a closed <details> element.
+    assert '"turn_id"' not in shown, "History initially exposed a raw turn id"
+    # The pane can also contain a separate "Other recorded work progress"
+    # disclosure. Open this turn's answer audit, not that earlier <details>.
+    page.click("#pane-history .recorded-turn details.audit summary")
+    page.wait_for_selector("#pane-history .recorded-turn details.audit[open]", timeout=10000)
+    assert page.locator('#pane-history .el > p.body').all_text_contents() == original
+    assert page.locator('#pane-history pre.recorded-raw').count() == 0
+    disclosed = page.locator('#pane-history').text_content()
+    for raw_key in ('"turn_id"', '"prompt"', '"model_calls"'):
+        assert raw_key not in disclosed, (
+            f"advocate History exposed diagnostic field {raw_key} after disclosure")
 
 
 def test_phase_9_reload_restores_the_matter(page, journey):
