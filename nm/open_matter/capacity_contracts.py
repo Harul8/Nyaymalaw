@@ -98,7 +98,12 @@ class CapacityPosition:
             return ("Obtain and record a human resolution of capacity "
                     "before relying on instructions.")
         if self.state is Capacity.NOT_ASSESSED:
-            return "Record an explicit capacity assessment and its basis before substantive work."
+            # The file is worked meanwhile; the advice is not reliance-ready
+            # until this is answered (owner, 28 September 2026: G-CAPACITY is
+            # a STEP gate, not a bar on working the file).
+            return ("Tell me whether you have assessed that the client can give these "
+                    "instructions, and on what basis; until then the advice is not "
+                    "reliance-ready.")
         return "Reassess if the basis or the instruction materially changes."
 
     def said(self) -> str:

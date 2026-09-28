@@ -90,7 +90,7 @@ def test_no_substance_is_admitted_to_a_matter_whose_screens_do_not_clear():
     """B3: *no substantive fact is persisted to a matter whose screen is not
     `clear` or expressly emergency-excepted.*"""
     ok, why = may_admit_substance(_all_clear())
-    assert ok and "every screen clears" in why
+    assert ok and "every screen that decides admission clears" in why
 
     partial = tuple(
         Screen(kind=k, state=ScreenState.INCOMPLETE, unread=("the registry",))
@@ -98,6 +98,35 @@ def test_no_substance_is_admitted_to_a_matter_whose_screens_do_not_clear():
     refused, reason = may_admit_substance(partial)
     assert refused is False
     assert "conflict" in reason and "incomplete" in reason
+
+
+def test_a_step_scoped_screen_is_a_stated_limit_never_a_bar_on_the_file():
+    """Owner, 28 September 2026: every message is worked. THE GATE MATRIX
+    DECIDES: G-SCOPE and G-CAPACITY block a STEP, so an unrecorded scope or an
+    unassessed capacity is carried as a stated limit and never stops the file
+    being worked. A turn-scoped screen -- the conflict check -- still does."""
+    from nm.open_matter.screens import limits_the_step
+    from nm.shared.gates_contracts import Scope, gate
+
+    stepped = {k for k in ScreenKind if limits_the_step(k)}
+    assert stepped == {ScreenKind.SCOPE, ScreenKind.CAPACITY}
+    for kind in stepped:
+        assert gate({ScreenKind.SCOPE: "G-SCOPE",
+                     ScreenKind.CAPACITY: "G-CAPACITY"}[kind]).scope is Scope.STEP
+
+    open_limits = tuple(
+        Screen(kind=k, state=ScreenState.NOT_ASSESSED, not_assessed_because="not given")
+        if k in stepped else _clear(k) for k in ScreenKind)
+    ok, why = may_admit_substance(open_limits)
+    assert ok is True, "an unassessed capacity or scope stopped the file being worked"
+    assert "stated limits" in why and "capacity" in why and "scope" in why, (
+        "the limits were admitted silently rather than stated")
+
+    no_conflict_check = tuple(
+        Screen(kind=k, state=ScreenState.NOT_ASSESSED, not_assessed_because="nobody named")
+        if k is ScreenKind.CONFLICT else _clear(k) for k in ScreenKind)
+    refused, reason = may_admit_substance(no_conflict_check)
+    assert refused is False and "conflict" in reason
 
 
 @pytest.mark.eval_id("E-107")

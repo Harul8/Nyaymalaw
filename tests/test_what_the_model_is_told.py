@@ -132,10 +132,6 @@ WITHHELD: dict[str, str] = {
         "the forum's calendar and sourced. Reopens if a read is ever "
         "asked about delay in prosecution, where when the advocate last "
         "touched the file is genuinely material.",
-    "Matter.updated_at":
-        "WHEN the file was last SAVED -- the same diary fact as "
-        "`last_activity`, to the second, and withheld for the same reason. "
-        "It orders My work (F-B-14); no dispute turns on it.",
     "Matter.emergency_because":
         "It is a screening decision about the FILE, not material for an "
         "answer. Telling a model that a matter was admitted under an "

@@ -1022,19 +1022,6 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
-    updated_at: str = ""
-    """WHEN THIS FILE WAS LAST SAVED, as a UTC ISO instant to the microsecond
-    (`operation_contracts.save_stamp`).
-    F-B-14 (owner, 28 September 2026): My work lists the latest updated
-    matter first.
-
-    STAMPED BY THE SAVE DOOR, NEVER BY A CALLER. Every store's `commit` sets
-    it, so every way of changing a file -- present or added later -- counts,
-    and no writer can forget. `last_activity` is the forum's DAY the advocate
-    sees; this orders files worked on the same day. Empty on a file not saved
-    since the field existed, which then sorts by its day alone.
-    """
-
     service_authorities: tuple[dict, ...] = ()
     """P45 / BK-58-AC1's recorded permission to work on this matter unprompted.
     Empty means nothing runs on it unless the advocate is here. Permission to

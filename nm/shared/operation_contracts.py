@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from nm.arrive.advocate_contracts import utcnow
@@ -196,8 +196,11 @@ def now_text(at: datetime | None = None) -> str:
 
 
 def save_stamp(at: datetime | None = None) -> str:
-    """`Matter.updated_at` for one save: UTC, to the MICROSECOND, one fixed
-    width so two stamps compare as text. Seconds would tie two saves made in
-    the same second and leave My work's order to chance (F-B-14). Every store
-    stamps through this one function, so the format has one owner."""
-    return (at or utcnow()).isoformat(timespec="microseconds")
+    """When a matter was last saved (`MatterList.saved_at`): UTC, to the
+    MICROSECOND, one fixed width so two times compare as text. Seconds would
+    tie two saves made in the same second and leave My work's order to chance
+    (F-B-14). Every store writes it through this one function."""
+    moment = at or utcnow()
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone.utc)
+    return moment.isoformat(timespec="microseconds")

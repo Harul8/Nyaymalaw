@@ -337,26 +337,28 @@ def test_the_matter_list_carries_the_deadline_it_holds_and_orders_by_last_update
     first (F-B-14): the matter saved most recently leads whatever its
     deadline, and the deadline is shown, not used to reorder.
     """
-    from dataclasses import replace
-
+    from nm.shared.store_port import MatterList
     from nm.work_the_file.deadlines import Deadline, DeadlineKind
     from nm.work_the_file.matter_contracts import Matter, Thread
     from nm.work_the_file.projections_api import matter_list_projection
 
-    def matter_with(title, on, saved):
+    def matter_with(title, on):
         m = Matter.create(advocate_id="adv", title=title)
         t = Thread.create(label=title)
-        m = replace(m.with_thread(t), updated_at=saved)
+        m = m.with_thread(t)
         return m, Deadline(thread=t.id, kind=DeadlineKind.LIMITATION,
                            source="Limitation Act, 1963 Article 65",
                            action="commence the suit", owner="the advocate",
                            consequence="the claim is barred", on=on)
 
-    far, far_d = matter_with("the far one", date(2039, 1, 1), "2026-09-28T09:00:05+00:00")
-    near, near_d = matter_with("the near one", date(2031, 1, 1), "2026-09-28T09:00:04+00:00")
+    far, far_d = matter_with("the far one", date(2039, 1, 1))
+    near, near_d = matter_with("the near one", date(2031, 1, 1))
+    held = MatterList((near, far), saved_at=(
+        (str(far.id), "2026-09-28T09:00:05.000000+00:00"),
+        (str(near.id), "2026-09-28T09:00:04.000000+00:00")))
 
     ordered = matter_list_projection(
-        [near, far], {far.id: (far_d,), near.id: (near_d,)})["matters"]
+        held, {far.id: (far_d,), near.id: (near_d,)})["matters"]
     assert [r["matter"] for r in ordered] == ["the far one", "the near one"], (
         "My work did not put the latest updated matter first — a nearer deadline "
         "must not reorder it (F-B-14)")

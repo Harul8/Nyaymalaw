@@ -1,4 +1,10 @@
-"""P14: the capacity state, not the truthiness of an answer, gates substance."""
+"""P14: the capacity STATE, not the truthiness of an answer, decides what capacity allows.
+
+Owner, 28 September 2026: every message is worked. G-CAPACITY is a STEP gate
+in the matrix, so an UNASSESSED capacity is a stated limit on relying on the
+advice, not a bar on working the file. Capacity recorded as IN DOUBT still
+holds the file until a person resolves it, and no prose ever clears it.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -38,6 +44,12 @@ def _capacity_screen(matter):
                 if screen.kind is screens.ScreenKind.CAPACITY)
 
 
+def _states_the_limit(response, word: str) -> bool:
+    """The reply says the limit out loud, as a disclosure the advocate reads."""
+    return any(word in e["text"].lower() and e["disclosure"]
+               for e in response.json()["elements"])
+
+
 @refuses("B6", 1)
 @pytest.mark.parametrize("state", list(Capacity))
 def test_each_explicit_state_reaches_the_actual_served_admission(client, monkeypatch, state):
@@ -64,10 +76,14 @@ def test_each_explicit_state_reaches_the_actual_served_admission(client, monkeyp
     assert stored["next_step"]
     screen = _capacity_screen(matter)
     assert screen.clears is (state is Capacity.NOT_IN_DOUBT)
-    assert bool(entered) is (state is Capacity.NOT_IN_DOUBT)
-    if state is not Capacity.NOT_IN_DOUBT:
+    # IN DOUBT holds the file; UNASSESSED is worked with the limit stated.
+    assert bool(entered) is (state is not Capacity.IN_DOUBT)
+    if state is Capacity.IN_DOUBT:
         assert response.json()["blocked"]
         assert not matter.facts
+    if state is Capacity.NOT_ASSESSED:
+        assert _states_the_limit(response, "capacity"), (
+            "an unassessed capacity was worked around silently")
 
 
 @pytest.mark.parametrize("answer", ["yes", "not in doubt", "in doubt", "cannot instruct",
@@ -76,10 +92,11 @@ def test_legacy_prose_never_grandfathers_a_capacity_clearance(client, answer):
     response = client.post("/api/turn", json=_request(
         release={"scope": "recovery advice", "capacity": answer}))
     matter = _saved(client, response)
-    assert response.json()["blocked"]
-    assert not matter.facts
+    # PROSE NEVER CLEARS IT, whatever it says: the screen stays unassessed and
+    # the reply says so, while the file is worked.
     assert _capacity_screen(matter).state is screens.ScreenState.NOT_ASSESSED
     assert matter.intake_answers["capacity"]["answer"] == answer
+    assert _states_the_limit(response, "capacity")
 
 
 @refuses("B6", 0)
@@ -162,7 +179,8 @@ def test_clear_capacity_does_not_clear_an_unanswered_scope(client):
     scope = next(screen for screen in screens.from_stored(matter.screens)
                  if screen.kind is screens.ScreenKind.SCOPE)
     assert not scope.clears
-    assert response.json()["blocked"] and not matter.facts
+    # An unrecorded scope is a STEP gate too: stated, not a bar on the file.
+    assert _states_the_limit(response, "instruct")
 
 
 def test_future_or_damaged_stored_clearance_is_not_current():

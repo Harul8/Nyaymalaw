@@ -924,6 +924,31 @@ class TurnEngine:
         if named:
             matter = replace(matter, intake_parties={**(matter.intake_parties or {}),
                                                      **named})
+        # THE MESSAGE'S OWN DETAILS COUNT (owner, 28 September 2026: a first
+        # message naming the client, the other side and the work was answered
+        # as though the blank form were all there was). A file that still holds
+        # NOBODY after the contribution read gets the dedicated, quote-guarded
+        # parties read now, so the conflict check runs on this turn rather than
+        # the next -- and that read is then not repeated below.
+        pre_screen_notes: list[Element] = []
+        parties_read = False
+        if not self._parties_of(matter).parties and not understanding.asserts_nothing:
+            matter = self._read_parties(turn, None, matter, metrics, pre_screen_notes)
+            parties_read = True
+        # THE WORK ASKED FOR, IN THE ADVOCATE'S OWN WORDS, is the engagement
+        # instruction when none is recorded -- attributed to them and the time,
+        # exactly as the opening form's answer is.
+        if not (matter.intake_answers or {}).get("scope") and understanding.instruction:
+            matter = replace(matter, intake_answers={
+                **(matter.intake_answers or {}),
+                "scope": {"by": turn.advocate_id, "answer": understanding.instruction,
+                          "at": self._clock().isoformat()}})
+        # CAPACITY ANSWERED IN THE CONVERSATION: the advocate's own stated
+        # assessment, their words as the basis. Never inferred (B6).
+        stated_capacity = understanding.capacity_assessment
+        if capacity is None and stated_capacity is not None:
+            capacity = CapacityPosition.record(
+                stated_capacity, actor=turn.advocate_id, now=self._clock())
         if turn.release:
             matter = replace(matter, intake_answers={
                 **(matter.intake_answers or {}),
@@ -1031,7 +1056,7 @@ class TurnEngine:
         # unexamined read is said out loud; and polite checks of material
         # assertions join the gap queue -- each asked once, so a check already
         # put in an earlier question is not repeated.
-        understood_notes = self._understanding_notes(understanding)
+        understood_notes = [*pre_screen_notes, *self._understanding_notes(understanding)]
         checks = tuple(check for check in understanding.checks()
                        if not any(check[0] in q.text for q in matter.asked))
 
@@ -1271,8 +1296,9 @@ class TurnEngine:
             # HERE AND NOT IN `_derive`, because `_derive` holds a
             # `matter_id` and not the matter, and what this read produces is
             # a change to the file.
-            if not understanding.asserts_nothing:
-                # A hypothetical or a question names nobody onto the file.
+            if not understanding.asserts_nothing and not parties_read:
+                # A hypothetical or a question names nobody onto the file; and a
+                # file whose parties were read before the screens is not read twice.
                 matter = self._read_parties(turn, memory, matter, metrics, elements)
             # Carry these disclosures into any late-source re-derivation too.
             head = list(elements)
@@ -2012,7 +2038,7 @@ class TurnEngine:
         # blanket exception was a sentence nobody read.
         if may:
             metrics.fire("G-UNSCREENED", "screened",
-                         "every screen on this matter clears: " + why)
+                         "the screens on this matter admit the work: " + why)
             # THE ROWS STILL GO OUT, and this was a regression for about
             # twenty minutes. `rows=()` on the cleared path meant an advocate
             # whose matter passed every screen was told NOTHING about the
@@ -2024,7 +2050,7 @@ class TurnEngine:
             # them will scroll past the turn they do not clear.
             return ScreenResult(
                 clear=True, assessed=True,
-                reason="every screen clears: " + why,
+                reason="the screens admit the work: " + why,
                 rows=(("Screens on this matter permit the current work within the "
                        "recorded limits; this is not complete legal coverage: "
                        + "; ".join(f"{s.kind.value} — {s.detail}"

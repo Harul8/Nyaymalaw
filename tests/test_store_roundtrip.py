@@ -240,11 +240,7 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     construction rather than by remembering to update a second place.
     """
     store = FileMatterStore(tmp_path, key=KEY)
-    # WHAT WAS WRITTEN is what the save door returns: it stamps `updated_at`
-    # (F-B-14), so the populated matter plus that stamp is the thing that must
-    # come back field for field.
-    written = store.commit(_fully_populated(), expected_version=0)
-    assert written.updated_at, "the save door did not stamp the matter it wrote"
+    store.commit(_fully_populated(), expected_version=0)
     reloaded = FileMatterStore(tmp_path, key=KEY).load("mat_1")
 
     def pick(m):
@@ -262,7 +258,7 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
         }[cls]
 
     found = pick(reloaded)
-    original = pick(written)
+    original = pick(_fully_populated())
 
     for f in dataclasses.fields(cls):
         assert getattr(found, f.name) == getattr(original, f.name), (

@@ -320,16 +320,37 @@ def unscreened(screens: tuple[Screen, ...]) -> tuple[str, ...]:
     threshold map already uses, and for the identical reason: an advocate
     reading four rows believes the fifth was checked.
     """
+    return tuple(row for _kind, row in _outstanding(screens))
+
+
+def _outstanding(screens: tuple[Screen, ...]) -> tuple[tuple[ScreenKind, str], ...]:
     by_kind = {s.kind: s for s in from_stored(screens)}
-    out: list[str] = []
+    out: list[tuple[ScreenKind, str]] = []
     for kind in ScreenKind:
         s = by_kind.get(kind)
         if s is None:
-            out.append(f"{kind.value}: never run on this matter")
+            out.append((kind, f"{kind.value}: never run on this matter"))
         elif not s.clears:
             reason = s.detail or s.not_assessed_because or "; ".join(s.unread)
-            out.append(f"{kind.value}: {s.state.value} — {reason}")
+            out.append((kind, f"{kind.value}: {s.state.value} — {reason}"))
     return tuple(out)
+
+
+def limits_the_step(kind: ScreenKind) -> bool:
+    """Does the gate matrix scope this screen's gate to a STEP?
+
+    THE MATRIX DECIDES, not this module. G-SCOPE and G-CAPACITY block a STEP --
+    a decision recorded as authority, advice relied on -- and never the turn.
+    Treating an unrecorded scope or an unassessed capacity as a bar on holding
+    the file stopped every message on a matter opened with a blank form, even
+    one that named the client, the other side and the work (owner, 28 September
+    2026: "every message ... analyse, identify disputes, retrieve passages,
+    update the matter board"). Such a screen is a LIMIT stated in the reply.
+    """
+    from nm.shared.gates_contracts import Scope, gate
+
+    gate_id = GATE_FOR.get(kind, ("", {}))[0]
+    return bool(gate_id) and gate(gate_id).scope is Scope.STEP
 
 
 @implements("B3")
@@ -352,9 +373,19 @@ def may_admit_substance(screens: tuple[Screen, ...],
     # the ones nobody had run. P14 owns this module and the ordinary-admission
     # criterion it serves (BK-34-AC3), so restoring the call IS the packet's
     # work rather than an unrelated fix carried alongside it.
-    blocking = unscreened(screens)
+    outstanding = _outstanding(screens)
+    # A STEP-SCOPED SCREEN THAT IS SIMPLY UNANSWERED LIMITS WHAT MAY BE RELIED
+    # ON, NOT WHAT MAY BE HELD (`limits_the_step`); it is carried to the reply as
+    # a stated limit. One that RAN AND FOUND SOMETHING -- capacity recorded as in
+    # doubt -- still holds the file until a person resolves it (B6).
+    found = {s.kind for s in from_stored(screens) if s.state is ScreenState.BLOCKED}
+    limit = {kind for kind, _row in outstanding
+             if limits_the_step(kind) and kind not in found}
+    blocking = tuple(row for kind, row in outstanding if kind not in limit)
+    limits = tuple(row for kind, row in outstanding if kind in limit)
     if not blocking:
-        return True, "every screen clears"
+        return True, ("every screen that decides admission clears"
+                      + (f"; stated limits: {'; '.join(limits)}" if limits else ""))
     if emergency:
         return True, ("admitted under the EMERGENCY EXCEPTION with screens "
                       "outstanding: " + "; ".join(blocking))

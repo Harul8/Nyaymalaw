@@ -63,7 +63,7 @@ A(feature('A1', 'Authentication and advocate identity', {
 A(feature('A2', 'The matter list, and the thread board', {
   does: [
     'With no matters: one invitation to brief, in an advocate\'s register.',
-    '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads** · what is blocked · last worked. **Ordered by when the file was last updated, latest first** (owner, 28 September 2026, F-B-14) — the time of its last saved change, stamped by the store on every write and shown on the row. Deadlines are shown on every row but do not reorder the list.',
+    '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads** · what is blocked · last worked. **Ordered by when the file was last updated, latest first** (owner, 28 September 2026, F-B-14) — the time of its last saved change, as the store itself records every write (kept by the store, never inside the file, so dating a save does not change what was saved) and shown on the row. Deadlines are shown on every row but do not reorder the list.',
     '**The THREAD BOARD**, inside a matter — one row per thread: thread · our client is · against whom · forum · stage · next deadline. Six fields.',
     'Surface any deadline that changed category while the advocate was away, **before they have to ask**.',
     'Render an unresolved posture **loudly**, as `unknown` rather than as an empty field, and a conflicting posture with a confirm-before-advising banner.',
@@ -193,6 +193,7 @@ A(feature('B2', 'Emergency triage', {
 A(feature('B3', 'Conflict screen', {
   does: [
     'Take **names only** and screen against the firm-wide registry before any substance is retained.',
+    'Take the names from wherever the advocate gives them: a first message that names the client and the other side is screened on that same turn, even when the new-matter form was left blank (owner, 28 September 2026).',
     'Where substance arrives before clearance: think, answer within the permitted pre-clearance scope, and **retain nothing** — quarantine it.',
     'On a match: block, name the matches reviewed, route to a named human.',
     'On human clearance: record who cleared it, when, and against what; release the quarantine **exactly once**.',
@@ -238,6 +239,7 @@ A(feature('B5', 'Engagement, authority and scope', {
     'Record who the client is, who may instruct, who decides, the scope and its exclusions, confidentiality, communications, fees and likely disbursements, document custody, termination rights and the complaints route.',
     'Distinguish the client from an intermediary, a payer, a family member, an authorised representative or the instructing advocate.',
     'Where nothing is recorded, advice may be discussed **provisionally** and is not reliance-ready.',
+    'Where no scope is recorded, the work the advocate\'s message asks for, **in their own words**, is recorded as the instruction, attributed to them and timed. An unrecorded scope limits the step and is stated in the reply; it does not stop the file being worked (owner, 28 September 2026).',
     'Work inside recorded scope; anything outside is visibly blocked or expressly accepted.',
   ],
   never: [
@@ -257,6 +259,7 @@ A(feature('B5', 'Engagement, authority and scope', {
 A(feature('B6', 'Capacity to instruct  ⟨tenet 32⟩', {
   does: [
     'Record a capacity position on any decision that becomes authority: assessed, not assessed, or in doubt.',
+    'Accept the advocate\'s own statement of capacity in the conversation, recorded as their attributed assessment with their quoted words as the basis. A capacity **not assessed** is a stated limit on reliance while the file is worked; a capacity **in doubt** holds the file until a person resolves it (owner, 28 September 2026).',
     'Where the material suggests the client may lack capacity to give the instruction being acted on, surface it and hold the instruction short of authority until a human resolves it.',
     'Keep vulnerability and capacity as **separate findings** — vulnerability changes how NM communicates; incapacity changes whether an instruction is authority at all.',
   ],

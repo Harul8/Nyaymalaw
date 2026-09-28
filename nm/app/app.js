@@ -1475,12 +1475,13 @@ function renderOpeningNote(note) {
 
 // LB-83. WHEN THE ANSWER WAS SAVED, said quietly under it (owner, 28 September
 // 2026), so an older reply is never mistaken for one given after later changes.
+// The date and time alone -- no "Answered" (owner, the same evening).
 function answeredAt(answer) {
   const when = Date.parse(answer?.at || '');
   if (Number.isNaN(when)) return null;
   const line = document.createElement('p');
   line.className = 'answered-at';
-  line.textContent = 'Answered ' + new Date(when).toLocaleString(undefined, {
+  line.textContent = new Date(when).toLocaleString(undefined, {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return line;
 }
@@ -1962,16 +1963,10 @@ function renderTurn(entry) {
     wrap.appendChild(fold);
   }
 
-  // P24. INTAKE READINESS, which the turn completing does not establish. The
-  // block names whether the file is ready, the open needs, and the needs the
-  // advocate marked unavailable with their resume trigger -- and offers the
-  // stop ("I can't get this") and resume controls, so the loop is a decision.
-  const brief = entry.answer.briefing;
-  if (brief && brief.state && brief.state !== 'not_assessed'
-      && (brief.state !== 'ready' || (brief.paused || []).length)) {
-    wrap.appendChild(renderBriefing(brief, entry.answer.matter_id,
-                                    entry.answer.matter_version));
-  }
+  // P24's INTAKE-READINESS BLOCK ("intake open", "NM has not completed the
+  // review of every dispute") is no longer drawn under a reply (owner, 28
+  // September 2026, LB-166): the matter board's per-dispute view carries what
+  // each dispute needs. The served `briefing` field is unchanged.
 
   const note = renderBoardNote(entry);
   if (note) wrap.appendChild(note);

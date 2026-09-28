@@ -120,6 +120,10 @@ REACHED_ELSEWHERE = {
     # route-table authentication sweep and served upload browser journey.
     # The held-content route deliberately refuses original-byte release.
     "open_upload_first_intake", "begin_upload", "list_uploads", "inspect_upload",
+    # F-B-02's route, registered the same way, with BROWSER callers: the
+    # board's opening edit and the new-matter form's correction post to it as
+    # template literals in `nm/app/app.js`.
+    "correct_opening",
     "receive_upload_chunk", "complete_upload", "cancel_upload", "held_upload_content",
     # P18's two, registered the same way, and both with a BROWSER caller: the
     # Case file pane's Correct control posts the correction and the pane reads

@@ -30,6 +30,21 @@ class MatterList:
     unreadable: tuple[str, ...] = ()
     """Ids that are on disk and could not be decoded. Named, not counted,
     so the advocate can say which file to look at."""
+    saved_at: tuple[tuple[str, str], ...] = ()
+    """WHEN EACH MATTER WAS LAST SAVED, as (matter id, UTC ISO instant). F-B-14:
+    My work lists the latest updated matter first.
+
+    THE STORE'S OWN RECORD, NOT A FIELD OF THE FILE. Every save goes through the
+    store, so the store knows when each file last changed -- every kind of
+    change, including ones not written yet -- and no writer can forget to say
+    so. It is kept OUT of the sealed matter on purpose: a stamp inside the file
+    changes the file's identity on every save, and the checks that ask "has the
+    file changed since I read it?" would then see a change after every journal
+    write. A matter this store cannot date is simply absent here."""
+
+    def saved(self, matter_id: str) -> str:
+        """When this matter was last saved, or empty when the store cannot say."""
+        return dict(self.saved_at).get(str(matter_id), "")
 
     @property
     def complete(self) -> bool:
@@ -52,9 +67,8 @@ class StorePort(Protocol):
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Persist atomically, or raise. There is no partial application.
 
-        Every implementation stamps `Matter.updated_at` with the time of THIS
-        save and returns the stamped matter (F-B-14): the save door is the one
-        owner of when a file was last updated."""
+        Every implementation keeps WHEN each save happened, which `list_for`
+        returns as `MatterList.saved_at` (F-B-14)."""
         ...
 
     def list_for(self, advocate_id: str) -> "MatterList":

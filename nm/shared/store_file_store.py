@@ -26,8 +26,8 @@ import re
 import tempfile
 import time
 from contextlib import contextmanager
-from dataclasses import asdict, fields, is_dataclass, replace
-from datetime import date
+from dataclasses import asdict, fields, is_dataclass
+from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
 from types import UnionType
@@ -436,9 +436,6 @@ class FileMatterStore:
                     f"{current.version} while this turn was deriving. Re-derive "
                     f"against the current state rather than overwriting it."
                 )
-            # F-B-14. THE SAVE DOOR STAMPS WHEN THE FILE WAS LAST UPDATED, so
-            # no writer can forget to and My work orders by what was saved.
-            matter = replace(matter, updated_at=save_stamp())
             blob = self._seal(
                 str(matter.id), json.dumps(_enc(matter)).encode("utf8"),
                 create_key=current is None)
@@ -505,7 +502,7 @@ class FileMatterStore:
             discard(lock)
 
     def list_for(self, advocate_id: str) -> MatterList:
-        out, unreadable = [], []
+        out, unreadable, saved_at = [], [], []
         for p in sorted(self._matters.glob("*.nm")):
             try:
                 _storage_component(p.stem, kind="matter ID")
@@ -523,7 +520,12 @@ class FileMatterStore:
                 continue
             if m.advocate_id == advocate_id:
                 out.append(m)
-        return MatterList(tuple(out), tuple(unreadable))
+                # F-B-14. WHEN IT WAS LAST SAVED is the file's own write time:
+                # every commit replaces the file whole, so this moves on every
+                # kind of change and on nothing else.
+                saved_at.append((str(m.id), save_stamp(
+                    datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc))))
+        return MatterList(tuple(out), tuple(unreadable), tuple(saved_at))
 
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed, and never containing client words.

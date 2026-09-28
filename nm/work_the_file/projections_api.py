@@ -28,21 +28,27 @@ from nm.shared.traceability_contracts import implements
 from nm.work_the_file.matter_contracts import Matter, Role
 
 
+def _saved(matters, matter) -> str:
+    """When the store last saved this matter (`MatterList.saved_at`), or empty."""
+    saved = getattr(matters, "saved", None)
+    return saved(matter.id) if callable(saved) else ""
+
+
 def latest_first(matters) -> list:
     """F-B-14's ordering for My work: the latest updated matter first.
 
     Owner, 28 September 2026: *"sort the matters based on the last updated
-    date, with latest updated at the top."* The key is `Matter.updated_at`,
-    stamped by the save door on every write, so a message, a correction, a
-    board edit and an upload all count and no writer can forget. A file not
-    saved since that stamp existed has only the day it was last worked and
-    sorts by it -- an ISO day sorts below any stamped time on that day.
-    Never worked and never stamped sorts last.
+    date, with latest updated at the top."* The key is when the STORE last
+    saved each file (`MatterList.saved_at`) -- every save goes through it, so a
+    message, a correction, a board edit and an upload all count and no writer
+    can forget. A matter the store cannot date falls back to the day it was
+    last worked, which sorts below any timed save on that day. Never worked
+    and undated sorts last.
 
     Deadlines no longer order this list (PRD A2 revised the same day); each
     row still carries its deadline. The thread board keeps `nearest_first`.
     """
-    return sorted(matters, key=lambda m: m.updated_at or m.last_activity or "",
+    return sorted(matters, key=lambda m: _saved(matters, m) or m.last_activity or "",
                   reverse=True)
 
 
@@ -446,10 +452,10 @@ def matter_list_projection(matters, registers=None) -> dict:
             # integer counting writes -- so a matter written nine times
             # looked more recent than one written twice yesterday.
             "last_touched": m.last_activity or "never worked",
-            # WHEN IT WAS LAST SAVED, to the second -- what the list is
-            # ordered by, so the row shows the time its place comes from.
-            # None on a file not saved since the stamp existed.
-            "last_updated": m.updated_at or None,
+            # WHEN IT WAS LAST SAVED -- what the list is ordered by, so the
+            # row shows the time its place comes from. None when the store
+            # cannot date it.
+            "last_updated": _saved(matters, m) or None,
         })
     return {
         # NOT "ok" when something could not be read. An advocate scanning a

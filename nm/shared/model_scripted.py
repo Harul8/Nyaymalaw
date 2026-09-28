@@ -1314,7 +1314,8 @@ class ScriptedModelAdapter:
                                ("asserts_facts", True), ("statements", []),
                                ("board_changes", []), ("parties_named", []),
                                ("material", []), ("urgency", "cannot_tell"),
-                               ("urgency_quote", ""), ("ambiguity", "")):
+                               ("urgency_quote", ""), ("ambiguity", ""),
+                               ("capacity", {"stated": "not_stated", "quoted": ""})):
                 data.setdefault(key, value)
         if schema.get('x-nm-read') == 'posture' and isinstance(data, dict):
             # Older controlled responses assert representation, not a correction.
