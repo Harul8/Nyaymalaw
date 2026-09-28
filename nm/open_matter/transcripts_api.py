@@ -9,6 +9,27 @@ from nm.advise.turn_receipt_contracts import (
 )
 
 
+def _with_own_words(row: dict, archive: dict | None) -> dict:
+    """THE ADVOCATE'S OWN WORDS COME BACK WITH THE CONVERSATION.
+
+    Owner, 28 September 2026: a reopened or reloaded matter shows the whole
+    conversation as it was. A turn whose checks had not cleared is released
+    without admitting its message to the file, so its receipt deliberately
+    keeps no narrative -- and the reopened chat showed the answer with the
+    advocate's own message missing. The conversation record still holds what
+    they typed. Reading it back to them is display, never admission: the
+    receipt, the facts and the model's context are unchanged. Where no record
+    holds the words, the row says so rather than showing a turn nobody asked.
+    """
+    if row.get("input_admitted") or row.get("message"):
+        return row
+    words = (archive.get("message") if isinstance(archive, dict)
+             and not archive.get("unreadable") else None)
+    if type(words) is str and words.strip():
+        return {**row, "message": words, "message_source": "conversation_record"}
+    return {**row, "message_source": "not_held"}
+
+
 def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
     """Prefer atomic receipts; legacy release needs both applied and ungated evidence."""
     entries = matter.turn_receipts if isinstance(matter.turn_receipts, (tuple, list)) else ()
@@ -27,7 +48,7 @@ def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
             continue
         seen.add(turn_id)
         if turn_id in approved:
-            rows.append(approved[turn_id])
+            rows.append(_with_own_words(approved[turn_id], archive))
             continue
         withheld = archive.get("withheld_by")
         # Retain only explicitly supplied disclosures, never the withheld
@@ -66,5 +87,6 @@ def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
                                         "be established.")})
         if state == "not_established":
             problems.append(f"{turn_id}: release not established")
-    rows.extend(row for turn_id, row in approved.items() if turn_id not in seen)
+    rows.extend(_with_own_words(row, None)
+                for turn_id, row in approved.items() if turn_id not in seen)
     return sorted(rows, key=lambda row: (str(row.get("at") or ""), str(row["turn_id"]))), problems

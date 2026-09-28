@@ -687,8 +687,10 @@ def test_nothing_is_computed_behind_a_closed_posture_gate(tmp_path):
     assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements), (
         "a directive step was produced behind a closed gate")
     # Only the reads that settle the gate. Counted separately from derivation
-    # for exactly this reason.
-    assert out.metrics.llm_calls == out.metrics.settling_reads, (
+    # for exactly this reason. Composing the reply is presentation, counted
+    # apart and deriving nothing side-dependent (LB-76, 28 September 2026).
+    assert out.metrics.llm_calls == (out.metrics.settling_reads
+                                     + out.metrics.presentation_reads), (
         f"a blocked turn made {out.metrics.llm_calls} model call(s) of which "
         f"only {out.metrics.settling_reads} were ADMIT-phase reads. The rest "
         f"were derivation behind a closed gate, and were paid for. "
@@ -865,8 +867,8 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     turn succeeded, and the test failed on `turns_applied` — telling me the
     fixture was wrong rather than the product.
     """
-    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
     from nm.legal_brain.orchestrate.turn import TurnRefused
+    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
     from tests.test_turn_contract import finding
 
     store = FileMatterStore(tmp_path, key=KEY)

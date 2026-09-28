@@ -47,6 +47,7 @@ from nm.legal_brain.common import reads_contracts as reads
 from nm.legal_brain.common.conversation import guided, with_evidence
 from nm.legal_brain.common.curation_contracts import Curation
 from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.communicate import compose as composer
 from nm.legal_brain.communicate.register_contracts import PEER
 from nm.legal_brain.procedure import limitation
 from nm.legal_brain.procedure.filing_requirement_port import (
@@ -74,6 +75,7 @@ from nm.legal_brain.reason import theory as theory_reader
 from nm.legal_brain.reason.elements_port import ElementsPort
 from nm.legal_brain.reason.proof_contracts import ProofStatus
 from nm.legal_brain.reason.requirements_contracts import applicability_subject
+from nm.legal_brain.reason.requirements_contracts import checklist as requirement_checklist
 from nm.legal_brain.retrieve import investigation
 from nm.legal_brain.retrieve.authority_weight_port import AuthorityWeightPort, Standing
 from nm.legal_brain.retrieve.coverage_port import CoveragePort
@@ -114,7 +116,14 @@ from nm.shared.spoken_contracts import named as in_prose
 from nm.shared.store_port import StaleWrite, StorePort
 from nm.shared.text_contracts import blank, refuses_blank_text, snippet
 from nm.shared.traceability_contracts import implements
-from nm.work_the_file import cascade, chronology, deadlines, dependency, dispute_agenda
+from nm.work_the_file import (
+    board_note,
+    cascade,
+    chronology,
+    deadlines,
+    dependency,
+    dispute_agenda,
+)
 from nm.work_the_file import evidence_item as inventory
 from nm.work_the_file import summary as matter_memory
 from nm.work_the_file.matter_contracts import (
@@ -122,6 +131,7 @@ from nm.work_the_file.matter_contracts import (
     CauseOfAction,
     Certainty,
     Fact,
+    FactBasis,
     Matter,
     Posture,
     Provenance,
@@ -241,6 +251,11 @@ class TurnInput:
 
     capacity: dict[str, str] | None = None
     """Explicit human capacity state and basis; actor/time belong to the server."""
+
+    keep_in_matter: bool = False
+    """F-C-04. The advocate's own choice to keep a message in this matter after
+    NM asked whether it belonged to a different one. An act by the person, on
+    the turn it applies to -- never inferred and never a setting."""
 
 
 @dataclass
@@ -737,6 +752,11 @@ class TurnEngine:
         # The assigned id and an opening whose id was not acknowledged name
         # the same target, not different instructions. Every other field stays.
         offer["matter_id"] = matter_id
+        # Not choosing to keep a message here is the ordinary offer, spelled as
+        # it always was, so an instruction saved before the choice existed
+        # still matches its own retry.
+        if not offer.get("keep_in_matter"):
+            offer.pop("keep_in_matter", None)
         return offer_fingerprint(offer)
 
     def _matching_receipt(self, matter: Matter, turn: TurnInput) -> TurnReceipt | None:
@@ -793,10 +813,15 @@ class TurnEngine:
         # discloses: an advocate five turns in who types "and now?" has
         # not stopped talking about their matter, and NON_MATTER writes
         # nothing to any file.
-        route, mode, mode_statement = self._read_route(turn, metrics)
+        route, mode, mode_statement, understanding = self._read_route(turn, metrics)
 
         if route is Route.NON_MATTER:
-            answer = self._non_matter_answer(turn, mode, mode_statement, metrics)
+            # A REQUEST THIS CONVERSATION CANNOT CARRY OUT IS NAMED, even on a
+            # courtesy or an abstract question (F-C-04): never silently dropped.
+            # Passed IN, so a told reply (LB-76) carries it with the rest.
+            answer = self._non_matter_answer(
+                turn, mode, mode_statement, metrics,
+                notes=tuple(self._understanding_notes(understanding)))
             # No implicit matter creation for a courtesy or an abstract question.
             # Inside an explicitly opened file, retain the released conversation
             # as a receipt, never as an admitted case fact or cleared screen.
@@ -811,8 +836,31 @@ class TurnEngine:
             self._store.record_metrics(metrics.as_dict())
             return TurnOutput(turn.turn_id, answer, recorded, metrics)
 
+        # POSSIBLY A DIFFERENT MATTER, ON A FILE THAT ALREADY HOLDS ONE.
+        # Merged silently, it would chart another client's facts on this one's
+        # file. So nothing from it is written; the reply asks, and the advocate
+        # keeps it here (the same words, sent again with that choice) or starts
+        # a new matter (F-C-04, owner, 28 September 2026).
+        if (admitted_snapshot is not None and admitted_snapshot.facts
+                and understanding.relation == "possibly_other_matter"
+                and not turn.keep_in_matter):
+            answer = self._held_answer(admitted_snapshot, route, mode, mode_statement,
+                                       understanding)
+            recorded = self._commit_released(
+                admitted_snapshot, turn, answer, admitted_snapshot.version,
+                input_admitted=False)
+            metrics.matter_id = recorded.id
+            metrics.outcome = Outcome.BLOCKED
+            metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
+            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+            self._store.record_metrics(metrics.as_dict())
+            return TurnOutput(turn.turn_id, answer, recorded, metrics)
+
         matter = self._load_or_create(turn, admitted_snapshot)
         metrics.matter_id = matter.id
+        # WHAT THE BOARD SHOWED BEFORE THIS MESSAGE, so the note under the
+        # reply reports what the SAVED FILE gained -- never what a read claimed.
+        board_before = matter
 
         # ---- G-DUTY: is this an instruction that must be REFUSED? ---------
         #
@@ -860,6 +908,22 @@ class TurnEngine:
                 **{str(n).strip(): str(side) for n, side in turn.parties.items()
                    if str(n).strip()},
             })
+        # A PARTY NAMED IN THIS MESSAGE IS SCREENED ON THIS TURN (F-C-04, owner,
+        # 28 September 2026). The contribution read has already seen the words,
+        # exactly as the route read always did; writing the names it found
+        # here, beside the intake names and before the screens, lets the
+        # conflict screen cover them before anything else from the message is
+        # admitted. It ADDS: a name already on the file keeps its recorded side.
+        # No party is taken from words not put forward as true (F-C-06).
+        rest = "" if understanding.asserts_nothing else turn.message
+        for statement in understanding.kept_apart:
+            rest = rest.replace(statement.quoted, " ")
+        held = {str(n).casefold() for n in (matter.intake_parties or {})}
+        named = {p.name: p.side for p in understanding.parties
+                 if p.name.casefold() not in held and p.name in rest}
+        if named:
+            matter = replace(matter, intake_parties={**(matter.intake_parties or {}),
+                                                     **named})
         if turn.release:
             matter = replace(matter, intake_answers={
                 **(matter.intake_answers or {}),
@@ -924,7 +988,7 @@ class TurnEngine:
         # a provider above this line.
 
         # ---- ADMIT-B: substance ---------------------------------------------
-        matter, bound = self._admit_facts(matter, turn, metrics)
+        matter, bound = self._admit_facts(matter, turn, metrics, understanding)
         # The original input remains the receipt/history. Derivation receives
         # only the active dispute's allocated words, never a mixed chronology.
         scopes = dict(bound.allocations)
@@ -961,6 +1025,15 @@ class TurnEngine:
         t1 = time.perf_counter()
         metrics.failed_phase = Phase.DERIVE
         elements: list[Element] = []
+
+        # WHAT THE CONTRIBUTION READ ADDS TO THE REPLY (F-C-04, LB-81). Requests
+        # this conversation cannot carry out are named, never dropped; an
+        # unexamined read is said out loud; and polite checks of material
+        # assertions join the gap queue -- each asked once, so a check already
+        # put in an earlier question is not repeated.
+        understood_notes = self._understanding_notes(understanding)
+        checks = tuple(check for check in understanding.checks()
+                       if not any(check[0] in q.text for q in matter.asked))
 
         # THE FACTS THIS TURN DID NOT ADD. Taken BEFORE the derive phase,
         # because a reservation is reactivated by a NEW fact and every
@@ -1112,7 +1185,11 @@ class TurnEngine:
                             "provisions while that limitation remains. When you are "
                             "ready, naming the client as the one seeking or the one "
                             "resisting is all it takes.")
-            opening = matter.intake_answers.get("opening", {}).get("answer", {})
+            # The details now in force, not the original record: a correction
+            # from the board (F-B-02) must reach this branch too.
+            from nm.open_matter.opening_contracts import current_opening
+
+            opening = current_opening(matter)
             if opening.get("proceedings") == "none" or no_proceeding:
                 # A recorded absence of proceedings is not a missing answer to
                 # "which side". IT PREFACES THE QUESTION; IT DOES NOT REPLACE IT.
@@ -1164,7 +1241,7 @@ class TurnEngine:
                 # conditions is how the two drift.
                 blocked=not source_explanation,
                 facts=matter.facts, matter_id=matter.id, response_mode=mode,
-                parties=self._parties_of(matter).names)
+                parties=self._parties_of(matter).names, checks=checks)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=_with_screens(elements, screens, split_note, mode=mode),
@@ -1194,14 +1271,16 @@ class TurnEngine:
             # HERE AND NOT IN `_derive`, because `_derive` holds a
             # `matter_id` and not the matter, and what this read produces is
             # a change to the file.
-            matter = self._read_parties(turn, memory, matter, metrics, elements)
+            if not understanding.asserts_nothing:
+                # A hypothetical or a question names nobody onto the file.
+                matter = self._read_parties(turn, memory, matter, metrics, elements)
             # Carry these disclosures into any late-source re-derivation too.
             head = list(elements)
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, work_turn, metrics, memory, facts=matter.facts,
                 matter_id=matter.id, concluded=concluded,
                 paused=matter.paused_need_texts, response_mode=mode,
-                parties=self._parties_of(matter).names)
+                parties=self._parties_of(matter).names, checks=checks)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=_with_screens(elements, screens, split_note, mode=mode))
@@ -1382,7 +1461,7 @@ class TurnEngine:
         answer = replace(answer, elements=tuple(
             [*answer.elements, *self._decisive_empties(metrics),
              *self._refused_reads(metrics), *_reactivated(matter),
-             *self._tier_degraded(metrics)]))
+             *self._tier_degraded(metrics), *understood_notes]))
 
         # WHAT THIS TURN DERIVED, RECORDED AGAINST WHAT IT RESTED ON. P18.
         #
@@ -1408,7 +1487,10 @@ class TurnEngine:
         # actually rests on. It runs LAST because everything before it can
         # still edit, reorder or truncate the text that will be emitted, and a
         # check that runs on an earlier draft has checked a different string.
-        report = grounding.verify(answer, relied_on, retrieved)
+        # The advocate's own words may be quoted back to them (LB-81's polite
+        # checks do); nothing else outside the retrieval may be.
+        own_words = (turn.message, *(f.statement for f in matter.facts))
+        report = grounding.verify(answer, relied_on, retrieved, own_words=own_words)
 
         # B-104. A BOUNDED SECOND ROUND, BEFORE THE REPORT IS RECORDED.
         #
@@ -1444,7 +1526,7 @@ class TurnEngine:
                     thread, work_turn, metrics, memory, facts=matter.facts,
                     matter_id=matter.id, seed=late, concluded=concluded,
                     paused=matter.paused_need_texts, response_mode=mode,
-                parties=self._parties_of(matter).names)
+                    parties=self._parties_of(matter).names, checks=checks)
                 # ONE CONSTRUCTION, THROUGH THE ASSEMBLER, like every
                 # other branch. This built an Answer from `head`, then
                 # replaced it with a longer tail, and neither call went
@@ -1470,10 +1552,12 @@ class TurnEngine:
                         [*head, *derived, *exposure, *self._late_note(late),
                          *self._decisive_empties(metrics),
                          *self._refused_reads(metrics), *_reactivated(matter),
-                         *self._tier_degraded(metrics), *currency_notes],
+                         *self._tier_degraded(metrics), *understood_notes,
+                         *currency_notes],
                         screens, split_note, mode=mode))
                 self._assert_invariants(answer, metrics)
-                report = grounding.verify(answer, relied_on, retrieved)
+                report = grounding.verify(answer, relied_on, retrieved,
+                                          own_words=own_words)
 
         metrics.grounding = report.as_dict()
         for violation in report.violations:
@@ -1517,7 +1601,7 @@ class TurnEngine:
             gates_withheld = tuple(sorted({v.rule
                                            for v in metrics.gating_violations}))
             self._record_turn(turn, answer, matter, metrics, derived_values,
-                              withheld_by=gates_withheld)
+                              withheld_by=gates_withheld, understanding=understanding)
             # NAME THE GATES. "Gated by a grounding violation" tells the
             # advocate nothing they can act on and tells an operator nothing
             # they can find; the gate id is the handle for both.
@@ -1535,6 +1619,13 @@ class TurnEngine:
                 # which is how GS-15 came to run four turns on four files.
                 matter_id=matter.id, persistence=persistence,
                 matter_version=matter.version if persistence == "input_only" else None)
+
+        # THE REPLY, TOLD FROM THE CHECKED FINDINGS AND CHECKED AGAIN (LB-76).
+        # After the gate, so only what passed it is retold; before the byte
+        # boundary, so the words the advocate reads are the words saved.
+        answer = self._compose(answer, turn, metrics, matter=matter, memory=memory,
+                               understanding=understanding, relied_on=relied_on,
+                               retrieved=retrieved)
 
         # ======== BYTE BOUNDARY: nothing above has been shown or saved.
 
@@ -1584,6 +1675,18 @@ class TurnEngine:
                 matter = matter.with_thread(replace(current, assessed=tuple(dict.fromkeys(
                     (*current.assessed, "review_current")))))
 
+        # THE BOARD NOTE (LB-90). Computed from the file before this message and
+        # the input as admitted -- what the advocate put on the file, not what
+        # this turn worked out -- so it reports only what the saved board
+        # shows, plus what NM noticed and did not apply.
+        answer = replace(answer, board_changes=(
+            *board_note.applied(board_before, admitted),
+            *board_note.kept_apart(understanding.kept_apart),
+            *board_note.proposed(
+                admitted, understanding.removals,
+                new_fact_ids=frozenset(f.id for f in admitted.facts)
+                - frozenset(f.id for f in board_before.facts))))
+
         try:
             matter = self._commit_released(matter, turn, answer, expected_version)
         except StaleWrite as exc:
@@ -1600,7 +1703,8 @@ class TurnEngine:
         metrics.stages["emit_ms"] = int((time.perf_counter() - t2) * 1000)
         metrics.latency_ms = int((time.perf_counter() - started) * 1000)
         self._store.record_metrics(metrics.as_dict())
-        self._record_turn(turn, answer, matter, metrics, derived_values)
+        self._record_turn(turn, answer, matter, metrics, derived_values,
+                          understanding=understanding)
         return TurnOutput(turn.turn_id, answer, matter, metrics)
 
     def _briefing_block(self, matter: Matter | None) -> dict:
@@ -1611,7 +1715,8 @@ class TurnEngine:
 
     def _record_turn(self, turn: TurnInput, answer: Answer, matter: Matter,
                      metrics: TurnMetrics,
-                     derived: tuple = (), withheld_by: tuple[str, ...] = ()
+                     derived: tuple = (), withheld_by: tuple[str, ...] = (),
+                     understanding: "route_reader.Understanding | None" = None,
                      ) -> None:
         """A diagnostic archive, never a substitute for the canonical receipt.
 
@@ -1714,6 +1819,9 @@ class TurnEngine:
                      "section": brief_mod.section_of(e).value,
                      "refs": list(e.refs)}
                     for e in answer.elements],
+                # LB-76. THE REPLY AS THE ADVOCATE READ IT, told from the
+                # elements above; empty where the checked findings were shown.
+                "composed": [asdict(p) for p in answer.composed],
                 "gates_fired": [
                     {"gate": g.gate_id, "state": g.state}
                     for g in metrics.gates_fired],
@@ -1736,6 +1844,16 @@ class TurnEngine:
                     for d in derived],
                 "cost_usd": metrics.cost_usd,
                 "llm_calls": metrics.llm_calls,
+                # HOW THIS ANSWER WAS MADE, in full: every gate with why it
+                # fired, the reads, calls, tokens, latency and cost. Owner, 28
+                # September 2026: not shown in the conversation, kept here for
+                # later review. Sealed with the matter because the gate reasons
+                # quote it; the browser read-back never carries this record.
+                "how_made": metrics.as_served(),
+                # F-C-04. THE WHOLE CONTRIBUTION AS READ -- every request, how
+                # each statement was taken, removals, parties, material,
+                # urgency -- sealed here for review. Never served back.
+                "understanding": (understanding or route_reader.Understanding()).as_record(),
             })
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a silence
             metrics.violate(
@@ -2131,16 +2249,19 @@ class TurnEngine:
                       advocate_id=turn.advocate_id, title=title)
 
     @implements("B1")
-    def _read_route(self, turn: TurnInput,
-                    metrics: TurnMetrics) -> tuple[Route, Mode, str]:
-        """Is this a matter? READ, and never counted.
+    def _read_route(self, turn: TurnInput, metrics: TurnMetrics
+                    ) -> tuple[Route, Mode, str, "route_reader.Understanding"]:
+        """Is this a matter, and WHAT IS THE WHOLE CONTRIBUTION? READ, and
+        never counted.
 
         THE FALLBACK IS `classify_route`, which no longer guesses: with no
         model there is nothing to read the meaning with, so it takes the safe
         direction rather than a word count. Every failure here lands on
         MATTER, because NON_MATTER writes nothing to any file and a matter
-        read as a greeting is gone.
+        read as a greeting is gone -- and the understanding it returns then is
+        the UNEXAMINED one, which the turn says out loud (F-C-04).
         """
+        unread = route_reader.Understanding()
         if not turn.message.strip():
             raise TurnRefused("an empty message discloses nothing")
 
@@ -2162,30 +2283,40 @@ class TurnEngine:
                       route_reader.ROUTE_SCHEMA, "route", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.route_reads += 1
-            read = route_reader.interpret(res.data or {})
+            read = route_reader.interpret(res.data or {}, turn.message)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the route could not be read: {exc}")
-            return classify_route(turn.message, bool(on_file))
+            return (*classify_route(turn.message, bool(on_file)), unread)
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
             metrics.violate("B1", f"route read failed: "
                                   f"{type(exc).__name__}: {exc}")
-            return classify_route(turn.message, bool(on_file))
+            return (*classify_route(turn.message, bool(on_file)), unread)
 
         if not read.examined:
-            return classify_route(turn.message, bool(on_file))
-        return read.route, read.mode, read.statement
+            return (*classify_route(turn.message, bool(on_file)), unread)
+        return read.route, read.mode, read.statement, read.understanding
 
     @implements("C1")
     def _admit_facts(self, matter: Matter, turn: TurnInput,
-                     metrics: TurnMetrics) -> tuple[Matter, BindResult]:
+                     metrics: TurnMetrics,
+                     understanding: "route_reader.Understanding | None" = None,
+                     ) -> tuple[Matter, BindResult]:
         """Take the account, then BIND it -- and keep the two separable.
 
         The fact is recorded on the matter BEFORE binding is attempted, so an
         account that cannot be placed is still an account that was heard.
         Discarding the turn when binding is ambiguous teaches an advocate to
         re-type what they have already said, and they stop volunteering detail.
+
+        NOT EVERYTHING WRITTEN IS PUT FORWARD AS TRUE (F-C-06, owner, 28
+        September 2026). The whole account is still kept. What changes is
+        what is CHARTED: a span the contribution read took as a hypothetical,
+        a question or the other side's allegation is not recorded as an
+        asserted fact on any dispute, and belief or hearsay is recorded as
+        such on the fact.
         """
+        understanding = understanding or route_reader.Understanding()
         fact = Fact.create(
             statement=turn.message.strip(),
             provenance=Provenance(kind="advocate_statement", turn=turn.turn_id),
@@ -2249,37 +2380,63 @@ class TurnEngine:
                 # Retain exact evidence spans separately; the whole incoming
                 # account remains on the matter, outside every scoped chart.
                 ids = []
+                charted = []
                 for span in spans:
                     origin = (turn.turn_id if span in turn.message else
                               next(f.provenance.turn for f in pending if span in f.statement))
+                    # A SPAN THIS MESSAGE DID NOT PUT FORWARD AS TRUE is not
+                    # charted. An earlier turn's pending account was read on
+                    # its own turn and is left as it was.
+                    if origin == turn.turn_id and (understanding.asserts_nothing
+                                                   or understanding.covers(span) is not None):
+                        continue
+                    basis = understanding.basis_of(span) if origin == turn.turn_id else ""
                     scoped_fact = Fact.create(statement=span, provenance=Provenance(
                         kind="advocate_statement", turn=origin, span=span),
-                        certainty=Certainty.ASSERTED)
+                        certainty=Certainty.ASSERTED,
+                        **({"basis": FactBasis(basis)} if basis else {}))
                     matter, scoped_fact = matter.recording(scoped_fact)
                     ids.append(scoped_fact.id)
+                    charted.append(span)
                 thread = replace(
                     thread, chronology=tuple(dict.fromkeys((*thread.chronology, *ids))),
                     assessed=tuple(a for a in thread.assessed if a != "review_current"))
                 matter = matter.with_thread(thread)
-                scoped_turn = replace(turn, message="\n".join(spans))
+                if not ids:
+                    # Everything allocated here was kept apart: nothing to read
+                    # a date, a side or a party from on this dispute.
+                    records[tid] = thread
+                    continue
+                scoped_turn = replace(turn, message="\n".join(charted))
                 matter, updated = self._admit_thread(matter, scoped_turn, metrics,
                                                    replace(bound, thread=thread),
-                                                   next(f for f in matter.facts if f.id == ids[0]))
+                                                   next(f for f in matter.facts if f.id == ids[0]),
+                                                   understanding)
                 records[tid] = updated.thread
             matter = requirements.apply_answers(matter, read.requirement_answers,
                 message=turn.message, turn_id=turn.turn_id, today=turn.today)
             return matter, replace(bound, thread=matter.thread(bound.thread.id),
                                    others=tuple(matter.thread(t.id) for t in bound.others))
-        matter, bound = self._admit_thread(matter, turn, metrics, bound, fact)
+        matter, bound = self._admit_thread(matter, turn, metrics, bound, fact, understanding)
         matter = requirements.apply_answers(matter, read.requirement_answers,
             message=turn.message, turn_id=turn.turn_id, today=turn.today)
         return matter, replace(bound, thread=matter.thread(bound.thread.id))
 
-    def _admit_thread(self, matter, turn, metrics, bound, fact):
-        """Read one scoped account; other disputes keep their own evidence."""
+    def _admit_thread(self, matter, turn, metrics, bound, fact, understanding=None):
+        """Read one scoped account; other disputes keep their own evidence.
+
+        A message that puts NOTHING forward as true -- a hypothetical, a
+        question -- is kept as the advocate's words and is not charted, and no
+        date, side or opponent is read out of it. Within a mixed message, a
+        dated row whose words sit inside a kept-apart statement is dropped
+        rather than dated (F-C-06, owner, 28 September 2026).
+        """
+        understanding = understanding or route_reader.Understanding()
         thread = bound.thread
         thread = replace(
             thread, assessed=tuple(a for a in thread.assessed if a != "review_current"))
+        if understanding.asserts_nothing:
+            return matter.with_thread(thread), replace(bound, thread=thread)
         posture: Posture = thread.posture
         # ONLY WHILE UNRESOLVED. Once the advocate has settled it, no further
         # call is made -- the extraction is cheap but it is not free, and a
@@ -2294,6 +2451,18 @@ class TurnEngine:
         # front of it to name one.
         existing = chronology.chart(matter.facts, thread.chronology)
         dated = self._read_dates(turn, matter, thread, metrics, existing)
+        if understanding.kept_apart:
+            # NO DATE FROM WORDS NOT PUT FORWARD AS TRUE. "What if the notice
+            # went on 1 March?" must not put 1 March on the chronology and move
+            # the limitation. Kept only where the same date words also appear
+            # outside every kept-apart statement.
+            rest = turn.message
+            for statement in understanding.kept_apart:
+                rest = rest.replace(statement.quoted, " ")
+            dated = [row for row in dated
+                     if not (row.dated and row.date_expression
+                             and row.date_expression not in rest
+                             and understanding.covers(row.date_expression) is not None)]
 
         ids = [fact.id]
         added: list[Fact] = []
@@ -2832,8 +3001,15 @@ class TurnEngine:
                 concluded: dict | None = None,
                 paused: frozenset[str] = frozenset(),
                 response_mode: Mode = Mode.SHORT_QUESTION,
+                checks: tuple[tuple[str, str], ...] = (),
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
+
+        `checks` are the polite checks of material assertions the contribution
+        read proposed (LB-81, owner, 28 September 2026). They join the ONE gap
+        queue at the lowest rank rather than becoming a second source of
+        questions, so they are batched into the same single ask and never
+        outrank what actually blocks the work.
 
         `blocked` is whether this turn's answer will be REFUSED. It is a
         different question from `side_blind` and they were conflated once in
@@ -3125,6 +3301,9 @@ class TurnEngine:
         # re-asked -- it is paused with a resume trigger and shown in the
         # briefing block instead. Dropping it here stops the loop; it stays a
         # gap on the file, so intake is not reported complete over it.
+        gaps.extend(gap_queue.Gap(what=what, blocks=blocks, thread=thread.id,
+                                  kind=gap_queue.GapKind.CONSEQUENCE)
+                    for what, blocks in checks)
         askable = [g for g in gaps if getattr(g, "what", None) not in paused]
         # A completed explanation need not become a fresh intake interview.
         # Gaps still persist below and material safety blocks remain in the answer.
@@ -6475,9 +6654,14 @@ class TurnEngine:
                           f"Do not assume a position either way.")
 
         system = (
+            # NO WORD COUNT (owner, 28 September 2026: guiding principles, not
+            # templates). The step is one decision the advocate can act on; how
+            # long it takes to say that is the step's own business, bounded by
+            # the output ceiling below and retold by the composer (LB-76).
             "You are senior counsel advising an instructing advocate in India. "
-            "Recommend one focused next step in at most 40 words, proportionate "
-            "to the immediate request. Keep any material condition or uncertainty. "
+            "Recommend the next step the immediate request calls for, stated so it "
+            "can be acted on and in proportion to the task. Keep any material "
+            "condition or uncertainty. "
             "If the request needs no further action, say so instead of inventing work. "
             "This is a recommendation, not an act taken or permission to act.\n"
             "NEVER restate a calculation already made for them, and never "
@@ -6531,7 +6715,7 @@ class TurnEngine:
                 "Distinguish allegations, supported conclusions, assumptions and unknowns. "
                 "Explain applicable law and material alternatives, keeping consequential "
                 "qualifications visible. Do not direct an act, concede a position or "
-                "claim permission to act. Keep the answer within 240 words.\n" + PEER)
+                "claim permission to act. Let the length follow what was asked.\n" + PEER)
         # THE FILE, THEN THIS TURN. A next step recommended off the last
         # message alone re-opens ground the advocate has already covered,
         # which reads to them as the product having forgotten the matter --
@@ -6559,8 +6743,12 @@ class TurnEngine:
         user += checklist_note
         prompt = with_evidence(Prompt(system=system, user=user), sources or result.findings)
         try:
+            # BOUNDED OUTPUT, NOT A WORD COUNT. The ceiling is a guard against a
+            # runaway answer; the step's ceiling rose from 120 when the 40-word
+            # instruction went, so a well-made step is not cut off (refused
+            # below as truncated) for taking the words it needs.
             res = self._model.complete(guided(prompt), Tier.ROUTINE,
-                                       max_tokens=768 if explanatory else 120)
+                                       max_tokens=768 if explanatory else 320)
             metrics.record_call(res)
             partial = refuse_partial(res.completion, doing="the recommendation")
             if partial:
@@ -6784,7 +6972,144 @@ class TurnEngine:
                 "D3", f"step repair failed: {type(exc).__name__}: {exc}")
             return ""
 
-    def _non_matter_answer(self, turn, mode, mode_statement, metrics) -> Answer:
+    @staticmethod
+    def _understanding_notes(understanding: "route_reader.Understanding") -> list[Element]:
+        """WHAT THE CONTRIBUTION READ OBLIGES THE REPLY TO SAY. F-C-04.
+
+        A request this conversation cannot carry out is named, never dropped
+        -- and preparing is never sending. An unexamined read is said out
+        loud: the message was treated as work on the matter, and something it
+        asked may have been missed. Composed by the engine; asserts no law.
+        """
+        if not understanding.examined:
+            return [Element(
+                kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+                text=("I could not fully work out everything this message asks, so I have "
+                      "treated it as work on this matter. If it asked for something I "
+                      "have not addressed, tell me."))]
+        return [Element(kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+                        text=line) for line in understanding.unavailable()]
+
+    @implements("E2")
+    def _compose(self, answer: Answer, turn: TurnInput, metrics: TurnMetrics, *,
+                 matter: Matter | None = None, memory=None,
+                 understanding: "route_reader.Understanding | None" = None,
+                 relied_on: tuple[Finding, ...] = (),
+                 retrieved: tuple[Finding, ...] = ()) -> Answer:
+        """THE REPLY, TOLD FROM THE CHECKED FINDINGS. LB-76 (owner, 28 September
+        2026: guiding principles, not templates).
+
+        Runs AFTER the grounding gate has passed the findings, because the
+        reply may only retell what was checked -- and the retelling is then
+        checked again, on its own words (`grounding.verify_reply`). A single
+        element that quotes no passage is already one voice and is not retold;
+        a quoted provision on its own is a quotation, not yet an answer.
+
+        FAILS TOWARD THE CHECKED FINDINGS, never toward less. The composer or its
+        check unavailable, a reply that fails a check: `composed` stays empty and
+        the advocate reads the findings exactly as they were served before this
+        existed. Each fall-back is recorded, sealed with the turn, for review.
+        A MATERIAL item the prose does not convey is carried in its own checked
+        words, and a blocked turn is led by its blocker (`composer.settle`).
+
+        Presentation, not derivation: nothing side-dependent is computed, so the
+        calls are counted as `presentation_reads` and a blocked turn stays a
+        turn that derived nothing behind its gate.
+        """
+        if not answer.elements or (len(answer.elements) == 1
+                                   and answer.elements[0].source is None):
+            return answer
+        disputes = []
+        for thread in (matter.threads if matter is not None else ()):
+            try:
+                rows = [row.rendered() for row in requirement_checklist(thread, matter.facts)]
+            except (ValueError, KeyError) as exc:
+                metrics.violate("E2", f"the checklist for {thread.id} could not be shown to "
+                                      f"the composer: {type(exc).__name__}: {exc}")
+                rows = []
+            disputes.append({
+                "dispute": thread.label,
+                "our_client": (thread.posture.client_described_as
+                               or thread.posture.role.value.replace("_", " ")),
+                "against": thread.posture.opponent or "",
+                "needs": [{"need": r["need"], "why": r["why"], "force": r["force"],
+                           "from": f"{r['source']} ({r['locator']})",
+                           "file_holds": r["state"], "on_file": r["fact"]}
+                          for r in rows]})
+        try:
+            written = self._read(
+                composer.build_prompt(
+                    answer, message=turn.message,
+                    requests=understanding.requests if understanding is not None else (),
+                    file_context=memory.as_context() if memory is not None else "",
+                    disputes=tuple(disputes),
+                    earlier_receipts=matter.turn_receipts if matter is not None else ()),
+                composer.COMPOSE_SCHEMA, "compose")
+            metrics.record_call(written)
+            metrics.presentation_reads += 1
+            paragraphs = composer.paragraphs_from(written.data or {}, answer)
+        except (ModelError, OutputTruncated) as exc:
+            metrics.violate("E2", f"the reply was not composed: {exc}")
+            return answer
+        if not paragraphs:
+            return answer
+        candidate = replace(answer, composed=paragraphs)
+        own_words = (turn.message,
+                     *(f.statement for f in (matter.facts if matter is not None else ())))
+        report = grounding.verify_reply(candidate, relied_on, retrieved, own_words=own_words)
+        if report.violations:
+            metrics.violate("E2", "the composed reply failed its own checks and the checked "
+                                  "findings were shown instead: "
+                                  + "; ".join(v.detail for v in report.violations))
+            return answer
+        items = composer.material(answer)
+        kept = {p.carries for p in paragraphs if p.carries is not None}
+        pending = tuple(i for i in items if i not in kept)
+        judged: dict = {}
+        if pending:
+            try:
+                check = self._read(composer.check_prompt(paragraphs, answer, pending),
+                                   composer.CHECK_SCHEMA, "compose_check")
+                metrics.record_call(check)
+                metrics.presentation_reads += 1
+                judged = check.data or {}
+            except (ModelError, OutputTruncated) as exc:
+                metrics.violate("E2", f"the composed reply could not be checked for what "
+                                      f"it had to convey, so the checked findings were "
+                                      f"shown: {exc}")
+                return answer
+        found = composer.confirmed(judged, paragraphs, answer, items)
+        settled = composer.settle(paragraphs, answer, items, found)
+        carried = sum(1 for p in settled if p.carries is not None) \
+            - sum(1 for p in paragraphs if p.carries is not None)
+        if carried:
+            metrics.violate("E2", f"{carried} item(s) the composed reply did not convey "
+                                  f"were carried in their own checked words")
+        return replace(answer, composed=settled)
+
+    @staticmethod
+    def _held_answer(matter: Matter, route, mode, mode_statement,
+                     understanding: "route_reader.Understanding") -> Answer:
+        """A message that may belong to a different matter, kept off this file.
+
+        One question, and a board line saying nothing was added. The advocate
+        keeps it here (the same words, sent again with that choice) or starts
+        a new matter; neither is decided for them (F-C-04).
+        """
+        why = understanding.ambiguity or "it does not seem to concern the facts on this file"
+        return Answer(
+            route=route, mode=mode, mode_statement=mode_statement,
+            elements=(Element(
+                kind=ElementKind.QUESTION,
+                text=(f"This reads as though it may belong to a different matter from "
+                      f"{snippet(matter.title, 60) or 'this one'} ({snippet(why, 160)}). "
+                      f"Should I keep it in this matter, or would you like to start a new "
+                      f"matter for it?")),),
+            blocked=True, blocked_reason="possibly a different matter; nothing was added",
+            board_changes=(board_note.held(matter.title),))
+
+    def _non_matter_answer(self, turn, mode, mode_statement, metrics,
+                           notes: tuple[Element, ...] = ()) -> Answer:
         # A QUESTION OF LAW IS ANSWERED, NOT DEFLECTED.
         #
         # The route read has four non-matter outcomes and this is the only
@@ -6795,7 +7120,7 @@ class TurnEngine:
         # `_load_or_create` -- and its requirement is a CITED answer, so a
         # blurb does not satisfy it either.
         if mode_statement == route_reader.A_QUESTION_OF_LAW:
-            return self._law_answer(turn, mode, mode_statement, metrics)
+            return self._law_answer(turn, mode, mode_statement, metrics, notes=notes)
 
         text = "I could not prepare a conversational reply. Your matter remains available."
         if mode_statement == route_reader.NOTHING_YET:
@@ -6808,7 +7133,7 @@ class TurnEngine:
         if mode_statement == route_reader.ABOUT_THE_PRODUCT:
             text = self._courtesy(turn, metrics, about_product=True) or text
         return Answer(route=Route.NON_MATTER, mode=mode, mode_statement=mode_statement,
-                      elements=(Element(kind=ElementKind.GROUND, text=text),))
+                      elements=(Element(kind=ElementKind.GROUND, text=text), *notes))
 
 
 
@@ -6991,7 +7316,8 @@ class TurnEngine:
                       elements=tuple(rows), blocked=True,
                       blocked_reason="G-DUTY: the instruction is refused")
 
-    def _law_answer(self, turn, mode, mode_statement, metrics) -> Answer:
+    def _law_answer(self, turn, mode, mode_statement, metrics,
+                    notes: tuple[Element, ...] = ()) -> Answer:
         """Retrieve the provision the question is about, and read it back.
 
         THE SAME RETRIEVAL AS A MATTER TURN, through `_fetch`, so the
@@ -7053,7 +7379,7 @@ class TurnEngine:
                           + (f" Missing: {missing}." if missing else "")
                           + " Name the Act and section and I will read it "
                             "back, or brief me on the matter and I will "
-                            "work it."),),))
+                            "work it.")), *notes))
 
         # THE PROVISION'S OWN WORDS, with the locator that reads it back.
         # Same shape as a matter turn's provision line, deliberately: an
@@ -7064,8 +7390,13 @@ class TurnEngine:
                   f'{" [...]" if _shortened(f.span) else ""} '
                   f"({f.locator})."),
             refs=(f.locator,), source=capture_source(f)) for f in cited[:3]]
-        return Answer(route=Route.NON_MATTER, mode=mode,
-                      mode_statement=mode_statement, elements=tuple(rows))
+        # A QUOTED PROVISION IS NOT YET AN ANSWER to the question asked. It is
+        # told as one (LB-76), from these rows and checked on its own words
+        # against the same retrieval; failing that, the rows are shown.
+        return self._compose(
+            Answer(route=Route.NON_MATTER, mode=mode,
+                   mode_statement=mode_statement, elements=(*rows, *notes)),
+            turn, metrics, relied_on=tuple(cited), retrieved=tuple(result.findings))
 
     def _assert_invariants(self, answer: Answer, metrics: TurnMetrics) -> None:
         """Class-B checks, on the assembled Answer, BEFORE the byte boundary."""

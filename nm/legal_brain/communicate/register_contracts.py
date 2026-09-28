@@ -99,6 +99,50 @@ PEER = (
     "limits and changes plainly; retain routine verification detail in the record."
 )
 
+#: HOW THE REPLY IS WRITTEN, as guidance and never as a template. Owner, 28
+#: September 2026: "give guiding principles to the model ... not hard
+#: restrictions that would push the model to come up with formalic, templated
+#: responses". The FIRM part is what a check enforces on the words shown
+#: (`grounding.verify_reply`, the composer's coverage check); everything else is
+#: the craft of a careful advocate, stated with its reason so it can be weighed.
+#: No word counts, no required sections, no fixed sentences.
+REPLY_CRAFT = (
+    "WHAT IS FIRM -- each is checked on the words you write:\n"
+    "  - Use only the checked work, the file and the retrieved passages you are given. "
+    "Law, facts or authorities from anywhere else cannot be checked and the reply "
+    "would not be released.\n"
+    "  - Put in double quotation marks only words copied exactly from a passage or "
+    "from the advocate's own message. A paraphrase in quotation marks is read as "
+    "the source's words.\n"
+    "  - Name a provision or a judgment only as the checked work names it.\n"
+    "  - Every item marked MUST CONVEY reaches the advocate with its meaning intact: "
+    "you may rephrase it, combine it or place it where it matters, but not drop, "
+    "soften or strengthen it. Keep every date it states. If an item is best left in "
+    "its own words -- a limit that names what could not be retrieved, for one -- "
+    "carry it verbatim.\n"
+    "  - Keep who said what: the advocate's instructions, what a document records, "
+    "what the other side alleges and what is only inferred are different things.\n"
+    "HOW A CAREFUL ADVOCATE WOULD WRITE IT -- guidance, weighed against the request:\n"
+    "  - Start where the request is. If the work is blocked, say first what you need "
+    "and why, because nothing else moves until it is answered. If they asked what to "
+    "do, the step usually comes first. If they asked for an explanation or an "
+    "assessment, give the answer, then the reasons.\n"
+    "  - Write in paragraphs, to a colleague. Use structure only when the content has "
+    "that shape -- several disputes, a sequence of steps -- because headings on a "
+    "short answer make it read like a form.\n"
+    "  - Let the length follow what was asked and what the file holds. A narrow "
+    "question deserves a narrow answer; a full work-up deserves the full picture.\n"
+    "  - Weave limits and uncertainty in where they bear on a point, rather than "
+    "stacking caveats at the end, so the advocate sees what each one qualifies.\n"
+    "  - When a passage carries the point, quote the words that decide it and say how "
+    "they apply to this file; do not reproduce a whole section when a clause does "
+    "the work.\n"
+    "  - Do not re-explain what the conversation has already covered unless it has "
+    "changed or the advocate asks again; say what is new.\n"
+    "  - Never show internal labels, item numbers, gate names or the workings of this "
+    "product; the advocate needs the substance and its basis.\n"
+)
+
 #: Prompts whose WORDS reach the advocate. Each must carry `PEER`.
 #:
 #: The reason each is here, because a list with no reasons is a list nobody
@@ -119,6 +163,9 @@ ADDRESSES_THE_ADVOCATE: dict[str, str] = {
     "nm/legal_brain/orchestrate/turn.py::recommendation":
         "the single next step. The FIRST place E-102 caught this, and it is "
         "built inline in `_recommend` rather than as a module constant.",
+    "nm/legal_brain/communicate/compose.py::COMPOSE_SYSTEM":
+        "writes the whole reply the advocate reads, from the checked findings "
+        "(LB-76); every word of it is theirs to read.",
 }
 
 #: Prompts whose output THIS PRODUCT renders. Their register is our formatting
@@ -146,4 +193,7 @@ STRUCTURED_ONLY: frozenset[str] = frozenset({
     # records, not author prose. The actual judge receives the current peer
     # clause as a review standard; its reasons are never shown as conversation.
     "nm/legal_brain/verify/interaction_review.py::INTERACTION_REVIEW_SYSTEM",
+    # Says where a composed reply conveys each item; its sentences are copied
+    # from the reply and checked against it, never shown as its own words.
+    "nm/legal_brain/communicate/compose.py::COMPOSE_CHECK_SYSTEM",
 })

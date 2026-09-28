@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from tests import test_the_journey_login_to_logout as journey_support
+from tests.matter_records import open_record
 from tests.test_the_journey_login_to_logout import (
     BRIEF,
     _advise,
@@ -29,8 +30,7 @@ def test_the_browser_cover_shows_the_file_the_advocate_just_worked(page, journey
     assert cover["client"] == "Synthetic CoverBrowserClient"
     assert cover["last_activity"]
     assert cover["case_deadlines"]["deadline_entries"], "must really have worked a dated file"
-    page.locator('#workspace-more summary').click()
-    page.get_by_role("button", name="Matter cover & instructions", exact=True).click()
+    open_record(page, "Matter cover & instructions")
     dialog = page.locator("#matter-workspace-dialog")
     dialog.wait_for(state="visible")
     page.wait_for_function("() => document.querySelector('#matter-workspace-dialog')"
@@ -52,8 +52,7 @@ def test_capacity_correction_is_reachable_and_preserves_the_conversation(page, j
     _open_matter(page, journey, client='Synthetic CapacityCorrection')
     matter_id, _ = saved(page)
     page.fill('#message', 'Keep this unsent instruction.')
-    page.locator('#workspace-more summary').click()
-    page.get_by_role('button', name='Matter cover & instructions', exact=True).click()
+    open_record(page, 'Matter cover & instructions')
     page.get_by_role('button', name='Record capacity assessment', exact=True).click()
     assert page.get_by_label('Your capacity assessment', exact=True).input_value() == ''
     page.get_by_label('Your capacity assessment', exact=True).select_option('not_in_doubt')

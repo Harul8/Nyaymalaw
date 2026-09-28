@@ -48,17 +48,20 @@ function fixture(value = record()) {
   let reply = url => structuredClone(url.endsWith('/casefile') ? value.casefile : value.acknowledgement);
   const document = {body, getElementById: id => walk(body).find(node => node.id === id),
     createElement: tag => { const node = new Element(tag); node.click = () => downloads.push({href: node.href, download: node.download}); return node; }};
+  const window = {addEventListener: (kind, handler) => (events[kind] ||= []).push(handler)};
   const sandbox = {document, state, crypto: webcrypto, URLSearchParams, AbortController, Uint8Array,
     TextDecoder, Blob, atob, URL: {createObjectURL: blob => { const url = `blob:checked-${urls.length}`; urls.push({url, blob}); return url; },
       revokeObjectURL: url => revoked.push(url)},
-    window: {addEventListener: (kind, handler) => (events[kind] ||= []).push(handler)},
+    window,
     api: async (url, options) => { calls.push({url, options}); return reply(url, options); }};
   vm.runInNewContext(shipped, sandbox);
   const find = predicate => walk(body).find(predicate);
   const button = text => { const node = find(node => node.tagName === 'button' && node.textContent === text); assert.ok(node, text); return node; };
+  // F-B-04 (owner, 28 September 2026): the header entry was removed; the
+  // attributed file opens through the controller's one entry.
   return {body, state, calls, urls, revoked, downloads, find, button, value,
     reply: handler => { reply = handler; }, dispatch: kind => (events[kind] || []).forEach(handler => handler()),
-    openFile: () => button('Attributed file').fire('click'), openOriginal: () => button('Open original at recorded location').fire('click')};
+    openFile: () => window.NMMatterRecords.open('casefile'), openOriginal: () => button('Open original at recorded location').fire('click')};
 }
 
 test('exact source opens original text through the existing scoped API helper without confirming a fact', async () => {

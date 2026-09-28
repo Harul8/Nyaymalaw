@@ -389,7 +389,20 @@
     <!-- F-B-02. THIS MATTER ONLY, read from the same record My work lists. -->
     <section id="matter-board" class="matter-board" aria-labelledby="board-title" hidden>
       <div class="row static">
-        <h3 id="board-title" class="r-title"></h3>
+        <div class="board-head">
+          <h3 id="board-title" class="r-title"></h3>
+          <!-- F-B-02, owner 28 September 2026: edit the opening details or add
+               what was missing. Deadline, position and last worked are
+               calculated, so the form does not offer them. -->
+          <button type="button" id="board-edit" class="board-edit" aria-label="Edit matter details"
+                  title="Edit matter details" disabled>
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+              <path d="M13.6 2.9a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L7.3 16.2 3 17l.8-4.3z
+                       M12.4 4.1l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
         <dl id="board-fields" class="r-fields"></dl>
       </div>
       <div id="board-state"></div>
@@ -403,19 +416,25 @@
     <div class="workspace-heading" id="workspace-focus" tabindex="-1">
       <div class="workspace-title"><h1 id="matter-heading">My work</h1></div>
       <div class="workspace-actions">
-        <details id="workspace-more" class="workspace-more">
-          <summary>More</summary>
-          <div id="workspace-menu" class="workspace-menu">
-            <button type="button" id="draft-open">Recover a draft</button>
-          </div>
-        </details>
-        <!-- F-A-17. CASE FILE AND HISTORY BELONG TO A MATTER, so they are
-             offered here, for the matter that is open, and not as tabs. -->
-        <nav class="work-links" id="work-links" aria-label="This matter" hidden>
-          <button type="button" class="ghost" data-tab="casefile">Case file</button>
-          <button type="button" class="ghost" data-tab="history">History</button>
-        </nav>
-        <span id="save-status" class="save-status" role="status"></span>
+        <!-- F-B-04, owner 28 September 2026: the open matter's header keeps only
+             a file icon. Its drop-down lists every file held on the matter --
+             documents, images, audio, video and voice notes -- and then the
+             matter's records (cover, case file, attributed file, history,
+             protective handoff, draft recovery). The saved-status line is gone. -->
+        <div class="matter-files" id="matter-files" hidden>
+          <button type="button" id="files-toggle" class="files-toggle" aria-expanded="false"
+                  aria-controls="files-menu" aria-label="Files on this matter"
+                  title="Files on this matter">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M11.5 2.5H5.8A1.3 1.3 0 0 0 4.5 3.8v12.4a1.3 1.3 0 0 0 1.3 1.3h8.4
+                       a1.3 1.3 0 0 0 1.3-1.3V6.5z M11.5 2.5v4h4 M7.5 10.5h5 M7.5 13.5h5"
+                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
+                    stroke-linecap="round"/>
+            </svg>
+          </button>
+          <section id="files-menu" class="files-menu" aria-label="Files on this matter"
+                   hidden></section>
+        </div>
       </div>
     </div>
     <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
@@ -428,9 +447,9 @@
          then covered by a dialog has to remember what they were saying; this
          sits above the composer and stays until it is answered. -->
     <form id="intake" class="intake" hidden>
-      <p class="eyebrow">NEW MATTER</p>
-      <h2>First, establish the brief.</h2>
-      <p class="intake-lede">
+      <p class="eyebrow" id="intake-eyebrow">NEW MATTER</p>
+      <h2 id="intake-title">First, establish the brief.</h2>
+      <p class="intake-lede" id="intake-lede">
         Record what you know now. Unknown details can follow in the conversation.
         Opening does not clear conflicts, verify authority or establish a deadline.
       </p>
@@ -483,7 +502,10 @@
         </div>
       </details>
 
-      <button type="submit" class="primary" id="in-go">Record and continue</button>
+      <div class="intake-actions">
+        <button type="submit" class="primary" id="in-go">Record and continue</button>
+        <button type="button" class="ghost" id="in-cancel" hidden>Cancel</button>
+      </div>
       <div id="intake-state" role="status"></div>
     </form>
 
@@ -573,6 +595,12 @@
     <button type="button" id="source-retry" class="ghost" hidden>Retry this reference</button>
     <button type="button" id="source-copy" disabled>Copy loaded passage with attribution</button>
   </footer>
+</dialog>
+
+<!-- F-B-02. The board's edit borrows THE opening form into this dialog, so there
+     is one form and one set of fields; nothing here is a copy of it. -->
+<dialog id="opening-edit" class="account-dialog opening-edit" aria-labelledby="intake-title">
+  <div id="opening-edit-host"></div>
 </dialog>
 
 <dialog id="draft-dialog" aria-labelledby="draft-title">

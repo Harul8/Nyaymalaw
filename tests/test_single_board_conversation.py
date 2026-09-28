@@ -150,5 +150,5 @@ def test_answer_is_ordered_paragraphs_not_internal_labels(page, journey):
     assert page.locator("#thread .support").evaluate("el => el.open")
     assert page.get_by_text("Exact supplied supporting passage.", exact=True).is_visible()
     assert page.get_by_text("synthetic-ref", exact=True).is_visible()
-    assert not page.locator("#thread .audit").evaluate("el => el.open")
+    assert "How this answer was made" not in page.locator("#thread").text_content()
     assert not page.errors

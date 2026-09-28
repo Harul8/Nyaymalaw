@@ -1144,7 +1144,22 @@ def scripted_claim_verification(_prompt):
                        "inference": verdict, "opposition_resolved": verdict})
 
 
+def scripted_compose(_user: str) -> str:
+    """THE OFFLINE DOUBLE COMPOSES NOTHING, and the turn then shows its checked
+    findings as they are (LB-76). A reply is a judgment about the whole turn;
+    a control that exercises composition supplies the reply it intends."""
+    return json.dumps({"paragraphs": []})
+
+
+def scripted_compose_check(_user: str) -> str:
+    """Confirms nothing, so every material item a control's reply leaves
+    unconfirmed is carried in its own words -- the safe direction."""
+    return json.dumps({"items": []})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "compose": scripted_compose,
+    "compose_check": scripted_compose_check,
     "claim_verification": scripted_claim_verification,
     "requirements": scripted_requirements,
     "step_dependency": scripted_step_dependency,
@@ -1288,6 +1303,19 @@ class ScriptedModelAdapter:
             # NEVER best-effort parsed. Lenient parsing is how an invented
             # vocabulary once emptied a charge map.
             raise SchemaViolation(f"scripted response is not JSON: {exc}") from exc
+        if schema.get('x-nm-read') == 'route' and isinstance(data, dict):
+            # A controlled response written before the route read became the
+            # whole-contribution read (F-C-04) states only the route. Restated
+            # in the new shape WITHOUT inventing anything: no request,
+            # statement, removal, party or material is listed, relation and
+            # urgency say they were not assessed, and the message is taken as
+            # putting facts forward -- which is what the fixture always meant.
+            for key, value in (("requests", []), ("relation", "cannot_tell"),
+                               ("asserts_facts", True), ("statements", []),
+                               ("board_changes", []), ("parties_named", []),
+                               ("material", []), ("urgency", "cannot_tell"),
+                               ("urgency_quote", ""), ("ambiguity", "")):
+                data.setdefault(key, value)
         if schema.get('x-nm-read') == 'posture' and isinstance(data, dict):
             # Older controlled responses assert representation, not a correction.
             # An absent correction remains absent; never invent supporting words.

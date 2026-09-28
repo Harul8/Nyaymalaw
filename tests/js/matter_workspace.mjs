@@ -40,9 +40,15 @@ function fixture(source = original) {
     showThreadBoard: async (id, options) => { assert.equal(options.restore, true, 'Successful record changes must restore the historical conversation, not retain unqualified live advice'); boards.push({ id, options }); state.railGeneration += 1; dispatch('nm:matter-changed'); } };
   vm.runInNewContext(source, sandbox);
   const find = predicate => walk(body).find(predicate);
+  // F-B-04 (owner, 28 September 2026): the header entries to these records were
+  // removed. The dialogs remain, opened through the controller's one entry.
+  const ENTRY = { 'Matter cover & instructions': 'cover', 'Attributed file': 'casefile', 'Protective handoff': 'emergency' };
   return { body, state, calls, sends, boards, dispatch, sandbox,
     reply: fn => { respond = fn; }, find,
-    button: text => { const found = find(el => el.tagName === 'button' && el.textContent === text); assert.ok(found, text); return found; },
+    button: text => {
+      if (text in ENTRY) return { fire: async () => window.NMMatterRecords.open(ENTRY[text]) };
+      const found = find(el => el.tagName === 'button' && el.textContent === text); assert.ok(found, text); return found;
+    },
     input: name => { const found = find(el => el.name === name); assert.ok(found, name); return found; },
     get dialog() { return find(el => el.tagName === 'dialog'); } };
 }
@@ -298,6 +304,7 @@ if (mode === 'cover') {
   f.state.ended = true; f.state.advocate = null; f.state.matterId = null; f.state.sessionGeneration += 1;
   f.dispatch('nm:session-ended');
   assert.equal(f.dialog.open, false); assert.equal(walk(f.dialog).filter(el => el.name).length, 0);
-  assert.equal(f.find(el => el.id === 'matter-tools').hidden, true);
+  // F-B-04: no header tools are mounted at all, signed in or out.
+  assert.equal(f.find(el => el.id === 'matter-tools'), undefined);
 } else throw Error(`Unknown witness: ${mode}`);
 console.log(`PASS matter workspace ${mode}`);

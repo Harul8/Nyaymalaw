@@ -3,5 +3,8 @@
 Feature: F-B-04 The matter's own tools sit in its header
 
   Scenario: The matter's own tools sit in its header
-    Given the page script
-    Then Matter cover & instructions, Attributed file and Protective handoff sit in the matter's header beside Case file and History
+    Given the page
+    And the page script
+    Then the open matter's header holds only the file icon
+    And the file icon lists every file held on the matter, including audio, video and voice notes
+    And the matter's own records open from the same icon

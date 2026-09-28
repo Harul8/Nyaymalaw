@@ -15,6 +15,7 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 ### Services and native owners
 
+- [board_note.py](board_note.py) — The note under a reply: what the saved file gained from the message, and removals waiting for the advocate.
 - [cascade.py](cascade.py) — Propagates corrections only to dependent file conclusions.
 - [casefile.py](casefile.py) — Projects attributed facts and documents into the living file.
 - [chronology.py](chronology.py) — Builds a dated-event chart from attributed records.

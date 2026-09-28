@@ -49,6 +49,7 @@ STOP_LABELS = {
     StopReason.REFUSED: "Work stopped at a permission or quality boundary.",
     StopReason.CONTEXT: "Work paused because the checked file could not fit safely.",
 }
+UNKNOWN_STOP_LABEL = "Work ended; its completion has not been established."
 
 
 class InvalidProgressCursor(ValueError):
@@ -88,7 +89,7 @@ def _project_event(record: LoopRecord, sequence: int, scope: dict | None) -> dic
             reason = StopReason(event.payload.get("reason"))
         except (TypeError, ValueError):
             reason = None
-        label = STOP_LABELS.get(reason, "Work ended; its completion has not been established.")
+        label = STOP_LABELS.get(reason, UNKNOWN_STOP_LABEL)
         state = (
             "requires_checks" if reason in (
                 StopReason.PROPOSAL, StopReason.QUESTION, StopReason.CONVERSATION) else "stopped"
@@ -515,13 +516,12 @@ def progress(record: LoopRecord, *, after: str | None = None, linked_turn: bool 
     }
 
 
-def sse_frame(row: dict) -> bytes:
-    # Only this closed projection is permitted here. An arbitrary payload or
-    # supplied SSE event id cannot become a second transport for model prose.
-    expected = {"sequence", "cursor", "at", "label", "state", "working_not_advice"}
-    scoped = "dispute_index" in row
-    if scoped:
-        expected.add("dispute_index")
+def label_states() -> dict[str, str]:
+    """EVERY stage label this projection can emit, with its state.
+
+    The one population: the transport below accepts exactly these, and the
+    page's working display must name each of them (LB-82).
+    """
     states = dict.fromkeys(STAGES.values(), "working")
     states.update(
         {
@@ -531,9 +531,20 @@ def sse_frame(row: dict) -> bytes:
             for reason, label in STOP_LABELS.items()
         }
     )
-    states["Work ended; its completion has not been established."] = "stopped"
+    states[UNKNOWN_STOP_LABEL] = "stopped"
     states[REQUIREMENTS_STAGE] = "working"
     states.update(dict.fromkeys(SHARED_TYPED_STAGES | SCOPED_STAGES, "working"))
+    return states
+
+
+def sse_frame(row: dict) -> bytes:
+    # Only this closed projection is permitted here. An arbitrary payload or
+    # supplied SSE event id cannot become a second transport for model prose.
+    expected = {"sequence", "cursor", "at", "label", "state", "working_not_advice"}
+    scoped = "dispute_index" in row
+    if scoped:
+        expected.add("dispute_index")
+    states = label_states()
     if (
         set(row) != expected
         or row["working_not_advice"] is not True

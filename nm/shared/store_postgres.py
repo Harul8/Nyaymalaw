@@ -56,6 +56,7 @@ from nm.shared.operation_contracts import (
     Outcome,
     now_text,
     refuse_outbox,
+    save_stamp,
 )
 from nm.shared.store_port import MatterList, StaleWrite
 from nm.shared.store_sealing import MatterSealer
@@ -337,8 +338,10 @@ class PostgresMatterStore:
         writing would leave an interval, and the interval is where two turns
         interleaving on one derivation graph both win.
         """
-        saved = _with_version(matter, expected_version + 1)
         stamp = now_text()
+        # F-B-14: the save door stamps when the file was last updated, never
+        # a caller, in the one format every store uses.
+        saved = _with_version(matter, expected_version + 1, updated_at=save_stamp())
         if expected_version == 0:
             # Admit creation under the database's unique constraint BEFORE
             # permitting key creation. A caller's expected_version=0 is only
@@ -530,7 +533,7 @@ def _decode(blob: dict) -> Matter:
     return _matter(blob)
 
 
-def _with_version(matter: Matter, version: int) -> Matter:
+def _with_version(matter: Matter, version: int, *, updated_at: str) -> Matter:
     import dataclasses
 
-    return dataclasses.replace(matter, version=version)
+    return dataclasses.replace(matter, version=version, updated_at=updated_at)

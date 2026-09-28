@@ -193,3 +193,11 @@ def refuse_outbox(entry: OutboxEntry, *, workspace_id: str,
 
 def now_text(at: datetime | None = None) -> str:
     return (at or utcnow()).isoformat(timespec="seconds")
+
+
+def save_stamp(at: datetime | None = None) -> str:
+    """`Matter.updated_at` for one save: UTC, to the MICROSECOND, one fixed
+    width so two stamps compare as text. Seconds would tie two saves made in
+    the same second and leave My work's order to chance (F-B-14). Every store
+    stamps through this one function, so the format has one owner."""
+    return (at or utcnow()).isoformat(timespec="microseconds")

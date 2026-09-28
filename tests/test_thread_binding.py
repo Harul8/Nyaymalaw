@@ -228,8 +228,10 @@ def test_an_ambiguous_binding_blocks_the_turn_and_keeps_the_account(tmp_path):
     # the answer.
     # Only the reads that SETTLE the gate. Discovering that two threads are
     # candidates costs one cheap read, and refusing to spend it would mean
-    # never discovering the second dispute at all.
-    assert out.metrics.llm_calls == out.metrics.settling_reads
+    # never discovering the second dispute at all. Composing the reply is
+    # presentation, counted apart and deriving nothing (LB-76).
+    assert out.metrics.llm_calls == (out.metrics.settling_reads
+                                     + out.metrics.presentation_reads)
 
     # And the account survived: the fact is on the matter even though it is on
     # no thread.

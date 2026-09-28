@@ -158,7 +158,13 @@ READS: tuple[Read, ...] = (
          "September 2026. \u2018bail\u2019 is one word and a case fact; "
          "\u2018hi\u2019 is one word and a greeting; a count cannot tell "
          "them apart. Every refusal lands on MATTER, which is the "
-         "asymmetry the routing has recorded since it was written."),
+         "asymmetry the routing has recorded since it was written.\n\n"
+         "IT ECHOES SINCE 28 SEPTEMBER 2026 (F-C-04): the same call now "
+         "sets out the whole contribution and quotes the advocate for "
+         "every request and statement, so its room follows what it was "
+         "shown. A fixed 120 would cut every live answer short and turn "
+         "each one into a failed read.",
+         echoes=True),
     Read("posture", True,
          "Which side we are on. Nothing side-dependent can be computed without "
          "it, and a wrong one advises the opponent's case. Exact representation "
@@ -250,6 +256,18 @@ READS: tuple[Read, ...] = (
     Read("salvage", False,
          "Coordinate variation. Its routes are already bound to retrieved "
          "citations by the type, so the read cannot manufacture one.",
+         echoes=True),
+    Read("compose", False,
+         "Writes the reply from the turn's already-checked findings (LB-76). It "
+         "moves no date, amount or choice of law: its words are checked again on "
+         "their own, a material item it does not convey is carried in its checked "
+         "words, and any failure shows the checked findings instead. Its length "
+         "follows what it was shown, so its room is derived, never fixed.",
+         echoes=True),
+    Read("compose_check", False,
+         "Says where the composed reply conveys each material item and copies the "
+         "sentence, which is then found in the reply. It decides whether an item is "
+         "carried verbatim, never whether it is dropped; one row per material item.",
          echoes=True),
     Read("working_scope_v1", False,
          "Independently classifies which owned work the original request needs "

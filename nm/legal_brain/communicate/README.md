@@ -7,6 +7,7 @@ stage or a claim of complete feature acceptance. Files inside this folder stay f
 
 ## Read first
 
+- [compose.py](compose.py)
 - [register_contracts.py](register_contracts.py)
 - [working_explanation.py](working_explanation.py)
 - [preview_display.py](preview_display.py)
@@ -23,11 +24,12 @@ provider-processing approval or release claim comes from moving a file.
 
 ## Complete file index
 
-Navigation over 10 implementation files, 4 browser assets and
+Navigation over 11 implementation files, 4 browser assets and
 the package initializer; this is not test evidence.
 
 ### Implementation
 
+- [compose.py](compose.py) — Tells the checked findings as one natural reply, checks its words, and carries anything it misses.
 - [loop_progress_api.py](loop_progress_api.py) — Read-only authenticated progress from the sealed matter journal.
 - [loop_progress.py](loop_progress.py) — Safe stages from a committed journal, never model text or legal advice.
 - [preview_display.py](preview_display.py) — Sealed private display acknowledgements, never client delivery or truth.
@@ -41,9 +43,9 @@ the package initializer; this is not test evidence.
 
 ### Browser assets
 
-- [loop-progress.js](loop-progress.js) — Shows only recorded, safe progress stages and keeps details closed by default.
+- [loop-progress.js](loop-progress.js) — Shows the working word while a reply is prepared, chosen by the recorded stage; no panel.
 - [matter-workspace.css](matter-workspace.css) — Styles the matter workspace, board, chat and contextual tools.
-- [matter-workspace.js](matter-workspace.js) — Served matter projections and explicit commands.
+- [matter-workspace.js](matter-workspace.js) — Served matter projections and explicit commands, opened from the file icon's Matter records.
 - [source-reader.js](source-reader.js) — Read a released saved passage; never resolve a label or start legal research.
 
 ### Package

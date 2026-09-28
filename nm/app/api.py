@@ -17,7 +17,7 @@ import json
 import logging
 import os
 import uuid
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import date
 from math import ceil
 from pathlib import Path
@@ -174,6 +174,14 @@ class _Released(BaseModel):
     # this to show whether the file is ready for the task, which a finished turn
     # does not by itself establish (C1 NEVER[4]).
     briefing: dict = {}
+    # LB-90. What this message changed on the board, and what waits for the
+    # advocate -- the same note the saved receipt carries.
+    board_changes: list[dict] = []
+    # LB-83. When the answer was saved: the quiet as-at line under each reply.
+    at: str | None = None
+    # LB-76. The reply as the advocate reads it, told from `elements` and
+    # checked on its own words. Empty: the checked findings are shown as they are.
+    composed: list[dict] = []
 
 
 def _release(output, *, request=None) -> _Released:
@@ -249,6 +257,9 @@ def _release(output, *, request=None) -> _Released:
         input_admitted=receipt.input_admitted if receipt is not None else False,
         matter_version=output.matter.version if output.matter else None,
         briefing=briefing,
+        board_changes=[asdict(change) for change in answer.board_changes],
+        at=receipt.recorded_at if receipt is not None else None,
+        composed=[asdict(paragraph) for paragraph in answer.composed],
     )
 
 
@@ -453,6 +464,12 @@ def open_upload_first_intake(body: dict, advocate_id: Advocate) -> dict:
     return _upload_call(_uploads().create_intake, advocate_id, body)
 
 
+@app.post("/api/matters/{matter_id}/opening", dependencies=[CsrfProtected])
+def correct_opening(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
+    """F-B-02. The board's edit: an attributed correction beside the original opening."""
+    return _upload_call(_uploads().amend_opening, matter_id, advocate_id, body)
+
+
 @app.post("/api/matters/{matter_id}/uploads", dependencies=[CsrfProtected])
 def begin_upload(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
     return _upload_call(_uploads().begin, matter_id, advocate_id, body)
@@ -581,6 +598,9 @@ class TurnRequest(BaseModel):
 
     capacity: dict[str, str] | None = None
     """Explicit capacity state/basis; authenticated actor and time are server-owned."""
+
+    keep_in_matter: bool = False
+    """F-C-04. The advocate chose to keep a message NM asked about in this matter."""
 
 
 #: THE CODE THIS PROCESS ACTUALLY LOADED, captured ONCE at import.
@@ -946,6 +966,7 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     store = application().store
     turns = store.transcripts_for(matter_id)
     unreadable = [t for t in turns if t.get("unreadable")]
+    from nm.open_matter.opening_contracts import correction_notes
     from nm.open_matter.transcripts_api import project
 
     projected, release_problems = project(m, turns)
@@ -970,6 +991,9 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
         "title": m.title,
         "turns": projected,
         "turn_count": len(projected),
+        # F-B-02. Each correction of the opening details, placed in the
+        # conversation by when it was made. Not a turn, and not counted as one.
+        "opening_changes": correction_notes(m),
         "release_problems": release_problems,
         "unreadable": [t["turn_id"] for t in unreadable],
         "unreadable_reason": (
@@ -1082,7 +1106,7 @@ def _registers(held, *, request=None) -> dict:
 
 @app.get("/api/matters")
 def matters(advocate_id: Advocate, request: Request) -> dict:
-    """THE MATTER LIST. One row per matter, nearest deadline first.
+    """THE MATTER LIST. One row per matter, latest updated first (F-B-14).
 
     Bounded by MATTER count -- never by threads, turns or facts.
     """
@@ -1117,13 +1141,15 @@ def matter(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     # than recomputing it. Passing `None` said "nobody has assessed the
     # deadlines on this matter", which was false on every matter that had
     # ever been advised on.
-    from nm.open_matter.opening_contracts import recorded_brief
+    from nm.open_matter.opening_contracts import opening_form, recorded_brief
 
     projections, source_current, require_current = _checked_checklists(m, request)
     register = _register_of(m, source_current=source_current, checklist_projections=projections)
     result = {**board_projection(m, register, source_current=source_current,
                                 checklist_projections=projections),
-              "opening_brief": recorded_brief(m)}
+              "opening_brief": recorded_brief(m),
+              # F-B-02. What the board's edit form starts from.
+              "opening_form": opening_form(m)}
     require_current()
     return result
 
@@ -3340,6 +3366,11 @@ class Correction(BaseModel):
     on: date | None = Field(default=None, alias="date")
     reason: NonBlank = Field(min_length=1)
     expected_version: int
+    withdraw: bool = False
+    """LB-90 / F-C-06. Take the entry OFF the file rather than rewording it:
+    the replacement is an undated withdrawal record joining no chronology, so
+    nothing charts or dates from the withdrawn words. The entry itself stays
+    on the file, superseded, with who and why -- the same one mechanism."""
 
 
 @app.post("/api/matters/{matter_id}/facts/{fact_id}/corrections",
@@ -3387,8 +3418,19 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
                     f"correct the current entry, not the withdrawn one"),
             "committed": "not_committed",
         })
-    statement = (body.statement or "").strip() or old.statement
-    on = body.on if body.on is not None else old.date
+    if body.withdraw:
+        if (body.statement or "").strip() or body.on is not None:
+            raise HTTPException(status_code=422, detail={
+                "code": "INVALID_REQUEST",
+                "why": "a withdrawal takes the entry off the file; it carries no new words "
+                       "or date",
+                "committed": "not_committed",
+            })
+        statement = f"Withdrawn by the advocate: {old.statement}"
+        on = None
+    else:
+        statement = (body.statement or "").strip() or old.statement
+        on = body.on if body.on is not None else old.date
     if statement == old.statement and on == old.date:
         raise HTTPException(status_code=422, detail={
             "code": "INVALID_REQUEST",
@@ -3408,7 +3450,8 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
     m = m.superseding(old.id, replacement.id)
     # THE REPLACEMENT JOINS EVERY CHRONOLOGY THE ORIGINAL WAS ON, so the
     # next derivation runs from the corrected entry rather than from nothing.
-    for thread in m.threads:
+    # A WITHDRAWAL JOINS NONE: the point is that nothing runs from it.
+    for thread in (() if body.withdraw else m.threads):
         if old.id in thread.chronology and replacement.id not in thread.chronology:
             m = m.with_thread(replace(
                 thread, chronology=(*thread.chronology, replacement.id)))
@@ -3429,7 +3472,7 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
 
     untouched = tuple(n.name for n in ledger.nodes if n.name not in affected)
     return {
-        "state": "corrected",
+        "state": "withdrawn" if body.withdraw else "corrected",
         "matter_id": committed.id,
         "version": committed.version,
         "fact": {"was": old.id, "now": replacement.id,
@@ -4149,6 +4192,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         parties=dict(req.parties or {}),
         release=dict(req.release or {}),
         capacity=dict(req.capacity) if req.capacity is not None else None,
+        keep_in_matter=req.keep_in_matter,
         expected_version=req.expected_version,
         session_reference=request.state.account_session.reference,
         request_offer=req.model_dump(mode="json", exclude={"turn_id"}),

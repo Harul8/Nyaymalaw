@@ -154,15 +154,28 @@ def test_an_echoing_read_gets_more_room_for_a_longer_brief():
 
 
 def test_a_fixed_read_is_unmoved_by_a_longer_brief():
-    """THE BOUND. A route decision is a verdict; scaling it with the brief
-    would spend tokens on every long file for nothing."""
+    """THE BOUND. A role decision is a verdict; scaling it with the brief
+    would spend tokens on every long file for nothing. (The route read was
+    the example until 28 September 2026, when it began quoting the whole
+    contribution and became an echoing read -- see the next test.)"""
     from nm.shared.model_port import Prompt
 
     short = Prompt(system="s" * 200, user="u" * 400)
     long_ = Prompt(system="s" * 200, user="u" * 12000)
 
-    assert ceiling.for_read("route", short, echoes=False) == \
-        ceiling.for_read("route", long_, echoes=False)
+    assert ceiling.for_read("role", short, echoes=reads.echoes("role")) == \
+        ceiling.for_read("role", long_, echoes=reads.echoes("role"))
+
+
+def test_the_contribution_read_is_never_cut_to_a_verdict_budget():
+    """F-C-04. The route read now sets out the whole contribution and quotes
+    the advocate; a verdict-sized ceiling would truncate every live answer
+    into a failed read. It echoes, and it is in no fixed table."""
+    from nm.shared.model_port import Prompt
+
+    assert reads.echoes("route") and "route" not in ceiling.FIXED
+    brief = Prompt(system="s" * 2000, user="u" * 2000)
+    assert ceiling.for_read("route", brief, echoes=reads.echoes("route")) > 120
 
 
 def test_the_floor_and_the_cap_both_hold():

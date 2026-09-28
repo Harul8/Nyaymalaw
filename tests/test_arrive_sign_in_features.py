@@ -1065,28 +1065,6 @@ def case_file_and_history_are_not_tabs(app_page):
         assert f'data-tab="{name}"' not in ribbon, name
 
 
-@then("an open matter offers Case file and History while it is open")
-def work_links_for_the_open_matter(app_page, page_script):
-    links = re.search(r'<nav class="work-links" id="work-links"[^>]*\bhidden>(.*?)</nav>',
-                      pane_html(app_page, "advise"), re.S)
-    assert links, "My work has no Case file and History links, or they start shown"
-    assert re.findall(r'data-tab="([a-z]+)">([^<]+)</button>', links.group(1)) == [
-        ("casefile", "Case file"), ("history", "History")]
-    assert "$('work-links').hidden = !state.matterId;" in _function(page_script, "updateWorkspace")
-
-
-@then("they open on that matter, with the matter's own tab still marked")
-def work_links_open_on_the_matter(page_script):
-    assert "if (['advise', 'casefile', 'history'].includes(pane)) return state.workTab;" \
-        in _function(page_script, "tabFor")
-    assert "const tab = tabFor(name);" in _function(page_script, "showTab")
-    assert "if (link.dataset.tab === 'casefile') $('casefile-matter').value = '';" in page_script
-    assert "const want = held || state.matterId || '';" in _function(
-        page_script, "loadCasefileMatters")
-    history = _function(page_script, "loadHistoryMatters")
-    assert "sel.value = state.matterId;" in history and "showHistory(state.matterId);" in history
-
-
 @then("the library availability line is on the Legal library page and not in the ribbon")
 def health_on_the_library_page(app_page):
     assert 'id="health"' not in ribbon_html(app_page)
@@ -1362,18 +1340,61 @@ def _composer(page: str) -> str:
 
 # ---------------------------------------------------------------- F-B-04 ---
 
-@then("Matter cover & instructions, Attributed file and Protective handoff sit in the matter's "
-      "header beside Case file and History")
-def matter_tools_in_the_header():
-    tools = _frontend_file("matter-workspace.js")
-    assert "document.getElementById('workspace-menu').prepend(toolbar);" \
-        in tools
-    page = _frontend_file('index.html')
-    header = page[page.index('id="workspace-focus"'):page.index('<form id="intake"')]
-    assert 'id="workspace-menu"' in header and '<summary>More</summary>' in header
-    assert ".after(toolbar)" not in tools, "the tools are still a bar of their own"
-    for label in ("'Matter cover & instructions'", "'Attributed file'", "'Protective handoff'"):
-        assert label in tools, label
+def _matter_header(app_page: str) -> str:
+    """The open matter's header markup, comments removed: a comment is not a control."""
+    header = app_page[app_page.index('id="workspace-focus"'):app_page.index('<form id="intake"')]
+    return re.sub(r"<!--.*?-->", " ", header, flags=re.S)
+
+
+@then("the open matter's header holds only the file icon")
+def the_header_holds_only_the_file_icon(app_page, page_script):
+    """F-B-04, owner 28 September 2026: "remove more to recorded file on the
+    right hand top corner -- just keep file icon"."""
+    header = _matter_header(app_page)
+    controls = re.findall(r"<(button|summary|details|nav|a)\b[^>]*>", header)
+    assert controls == ["button"], f"the matter header holds {controls}, not one file icon"
+    assert 'id="files-toggle"' in header and 'aria-label="Files on this matter"' in header
+    for gone in ("More", "Case file", "History", "Recorded file", "Recover a draft",
+                 'id="save-status"', 'id="work-links"', 'id="workspace-more"'):
+        assert gone not in header, f"{gone!r} is still in the matter header"
+    assert "Recorded file" not in page_script, "the saved-status line is still written"
+    workspace = _function(page_script, "updateWorkspace")
+    assert "const filesShown = Boolean(state.matterId) || intakeOpen;" in workspace
+    assert "$('matter-files').hidden = !filesShown;" in workspace
+    tools = _frontend_file("legal_brain/communicate/matter-workspace.js")
+    assert "matter-tools" not in tools and "toolbar." not in tools, (
+        "the matter records are still mounted as header tools")
+
+
+@then("the file icon lists every file held on the matter, including audio, video and voice notes")
+def the_file_icon_lists_every_file(page_script):
+    opening = _function(page_script, "openFilesMenu")
+    assert "/uploads`" in opening, "the list is not read from the matter's saved upload receipts"
+    assert "does not mean no files are held" in opening, (
+        "a list that could not be read would render as no files")
+    kinds = _function(page_script, "fileKind")
+    for kind in ("'Voice note'", "'Audio'", "'Video'", "'Image'", "'Document'"):
+        assert kind in kinds, kind
+    cleared = _function(page_script, "clearPrivileged")
+    assert "'files-menu'" in cleared and "closeFilesMenu();" in cleared, (
+        "file names could outlive the session")
+
+
+@then("the matter's own records open from the same icon")
+def the_matters_records_open_from_the_icon(page_script):
+    """Owner, 28 September 2026: "if any of these are important and must be
+    kept, keep those files under the same files icon folder" -- all six are."""
+    records = page_script[page_script.index("const MATTER_RECORDS = ["):]
+    records = records[:records.index("];")]
+    for label, opens in (("Matter cover & instructions", "open('cover')"),
+                         ("Case file", "showTab('casefile')"),
+                         ("Attributed file", "open('casefile')"),
+                         ("History", "showTab('history')"),
+                         ("Protective handoff", "open('emergency')"),
+                         ("Recover a draft", "openDraftRecovery()")):
+        assert f"label: '{label}'" in records, f"{label} has no way in from the file icon"
+        assert opens in records, f"{label} does not open its own record"
+    assert "matterRecords()" in _function(page_script, "openFilesMenu")
 
 
 # ================================ C. Take the brief ===========================

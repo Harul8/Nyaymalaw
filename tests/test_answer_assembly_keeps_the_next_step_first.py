@@ -38,6 +38,8 @@ def test_real_operative_element_leads_without_erasing_or_retyping_support(kind, 
 
 
 def test_background_alone_is_still_refused_not_relabelled_as_a_step():
+    """PRD E2, by purpose (28 September 2026): a recommending turn never leads
+    with background, and background alone is refused."""
     support = Element(kind=ElementKind.GROUND, text="Only background")
     with pytest.raises(ValueError, match="first content element"):
         Answer(

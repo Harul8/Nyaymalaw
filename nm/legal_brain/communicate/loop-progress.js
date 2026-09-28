@@ -1,175 +1,278 @@
-/* Closed-by-default recorded stages. No model text or private deliberation. */
+/* The working word while a reply is prepared. No model text or private deliberation. */
 'use strict';
 
 (() => {
   const streams = new Set();
+  const watchers = new Set();
   function stopAll() {
     streams.forEach((stream) => stream.close());
     streams.clear();
+    [...watchers].forEach((watcher) => watcher.stop());
   }
   window.addEventListener('nm:session-ended', stopAll);
   window.addEventListener('nm:matter-changed', stopAll);
 
-  function attach(container, matterId, { read, isCurrent, turnId = null, unlinkedOnly = false }) {
-    const panel = document.createElement('details');
-    panel.className = 'audit recorded-work-progress';
-    const summary = document.createElement('summary');
-    summary.textContent = turnId ? 'Recorded work for this response' : 'Other recorded work progress';
-    panel.appendChild(summary);
-    container.appendChild(panel);
-    let requestGeneration = 0;
-    const localStreams = new Set();
-    function stopLocal() {
-      localStreams.forEach((stream) => { stream.close(); streams.delete(stream); });
-      localStreams.clear();
+  // NO RECORDED-WORK PANEL (owner, 28 September 2026: "Remove, keep saved";
+  // LB-139). 'Recorded work for this response' under replies and 'Other
+  // recorded work progress' in History are gone; the saved stages stay sealed
+  // with the matter and readable through the owned progress reads for review.
+  // The stream below feeds only the working word.
+
+  /* LB-82. WHILE A REPLY IS BEING PREPARED.
+   *
+   * Owner direction, 28 September 2026: in place of a fixed "Working on your
+   * brief", show legal words from several languages, chosen by the stage the
+   * recorded work has actually reached. The words are decoration and claim
+   * nothing about the work. Later the same day: the word alone -- no language,
+   * no meaning, no stage line -- and one word every thirty seconds. A stop is
+   * shown as the server's own saved label in place of the word, never as more
+   * rotating words. Screen readers hear one stable status, not every word.
+   *
+   * The language and meaning stay beside each word for whoever reviews the
+   * list; they are never painted.
+   *
+   * THE SERVER'S LABELS ARE NAMED HERE VERBATIM. A label this table does not
+   * know keeps the current words, and
+   * tests/test_working_words_follow_every_recorded_stage.py fails the build
+   * when the server can emit a label that is not listed below. */
+  const WORDS = {
+    reading: [
+      ["Da mihi factum, dabo tibi jus", "Latin", "give me the facts, I will give you the law"],
+      ["Vakalatnama", "Persian and Urdu", "the document that authorises an advocate to appear"],
+      ["Arzi", "Urdu", "a petition; a written application"],
+      ["Bayan", "Urdu", "a statement of what happened"],
+      ["Locus standi", "Latin", "the standing to bring the matter"],
+      ["Muqaddama", "Urdu", "a case; a lawsuit"],
+      ["Factum", "Latin", "a fact; a thing done"],
+      ["Vadi", "Sanskrit", "the one who brings the claim"],
+    ],
+    assessing: [
+      ["Prima facie", "Latin", "at first sight"],
+      ["Nyaya", "Sanskrit", "justice; also reasoned inquiry"],
+      ["Ubi jus ibi remedium", "Latin", "where there is a right, there is a remedy"],
+      ["Viveka", "Sanskrit", "discernment; sound judgment"],
+      ["Bona fide", "Latin", "in good faith"],
+      ["Consensus ad idem", "Latin", "a meeting of minds on the same thing"],
+      ["Mens rea", "Latin", "a guilty mind"],
+    ],
+    checking: [
+      ["Sakshya", "Sanskrit and Hindi", "evidence"],
+      ["Onus probandi", "Latin", "the burden of proof"],
+      ["Dastavez", "Urdu", "a document; a deed"],
+      ["Saboot", "Urdu", "proof"],
+      ["Gawah", "Urdu", "a witness"],
+      ["Res ipsa loquitur", "Latin", "the thing speaks for itself"],
+      ["Adharam", "Telugu", "the basis; supporting proof"],
+      ["Affidavit", "Law Latin", "he has declared on oath"],
+    ],
+    statute: [
+      ["Lex", "Latin", "law; a statute"],
+      ["Vidhi", "Sanskrit and Hindi", "law; a rule"],
+      ["Qanun", "Arabic and Urdu", "law; an enactment"],
+      ["Adhiniyam", "Hindi", "an Act of the legislature"],
+      ["Sanhita", "Sanskrit and Hindi", "a code"],
+      ["Generalia specialibus non derogant", "Latin", "a general provision does not override a specific one"],
+      ["Chattam", "Telugu", "law; an Act"],
+    ],
+    precedent: [
+      ["Stare decisis", "Latin", "stand by what has been decided"],
+      ["Ratio decidendi", "Latin", "the reason for the decision"],
+      ["Obiter dictum", "Latin", "a remark in passing, not binding"],
+      ["Per incuriam", "Latin", "decided in ignorance of binding law"],
+      ["Faisla", "Urdu", "a judgment; a decision"],
+      ["Tirpu", "Telugu", "a judgment; a verdict"],
+      ["Jurisprudence constante", "French", "a settled line of decisions"],
+    ],
+    opposing: [
+      ["Audi alteram partem", "Latin", "hear the other side"],
+      ["Prativadi", "Sanskrit", "the one who resists the claim"],
+      ["Jawab-dawa", "Urdu", "the written reply to a claim"],
+      ["Exceptio", "Latin", "a defence raised against a claim"],
+      ["Advocatus diaboli", "Latin", "the devil's advocate"],
+      ["Contra proferentem", "Latin", "read against the one who drafted it"],
+    ],
+    finishing: [
+      ["Satyameva jayate", "Sanskrit", "truth alone triumphs"],
+      ["Fiat justitia", "Latin", "let justice be done"],
+      ["Nota bene", "Latin", "note well"],
+      ["Caveat", "Latin", "let them beware; a formal warning"],
+      ["Insaf", "Urdu", "justice; fairness"],
+      ["Nyayam", "Telugu", "justice"],
+      ["Quod erat demonstrandum", "Latin", "which was to be shown"],
+    ],
+  };
+  const STAGE_WORDS = new Map([
+    ["Recorded work started.", "reading"],
+    ["Assessing the recorded file.", "assessing"],
+    ["An assessment was received; checks are still required.", "checking"],
+    ["Checking the relevant material.", "checking"],
+    ["A material check was recorded.", "checking"],
+    ["Source-linked information needs were proposed for this dispute; their applicability has not been assessed.", "checking"],
+    ["A provision was read; its application has not been assessed.", "statute"],
+    ["An authority passage was read; its legal effect has not been assessed.", "precedent"],
+    ["Authority candidates were found; none is yet legal support.", "precedent"],
+    ["A source-linked opposition pass was recorded for this dispute; its conclusions have not been independently assessed.", "opposing"],
+    ["Cross-dispute opposition work was recorded; its conclusions have not been independently assessed.", "opposing"],
+    ["A draft was prepared; it has not been released as advice.", "finishing"],
+    ["A question was prepared; checks are still required.", "finishing"],
+    ["A conversational reply was prepared; it has not been released.", "finishing"],
+  ]);
+  // Shown as the label alone: work that failed or stopped is not decorated.
+  const PLAIN_STAGES = new Set([
+    "Part of the work could not complete.",
+    "Work paused at its resource limit.",
+    "Work was cancelled or its session ended.",
+    "Work paused because further useful progress was not established.",
+    "Work paused because a service was unavailable.",
+    "Work was interrupted; completion has not been confirmed.",
+    "Work stopped at a permission or quality boundary.",
+    "Work paused because the checked file could not fit safely.",
+    "Work ended; its completion has not been established.",
+  ]);
+  const CURSOR = /^[0-9]{1,9}\.[a-f0-9]{64}$/;
+  // Owner, 28 September 2026: one word every thirty seconds.
+  const WORD_EVERY_MS = 30000;
+  // A repaint rebuilds the turn; its word, stage and clock carry on.
+  const turnMemory = new Map();
+
+  function shuffled(items) {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
     }
-    function current(generation) {
-      return generation === requestGeneration && panel.isConnected && panel.open && isCurrent();
+    return out;
+  }
+
+  function working(container, { matterId, turnId, read, isCurrent }) {
+    container.classList.add('working');
+    container.setAttribute('role', 'status');
+    const said = document.createElement('span');
+    said.className = 'sr-only';
+    said.textContent = 'Working on your brief…';
+    const word = document.createElement('p');
+    word.className = 'working-word';
+    word.setAttribute('aria-hidden', 'true');
+    const stopLine = document.createElement('p');
+    stopLine.className = 'working-stopped';
+    stopLine.setAttribute('aria-hidden', 'true');
+    container.append(said, word, stopLine);
+
+    const memory = (turnId && turnMemory.get(turnId)) || {
+      started: Date.now(), stage: 'reading', label: '', plain: false, seen: new Set(),
+      shown: null, shownAt: 0,
+    };
+    if (turnId && !turnMemory.has(turnId)) {
+      turnMemory.set(turnId, memory);
+      if (turnMemory.size > 20) turnMemory.delete(turnMemory.keys().next().value);
     }
-    panel.addEventListener('toggle', async () => {
-      stopLocal();
-      const generation = ++requestGeneration;
-      if (!panel.open || !isCurrent()) return;
-      [...panel.children].slice(1).forEach((element) => element.remove());
-      const note = document.createElement('p');
-      note.textContent = 'These are saved working stages, not released advice or private deliberation.';
-      panel.appendChild(note);
-      try {
-        const root = `/api/matters/${encodeURIComponent(matterId)}/loops`;
-        const population = turnId
-          ? { loops: [await read(`${root}/${encodeURIComponent(turnId)}`)] }
-          : await read(root);
-        if (!current(generation)) return;
-        if (!Array.isArray(population.loops)) throw new Error('The work list could not be verified.');
-        const loops = population.loops.filter((loop) => turnId
-          ? loop.linked_released_turn === true : !unlinkedOnly || loop.linked_released_turn !== true);
-        if (!loops.length) {
-          const empty = document.createElement('p');
-          empty.textContent = turnId ? 'Work cannot currently be linked to this released response.'
-            : 'No other autonomous work is recorded on this matter.';
-          panel.appendChild(empty);
-        }
-        loops.forEach((loop, index) => {
-          const detail = document.createElement('details');
-          const heading = document.createElement('summary');
-          heading.textContent = turnId ? 'Saved working stages'
-            : `Work ${index + 1}${loop.terminal ? ' — ended' : ' — completion not confirmed'}`;
-          detail.appendChild(heading);
-          panel.appendChild(detail);
-          let stream = null;
-          let detailGeneration = 0;
-          detail.addEventListener('toggle', async () => {
-            if (stream) { stream.close(); streams.delete(stream); localStreams.delete(stream); }
-            const thisDetail = ++detailGeneration;
-            if (!detail.open || !current(generation)) return;
-            [...detail.children].slice(1).forEach((element) => element.remove());
-            const list = document.createElement('ol');
-            list.className = 'progress-stages';
-            list.setAttribute('aria-label', 'Saved working stages');
-            const status = document.createElement('p');
-            status.setAttribute('role', 'status');
-            status.setAttribute('aria-live', 'polite');
-            detail.append(list, status);
-            const seen = new Set();
-            let recordedScope = null;
-            const active = () => thisDetail === detailGeneration && detail.open && current(generation);
-            function add(row) {
-              if (!active() || !row || typeof row.label !== 'string'
-                  || row.working_not_advice !== true || typeof row.cursor !== 'string'
-                  || !/^[0-9]{1,9}\.[a-f0-9]{64}$/.test(row.cursor)) return;
-              if (row.dispute_index !== undefined &&
-                  (!Number.isSafeInteger(row.dispute_index) || row.dispute_index < 1 ||
-                   recordedScope?.state !== 'recorded' ||
-                   !Array.isArray(recordedScope.disputes) || row.dispute_index > 1000)) return;
-              if (seen.has(row.cursor)) return;
-              seen.add(row.cursor);
-              const item = document.createElement('li');
-              item.textContent = row.dispute_index === undefined
-                ? row.label : `Dispute ${row.dispute_index}: ${row.label}`;
-              list.appendChild(item);
-              status.textContent = item.textContent;
-              if (row.state !== 'working' && stream) {
-                stream.close(); streams.delete(stream); localStreams.delete(stream);
-              }
-            }
-            const base = `/api/matters/${encodeURIComponent(matterId)}/loops/${encodeURIComponent(loop.turn_id)}`;
-            try {
-              const record = await read(base);
-              if (!active()) return;
-              if (!Array.isArray(record.events)) throw new Error('The saved stages could not be verified.');
-              recordedScope = record.scope;
-              if (turnId && record.linked_released_turn !== true) {
-                throw new Error('The released response link could not be verified.');
-              }
-              const scope = document.createElement('section');
-              scope.className = 'progress-scope';
-              scope.setAttribute('aria-label', 'Recorded working scope');
-              const scopeNote = document.createElement('p');
-              scope.appendChild(scopeNote);
-              if (record.scope?.state === 'recorded' && Array.isArray(record.scope.disputes)) {
-                scopeNote.textContent = record.scope.disputes.length
-                  ? 'Disputes in the recorded working scope:' : 'The recorded scope was the opening matter file.';
-                const disputes = document.createElement('ul');
-                record.scope.disputes.forEach((dispute) => {
-                  if (typeof dispute.label !== 'string') return;
-                  const name = document.createElement('li');
-                  name.textContent = dispute.label;
-                  disputes.appendChild(name);
-                });
-                scope.appendChild(disputes);
-              } else {
-                scopeNote.textContent = 'Dispute-specific working scope was not established in this record.';
-              }
-              const shared = document.createElement('p');
-              shared.textContent = 'Only source-linked information-needs and single-dispute opposition receipts are marked by dispute here. Authority and provision reads remain shared; no working stage establishes legal assessment.';
-              scope.appendChild(shared);
-              detail.insertBefore(scope, list);
-              record.events.forEach(add);
-              if (!record.terminal) {
-                stream = new EventSource(`${base}/progress?after=${encodeURIComponent(record.cursor)}`,
-                                         { withCredentials: true });
-                streams.add(stream); localStreams.add(stream);
-                stream.addEventListener('progress', (event) => {
-                  if (!active()) { stream.close(); return; }
-                  try { add(JSON.parse(event.data)); }
-                  catch { stream.close(); status.textContent = 'A progress update could not be verified.'; }
-                });
-                stream.onerror = async () => {
-                  stream.close(); streams.delete(stream); localStreams.delete(stream);
-                  if (!active()) return;
-                  // Reuse the central authenticated reader: 401 ends the
-                  // session and clears privileged content, rather than leaving
-                  // this fold alive behind an expired EventSource connection.
-                  try {
-                    const latest = await read(base);
-                    if (!active()) return;
-                    latest.events.forEach(add);
-                    if (!latest.terminal) status.textContent = 'Live updates paused. Reopen to refresh the saved stages.';
-                  } catch (error) {
-                    if (active() && !error.obsolete) status.textContent = 'The current work status could not be read.';
-                  }
-                };
-              }
-            } catch (error) {
-              if (active() && !error.obsolete) status.textContent = 'The saved stages could not be read. Reopen to try again.';
-            }
-          });
-          if (turnId) detail.open = true;
-        });
-      } catch (error) {
-        if (current(generation) && !error.obsolete) note.textContent = 'The recorded work could not be read. Reopen to try again.';
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let bag = [];
+    let bagStage = null;
+    let stopped = false;
+    let stream = null;
+    let poll = null;
+    let timer = null;
+    let failures = 0;
+
+    // The next word, from the stage the work has reached. A stage change
+    // waits for the next thirty-second turn; it never swaps the word early.
+    function next() {
+      if (bagStage !== memory.stage || !bag.length) {
+        bag = shuffled(WORDS[memory.stage] || WORDS.reading);
+        bagStage = memory.stage;
+        if (bag.length > 1 && bag[0] === memory.shown) bag.push(bag.shift());
       }
-    });
-    return panel;
+      memory.shown = bag.shift();
+      memory.shownAt = Date.now();
+      render();
+      if (!still && !memory.plain) {
+        word.classList.remove('fresh');
+        void word.offsetWidth;
+        word.classList.add('fresh');
+      }
+    }
+    function render() {
+      // Owner, 28 September 2026: the word alone, in the continuous whatever
+      // its language -- "ing" on the word, nothing beside it.
+      word.textContent = memory.shown ? `${memory.shown[0]}ing…` : '';
+      word.hidden = memory.plain;
+      stopLine.textContent = memory.plain ? memory.label : '';
+      stopLine.hidden = !memory.plain;
+    }
+    function schedule() {
+      const due = memory.shownAt + WORD_EVERY_MS - Date.now();
+      timer = setTimeout(() => {
+        timer = null;
+        if (!alive()) { stop(); return; }
+        if (!memory.plain) next();
+        schedule();
+      }, Math.max(0, due));
+    }
+    const alive = () => !stopped && container.isConnected && isCurrent();
+    function closeStream() {
+      if (stream) { stream.close(); streams.delete(stream); stream = null; }
+    }
+    function stop() {
+      stopped = true;
+      clearTimeout(timer);
+      clearTimeout(poll);
+      closeStream();
+      watchers.delete(handle);
+    }
+    function apply(row) {
+      if (!row || typeof row.label !== 'string' || row.working_not_advice !== true
+          || typeof row.cursor !== 'string' || !CURSOR.test(row.cursor)
+          || memory.seen.has(row.cursor)) return;
+      memory.seen.add(row.cursor);
+      memory.label = row.label;
+      memory.plain = row.state === 'stopped' || PLAIN_STAGES.has(row.label);
+      const staged = STAGE_WORDS.get(row.label);
+      if (staged) memory.stage = staged;
+      render();
+    }
+    const base = matterId && turnId
+      ? `/api/matters/${encodeURIComponent(matterId)}/loops/${encodeURIComponent(turnId)}`
+      : null;
+    async function look() {
+      poll = null;
+      if (!alive() || !base) return;
+      try {
+        const record = await read(base);
+        if (!alive()) return;
+        if (!record || !Array.isArray(record.events)) throw new Error('unverified');
+        failures = 0;
+        record.events.forEach(apply);
+        if (record.terminal || typeof record.cursor !== 'string') return;
+        stream = new EventSource(`${base}/progress?after=${encodeURIComponent(record.cursor)}`,
+                                 { withCredentials: true });
+        streams.add(stream);
+        stream.addEventListener('progress', (event) => {
+          if (!alive()) { stop(); return; }
+          try { apply(JSON.parse(event.data)); } catch { closeStream(); }
+        });
+        stream.onerror = () => {
+          closeStream();
+          if (alive()) poll = setTimeout(look, 1000);
+        };
+      } catch (error) {
+        if (error?.obsolete || !alive()) return;
+        // The work record appears once the loop starts; until then this is a
+        // 404 and the words stay on the brief. Other failures stop following
+        // after a few tries -- the words carry on at the stage last recorded.
+        if (error?.status !== 404 && ++failures >= 3) return;
+        poll = setTimeout(look, Date.now() - memory.started < 20000 ? 2000 : 5000);
+      }
+    }
+    const handle = { stop };
+    watchers.add(handle);
+    // A repaint keeps the word already showing until its thirty seconds are up.
+    if (memory.shown && Date.now() - memory.shownAt < WORD_EVERY_MS) render();
+    else next();
+    schedule();
+    look();
+    return handle;
   }
-  async function attachTurn(container, matterId, turnId, { read, isCurrent }) {
-    // Presence in the private journal is not release. The actual strict
-    // receipt, applied-turn ledger and original offer must agree on the server.
-    try {
-      const record = await read(`/api/matters/${encodeURIComponent(matterId)}/loops/${encodeURIComponent(turnId)}`);
-      if (!container.isConnected || !isCurrent() || record.linked_released_turn !== true) return null;
-      return attach(container, matterId, { read, isCurrent, turnId });
-    } catch { return null; } // Legacy turns without journals do not gain an empty work panel.
-  }
-  window.NMLoopProgress = Object.freeze({ attach, attachTurn, stopAll });
+
+  window.NMLoopProgress = Object.freeze({ stopAll, working });
 })();

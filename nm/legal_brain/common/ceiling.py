@@ -102,8 +102,9 @@ def for_echo(prompt) -> int:
 #: which is the mechanism that stops the seventeenth call site inventing a
 #: number.
 FIXED: dict[str, int] = {
-    # A verdict and a quoted trigger. Short by construction.
-    "route": 120,
+    # A verdict and a quoted trigger. Short by construction. (`route` left
+    # this table on 28 September 2026: it now quotes the whole contribution
+    # and echoes -- `nm/legal_brain/common/reads_contracts.py`.)
     "role": 150,
     "cause": 300,
     "duty": 250,

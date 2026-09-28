@@ -84,6 +84,8 @@ const INTAKE_INPUTS = [
   'in-urgency', 'in-urgency-note', 'in-date', 'in-date-source',
 ];
 let activeIntent = null;
+// F-B-02. The board's edit of the opening details, while its dialog is open.
+let openingEdit = null;
 let draftVault = null;
 let draftWrite = 0;
 let draftUnlock = Promise.resolve();
@@ -203,7 +205,6 @@ async function unlockDrafts() {
 
 async function openDraftRecovery() {
   if (!state.advocate || !activeIntent) return;
-  $('workspace-more').open = false;
   const generation = ++recoveryGeneration;
   const session = state.sessionGeneration;
   const context = activeIntent;
@@ -300,13 +301,19 @@ function snapshotIntent({ edited = false } = {}) {
   if (!ownsIntent(activeIntent)) return;
   activeIntent.text = $('message').value;
   activeIntent.intake = state.intake;
-  activeIntent.intakeOpen = !$('intake').hidden;
-  activeIntent.fields = Object.fromEntries(INTAKE_INPUTS.map((id) => [id, $(id).value]));
-  activeIntent.capacity = $('in-capacity').checked;
+  // While the board's edit borrows the opening form (F-B-02), its fields hold
+  // the matter's recorded details, not this tab's unsent opening draft.
+  if (!openingEdit) {
+    activeIntent.intakeOpen = !$('intake').hidden;
+    activeIntent.fields = Object.fromEntries(INTAKE_INPUTS.map((id) => [id, $(id).value]));
+    activeIntent.capacity = $('in-capacity').checked;
+  }
   if (edited) { activeIntent.editedAt = Date.now(); saveProtectedDraft(); }
 }
 
 function restoreIntent() {
+  // Any change of context ends a board edit first; its unsaved changes go.
+  if (openingEdit) closeOpeningEdit({ restore: false });
   const intent = activeIntent;
   $('message').value = intent ? intent.text : '';
   sizeComposer();
@@ -400,6 +407,8 @@ function clearPrivileged() {
   stopDictation({ discard: true });
   closeLiveWords();
   setPlusMenu(false);
+  // The borrowed form holds this matter's details; they leave with the session.
+  closeOpeningEdit({ restore: false });
   $('dictation-state').textContent = '';
   state.sessionGeneration += 1;
   state.searchGeneration += 1;
@@ -426,7 +435,7 @@ function clearPrivileged() {
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
-   'who-detail', 'professional-approval', 'save-status', 'search-index', 'search-state', 'history-state']
+   'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   $('matter-heading').textContent = 'My work';
   $('matter-heading').removeAttribute('title');
@@ -441,7 +450,8 @@ function clearPrivileged() {
   // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
   ['who-name', 'workspace-name', 'profile-name', 'profile-email', 'profile-workspace']
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
-  $('work-links').hidden = true;
+  closeFilesMenu();
+  $('matter-files').hidden = true;
   const composer = $('message');
   if (composer) composer.value = '';
   const chooser = $('history-matter');
@@ -878,19 +888,31 @@ function closeOpenMatter() {
   $('matter-board').hidden = true;
   $('opening-fields').replaceChildren();
   $('opening-record').hidden = true;
-  $('save-status').textContent = '';
+  closeFilesMenu();
 }
 
 // WHO THE FILE IS FOR AND WHO IT IS AGAINST. BK-33's acceptance is that ten
 // similar matters stay distinguishable, and `threads: 1` on every row
 // distinguishes nothing. ONE OWNER for My work's rows and the matter board
 // (F-B-02), so a field added to one is on the other.
+// F-B-14. WHEN THE FILE WAS LAST SAVED, in the advocate's own time -- the
+// time My work is ordered by, so a row's place and its date agree. A file not
+// saved since the stamp existed shows the day it was last worked.
+function lastWorked(m) {
+  const at = m.last_updated ? new Date(m.last_updated) : null;
+  if (at && !Number.isNaN(at.getTime())) {
+    return at.toLocaleString(undefined, {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  return m.last_touched || 'never worked';
+}
+
 function matterFields(dl, m) {
   field(dl, 'client', m.client || 'not recorded');
   field(dl, 'against', m.opponent || 'not recorded');
   field(dl, 'deadline', deadlineField(m));
   staleDeadlineFields(dl, m);
-  field(dl, 'last worked', m.last_touched || 'never worked');
+  field(dl, 'last worked', lastWorked(m));
   field(dl, 'position', m.blocked
     ? { pill: 'blocked', text: m.blocked }
     : { pill: 'unknown', text: 'no unresolved posture recorded' });
@@ -990,7 +1012,7 @@ async function showThreadBoard(
   updateWorkspace();
   $('matter-heading').textContent = 'Loading matter…';
   $('matter-heading').removeAttribute('title');
-  $('save-status').textContent = '';
+  closeFilesMenu();
   if (restore) {
     state.turns = [];
     $('thread').textContent = '';
@@ -1031,7 +1053,6 @@ async function showThreadBoard(
   $('rail-meta').textContent = '';
   $('matter-heading').textContent = data.title || 'Untitled matter';
   $('matter-heading').title = data.title || 'Untitled matter';
-  $('save-status').textContent = 'Recorded file';
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
 
@@ -1260,13 +1281,10 @@ async function renderMatterBoard(matterId, generation) {
 
 // BK-33. THE SERVED CONVERSATION, READ BACK.
 //
-// A RESTORED TURN SAYS IT WAS RESTORED. The transcript keeps what the
-// advocate read; it does not keep the latency, the token counts or the cost,
-// because those are facts about the RUN and not about the answer. Rendering
-// them as zeros would put `latency 0ms · calls 0 · cost $0.000000` under a
-// turn that really did cost something -- a measurement nobody made, shown as
-// a measurement. So the audit line for a read-back turn says where it came
-// from instead.
+// The read-back keeps what the advocate read. How each answer was made is
+// not shown in the conversation (owner, 28 September 2026); it stays in the
+// turn's sealed history record, and nothing here renders run numbers that
+// the read-back does not carry.
 async function restoreConversation(matterId, generation = state.railGeneration) {
   state.turns = [];
   let d;
@@ -1291,12 +1309,13 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
     }];
     reconcileIntent([]);
     repaint();
+    keepThreadAtLatest();
     return true;
   }
 
   if (generation !== state.railGeneration) return false;
 
-  state.turns = (d.turns || []).map(restoredTurn);
+  state.turns = withOpeningNotes((d.turns || []).map(restoredTurn), d.opening_changes);
 
   reconcileIntent(d.turns || []);
   if (d.unreadable_reason) {
@@ -1312,6 +1331,7 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
     });
   }
   repaint();
+  keepThreadAtLatest();
   return true;
 }
 
@@ -1321,28 +1341,24 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
 // Both matter re-entry and History consume the same release projection.
 // Diagnostic presence alone never turns a withheld draft into ordinary advice.
 function restoredTurn(turn) {
+  // A turn whose words no record holds says so, rather than an answer to nothing.
+  const briefMissing = !(turn.message || turn.asked) && turn.message_source === 'not_held';
   if (turn.committed !== true || !['released', 'legacy_released'].includes(turn.release_state)) {
-    return { brief: turn.message || turn.asked || '', state: 'not_established',
+    return { brief: turn.message || turn.asked || '', briefMissing, state: 'not_established',
       error: turn.blocked_reason || 'Release and successful commitment could not be established.',
       refusal: { withheld_by: turn.withheld_by || [],
         why: turn.blocked_reason || 'This archival record is not a released answer.',
         not_established: turn.not_established || [] } };
   }
-  return { brief: turn.message || turn.asked || '', answer: {
+  return { brief: turn.message || turn.asked || '', briefMissing, answer: {
     matter_id: turn.matter_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
     at: turn.at || '',
+    board_changes: Array.isArray(turn.board_changes) ? turn.board_changes : [],
+    composed: Array.isArray(turn.composed) ? turn.composed : [],
   } };
 }
-
-// WHAT THE ADVOCATE IS NOT SHOWN BY DEFAULT, and it is a door rather than a
-// deletion. J-7: gate ids, rule ids, token counts and the trace line are
-// engineering vocabulary on an advocate's screen. They are what makes every
-// claim checkable and this whole product is an argument for keeping them --
-// they answer HOW THIS WAS MADE, which counsel reading for the position is
-// not asking. Present, checkable, out of the way.
-let SHOW_AUDIT = false;
 
 // P24. THE BRIEFING READINESS SURFACE. Intake is READY only when no gap is
 // open; a completed turn does not make it so. A need the advocate cannot get is
@@ -1432,7 +1448,210 @@ function renderBriefingPane(matterId, brief, version) {
   host.appendChild(renderBriefing(brief, matterId, version));
 }
 
+// F-B-02. A CORRECTION OF THE OPENING DETAILS, in the conversation where it
+// was made, so the record shows what changed and when. Not a turn: nothing
+// was asked and nothing was answered.
+function renderOpeningNote(note) {
+  const wrap = document.createElement('div');
+  wrap.className = 'turn opening-note';
+  const head = document.createElement('p');
+  head.className = 'opening-note-head';
+  const when = Date.parse(note.at || '');
+  head.textContent = 'You updated the matter details'
+    + (Number.isNaN(when) ? '' : ` · ${new Date(when).toLocaleString()}`);
+  const list = document.createElement('ul');
+  for (const line of note.changes) {
+    const item = document.createElement('li');
+    item.textContent = line;
+    list.appendChild(item);
+  }
+  const foot = document.createElement('p');
+  foot.className = 'hint';
+  foot.textContent = 'Kept beside the original details. The next reply works from these, '
+    + 'and the parties are checked for conflicts again on your next message.';
+  wrap.append(head, list, foot);
+  return wrap;
+}
+
+// LB-83. WHEN THE ANSWER WAS SAVED, said quietly under it (owner, 28 September
+// 2026), so an older reply is never mistaken for one given after later changes.
+function answeredAt(answer) {
+  const when = Date.parse(answer?.at || '');
+  if (Number.isNaN(when)) return null;
+  const line = document.createElement('p');
+  line.className = 'answered-at';
+  line.textContent = 'Answered ' + new Date(when).toLocaleString(undefined, {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return line;
+}
+
+// LB-90. WHAT THIS MESSAGE CHANGED ON THE BOARD, and what waits for you
+// (owner, 28 September 2026). Applied lines come from the saved file; a
+// proposal changed nothing, and its button goes through the same attributed,
+// version-checked owner every other correction uses.
+const BOARD_APPLIED = new Set(['dispute_opened', 'statements_added', 'dated_event', 'corrected',
+  'question_answered', 'party_added', 'side_recorded', 'kept_apart']);
+
+function renderBoardNote(entry) {
+  const changes = Array.isArray(entry.answer?.board_changes) ? entry.answer.board_changes : [];
+  if (!changes.length) return null;
+  const box = document.createElement('div');
+  box.className = 'board-note';
+  const applied = changes.filter((c) => BOARD_APPLIED.has(c.kind));
+  const waiting = changes.filter((c) => !BOARD_APPLIED.has(c.kind));
+  const section = (title, rows) => {
+    if (!rows.length) return;
+    const head = document.createElement('p');
+    head.className = 'board-note-head';
+    head.textContent = title;
+    const list = document.createElement('ul');
+    for (const change of rows) {
+      const item = document.createElement('li');
+      const text = document.createElement('span');
+      text.textContent = change.text;
+      item.appendChild(text);
+      const act = boardAction(entry, change);
+      if (act) item.appendChild(act);
+      list.appendChild(item);
+    }
+    box.append(head, list);
+  };
+  section('On the matter board', applied);
+  section('Waiting for you', waiting);
+  return box;
+}
+
+function boardAction(entry, change) {
+  const matterId = entry.answer?.matter_id || state.matterId;
+  const button = (label, run) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'ghost board-act'; b.textContent = label;
+    b.addEventListener('click', async () => {
+      if (b.disabled) return;
+      b.disabled = true;
+      const said = document.createElement('span');
+      said.className = 'board-act-state';
+      said.textContent = ' Saving…';
+      b.after(said);
+      try {
+        said.textContent = ` ${await run()}`;
+        if (matterId === state.matterId) {
+          await showThreadBoard(matterId, { restore: false, closeNavigator: false }).catch(() => {});
+        }
+      } catch (e) {
+        if (e.obsolete) return;
+        b.disabled = false;
+        said.textContent = e.status === 409
+          ? ' Not changed: the file has moved or this entry was already changed. The board shows it as it is now.'
+          : ` Not changed: ${e.message}`;
+      }
+    });
+    return b;
+  };
+  // THE VERSION IS READ FROM THE SERVER, not from this page: the note may be
+  // in History, or on a reply older than the file the board now shows.
+  const version = async () => {
+    const current = await api(`/api/matters/${encodeURIComponent(matterId)}`);
+    if (!Number.isInteger(current?.version)) throw new Error('the matter could not be read');
+    return current;
+  };
+  const correct = async (factId, body) => {
+    const current = await version();
+    const out = await api(`/api/matters/${encodeURIComponent(matterId)}/facts/`
+      + `${encodeURIComponent(factId)}/corrections`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...body, expected_version: current.version }),
+    });
+    if (matterId === state.matterId && Number.isInteger(out?.version)) {
+      state.matterVersion = out.version;
+    }
+    return out;
+  };
+  const parties = async (change) => {
+    const current = await version();
+    const form = current.opening_form;
+    if (!form) throw new Error('the matter details could not be read');
+    const next = { ...(form.parties || {}) };
+    if (change.kind === 'proposed_party_removal') delete next[change.target];
+    else next[change.target] = change.value;
+    // The recorded other-party state follows the parties, exactly as the form
+    // requires: removing the last named other party leaves them unknown.
+    const brief = { ...(form.brief || {}) };
+    const others = Object.values(next).some((side) => side !== 'client');
+    if (others) brief.other_party_state = 'identified';
+    else if (brief.other_party_state === 'identified') brief.other_party_state = 'not_known';
+    const out = await api(`/api/matters/${encodeURIComponent(matterId)}/opening`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ request_key: `opening_${newTurnId().slice(5)}`,
+        expected_version: current.version, title: form.title, parties: next, brief }),
+    });
+    if (matterId !== state.matterId) return 'Done. The matter details now show it.';
+    if (Number.isInteger(out?.version)) state.matterVersion = out.version;
+    if (out?.state === 'opening_corrected' && Array.isArray(out.changes) && out.changes.length) {
+      state.turns.push({ note: { at: new Date().toISOString(), changes: out.changes.map(String) } });
+      repaint();
+    }
+    return 'Done. The matter details now show it, and the history keeps the change.';
+  };
+  if (!matterId) return null;
+  if (change.kind === 'corrected' && change.target && change.was) {
+    return button('Undo', async () => {
+      await correct(change.target, { statement: change.was,
+        ...(change.was_date ? { date: change.was_date } : {}),
+        reason: 'Undo: the earlier entry was right' });
+      return 'Undone. The earlier entry is back, and both remain in the history.';
+    });
+  }
+  if (change.kind === 'proposed_withdrawal' && change.target) {
+    return button('Withdraw it', async () => {
+      await correct(change.target, { withdraw: true,
+        reason: 'Withdrawn at the advocate’s request in the conversation' });
+      return 'Withdrawn. It stays in the history, and nothing runs from it now.';
+    });
+  }
+  if (['proposed_party_removal', 'proposed_party_move'].includes(change.kind) && change.target) {
+    return button('Confirm', () => parties(change));
+  }
+  if (change.kind === 'held_other_matter') {
+    const span = document.createElement('span');
+    // Only on the open matter's own conversation, where the words are held and
+    // a resend lands on this file.
+    if (entry.brief && matterId === state.matterId
+        && document.body.dataset.pane === 'advise') {
+      span.appendChild(button('Keep it in this matter', async () => {
+        await send(entry.brief, { keepInMatter: true });
+        return 'Sent again, kept in this matter.';
+      }));
+    }
+    const fresh = document.createElement('button');
+    fresh.type = 'button'; fresh.className = 'ghost board-act';
+    fresh.textContent = 'Start a new matter';
+    fresh.addEventListener('click', startMatter);
+    span.appendChild(fresh);
+    return span;
+  }
+  return null;
+}
+
+// Each correction goes before the first turn known to come after it.
+function withOpeningNotes(turns, changes) {
+  const time = (value) => { const t = Date.parse(value || ''); return Number.isNaN(t) ? null : t; };
+  const out = [...turns];
+  for (const change of Array.isArray(changes) ? changes : []) {
+    if (!change || !Array.isArray(change.changes) || !change.changes.length) continue;
+    const at = time(change.at);
+    const later = at === null ? -1 : out.findIndex((entry) => {
+      const t = time(entry.note ? entry.note.at : entry.answer?.at);
+      return t !== null && t > at;
+    });
+    out.splice(later < 0 ? out.length : later, 0,
+      { note: { at: change.at, changes: change.changes.map(String) } });
+  }
+  return out;
+}
+
 function renderTurn(entry) {
+  if (entry.note) return renderOpeningNote(entry.note);
   const wrap = document.createElement('div');
   wrap.className = 'turn';
 
@@ -1445,6 +1664,15 @@ function renderTurn(entry) {
     const b = document.createElement('div');
     b.className = 'brief';
     b.textContent = entry.brief;
+    row.appendChild(b);
+    wrap.appendChild(row);
+  } else if (entry.briefMissing) {
+    const row = document.createElement('div');
+    row.className = 'said-row';
+    const b = document.createElement('div');
+    b.className = 'brief brief-missing';
+    b.textContent = 'Your message on this turn is not held: it was not added to the file '
+      + 'because the checks had not cleared, and no conversation record of it was found.';
     row.appendChild(b);
     wrap.appendChild(row);
   }
@@ -1532,20 +1760,22 @@ function renderTurn(entry) {
   if (!entry.answer) {
     const pending = document.createElement('div');
     pending.className = 'el ground';
-    const b = document.createElement('div');
-    b.className = 'body';
-    b.textContent = 'Working on your brief…';
-    pending.appendChild(b);
+    // LB-82. Words chosen by the stage this turn's own recorded work has
+    // reached; its saved stage label beneath them (owner, 28 September 2026).
+    window.NMLoopProgress.working(pending, {
+      matterId: entry.request?.matter_id || state.matterId, turnId: entry.turnId, read: api,
+      isCurrent: () => !state.ended && Boolean(state.advocate) && pending.isConnected,
+    });
     wrap.appendChild(pending);
     return wrap;
   }
 
+  // A READ-BACK TURN IS SHOWN AS IT WAS SERVED, without a notice (owner, 28
+  // September 2026). A retry that recovered the earlier saved answer instead
+  // of making a new one still says so: the advocate asked just now.
   if (entry.answer.replayed) {
     wrap.appendChild(stateBlock('quiet',
       'Earlier recorded response recovered. This is not a new assessment; the file may have changed since it was prepared.'));
-  } else if (entry.answer.restored) {
-    wrap.appendChild(stateBlock('quiet',
-      'Recorded response. It has not been reassessed against later changes to the file.'));
   }
 
   // WHAT FOLDS AND WHAT MAY NEVER FOLD.
@@ -1565,8 +1795,13 @@ function renderTurn(entry) {
   const foldsAsSupport = (el) => el.kind === 'ground'
     && !el.disclosure && el.signal === 'none'
     && (!el.section || el.section === 'authority');
-  let support = entry.answer.elements.filter(foldsAsSupport);
-  let spoken = entry.answer.elements.filter((el) => !foldsAsSupport(el));
+  // LB-76. THE REPLY, told from the checked findings as one colleague tells
+  // another and checked again, on its own words, by the server. Where there is
+  // one it is what the advocate reads; where there is none the checked
+  // findings are shown as they are, exactly as before.
+  const composed = Array.isArray(entry.answer.composed) ? entry.answer.composed : [];
+  let support = composed.length ? [] : entry.answer.elements.filter(foldsAsSupport);
+  let spoken = composed.length ? [] : entry.answer.elements.filter((el) => !foldsAsSupport(el));
 
   // BK-37. AN ANSWER THAT IS ONLY GROUNDS IS NOT SUPPORT FOR ANYTHING.
   //
@@ -1603,6 +1838,35 @@ function renderTurn(entry) {
     else rows.push({ el, said: 1 });
   }
   for (const row of rows) renderElement(wrap, row.el);
+  for (const paragraph of composed) renderParagraph(wrap, paragraph);
+
+  // ONE PARAGRAPH OF THE REPLY. Plain prose. A paragraph that carries a step in
+  // its own words keeps the step's date line; a paragraph that relies on a
+  // saved passage links it, opening the same source reader as the finding.
+  function renderParagraph(into, paragraph) {
+    const d = document.createElement('div');
+    d.className = 'el reply';
+    const body = document.createElement('p');
+    body.className = 'body'; body.textContent = paragraph.text;
+    d.appendChild(body);
+    const carried = Number.isInteger(paragraph.carries)
+      ? entry.answer.elements[paragraph.carries] : null;
+    if (carried && (carried.by_when || carried.no_deadline_reason)) {
+      const w = document.createElement('span');
+      w.className = 'when';
+      w.textContent = carried.by_when ? `Next step, by ${carried.by_when}`
+        : `Next step — no deadline: ${carried.no_deadline_reason}`;
+      d.appendChild(w);
+    }
+    const linked = Number.isInteger(paragraph.passage)
+      ? entry.answer.elements[paragraph.passage] : null;
+    if (linked && linked.refs && linked.refs.length) {
+      const r = document.createElement('span');
+      r.className = 'refs'; fillReferences(r, linked);
+      d.appendChild(r);
+    }
+    into.appendChild(d);
+  }
 
   function renderElement(into, el) {
     const d = document.createElement('div');
@@ -1709,98 +1973,50 @@ function renderTurn(entry) {
                                     entry.answer.matter_version));
   }
 
-  // THE GATES THAT FIRED. A gate whose response is `disclose` and which the
-  // advocate cannot see has disclosed nothing -- and G-UNSCREENED fires on
-  // every turn, because the conflict, competence and engagement screens are
-  // slice 10 and are not built.
-  // J-7. HOW THIS ANSWER WAS MADE, filed under its own heading and closed.
-  //
-  // MEASURED: `G-DUTY · clear`, `G-UNSCREENED · unscreened`, `G-CONSISTENT ·
-  // consistent`, and `outcome ok · latency 69ms · calls 15 · tokens 6860/606
-  // · cost $0.000000 · violations 1` were on the advocate's screen under
-  // every answer. None of it is wrong and none of it is theirs: an advocate
-  // cannot act on `G-UNSCREENED`, and the sentence beside it already says
-  // what it means.
-  //
-  // A `<details>` AND NOT A DELETION, and not an operator-only route either.
-  // Every one of these is what makes a claim checkable, and this product's
-  // whole argument is for keeping them where the person relying on the answer
-  // can reach them. What changes is that reaching them is a decision.
-  // `metrics` IS NULL ON A RESTORED TURN. The transcript keeps what was
-  // served and not the numbers about the run, so every read of it here
-  // has to tolerate its absence -- this one did not, and threw
-  // `Cannot read properties of null (reading 'gates_fired')` inside
-  // `repaint`, which renders NOTHING and looks exactly like a matter
-  // with no conversation on it.
-  const fired = ((entry.answer.metrics || {}).gates_fired || []);
-  if (entry.answer.matter_id && entry.answer.turn_id) {
-    window.NMLoopProgress.attachTurn(wrap, entry.answer.matter_id, entry.answer.turn_id, {
-      read: api,
-      isCurrent: () => !state.ended && Boolean(state.advocate) && wrap.isConnected
-        && ['advise', 'history'].includes(document.body.dataset.pane),
-    });
-  }
-  const audit = document.createElement('details');
-  audit.className = 'audit';
-  const auditSum = document.createElement('summary');
-  auditSum.textContent = 'How this answer was made';
-  audit.appendChild(auditSum);
+  const note = renderBoardNote(entry);
+  if (note) wrap.appendChild(note);
+  const at = answeredAt(entry.answer);
+  if (at) wrap.appendChild(at);
 
-  if (fired.length) {
-    const g = document.createElement('div');
-    g.className = 'gates';
-    for (const gate of fired) {
-      const row = document.createElement('div');
-      row.className = `gate ${gate.response}`;
-      const id = document.createElement('span');
-      id.className = 'gid';
-      id.textContent = `${gate.gate} · ${gate.state}`;
-      const detail = document.createElement('span');
-      detail.className = 'gdetail';
-      detail.textContent = gate.detail;
-      row.append(id, detail);
-      g.appendChild(row);
-    }
-    audit.appendChild(g);
-  }
-
-  const m = entry.answer.metrics;
-  if (!m) {
-    // A RESTORED TURN. It was served, it was recorded, and the numbers about
-    // the run were not kept -- so the working says that rather than showing
-    // zeros that would read as a measurement.
-    const note = document.createElement('div');
-    note.className = 'metrics';
-    note.textContent = entry.answer.at
-      ? `read back from the record · served ${entry.answer.at}`
-      : 'read back from the record';
-    audit.appendChild(note);
-    // This is the advocate's released answer, not an operator audit view.
-    // Keep diagnostic identities and raw records behind separately authorised
-    // operator access; serialising even the release projection here exposed
-    // internal turn IDs in the ordinary History pane.
-    wrap.appendChild(audit);
-    return wrap;
-  }
-  const met = document.createElement('div');
-  met.className = 'metrics';
-  const add = (label, value, warn) => {
-    const s = document.createElement('span');
-    s.innerHTML = `${label} <span class="v${warn ? ' warn' : ''}"></span>`;
-    s.querySelector('.v').textContent = value;
-    met.appendChild(s);
-  };
-  add('outcome', m.outcome, m.outcome !== 'ok');
-  add('latency', `${m.latency_ms}ms`);
-  add('calls', String(m.llm_calls));
-  add('tokens', `${m.tokens.in}/${m.tokens.out}`);
-  add('cost', `$${m.cost_usd.toFixed(6)}`);
-  if (m.violations.length) add('violations', String(m.violations.length), true);
-  if (m.tier_downgrades.length) add('downgrades', String(m.tier_downgrades.length), true);
-  if (entry.answer.replayed) add('replayed', 'yes', true);
-  audit.appendChild(met);
-  wrap.appendChild(audit);
+  // HOW THIS ANSWER WAS MADE -- gates, reads, calls and cost -- is not shown
+  // in the conversation (owner, 28 September 2026). It is kept, in full and
+  // sealed with the matter, in the turn's own history record for review.
+  // NOR IS THE RECORDED WORK BEHIND IT (owner, the same day: "Remove, keep
+  // saved"; LB-139). The saved working stages stay sealed with the matter and
+  // readable through the owned progress reads, for the owner's review.
   return wrap;
+}
+
+// REOPENED OR RELOADED, A CONVERSATION OPENS AT ITS LAST MESSAGE (owner,
+// 28 September 2026) and stays there while its late parts -- board notes,
+// fonts -- finish laying out. The first scroll, key, tap or click is
+// the advocate's own, and releases it; so do a few seconds of quiet.
+let releaseLatest = null;
+function keepAtLatest(container, toEnd) {
+  if (releaseLatest) releaseLatest();
+  const intents = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  const observer = new MutationObserver(() => toEnd());
+  let timer = null;
+  const release = () => {
+    observer.disconnect();
+    clearTimeout(timer);
+    intents.forEach((type) => container.removeEventListener(type, release));
+    if (releaseLatest === release) releaseLatest = null;
+  };
+  releaseLatest = release;
+  toEnd();
+  observer.observe(container, { childList: true, subtree: true });
+  intents.forEach((type) => container.addEventListener(type, release, { passive: true }));
+  timer = setTimeout(release, 4000);
+  document.fonts?.ready.then(() => { if (releaseLatest === release) toEnd(); });
+}
+
+function keepThreadAtLatest() {
+  const t = $('thread');
+  keepAtLatest(t, () => {
+    t.scrollTop = t.scrollHeight;
+    $('jump-latest').hidden = true;
+  });
 }
 
 function repaint() {
@@ -1822,11 +2038,16 @@ function sizeComposer() {
 }
 
 function updateWorkspace() {
-  const intakeOpen = !$('intake').hidden;
+  const intakeOpen = !$('intake').hidden && !openingEdit;
   const nothingYet = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
   $('composer').hidden = nothingYet || intakeOpen;
-  // F-A-17. Case file and History are offered for a matter that is open.
-  $('work-links').hidden = !state.matterId;
+  // F-B-04. The file icon is offered for an open matter, and on a new matter's
+  // form, where Recover a draft is the one record that already applies.
+  const filesShown = Boolean(state.matterId) || intakeOpen;
+  $('matter-files').hidden = !filesShown;
+  if (!filesShown) closeFilesMenu();
+  // F-B-02. Not while a reply is being prepared: the file is moving under it.
+  $('board-edit').disabled = Boolean(activeDelivery || !state.matterId || !state.matterReady);
   $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady));
   if (!activeDelivery) $('send').textContent = state.matterId && !state.matterReady
     ? 'Loading file…' : 'Send';
@@ -1861,7 +2082,7 @@ function consumeComposer(entry) {
   sizeComposer();
 }
 
-async function send(message, { workProduct } = {}) {
+async function send(message, { workProduct, keepInMatter = false } = {}) {
   if (activeDelivery || (state.matterId && !state.matterReady)) return;
   if (!activeIntent) selectIntent(state.matterId, { opening: !state.matterId });
   snapshotIntent();
@@ -1885,6 +2106,9 @@ async function send(message, { workProduct } = {}) {
     parties: entry.request.parties, release: entry.request.release,
     capacity: entry.request.capacity,
     expected_version: entry.request.expected_version, work_product: entry.request.work_product,
+    // F-C-04. Only the advocate's explicit choice travels; its absence is the
+    // ordinary offer, spelled as it always was.
+    ...(keepInMatter ? { keep_in_matter: true } : {}),
   });
   activeIntent.pending.push(entry);
   state.turns.push(entry);
@@ -2348,8 +2572,13 @@ function intakeFields() {
   const proceedings = text('in-proceedings');
   const urgency = text('in-urgency');
   let otherState = text('in-other-state');
-  if (otherState === 'not_known' && Object.values(parties).some(role => role !== 'client')) {
+  const others = Object.values(parties).some(role => role !== 'client');
+  if (otherState === 'not_known' && others) {
     otherState = 'identified';
+  }
+  if (otherState === 'identified' && !others) {
+    throw new Error('Other parties are marked as identified, but none is listed. '
+      + 'Add their names, or change what is known about other parties.');
   }
   const brief = {
     client_type: text('in-client-type'), instructing: text('in-instructing'),
@@ -2378,8 +2607,198 @@ function openingSections() {
 
 let openingInFlight = false;
 
+// F-B-02. EDIT THE OPENING DETAILS FROM THE BOARD (owner, 28 September 2026).
+//
+// The pencil on the matter board opens THE opening form -- borrowed into a
+// dialog, not copied -- so a field added to the form is editable the day it is
+// added. It starts from the details as they now stand, and saving records an
+// attributed correction beside the original on the server. Deadline, position
+// and last worked are not on the form: they are calculated, never typed.
+const intakeHome = { parent: $('intake').parentElement, next: $('intake').nextElementSibling };
+const INTAKE_WORDING = ['intake-eyebrow', 'intake-title', 'intake-lede', 'in-go'];
+let intakeWording = null;
+
+function fillOpeningForm(form) {
+  const named = (side) => Object.entries(form.parties || {})
+    .filter(([, role]) => role === side).map(([name]) => name).join('\n');
+  const brief = form.brief || {};
+  const values = {
+    'in-title': form.title || '', 'in-client': named('client'),
+    'in-adverse': named('adverse'), 'in-others': named('related'),
+    'in-client-type': brief.client_type || 'not_known', 'in-scope': brief.objective || '',
+    'in-instructing': brief.instructing || 'not_known', 'in-instructor': brief.instructor_name || '',
+    'in-instructor-role': brief.instructor_role || '', 'in-authority': brief.authority_basis || '',
+    'in-other-state': brief.other_party_state || 'not_known',
+    'in-proceedings': brief.proceedings || 'not_known', 'in-forum': brief.forum || '',
+    'in-reference': brief.case_reference || '', 'in-stage': brief.stage || '',
+    'in-urgency': brief.urgency || 'not_known', 'in-urgency-note': brief.urgency_details || '',
+    'in-date': brief.reported_date || '', 'in-date-source': brief.date_source || '',
+  };
+  INTAKE_INPUTS.forEach((id) => { $(id).value = values[id] ?? ''; });
+  $('in-capacity').checked = brief.capacity?.state === 'not_in_doubt';
+  openingSections();
+  // Sections that hold an answer open, so nothing recorded is hidden.
+  for (const section of $('intake').querySelectorAll('details.opening-details')) {
+    section.open = [...section.querySelectorAll('input, textarea, select')].some((field) =>
+      field.type === 'checkbox' ? field.checked : field.value && field.value !== 'not_known');
+  }
+}
+
+async function openOpeningEdit() {
+  const matterId = state.matterId;
+  if (!matterId || !state.matterReady || activeDelivery || openingEdit) return;
+  const trigger = $('board-edit');
+  trigger.disabled = true;
+  let data;
+  try {
+    data = await api(`/api/matters/${encodeURIComponent(matterId)}`);
+  } catch (e) {
+    if (!e.obsolete && state.matterId === matterId) {
+      $('board-state').replaceChildren(stateBlock('loud',
+        `The matter details could not be opened for editing: ${e.message}. Nothing was changed.`));
+    }
+    return;
+  } finally {
+    updateWorkspace();
+  }
+  if (state.matterId !== matterId || activeDelivery || openingEdit) return;
+  if (!data?.opening_form || !Number.isInteger(data.version)) {
+    $('board-state').replaceChildren(stateBlock('loud',
+      'The recorded details could not be established, so they cannot be edited. Reopen the matter.'));
+    return;
+  }
+  snapshotIntent();
+  openingEdit = { matterId, version: data.version, capacity: data.opening_form.brief?.capacity || null,
+    offer: null, key: null, saving: false, trigger };
+  intakeWording = INTAKE_WORDING.map((id) => [id, $(id).textContent]);
+  $('intake-eyebrow').textContent = 'MATTER DETAILS';
+  $('intake-title').textContent = 'Edit or add what you know.';
+  $('intake-lede').textContent = 'Saving records a correction beside the original details, with '
+    + 'who made it and when. It does not clear conflicts, verify authority or establish a deadline.';
+  $('in-go').textContent = 'Save changes';
+  $('in-cancel').hidden = false;
+  fillOpeningForm(data.opening_form);
+  $('intake-state').textContent = '';
+  $('opening-edit-host').appendChild($('intake'));
+  $('intake').hidden = false;
+  $('opening-edit').showModal();
+  $('in-title').focus();
+}
+
+function closeOpeningEdit({ restore = true } = {}) {
+  const edit = openingEdit;
+  if (!edit) return;
+  openingEdit = null;
+  const form = $('intake');
+  form.hidden = true;
+  intakeHome.parent.insertBefore(form, intakeHome.next);
+  (intakeWording || []).forEach(([id, text]) => { $(id).textContent = text; });
+  intakeWording = null;
+  $('in-cancel').hidden = true;
+  $('intake-state').textContent = '';
+  [...INTAKE_INPUTS, 'in-capacity', 'in-go', 'in-cancel'].forEach((id) => { $(id).disabled = false; });
+  // The matter's details never stay behind in the hidden form.
+  INTAKE_INPUTS.forEach((id) => { $(id).value = $(id).tagName === 'SELECT' ? 'not_known' : ''; });
+  $('in-capacity').checked = false;
+  if ($('opening-edit').open) $('opening-edit').close();
+  if (restore) {
+    restoreIntent();
+    if (edit.trigger.isConnected && !$('matter-board').hidden) edit.trigger.focus();
+  }
+}
+
+async function saveOpeningEdit() {
+  const edit = openingEdit;
+  if (!edit || edit.saving) return;
+  let fields;
+  try { fields = intakeFields(); }
+  catch (error) {
+    $('intake-state').replaceChildren(stateBlock('loud', error.message));
+    return;
+  }
+  const brief = { ...fields.brief };
+  // AN UNTOUCHED BOX KEEPS THE RECORDED ASSESSMENT EXACTLY, including one the
+  // checkbox cannot express; only a deliberate change records a new one.
+  if (edit.capacity && $('in-capacity').checked === (edit.capacity.state === 'not_in_doubt')) {
+    brief.capacity = edit.capacity;
+  }
+  const offer = { title: fields.title, parties: fields.parties, brief };
+  // ONE REQUEST KEY PER SET OF DETAILS, as at opening: a retry after a lost
+  // response is recognised as the same correction rather than a second one.
+  const wire = JSON.stringify(offer);
+  if (edit.offer !== wire) { edit.offer = wire; edit.key = `opening_${newTurnId().slice(5)}`; }
+  const controls = [...INTAKE_INPUTS, 'in-capacity', 'in-go', 'in-cancel'];
+  edit.saving = true;
+  controls.forEach((id) => { $(id).disabled = true; });
+  $('intake-state').replaceChildren(stateBlock('building', 'Saving the corrected details…'));
+  let out;
+  try {
+    out = await api(`/api/matters/${encodeURIComponent(edit.matterId)}/opening`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ request_key: edit.key, expected_version: edit.version, ...offer }),
+    });
+  } catch (e) {
+    if (openingEdit !== edit) return;
+    edit.saving = false;
+    controls.forEach((id) => { $(id).disabled = false; });
+    if (e.obsolete) return;
+    if (e.status === 409) {
+      // THE FILE MOVED UNDER THE FORM. Reload what is recorded now rather
+      // than write over details the advocate has not seen.
+      try {
+        const fresh = await api(`/api/matters/${encodeURIComponent(edit.matterId)}`);
+        if (openingEdit !== edit || !fresh?.opening_form || !Number.isInteger(fresh.version)) return;
+        edit.version = fresh.version;
+        edit.capacity = fresh.opening_form.brief?.capacity || null;
+        edit.offer = null;
+        fillOpeningForm(fresh.opening_form);
+        $('intake-state').replaceChildren(stateBlock('loud',
+          'Not saved: this matter changed while the form was open. The form now shows the '
+          + 'current details; make your change again and save.'));
+      } catch (again) {
+        if (openingEdit === edit && !again.obsolete) {
+          $('intake-state').replaceChildren(stateBlock('loud',
+            `Not saved: this matter changed while the form was open, and the current details could `
+            + `not be read (${again.message}). Close this form and open it again.`));
+        }
+      }
+      return;
+    }
+    $('intake-state').replaceChildren(stateBlock('loud',
+      `The correction was not confirmed: ${e.message}. Your changes are still here. Saving again `
+      + 'is safe: it carries the same request, so a correction that did land is not recorded twice.'));
+    return;
+  }
+  if (openingEdit !== edit) return;
+  edit.saving = false;
+  controls.forEach((id) => { $(id).disabled = false; });
+  if (!out || out.matter_id !== edit.matterId
+      || !['opening_corrected', 'opening_unchanged'].includes(out.state)) {
+    $('intake-state').replaceChildren(stateBlock('loud',
+      'The server did not confirm the correction. Reopen the matter before relying on the board.'));
+    return;
+  }
+  closeOpeningEdit();
+  if (state.matterId !== edit.matterId) return;
+  if (out.state === 'opening_corrected' && Array.isArray(out.changes) && out.changes.length) {
+    state.turns.push({ note: { at: new Date().toISOString(), changes: out.changes.map(String) } });
+    repaint();
+  }
+  // THE NEW VERSION IS READ BACK before the next brief can be sent on it.
+  await showThreadBoard(edit.matterId, { restore: false, closeNavigator: false }).catch(() => {});
+}
+
+$('board-edit').addEventListener('click', openOpeningEdit);
+$('in-cancel').addEventListener('click', () => closeOpeningEdit());
+// Escape closes the dialog; the form goes home with it, unsaved changes discarded.
+$('opening-edit').addEventListener('cancel', (ev) => {
+  ev.preventDefault();
+  if (!openingEdit?.saving) closeOpeningEdit();
+});
+
 $('intake').addEventListener('submit', async (ev) => {
   ev.preventDefault();
+  if (openingEdit) { await saveOpeningEdit(); return; }
   if (openingInFlight) return;
   // THE ANSWERS STILL TRAVEL WITH THE FIRST BRIEF. The scope, capacity and
   // conflict screens run on that turn, before any fact is admitted (BK-34).
@@ -2451,7 +2870,13 @@ $('intake').addEventListener('submit', async (ev) => {
     if (!opened.matter_id || opened.state !== 'intake_opened') {
       throw new Error('the server did not confirm that the matter was saved');
     }
-    intent.opening.uncertain = false;
+    // THE OPENING'S IDENTITY IS SPENT ONCE THE SERVER CONFIRMS IT. It exists so
+    // a retry after a LOST reply reopens the same file; kept after success, the
+    // next new-matter form with the same answers -- two blank forms, most often
+    // -- reused it, and the server rightly handed back the earlier matter
+    // (owner, 28 September 2026: "a blank form is going back to a latest
+    // previous matter chat"). Every Record and continue is a new matter.
+    intent.opening = null;
     // These instructions are now on the server, not an unsent first-turn draft.
     // The turn engine reads their attributed record when the advocate returns.
     state.intake = null;
@@ -2466,7 +2891,7 @@ $('intake').addEventListener('submit', async (ev) => {
     }
   } catch (e) {
     if (e.obsolete || !ownsIntent(intent)) return;
-    if ([400, 403, 413, 422].includes(e.status)) {
+    if (intent.opening && [400, 403, 413, 422].includes(e.status)) {
       intent.opening.uncertain = false;
       await saveProtectedDraft();
     }
@@ -2489,6 +2914,10 @@ function startMatter() {
   showTab('advise');
   setWorkView('opening');
   selectIntent(null, { opening: true });
+  // A NEW FORM IS A NEW MATTER. Only an opening whose reply was lost keeps its
+  // identity, so a retry can find the file the server may already hold; any
+  // other identity left on this draft would reopen a matter already made.
+  if (activeIntent.opening && !activeIntent.opening.uncertain) activeIntent.opening = null;
   toggleMatters(false);
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
@@ -2497,7 +2926,6 @@ function startMatter() {
   $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'New matter';
   $('matter-heading').removeAttribute('title');
-  $('save-status').textContent = 'Not yet saved';
   window.dispatchEvent(new Event('nm:matter-changed'));
   if (!$('intake').hidden) $('in-client').focus();
   else $('message').focus();
@@ -2628,13 +3056,172 @@ document.querySelectorAll('#tabs .tab').forEach((b) => {
   b.addEventListener('click', () => openTab(b.dataset.tab));
 });
 
-$('work-links').addEventListener('click', (ev) => {
-  const link = ev.target.closest('button[data-tab]');
-  if (!link) return;
-  // THE MATTER THAT IS OPEN, not whichever one the case file showed last.
-  if (link.dataset.tab === 'casefile') $('casefile-matter').value = '';
-  showTab(link.dataset.tab);
+/* F-B-04. THE OPEN MATTER'S FILES, from the one file icon in its header.
+ *
+ * Owner, 28 September 2026: "just keep file icon and show all the files under
+ * it ... list all the files there include AV media files". Read from the
+ * matter's saved upload receipts -- the same record the plus menu writes -- so
+ * the list cannot name a file the matter does not hold. Listing is not
+ * opening: originals stay held exactly as before. A list that could not be
+ * read says so; it never renders as "no files".
+ *
+ * The generation lives on `state`, not in a module `let`: `closeFilesMenu` is
+ * called from paths that run before this part of the script is reached.
+ */
+function closeFilesMenu() {
+  state.filesGeneration = (state.filesGeneration || 0) + 1;
+  const menu = $('files-menu');
+  if (!menu) return;
+  menu.hidden = true;
+  menu.replaceChildren();
+  $('files-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function fileKind(row) {
+  const type = String(row.receipt?.declared_type || '').toLowerCase();
+  const name = String(row.filename || '');
+  const extension = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+  if (type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'ogg', 'oga', 'aac', 'flac', 'opus', 'amr'].includes(extension)
+      || (type === 'video/webm' && name.startsWith('Voice note '))) {
+    return name.startsWith('Voice note ') ? 'Voice note' : 'Audio';
+  }
+  if (type.startsWith('video/') || ['mp4', 'mov', 'webm', 'mkv', 'avi', '3gp'].includes(extension)) return 'Video';
+  if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'heic', 'webp', 'tif', 'tiff', 'bmp'].includes(extension)) return 'Image';
+  return 'Document';
+}
+
+function fileState(receipt) {
+  return {
+    received: 'Received',
+    receiving: 'Incomplete upload',
+    cancelled: 'Upload cancelled',
+    not_started: 'Not yet sent',
+  }[receipt?.state] || 'Integrity not established';
+}
+
+function fileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return '';
+  if (bytes < 1024) return `${bytes} bytes`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+  return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${units[unit]}`;
+}
+
+/* F-B-04, later the same day. THE MATTER'S RECORDS, under the same icon.
+ *
+ * Owner: "if any of these are important and must be kept, keep those files
+ * under the same files icon folder". All six are kept -- each serves something
+ * nothing else does: recording a danger (Protective handoff), the capacity
+ * correction a blocked turn points to and the recorded instructions (Matter
+ * cover), the inspectable record of the file and where each statement came
+ * from (Case file, Attributed file), the review record of what was served
+ * (History), and an unsent message brought back (Recover a draft). Only the
+ * last applies before a new matter is saved.
+ */
+const MATTER_RECORDS = [
+  { id: 'records-cover', label: 'Matter cover & instructions', matter: true,
+    open: () => window.NMMatterRecords?.open('cover') },
+  { id: 'records-casefile', label: 'Case file', matter: true,
+    open: () => { $('casefile-matter').value = ''; showTab('casefile'); } },
+  { id: 'records-attributed', label: 'Attributed file', matter: true,
+    open: () => window.NMMatterRecords?.open('casefile') },
+  { id: 'records-history', label: 'History', matter: true, open: () => showTab('history') },
+  { id: 'records-handoff', label: 'Protective handoff', matter: true,
+    open: () => window.NMMatterRecords?.open('emergency') },
+  { id: 'draft-open', label: 'Recover a draft', matter: false, open: () => openDraftRecovery() },
+];
+
+function matterRecords() {
+  const part = document.createElement('div');
+  part.className = 'files-records';
+  const head = document.createElement('p');
+  head.className = 'files-head';
+  head.textContent = 'Matter records';
+  part.appendChild(head);
+  for (const record of MATTER_RECORDS) {
+    if (record.matter && !state.matterId) continue;
+    const button = document.createElement('button');
+    button.type = 'button'; button.id = record.id; button.className = 'files-record';
+    button.textContent = record.label;
+    button.disabled = record.matter && !state.matterReady;
+    button.addEventListener('click', () => { closeFilesMenu(); record.open(); });
+    part.appendChild(button);
+  }
+  return part;
+}
+
+async function openFilesMenu() {
+  const matterId = state.matterId;
+  if (!state.advocate || state.ended) return;
+  state.filesGeneration = (state.filesGeneration || 0) + 1;
+  const generation = state.filesGeneration;
+  const menu = $('files-menu');
+  const note = (text) => { const p = document.createElement('p'); p.className = 'files-note'; p.textContent = text; return p; };
+  const files = document.createElement('div');
+  files.className = 'files-list';
+  menu.replaceChildren(files, matterRecords());
+  menu.hidden = false;
+  $('files-toggle').setAttribute('aria-expanded', 'true');
+  if (!matterId) {
+    files.replaceChildren(note('Files appear here once this matter is saved.'));
+    return;
+  }
+  files.replaceChildren(note('Reading the files on this matter…'));
+  let reply;
+  try {
+    reply = await api(`/api/matters/${encodeURIComponent(matterId)}/uploads`);
+  } catch (error) {
+    if (generation !== state.filesGeneration || error.obsolete) return;
+    files.replaceChildren(note('The file list could not be read. This does not mean no files are held; try again.'));
+    return;
+  }
+  if (generation !== state.filesGeneration || matterId !== state.matterId) return;
+  if (!reply || reply.matter_id !== matterId || !Array.isArray(reply.uploads)) {
+    files.replaceChildren(note('The file list could not be verified. This does not mean no files are held.'));
+    return;
+  }
+  const rows = reply.uploads.filter((row) => row && typeof row.filename === 'string' && row.receipt);
+  if (!rows.length) {
+    files.replaceChildren(note('No files on this matter yet. Add documents, media or a voice note with the + under the message box.'));
+    return;
+  }
+  const head = document.createElement('p');
+  head.className = 'files-head';
+  head.textContent = `${rows.length} file${rows.length === 1 ? '' : 's'} on this matter`;
+  const list = document.createElement('ul');
+  for (const row of rows) {
+    const item = document.createElement('li');
+    const kind = document.createElement('span');
+    kind.className = 'file-kind'; kind.textContent = fileKind(row);
+    const name = document.createElement('span');
+    name.className = 'file-name'; name.textContent = row.filename;
+    const meta = document.createElement('span');
+    meta.className = 'file-meta';
+    const size = fileSize(row.receipt.observed_size ?? row.receipt.declared_size);
+    meta.textContent = [size, fileState(row.receipt)].filter(Boolean).join(' · ');
+    item.append(kind, name, meta);
+    list.appendChild(item);
+  }
+  files.replaceChildren(head, list);
+}
+
+$('files-toggle').addEventListener('click', () => {
+  if ($('files-menu').hidden) openFilesMenu();
+  else closeFilesMenu();
 });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !$('files-menu').hidden) {
+    closeFilesMenu();
+    $('files-toggle').focus();
+  }
+});
+document.addEventListener('click', (event) => {
+  if (!$('files-menu').hidden && !event.target.closest('#matter-files')) closeFilesMenu();
+});
+window.addEventListener('nm:matter-changed', closeFilesMenu);
+window.addEventListener('nm:session-ended', closeFilesMenu);
 
 /* ================= PREPARATION — P29 to P32 ON ONE SCREEN. P36 ===========
  *
@@ -4177,13 +4764,8 @@ async function showHistory(matterId) {
   head.className = 'result-count';
   head.textContent = `${d.turn_count} turn${d.turn_count === 1 ? '' : 's'} on ${d.title}`;
   body.appendChild(head);
-
-  window.NMLoopProgress.attach(body, matterId, {
-    read: api,
-    unlinkedOnly: true,
-    isCurrent: () => generation === state.historyGeneration && !state.ended
-      && Boolean(state.advocate) && document.body.dataset.pane === 'history',
-  });
+  // No panel of other saved working stages here (owner, 28 September 2026;
+  // LB-139): the stages are kept for review, not shown.
 
   // BK-39. THE SAME RENDERER, AND THAT IS THE WHOLE FIX.
   //
@@ -4219,6 +4801,8 @@ async function showHistory(matterId) {
 
     body.appendChild(card);
   });
+  // Reopened here too, the record opens at its last turn.
+  keepAtLatest(body, () => body.lastElementChild?.scrollIntoView({ block: 'end' }));
 }
 
 $('history-matter').addEventListener('change', (ev) => showHistory(ev.target.value));
@@ -4556,10 +5140,6 @@ $('signout').addEventListener('click', signOut);
 });
 
 $('message').addEventListener('input', sizeComposer);
-$('draft-open').addEventListener('click', openDraftRecovery);
-$('workspace-menu').addEventListener('click', event => {
-  if (event.target.closest('button')) $('workspace-more').open = false;
-});
 $('draft-close').addEventListener('click', closeDraftRecovery);
 $('draft-dialog').addEventListener('cancel', (event) => {
   event.preventDefault(); closeDraftRecovery();

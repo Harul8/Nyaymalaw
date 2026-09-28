@@ -15,12 +15,9 @@
     el.addEventListener('click', action);
     return el;
   };
-  const toolbar = node('nav', undefined, 'matter-tools');
-  toolbar.id = 'matter-tools';
-  toolbar.setAttribute('aria-label', 'Matter records and instructions');
-  toolbar.hidden = true;
-  // Secondary records remain reachable without crowding the conversation.
-  document.getElementById('workspace-menu').prepend(toolbar);
+  // F-B-04, owner 28 September 2026: the header's buttons went, and these
+  // records came back the same day under the file icon's "Matter records"
+  // (app.js), which opens them through `window.NMMatterRecords.open` below.
   const dialog = node('dialog', undefined, 'account-dialog matter-dialog');
   dialog.id = 'matter-workspace-dialog';
   dialog.setAttribute('aria-labelledby', 'matter-workspace-title');
@@ -682,7 +679,8 @@
       await showThreadBoard(token.matter, { restore: true, closeNavigator: false });
       if (token.session === state.sessionGeneration && token.matter === state.matterId
           && refreshedRail === state.railGeneration && !state.ended && state.matterReady) {
-        document.getElementById('save-status').textContent = message;
+        const saved = document.getElementById('save-status');
+        if (saved) saved.textContent = message;
       }
     } catch (error) {
       if (current(token)) rejected(error);
@@ -694,12 +692,10 @@
   }
   function update() {
     dismiss();
-    toolbar.hidden = !state.matterId || !state.advocate || state.ended;
-    toolbar.querySelectorAll('button').forEach(control => { control.disabled = !state.matterReady; });
   }
-  toolbar.append(button('Matter cover & instructions', () => open('cover')),
-    button('Attributed file', () => open('casefile')),
-    button('Protective handoff', () => open('emergency')));
+  // The one way in (F-B-04): the file icon's Matter records call this, and the
+  // controller witnesses drive the dialogs through it.
+  window.NMMatterRecords = Object.freeze({ open });
   window.addEventListener('nm:matter-changed', update);
   window.addEventListener('nm:session-ended', () => { declarationAttempts.clear(); urgencyAttempts.clear(); update(); });
   update();

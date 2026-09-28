@@ -117,6 +117,14 @@ class TurnMetrics:
     you act for, which is the test E-034 actually applies."""
 
     cause_reads: int = 0
+    presentation_reads: int = 0
+    """Model calls spent TELLING the checked findings, not deriving them. LB-76.
+
+    The composer writes the reply from what the turn already checked, and a
+    second read confirms what the reply conveys. Neither computes anything
+    side-dependent, so a blocked turn that spends them has still derived
+    nothing behind its gate -- which is why they are counted apart from both
+    the settling reads and derivation, and never hidden inside either."""
     duty_reads: int = 0
     """G-DUTY. Whether the instruction is one that must be refused.
 
@@ -242,6 +250,7 @@ class TurnMetrics:
             "chronology_reads": self.chronology_reads,
             "route_reads": self.route_reads,
             "cause_reads": self.cause_reads,
+            "presentation_reads": self.presentation_reads,
             "duty_reads": self.duty_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [

@@ -135,6 +135,65 @@ class Route(str, Enum):
     NON_MATTER = "non_matter"
 
 
+#: WHAT A LINE OF THE BOARD NOTE REPORTS. The first group is what the saved
+#: file actually gained; the second is what NM noticed and did NOT apply, which
+#: waits for the advocate (LB-90, owner, 28 September 2026).
+APPLIED_KINDS = frozenset({
+    "dispute_opened", "statements_added", "dated_event", "corrected",
+    "question_answered", "party_added", "side_recorded", "kept_apart"})
+PROPOSED_KINDS = frozenset({
+    "proposed_withdrawal", "proposed_party_removal", "proposed_party_move",
+    "unmatched_request", "held_other_matter"})
+
+
+@refuses_blank_text("kind", "text")
+@dataclass(frozen=True)
+class BoardChange:
+    """ONE LINE OF THE BOARD NOTE UNDER A REPLY. Not advice, and not a claim a
+    model made: an applied line is computed from the file before and after the
+    turn, and a proposed line changed nothing until the advocate acts on it.
+
+    `target` is the entry or party a button acts on; `value` the side a party
+    moves to; `was` / `was_date` the words and date a correction replaced, so
+    Undo can put them back through the ordinary correction owner.
+    """
+
+    kind: str
+    text: str
+    target: str = ""
+    value: str = ""
+    was: str = ""
+    was_date: str = ""
+
+    def __post_init__(self) -> None:
+        if self.kind not in APPLIED_KINDS | PROPOSED_KINDS:
+            raise ValueError(f"unknown board change kind {self.kind!r}")
+
+
+@refuses_blank_text("text")
+@dataclass(frozen=True)
+class ReplyParagraph:
+    """ONE PARAGRAPH OF THE REPLY AS THE ADVOCATE READS IT. LB-76, owner, 28
+    September 2026: guiding principles, not templates.
+
+    The answer's `elements` are the CHECKED WORKING FINDINGS of the turn -- what
+    was established, asked, recommended and could not be established. The reply
+    is those findings told as one colleague tells another, written by one
+    composer and then checked again ON THESE WORDS (`grounding.verify_reply`).
+
+    `carries` names the element whose checked wording this paragraph IS,
+    verbatim -- a limit, a blocker or a step the reply keeps word for word, or
+    one appended because the composed prose did not convey it. `passage` names
+    the element whose saved source the paragraph relies on, for its pinpoint
+    link. Both are indexes into `Answer.elements`; neither is a certificate --
+    the words are checked, not the labels.
+    """
+
+    text: str
+    passage: int | None = None
+    carries: int | None = None
+
+
 @refuses_blank_text("mode_statement")
 @dataclass(frozen=True)
 class Answer:
@@ -144,15 +203,38 @@ class Answer:
     elements: tuple[Element, ...] = ()
     blocked: bool = False
     blocked_reason: str | None = None
+    board_changes: tuple[BoardChange, ...] = ()
+    """What this message changed on the board, and what waits for the
+    advocate. Empty on a turn that changed nothing, and on every answer saved
+    before the note existed."""
+    composed: tuple[ReplyParagraph, ...] = ()
+    """THE REPLY, told from the checked `elements` (LB-76). Empty means the
+    checked findings are shown as they are: nothing was composed, or the
+    composed words failed their checks -- and on every answer saved before
+    composition existed."""
 
     def __post_init__(self) -> None:
+        for paragraph in self.composed:
+            for index in (paragraph.passage, paragraph.carries):
+                if index is not None and not 0 <= index < len(self.elements):
+                    raise ValueError("a reply paragraph names an element this answer does not hold")
+            if paragraph.passage is not None and self.elements[paragraph.passage].source is None:
+                raise ValueError("a reply paragraph's passage must be a saved source")
+            if paragraph.carries is not None \
+                    and paragraph.text != self.elements[paragraph.carries].text:
+                raise ValueError(
+                    "a carried paragraph must be its element's checked words, verbatim")
         if self.route is Route.NON_MATTER:
             return
         if not self.elements:
             raise ValueError("a matter-route answer must contain at least one element")
-        # Purpose governs presentation, not permission, grounding or truth.
-        # Blocked work still leads with the real blocking question. Substantive
-        # explanations/assessments may be complete without prescribing an act.
+        # PRD E2, BY PURPOSE (owner, 28 September 2026). A blocked turn leads
+        # with its blocker; a recommending turn leads with its recommendation;
+        # an unblocked explanation or assessment leads with its answer, which
+        # the type leaves to the work because only a reading can tell an answer
+        # from background. Purpose governs presentation, not permission,
+        # grounding or truth -- and how the reply is WRITTEN is guidance
+        # (`register_contracts.REPLY_CRAFT`), not this rule.
         if self.mode in (Mode.EXPLANATION, Mode.ASSESSMENT) and not self.blocked:
             return
         first = self.elements[0]
@@ -161,13 +243,13 @@ class Answer:
             # toward a verdict and not toward a step.
             raise ValueError(
                 "the first content element must be an ACTION or a blocking "
-                "QUESTION, never background (PRD §6.2 S3). Got "
+                "QUESTION, never background (PRD E2). Got "
                 f"{first.kind.value!r}.")
         if not any(e.kind in (ElementKind.ACTION, ElementKind.QUESTION)
                    for e in self.elements):
             raise ValueError(
-                "every turn contains a recommendation or a blocking question "
-                "(PRD D2). An answer with neither has failed.")
+                "every recommending turn contains a recommendation or a blocking "
+                "question (PRD E2). An answer with neither has failed.")
 
     @property
     def loud_signals(self) -> tuple[Element, ...]:

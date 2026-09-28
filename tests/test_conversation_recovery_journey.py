@@ -2,6 +2,7 @@
 
 import pytest
 
+from tests.matter_records import open_record
 from tests.test_opening_journey import saved
 from tests.test_the_journey_login_to_logout import (
     BRIEF,
@@ -18,8 +19,8 @@ journey, page = _journey, _page
 
 
 def open_recovery(page):
-    page.locator("#workspace-more summary").click()
-    page.click("#draft-open")
+    """Recover a draft is one of the matter's records under the file icon (F-B-04)."""
+    open_record(page, "Recover a draft")
     page.wait_for_selector("#draft-dialog[open]")
 
 
@@ -243,7 +244,7 @@ def test_matter_header_is_one_line_and_opening_record_is_only_in_casefile(
     assert page.get_by_text("MATTER WORKSPACE", exact=True).count() == 0
     assert page.locator("#thread").bounding_box()["height"] > height * 0.5
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-    page.get_by_role("button", name="Case file", exact=True).click()
+    open_record(page, "Case file")
     page.locator("#opening-record").wait_for(state="visible")
     assert page.locator("#pane-casefile #opening-record").count() == 1
     assert not page.errors

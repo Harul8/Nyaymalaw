@@ -414,8 +414,11 @@ def test_nothing_side_dependent_is_computed_behind_a_closed_gate(tmp_path):
         # turn legitimately spends the cheap extraction that settles it and
         # must spend nothing else. Asserting a total of zero would confuse the
         # two and would have to be RELAXED, rather than tightened, the moment
-        # the read moved to a model.
-        derivation_calls = out.metrics.llm_calls - out.metrics.settling_reads
+        # the read moved to a model. TELLING the result is not deriving it:
+        # the reply's composition is counted apart (`presentation_reads`, LB-76,
+        # owner 28 September 2026) and computes nothing side-dependent.
+        derivation_calls = (out.metrics.llm_calls - out.metrics.settling_reads
+                            - out.metrics.presentation_reads)
         assert derivation_calls == 0, (
             f"{gate}: {derivation_calls} derivation call(s) behind a closed gate")
 
@@ -513,7 +516,9 @@ def test_the_thread_gate_also_computes_nothing(tmp_path):
         message="the hearing yesterday went badly, what now"))
 
     assert out.answer.blocked
-    assert out.metrics.llm_calls - out.metrics.settling_reads == 0
+    # Composing the reply is presentation, counted apart (LB-76).
+    assert (out.metrics.llm_calls - out.metrics.settling_reads
+            - out.metrics.presentation_reads) == 0
     assert out.metrics.evidence_rounds == 0
 
 

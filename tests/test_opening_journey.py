@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 import pytest
 
+from tests.matter_records import open_record
 from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in, _start_matter
 from tests.test_the_journey_login_to_logout import journey as _base_journey
 from tests.test_the_journey_login_to_logout import page as _base_page
@@ -45,6 +46,34 @@ def test_first_blocked_chat_stays_with_its_saved_matter(page, journey):
     assert page.get_by_text(message, exact=True).count() >= 1
     current = page.request.get(urljoin(page.url, '/api/matters/' + mid)).json()
     assert current['opening_brief'] == before['opening_brief']
+    assert not page.errors
+
+
+def test_a_second_blank_opening_is_a_new_matter_not_the_last_one(page, journey):
+    """Owner, 28 September 2026: "when record and continue is clicked without
+    filling any details, it should still open a new matter without any details,
+    instead a blank form is going back to a latest previous matter chat".
+
+    THE RULE: every Record and continue on a new matter's form opens a NEW
+    file, whatever it holds -- two blank forms are two matters. Only a retry of
+    an opening whose answer was lost may reuse that opening's identity."""
+    _sign_in(page, journey)
+    _start_matter(page)
+    page.click('#in-go')
+    first, _ = saved(page)
+    said = 'Synthetic brief on the first blank matter only.'
+    page.fill('#message', said)
+    page.click('#send')
+    page.wait_for_function("() => document.getElementById('send').textContent === 'Send'")
+
+    _start_matter(page)
+    page.click('#in-go')
+    second, body = saved(page)
+    assert second != first, 'a blank opening went back to the previous matter'
+    assert body['title'] == 'New matter'
+    assert page.get_attribute('#pane-advise', 'data-matter-id') == second
+    assert page.get_by_text(said, exact=True).count() == 0, (
+        "the new matter's chat shows the previous matter's conversation")
     assert not page.errors
 
 
@@ -117,8 +146,8 @@ def test_all_new_fields_are_protected_and_restored_before_opening(page, journey)
     page.reload()
     # Recovery is now explicit and scoped to the opening input, never a global banner.
     _start_matter(page)
-    page.locator('#workspace-more summary').click()
-    page.click('#draft-open')
+    # On a new matter's form the file icon offers the one record that applies.
+    open_record(page, 'Recover a draft')
     page.get_by_role('button', name='Recover unsent draft', exact=False).click()
     page.click('#in-go')
     _, body = saved(page)

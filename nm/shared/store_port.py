@@ -50,7 +50,11 @@ class StorePort(Protocol):
     def load(self, matter_id: MatterId) -> Matter | None: ...
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
-        """Persist atomically, or raise. There is no partial application."""
+        """Persist atomically, or raise. There is no partial application.
+
+        Every implementation stamps `Matter.updated_at` with the time of THIS
+        save and returns the stamped matter (F-B-14): the save door is the one
+        owner of when a file was last updated."""
         ...
 
     def list_for(self, advocate_id: str) -> "MatterList":

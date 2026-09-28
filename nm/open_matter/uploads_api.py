@@ -16,7 +16,7 @@ from dataclasses import replace
 from datetime import date
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.open_matter.capacity_contracts import CapacityPosition
+from nm.open_matter.capacity_contracts import CapacityPosition, record_on
 from nm.open_matter.intake_contracts import (
     MAX_CHUNK_BYTES,
     MAX_MATTER_UPLOADS,
@@ -28,9 +28,17 @@ from nm.open_matter.intake_contracts import (
     UploadSession,
 )
 from nm.open_matter.media_contracts import MediaAdmission, MediaKind, Quarantine, Retention
-from nm.open_matter.opening_contracts import normalise_brief, recorded_brief
+from nm.open_matter.opening_contracts import (
+    CORRECTIONS,
+    corrections,
+    current_opening,
+    describe_changes,
+    normalise_brief,
+    opening_form,
+    recorded_brief,
+)
 from nm.open_matter.upload_port import UploadPort
-from nm.shared.store_port import StorePort
+from nm.shared.store_port import StaleWrite, StorePort
 from nm.work_the_file.matter_contracts import Matter, MatterId, new_id
 
 
@@ -58,6 +66,39 @@ def _receipt(row: dict) -> UploadSession:
         data.pop(key, None)
     data["state"] = ReceiptState(data["state"])
     return UploadSession(**data)
+
+
+def _opening_offer(body: dict) -> tuple[str, dict, dict | None]:
+    """The form's title, parties and brief, checked once for opening and correction."""
+    parties = body.get("parties", {})
+    if not isinstance(parties, dict) or len(parties) > 50:
+        raise UploadRefused(422, "parties must be a bounded name-to-side map")
+    names = [_text(name, "party name", 200) for name in parties]
+    if len({name.casefold() for name in names}) != len(names):
+        raise UploadRefused(
+            422, "duplicate party names need distinct identities, not overwritten roles")
+    parties = {name: _text(side, "party side", 100)
+               for name, side in zip(names, parties.values(), strict=True)}
+    try:
+        brief = normalise_brief(body["brief"]) if "brief" in body else None
+    except ValueError as exc:
+        raise UploadRefused(422, str(exc)) from exc
+    if brief is not None:
+        if any(side not in {"client", "adverse", "related"} for side in parties.values()):
+            raise UploadRefused(422, "opening parties need a supported explicit role")
+        others = any(side != "client" for side in parties.values())
+        if others != (brief["other_party_state"] == "identified"):
+            raise UploadRefused(422, "other-party names and their recorded state disagree")
+    # A MATTER OPENED FROM THE INTAKE FORM IS NAMED BY ITS PARTIES (F-B-01).
+    # The form gives who we act for and who it is against, and the one rule
+    # for naming a file from them is the turn engine's -- not a second copy
+    # in the page. A title that is given still wins, as it always did.
+    title = body.get("title")
+    if title is None or title == "":
+        from nm.legal_brain.orchestrate.turn import _matter_name
+
+        title = _matter_name("", parties)
+    return _text(title, "title", 200), parties, brief
 
 
 def _signature(prefix: bytes, utf8_text: bool) -> str:
@@ -96,35 +137,7 @@ class UploadService:
 
     def create_intake(self, actor_id: str, body: dict) -> dict:
         key = _text(body.get("request_key"), "request_key", 100)
-        parties = body.get("parties", {})
-        if not isinstance(parties, dict) or len(parties) > 50:
-            raise UploadRefused(422, "parties must be a bounded name-to-side map")
-        names = [_text(name, "party name", 200) for name in parties]
-        if len({name.casefold() for name in names}) != len(names):
-            raise UploadRefused(
-                422, "duplicate party names need distinct identities, not overwritten roles")
-        parties = {name: _text(side, "party side", 100)
-                   for name, side in zip(names, parties.values(), strict=True)}
-        try:
-            brief = normalise_brief(body["brief"]) if "brief" in body else None
-        except ValueError as exc:
-            raise UploadRefused(422, str(exc)) from exc
-        if brief is not None:
-            if any(side not in {"client", "adverse", "related"} for side in parties.values()):
-                raise UploadRefused(422, "opening parties need a supported explicit role")
-            others = any(side != "client" for side in parties.values())
-            if others != (brief["other_party_state"] == "identified"):
-                raise UploadRefused(422, "other-party names and their recorded state disagree")
-        # A MATTER OPENED FROM THE INTAKE FORM IS NAMED BY ITS PARTIES (F-B-01).
-        # The form gives who we act for and who it is against, and the one rule
-        # for naming a file from them is the turn engine's -- not a second copy
-        # in the page. A title that is given still wins, as it always did.
-        title = body.get("title")
-        if title is None or title == "":
-            from nm.legal_brain.orchestrate.turn import _matter_name
-
-            title = _matter_name("", parties)
-        title = _text(title, "title", 200)
+        title, parties, brief = _opening_offer(body)
         digest = hashlib.sha256((actor_id + "\x00" + key).encode()).hexdigest()
         matter_id = MatterId("m_" + digest[:32])
         offer = {"title": title, "parties": parties}
@@ -176,6 +189,87 @@ class UploadService:
             "screens": "not_assessed",
             "facts_established": False,
             "opening_brief": recorded_brief(saved),
+        }
+
+    def amend_opening(self, matter_id: str, actor_id: str, body: dict) -> dict:
+        """F-B-02. Correct the opening details ON THE RECORD, never over it.
+
+        Owner direction, 28 September 2026: the matter board carries an edit
+        icon that opens the opening form, to correct details or add what was
+        missing. Each save is a correction beside the original -- who, when,
+        the details before and after, and what changed in plain words -- so
+        the original instructions are never overwritten. A removed or moved
+        party stays named in that history. Nothing here runs or clears a
+        screen: the corrected party set is what the conflict screen reads on
+        the next message, and an edit is never itself a clearance.
+
+        Refused (409) when the file moved after the form was read, so a
+        correction can never land over details the advocate did not see --
+        including a reply that was being prepared meanwhile.
+        """
+        matter = self.owned(matter_id, actor_id)
+        key = _text(body.get("request_key"), "request_key", 100)
+        expected = body.get("expected_version")
+        if isinstance(expected, bool) or not isinstance(expected, int) or expected < 1:
+            raise UploadRefused(
+                422, "expected_version must be the matter version the form was read from")
+        title, parties, brief = _opening_offer(body)
+        if brief is None:
+            raise UploadRefused(422, "the corrected opening details are required")
+        offer = {"title": title, "parties": parties, "brief": brief}
+        prior = corrections(matter)
+        for row in prior:
+            if row.get("request_key") == key:
+                # A retry after a lost response is the same correction, once.
+                if {name: row.get(name) for name in offer} != offer:
+                    raise UploadRefused(
+                        409, "this correction request already names different details")
+                return self._opening_result(matter, row.get("changes") or [], saved=True)
+        if matter.version != expected:
+            raise UploadRefused(409, "this matter changed after the form was opened; "
+                                     "reopen it to see the current details")
+        before = {"title": matter.title, "parties": dict(matter.intake_parties or {}),
+                  "brief": current_opening(matter)}
+        changes = describe_changes(before, offer)
+        if not changes:
+            return self._opening_result(matter, [], saved=False)
+        stamp = utcnow()
+        at = stamp.isoformat()
+        answers = dict(matter.intake_answers or {})
+        answers[CORRECTIONS] = {"by": actor_id, "at": at, "answer": [*prior, {
+            "request_key": key, "by": actor_id, "at": at, **offer,
+            "previous": before, "changes": changes}]}
+        if brief["objective"] and brief["objective"] != before["brief"].get("objective"):
+            # The stated task is the scope answer, exactly as at opening.
+            answers["scope"] = {"by": actor_id, "at": at, "answer": brief["objective"]}
+        updated = replace(matter, title=title, intake_parties=parties,
+                          intake_answers=answers, version=matter.version + 1)
+        if brief["capacity"] != before["brief"].get("capacity"):
+            try:
+                position = CapacityPosition.record(brief["capacity"], actor=actor_id, now=stamp)
+            except ValueError as exc:
+                raise UploadRefused(422, str(exc)) from exc
+            # The one capacity history: the prior assessment is kept, not replaced.
+            updated = record_on(updated, position)
+        try:
+            saved = self.store.commit(updated, expected_version=matter.version)
+        except StaleWrite:
+            raise UploadRefused(409, "this matter changed while the correction was saved; "
+                                     "reopen it to see the current details") from None
+        return self._opening_result(saved, changes, saved=True)
+
+    @staticmethod
+    def _opening_result(matter: Matter, changes: list, *, saved: bool) -> dict:
+        return {
+            "state": "opening_corrected" if saved else "opening_unchanged",
+            "matter_id": str(matter.id),
+            "title": matter.title,
+            "version": matter.version,
+            "changes": list(changes),
+            "screens": "not_assessed",
+            "facts_established": False,
+            "opening_brief": recorded_brief(matter),
+            "opening_form": opening_form(matter),
         }
 
     def begin(self, matter_id: str, actor_id: str, body: dict) -> dict:

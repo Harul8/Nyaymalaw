@@ -53,7 +53,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from nm.advise.answer_contracts import Answer, Element
+from nm.advise.answer_contracts import Answer, Element, ElementKind
 from nm.legal_brain.common.citation_contracts import (
     cases_named,
     provisions_cited,
@@ -144,12 +144,20 @@ def quoted_spans(text: str) -> list[str]:
 @implements("P1")
 def verify_quotes(elements: tuple[Element, ...],
                   findings: tuple[Finding, ...], *,
-                  document_spans: tuple[MatterDocumentSpan, ...] = ()) -> list[GroundingViolation]:
-    """G-QUOTE. Every quotation must be findable, verbatim, in a retrieved span.
+                  document_spans: tuple[MatterDocumentSpan, ...] = (),
+                  own_words: tuple[str, ...] = ()) -> list[GroundingViolation]:
+    """G-QUOTE. Every quotation must be findable, verbatim, in a retrieved span
+    -- or in the advocate's own words.
 
     A quotation that matches NOTHING retrieved on this turn is treated as
     fabricated even if it happens to be accurate, because accuracy that cannot
     be demonstrated is indistinguishable from luck.
+
+    THE ADVOCATE'S OWN WORDS ARE A SOURCE TOO (28 September 2026). A polite
+    check that quotes back what they said (LB-81) was withheld as a fabricated
+    quotation: the words were verbatim, just not from the corpus. `own_words`
+    is their message and their statements on the file, which C1 keeps
+    verbatim; quoting them is quoting, and nothing else is admitted by it.
     """
     corpus = [_citation_fold(f.span) for f in findings]
     for span in document_spans:
@@ -157,6 +165,7 @@ def verify_quotes(elements: tuple[Element, ...],
             raise ValueError("Document quotation support needs an exact typed captured window")
         span.validate()
         corpus.append(_citation_fold(span.text))
+    corpus.extend(_citation_fold(words) for words in own_words if words)
     out: list[GroundingViolation] = []
     for element in elements:
         for quote in quoted_spans(element.text):
@@ -166,8 +175,8 @@ def verify_quotes(elements: tuple[Element, ...],
             if not any(folded in span for span in corpus):
                 out.append(GroundingViolation(
                     "G-QUOTE",
-                    f"quoted text is not verbatim in any retrieved span: "
-                    f"{snippet(quote, 120)!r}"))
+                    f"quoted text is not verbatim in any retrieved span or in the "
+                    f"advocate's own words: {snippet(quote, 120)!r}"))
     return out
 
 
@@ -196,7 +205,7 @@ def verify_findings(findings: tuple[Finding, ...]) -> list[GroundingViolation]:
 # `provisions_cited` and `cases_named` are imported, NOT defined here. They
 # used to be defined here, and the copy in the evidence adapter was hardened
 # separately -- see nm/legal_brain/common/citation_contracts.py for what that cost.
-__all__ = ["verify", "verify_citations", "verify_quotes", "verify_findings",
+__all__ = ["verify", "verify_reply", "verify_citations", "verify_quotes", "verify_findings",
            "unretrieved_authorities",
            "quoted_spans", "provisions_cited", "cases_named",
            "GroundingReport", "GroundingViolation"]
@@ -303,7 +312,7 @@ def unretrieved_authorities(text: str, findings: tuple[Finding, ...]
 def verify(answer: Answer, relied_on: tuple[Finding, ...],
            retrieved: tuple[Finding, ...] = (), *,
            independent_packages=(), independent_records=(),
-           retrieved_documents=()) -> GroundingReport:
+           retrieved_documents=(), own_words: tuple[str, ...] = ()) -> GroundingReport:
     """The gate, run on the assembled answer immediately before emission.
 
     The two arguments are NOT the same set, and conflating them breaks the
@@ -332,7 +341,8 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
                            for span in (*package.documents, *package.document_contrary)
                            if span.captured_quote in retrieved_documents)
     report.violations.extend(verify_quotes(answer.elements, quotable,
-                                          document_spans=document_spans))
+                                          document_spans=document_spans,
+                                          own_words=own_words))
     report.violations.extend(verify_citations(answer.elements, quotable))
     if uncovered_claim is not None:
         report.violations.append(GroundingViolation("G-GROUND", uncovered_claim))
@@ -355,6 +365,50 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
         if element.source is not None and element.source not in captured:
             report.violations.append(GroundingViolation(
                 "G-GROUND", "the saved source excerpt was not retrieved on this turn"))
+    return report
+
+
+@implements("P1")
+def verify_reply(answer: Answer, relied_on: tuple[Finding, ...],
+                 retrieved: tuple[Finding, ...] = (), *,
+                 own_words: tuple[str, ...] = ()) -> GroundingReport:
+    """THE SAME GATE, ON THE WORDS THE ADVOCATE READS. LB-76.
+
+    `verify` checks the turn's working findings. When a composer retells them
+    (`nm.legal_brain.communicate.compose`), the retelling is new text, and a
+    check on the findings has checked a different string -- the gap this module's
+    docstring was written about. So every composed paragraph is checked here as
+    an asserting element, with the SAME detectors: each quotation verbatim in a
+    retrieved span or in the advocate's own words, each provision and case named
+    covered by what was retrieved, and each linked passage the exact captured
+    source. A composed paragraph never carries `disclosure`, so it cannot name an
+    unretrieved provision under a limit's licence.
+
+    A paragraph that CARRIES an element is that element's checked words -- the
+    type refuses anything else -- and was checked by `verify` as that element.
+
+    `own_words` are the advocate's message and statements on the file: quoting
+    them back is quoting, and they are the words C1 keeps verbatim.
+    """
+    pool = retrieved or relied_on
+    quotable = tuple(f for f in pool if f.quotable)
+    shown: list[Element] = []
+    for paragraph in answer.composed:
+        if paragraph.carries is not None:
+            continue
+        linked = answer.elements[paragraph.passage] if paragraph.passage is not None else None
+        shown.append(Element(kind=ElementKind.FINDING, text=paragraph.text,
+                             refs=linked.refs if linked is not None else (),
+                             source=linked.source if linked is not None else None))
+    report = GroundingReport(checked_elements=len(shown))
+    report.checked_quotes = sum(len(quoted_spans(e.text)) for e in shown)
+    report.violations.extend(verify_quotes(tuple(shown), quotable, own_words=own_words))
+    report.violations.extend(verify_citations(tuple(shown), quotable))
+    captured = tuple(capture_source(f) for f in quotable)
+    for element in shown:
+        if element.source is not None and element.source not in captured:
+            report.violations.append(GroundingViolation(
+                "G-GROUND", "the reply links a saved excerpt that was not retrieved on this turn"))
     return report
 
 

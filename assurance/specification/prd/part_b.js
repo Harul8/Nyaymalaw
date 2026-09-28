@@ -63,7 +63,7 @@ A(feature('A1', 'Authentication and advocate identity', {
 A(feature('A2', 'The matter list, and the thread board', {
   does: [
     'With no matters: one invitation to brief, in an advocate\'s register.',
-    '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads** · what is blocked · last touched. **Ordered by nearest deadline first**, then by what is blocked, then by recency.',
+    '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads** · what is blocked · last worked. **Ordered by when the file was last updated, latest first** (owner, 28 September 2026, F-B-14) — the time of its last saved change, stamped by the store on every write and shown on the row. Deadlines are shown on every row but do not reorder the list.',
     '**The THREAD BOARD**, inside a matter — one row per thread: thread · our client is · against whom · forum · stage · next deadline. Six fields.',
     'Surface any deadline that changed category while the advocate was away, **before they have to ask**.',
     'Render an unresolved posture **loudly**, as `unknown` rather than as an empty field, and a conflicting posture with a confirm-before-advising banner.',
@@ -80,7 +80,7 @@ A(feature('A2', 'The matter list, and the thread board', {
   produces: ['`MatterListProjection` and `BoardProjection` — both derived from the **`CaseSummary`, whose full contract is Appendix E**, and holding nothing it does not. The summary was named by this feature and by G3 and was defined nowhere; two features derived from a type that did not exist.'],
   evals: [
     '**Class A** — adding a turn never adds a board line; length is asserted as a function of row count. A board that cannot be built raises rather than returning empty. A `not_assessed` screen never renders as clear. An inapplicable gate never renders as an open item.',
-    '**Class B** — no board field contains a conclusion, a reason, or a piece of reasoning. The matter list is ordered by nearest deadline. A passed deadline renders as passed.',
+    '**Class B** — no board field contains a conclusion, a reason, or a piece of reasoning. The matter list is ordered by last update, latest first. A passed deadline renders as passed.',
   ],
   counter: 'A board carrying `facts` (up to 8), `issues` (up to 10) and `open_items` (up to 10) — twenty-eight lines of analysis that grow with the conversation. This was the measured previous behaviour.',
 }));
@@ -688,12 +688,12 @@ A(feature('E2', 'The recommendation', {
   never: [
     '**Never present a set of options without a stated recommendation among them.** "Option A and Option B, with pros and cons" is the junior\'s survey and is not advice.',
     'Never hedge into non-commitment. Uncertainty is stated; it is not a reason to withhold a view.',
-    'Never lead with background. The first content element is an action or a blocking question.',
+    'Never lead with background. A reply leads with what its purpose calls for (owner, 28 September 2026): a blocked reply with its blocker, a recommendation with its recommended action, an explanation or assessment with its answer or finding. How it is written beyond that is guidance to the model, not a template — no word counts, required sections or fixed sentences.',
   ],
   produces: ['`Recommendation { position, why_alternatives_lose[], next_step{action, owner, by_when}, fallback, changing_fact }`.'],
   evals: [
     '**Class A** — no options set exists without a recommendation among them.',
-    '**Class B** — every turn contains a recommendation or a blocking question. The first content element is one of those two, never background.',
+    '**Class B** — every recommending turn contains a recommendation or a blocking question; a blocked turn leads with its blocker; an explanation or assessment leads with its answer or finding. Never background first. The words shown are checked on their own, and a material caveat, adverse point or blocker the prose does not convey is carried in its checked words — qualified or withheld, never dropped.',
     '**Class D** — the recommendation is one a senior would actually make.',
   ],
   counter: 'A balanced pros-and-cons table with no view, which in the measured original also contradicted the analysis above it.',

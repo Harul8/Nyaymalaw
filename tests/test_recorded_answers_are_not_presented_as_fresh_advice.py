@@ -1,8 +1,14 @@
-"""A saved answer survives changed instructions as history, not a new assessment."""
+"""A saved answer survives changed instructions as history, not a new assessment.
+
+It stays exactly as it was saved and is shown as it was served. Owner, 28
+September 2026: no "Recorded response. It has not been reassessed..." notice
+in the conversation -- the answer is not relabelled either way.
+"""
 from __future__ import annotations
 
 import pytest
 
+from tests.matter_records import open_record
 from tests.test_the_journey_login_to_logout import _sign_in, _tab
 from tests.test_the_workspace_respects_its_current_context import (
     _new_matter,
@@ -23,8 +29,7 @@ def test_changed_instructions_do_not_relabel_the_saved_answer_as_a_fresh_assessm
     matter_id = _new_matter(page, "Synthetic changed-instruction client")
     before = journey["box"].application.store.load(matter_id)
     assert before.turn_receipts, "the historical answer must have really been saved"
-    page.locator('#workspace-more summary').click()
-    page.get_by_role("button", name="Matter cover & instructions", exact=True).click()
+    open_record(page, "Matter cover & instructions")
     page.get_by_role("button", name="Record the instructions", exact=True).click()
     page.fill("#mw-objective", "Review the changed synthetic instruction before any new assessment")
     page.select_option("#mw-work_product", "advice")
@@ -40,7 +45,6 @@ def test_changed_instructions_do_not_relabel_the_saved_answer_as_a_fresh_assessm
     page.fill("#mw-because", "Explicit changed instruction for a synthetic browser witness")
     page.get_by_role("button", name="Record instructions", exact=True).click()
     page.wait_for_selector("#matter-workspace-dialog[open]", state="hidden")
-    page.get_by_text(NOTICE, exact=True).wait_for()
     saved = journey["box"].application.store.load(matter_id)
     assert saved.version > before.version
     assert saved.turn_receipts == before.turn_receipts
@@ -52,8 +56,10 @@ def test_changed_instructions_do_not_relabel_the_saved_answer_as_a_fresh_assessm
     _tab(page, "history")
     page.wait_for_selector(f"#history-matter option[value='{matter_id}']", state="attached")
     page.select_option("#history-matter", matter_id)
-    page.locator("#pane-history").get_by_text(NOTICE, exact=True).wait_for()
+    page.wait_for_selector("#pane-history .el > p.body")
+    assert NOTICE not in page.locator("#pane-history").text_content()
     _tab(page, "advise")
     _open_by_keyboard(page, matter_id, 1280)
-    page.locator("#pane-advise").get_by_text(NOTICE, exact=True).wait_for()
+    page.wait_for_selector("#pane-advise #thread .el > p.body")
+    assert NOTICE not in page.locator("#pane-advise").text_content()
     assert not page.errors and not page.external_assets

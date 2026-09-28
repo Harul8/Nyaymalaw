@@ -43,6 +43,8 @@ import urllib.request
 
 import pytest
 
+from tests.matter_records import open_record
+
 pytestmark = pytest.mark.journey
 
 playwright_api = pytest.importorskip(
@@ -275,20 +277,21 @@ def _tab(page, name: str):
     keeps recording.
 
     F-A-17. Home, My work, Legal library and Preparation are the ribbon's tabs.
-    Case file and History are offered inside My work for the matter that is
-    open, so they are reached there -- opening the first matter on the list
-    when none is open, as an advocate would have to.
+    Case file and History belong to the matter that is open, and since F-B-04
+    (owner, 28 September 2026) they are among its records under the file icon
+    -- reached there, opening the first matter on the list when none is open,
+    as an advocate would have to.
     """
     if name in ("casefile", "history"):
         if page.is_hidden("#pane-advise"):
             page.click("#tabs button[data-tab='advise']")
             page.wait_for_selector("#pane-advise:not([hidden])", timeout=15000)
-        link = page.locator(f"#work-links button[data-tab='{name}']")
-        if not link.is_visible():
+        if not page.is_visible("#files-toggle"):
             _reach_rail(page, page.viewport_size["width"])
             page.locator("#rail-body .row[data-matter-id]").first.click()
-            link.wait_for(state="visible", timeout=15000)
-        link.click()
+            page.wait_for_selector("#files-toggle", state="visible", timeout=15000)
+            page.wait_for_function("() => state.matterReady", timeout=15000)
+        open_record(page, "Case file" if name == "casefile" else "History")
     else:
         page.click(f"#tabs button[data-tab='{name}']")
     page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
@@ -604,51 +607,44 @@ def test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen(
 
 
 def test_phase_5b_the_answer_does_not_speak_engineering(page, journey):
-    """J-7, CLOSED. The working is present, checkable, and out of the way.
+    """How an answer was made is kept for review and never drawn in the chat.
 
     WHAT WAS MEASURED: `G-DUTY · clear`, `G-UNSCREENED · unscreened`,
     `G-CONSISTENT · consistent` and `outcome ok · latency 69ms · calls 15 ·
     tokens 6860/606 · cost $0.000000 · violations 1` sat under every answer.
-    An advocate cannot act on `G-UNSCREENED`, and the sentence beside it
-    already says what it means.
+    J-7 folded them behind a closed "How this answer was made". The owner, 28
+    September 2026: not in the conversation at all -- save it in the backend
+    history for review later.
 
-    THIS PHASE ASSERTS BOTH HALVES, and the second is the one that stops the
-    fix being a deletion. Engineering vocabulary is not on the screen; open
-    the working and it is all still there. A product that had simply stopped
-    recording gate states would pass the first assertion and fail the second,
-    and it would be a worse product than the one that showed them.
-
-    IT ALSO REPLACES A CHECK THAT HAD STARTED FAILING FOR THE WRONG REASON.
-    The first version waited for `.gates` to be VISIBLE; once the working
-    moved behind a closed `<details>` that wait timed out, the xfail went on
-    passing, and a defect that had been fixed would have stayed recorded as
-    open indefinitely. A reproduced counterexample has to reproduce the
-    stated thing.
+    THIS PHASE STILL ASSERTS BOTH HALVES, and the second is the one that stops
+    the change being a deletion. Nothing of the working is in the page, not
+    even folded; and the turn's sealed history record carries all of it, the
+    reason each gate fired included. A product that had simply stopped
+    recording gate states would pass the first assertion and fail the second.
     """
     _open_matter(page, journey)
-    _advise(page, BRIEF)
-    # The working exists and is CLOSED. Waiting for the summary rather than
-    # for `.gates` is the difference between asserting on the fix and
-    # asserting on the fold.
-    page.wait_for_selector("details.audit summary", timeout=60000)
+    with page.expect_response(lambda r: r.url.endswith('/api/turn')
+                              and r.request.method == 'POST') as returned:
+        _advise(page, BRIEF)
+    answer = returned.value.json()
+    page.wait_for_selector("#thread .el > p.body", timeout=30000)
 
-    shown = _visible_text(page)
-    gate_ids = sorted(set(re.findall(r"G-[A-Z]{3,}", shown)))
-    assert not gate_ids, (
-        f"these gate ids are on the advocate's screen: {gate_ids}")
-    assert "outcome ok" not in shown.lower(), (
-        "the turn's own telemetry -- latency, calls, tokens, cost -- is "
-        "rendered to the advocate")
+    # The whole document, folded or not -- `text_content` includes what a
+    # closed disclosure hides.
+    drawn = page.locator("#thread").text_content()
+    gate_ids = sorted(set(re.findall(r"G-[A-Z]{3,}", drawn)))
+    assert not gate_ids, f"these gate ids are drawn in the conversation: {gate_ids}"
+    for token in ("How this answer was made", "outcome ok", "latency", "tokens"):
+        assert token not in drawn, f"{token!r} is drawn in the conversation"
 
-    # AND NOTHING WAS THROWN AWAY. Every one of these is what makes a claim
-    # checkable; the change is that reaching them is a decision.
-    page.click("details.audit summary")
-    page.wait_for_selector("details.audit[open]", timeout=10000)
-    opened = _visible_text(page)
-    assert re.search(r"G-[A-Z]{3,}", opened), (
-        "the working is empty -- the gate states were deleted rather than "
-        "filed, which is a worse product than the one that showed them")
-    assert "outcome" in opened.lower()
+    # AND NOTHING WAS THROWN AWAY.
+    store = journey["box"].application.store
+    (kept,) = [row for row in store.transcripts_for(answer["matter_id"])
+               if row.get("turn_id") == answer["turn_id"]]
+    made = kept["how_made"]
+    assert made["gates_fired"] and all(g["gate"] and "detail" in g
+                                       for g in made["gates_fired"])
+    assert made["outcome"] and made["llm_calls"] == kept["llm_calls"]
 
 
 def test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log(page, journey):
@@ -854,19 +850,15 @@ def test_phase_8b_history_is_a_record_and_not_a_json_dump(page, journey):
     assert page.locator('#pane-history .el > p.body').all_text_contents() == original
     assert page.locator('#pane-history h3.section, #pane-history .el .k').count() == 0
     # The advocate's History is a released-answer projection, not a route to
-    # the diagnostic archive. Opening its audit disclosure must preserve that
-    # boundary, including material concealed by a closed <details> element.
+    # the diagnostic archive -- including material a closed <details> would
+    # conceal, which is why the whole pane's text is read, folded or not.
     assert '"turn_id"' not in shown, "History initially exposed a raw turn id"
-    # The pane can also contain a separate "Other recorded work progress"
-    # disclosure. Open this turn's answer audit, not that earlier <details>.
-    page.click("#pane-history .recorded-turn details.audit summary")
-    page.wait_for_selector("#pane-history .recorded-turn details.audit[open]", timeout=10000)
-    assert page.locator('#pane-history .el > p.body').all_text_contents() == original
     assert page.locator('#pane-history pre.recorded-raw').count() == 0
     disclosed = page.locator('#pane-history').text_content()
-    for raw_key in ('"turn_id"', '"prompt"', '"model_calls"'):
+    for raw_key in ('"turn_id"', '"prompt"', '"model_calls"', '"how_made"',
+                    'How this answer was made'):
         assert raw_key not in disclosed, (
-            f"advocate History exposed diagnostic field {raw_key} after disclosure")
+            f"advocate History exposed diagnostic field {raw_key}")
 
 
 def test_phase_9_reload_restores_the_matter(page, journey):
@@ -899,7 +891,6 @@ def test_phase_9_reload_restores_the_matter(page, journey):
     # that waiting for a container rather than for the content reported a
     # working product as broken.
     page.wait_for_selector("#thread .el > p.body", timeout=30000)
-    page.wait_for_selector("details.audit summary", timeout=30000)
     after = _visible_text(page)
 
     assert "Goods were supplied" in after, (
@@ -907,13 +898,12 @@ def test_phase_9_reload_restores_the_matter(page, journey):
     # AND WHAT THEY WERE TOLD, not only what they said. A transcript that
     # restored the question and lost the answer would be the worse half.
     assert page.locator('#thread .el > p.body').all_text_contents() == original
-    # A READ-BACK TURN SAYS SO. The run's latency, calls and cost are not on
-    # the record, and rendering them as zeros would show a measurement nobody
-    # made.
-    page.click("details.audit summary")
-    page.wait_for_selector("details.audit[open]", timeout=10000)
-    assert "read back from the record" in _visible_text(page), (
-        "a restored turn presents itself as a fresh one")
+    # A READ-BACK TURN IS SHOWN AS SERVED (owner, 28 September 2026): no
+    # notice, and no run numbers the read-back does not carry -- rendering
+    # zeros would show a measurement nobody made.
+    drawn = page.locator("#thread").text_content()
+    for token in ("Recorded response", "How this answer was made", "latency"):
+        assert token not in drawn, f"{token!r} is drawn on a read-back turn"
 
 
 def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(

@@ -26,7 +26,7 @@ import re
 import tempfile
 import time
 from contextlib import contextmanager
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import asdict, fields, is_dataclass, replace
 from datetime import date
 from enum import Enum
 from pathlib import Path
@@ -34,6 +34,7 @@ from types import UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
 from nm.shared.names_contracts import discard
+from nm.shared.operation_contracts import save_stamp
 from nm.shared.store_port import MatterList, StaleWrite
 from nm.shared.store_sealing import MatterSealer, is_envelope
 from nm.shared.text_contracts import blank
@@ -435,6 +436,9 @@ class FileMatterStore:
                     f"{current.version} while this turn was deriving. Re-derive "
                     f"against the current state rather than overwriting it."
                 )
+            # F-B-14. THE SAVE DOOR STAMPS WHEN THE FILE WAS LAST UPDATED, so
+            # no writer can forget to and My work orders by what was saved.
+            matter = replace(matter, updated_at=save_stamp())
             blob = self._seal(
                 str(matter.id), json.dumps(_enc(matter)).encode("utf8"),
                 create_key=current is None)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.matter_records import open_record
 from tests.test_the_journey_login_to_logout import _sign_in
 from tests.test_the_workspace_respects_its_current_context import (
     _assert_no_overflow,
@@ -23,8 +24,7 @@ def test_an_advocate_records_reopens_and_explicitly_resolves_one_danger(
     _sign_in(page, journey, width, height)
     matter_id = _new_matter(page, f"Manual urgency client {width}", width)
     before = journey["box"].application.store.load(matter_id)
-    page.locator('#workspace-more summary').click()
-    page.get_by_role("button", name="Protective handoff", exact=True).click()
+    open_record(page, "Protective handoff")
     page.get_by_role("button", name="Record a danger manually", exact=True).click()
     page.select_option("#mw-urgency-class", "personal_safety")
     page.fill("#mw-urgency-basis", "The instructing advocate reports a specific immediate danger")
@@ -42,8 +42,7 @@ def test_an_advocate_records_reopens_and_explicitly_resolves_one_danger(
     page.reload()
     page.wait_for_selector("#masthead", state="visible")
     _open_by_keyboard(page, matter_id, width)
-    page.locator('#workspace-more summary').click()
-    page.get_by_role("button", name="Protective handoff", exact=True).click()
+    open_record(page, "Protective handoff")
     dialog = page.locator("#matter-workspace-dialog")
     dialog.get_by_role("heading", name="live · personal safety", exact=True).wait_for()
     assert "Unknown — The controlling order has not been supplied" in dialog.inner_text()
@@ -54,8 +53,7 @@ def test_an_advocate_records_reopens_and_explicitly_resolves_one_danger(
     page.get_by_role("button", name="Record this resolution", exact=True).click()
     page.wait_for_selector("#matter-workspace-dialog[open]", state="hidden")
     page.wait_for_function("() => state.matterReady && !activeDelivery")
-    page.locator('#workspace-more summary').click()
-    page.get_by_role("button", name="Protective handoff", exact=True).click()
+    open_record(page, "Protective handoff")
     dialog.get_by_role("heading", name="resolved · personal safety", exact=True).wait_for()
     resolved = journey["box"].application.store.load(matter_id)
     record = resolved.urgency_records[0]

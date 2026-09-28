@@ -411,7 +411,7 @@ A(callout('**Anything that is none of these four is cut.** Restating facts the a
 A(h3('Ordering and layout rules'));
 
 A(
-  bullet('**The recommendation comes first — unless something blocks it.** The first content element is an action, never background. If the recommendation is not at the top, the analysis was written toward a verdict and not toward a step.'),
+  bullet('**The reply leads with what its purpose calls for** (owner, 28 September 2026): a recommendation with its recommended action, an explanation or assessment with its answer or finding — never background. The reply is written in natural prose from the checked findings, under guidance rather than a template, and checked again on the words shown.'),
   bullet('**A blocking question displaces it.** Where posture is unresolved or a document cannot be bound to a thread, the question comes first and the recommendation is withheld for that thread — **the block *is* the answer.**'),
   bullet('**Organised by thread**, because an advocate thinks matter by matter. Cross-thread exposure is the one thing that legitimately sits outside the threads, and it appears **once**, after them.'),
   bullet('**Progressive disclosure is allowed. Hiding a loud signal is not.** A limitation bar, an adverse treatment flag, an unresolved posture, a contradiction between instruction and document, or a cross-thread exposure is **never placed below the fold or inside collapsed content.** Otherwise "concise" becomes the mechanism that suppresses exactly the signals we fought to raise.'),
@@ -429,7 +429,7 @@ A(table(
     ['Answers', '*Which of my files needs me, and why?*', '*Where does each dispute in this file stand?*'],
     ['One row per', '**Matter**', '**Thread**'],
     ['Fields', 'Matter name · client · **nearest deadline across all its threads** · what is blocked · last touched', 'Thread · our client is · against whom · forum · stage · next deadline'],
-    ['Ordered by', '**Nearest deadline first**, then what is blocked, then recency. Never alphabetically and never by creation date', 'The deadline register (§D3). The nearest window leads regardless of which thread is legally the most interesting'],
+    ['Ordered by', '**Last update, latest first** (owner, 28 September 2026) — the time of the last saved change. Never alphabetically and never by creation date; deadlines are shown, not used to reorder', 'The deadline register (§D3). The nearest window leads regardless of which thread is legally the most interesting'],
     ['Bounded by', '**Matter count** — never by threads, turns or facts', '**Thread count** — never by turns, facts, issues or authorities'],
     ['Updated', 'Overwritten. Recomputed on entry and when a deadline changes category', 'Overwritten each turn'],
   ],
@@ -486,7 +486,7 @@ A(table(
 
 A(spacer(140));
 
-A(p('*Evals:* **Class A** — a board that cannot be built raises rather than returning an empty projection; a `not_assessed` screen never renders as clear; an inapplicable gate never renders as an open item; a passed deadline is never absent. **Class B** — no board field contains a conclusion, a reason or a piece of reasoning; the matter list is ordered by nearest deadline.'));
+A(p('*Evals:* **Class A** — a board that cannot be built raises rather than returning an empty projection; a `not_assessed` screen never renders as clear; an inapplicable gate never renders as an open item; a passed deadline is never absent. **Class B** — no board field contains a conclusion, a reason or a piece of reasoning; the matter list is ordered by last update, latest first.'));
 
 A(h3('The case summary'));
 
@@ -504,7 +504,7 @@ A(table(
   [
     ['**Sign in**', 'Advocate identity, enrolment, firm.', 'A failed credential discloses nothing about which matters exist.'],
     ['**Landing — no matters**', 'One invitation to brief.', 'Not a form.'],
-    ['**Landing — matters exist**', '**The matter list**, ordered by nearest deadline. Deadlines that changed category surfaced above it.', 'One row per matter. Bounded by matter count. No analysis.'],
+    ['**Landing — matters exist**', '**The matter list**, latest updated first. Deadlines that changed category surfaced above it.', 'One row per matter. Bounded by matter count. No analysis.'],
     ['**Inside a matter**', '**The thread board**, pinned left. Unresolved postures render loudly; blocked threads carry the block.', 'One row per thread, six fields. Bounded by thread count.'],
     ['**Board — degraded**', 'Building: ready rows plus pending. Stale: last projection, marked as of when. **Unbuildable: an explicit failure naming what could not be read.**', 'A board that cannot be built never renders as an empty one.'],
     ['**Conversation**', 'The chat answer, with the thread board pinned left and the case summary reachable per thread.', 'The answer recites neither of the other surfaces.'],

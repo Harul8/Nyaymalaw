@@ -100,6 +100,14 @@ def answer_from_payload(value: dict):
         value = {**value, "elements": [
             ({"source": None, **row} if isinstance(row, dict) else row)
             for row in value["elements"]]}
+    # An answer saved before the board note existed changed nothing that was
+    # reported: its note is empty, never reconstructed from today's file.
+    if isinstance(value, dict) and "board_changes" not in value:
+        value = {**value, "board_changes": []}
+    # An answer saved before replies were composed showed its checked findings
+    # as they were: its reply is empty, never composed after the fact.
+    if isinstance(value, dict) and "composed" not in value:
+        value = {**value, "composed": []}
     answer = _answer_value(Answer, value)
     # Section is a domain projection, not caller-authored authority. Comparing
     # the canonical round-trip also refuses representations the decoder ignored.
@@ -119,7 +127,11 @@ def legacy_answer_from_archive(archive: dict):
 
     if type(archive.get("message")) is not str or type(archive.get("at")) is not str:
         raise ValueError("legacy conversation identity has invalid fields")
-    payload = {field.name: archive[field.name] for field in fields(Answer)}
+    # The archive never carried the board note or a composed reply; absent,
+    # each is empty.
+    payload = {field.name: (archive.get(field.name, [])
+                            if field.name in ("board_changes", "composed")
+                            else archive[field.name]) for field in fields(Answer)}
     if not isinstance(payload["elements"], list):
         raise ValueError("legacy answer elements must be a list")
     feature_default = next(field.default for field in fields(Element) if field.name == "feature")

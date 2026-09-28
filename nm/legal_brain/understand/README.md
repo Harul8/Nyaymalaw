@@ -37,7 +37,7 @@ the package initializer; this is not test evidence.
 - [dispute.py](dispute.py) — Distinguishes a contribution to an existing dispute from a newly raised dispute.
 - [parties.py](parties.py) — Interprets party identities and relationships from supplied words.
 - [posture.py](posture.py) — Interprets stated procedural posture without a keyword list.
-- [route.py](route.py) — Classifies the current contribution's immediate objective.
+- [route.py](route.py) — Reads the whole current contribution in one call: route and depth, every request, how each statement is taken, removals, parties, material, urgency and the one ambiguity (F-C-04).
 - [threading.py](threading.py) — Binds a contribution to existing or new dispute threads.
 - [tool_ask_advocate.py](tool_ask_advocate.py) — Proposes one advocate-facing question for review.
 - [tool_propose_conversation.py](tool_propose_conversation.py) — Proposes a private natural reply without merits clearance.

@@ -567,7 +567,10 @@ def test_neither_board_carries_analysis(client):
                    "deadline_unassessed", "passed_deadlines", "uncomputed_deadlines",
                    "next_deadline_currency", "stale_deadline", "stale_deadlines",
                    # Status, for the reason given on the thread board above.
-                   "information_followups"}
+                   "information_followups",
+                   # WHEN the file was last saved: a time, like `last_touched`,
+                   # and what My work is ordered by (F-B-14). Not analysis.
+                   "last_updated"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"

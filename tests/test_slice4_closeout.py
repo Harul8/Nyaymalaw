@@ -326,35 +326,43 @@ def test_the_board_distinguishes_no_deadline_from_no_register(tmp_path):
 
 @pytest.mark.eval_id("E-046")
 @pytest.mark.eval_id("E-063d")
-def test_the_matter_list_orders_by_a_deadline_it_actually_holds():
-    """THE RULE THAT COULD NOT FIRE.
+def test_the_matter_list_carries_the_deadline_it_holds_and_orders_by_last_update():
+    """THE DEADLINE COLUMN MUST BE ABLE TO FIRE, AND IT NO LONGER ORDERS.
 
-    The list sorts nearest-deadline-first and reads `next_deadline` as the
-    first key — and that field was hard-coded `None` on every row, so the sort
-    always fell through to recency and the ordering rule the list exists to
-    obey had never once applied. Shape S11: a check that cannot fail.
+    `next_deadline` was hard-coded `None` on every row, so the ordering rule
+    the list then obeyed had never once applied — shape S11, a check that
+    cannot fail. The row must carry the deadline the register holds.
+
+    Since 28 September 2026 the owner orders My work by LAST UPDATE, latest
+    first (F-B-14): the matter saved most recently leads whatever its
+    deadline, and the deadline is shown, not used to reorder.
     """
+    from dataclasses import replace
+
     from nm.work_the_file.deadlines import Deadline, DeadlineKind
     from nm.work_the_file.matter_contracts import Matter, Thread
     from nm.work_the_file.projections_api import matter_list_projection
 
-    def matter_with(title, on):
+    def matter_with(title, on, saved):
         m = Matter.create(advocate_id="adv", title=title)
         t = Thread.create(label=title)
-        m = m.with_thread(t)
+        m = replace(m.with_thread(t), updated_at=saved)
         return m, Deadline(thread=t.id, kind=DeadlineKind.LIMITATION,
                            source="Limitation Act, 1963 Article 65",
                            action="commence the suit", owner="the advocate",
                            consequence="the claim is barred", on=on)
 
-    far, far_d = matter_with("the far one", date(2039, 1, 1))
-    near, near_d = matter_with("the near one", date(2031, 1, 1))
+    far, far_d = matter_with("the far one", date(2039, 1, 1), "2026-09-28T09:00:05+00:00")
+    near, near_d = matter_with("the near one", date(2031, 1, 1), "2026-09-28T09:00:04+00:00")
 
     ordered = matter_list_projection(
-        [far, near], {far.id: (far_d,), near.id: (near_d,)})["matters"]
-    assert ordered[0]["matter"] == "the near one", (
-        "the list did not put the nearest deadline first — the interesting "
-        "file will still be there next week and the one expiring will not")
+        [near, far], {far.id: (far_d,), near.id: (near_d,)})["matters"]
+    assert [r["matter"] for r in ordered] == ["the far one", "the near one"], (
+        "My work did not put the latest updated matter first — a nearer deadline "
+        "must not reorder it (F-B-14)")
+    assert {r["matter"]: r["next_deadline"] for r in ordered} == {
+        "the far one": "2039-01-01", "the near one": "2031-01-01"}, (
+        "the row lost the deadline its register holds")
 
     # AND WITH NO REGISTERS the field says so rather than reading as a matter
     # with no deadline at all.

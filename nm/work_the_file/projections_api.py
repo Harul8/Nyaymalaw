@@ -28,16 +28,34 @@ from nm.shared.traceability_contracts import implements
 from nm.work_the_file.matter_contracts import Matter, Role
 
 
+def latest_first(matters) -> list:
+    """F-B-14's ordering for My work: the latest updated matter first.
+
+    Owner, 28 September 2026: *"sort the matters based on the last updated
+    date, with latest updated at the top."* The key is `Matter.updated_at`,
+    stamped by the save door on every write, so a message, a correction, a
+    board edit and an upload all count and no writer can forget. A file not
+    saved since that stamp existed has only the day it was last worked and
+    sorts by it -- an ISO day sorts below any stamped time on that day.
+    Never worked and never stamped sorts last.
+
+    Deadlines no longer order this list (PRD A2 revised the same day); each
+    row still carries its deadline. The thread board keeps `nearest_first`.
+    """
+    return sorted(matters, key=lambda m: m.updated_at or m.last_activity or "",
+                  reverse=True)
+
+
 def nearest_first(rows: list[dict]) -> list[dict]:
-    """D3's ordering, and BOTH BOARDS ASK THE SAME FUNCTION FOR IT.
+    """D3's ordering, for the THREAD BOARD.
 
     *Nearest deadline first, then what is blocked, then recency. Never
     alphabetically and never by creation date.* The thread board did not sort
     at all and the matter list sorted on a field hard-coded `None`, so the rule
     was stated in the PRD, stated in the docstring, and applied by neither.
 
-    Two copies of an ordering rule drift within a slice, and the advocate then
-    sees the urgent file at the top of one board and the bottom of the other.
+    The matter list used this too until 28 September 2026, when the owner
+    ordered My work by last update instead (`latest_first`, F-B-14).
 
     A row with no date sorts LAST rather than first: `not_assessed` is a gap
     and a gap is not an emergency, but it must not displace a window that is
@@ -393,7 +411,9 @@ def matter_list_projection(matters, registers=None) -> dict:
     unreadable = tuple(getattr(matters, "unreadable", ()))
     today = forum_today()            # BK-14: the forum's date
     rows = []
-    for m in matters:
+    # F-B-14. THE LATEST UPDATED FILE FIRST -- ordered on the matters, whose
+    # save stamp is not a board field, and never re-sorted by deadline below.
+    for m in latest_first(matters):
         unresolved = sum(1 for t in m.threads if not t.posture.resolved)
         # THE ORDERING RULE COULD NOT FIRE. `next_deadline` was hard-coded
         # `None` on every row and the sort below reads it first, so "nearest
@@ -426,8 +446,11 @@ def matter_list_projection(matters, registers=None) -> dict:
             # integer counting writes -- so a matter written nine times
             # looked more recent than one written twice yesterday.
             "last_touched": m.last_activity or "never worked",
+            # WHEN IT WAS LAST SAVED, to the second -- what the list is
+            # ordered by, so the row shows the time its place comes from.
+            # None on a file not saved since the stamp existed.
+            "last_updated": m.updated_at or None,
         })
-    rows = nearest_first(rows)
     return {
         # NOT "ok" when something could not be read. An advocate scanning a
         # board for what needs them must be able to see that a file is missing

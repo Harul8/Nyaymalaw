@@ -423,15 +423,24 @@ def test_the_live_workspace_is_local_and_keyboard_navigable_at_each_width(
         _assert_fits(page, f"#tabs button[data-tab='{tab}']")
         _tab(page, tab)
         _assert_no_overflow(page)
-    # F-A-17. Case file and History are offered inside My work, for the open matter.
-    for surface in ("casefile", "history"):
-        # My work deliberately returns to its list (F-A-18); choose the file
-        # before asserting the file-scoped controls are reachable.
-        _open_by_keyboard(page, second, width)
-        _assert_fits(page, f"#work-links button[data-tab='{surface}']")
-        _tab(page, surface)
-        _assert_no_overflow(page)
-        _tab(page, "advise")
+    # F-B-04. The open matter's one header control is its file icon; its
+    # drop-down opens, fits the screen, and closes on Escape.
+    _open_by_keyboard(page, second, width)
+    _assert_fits(page, "#files-toggle")
+    page.click("#files-toggle")
+    page.wait_for_function(
+        "() => !document.querySelector('#files-menu').hidden "
+        "&& !/Reading the files/.test(document.querySelector('#files-menu').textContent)")
+    assert "No files on this matter yet" in page.inner_text("#files-menu")
+    # AND THE MATTER'S RECORDS, under the same icon (owner, 28 September 2026).
+    assert page.locator("#files-menu .files-record").all_text_contents() == [
+        "Matter cover & instructions", "Case file", "Attributed file", "History",
+        "Protective handoff", "Recover a draft"]
+    _assert_fits(page, "#files-menu")
+    _assert_no_overflow(page)
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#files-menu", state="hidden")
+    assert page.get_attribute("#files-toggle", "aria-expanded") == "false"
     if width > 820:
         for selector in ("#who-name", "#workspace-name"):
             _assert_fits(page, selector)
@@ -595,13 +604,20 @@ def test_a_pending_answer_can_rejoin_its_own_reopened_context(page, journey):
 
     page.route(transcript_pattern, unavailable)
     _open_by_keyboard(page, original)
-    assert page.get_by_text("Working on your brief…", exact=True).is_visible()
+    # The in-flight turn is shown as working in its own reopened context. Its
+    # visible word follows the stage (LB-82) and is shown alone -- no
+    # language, meaning or stage line; its status for assistive technology
+    # is the one stable sentence.
+    working = page.locator("#thread .working")
+    assert working.is_visible()
+    assert "Working on your brief…" in working.text_content()
+    shown = working.locator(".working-word").inner_text().strip()
+    assert shown.endswith("ing…") and "·" not in shown and "\n" not in shown, shown
     held.release()
     page.wait_for_selector("#send:not([disabled])")
     assert page.get_attribute("#pane-advise", "data-matter-id") == original
     assert page.input_value("#message") == ""
-    assert not page.get_by_text(
-        "Working on your brief…", exact=True).count()
+    assert not page.locator("#thread .working").count()
     assert page.locator("#thread .brief").filter(has_text=brief).count() == 1
     assert not page.errors, page.errors
 
