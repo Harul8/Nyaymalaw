@@ -1,3 +1,5 @@
+"""Check bounded legal-source inventories and the offline inventory command."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

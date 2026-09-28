@@ -1,3 +1,4 @@
+/** Author PRD Part 3: the advocate journey and its feature contracts. */
 const H = require('./helpers');
 const { d, h1, h2, h3, h4, p, bullet, num, table, callout, feature, spacer, SIGNAL } = H;
 const { Paragraph, PageBreak } = d;

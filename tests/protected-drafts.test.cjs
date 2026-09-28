@@ -1,3 +1,4 @@
+/** Verify encrypted local draft recovery, expiry and cross-tab ownership. */
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {webcrypto} = require('node:crypto');

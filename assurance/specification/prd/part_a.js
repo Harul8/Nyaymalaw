@@ -1,3 +1,4 @@
+/** Author PRD Parts 0–2: reading guide, product definition and behavioural tenets. */
 const H = require('./helpers');
 const { d, h1, h2, h3, h4, p, bullet, num, table, callout, feature, spacer, ACCENT, SIGNAL, CONTENT_W } = H;
 const { Paragraph, TextRun, PageBreak, AlignmentType } = d;

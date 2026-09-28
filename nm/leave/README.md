@@ -1,4 +1,4 @@
-# Leave
+# 09 — Leave
 
 Ending the server-owned account session. The HTTP edge separately clears cookies; sign-out is a human account operation, not a model tool or a claim that a missing token represented a live session.
 
@@ -12,8 +12,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 ### Services and native owners
 
-- [sign_out.py](sign_out.py)
+- [sign_out.py](sign_out.py) — Ends the server-owned session through the native directory owner.
 
 ### Contracts and package
 
-- [__init__.py](__init__.py)
+- [__init__.py](__init__.py) — Marks the session-termination package; it exports no alternate logout path.

@@ -1,3 +1,4 @@
+/** Author PRD Parts 4–8 and appendices: grounding, interaction and evaluation. */
 const H = require('./helpers');
 const GATES = require('./gates.json');
 const { d, h1, h2, h3, h4, p, bullet, num, table, callout, feature, spacer, SIGNAL, ACCENT } = H;

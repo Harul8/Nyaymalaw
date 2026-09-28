@@ -49,25 +49,30 @@ Assurance keeps its existing purposeful gate/journey/control-plane homes: those
 are build controls, not user-journey stages. Tests remain shared so existing
 cross-phase protections are not split or quietly dropped.
 
-## Review in the advocate's order
+## Numbered review map: the advocate's order
 
-| Phase | Main owners to read first |
+These numbers guide review; the physical folder names and imports are unchanged.
+An advocate can revisit earlier stages, and legal reasoning itself is iterative.
+
+| Review position and phase | Main owners to read first |
 |---|---|
-| [Arrive](../nm/arrive/README.md) | `store_directory.py`, `store_pending_accounts.py`, `professional_access.py`; account routes currently remain in `app/api.py` |
-| [Open a matter](../nm/open_matter/README.md) | `opening_contracts.py`, `commission_contracts.py`, `screens.py`, `intake.py`, `quarantine.py`, `document_permission.py` |
-| [Legal brain](../nm/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
-| [Work the file](../nm/work_the_file/README.md) | `casefile.py`, `file_mutation.py`, `dispute_agenda.py`, `deadlines.py`, `summary.py` |
-| [Advise](../nm/advise/README.md) | `advice_contracts.py`, `options.py`, `reassessment.py`, `relief.py` |
-| [Act](../nm/act/README.md) | `action.py`, `drafting.py`, `hearing.py` |
-| [Carry](../nm/carry/README.md) | `handover.py`, `service.py` |
-| [Close](../nm/close/README.md) | `closure_contracts.py`, `retention.py`, `retention_contracts.py` |
-| [Leave](../nm/leave/README.md) | `sign_out.py`; served logout and cookie removal remain in `app/api.py` |
+| 01 — [Arrive](../nm/arrive/README.md) | `store_directory.py`, `store_pending_accounts.py`, `professional_access.py`; account routes currently remain in `app/api.py` |
+| 02 — [Open a matter](../nm/open_matter/README.md) | `opening_contracts.py`, `commission_contracts.py`, `screens.py`, `intake.py`, `quarantine.py`, `document_permission.py` |
+| 03 — [Legal brain](../nm/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
+| 04 — [Work the file](../nm/work_the_file/README.md) | `casefile.py`, `file_mutation.py`, `dispute_agenda.py`, `deadlines.py`, `summary.py` |
+| 05 — [Advise](../nm/advise/README.md) | `advice_contracts.py`, `options.py`, `reassessment.py`, `relief.py` |
+| 06 — [Act](../nm/act/README.md) | `action.py`, `drafting.py`, `hearing.py` |
+| 07 — [Carry](../nm/carry/README.md) | `handover.py`, `service.py` |
+| 08 — [Close](../nm/close/README.md) | `closure_contracts.py`, `retention.py`, `retention_contracts.py` |
+| 09 — [Leave](../nm/leave/README.md) | `sign_out.py`; served logout and cookie removal remain in `app/api.py` |
 
 The legal brain is grouped by responsibility, not by a fixed cognitive sequence.
-Read the [legal-brain index](../nm/legal_brain/README.md), then the capability you
-want to inspect. The index gives actual per-folder populations and each capability
-README lists every file. Descriptive filenames distinguish contracts, ports,
-adapters, native source owners, reasoning services and actual tool entry points.
+Its [03.00–03.08 reading map](../nm/legal_brain/README.md) begins with shared
+guidance, then follows understanding, retrieval, reasoning, procedure,
+verification, communication, orchestration and evaluation. The index gives
+actual per-folder populations and each capability README lists every file with
+its purpose. Descriptive filenames distinguish contracts, ports, adapters,
+native source owners, reasoning services and actual tool entry points.
 
 Common files stay in [legal_brain/common](../nm/legal_brain/common/README.md) only
 when they genuinely serve multiple capabilities. Capability-specific contracts

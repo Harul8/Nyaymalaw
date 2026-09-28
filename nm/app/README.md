@@ -15,23 +15,23 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 ### Composition and configuration
 
-- [composition.py](composition.py)
-- [main.py](main.py)
-- [model_permission.py](model_permission.py)
+- [composition.py](composition.py) — Selects concrete ports, adapters and shipped browser assets.
+- [main.py](main.py) — Wires the ASGI application and command-line startup.
+- [model_permission.py](model_permission.py) — Owner-approved OpenAI text route, narrowed by each authenticated advocate.
 
 ### Contracts and package
 
-- [__init__.py](__init__.py)
+- [__init__.py](__init__.py) — Application composition, HTTP routes and the browser shell.
 
 ### HTTP and rendering boundary
 
-- [api.py](api.py)
-- [static_assets.py](static_assets.py)
+- [api.py](api.py) — Serves authenticated HTTP routes with session, CSRF and release checks.
+- [static_assets.py](static_assets.py) — Serve only the browser assets declared by the shipped source-layout owner.
 
 ### Browser assets
 
-- [app.css](app.css)
-- [app.js](app.js)
-- [index.html](index.html)
+- [app.css](app.css) — Advocate-facing design system and responsive shell for the journey screens.
+- [app.js](app.js) — Renders journey state and browser interactions without deciding legal facts.
+- [index.html](index.html) — Main browser document and journey screen containers.
 
 Only the exact declared `/static/<name>` URLs are public; Python and private files in the same folders are never a static population.

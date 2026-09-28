@@ -1,3 +1,4 @@
+/** Shared Word layout, feature-register and anchor helpers for the PRD sources. */
 const d = require('docx');
 const {
   Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell,

@@ -5,21 +5,22 @@ shared-owner folder. This is navigation over implemented source, not a claim of
 expert-quality acceptance. Before Build and current tests/evaluations govern that
 claim.
 
-## Choose the question you want to review
+## 03 — Choose the question you want to review
 
-| Responsibility | Where to start | Existing implementation files | Browser assets |
-|---|---|---:|---:|
-| Understand the contribution | [understand/](understand/README.md) | 19 | 1 |
-| Retrieve and inspect sources | [retrieve/](retrieve/README.md) | 48 | 0 |
-| Assess disputes and possibilities | [reason/](reason/README.md) | 35 | 0 |
-| Assess procedural conditions and calculations | [procedure/](procedure/README.md) | 42 | 0 |
-| Check support and publication boundaries | [verify/](verify/README.md) | 17 | 0 |
-| Explain and present checked work | [communicate/](communicate/README.md) | 10 | 4 |
-| Run and coordinate bounded reasoning | [orchestrate/](orchestrate/README.md) | 21 | 0 |
-| Measure and replay controlled execution | [evaluate/](evaluate/README.md) | 11 | 2 |
-| Share one guidance and contract owner | [common/](common/README.md) | 11 | 0 |
+| Review position | Responsibility | Where to start | Implementation files | Browser assets |
+|---|---|---|---:|---:|
+| 03.00 | Shared guidance and contracts | [common/](common/README.md) | 11 | 0 |
+| 03.01 | Understand the contribution | [understand/](understand/README.md) | 19 | 1 |
+| 03.02 | Retrieve and inspect sources | [retrieve/](retrieve/README.md) | 48 | 0 |
+| 03.03 | Assess disputes and possibilities | [reason/](reason/README.md) | 35 | 0 |
+| 03.04 | Assess procedural conditions and calculations | [procedure/](procedure/README.md) | 42 | 0 |
+| 03.05 | Check support and publication boundaries | [verify/](verify/README.md) | 17 | 0 |
+| 03.06 | Explain and present checked work | [communicate/](communicate/README.md) | 10 | 4 |
+| 03.07 | Run and coordinate bounded reasoning | [orchestrate/](orchestrate/README.md) | 21 | 0 |
+| 03.08 | Measure and replay controlled execution | [evaluate/](evaluate/README.md) | 11 | 2 |
 
-Each folder README indexes every physical implementation file and browser asset.
+These numbers are reading positions, not Python package names or a runtime
+pipeline. Each folder README indexes every physical implementation file and browser asset.
 Each folder is flat; there are no further stage or layer folders. The root retains
 only this index and [the package initializer](__init__.py).
 

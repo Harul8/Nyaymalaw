@@ -1,3 +1,4 @@
+/** Assemble the authored PRD sections into the generated Word document. */
 const fs = require('fs');
 const path = require('path');
 const H = require('./helpers');

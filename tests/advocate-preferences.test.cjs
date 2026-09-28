@@ -1,3 +1,4 @@
+/** Exercise bounded account preferences, explicit approval and session-safe UI state. */
 'use strict';
 const {test} = require('node:test');
 const assert = require('node:assert/strict');

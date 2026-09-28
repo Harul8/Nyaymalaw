@@ -1,3 +1,4 @@
+/** Verify scoped original-document opening without promoting it into a case fact. */
 'use strict';
 const {test} = require('node:test');
 const assert = require('node:assert/strict');

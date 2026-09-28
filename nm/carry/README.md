@@ -1,4 +1,4 @@
-# Carry
+# 07 — Carry
 
 Handover, re-entry, scheduled service decisions and conflict-watch state. Scheduling a job is not running or delivering it; durable work execution remains with the existing shared worker and configured connectors.
 
@@ -15,11 +15,11 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 ### Services and native owners
 
-- [handover.py](handover.py)
-- [service.py](service.py)
+- [handover.py](handover.py) — Persists handover records and manages closure and re-entry transitions.
+- [service.py](service.py) — Schedules authorised follow-up work and monitors recorded conflict-watch state.
 
 ### Contracts and package
 
-- [__init__.py](__init__.py)
-- [handover_contracts.py](handover_contracts.py)
-- [service_contracts.py](service_contracts.py)
+- [__init__.py](__init__.py) — Continuity, service and advocate handover of the matter record.
+- [handover_contracts.py](handover_contracts.py) — Handover does not move responsibility by itself.
+- [service_contracts.py](service_contracts.py) — Nothing runs in the background without somebody having asked.
