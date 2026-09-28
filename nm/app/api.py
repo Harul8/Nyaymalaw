@@ -1022,7 +1022,7 @@ def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
     )
     projections = requirements.file_projections(matter, source_current=source_current)
 
-    def require_current():
+    def require_current(*, check_generation=True):
         if not _loop_session_current(request, matter.advocate_id):
             raise HTTPException(401, "Your session ended. Sign in to see the saved work.")
         current = installed.store.load(matter.id)
@@ -1036,7 +1036,7 @@ def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
         except ValueError as exc:
             raise HTTPException(
                 409, "The checked file changed. Reopen it before continuing.") from exc
-        if generation is not None:
+        if check_generation and generation is not None:
             try:
                 generation.require_current()
             except GenerationUnavailable as exc:
@@ -1046,11 +1046,11 @@ def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
 
 
 def _registers(held, *, request=None) -> dict:
+    from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
+
     registers = {}
     generation = None
     if request is not None and held:
-        from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
-
         try:
             # One generation owns the whole list response. Rebuilding it for
             # each file both rehashed the same source population twice per
@@ -1068,7 +1068,15 @@ def _registers(held, *, request=None) -> dict:
                 matter, request, generation=generation)
             registers[matter.id] = _register_of(matter, source_current=source_current,
                                                checklist_projections=projections)
-            require_current()
+            # Each file still gets its own late version, journal and session
+            # check. The list's one bound source generation is checked after
+            # every row, immediately before the response is built.
+            require_current(check_generation=False)
+    if request is not None and generation is not None:
+        try:
+            generation.require_current()
+        except GenerationUnavailable as exc:
+            raise HTTPException(409, "The legal sources changed. Reopen this file.") from exc
     return registers
 
 

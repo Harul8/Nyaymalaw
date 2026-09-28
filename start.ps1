@@ -118,8 +118,19 @@ if ($env:NM_MATTER_KEY) {
 # interpreter, deliberately: an editable install would make every worktree
 # import the MAIN checkout's code. The path is set for this process only.
 $env:PYTHONPATH = $root
-Write-Host "  starting  python -m nm.app.main --port $Port"
-$server = Start-Process -FilePath "python" `
+$projectPython = Join-Path $root ".venv-arrive\Scripts\python.exe"
+if (Test-Path $projectPython) {
+    $python = $projectPython
+} else {
+    $command = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $command) {
+        Write-Host "  Python is unavailable; install the project environment first." -ForegroundColor Red
+        exit 1
+    }
+    $python = $command.Source
+}
+Write-Host "  starting  $python -m nm.app.main --port $Port"
+$server = Start-Process -FilePath $python `
     -ArgumentList "-m", "nm.app.main", "--port", "$Port" `
     -WorkingDirectory $root -WindowStyle Hidden -PassThru
 
@@ -138,7 +149,7 @@ for ($i = 0; $i -lt 100; $i++) {
         Write-Host ""
         Write-Host "  the server exited immediately (code $($server.ExitCode))." -ForegroundColor Red
         Write-Host "  run it in the foreground to see why:" -ForegroundColor Red
-        Write-Host "    python -m nm.app.main --port $Port"
+        Write-Host "    $python -m nm.app.main --port $Port"
         exit 1
     }
     $probe = New-Object System.Net.Sockets.TcpClient

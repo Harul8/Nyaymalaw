@@ -167,14 +167,32 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
      ("Provided that", "(c)", "Explanation")),
     ("Specific Relief Act, 1963 section 6", "6", ("(2)", "against the Government", "(4)")),
 ])
-def test_the_measured_sections_reach_the_turn_whole(corpus, question, section, must_hold):
-    """Through the served adapter, not the helper alone."""
-    from nm.legal_brain.retrieve.evidence_port import EvidenceNeed
+def test_held_section_words_remain_readable_without_an_unreviewed_legal_finding(
+    corpus, question, section, must_hold
+):
+    """The dated reader preserves held words but does not certify their currency."""
     from nm.legal_brain.retrieve.manifest_sources import Manifest
     adapter = CorpusEvidenceAdapter(CORPUS, Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
-    result = adapter.fetch(EvidenceNeed(question=question, governing_date=date(2025, 9, 1),
-                                        provision_hint=section))
-    assert result.findings, result.missing
-    span = result.findings[0].span
+    read = adapter.read_provision_at_date(question.rsplit(" section ", 1)[0],
+                                          section, date(2025, 9, 1))
+    assert read.evidence.coverage.value == "not_assessed"
+    assert not read.evidence.findings
+    assert read.passages, read.evidence.missing
+    span = max(read.passages, key=lambda passage: len(passage.text)).text
     assert all(piece in span for piece in must_hold), (
-        f"{question}: the text reaching the turn lacks {[p for p in must_hold if p not in span]}")
+        f"{question}: the held text lacks {[p for p in must_hold if p not in span]}")
+
+    from nm.legal_brain.orchestrate.tools import Assessment, Availability
+    from nm.legal_brain.retrieve.tool_sources import findings_from_envelope
+    from tests.test_dated_provision_capture_reaches_the_actual_tools import tool
+
+    offered = tool(adapter).handler({
+        "act": question.rsplit(" section ", 1)[0],
+        "section": section,
+        "as_of": "2025-09-01",
+    }, None)
+    assert offered.availability is Availability.PARTIAL
+    assert offered.assessment is Assessment.NOT_ASSESSED
+    assert not findings_from_envelope(offered)
+    offered_words = " ".join(window["text"] for window in offered.data["captured_windows"])
+    assert all(piece in offered_words for piece in must_hold), question

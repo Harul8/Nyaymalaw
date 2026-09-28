@@ -8,11 +8,6 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import captured_retrievals
-from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
-from nm.legal_brain.orchestrate.loop_contracts import digest
 from nm.legal_brain.communicate.working_explanation import (
     CONSISTENCY_NAME,
     CRITERIA,
@@ -21,6 +16,11 @@ from nm.legal_brain.communicate.working_explanation import (
     WORKING_RATIONALE_SCHEMA,
     WorkingExplanationService,
 )
+from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.verify.brain_assessment import captured_retrievals
+from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.legal_brain.verify.brain_release import ReviewRefused
 from nm.open_matter import screens
 from nm.shared.authority_contracts import Act, capacity_for, permits
 from nm.shared.budget_contracts import Completion
@@ -212,6 +212,9 @@ def test_full_actual_controlled_population_releases_only_exact_checked_private_r
 
     monkeypatch.setattr(fixtures, "_setup", admitted_setup)
     store, outcome, service, _judge, budget = _service(tmp_path, observed=True)
+    # A pending question does not complete the whole request. Its individual
+    # checked source-bound working entry may still have a private rationale.
+    assert not service.working.completeness(outcome, scope_service=service.scope).complete
     result = service.review(outcome, budget=budget)
     assert result.private_ready, [
         (row.gate_id, row.assessed, row.reason)

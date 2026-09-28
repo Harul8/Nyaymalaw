@@ -202,13 +202,38 @@ def test_author_labels_cannot_skip_applied_assessment_checks(label):
     assert record.textual_eligible is False and not record.releasable
 
 
-def test_only_an_independently_classified_self_contained_text_report_needs_support_alone():
-    subject = package(claim="The retrieved rule says that a benefit requires notice.", premises=())
+def test_only_an_independently_classified_exact_source_passage_needs_support_alone():
+    subject = package(claim="A benefit requires notice.", premises=())
     record = verify(
         subject, Judge(response(textual=True, applies=None, inference=None, opposition=None))
     )
     assert record.releasable
     assert release_verified((subject,), (record,)).released == (subject,)
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "The retrieved rule says that a benefit requires notice.",
+        "On these facts, the benefit is available without notice.",
+        "A certificate establishes service, so notice is unnecessary.",
+    ],
+)
+def test_a_no_premises_paraphrase_or_application_cannot_become_text_only_by_model_label(claim):
+    subject = package(claim=claim, premises=())
+    record = verify(
+        subject, Judge(response(textual=True, applies=None, inference=False, opposition=None))
+    )
+    assert record.textual_eligible is False
+    assert not record.releasable
+    assert not release_verified((subject,), (record,)).released
+
+
+def test_a_faithful_paraphrase_can_still_pass_all_four_checks():
+    subject = package(claim="The retrieved rule says that a benefit requires notice.", premises=())
+    record = verify(subject, Judge(response(textual=True)))
+    assert record.textual_eligible is False
+    assert record.releasable
 
 
 def test_missing_classification_never_becomes_a_textual_bypass():

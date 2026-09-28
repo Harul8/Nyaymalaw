@@ -23,7 +23,7 @@ provider-processing approval or release claim comes from moving a file.
 
 ## Complete file index
 
-Navigation over 48 implementation files, 0 browser assets and
+Navigation over 50 implementation files, 0 browser assets and
 the package initializer; this is not test evidence.
 
 ### Implementation
@@ -52,6 +52,7 @@ the package initializer; this is not test evidence.
 - [provision_registry_composition.py](provision_registry_composition.py) — Import one optional, published candidate registry; never issue a review.
 - [provision_review.py](provision_review.py) — Read a host-allowlisted dated provision review through existing trust owners.
 - [provision_revision_sources.py](provision_revision_sources.py) — Date-qualified provision identities, distinct from Act lifetime metadata.
+- [provision_search_port.py](provision_search_port.py) — Types ranked provision candidates separately from dated legal support.
 - [research_context.py](research_context.py) — Fresh task-scoped reading, never a chat summary or personal memory.
 - [research.py](research.py) — Coordinates research findings without treating retrieval as verification.
 - [resolution_sources.py](resolution_sources.py) — Resolves legal identities through the governed legal graph.
@@ -73,6 +74,7 @@ the package initializer; this is not test evidence.
 - [tool_research.py](tool_research.py) — Dispatches bounded research through the registered model tool.
 - [tool_resolve_citation.py](tool_resolve_citation.py) — Resolves a citation to a governed held-source identity.
 - [tool_search_authorities.py](tool_search_authorities.py) — Searches held authorities within the admitted scope.
+- [tool_search_provisions.py](tool_search_provisions.py) — Ranks held provision wording without deciding the governing Act.
 - [tool_search_authority.py](tool_search_authority.py) — Searches the authority index through the governed reader.
 - [tool_sources.py](tool_sources.py) — Captures trusted source-reader results without accepting model-authored evidence.
 - [tool_treatment.py](tool_treatment.py) — Reads subsequent treatment of a held judgment.

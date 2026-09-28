@@ -280,11 +280,13 @@ VERIFY_SYSTEM = (
     "factual finding cannot upgrade its recorded status. Unconfirmed is not rejected: "
     "use it only as an expressly conditional premise and assess that qualification. "
     "An applicable exception, conflicting fact or contrary passage must be addressed. "
-    "Classify textual_eligible true only for a self-contained report of what the exact "
-    "source says with NO implied application, case assessment, inference, advice or "
-    "recommendation. Labels, disclaimers and harmless-sounding wording do not exempt "
-    "applied advice. Unknown classification is null, not textual. A textual report may "
-    "have null applicability/inference/opposition; applied claims require all four. "
+    "Classify textual_eligible true only when the entire claim is an exact contiguous "
+    "passage in one supplied legal source window, with NO implied application, case "
+    "assessment, inference, advice or recommendation. A paraphrase must receive all "
+    "four judgments even when it accurately describes a source. Labels, disclaimers "
+    "and harmless-sounding wording do not exempt applied advice. Unknown "
+    "classification is null, not textual. A qualifying exact passage may have null "
+    "applicability/inference/opposition; every other claim requires all four. "
     "A partially supported claim is false; do not silently rewrite it or certify the "
     "whole because one part is sound. Separately submitted self-contained claims can "
     "be reviewed separately. Supporting_words must be verbatim from the supplied "
@@ -331,9 +333,19 @@ def interpret_completed_verification(package: EvidencePackage, result: ModelResu
         return Judgment(row["reason"], words, row["assessed"])
 
     textual = data["textual_eligible"]
-    # A case-dependent package cannot become pure textual on replay either.
-    if textual is True and (package.premises or package.dependencies or package.contrary
-                            or package.documents or package.document_contrary):
+    # The judge does not see the conversation. Its positive classification alone
+    # cannot prove that a paraphrase is context-free, even without explicit
+    # premises. The reduced four-check route is therefore reserved for exact
+    # source words; all other claims need applicability, inference and opposition.
+    # This same interpreter runs for both live reads and saved-response replay.
+    if textual is True and (
+        package.premises
+        or package.dependencies
+        or package.contrary
+        or package.documents
+        or package.document_contrary
+        or not any(package.claim.strip() in span.text for span in package.spans)
+    ):
         textual = False
     return VerificationRecord(package.id, package.identity, data["classification_reason"],
         textual, judgment("textual_support"), judgment("applicability"), judgment("inference"),

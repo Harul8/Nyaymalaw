@@ -10,7 +10,12 @@ import pytest
 
 from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
 from nm.work_the_file.matter_contracts import Matter
-from tests.test_saved_loop_progress_is_not_an_advice_transport import SECRET, add, work
+from tests.test_saved_loop_progress_is_not_an_advice_transport import (
+    SECRET,
+    add,
+    opening_work,
+    work,
+)
 from tests.test_saved_work_attaches_only_to_its_released_turn import scoped_work
 from tests.test_the_journey_login_to_logout import (
     _sign_in,
@@ -87,6 +92,76 @@ def test_saved_work_is_closed_by_default_keyboard_reachable_and_updates_from_com
     assert not page.errors
 
 
+def test_live_opening_disputes_are_not_lost_when_the_panel_started_with_empty_scope(page, journey):
+    """A stream may outgrow the scope snapshot the viewer opened earlier."""
+    full, _created = opening_work(
+        actor=journey["advocate"], matter_id="live_opening_disputes"
+    )
+    initial = replace(full, events=full.events[:1])
+    store = journey["box"].application.store
+    matter = Matter(
+        id=full.identity.matter_id,
+        advocate_id=journey["advocate"],
+        title="Opening disputes in progress",
+        version=1,
+        loop_records=(initial,),
+    )
+    store.commit(matter, expected_version=0)
+    _sign_in(page, journey)
+    _tab(page, "history")
+    page.select_option("#history-matter", matter.id)
+    panel = page.locator("#history-body > .recorded-work-progress")
+    panel.locator(":scope > summary").click()
+    child = panel.locator("details").first
+    child.locator(":scope > summary").click()
+    stages = child.locator(".progress-stages li")
+    page.wait_for_function(
+        "document.querySelector('.recorded-work-progress .progress-stages')?.children.length === 1"
+    )
+    assert child.locator(".progress-scope ul li").count() == 0
+    initial_scope = page.request.get(
+        journey["base"] + f"/api/matters/{matter.id}/loops/{full.identity.turn_id}"
+    ).json()["scope"]
+    assert initial_scope["state"] == "recorded", initial_scope
+
+    partial = replace(full, events=full.events[:7])
+    store.commit(replace(matter, version=2, loop_records=(partial,)), expected_version=1)
+    current = page.request.get(
+        journey["base"] + f"/api/matters/{matter.id}/loops/{full.identity.turn_id}"
+    ).json()
+    assert len(current["events"]) == 7
+    assert current["events"][6]["dispute_index"] == 1, current
+    stream_result = page.request.get(
+        journey["base"] + f"/api/matters/{matter.id}/loops/{full.identity.turn_id}/progress"
+        f"?follow=false&after={initial.events[0].sequence}.{initial.events[0].fingerprint}"
+    )
+    assert stream_result.status == 200, stream_result.text()
+    assert "\"dispute_index\":1" in stream_result.text(), stream_result.text()
+    page.wait_for_function(
+        "document.querySelector('.recorded-work-progress .progress-stages')?.children.length === 7"
+    )
+    assert stages.last.inner_text().startswith("Dispute 1: Source-linked information needs")
+    assert "Ownership share" not in child.inner_text()
+    assert SECRET not in page.inner_text("body")
+
+    store.commit(replace(matter, version=3, loop_records=(full,)), expected_version=2)
+    page.wait_for_function(
+        "document.querySelector('.recorded-work-progress .progress-stages')?.children.length === 10"
+    )
+    assert stages.nth(8).inner_text().startswith("Dispute 2: Source-linked information needs")
+    panel.locator(":scope > summary").click()
+    panel.locator(":scope > summary").click()
+    child = panel.locator("details").first
+    child.locator(":scope > summary").click()
+    child.locator(".progress-stages li").last.wait_for()
+    assert child.locator(".progress-scope ul li").all_text_contents() == [
+        "Ownership share", "Shop access",
+    ]
+    assert child.locator(".progress-stages li").count() == 10
+    assert SECRET not in page.inner_text("body")
+    assert not page.errors
+
+
 def test_work_is_attached_to_its_released_response_and_shows_the_historic_dispute_scope(
     page, journey
 ):
@@ -120,7 +195,7 @@ def test_work_is_attached_to_its_released_response_and_shows_the_historic_disput
     assert stages.count() == len(record.events)
     scope = panel.locator(".progress-scope")
     assert scope.locator("ul li").all_text_contents() == ["One", "Two"]
-    assert "not proof of a separate assessment of each dispute" in scope.inner_text()
+    assert "no working stage establishes legal assessment" in scope.inner_text()
     assert "Renamed today" not in scope.inner_text()
     assert SECRET not in page.inner_text("body")
     assert record.identity.turn_id not in panel.inner_text()

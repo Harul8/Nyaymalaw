@@ -215,6 +215,7 @@
     "nm.legal_brain.retrieve.provision_registry_composition": "bootstrap",
     "nm.legal_brain.retrieve.provision_review": "bootstrap",
     "nm.legal_brain.retrieve.provision_revision_sources": "knowledge",
+    "nm.legal_brain.retrieve.provision_search_port": "ports",
     "nm.legal_brain.retrieve.research": "core",
     "nm.legal_brain.retrieve.research_context": "core",
     "nm.legal_brain.retrieve.resolution_sources": "knowledge",
@@ -236,6 +237,7 @@
     "nm.legal_brain.retrieve.tool_research": "core",
     "nm.legal_brain.retrieve.tool_resolve_citation": "core",
     "nm.legal_brain.retrieve.tool_search_authorities": "core",
+    "nm.legal_brain.retrieve.tool_search_provisions": "core",
     "nm.legal_brain.retrieve.tool_search_authority": "core",
     "nm.legal_brain.retrieve.tool_sources": "core",
     "nm.legal_brain.retrieve.tool_treatment": "core",
@@ -392,12 +394,12 @@
   "expected_roles": {
     "adapters": 39,
     "bootstrap": 18,
-    "core": 180,
+    "core": 181,
     "domain": 94,
     "edge": 13,
     "infrastructure": 1,
     "knowledge": 18,
-    "ports": 24
+    "ports": 25
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",

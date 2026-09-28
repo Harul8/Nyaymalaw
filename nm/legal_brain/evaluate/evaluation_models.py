@@ -28,10 +28,30 @@ VERIFIER = "gpt-5.1-2025-11-13"
 class VerifierOnly:
     """A separate verifier cannot be borrowed as an expensive author or tool agent."""
     def __init__(self, inner):
+        from nm.legal_brain.communicate.working_explanation import WORKING_RATIONALE_SCHEMA
+        from nm.legal_brain.verify.consistency import CONSISTENCY_SCHEMA
+        from nm.legal_brain.verify.duty import DUTY_SCHEMA
+        from nm.legal_brain.verify.working_scope import (
+            REQUEST_DEMAND_SCHEMA,
+            WORKING_SCOPE_SCHEMA,
+        )
+
         self.inner = inner
-        self._schema_identities = frozenset((digest(VERIFICATION_SCHEMA), *(
-            digest(communication_contract(version)[1])
-            for version in COMMUNICATION_PROTOCOL_VERSIONS)))
+        self._schema_limits = {
+            digest(VERIFICATION_SCHEMA): 2048,
+            **{
+                digest(communication_contract(version)[1]): 2048
+                for version in COMMUNICATION_PROTOCOL_VERSIONS
+            },
+            # These are the other independently owned reads actually composed
+            # from this verifier model. The larger bounded output belongs to
+            # whole-work populations, not to an arbitrary judge request.
+            digest(REQUEST_DEMAND_SCHEMA): 4096,
+            digest(WORKING_SCOPE_SCHEMA): 4096,
+            digest(WORKING_RATIONALE_SCHEMA): 4096,
+            digest(CONSISTENCY_SCHEMA): 4096,
+            digest(DUTY_SCHEMA): 4096,
+        }
 
     @property
     def provider(self):
@@ -56,11 +76,12 @@ class VerifierOnly:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self._tier(tier)
-        if digest(schema) not in self._schema_identities:
+        allowed = self._schema_limits.get(digest(schema))
+        if allowed is None:
             raise ModelPermissionRefused(
-                "Only the owned evidence-package and communication checks are approved.")
+                "Only the owned independent legal-brain checks are approved.")
         if (max_tokens is not None and (type(max_tokens) is not int
-                                        or not 1 <= max_tokens <= 2048)):
+                                        or not 1 <= max_tokens <= allowed)):
             raise ModelPermissionRefused("The verifier output exceeds its bounded read allowance.")
         return self.inner.structured(prompt, schema, tier, max_tokens=max_tokens or 2048)
 
@@ -106,9 +127,10 @@ def bounded_pair(config: ModelConfig, *, ledger: Path, maximum_usd: str,
 
     A snapshot mismatch refuses before constructing a provider client. The
     immutable ledger maximum cannot be raised on restart. GPT-5.1's USD0.55
-    reservation bounds its published 400,000 context tokens and the enforced
-    2,048-token output ceiling at USD1.25/10 per million (official model page
-    checked 27 September 2026). Unknown outcomes retain that full reservation.
+    reservation bounds its published 400,000 context tokens and the largest
+    owned 4,096-token independent-read output at USD1.25/10 per million
+    (official model page checked 27 September 2026). Ordinary claim and
+    interaction checks stay at 2,048. Unknown outcomes retain the reservation.
     GPT-4o mini retains the existing conservative USD0.03 reservation.
     """
     _direct(config)
@@ -122,7 +144,7 @@ def bounded_pair(config: ModelConfig, *, ledger: Path, maximum_usd: str,
         reservation_micro_usd=30000)
     judge_budget = CallBudget(ledger, maximum_usd, model=judge.model,
         price_per_million=(str(judge.price_in), str(judge.price_out)),
-        reservation_micro_usd=550000)
+    reservation_micro_usd=550000)
     # The author's transport deliberately has no judge tier: it cannot use
     # the cheaper ledger to dispatch another model. The separate transport's
     # constructor gets its own key/endpoint; the closed facade permits JUDGE.

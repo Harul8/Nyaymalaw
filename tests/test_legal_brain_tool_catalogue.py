@@ -9,21 +9,36 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
-from nm.legal_brain.retrieve.authority_weight_port import Weighed
-from nm.legal_brain.reason.elements_adapter import CuratedElements
-from nm.legal_brain.retrieve.evidence_port import (
-    Coverage,
-    EvidenceResult,
-    SourceDocument,
-    Treatment,
-    TreatmentState,
+from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
+from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables, catalogue_tools
+from nm.legal_brain.orchestrate.tools import (
+    Assessment,
+    Availability,
+    Boundary,
+    ToolContext,
+    ToolOutcome,
+    ToolRefused,
+    ToolRegistry,
 )
 from nm.legal_brain.procedure.filing_requirement_adapter import CuratedFilingRequirements
 from nm.legal_brain.procedure.governing_law_adapter import CuratedGoverningLaw
 from nm.legal_brain.procedure.institution_adapter import CuratedPreInstitution
 from nm.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
 from nm.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
+from nm.legal_brain.reason.elements_adapter import CuratedElements
+from nm.legal_brain.retrieve.authority_weight_port import Weighed
+from nm.legal_brain.retrieve.evidence_port import (
+    Coverage,
+    EvidenceResult,
+    Origin,
+    SourceDocument,
+    Treatment,
+    TreatmentState,
+)
+from nm.legal_brain.retrieve.provision_search_port import (
+    ProvisionCandidate,
+    ProvisionSearchResult,
+)
 from nm.legal_brain.retrieve.search_port import (
     CaseDiscovery,
     CaseExpansion,
@@ -34,16 +49,6 @@ from nm.legal_brain.retrieve.search_port import (
     Paragraph,
     PassageRead,
     ResolutionState,
-)
-from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables, catalogue_tools
-from nm.legal_brain.orchestrate.tools import (
-    Assessment,
-    Availability,
-    Boundary,
-    ToolContext,
-    ToolOutcome,
-    ToolRefused,
-    ToolRegistry,
 )
 from nm.shared.model_port import SchemaViolation, ToolCall
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread
@@ -58,6 +63,7 @@ ARGS = {
     "resolve_citation": {"citation": "(2020) 1 SCC 1"},
     "search_authorities": {"query": "exact issue", "court": None,
                            "from_year": None, "to_year": None, "limit": 20},
+    "search_provisions": {"query": "written acknowledgment", "act": None, "limit": 20},
     "read_paragraph": {"locator": "case-one:1"},
     "read_judgment": {"case_id": "case-one", "query": None, "limit": 20, "after": None},
     "read_source_document": {"locator": "case-one:1", "kind": "authority",
@@ -108,12 +114,22 @@ def fixture(*, before=None, configured=True):
                                                         identity={"court": "Supreme Court"})
     search.treatment.return_value = Treatment(TreatmentState.NOT_CHECKED,
                                               "No later-treatment assessment is held.")
+    provision_search = Mock()
+    provision_search.search_provisions.return_value = ProvisionSearchResult(
+        "written acknowledgment", None, "chunks.db bare_act full provision text",
+        Coverage.ANSWERED, searched_stores=("example_act_2000",), sections_scanned=1,
+        candidates=(ProvisionCandidate("Example Act, 2000", "18",
+                                       "example_act_2000::18::section", 1,
+                                       ("written", "acknowledgment"), Origin.SEARCHED),),
+        why="Ranked wording only; dated legal support not assessed.",
+    )
     weight = Mock(weigh=Mock(return_value=Weighed(why="Only one authority was supplied.")))
     tables = PracticeTables("curated-version-one", CuratedElements(), CuratedPreInstitution(),
         CuratedInterimRelief(), CuratedProceduralPeriods(), CuratedFilingRequirements(),
         CuratedGoverningLaw())
     tools = catalogue_tools(store, evidence, source_version="generation-one",
                             search=search if configured else None,
+                            provision_search=provision_search if configured else None,
                             tables=tables if configured else None,
                             authority_weight=weight if configured else None)
     registry = ToolRegistry(tools, before=before or (lambda *_: ALLOW), after=lambda *_: ALLOW)
@@ -129,7 +145,7 @@ def invoke(registry, context, name, args=None):
 
 def test_each_catalogue_tool_runs_the_same_admission_boundary():
     registry, context, _store, _evidence, _search, tools = fixture()
-    assert len(tools) == len(ARGS) == 20
+    assert len(tools) == len(ARGS) == 21
     assert {tool.definition.name for tool in tools} == set(ARGS)
     for tool in tools:
         result = invoke(registry, context, tool.definition.name)
@@ -146,12 +162,12 @@ def test_each_catalogue_tool_runs_the_same_admission_boundary():
     for name in ARGS:
         with pytest.raises(ToolRefused, match="scope is not established"):
             invoke(blocked, context, name)
-    assert set(observed) == set(ARGS) and len(observed) == 20
+    assert set(observed) == set(ARGS) and len(observed) == 21
 
 
 def test_catalogue_absence_never_becomes_a_supported_result():
     registry, context, _store, evidence, _search, _tools = fixture(configured=False)
-    source_names = {"resolve_citation", "search_authorities", "read_paragraph",
+    source_names = {"resolve_citation", "search_authorities", "search_provisions", "read_paragraph",
         "read_judgment", "treatment",
         "rank_authorities", "pre_institution_steps", "interim_test", "procedural_periods",
         "governing_code", "elements_of", "filing_requirements", "court_fee"}
@@ -189,6 +205,16 @@ def test_grouped_ranked_cases_and_partial_judgment_windows_keep_their_limits():
     assert treatment.data["state"] == "not_checked"
     assert treatment.availability is Availability.PARTIAL
     assert treatment.assessment is Assessment.NOT_ASSESSED
+
+
+def test_ranked_provision_candidates_have_readback_but_not_legal_support():
+    registry, context, _store, _evidence, _search, _tools = fixture()
+    result = invoke(registry, context, "search_provisions")
+    assert result.data["candidates"][0]["origin"] == "searched"
+    assert result.data["candidates"][0]["act"] == "Example Act, 2000"
+    assert result.assessment is Assessment.NOT_ASSESSED
+    assert result.receipt["locators"] == ["example_act_2000::18::section"]
+    assert "findings" not in result.data and "captured_windows" not in result.data
 
 
 def test_source_windows_keep_actual_snapshot_and_do_not_present_a_tail_as_a_whole():

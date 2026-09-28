@@ -31,6 +31,7 @@ from nm.legal_brain.procedure.procedural_period_port import ProceduralPeriodPort
 from nm.legal_brain.reason.elements_port import ElementsPort
 from nm.legal_brain.retrieve.authority_weight_port import AuthorityWeightPort
 from nm.legal_brain.retrieve.evidence_port import EvidencePort, EvidenceResult
+from nm.legal_brain.retrieve.provision_search_port import ProvisionSearchPort
 from nm.legal_brain.retrieve.search_port import CorpusSearchPort
 from nm.legal_brain.retrieve.tool_sources import (
     source_envelope,
@@ -117,6 +118,7 @@ def catalogue_tools(
     *,
     source_version: str,
     search: CorpusSearchPort | None = None,
+    provision_search: ProvisionSearchPort | None = None,
     tables: PracticeTables | None = None,
     authority_weight: AuthorityWeightPort | None = None,
     matter_documents: MatterDocumentsPort | None = None,
@@ -250,6 +252,9 @@ def catalogue_tools(
     from nm.legal_brain.retrieve.tool_search_authorities import (
         build_tool as search_authorities_tool,
     )
+    from nm.legal_brain.retrieve.tool_search_provisions import (
+        build_tool as search_provisions_tool,
+    )
     from nm.legal_brain.retrieve.tool_treatment import build_tool as treatment_tool
     from nm.legal_brain.understand.tool_quote_matter import build_tool as quote_matter_tool
     from nm.legal_brain.understand.tool_read_facts import build_tool as read_facts_tool
@@ -273,6 +278,7 @@ def catalogue_tools(
         search_authorities_tool(
             search=search, source_version=source_version, source_unavailable=source_unavailable
         ),
+        search_provisions_tool(search=provision_search, source_version=source_version),
         read_paragraph_tool(
             search=search, source_version=source_version, source_unavailable=source_unavailable
         ),

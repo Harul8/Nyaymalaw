@@ -71,17 +71,23 @@
             status.setAttribute('aria-live', 'polite');
             detail.append(list, status);
             const seen = new Set();
+            let recordedScope = null;
             const active = () => thisDetail === detailGeneration && detail.open && current(generation);
             function add(row) {
               if (!active() || !row || typeof row.label !== 'string'
                   || row.working_not_advice !== true || typeof row.cursor !== 'string'
                   || !/^[0-9]{1,9}\.[a-f0-9]{64}$/.test(row.cursor)) return;
+              if (row.dispute_index !== undefined &&
+                  (!Number.isSafeInteger(row.dispute_index) || row.dispute_index < 1 ||
+                   recordedScope?.state !== 'recorded' ||
+                   !Array.isArray(recordedScope.disputes) || row.dispute_index > 1000)) return;
               if (seen.has(row.cursor)) return;
               seen.add(row.cursor);
               const item = document.createElement('li');
-              item.textContent = row.label;
+              item.textContent = row.dispute_index === undefined
+                ? row.label : `Dispute ${row.dispute_index}: ${row.label}`;
               list.appendChild(item);
-              status.textContent = row.label;
+              status.textContent = item.textContent;
               if (row.state !== 'working' && stream) {
                 stream.close(); streams.delete(stream); localStreams.delete(stream);
               }
@@ -91,6 +97,7 @@
               const record = await read(base);
               if (!active()) return;
               if (!Array.isArray(record.events)) throw new Error('The saved stages could not be verified.');
+              recordedScope = record.scope;
               if (turnId && record.linked_released_turn !== true) {
                 throw new Error('The released response link could not be verified.');
               }
@@ -114,7 +121,7 @@
                 scopeNote.textContent = 'Dispute-specific working scope was not established in this record.';
               }
               const shared = document.createElement('p');
-              shared.textContent = 'These are shared working stages, not proof of a separate assessment of each dispute.';
+              shared.textContent = 'Only source-linked information-needs and single-dispute opposition receipts are marked by dispute here. Authority and provision reads remain shared; no working stage establishes legal assessment.';
               scope.appendChild(shared);
               detail.insertBefore(scope, list);
               record.events.forEach(add);

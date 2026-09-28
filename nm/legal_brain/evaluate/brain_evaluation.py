@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -19,8 +19,16 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     StopReason,
     digest,
 )
-from nm.legal_brain.verify.brain_assessment import AssessmentService, BrainAssessment
-from nm.legal_brain.verify.brain_release import ProposalBindingRefused, ReviewRefused
+from nm.legal_brain.verify.brain_assessment import (
+    AssessmentService,
+    BrainAssessment,
+    saved_package_reviews,
+)
+from nm.legal_brain.verify.brain_release import (
+    ProposalBindingRefused,
+    ReviewRefused,
+    shared_review_budget,
+)
 from nm.legal_brain.verify.output_checks import CheckReceipt
 from nm.shared.budget_contracts import Budget, Exhausted, Spend
 from nm.shared.gates_contracts import Response, Scope
@@ -192,7 +200,11 @@ class EvaluationService:
                 elapsed_ms=max(current.spend.elapsed_ms, elapsed)))
 
         def deadline_hit():
-            return initial_ms + max(0, int((self.monotonic() - started) * 1000)) >= budget.max_ms
+            # Saved children can carry more elapsed time than the parent STOP
+            # on an idempotent retry. Compare that sealed floor with this
+            # invocation's clock; never add the two overlapping intervals.
+            elapsed = initial_ms + max(0, int((self.monotonic() - started) * 1000))
+            return max(budget.spend.elapsed_ms, elapsed) >= budget.max_ms
 
         def check_work(attempt):
             """Scope is last: it spends the real allowance after all wording/final checks.
@@ -230,6 +242,7 @@ class EvaluationService:
                                         "cancelled" if cancelled() else "budget",
                                         tuple(reservations))
             ident = turn_id if iteration == 0 else f"{turn_id}:repair:{iteration}"
+            entering_budget = budget
             attempt = self.brain.run(matter_id=matter_id, turn_id=ident, message=message,
                 limits=replace(limits, budget=budget, max_steps=limits.max_steps - steps),
                 selected_issue_ids=selected_issue_ids, cancelled=cancelled, feedback=feedback,
@@ -239,6 +252,18 @@ class EvaluationService:
             budget = measured(attempt.budget)
             try:
                 steps += dispatch_steps(attempt.record)
+                # An exact retry returns the immutable parent. Its STOP budget
+                # cannot contain independent children already sealed after it.
+                # Reconstruct their actual shared ledger before any owner can
+                # admit another review; never ask the reviewer to accept a
+                # caller-restored parent-only spending proposal.
+                recorded = shared_review_budget(attempt, (),
+                    self.brain.store.load(matter_id), self.brain.log, None)
+                spend = Spend(**{field.name: max(
+                    getattr(recorded.spend, field.name),
+                    getattr(entering_budget.spend, field.name),
+                    getattr(budget.spend, field.name)) for field in fields(Spend)})
+                budget = measured(replace(recorded, spend=spend))
             except ReviewRefused as exc:
                 return finish(tuple(attempts), tuple(assessments), budget,
                                         "review_refused", tuple(reservations) + (str(exc),))
@@ -436,6 +461,17 @@ class EvaluationService:
                         return finish(tuple(attempts), tuple(assessments), budget,
                                                 "budget", tuple(reservations))
                     current = self.brain.store.load(matter_id)
+                    # A replay carries fresh elapsed time and all prior child
+                    # spending in its running budget. The final assessment is
+                    # about the historical sealed verdict, whose exact budget
+                    # is reconstructed separately; only that budget field may
+                    # differ from the trusted reviewer's returned verdict.
+                    sealed_review = saved_package_reviews(
+                        attempt, review.packages, current, self.brain.log)
+                    if replace(review, budget=sealed_review.budget) != sealed_review:
+                        raise ReviewRefused(
+                            "The current review differs from its sealed independent verdict")
+                    review = sealed_review
                     result = self.assessment.assess(
                         attempt, review, expected_version=current.version)
                     if self.brain.publication is not None:

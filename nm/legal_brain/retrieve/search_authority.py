@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Callable, TypeVar
 
@@ -80,11 +81,11 @@ class AuthorityIndexSearch:
 
     @property
     def available(self) -> bool:
-        return self._path.exists()
+        return self._path.exists() and self._partial_index_reason() is None
 
     def identity_version(self) -> str:
         """The corpus version the index says it was built from, or ''."""
-        if not self._path.exists():
+        if not self.available:
             return ""
         try:
             con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
@@ -130,12 +131,42 @@ class AuthorityIndexSearch:
 
     def _published_read(self, read: Callable[[], _T]) -> _T:
         """One boundary for ALL reads, including withdrawal during a read."""
+        self._require_complete_index()
         if self._published_snapshot is not None:
             self._published_snapshot.require_usable()
         result = read()
         if self._published_snapshot is not None:
             self._published_snapshot.require_usable()
+        self._require_complete_index()
         return result
+
+    def _partial_index_reason(self) -> str | None:
+        """A builder-declared partial index cannot answer as the whole index.
+
+        The same check sits at the common read boundary so search, discovery,
+        expansion, exact paragraph reads and the companion identity operations
+        cannot disagree when an index is explicitly incomplete. Older synthetic
+        fixtures without this builder field retain their existing behavior;
+        an unreadable identity is not permission to fall through to a separate
+        case-identity index or report clean treatment.
+        """
+        if not self._path.exists():
+            return None
+        try:
+            with closing(sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)) as con:
+                row = con.execute(
+                    "select value from identity where key='partial'"
+                ).fetchone()
+        except sqlite3.Error:
+            return "the authority index identity is unreadable; no read was admitted"
+        if row is not None and row[0] != "no":
+            return "the authority index declares a partial or invalid build; no read was admitted"
+        return None
+
+    def _require_complete_index(self) -> None:
+        reason = self._partial_index_reason()
+        if reason is not None:
+            raise CorpusPublicationRefused(reason)
 
     @classmethod
     def from_published_corpus(

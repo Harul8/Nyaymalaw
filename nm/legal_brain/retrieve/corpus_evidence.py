@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 from fnmatch import fnmatchcase
@@ -67,6 +68,10 @@ from nm.legal_brain.retrieve.manifest_sources import (
     title_without_year,
 )
 from nm.legal_brain.retrieve.provision_revision_sources import RevisionSelection, SelectionState
+from nm.legal_brain.retrieve.provision_search_port import (
+    ProvisionCandidate,
+    ProvisionSearchResult,
+)
 from nm.legal_brain.retrieve.resolution_sources import (
     CODE_TITLES,
     article_for,
@@ -91,6 +96,18 @@ def _section_order(number: str) -> tuple:
     return (int(digits.group(1)) if digits else 10**9, number or "")
 
 EXAMINED_CEILING = 40
+
+# A whole-manifest provision search is bounded by actual source rows, not by
+# the number of hits. Exceeding either bound is NOT_ASSESSED, never a clean miss.
+_PROVISION_SEARCH_ATOM_CEILING = 100_000
+_PROVISION_SEARCH_TEXT_CEILING = 64_000_000
+_PROVISION_SEARCH_STORE_CEILING = 500
+_PROVISION_SEARCH_INDEX = "chunks.db bare_act full provision text"
+_PROVISION_WORD = re.compile(r"[^\W_]+", re.UNICODE)
+_PROVISION_STOP = frozenset({
+    "a", "an", "and", "as", "at", "by", "for", "from", "in", "is", "of",
+    "on", "or", "the", "to", "under", "with",
+})
 
 
 def _squash(text: str) -> str:
@@ -401,6 +418,195 @@ class CorpusEvidenceAdapter:
         becomes `Article_65` there, not here.
         """
         return self._guarded(lambda: self._read_provision(act, section, as_of))
+
+    def search_provisions(
+        self, query: str, act: str | None = None, limit: int = 20
+    ) -> ProvisionSearchResult:
+        """Rank complete held sections, without selecting law or claiming support.
+
+        ``act`` is an exact manifest title, year included, only a search filter.
+        An omitted Act searches every manifest entry; rank never changes that
+        entry's status into the governing Act. Candidates have no legal text,
+        locator, date assessment or source capture. The caller must perform an
+        exact dated ``read_provision`` before making a legal proposition.
+        """
+        if type(query) is not str or not query.strip() or len(query) > 500:
+            raise ValueError("the provision query must contain 1-500 characters")
+        if act is not None and (type(act) is not str or not act.strip() or len(act) > 500):
+            raise ValueError("the Act filter must be an exact, nonblank title")
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError("provision search limit must be between 1 and 20")
+
+        requested = act.strip() if act is not None else None
+        words = tuple(dict.fromkeys(word for word in _PROVISION_WORD.findall(query.lower())
+                                    if len(word) >= 2 and word not in _PROVISION_STOP))
+        if len(words) > 24:
+            raise ValueError("the provision query has more than 24 searchable terms")
+        if not words:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why="The query has no searchable provision terms; no text search ran.")
+
+        if requested is not None:
+            entry = self._manifest.act(requested)
+            if entry is None:
+                title = title_without_year(requested).lower()
+                possibilities = tuple(e.act_name for e in self._manifest.entries
+                                      if title and title_without_year(e.act_name).lower() == title)
+                detail = (f" Exact titles under that name: {'; '.join(possibilities)}."
+                          if possibilities else "")
+                return ProvisionSearchResult(
+                    query, requested, "curated manifest", Coverage.NOT_HELD,
+                    why=f"No Act titled {requested!r} is in the manifest; a year-qualified "
+                        f"exact title is required.{detail}")
+            entries = (entry,)
+        else:
+            entries = self._manifest.entries
+        if not entries:
+            return ProvisionSearchResult(
+                query, requested, "curated manifest", Coverage.NOT_ASSESSED,
+                why="The manifest has no Act population to search.")
+        if not self.available:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why="The held bare-act database or its published generation is not readable.")
+
+        try:
+            return self._search_provision_text(query, requested, words, entries, limit)
+        except (sqlite3.Error, OSError, ValueError, TypeError, CorpusPublicationRefused) as exc:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why=f"The bounded held-provision scan could not complete: {exc}")
+
+    def _search_provision_text(self, query, requested, words, entries, limit):
+        """Scan actual manifest-matched stores, assembling every section once."""
+        store_owner = {}
+        sections = {}
+        excluded = atoms_read = text_chars = 0
+        connection = sqlite3.connect(f"file:{self._db}?mode=ro", uri=True)
+        try:
+            for entry in entries:
+                for pattern in entry.act_patterns:
+                    rows = connection.execute(
+                        "select distinct act_id from chunks "
+                        "where doc_type='bare_act' and act_id like ? limit 501",
+                        (pattern,),
+                    ).fetchall()
+                    if len(rows) > _PROVISION_SEARCH_STORE_CEILING:
+                        raise ValueError("a manifest pattern exceeded the store read bound")
+                    for (store,) in rows:
+                        if (type(store) is not str or not store or len(store) > 500
+                                or "::" in store):
+                            raise ValueError("a bare-act store identifier is malformed")
+                        old = store_owner.setdefault(store, entry)
+                        if old.act_name != entry.act_name:
+                            raise ValueError("one bare-act store matches two manifest Acts")
+                        if len(store_owner) > _PROVISION_SEARCH_STORE_CEILING:
+                            raise ValueError("the manifest scope exceeded the store read bound")
+
+            if not store_owner:
+                return ProvisionSearchResult(
+                    query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                    why="No actual bare-act store matched the manifest search scope.")
+
+            for store, entry in sorted(store_owner.items()):
+                current_section = None
+                current_atoms = []
+
+                def finish_section(section, atoms, owner, store_id):
+                    if section is None or not atoms:
+                        return
+                    # The same sole assembler used by exact provision and
+                    # document reads; a heading or sub-clause is never a whole.
+                    full_text = assemble_section(atoms)
+                    if full_text:
+                        key = (owner.act_name, section)
+                        if len(full_text) > len(sections.get(key, ("", ""))[0]):
+                            sections[key] = (full_text, store_id)
+
+                cursor = connection.execute(
+                    "select act_id, section_number, atom_type, chunk_id, blob from chunks "
+                    "where doc_type='bare_act' and act_id=? and section_number is not null "
+                    "order by section_number, pos", (store,),
+                )
+                while batch := cursor.fetchmany(512):
+                    atoms_read += len(batch)
+                    if atoms_read > _PROVISION_SEARCH_ATOM_CEILING:
+                        raise ValueError("the provision atom scan exceeded its read bound")
+                    kept, held_back = self._screen(batch, 3)
+                    excluded += held_back
+                    for _store, section, atom_type, _chunk_id, blob in kept:
+                        if (type(section) is not str or not section.strip()
+                                or len(section) > 500 or "::" in section):
+                            raise ValueError("a held provision has an invalid section key")
+                        if type(blob) is not str:
+                            raise ValueError("a held provision has no text blob")
+                        text_chars += len(blob)
+                        if text_chars > _PROVISION_SEARCH_TEXT_CEILING:
+                            raise ValueError("the provision text scan exceeded its read bound")
+                        if section != current_section:
+                            finish_section(current_section, current_atoms, entry, store)
+                            current_section, current_atoms = section, []
+                        record = json.loads(blob)
+                        if not isinstance(record, dict) or not isinstance(
+                            record.get("full_text"), str
+                        ) or not record["full_text"].strip():
+                            raise ValueError("a held provision atom has no searchable text")
+                        current_atoms.append((atom_type, record["full_text"]))
+                finish_section(current_section, current_atoms, entry, store)
+
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+        finally:
+            connection.close()
+
+        if not sections:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                searched_stores=tuple(sorted(store_owner)), excluded_atoms=excluded,
+                snapshot_id=self.published_snapshot_id,
+                why="The matched bare-act stores supplied no readable provision sections.",
+            )
+
+        query_text = " ".join(words)
+        ranked = []
+        for (act_title, section), (text, store) in sections.items():
+            text_lower = text.lower()
+            tokens = Counter(_PROVISION_WORD.findall(text_lower))
+            matched = tuple(word for word in words if word in tokens)
+            if not matched:
+                continue
+            score = (100 * len(matched)
+                     + min(40, sum(min(tokens[word], 5) for word in matched))
+                     + (50 if query_text in text_lower else 0))
+            ranked.append((-score, act_title, _section_order(section), section, store, matched))
+        ranked.sort()
+        candidates = tuple(
+            ProvisionCandidate(act_title, section, f"{store}::{section}::section",
+                               position, matched)
+            for position, (_score, act_title, _order, section, store, matched)
+            in enumerate(ranked[:limit], 1)
+        )
+        common = dict(
+            searched_stores=tuple(sorted(store_owner)), sections_scanned=len(sections),
+            excluded_atoms=excluded, candidates=candidates,
+            snapshot_id=self.published_snapshot_id,
+        )
+        if not candidates:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.SEARCHED_NO_MATCH,
+                why=(f"Searched {len(sections)} assembled sections in "
+                     f"{_PROVISION_SEARCH_INDEX}; no lexical candidate matched. "
+                     "This does not establish absence of relevant law. "
+                     f"{excluded} contaminated atom(s) were withheld."),
+                **common,
+            )
+        return ProvisionSearchResult(
+            query, requested, _PROVISION_SEARCH_INDEX, Coverage.ANSWERED,
+            why=("Ranked wording matches only; no Act applicability or dated legal "
+                 f"support was assessed. {excluded} contaminated atom(s) were withheld."),
+            **common,
+        )
 
     def _read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
         return self._read_provision_at_date(act, section, as_of).evidence

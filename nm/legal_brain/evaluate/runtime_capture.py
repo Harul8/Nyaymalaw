@@ -7,7 +7,7 @@ specialist and full-port injection deliberately remain unpopulated.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields, replace
 from datetime import date, datetime
 
 from nm.legal_brain.common.principles_port import PrinciplesSnapshot
@@ -20,10 +20,15 @@ from nm.legal_brain.evaluate.replay_capture_contracts import (
     inspect_capture,
     instant,
 )
-from nm.legal_brain.evaluate.runtime_port_tape import NativePortRecorder, validate_exchange
+from nm.legal_brain.evaluate.runtime_port_tape import (
+    CONTRACTS,
+    NativePortRecorder,
+    validate_exchange,
+)
 from nm.legal_brain.evaluate.strict_replay import PermissionTape, Tape, validate_port_exchange
 from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
 from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
+from nm.legal_brain.orchestrate.controlled_registry_composition import ControlledRegistryPorts
 from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
 from nm.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
@@ -34,6 +39,7 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     StepKind,
     digest,
 )
+from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables
 from nm.legal_brain.retrieve.evidence_port import EvidenceNeed, EvidenceResult
 from nm.legal_brain.retrieve.manifest_sources import Manifest
 from nm.legal_brain.understand.brain_context import ContextPolicy, ContextSession
@@ -255,6 +261,7 @@ class RuntimeCaptureSession:
         self.exchanges = []
         self.bound = None
         self.finished = False
+        self.registry_ports_observed = False
         self.permissions = ObservedPermissions(self)
         self.native_ports = NativePortRecorder(
             generation=owner.guard.version, require_current=self._native_current
@@ -271,6 +278,65 @@ class RuntimeCaptureSession:
         """Observe an existing typed reader; no port grants or writer are added."""
         self._native_current()
         return self.native_ports.wrap(owner, actual)
+
+    def observe_registry_ports(self, ports: ControlledRegistryPorts) -> ControlledRegistryPorts:
+        """Instrument every native reader in the one controlled registry input.
+
+        This is deliberately a closed projection rather than an ad-hoc list of
+        popular readers. A newly added composition port must be classified here
+        before a capture can continue. Snapshot/model/principles inputs are not
+        native calls and need their own capture/verification; this does not make
+        the controlled profile replay-ready.
+        """
+        self._native_current()
+        if self.registry_ports_observed:
+            raise ReplayCaptureRefused("controlled native registry ports were already projected")
+        if not isinstance(ports, ControlledRegistryPorts):
+            raise ReplayCaptureRefused("native observation needs actual controlled registry ports")
+        mapped = {
+            "evidence": "evidence",
+            "search": "search",
+            "authority_weight": "authority",
+            "matter_documents": "documents",
+            "playbooks": "playbooks",
+        }
+        snapshots = {"manifest", "model", "principles", "playbook_snapshot", "tables"}
+        if {field.name for field in fields(ControlledRegistryPorts)} != set(mapped) | snapshots:
+            raise ReplayCaptureRefused("controlled registry gained an unclassified capture port")
+        table_ports = {
+            "elements": "elements",
+            "institution": "institution",
+            "interim": "interim",
+            "procedural": "procedural",
+            "filing": "filing",
+            "governing": "governing",
+        }
+        if {field.name for field in fields(PracticeTables)} != set(table_ports) | {"version"}:
+            raise ReplayCaptureRefused("practice tables gained an unclassified capture port")
+        if set(mapped.values()) | set(table_ports.values()) != set(CONTRACTS):
+            raise ReplayCaptureRefused("native port contracts gained an unclassified owner")
+        tables = replace(
+            ports.tables,
+            **{
+                name: self.native_port(owner, getattr(ports.tables, name))
+                if getattr(ports.tables, name) is not None
+                else None
+                for name, owner in table_ports.items()
+            },
+        )
+        observed = replace(
+            ports,
+            tables=tables,
+            **{
+                name: self.native_port(owner, getattr(ports, name))
+                if getattr(ports, name) is not None
+                else None
+                for name, owner in mapped.items()
+            },
+        )
+        self._native_current()
+        self.registry_ports_observed = True
+        return observed
 
     def bind(
         self,

@@ -19,12 +19,86 @@ from nm.legal_brain.retrieve.manifest_sources import Manifest
 from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch, _fts_query
 from nm.legal_brain.retrieve.search_port import ResolutionState
 from nm.shared.model_port import Prompt
+from tests.synthetic_index import build as synthetic_indexes
 from tests.test_bounded_judgment_investigation import offer, run
 from tests.test_corpus_conformance import _withdraw
 from tests.test_immutable_corpus_publication import _runtime_publication
 from tests.test_turn_contract import finding
 
 pytestmark = pytest.mark.class_a
+
+
+@pytest.mark.parametrize("flag", ["yes", "invalid"])
+def test_builder_declared_partial_index_refuses_every_authority_reader(tmp_path, flag):
+    """An explicitly incomplete index cannot answer through a different door."""
+    authority, identity = synthetic_indexes(tmp_path)
+    with sqlite3.connect(authority) as con:
+        con.execute("update identity set value=? where key='partial'", (flag,))
+    search = AuthorityIndexSearch(authority, identity)
+
+    assert not search.available and search.identity_version() == ""
+    scanned = search.search("marker")
+    discovered = search.discover("marker")
+    expanded = search.expand("SYN_1990_MARKER")
+    paragraph = search.passage("SYN_1990_MARKER_P002_C01")
+    citation = search.resolve("1990 SYN 1")
+    case = search.case_identity("SYN_1990_MARKER")
+    treated = search.treatment("SYN_2001_OVERRULED")
+
+    for result in (scanned, discovered, expanded):
+        assert result.coverage is Coverage.NOT_ASSESSED
+        assert "partial" in result.why
+    for result in (paragraph, citation, case):
+        assert result.state is ResolutionState.INDEX_UNAVAILABLE
+        assert "partial" in result.why
+    assert treated.state is TreatmentState.NOT_CHECKED
+    assert "partial" in treated.scope
+
+
+def test_complete_builder_index_still_answers_every_authority_reader(tmp_path):
+    """The partial flag rejects a damaged index without disabling a complete one."""
+    authority, identity = synthetic_indexes(tmp_path)
+    search = AuthorityIndexSearch(authority, identity)
+
+    assert search.available and search.identity_version() == "synthetic-2026-09-12"
+    assert search.search("marker").coverage is Coverage.ANSWERED
+    assert search.discover("marker").coverage is Coverage.ANSWERED
+    assert search.expand("SYN_1990_MARKER").coverage is Coverage.ANSWERED
+    assert search.passage("SYN_1990_MARKER_P002_C01").state is ResolutionState.RESOLVED
+    assert search.resolve("1990 SYN 1").state is ResolutionState.RESOLVED
+    assert search.case_identity("SYN_1990_MARKER").state is ResolutionState.RESOLVED
+    assert search.treatment("SYN_2001_OVERRULED").state is TreatmentState.NEGATIVE
+
+
+def test_unreadable_authority_identity_cannot_be_bypassed_by_case_identity(tmp_path):
+    """The companion identity store must not answer after its authority gate breaks."""
+    authority, identity = synthetic_indexes(tmp_path)
+    with sqlite3.connect(authority) as con:
+        con.execute("drop table identity")
+    search = AuthorityIndexSearch(authority, identity)
+
+    assert not search.available
+    assert search.identity_version() == ""
+    assert search.search("marker").coverage is Coverage.NOT_ASSESSED
+    assert search.case_identity("SYN_1990_MARKER").state is ResolutionState.INDEX_UNAVAILABLE
+    assert search.treatment("SYN_2001_OVERRULED").state is TreatmentState.NOT_CHECKED
+
+
+def test_index_becoming_partial_during_a_read_cannot_emit_its_result(tmp_path, monkeypatch):
+    authority, identity = synthetic_indexes(tmp_path)
+    search = AuthorityIndexSearch(authority, identity)
+    original = search._search
+
+    def made_partial(*args, **kwargs):
+        result = original(*args, **kwargs)
+        with sqlite3.connect(authority) as con:
+            con.execute("update identity set value='yes' where key='partial'")
+        return result
+
+    monkeypatch.setattr(search, "_search", made_partial)
+    result = search.search("marker")
+    assert result.coverage is Coverage.NOT_ASSESSED
+    assert not result.hits and "partial" in result.why
 
 
 def index(tmp_path, rows):

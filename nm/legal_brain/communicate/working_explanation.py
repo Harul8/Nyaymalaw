@@ -113,6 +113,9 @@ class WorkingExplanationResult:
 
     @property
     def private_ready(self):
+        # Scope here is the independent coverage of these exact entries. It is
+        # not a declaration that every part of the advocate's request, or the
+        # matter, is complete. Questions can have checked working rationale.
         return (
             bool(self.entries)
             and self.wording_checked
@@ -460,9 +463,10 @@ class WorkingExplanationService:
         current = self._current(outcome)
         matter, working, proof, completeness, _selected, entries = current
         budget = shared_review_budget(outcome, (), matter, self.reader.log, budget)
-        if not completeness.complete or not entries:
+        scope_checked = proof is not None and proof.assessed and bool(entries)
+        if not scope_checked:
             return WorkingExplanationResult(
-                working.inventory.identity, (), (), (), False, completeness.complete, budget, 0
+                working.inventory.identity, (), (), (), False, False, budget, 0
             )
         requests = self._requests(outcome, matter, working, proof, entries)
         steps = 0
@@ -491,7 +495,7 @@ class WorkingExplanationService:
             outputs,
             boundaries,
             wording,
-            completeness.complete,
+            scope_checked,
             budget,
             steps,
         )
@@ -501,9 +505,10 @@ class WorkingExplanationService:
         current = self._current(outcome)
         matter, working, proof, completeness, _selected, entries = current
         budget = shared_review_budget(outcome, (), matter, self.reader.log, None)
-        if not completeness.complete or not entries:
+        scope_checked = proof is not None and proof.assessed and bool(entries)
+        if not scope_checked:
             return WorkingExplanationResult(
-                working.inventory.identity, (), (), (), False, completeness.complete, budget, 0
+                working.inventory.identity, (), (), (), False, False, budget, 0
             )
         requests = self._requests(outcome, matter, working, proof, entries)
         outputs, boundaries, wording = self._receipts(outcome, current, requests)
@@ -513,7 +518,7 @@ class WorkingExplanationService:
             outputs,
             boundaries,
             wording,
-            completeness.complete,
+            scope_checked,
             budget,
             0,
         )

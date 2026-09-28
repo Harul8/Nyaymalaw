@@ -82,6 +82,47 @@ def test_actual_owned_verification_uses_a_bounded_read_not_an_extra_author_call(
     assert inner.structured.call_args.kwargs == {"max_tokens": 2048}
 
 
+def test_current_composed_independent_reads_fit_the_verifier_only_capability():
+    from nm.legal_brain.communicate.working_explanation import WORKING_RATIONALE_SCHEMA
+    from nm.legal_brain.verify.consistency import CONSISTENCY_SCHEMA
+    from nm.legal_brain.verify.duty import DUTY_SCHEMA
+    from nm.legal_brain.verify.working_scope import (
+        REQUEST_DEMAND_SCHEMA,
+        WORKING_SCOPE_SCHEMA,
+    )
+
+    inner = Mock()
+    model = VerifierOnly(inner)
+    for schema in (
+        REQUEST_DEMAND_SCHEMA,
+        WORKING_SCOPE_SCHEMA,
+        WORKING_RATIONALE_SCHEMA,
+        CONSISTENCY_SCHEMA,
+        DUTY_SCHEMA,
+    ):
+        model.structured(Prompt("Owned independent read"), schema, Tier.JUDGE,
+                         max_tokens=4096)
+    assert inner.structured.call_count == 5
+    assert all(call.kwargs == {"max_tokens": 4096} for call in inner.structured.call_args_list)
+
+
+def test_the_larger_scope_cap_does_not_expand_claim_review_or_admit_unowned_schemas():
+    from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
+
+    inner = Mock()
+    model = VerifierOnly(inner)
+    with pytest.raises(ModelPermissionRefused):
+        model.structured(Prompt("Overlong claim review"), VERIFICATION_SCHEMA, Tier.JUDGE,
+                         max_tokens=2049)
+    with pytest.raises(ModelPermissionRefused):
+        model.structured(Prompt("Overlong scope review"), WORKING_SCOPE_SCHEMA, Tier.JUDGE,
+                         max_tokens=4097)
+    with pytest.raises(ModelPermissionRefused):
+        model.structured(Prompt("Unowned review"), {"type": "object"}, Tier.JUDGE,
+                         max_tokens=4096)
+    assert not inner.mock_calls
+
+
 def _permitted():
     directory = Mock()
     directory.model_permission.return_value = ModelPermission(

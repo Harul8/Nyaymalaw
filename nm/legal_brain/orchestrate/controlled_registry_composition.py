@@ -51,6 +51,7 @@ from nm.legal_brain.retrieve.evidence_port import EvidencePort
 from nm.legal_brain.retrieve.manifest_sources import Manifest
 from nm.legal_brain.retrieve.practice_playbooks import playbook_tools
 from nm.legal_brain.retrieve.practice_playbooks_port import PlaybooksSnapshot, PracticePlaybooksPort
+from nm.legal_brain.retrieve.provision_search_port import ProvisionSearchPort
 from nm.legal_brain.retrieve.search_port import CorpusSearchPort
 from nm.open_matter.matter_documents_port import MatterDocumentsPort
 from nm.shared.authority_contracts import Act
@@ -200,6 +201,8 @@ def assemble_controlled_registry(
         ports.evidence,
         source_version=source_version,
         search=ports.search,
+        provision_search=(ports.evidence if isinstance(ports.evidence, ProvisionSearchPort)
+                          else None),
         tables=ports.tables,
         authority_weight=ports.authority_weight,
         matter_documents=ports.matter_documents,

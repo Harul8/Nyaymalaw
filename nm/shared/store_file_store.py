@@ -22,6 +22,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from contextlib import contextmanager
@@ -52,6 +53,39 @@ class EncryptionNotConfigured(RuntimeError):
     `cryptography` was absent -- silently, on a deployment that would then
     serve privileged client material under it (BK-16).
     """
+
+
+_STORAGE_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
+
+
+def _storage_component(value: str, *, kind: str) -> str:
+    """Keep every caller-supplied identifier inside its one storage name.
+
+    Matter and turn IDs are opaque identifiers, never paths or glob patterns.
+    The same rule applies to reads, writes, locks and transcript discovery so
+    a new caller cannot accidentally reopen a traversal through another door.
+    """
+    if not isinstance(value, str) or _STORAGE_COMPONENT.fullmatch(value) is None:
+        raise ValueError(f"{kind} must be an opaque storage identifier")
+    return value
+
+
+def _transcript_component(value: str) -> str:
+    """Case-insensitive, reversible name for an opaque transcript component."""
+    return base64.b32encode(value.encode("ascii")).decode("ascii").rstrip("=")
+
+
+def _read_transcript_component(value: str) -> str:
+    if not re.fullmatch(r"[A-Z2-7]{2,208}", value):
+        raise ValueError("the encoded transcript identifier is invalid")
+    try:
+        decoded = base64.b32decode(value + "=" * (-len(value) % 8)).decode("ascii")
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError("the encoded transcript identifier is unreadable") from exc
+    _storage_component(decoded, kind="turn ID")
+    if _transcript_component(decoded) != value:
+        raise ValueError("the encoded transcript identifier is not canonical")
+    return decoded
 
 
 class _Cipher:
@@ -239,6 +273,12 @@ _LOCK_POLL = 0.02
 _SEP = "__"
 
 
+def _legacy_split_positions(stem: str) -> tuple[int, ...]:
+    """Every possible delimiter, including overlaps in runs of underscores."""
+    return tuple(index for index in range(len(stem) - 1)
+                 if stem[index:index + len(_SEP)] == _SEP)
+
+
 def _transcript_payload(blob: bytes) -> dict:
     """Read a historical archive safely without inventing release evidence.
 
@@ -350,14 +390,17 @@ class FileMatterStore:
         return self._sealer.open(str(matter_id), blob)
 
     def _path(self, matter_id: MatterId) -> Path:
-        return self._matters / f"{matter_id}.nm"
+        return self._matters / f"{_storage_component(matter_id, kind='matter ID')}.nm"
 
     def load(self, matter_id: MatterId) -> Matter | None:
         p = self._path(matter_id)
         if not p.exists():
             return None
-        return _matter(json.loads(
+        matter = _matter(json.loads(
             self._open(str(matter_id), p.read_bytes()).decode("utf8")))
+        if matter.id != matter_id:
+            raise ValueError("the saved matter identity conflicts with its storage name")
+        return matter
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Write the matter, or refuse because the file moved underneath.
@@ -429,7 +472,7 @@ class FileMatterStore:
         else is writing this matter` -- a new exception type would be a
         second name for one condition.
         """
-        lock = self._matters / f"{matter_id}.lock"
+        lock = self._matters / f"{_storage_component(matter_id, kind='matter ID')}.lock"
         deadline = time.monotonic() + _LOCK_TIMEOUT
         fd = None
         while fd is None:
@@ -461,8 +504,11 @@ class FileMatterStore:
         out, unreadable = [], []
         for p in sorted(self._matters.glob("*.nm")):
             try:
+                _storage_component(p.stem, kind="matter ID")
                 m = _matter(json.loads(
                     self._open(p.stem, p.read_bytes()).decode("utf8")))
+                if m.id != p.stem:
+                    raise ValueError("the saved matter identity conflicts with its storage name")
             except Exception:  # noqa: BLE001 -- named, never swallowed
                 # One unreadable matter must not take the whole list down, and
                 # it must not VANISH either. It used to `continue` here with a
@@ -486,7 +532,8 @@ class FileMatterStore:
         reason -- that makes the line true; the full record is `as_served`, and
         it goes to the advocate over an authenticated response and never here.
         """
-        path = self._metrics / f"{metrics['turn_id']}.json"
+        turn_id = _storage_component(metrics['turn_id'], kind="turn ID")
+        path = self._metrics / f"{turn_id}.json"
         path.write_text(json.dumps(metrics, indent=2), encoding="utf8")
 
     # ------------------------------------------------------- transcripts ---
@@ -523,9 +570,20 @@ class FileMatterStore:
 
         Attribution must not depend on being able to read the payload.
         """
-        self._transcripts.mkdir(parents=True, exist_ok=True)
         matter = str(transcript.get("matter_id") or "unattributed")
-        path = self._transcripts / f"{matter}{_SEP}{transcript['turn_id']}.nm"
+        matter = _storage_component(matter, kind="matter ID")
+        turn_id = _storage_component(transcript['turn_id'], kind="turn ID")
+        self._transcripts.mkdir(parents=True, exist_ok=True)
+        if (_SEP in matter or _SEP in turn_id
+                or matter.endswith("_") or turn_id.startswith("_")):
+            # A flat `matter__turn` name has more than one possible split.
+            # Keep simple historical names readable, but write ambiguous new
+            # pairs under two canonical, individually bounded components.
+            path = (self._transcripts / "v2" / _transcript_component(matter)
+                    / f"{_transcript_component(turn_id)}.nm")
+            path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            path = self._transcripts / f"{matter}{_SEP}{turn_id}.nm"
         blob = self._seal(
             matter,
             json.dumps(transcript, indent=2, default=str).encode("utf8"))
@@ -540,22 +598,46 @@ class FileMatterStore:
         drops the turn it could not decrypt is reviewing a different
         conversation from the one that ran.
         """
+        matter_id = _storage_component(matter_id, kind="matter ID")
         if not self._transcripts.exists():
             return ()
         out: list[dict] = []
+
+        encoded = self._transcripts / "v2" / _transcript_component(matter_id)
+        if encoded.exists():
+            for p in sorted(encoded.glob("*.nm")):
+                owned_turn = p.stem
+                try:
+                    owned_turn = _read_transcript_component(p.stem)
+                    document = _transcript_payload(self._open(matter_id, p.read_bytes()))
+                    if document["matter_id"] != matter_id or document["turn_id"] != owned_turn:
+                        raise ValueError("the transcript identity conflicts with its archive name")
+                    out.append(document)
+                except Exception as exc:  # noqa: BLE001 -- reported, never dropped
+                    out.append({"turn_id": owned_turn, "matter_id": matter_id,
+                                "unreadable": True, "why": f"{type(exc).__name__}: {exc}"})
 
         # THE FILES THIS MATTER OWNS, by name. An unreadable one among these
         # is genuinely this matter's and is reported as missing FROM THIS
         # RECORD; an unreadable file belonging to another matter is not.
         for p in sorted(self._transcripts.glob(f"{matter_id}{_SEP}*.nm")):
+            if len(_legacy_split_positions(p.stem)) > 1:
+                # An old name with several separators cannot attribute a
+                # corrupt blob. A readable payload can resolve the split;
+                # otherwise `unattributable()` counts it once, never on both
+                # possible matters' histories.
+                document = self._legacy_ambiguous_transcript(p)
+                if document is not None and document["matter_id"] == matter_id:
+                    out.append(document)
+                continue
+            owned_turn = p.stem[len(matter_id) + len(_SEP):]
             try:
                 document = _transcript_payload(self._open(str(matter_id), p.read_bytes()))
-                owned_turn = p.name.split(_SEP, 1)[1][:-3]
                 if document["matter_id"] != matter_id or document["turn_id"] != owned_turn:
                     raise ValueError("the transcript identity conflicts with its archive name")
                 out.append(document)
             except Exception as exc:  # noqa: BLE001 -- reported, never dropped
-                out.append({"turn_id": p.name.split(_SEP, 1)[1][:-3],
+                out.append({"turn_id": owned_turn,
                             "matter_id": matter_id, "unreadable": True,
                             "why": f"{type(exc).__name__}: {exc}"})
 
@@ -575,6 +657,29 @@ class FileMatterStore:
 
         return tuple(sorted(out, key=lambda d: d.get("at", "")))
 
+    def _legacy_ambiguous_transcript(self, path: Path) -> dict | None:
+        """Resolve an old multi-separator name only from a matching payload.
+
+        No candidate receives an unreadable row: without the payload there is
+        no sound way to say which of its possible matter prefixes owned it.
+        """
+        try:
+            blob = path.read_bytes()
+        except OSError:
+            return None
+        stem = path.stem
+        for position in _legacy_split_positions(stem):
+            matter, turn = stem[:position], stem[position + len(_SEP):]
+            if not turn or _STORAGE_COMPONENT.fullmatch(matter) is None:
+                continue
+            try:
+                document = _transcript_payload(self._open(matter, blob))
+            except Exception:  # noqa: BLE001 -- a possible split is not an attribution
+                continue
+            if document["matter_id"] == matter and document["turn_id"] == turn:
+                return document
+        return None
+
     def unattributable(self) -> tuple[str, ...]:
         """Transcripts on disk that belong to NO KNOWN MATTER.
 
@@ -590,6 +695,9 @@ class FileMatterStore:
         lost: list[str] = []
         for p in sorted(self._transcripts.glob("*.nm")):
             if _SEP in p.name:
+                if (len(_legacy_split_positions(p.stem)) > 1
+                        and self._legacy_ambiguous_transcript(p) is None):
+                    lost.append(p.stem)
                 continue
             try:
                 _transcript_payload(self._cipher.decrypt(p.read_bytes()))

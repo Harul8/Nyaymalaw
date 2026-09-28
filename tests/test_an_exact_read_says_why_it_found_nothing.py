@@ -40,6 +40,13 @@ def _index(tmp_path):
     with sqlite3.connect(path) as con:
         con.execute("create table paras(chunk_id text, case_id text, case_name text, "
                     "court text, year text, para_type text, text text)")
+        con.execute("create table identity(key text primary key, value text)")
+        con.executemany("insert into identity values (?, ?)", [
+            ("built_at", "2026-09-26"), ("source", "test source"),
+            ("corpus_version", "synthetic-exact-read"),
+            ("indexed_paragraphs", "1"), ("source_paragraphs", "1"),
+            ("partial", "no"),
+        ])
         con.execute("insert into paras values ('p1', 'c1', 'A v B', 'Supreme Court of India', "
                     "'2020', 'ratio', 'The court held the notice was valid.')")
     return path

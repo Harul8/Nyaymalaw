@@ -195,8 +195,8 @@ def test_matter_list_refuses_a_source_change_between_rows(client, monkeypatch, t
     def change_after_first_row(matter, request, **kwargs):
         projections, source_current, require_current = checked(matter, request, **kwargs)
 
-        def checked_and_changed():
-            require_current()
+        def checked_and_changed(*, check_generation=True):
+            require_current(check_generation=check_generation)
             completed.append(matter.id)
             if len(completed) == 1:
                 manifest.write_text("coverage: changed-between-rows", encoding="utf8")
@@ -206,7 +206,9 @@ def test_matter_list_refuses_a_source_change_between_rows(client, monkeypatch, t
     monkeypatch.setattr(api, "_checked_checklists", change_after_first_row)
     response = client.get("/api/matters")
     assert response.status_code == 409
-    assert len(completed) == 1
+    # Per-file identity checks continue after the change, and the list's
+    # one late generation check refuses the whole response before release.
+    assert len(completed) == 2
     assert "matters" not in response.json()
 
 

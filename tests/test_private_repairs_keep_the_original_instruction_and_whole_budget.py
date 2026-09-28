@@ -5,7 +5,6 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import AssessmentService
 from nm.legal_brain.evaluate.brain_evaluation import (
     ANSWER_REPAIR_OWNERS,
     CheckFeedback,
@@ -14,8 +13,9 @@ from nm.legal_brain.evaluate.brain_evaluation import (
     completed_child_within_grant,
     dispatch_steps,
 )
-from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
 from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
+from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.legal_brain.verify.brain_assessment import AssessmentService
 from nm.legal_brain.verify.output_checks import (
     BoundarySubjects,
     OutputSubjects,
@@ -112,6 +112,63 @@ def test_missing_owner_checks_do_not_cause_futile_paid_repairs_or_a_client_relea
     assert repeated.budget.spend.tokens == checked.budget.spend.tokens
     assert repeated.budget.spend.children == checked.budget.spend.children
     assert repeated.budget.spend.elapsed_ms >= repeated.attempts[0].budget.spend.elapsed_ms
+    assert len(judge.prompts) == 1
+
+
+def test_exact_evaluation_retry_keeps_a_larger_entering_whole_task_spend(tmp_path):
+    store, brain, _, judge, _ = _ready(tmp_path)
+    checked = _run(brain)
+    entering = replace(checked.budget, spend=replace(checked.budget.spend,
+        tokens=checked.budget.spend.tokens + 37,
+        cost_usd=checked.budget.spend.cost_usd + 0.01))
+
+    repeated = brain.evaluate(matter_id="mat_loop", turn_id="package-turn",
+        message="Assess the notice requirement.",
+        limits=LoopLimits(entering, 10, 500))
+
+    assert repeated.stop == checked.stop
+    assert repeated.assessments == checked.assessments
+    assert repeated.budget.spend.tokens == entering.spend.tokens
+    assert repeated.budget.spend.cost_usd == pytest.approx(entering.spend.cost_usd)
+    assert repeated.budget.spend.children == checked.budget.spend.children
+    assert len(judge.prompts) == 1
+    assert not repeated.client_ready and not store.load("mat_loop").turn_receipts
+
+
+def test_exact_retry_does_not_count_saved_child_time_twice(tmp_path):
+    """A sealed reviewer interval can overlap this retry's work, not follow it."""
+    _, brain, _, judge, _ = _ready(tmp_path)
+    clock = [0.0]
+    original_judge = judge.structured
+
+    def first_review(*args, **kwargs):
+        result = original_judge(*args, **kwargs)
+        clock[0] = 40.0
+        return result
+
+    judge.structured = first_review
+    evaluator = EvaluationService(brain, brain.assessment, monotonic=lambda: clock[0])
+    limits = LoopLimits(Budget(max_ms=60000, max_tokens=100000,
+                               max_cost_usd=1), 10, 500)
+    first = evaluator.run(matter_id="mat_loop", turn_id="package-turn",
+                          message="Assess the notice requirement.", limits=limits)
+    assert first.budget.spend.elapsed_ms == 40000
+    assert len(judge.prompts) == 1
+
+    clock[0] = 0.0
+    actual_run = brain.run
+
+    def replay_with_elapsed_time(*args, **kwargs):
+        result = actual_run(*args, **kwargs)
+        clock[0] = 40.0
+        return result
+
+    brain.run = replay_with_elapsed_time
+    repeated = evaluator.run(matter_id="mat_loop", turn_id="package-turn",
+                             message="Assess the notice requirement.", limits=limits)
+
+    assert repeated.stop == first.stop
+    assert repeated.budget.spend.elapsed_ms == 40000
     assert len(judge.prompts) == 1
 
 

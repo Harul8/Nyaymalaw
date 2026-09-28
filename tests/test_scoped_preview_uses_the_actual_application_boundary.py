@@ -1,15 +1,23 @@
-"""Approved private views never turn the metadata POST into client advice."""
+"""Approved private views never turn the metadata POST into client advice.
+
+The served path also makes an independent working-scope read. This transport
+test leaves that substantive assessment unresolved rather than scripting a
+false claim that the advocate's legal request has been completed.
+"""
+import json
 from dataclasses import replace
 from datetime import timedelta
 
 import pytest
 
 from nm.arrive.advocate_contracts import utcnow
+from nm.legal_brain.orchestrate.loop_contracts import LoopMode
 from nm.legal_brain.verify.brain_release import ReviewService
 from nm.legal_brain.verify.interaction_review import COMMUNICATION_REVIEW_SCHEMA
-from nm.legal_brain.orchestrate.loop_contracts import LoopMode
 from nm.legal_brain.verify.verifier import IndependentVerifier
-from nm.shared.model_port import Tier
+from nm.legal_brain.verify.working_scope import CHECK_NAME, WORKING_SCOPE_SCHEMA
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_interaction_words_require_an_independent_exact_review import InteractionJudge
 from tests.test_private_brain_transport_cannot_approve_or_release_itself import (
@@ -18,8 +26,31 @@ from tests.test_private_brain_transport_cannot_approve_or_release_itself import 
     path,
     request,
 )
+from tests.test_working_record_is_source_owned_and_independently_scoped import _scope_answer
 
 pytestmark = pytest.mark.class_a
+
+
+class PreviewJudge(InteractionJudge):
+    """Assess communication, but do not self-certify unfinished legal work."""
+
+    def __init__(self, mutation):
+        super().__init__(mutation)
+        self.scope_prompts = []
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if schema != WORKING_SCOPE_SCHEMA:
+            return super().structured(prompt, schema, tier, **kwargs)
+        assert tier is Tier.JUDGE
+        self.scope_prompts.append(prompt)
+        data = _scope_answer(json.loads(prompt.user))
+        data["population_assessed"] = None
+        data["comprehensive"]["assessed"] = None
+        for row in data["judgments"]:
+            row["needed"] = row["covered"] = None
+            row["reason"] = "No substantive working-scope judgment in this transport test"
+        return ModelResult(None, data, tier, self.provider, self.resolved_model(tier),
+                           Usage(40, 40, 0.02), 0, completion=Completion.COMPLETE)
 
 
 def approved(client, mutation=lambda raw: raw):
@@ -27,7 +58,7 @@ def approved(client, mutation=lambda raw: raw):
     judges = []
 
     def reviewer(application, scope, current):
-        judge = InteractionJudge(mutation)
+        judge = PreviewJudge(mutation)
         judges.append(judge)
         return ReviewService(store=application.store,
             log=MatterLoopLog(application.store, advocate_id=scope.advocate_id),
@@ -61,11 +92,18 @@ def test_actual_post_stays_private_but_separate_checked_read_reuses_exact_saved_
     assert "not client advice" in body["marker"]
     assert shown.headers["cache-control"] == "no-store"
     saved = app.store.load(matter.id)
-    assert len(saved.loop_records) == 2 and not saved.turn_receipts and not saved.asked
-    assert author.tool_call.call_count == 1 and sum(len(j.prompts) for j in judges) == 1
+    assert len(saved.loop_records) == 3 and not saved.turn_receipts and not saved.asked
+    scope_record = next(row for row in saved.loop_records
+                        if row.identity.turn_id.endswith(f":check:{CHECK_NAME}"))
+    assert scope_record.terminal
+    assert scope_record.events[-1].payload["data"]["population_assessed"] is None
+    assert author.tool_call.call_count == 1
+    assert sum(len(j.prompts) for j in judges) == 1
+    assert sum(len(j.scope_prompts) for j in judges) == 1
     assert client.get(preview(matter)).json() == body
     assert app.store.load(matter.id) == saved
     assert sum(len(j.prompts) for j in judges) == 1
+    assert sum(len(j.scope_prompts) for j in judges) == 1
 
 
 @pytest.mark.parametrize("state", ["absent", "expired", "client_mode", "revoked", "foreign"])
@@ -119,7 +157,9 @@ def test_actual_application_records_only_the_exact_checked_private_display(clien
     assert not saved.turn_receipts
     assert client.post(f"{preview(matter)}/seen", json={}).json() == seen.json()
     assert app.store.load(matter.id) == saved
-    assert author.tool_call.call_count == 1 and sum(len(j.prompts) for j in judges) == 1
+    assert author.tool_call.call_count == 1
+    assert sum(len(j.prompts) for j in judges) == 1
+    assert sum(len(j.scope_prompts) for j in judges) == 1
 
 
 @pytest.mark.parametrize("body", [{"text": PRIVATE}, {"approved": True}, {"released": True}])
