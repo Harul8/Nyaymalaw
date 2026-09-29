@@ -1488,6 +1488,24 @@ function answeredAt(answer) {
   return line;
 }
 
+// A DISPUTE'S NAME IN BOLD (owner, 29 September 2026: the reply goes dispute by
+// dispute). The one mark a composed reply may carry is **name**; it becomes a
+// <strong> through the DOM, never through HTML, so no other text is ever read
+// as markup. An unpaired mark is left as written.
+function appendWithBold(into, text) {
+  const parts = String(text || '').split(/\*\*([^*\n]+?)\*\*/);
+  parts.forEach((part, i) => {
+    if (!part) return;
+    if (i % 2) {
+      const strong = document.createElement('strong');
+      strong.textContent = part;
+      into.appendChild(strong);
+    } else {
+      into.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
 // A STEP'S DATE LINE, in one place: the reply shows it and the copy carries it.
 function nextStepLine(el) {
   if (!el || !(el.by_when || el.no_deadline_reason)) return '';
@@ -1500,7 +1518,8 @@ function nextStepLine(el) {
 // naming it as NM's reply and when it was given, so a pasted copy keeps its
 // date and is never mistaken for a later view (LB-83-AC4).
 function replyText(answer, shown) {
-  const blocks = shown.map(({ text, step, refs }) => [text, nextStepLine(step),
+  const blocks = shown.map(({ text, step, refs }) => [
+    String(text || '').replace(/\*\*([^*\n]+?)\*\*/g, '$1'), nextStepLine(step),
     refs && refs.length ? `References: ${refs.join(' · ')}` : ''].filter(Boolean).join('\n'));
   const when = Date.parse(answer?.at || '');
   blocks.push(Number.isNaN(when) ? '— NM reply' : `— NM reply, ${new Date(when).toLocaleString(
@@ -2021,7 +2040,8 @@ function renderTurn(entry) {
     const d = document.createElement('div');
     d.className = 'el reply';
     const body = document.createElement('p');
-    body.className = 'body'; body.textContent = paragraph.text;
+    body.className = 'body';
+    appendWithBold(body, paragraph.text);
     d.appendChild(body);
     const { carried, linked } = paragraphLinks(paragraph);
     if (nextStepLine(carried)) {

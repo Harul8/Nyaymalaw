@@ -235,15 +235,18 @@ def _composer(write):
 
 
 def _judge(user: str) -> str:
-    """Confirms an item only where the reply holds its words -- a strict reader."""
-    reply = json.loads(_between(user, "THE REPLY:\n", "\n\nTHE ITEMS IT HAD TO CONVEY:\n"))
+    """Confirms an item only where the reply holds its words -- a strict reader --
+    and names nothing as unsupported, because this reply only retells the work."""
+    reply = json.loads(_between(
+        user, "THE REPLY:\n",
+        "\n\nTHE PASSAGES AND CHECKED WORK THE REPLY MAY STATE LAW FROM:\n"))
     items = json.loads(_between(user, "THE ITEMS IT HAD TO CONVEY:\n"))
     out = []
     for item in items:
         where = next((p["paragraph"] for p in reply if item["words"] in p["text"]), -1)
         out.append({"id": item["id"], "conveyed": where >= 0, "paragraph": where,
                     "sentence": item["words"] if where >= 0 else ""})
-    return json.dumps({"items": out})
+    return json.dumps({"items": out, "unsupported": []})
 
 
 def _told(work):
@@ -309,7 +312,7 @@ def test_a_reply_that_drops_what_matters_is_qualified_not_trimmed(tmp_path):
         structured_responses={
             "compose": {"paragraphs": [{"text": "The position is broadly favourable.",
                                         "passage": "", "carries": ""}]},
-            "compose_check": {"items": []}})
+            "compose_check": {"items": [], "unsupported": []}})
     engine, _ = build(tmp_path, model=model)
     out = engine.run(TurnInput(advocate_id="adv", message=BRIEF))
     answer = out.answer
@@ -320,23 +323,27 @@ def test_a_reply_that_drops_what_matters_is_qualified_not_trimmed(tmp_path):
         "checked words and in the order the work holds them")
 
 
-def test_a_blocked_turn_composes_without_deriving_anything(tmp_path):
+def test_a_stopped_turn_is_not_retold_and_derives_nothing(tmp_path):
+    """A STOPPED TURN IS NOT RETOLD (owner, 29 September 2026). Measured on the
+    Farah Begum matter: a turn stopped because the disputes could not be
+    separated was retold as "I have corrected and confirmed the four separate
+    disputes", with limitation periods nobody retrieved. A blocked answer is its
+    blocker and its limits, shown as they are, and nothing is spent behind it."""
     model = ScriptedModelAdapter(
         _model_config(),
         responses={"__default__": "File the summary possession suit within six months."},
         structured_responses={
             "compose": {"paragraphs": [{"text": "There is a dishonoured cheque on the file.",
                                         "passage": "", "carries": ""}]},
-            "compose_check": {"items": []}})
+            "compose_check": {"items": [], "unsupported": []}})
     engine, _ = build(tmp_path, model=model)
     out = engine.run(TurnInput(advocate_id="adv", message="a cheque was dishonoured on 3 March"))
     assert out.answer.blocked
     assert len(out.answer.elements) > 1, "this control needs more than the blocker"
-    assert out.answer.composed[0] == ReplyParagraph(out.answer.elements[0].text, carries=0), (
-        "a blocked reply did not lead with its blocker")
-    assert out.metrics.presentation_reads == 2
-    assert (out.metrics.llm_calls - out.metrics.settling_reads
-            - out.metrics.presentation_reads) == 0, "something was derived behind the gate"
+    assert out.answer.composed == (), "a stopped turn was retold"
+    assert out.metrics.presentation_reads == 0
+    assert (out.metrics.llm_calls - out.metrics.settling_reads) == 0, (
+        "something was derived or composed behind the gate")
 
 
 def test_a_question_of_law_is_told_not_merely_quoted(tmp_path):
@@ -349,7 +356,7 @@ def test_a_question_of_law_is_told_not_merely_quoted(tmp_path):
         structured_responses={
             "compose": {"paragraphs": [{"text": told, "passage": "E0", "carries": ""}]},
             "compose_check": {"items": [{"id": "E0", "conveyed": True, "paragraph": 0,
-                                         "sentence": told}]}})
+                                         "sentence": told}], "unsupported": []}})
     engine, _ = build(tmp_path, model=model)
     out = engine.run(TurnInput(
         advocate_id="adv",

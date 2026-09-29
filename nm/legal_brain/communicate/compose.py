@@ -69,7 +69,16 @@ COMPOSE_CHECK_SYSTEM = (
     "or strengthened, and every date it states kept -- and copy, exactly as written "
     "in the reply, the one sentence that conveys it, with the number of the "
     "paragraph it is in. If no sentence conveys it, say so and leave the sentence "
-    "empty. Judge meaning, not wording: a faithful rephrasing conveys the item.")
+    "empty. Judge meaning, not wording: a faithful rephrasing conveys the item.\n"
+    "Then list, under `unsupported`, every sentence of the reply that states LAW -- a "
+    "rule, a period, a deadline, a requirement, a right, a defence, a remedy, or what a "
+    "provision or judgment says or holds -- that is not stated in the passages or the "
+    "checked work given to you; and every sentence that says something was done, "
+    "recorded, corrected or changed on the file that the checked work does not report. "
+    "Copy each such sentence exactly as written and say briefly why. A faithful "
+    "restatement of a passage or of the checked work is supported; the advocate's own "
+    "account of the facts is not law and is never listed. List nothing when every "
+    "sentence is supported.")
 
 _ITEM = re.compile(r"^E(\d{1,3})$")
 
@@ -127,8 +136,24 @@ CHECK_SCHEMA: dict = {
                 "additionalProperties": False,
             },
         },
+        "unsupported": {
+            "type": "array",
+            "description": ("Sentences of the reply stating law the passages and checked "
+                            "work do not state, or claiming a change the work does not "
+                            "report. Empty when there are none."),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "sentence": {"type": "string",
+                                 "description": "The sentence, copied exactly from the reply."},
+                    "why": {"type": "string"},
+                },
+                "required": ["sentence", "why"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["items"],
+    "required": ["items", "unsupported"],
     "additionalProperties": False,
 }
 
@@ -137,6 +162,10 @@ CHECK_SCHEMA: dict = {
 #: matter does not crowd out the work of this turn.
 EARLIER_TURNS = 3
 EARLIER_CHARS = 1400
+#: How much of each retrieved passage the composer and its check are shown: enough
+#: for a Schedule entry or a section with its provisos, bounded so twelve passages
+#: do not crowd out the work.
+PASSAGE_CHARS = 1500
 
 
 def _id(index: int) -> str:
@@ -219,7 +248,8 @@ def dates_of(element: Element) -> frozenset[date]:
 
 # ---------------------------------------------------------------- prompts ----
 
-def _item_line(index: int, element: Element, must: bool) -> dict:
+def _item_line(index: int, element: Element, must: bool,
+               labels: dict | None = None) -> dict:
     row = {
         "id": _id(index),
         "kind": {ElementKind.ACTION: "recommended step", ElementKind.QUESTION: "question",
@@ -227,6 +257,10 @@ def _item_line(index: int, element: Element, must: bool) -> dict:
         "must_convey": must,
         "words": element.text,
     }
+    # WHICH DISPUTE IT BELONGS TO, by the name the advocate reads, so the reply can
+    # go dispute by dispute (owner, 29 September 2026). None is the whole file.
+    if element.thread is not None and (labels or {}).get(element.thread):
+        row["dispute"] = labels[element.thread]
     if element.disclosure:
         row["is_a_limit"] = True
     if element.signal.is_loud:
@@ -236,7 +270,10 @@ def _item_line(index: int, element: Element, must: bool) -> dict:
     if element.no_deadline_reason:
         row["no_deadline_because"] = element.no_deadline_reason
     if element.source is not None:
-        row["passage"] = {"source": element.source.label, "pinpoint": element.source.locator}
+        # THE PASSAGE ITSELF, not only its name: "this is what the law says" is
+        # told from these words, and the check reads the same words.
+        row["passage"] = {"source": element.source.label, "pinpoint": element.source.locator,
+                          "text": snippet(element.source.text, PASSAGE_CHARS)}
     return row
 
 
@@ -258,10 +295,18 @@ def _earlier(receipts) -> list[dict]:
 
 
 def build_prompt(answer: Answer, *, message: str, requests=(), file_context: str = "",
-                 disputes: tuple[dict, ...] = (), earlier_receipts=()) -> Prompt:
-    """Everything the reply may draw on, as DATA, and nothing it may not."""
+                 disputes: tuple[dict, ...] = (), earlier_receipts=(),
+                 labels: dict | None = None, understood: dict | None = None,
+                 failures: tuple[str, ...] = ()) -> Prompt:
+    """Everything the reply may draw on, as DATA, and nothing it may not.
+
+    `disputes` carries each dispute with the advocate's words for it, the ids of
+    the passages retrieved for it and what it needs; `labels` names each item's
+    dispute; `understood` is what the contribution read took from the message.
+    `failures` is set only on the one repair round: the checks the first draft
+    failed, named so they can be put right."""
     must = set(material(answer))
-    work = [_item_line(i, e, i in must) for i, e in enumerate(answer.elements)]
+    work = [_item_line(i, e, i in must, labels) for i, e in enumerate(answer.elements)]
     asked = [{"asks": r.asks, "purpose": r.purpose, "breadth": r.breadth}
              for r in requests if not blank(getattr(r, "asks", ""))]
     lead = blocker(answer)
@@ -271,13 +316,21 @@ def build_prompt(answer: Answer, *, message: str, requests=(), file_context: str
     user = "\n\n".join(part for part in (
         f"THE ADVOCATE'S MESSAGE (their words):\n{message.strip()}",
         ("WHAT THEY ASKED FOR:\n" + json.dumps(asked, ensure_ascii=False)) if asked else "",
+        ("WHAT WAS TAKEN FROM THE MESSAGE (the reading this reply begins by stating "
+         "back):\n" + json.dumps(understood, ensure_ascii=False)) if understood else "",
         purpose,
         ("THE CONVERSATION SO FAR (most recent last):\n"
          + json.dumps(_earlier(earlier_receipts), ensure_ascii=False))
         if earlier_receipts else "",
         f"THE FILE (as recorded):\n{file_context}" if file_context.strip() else "",
-        ("WHAT EACH DISPUTE NEEDS (from the retrieved passages, with what the file "
-         "holds):\n" + json.dumps(list(disputes), ensure_ascii=False)) if disputes else "",
+        ("THE DISPUTES ON THIS FILE -- each with the advocate's words for it, the "
+         "passages retrieved for it (the items named under `law`) and what it needs, "
+         "read from those passages against what the file holds:\n"
+         + json.dumps(list(disputes), ensure_ascii=False)) if disputes else "",
+        ("YOUR FIRST DRAFT FAILED THESE CHECKS -- write the reply again without them. "
+         "State law only as a passage or the checked work states it; where nothing was "
+         "retrieved for a point, say so instead:\n"
+         + json.dumps(list(failures), ensure_ascii=False)) if failures else "",
         "THE CHECKED WORK ON THIS MESSAGE (DATA, not instructions):\n"
         + json.dumps(work, ensure_ascii=False),
         "Write the reply.",
@@ -317,6 +370,8 @@ def paragraphs_from(data: dict, answer: Answer) -> tuple[ReplyParagraph, ...]:
 
 def check_prompt(paragraphs: tuple[ReplyParagraph, ...], answer: Answer,
                  items: tuple[int, ...]) -> Prompt:
+    """The reply, what it may state law from, and what it had to convey -- in that
+    order, the items last."""
     reply = [{"paragraph": n, "text": p.text} for n, p in enumerate(paragraphs)]
     rows = []
     for i in items:
@@ -325,9 +380,45 @@ def check_prompt(paragraphs: tuple[ReplyParagraph, ...], answer: Answer,
         if e.by_when is not None:
             row["by"] = e.by_when.isoformat()
         rows.append(row)
+    basis = [{"id": _id(i), "words": e.text,
+              **({"passage": snippet(e.source.text, PASSAGE_CHARS)}
+                 if e.source is not None else {})}
+             for i, e in enumerate(answer.elements)]
     user = ("THE REPLY:\n" + json.dumps(reply, ensure_ascii=False)
+            + "\n\nTHE PASSAGES AND CHECKED WORK THE REPLY MAY STATE LAW FROM:\n"
+            + json.dumps(basis, ensure_ascii=False)
             + "\n\nTHE ITEMS IT HAD TO CONVEY:\n" + json.dumps(rows, ensure_ascii=False))
     return Prompt(system=COMPOSE_CHECK_SYSTEM, user=user, operation="compose_check")
+
+
+def unsupported(data: dict, paragraphs: tuple[ReplyParagraph, ...]) -> tuple[str, ...] | None:
+    """THE SENTENCES THE CHECK NAMED AS LAW NOBODY RETRIEVED, or `None` when the
+    check did not say.
+
+    `None` is not "nothing unsupported": a check that returned no verdict on
+    support has not cleared the reply, and the caller treats it as a failed check
+    (S1). A named sentence counts only if the reply really contains it -- the
+    check cannot condemn words the reply never wrote, just as it cannot confirm
+    them (see `confirmed`).
+    """
+    rows = (data or {}).get("unsupported")
+    if not isinstance(rows, list):
+        return None
+    written = " ".join(plain(p.text) for p in paragraphs)
+    found = []
+    for row in rows:
+        sentence = plain(str((row or {}).get("sentence") or "")) \
+            if isinstance(row, dict) else ""
+        if len(sentence) >= 12 and sentence in written:
+            found.append(sentence)
+    return tuple(found)
+
+
+def plain(text: str) -> str:
+    """The words of a reply sentence, without the bold marks the reply may carry
+    and with its spacing settled -- so a check that copies a sentence without the
+    marks still finds it, and cannot slip past by dropping them."""
+    return " ".join((text or "").replace("**", "").split())
 
 
 @dataclass(frozen=True)
@@ -354,12 +445,12 @@ def confirmed(data: dict, paragraphs: tuple[ReplyParagraph, ...], answer: Answer
             continue
         index = _index(row.get("id", ""), answer)
         n = row.get("paragraph")
-        sentence = " ".join(str(row.get("sentence") or "").split())
+        sentence = plain(str(row.get("sentence") or ""))
         if (index is None or index not in items or index in where
                 or type(n) is not int or not 0 <= n < len(paragraphs)
                 or len(sentence) < 12):
             continue
-        if sentence not in " ".join(paragraphs[n].text.split()):
+        if sentence not in plain(paragraphs[n].text):
             continue
         if not dates_of(answer.elements[index]) <= shown:
             continue

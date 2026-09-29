@@ -81,7 +81,11 @@ DERIVED = ("theory", "issues", "decisions", "proof", "deadlines", "gaps",
            # Checklist derivation and its cache/session markers must be swept
            # too; otherwise a refused answer could leave a green board behind.
            "requirements", "requirement_reads", "requirement_outcomes",
-           "checklist_session")
+           "checklist_session",
+           # The applicability identity each requirement read was made under,
+           # caught by the population check below: a refused answer must not
+           # leave the cache believing its law was read for this file.
+           "requirement_read_contexts")
 
 
 class _Ungrounded(ScriptedModelAdapter):

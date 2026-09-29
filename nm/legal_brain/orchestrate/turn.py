@@ -87,6 +87,7 @@ from nm.legal_brain.retrieve.evidence_port import (
     Finding,
     SourceKind,
     TreatmentState,
+    is_current_text,
 )
 from nm.legal_brain.retrieve.source_excerpt import capture as capture_source
 from nm.legal_brain.understand import briefing as briefing_mod
@@ -147,6 +148,9 @@ from nm.work_the_file.matter_contracts import (
 #: prevent is the expensive one: a turn that keeps asking for evidence, hits no
 #: limit, and eventually answers as though it had found what it was looking for.
 MAX_EVIDENCE_ROUNDS = 3
+#: F-C-04 / LB-166 (owner, 29 September 2026): how many disputes beyond the one in
+#: focus have their law read on one message. A bound on cost, stated when it binds.
+MAX_DISPUTE_LAW = 4
 
 # How many authorities an answer SHOWS. Retrieval keeps every candidate -- H4
 # forbids discarding what might be right -- but forty grounds in one answer is
@@ -1117,7 +1121,8 @@ class TurnEngine:
             split_note = (Element(
                 kind=ElementKind.GROUND,
                 text=(f"I have organised these instructions across {bound.looks_like} "
-                      f"disputes on the board and am working on {dispute(bound.thread.label)}. "
+                      f"disputes on the board; {dispute(bound.thread.label)} is the one "
+                      "worked through in full on this message. "
                       "Please check the allocation; you can change the focus "
                       "or correct that organisation."),
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
@@ -1452,6 +1457,19 @@ class TurnEngine:
                 assessed=tuple(dict.fromkeys(
                     (*matter.assessed, "reservations"))))
 
+        # EVERY OTHER DISPUTE'S LAW (F-C-04, LB-166; owner, 29 September 2026).
+        # After the focus dispute's conclusions are on the file and before the
+        # cross-file pass, which then reads every dispute with its law. Not on a
+        # blocked turn: a turn that stopped spends only what settles the stop.
+        dispute_law: list[Element] = []
+        law_relied: tuple[Finding, ...] = ()
+        law_retrieved: tuple[Finding, ...] = ()
+        if not answer.blocked and bound.thread is not None:
+            matter, dispute_law, law_relied, law_retrieved = self._dispute_law(
+                matter, turn, metrics, focus=thread, allocations=dict(bound.allocations),
+                parties=self._parties_of(matter).names)
+            answer = replace(answer, elements=(*answer.elements, *dispute_law))
+
         exposure: list[Element] = []
         if not answer.blocked:
             # THE THREADS THIS MESSAGE OPENED, so the pass does not argue
@@ -1487,7 +1505,8 @@ class TurnEngine:
         answer = replace(answer, elements=tuple(
             [*answer.elements, *self._decisive_empties(metrics),
              *self._refused_reads(metrics), *_reactivated(matter),
-             *self._tier_degraded(metrics), *understood_notes]))
+             *self._tier_degraded(metrics), *understood_notes,
+             *self._current_text_note((*relied_on, *law_relied))]))
 
         # WHAT THIS TURN DERIVED, RECORDED AGAINST WHAT IT RESTED ON. P18.
         #
@@ -1516,7 +1535,8 @@ class TurnEngine:
         # The advocate's own words may be quoted back to them (LB-81's polite
         # checks do); nothing else outside the retrieval may be.
         own_words = (turn.message, *(f.statement for f in matter.facts))
-        report = grounding.verify(answer, relied_on, retrieved, own_words=own_words)
+        report = grounding.verify(answer, (*relied_on, *law_relied),
+                                  (*retrieved, *law_retrieved), own_words=own_words)
 
         # B-104. A BOUNDED SECOND ROUND, BEFORE THE REPORT IS RECORDED.
         #
@@ -1575,15 +1595,16 @@ class TurnEngine:
                 answer = Answer(
                     route=route, mode=mode, mode_statement=mode_statement,
                     elements=_with_screens(
-                        [*head, *derived, *exposure, *self._late_note(late),
+                        [*head, *derived, *dispute_law, *exposure, *self._late_note(late),
                          *self._decisive_empties(metrics),
                          *self._refused_reads(metrics), *_reactivated(matter),
                          *self._tier_degraded(metrics), *understood_notes,
+                         *self._current_text_note((*relied_on, *law_relied)),
                          *currency_notes],
                         screens, split_note, mode=mode))
                 self._assert_invariants(answer, metrics)
-                report = grounding.verify(answer, relied_on, retrieved,
-                                          own_words=own_words)
+                report = grounding.verify(answer, (*relied_on, *law_relied),
+                                          (*retrieved, *law_retrieved), own_words=own_words)
 
         metrics.grounding = report.as_dict()
         for violation in report.violations:
@@ -1650,8 +1671,9 @@ class TurnEngine:
         # After the gate, so only what passed it is retold; before the byte
         # boundary, so the words the advocate reads are the words saved.
         answer = self._compose(answer, turn, metrics, matter=matter, memory=memory,
-                               understanding=understanding, relied_on=relied_on,
-                               retrieved=retrieved)
+                               understanding=understanding,
+                               relied_on=(*relied_on, *law_relied),
+                               retrieved=(*retrieved, *law_retrieved))
 
         # ======== BYTE BOUNDARY: nothing above has been shown or saved.
 
@@ -3472,6 +3494,92 @@ class TurnEngine:
             concluded["requirement_outcomes"] = checked.threads[0].requirement_outcomes
         return merged if merged != held else None
 
+    def _dispute_law(self, matter: Matter, turn: TurnInput, metrics: TurnMetrics, *,
+                     focus: Thread | None, allocations: dict,
+                     parties: frozenset[str]) -> tuple[Matter, list[Element], tuple, tuple]:
+        """FOR EACH DISPUTE, ITS LAW (F-C-04, LB-166; owner, 29 September 2026).
+
+        "...identify the dispute, then for each dispute, we retrieve the relevant
+        bare act and relevant judgments, retrieve those passages, then prepare a
+        reply." The dispute in focus is worked in full by `_derive`. Every OTHER
+        dispute that received words on this message, or has never had its law
+        read, gets its law here: its cause, the provisions it routes to, one
+        judgment search once its side is settled (which judgments help depends on
+        the side, the rule G-POSTURE keeps), and what it needs, read from those
+        passages against the file.
+
+        Its own bound: MAX_DISPUTE_LAW disputes a message, the rest named. Its
+        searches are counted but do not spend the focus dispute's wandering
+        bound -- one read per dispute is not wandering.
+
+        Returns the matter with each dispute's law recorded on it, the elements
+        (every passage and limit, each on its dispute), and what was relied on
+        and retrieved, for the grounding gate.
+        """
+        pending = [t for t in matter.threads
+                   if (focus is None or t.id != focus.id)
+                   and (t.id in allocations or "authorities" not in t.assessed)]
+        elements: list[Element] = []
+        relied: list[Finding] = []
+        retrieved: list[Finding] = []
+        for n, thread in enumerate(pending):
+            if n >= MAX_DISPUTE_LAW:
+                later = ", ".join(dispute(t.label) for t in pending[n:])
+                elements.append(Element(
+                    kind=ElementKind.GROUND, disclosure=True,
+                    text=(f"I read the law for {MAX_DISPUTE_LAW} of the {len(pending)} other "
+                          f"disputes on this message. Not yet read: {later}. "
+                          "Turn to any of them and I will read its law then.")))
+                break
+            words = "\n".join(allocations.get(thread.id, ())).strip() or "\n".join(
+                f.statement for f in matter.facts
+                if f.id in thread.chronology and f.superseded_by is None).strip()
+            scoped = replace(turn, message=words or f"Review the recorded dispute: {thread.label}")
+            memory = matter_memory.build(matter, thread.id, about=scoped.message,
+                                         load_bearing=self._load_bearing(matter, thread))
+            grounds: list[Element] = []
+            relied_here: list[Finding] = []
+            retrieved_here: list[Finding] = []
+            concluded: dict = {}
+            cause = self._read_cause(scoped, memory, metrics, grounds, thread_label=thread.label)
+            need = EvidenceNeed(question=scoped.message.strip(), governing_date=turn.today,
+                                jurisdiction=turn.jurisdiction, account=memory.account,
+                                cause_of_action=cause, parties=parties)
+            result = self._fetch(need, metrics, exploratory=False)
+            retrieved_here.extend(result.findings)
+            self._read_coverage(result, thread, metrics, grounds, relied_here, scoped, concluded)
+            if thread.posture.resolved:
+                self._judgment_round(scoped, thread, need, result, metrics, grounds,
+                                     relied_here, retrieved_here, concluded, exploratory=False)
+            found = self._requirements(thread, tuple(relied_here), metrics,
+                                       context=memory.as_context(), concluded=concluded,
+                                       facts=matter.facts, turn=scoped)
+            settled = replace(
+                thread,
+                authorities=tuple(relied_here),
+                decisions=concluded.get("decisions", thread.decisions),
+                requirements=found if found is not None else thread.requirements,
+                requirement_reads=concluded.get("requirement_reads", thread.requirement_reads),
+                requirement_read_contexts=concluded.get(
+                    "requirement_read_contexts", thread.requirement_read_contexts),
+                requirement_outcomes=concluded.get(
+                    "requirement_outcomes", thread.requirement_outcomes),
+                # WHAT WAS LOOKED FOR, from what was written: the law was read,
+                # found or not, so a dispute whose law is not held is not read
+                # again on every message -- only when it receives new words.
+                assessed=tuple(dict.fromkeys((
+                    *thread.assessed, "authorities",
+                    *(("requirements",) if found is not None else ()),
+                    *(k for k in ("decisions", "requirement_reads",
+                                  "requirement_read_contexts", "requirement_outcomes")
+                      if k in concluded)))))
+            matter = matter.with_thread(settled)
+            elements.extend(replace(e, thread=thread.id) if e.thread is None else e
+                            for e in grounds)
+            relied.extend(relied_here)
+            retrieved.extend(retrieved_here)
+        return matter, elements, tuple(relied), tuple(retrieved)
+
     def _remember_questions(self, matter: Matter, answer: Answer,
                             metrics: TurnMetrics, turn: TurnInput) -> Matter:
         """Record every question PUT, and close every one that came back.
@@ -4619,6 +4727,34 @@ class TurnEngine:
         metrics.evidence_rounds += 1
         return self._evidence.fetch(need)
 
+    def _judgment_round(self, turn, thread, need, result, metrics, grounds,
+                        relied_on, retrieved, concluded, *,
+                        exploratory: bool = True) -> EvidenceResult:
+        """ONE JUDGMENT SEARCH FOR THE DISPUTE, by the code and not proposed.
+
+        Owner, 29 September 2026: "for each dispute, we retrieve the relevant
+        bare act and relevant judgments". The model-proposed research lane
+        below refines; it cannot be the only search, because a proposal that
+        fails its checks leaves the dispute with no judgment searched at all --
+        measured on the Farah Begum matter's first message.
+
+        The terms come from the product's own closed vocabulary (the cause) and
+        the advocate's words for this dispute, and the provision already read
+        for it leads -- `_terms` spends them in that order. Nothing a model wrote
+        is searched for. Judgments come back as candidates with their binding,
+        treatment and support limits, exactly as every authority does.
+        """
+        if not any(g.gate_id == "G-COVERAGE" for g in metrics.gates_fired):
+            self._disclose_coverage(turn, thread, metrics, grounds)
+        provision = next((f.ref for f in result.findings
+                          if f.source_kind is SourceKind.PROVISION and f.quotable), "")
+        question = f"{provision}\n{need.question}".strip() if provision else need.question
+        authority = self._fetch(replace(need, want_authority=True, question=question),
+                                metrics, exploratory=exploratory)
+        retrieved.extend(authority.findings)
+        self._read_coverage(authority, thread, metrics, grounds, relied_on, turn, concluded)
+        return authority
+
     def _investigate(self, turn, thread, need, result, metrics, grounds,
                      relied_on, retrieved, concluded) -> None:
         """One bounded model-driven research lane after primary resolution.
@@ -4627,8 +4763,14 @@ class TurnEngine:
         executor cannot invoke other tools, expand the matter, write canonical
         state, replenish its budget or convert its rationale into legal advice.
         Every returned finding crosses the existing coverage/grounding boundary.
+
+        IT BEGINS WITH THE CODE'S OWN SEARCH for this dispute's judgments
+        (`_judgment_round`), so a proposal that fails its checks no longer
+        leaves the dispute unsearched; the lane refines from what it found.
         """
-        disclosed = False
+        first = self._judgment_round(turn, thread, need, result, metrics, grounds,
+                                     relied_on, retrieved, concluded)
+        disclosed = True
 
         def read(prompt, schema):
             reply = self._read(prompt, schema, "investigation", Tier.ROUTINE)
@@ -4649,10 +4791,10 @@ class TurnEngine:
 
         run = investigation.run(
             message=turn.message, account=need.account,
-            initial=tuple(result.findings), thread_id=str(thread.id),
+            initial=(*result.findings, *first.findings), thread_id=str(thread.id),
             version=turn.expected_version if turn.expected_version is not None else 0,
             round_budget=max(0, MAX_EVIDENCE_ROUNDS - metrics.evidence_rounds),
-            read=read, fetch=fetch)
+            read=read, fetch=fetch, searched_before=1)
         if run.stop == "budget":
             metrics.evidence_bound_hit = True
         grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
@@ -6772,9 +6914,11 @@ class TurnEngine:
             # BOUNDED OUTPUT, NOT A WORD COUNT. The ceiling is a guard against a
             # runaway answer; the step's ceiling rose from 120 when the 40-word
             # instruction went, so a well-made step is not cut off (refused
-            # below as truncated) for taking the words it needs.
+            # below as truncated) for taking the words it needs. And from 320 on
+            # 29 September 2026: a step for a three-dispute brief ran past it and
+            # the whole recommendation was lost as truncated.
             res = self._model.complete(guided(prompt), Tier.ROUTINE,
-                                       max_tokens=768 if explanatory else 320)
+                                       max_tokens=768 if explanatory else 640)
             metrics.record_call(res)
             partial = refuse_partial(res.completion, doing="the recommendation")
             if partial:
@@ -6999,6 +7143,25 @@ class TurnEngine:
             return ""
 
     @staticmethod
+    def _current_text_note(relied: tuple[Finding, ...]) -> list[Element]:
+        """LB-156. THE CURRENT TEXT IS SAID TO BE THE CURRENT TEXT, once per answer.
+
+        Each such passage carries the limit in its own basis; this says it where
+        the advocate reads the answer as a whole, so a reply that quotes the
+        passage cannot leave the limit behind (a disclosure is material).
+        """
+        refs = list(dict.fromkeys(f.ref for f in relied if is_current_text(f)))
+        if not refs:
+            return []
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+            text=(f"The provisions relied on here ({'; '.join(refs)}) are quoted from the "
+                  "current text held in this library. No amendment register is installed, "
+                  "so I have not checked that each was the wording in force on the date "
+                  "that matters; check its amendment history before relying on it for an "
+                  "earlier date."))]
+
+    @staticmethod
     def _understanding_notes(understanding: "route_reader.Understanding") -> list[Element]:
         """WHAT THE CONTRIBUTION READ OBLIGES THE REPLY TO SAY. F-C-04.
 
@@ -7039,12 +7202,28 @@ class TurnEngine:
         words, and a blocked turn is led by its blocker (`composer.settle`).
 
         Presentation, not derivation: nothing side-dependent is computed, so the
-        calls are counted as `presentation_reads` and a blocked turn stays a
-        turn that derived nothing behind its gate.
+        calls are counted as `presentation_reads`.
+
+        A STOPPED TURN IS NOT RETOLD (owner, 29 September 2026). A blocked answer
+        is its blocker and its limits, shown as they are: measured on the Farah
+        Begum matter, a turn stopped because the disputes could not be separated
+        was retold as "I have corrected and confirmed the four separate disputes",
+        with limitation periods nobody retrieved. Nothing is composed behind a
+        gate.
+
+        NOTHING ABOUT THE LAW FROM MEMORY. The words shown are checked for
+        quotations, citations and PERIODS (`grounding.verify_reply`), and a
+        separate check read names any sentence stating law the passages and the
+        checked work do not state, or claiming a change the work does not report.
+        A draft that fails gets ONE repair round with the failures named; a second
+        failure shows the checked findings as they are.
         """
+        if answer.blocked:
+            return answer
         if not answer.elements or (len(answer.elements) == 1
                                    and answer.elements[0].source is None):
             return answer
+        labels = {t.id: t.label for t in (matter.threads if matter is not None else ())}
         disputes = []
         for thread in (matter.threads if matter is not None else ()):
             try:
@@ -7058,52 +7237,85 @@ class TurnEngine:
                 "our_client": (thread.posture.client_described_as
                                or thread.posture.role.value.replace("_", " ")),
                 "against": thread.posture.opponent or "",
+                # WHAT THE ADVOCATE SAID OF IT, so the reply can state the reading
+                # back before it says what the law makes of it.
+                "their_words": [snippet(f.statement, 400) for f in matter.facts
+                                if f.id in thread.chronology and f.superseded_by is None
+                                and f.provenance.kind == "advocate_statement"][:12],
+                # THE PASSAGES RETRIEVED FOR IT on this message, by item id.
+                "law": [f"E{i}" for i, e in enumerate(answer.elements)
+                        if e.thread == thread.id and e.source is not None],
                 "needs": [{"need": r["need"], "why": r["why"], "force": r["force"],
                            "from": f"{r['source']} ({r['locator']})",
                            "file_holds": r["state"], "on_file": r["fact"]}
                           for r in rows]})
-        try:
-            written = self._read(
-                composer.build_prompt(
-                    answer, message=turn.message,
-                    requests=understanding.requests if understanding is not None else (),
-                    file_context=memory.as_context() if memory is not None else "",
-                    disputes=tuple(disputes),
-                    earlier_receipts=matter.turn_receipts if matter is not None else ()),
-                composer.COMPOSE_SCHEMA, "compose")
-            metrics.record_call(written)
-            metrics.presentation_reads += 1
-            paragraphs = composer.paragraphs_from(written.data or {}, answer)
-        except (ModelError, OutputTruncated) as exc:
-            metrics.violate("E2", f"the reply was not composed: {exc}")
-            return answer
-        if not paragraphs:
-            return answer
-        candidate = replace(answer, composed=paragraphs)
+        understood = None
+        if understanding is not None:
+            understood = {
+                "their_statements": [s.quoted for s in understanding.statements][:24],
+                "people_named": [{"name": p.name, "side": p.side}
+                                 for p in understanding.parties],
+            }
         own_words = (turn.message,
                      *(f.statement for f in (matter.facts if matter is not None else ())))
-        report = grounding.verify_reply(candidate, relied_on, retrieved, own_words=own_words)
-        if report.violations:
-            metrics.violate("E2", "the composed reply failed its own checks and the checked "
-                                  "findings were shown instead: "
-                                  + "; ".join(v.detail for v in report.violations))
-            return answer
         items = composer.material(answer)
-        kept = {p.carries for p in paragraphs if p.carries is not None}
-        pending = tuple(i for i in items if i not in kept)
-        judged: dict = {}
-        if pending:
+        failures: tuple[str, ...] = ()
+        for attempt in (1, 2):
             try:
-                check = self._read(composer.check_prompt(paragraphs, answer, pending),
-                                   composer.CHECK_SCHEMA, "compose_check")
-                metrics.record_call(check)
+                written = self._read(
+                    composer.build_prompt(
+                        answer, message=turn.message,
+                        requests=understanding.requests if understanding is not None else (),
+                        file_context=memory.as_context() if memory is not None else "",
+                        disputes=tuple(disputes),
+                        earlier_receipts=matter.turn_receipts if matter is not None else (),
+                        labels=labels, understood=understood, failures=failures),
+                    composer.COMPOSE_SCHEMA, "compose")
+                metrics.record_call(written)
                 metrics.presentation_reads += 1
-                judged = check.data or {}
+                paragraphs = composer.paragraphs_from(written.data or {}, answer)
             except (ModelError, OutputTruncated) as exc:
-                metrics.violate("E2", f"the composed reply could not be checked for what "
-                                      f"it had to convey, so the checked findings were "
-                                      f"shown: {exc}")
+                metrics.violate("E2", f"the reply was not composed: {exc}")
                 return answer
+            if not paragraphs:
+                return answer
+            candidate = replace(answer, composed=paragraphs)
+            report = grounding.verify_reply(candidate, relied_on, retrieved,
+                                            own_words=own_words)
+            failed = [v.detail for v in report.violations]
+            kept = {p.carries for p in paragraphs if p.carries is not None}
+            pending = tuple(i for i in items if i not in kept)
+            prose = any(p.carries is None for p in paragraphs)
+            judged: dict = {}
+            if not failed and (pending or prose):
+                try:
+                    check = self._read(composer.check_prompt(paragraphs, answer, pending),
+                                       composer.CHECK_SCHEMA, "compose_check")
+                    metrics.record_call(check)
+                    metrics.presentation_reads += 1
+                    judged = check.data or {}
+                except (ModelError, OutputTruncated) as exc:
+                    metrics.violate("E2", f"the composed reply could not be checked for what "
+                                          f"it had to convey, so the checked findings were "
+                                          f"shown: {exc}")
+                    return answer
+                named = composer.unsupported(judged, paragraphs) if prose else ()
+                if named is None:
+                    metrics.violate("E2", "the check gave no verdict on what the reply states "
+                                          "as law, so the checked findings were shown")
+                    return answer
+                failed = [f"not supported by the passages or the checked work: {s}"
+                          for s in named]
+            if not failed:
+                break
+            if attempt == 2:
+                metrics.violate("E2", "the composed reply failed its own checks and the "
+                                      "checked findings were shown instead: "
+                                      + "; ".join(failed))
+                return answer
+            metrics.violate("E2", "the first composed reply failed its checks and was "
+                                  "written again: " + "; ".join(failed))
+            failures = tuple(failed)
         found = composer.confirmed(judged, paragraphs, answer, items)
         settled = composer.settle(paragraphs, answer, items, found)
         carried = sum(1 for p in settled if p.carries is not None) \

@@ -1581,13 +1581,15 @@ MUTATIONS = [
      '"none_on_this_thread" if not complete else',
      "test_the_board_distinguishes_no_deadline_from_no_register", "E-046"),
 
-    # S11. The list sorts nearest-deadline-first and reads `next_deadline`
-    # first -- and that field was hard-coded None, so the rule never applied.
-    ("a matter list whose nearest-deadline ordering cannot fire",
+    # S11. The list read `next_deadline` -- and that field was hard-coded None,
+    # so the rule never applied. The list orders by last update since 28
+    # September 2026 (F-B-14); the row must still carry the deadline it holds.
+    ("a matter list whose rows cannot carry the deadline they hold",
      "nm/work_the_file/projections_api.py",
      '        "next_deadline": live[0].on.isoformat() if live else None,',
      '        "next_deadline": None,',
-     "test_the_matter_list_orders_by_a_deadline_it_actually_holds", "E-046"),
+     "test_the_matter_list_carries_the_deadline_it_holds_and_orders_by_last_update",
+     "E-046"),
 ]
 
 

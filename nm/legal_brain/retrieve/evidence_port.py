@@ -221,6 +221,20 @@ class Treatment:
             source="statute")
 
 
+#: LB-156 (owner direction, 29 September 2026). The basis a provision Finding
+#: carries when it is the library's CURRENT TEXT, read because no provision-
+#: version register is installed. One owner of the words: the adapter writes
+#: them, and the answer recognises them to say, once, that the wording on the
+#: matter's date has not been checked.
+CURRENT_TEXT_BASIS = "the current text of this provision as held in this library"
+
+
+def is_current_text(finding: "Finding") -> bool:
+    """Whether a Finding is a current-text read, by its stated basis."""
+    return (finding.source_kind is SourceKind.PROVISION
+            and finding.binding_reason.startswith(CURRENT_TEXT_BASIS))
+
+
 class Coverage(Spoken, str, Enum):
     """FOUR states, and the fourth was the one nobody had.
 

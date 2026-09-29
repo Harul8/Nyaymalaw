@@ -368,6 +368,63 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
     return report
 
 
+_NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+    "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+    "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+    "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90, "hundred": 100,
+}
+_TENS = ("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+_PERIOD = re.compile(
+    r"\b(\d{1,4}|(?:(?:" + "|".join(_TENS) + r")[\s-]+)?(?:" + "|".join(_NUMBER_WORDS)
+    + r"))[\s-]+(year|month|week|day)s?\b", re.I)
+
+
+def periods_stated(text: str) -> frozenset[tuple[int, str]]:
+    """EVERY SPAN OF TIME A TEXT STATES, as (number, unit): "twelve years", "12
+    years", "a three-year period" and "30-day notice" all read the same way.
+
+    Used for one rule: a period the reply states must be one a retrieved
+    passage, the checked work or the advocate states. It decides nothing else.
+    """
+    found = set()
+    for number, unit in _PERIOD.findall(text or ""):
+        words = number.lower().replace("-", " ").split()
+        if words and words[0].isdigit():
+            value = int(words[0])
+        else:
+            value = sum(_NUMBER_WORDS.get(w, 0) for w in words)
+        if value:
+            found.add((value, unit.lower()))
+    return frozenset(found)
+
+
+def verify_periods(elements: tuple[Element, ...], sources: tuple[str, ...]
+                   ) -> list[GroundingViolation]:
+    """A PERIOD NOBODY STATED IS LAW FROM MEMORY (owner, 29 September 2026).
+
+    Measured on the Farah Begum matter: with no passage retrieved, the reply said
+    "a three-year period for property-related disputes" and "a six-month
+    limitation" for an assault. Neither sentence cites a provision, so the
+    citation check could not see them, and both were wrong. A limitation period,
+    a notice period or a deadline is the law's own number: the reply may state
+    one only where a retrieved passage, the checked work or the advocate's own
+    words state it.
+    """
+    allowed: set[tuple[int, str]] = set()
+    for text in sources:
+        allowed |= periods_stated(text)
+    out = []
+    for element in elements:
+        for value, unit in sorted(periods_stated(element.text) - allowed):
+            out.append(GroundingViolation(
+                "G-GROUND",
+                f"the reply states a period of {value} {unit}(s) that no retrieved "
+                "passage, checked finding or statement of the advocate states"))
+    return out
+
+
 @implements("P1")
 def verify_reply(answer: Answer, relied_on: tuple[Finding, ...],
                  retrieved: tuple[Finding, ...] = (), *,
@@ -382,7 +439,10 @@ def verify_reply(answer: Answer, relied_on: tuple[Finding, ...],
     retrieved span or in the advocate's own words, each provision and case named
     covered by what was retrieved, and each linked passage the exact captured
     source. A composed paragraph never carries `disclosure`, so it cannot name an
-    unretrieved provision under a limit's licence.
+    unretrieved provision under a limit's licence. And every PERIOD it states
+    must be one a retrieved passage, a checked finding or the advocate states
+    (`verify_periods`): a limitation period written from memory names no section
+    for the citation check to see.
 
     A paragraph that CARRIES an element is that element's checked words -- the
     type refuses anything else -- and was checked by `verify` as that element.
@@ -404,6 +464,8 @@ def verify_reply(answer: Answer, relied_on: tuple[Finding, ...],
     report.checked_quotes = sum(len(quoted_spans(e.text)) for e in shown)
     report.violations.extend(verify_quotes(tuple(shown), quotable, own_words=own_words))
     report.violations.extend(verify_citations(tuple(shown), quotable))
+    report.violations.extend(verify_periods(tuple(shown), (
+        *(f.span for f in quotable), *own_words, *(e.text for e in answer.elements))))
     captured = tuple(capture_source(f) for f in quotable)
     for element in shown:
         if element.source is not None and element.source not in captured:

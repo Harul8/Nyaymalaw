@@ -142,6 +142,9 @@ class Investigation:
     results: tuple[EvidenceResult, ...]
     proposals: tuple[StepProposal, ...]
     stop: str
+    searched_before: int = 0
+    """Searches the caller ran for this dispute before the lane (its own judgment
+    search), counted in the disclosure so the count is of every search made."""
 
     def disclosure(self) -> str:
         reasons = {
@@ -155,14 +158,14 @@ class Investigation:
             "needs_input": "further investigation needs additional input",
             "no_useful_search": "no useful further search was identified",
         }
-        return (f"Judgment research: {len(self.results)} retrieval round(s) returned; "
-                f"{reasons[self.stop]}. This does not establish complete legal "
-                "coverage or that the matter is ready for advice.")
+        return (f"Judgment research: {self.searched_before + len(self.results)} retrieval "
+                f"round(s) returned; {reasons[self.stop]}. This does not establish complete "
+                "legal coverage or that the matter is ready for advice.")
 
 
 def run(*, message: str, account: str, initial: tuple[Finding, ...],
         version: int, thread_id: str, round_budget: int,
-        read: Callable, fetch: Callable) -> Investigation:
+        read: Callable, fetch: Callable, searched_before: int = 0) -> Investigation:
     """One snapshot, bounded calls and no canonical writes or delegated powers.
 
     Search-count budget is lent by the existing turn owner, never reset here.
@@ -172,6 +175,8 @@ def run(*, message: str, account: str, initial: tuple[Finding, ...],
     """
     if type(round_budget) is not int or round_budget < 0:
         raise ValueError("research budget must be a non-negative integer")
+    if type(searched_before) is not int or searched_before < 0:
+        raise ValueError("searches made before the lane are a non-negative count")
     results, proposals = [], []
     findings = list(initial)
     seen = {finding_key(f) for f in initial}
@@ -226,4 +231,4 @@ def run(*, message: str, account: str, initial: tuple[Finding, ...],
             break
         findings.extend(fresh)
         seen.update(finding_key(f) for f in fresh)
-    return Investigation(tuple(results), tuple(proposals), stop)
+    return Investigation(tuple(results), tuple(proposals), stop, searched_before)

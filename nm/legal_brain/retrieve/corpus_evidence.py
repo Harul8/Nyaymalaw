@@ -47,6 +47,7 @@ from nm.legal_brain.common.citation_contracts import (
 )
 from nm.legal_brain.retrieve.citator_sources import Citator
 from nm.legal_brain.retrieve.evidence_port import (
+    CURRENT_TEXT_BASIS,
     Binding,
     Coverage,
     EvidenceNeed,
@@ -199,7 +200,8 @@ class CorpusEvidenceAdapter:
                  authority_index: str | Path | None = None,
                  identity_index: str | Path | None = None, *,
                  source_registry=None, revision_source_bytes=None,
-                 revision_review_owner=None, revision_checked_at=None) -> None:
+                 revision_review_owner=None, revision_checked_at=None,
+                 current_text_when_unversioned: bool = False) -> None:
         self._dir = Path(corpus_dir)
         self._db = self._dir / "chunks.db"
         self._manifest = manifest
@@ -215,6 +217,14 @@ class CorpusEvidenceAdapter:
         self._revision_source_bytes = revision_source_bytes
         self._revision_review_owner = revision_review_owner
         self._revision_checked_at = revision_checked_at
+        #: LB-156, owner direction of 29 September 2026. With NO provision-
+        #: version register installed at all, a held provision is read as the
+        #: library's CURRENT TEXT, labelled so on the passage -- "current text
+        #: may be read separately with its own date and version, without
+        #: establishing the historical proposition". Off by default: only the
+        #: composition root, which knows no register exists, turns it on, and a
+        #: register once installed is never bypassed by it.
+        self._current_text = current_text_when_unversioned
 
     @classmethod
     def from_published_corpus(
@@ -847,6 +857,22 @@ class CorpusEvidenceAdapter:
             return ProvisionRevisionRead(EvidenceResult(
                 Coverage.ANSWERED, (finding,), searched_stores=stores,
                 assumption=note, search_note=self._held_back(excluded)), selection, passages)
+        if (passages and self._current_text and self._source_registry is None
+                and (entry.in_force_from or entry.in_force_to)):
+            # THE CURRENT TEXT, SAID TO BE THE CURRENT TEXT. Nothing here claims
+            # the wording applied on the matter's date: the limit is written into
+            # the passage's own basis, so every place the passage is shown or
+            # quoted carries it. The selection stays NOT_ASSESSED -- the
+            # historical question is still unanswered, and a caller that asks
+            # for the revision is told so.
+            reason = current_text_reason(as_of)
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.ANSWERED, tuple(self._provision_finding(
+                    entry, section, passage.text, passage.locator, passage.store,
+                    as_of, entry.in_force_from, entry.in_force_to, reason)
+                    for passage in passages),
+                searched_stores=stores, assumption=note,
+                search_note=self._held_back(excluded)), selection, passages)
         if passages:
             return ProvisionRevisionRead(EvidenceResult(
                 Coverage.NOT_ASSESSED, missing=selection.reason,
@@ -1556,6 +1582,16 @@ class CorpusEvidenceAdapter:
 
 def default_authority_index(root: Path) -> Path:
     return Path(root) / ".nm" / "authority.db"
+
+
+def current_text_reason(as_of: date | None) -> str:
+    """THE LIMIT A CURRENT-TEXT PASSAGE CARRIES, in the words the advocate reads.
+
+    One owner, so the passage, the reply and the board say the same thing.
+    """
+    on = f"on {as_of.isoformat()}" if as_of is not None else "on the matter's date"
+    return (f"{CURRENT_TEXT_BASIS}; no amendment register is installed, so whether "
+            f"this was the wording in force {on} has not been checked")
 
 
 def in_force_on(entry, day: date) -> bool:

@@ -1153,8 +1153,9 @@ def scripted_compose(_user: str) -> str:
 
 def scripted_compose_check(_user: str) -> str:
     """Confirms nothing, so every material item a control's reply leaves
-    unconfirmed is carried in its own words -- the safe direction."""
-    return json.dumps({"items": []})
+    unconfirmed is carried in its own words -- the safe direction. Names no
+    unsupported sentence: a control about support supplies its own verdict."""
+    return json.dumps({"items": [], "unsupported": []})
 
 
 SCRIPTED_READS: dict[str, object] = {

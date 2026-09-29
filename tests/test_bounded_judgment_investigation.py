@@ -188,7 +188,12 @@ def test_the_served_engine_executes_a_proposal_and_persists_its_limit(tmp_path):
                                  message=text, today=date(2026, 9, 21)))
     assert len(proposed) == 1
     actual = [need for need in searched if need.want_authority]
-    assert len(actual) == 1 and actual[0].question == text
+    # THE CODE'S OWN JUDGMENT SEARCH FIRST (owner, 29 September 2026: every
+    # dispute's judgments are searched), on the advocate's words; then the one
+    # proposal the lane executed, exactly as proposed.
+    assert len(actual) == 2
+    assert text in actual[0].question
+    assert actual[1].question == text
     assert output.metrics.evidence_rounds == len(searched)
     saved = store.load(output.matter.id)
     assert saved.turn_receipts
@@ -221,9 +226,13 @@ def test_invalid_model_proposal_does_not_bypass_the_served_turn(tmp_path):
 
     engine, _ = build(tmp_path, evidence=RecordingEvidence(), model=MaliciousModel(
         _model_config(), responses={'__default__': 'Obtain the original records.'}))
+    message = 'We act for the plaintiff at Hyderabad. Find judgments about the disputed payment.'
     output = engine.run(TurnInput(turn_id='invalid-investigation', advocate_id='adv_demo',
-        message='We act for the plaintiff at Hyderabad. Find judgments about the disputed payment.',
-        today=date(2026, 9, 21)))
-    assert not any(need.want_authority for need in searches)
+        message=message, today=date(2026, 9, 21)))
+    # THE INVALID PROPOSAL IS NEVER SEARCHED. The only judgment search is the
+    # code's own, on the advocate's words -- never the fabricated focus.
+    authority = [need for need in searches if need.want_authority]
+    assert len(authority) == 1 and message in authority[0].question
+    assert not any('Fabricated Act' in need.question for need in searches)
     assert any('failed its source or action checks' in e.text for e in output.answer.elements)
     assert all('Fabricated Act' not in e.text for e in output.answer.elements)

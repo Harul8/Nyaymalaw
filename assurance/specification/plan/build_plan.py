@@ -1725,7 +1725,8 @@ d("B-060", "2026-08-31", "edge",
   "by-when, and the same rule about defaults: an argument whose absence "
   "changes what the advocate believes may not have one.",
   "tests/test_slice4_closeout.py::test_the_board_distinguishes_no_deadline_from_no_register; "
-  "tests/test_slice4_closeout.py::test_the_matter_list_orders_by_a_deadline_it_actually_holds")
+  "tests/test_slice4_closeout.py::"
+  "test_the_matter_list_carries_the_deadline_it_holds_and_orders_by_last_update")
 
 d("B-061", "2026-08-31", "tooling",
   "THE SCENARIO RUN MEASURED YESTERDAY'S CODE AND EXITED 0. Five golden "

@@ -282,13 +282,19 @@ class Application:
                 revision_review_owner=revision_reviews,
                 revision_checked_at=lambda: utcnow().date())
         else:
+            # NO PROVISION-VERSION REGISTER EXISTS ON THIS BRANCH, so a held
+            # provision is read as the library's current text and says so on the
+            # passage (LB-156; owner, 29 September 2026: every dispute's law is
+            # retrieved and shown). A published corpus installs its register above
+            # and keeps the strict rule.
             self.evidence = CorpusEvidenceAdapter(
                 corpus_path,
                 self.manifest,
                 authority_index=(settings.get("NM_AUTHORITY_INDEX")
                                  or default_authority_index(self.root)),
                 identity_index=(settings.get("NM_IDENTITY_INDEX")
-                                or (self.root / ".nm" / "identity.db")))
+                                or (self.root / ".nm" / "identity.db")),
+                current_text_when_unversioned=True)
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
         # and the evidence adapter came to hold different provision patterns
