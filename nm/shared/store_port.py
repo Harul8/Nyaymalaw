@@ -95,3 +95,15 @@ class StorePort(Protocol):
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed."""
         ...
+
+    def record_feedback(self, feedback: dict) -> None:
+        """One rating of one reply, ADDED and never overwriting. LB-56, LB-83.
+
+        Kept beside the matter and not in it: rating a reply must not move the
+        matter's version, or a reply being prepared would be refused as stale
+        by a thumbs-up on the one before it. Holds no client words."""
+        ...
+
+    def feedback_for(self, matter_id: MatterId) -> tuple[dict, ...]:
+        """Every rating recorded on one matter, oldest first."""
+        ...

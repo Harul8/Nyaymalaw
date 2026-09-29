@@ -967,9 +967,14 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     turns = store.transcripts_for(matter_id)
     unreadable = [t for t in turns if t.get("unreadable")]
     from nm.open_matter.opening_contracts import correction_notes
-    from nm.open_matter.transcripts_api import project
+    from nm.open_matter.transcripts_api import project, ratings
 
     projected, release_problems = project(m, turns)
+    # LB-56, LB-83. Each reply comes back with the rating last given to it, so
+    # a reopened matter shows the thumb the advocate chose.
+    rated = ratings(store.feedback_for(matter_id))
+    projected = [{**row, "rating": rated.get(str(row["turn_id"]), "none")}
+                 for row in projected]
 
     # A FACT ABOUT THE STORE, NOT ABOUT THIS CONVERSATION.
     #
@@ -1008,6 +1013,53 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
             f"not be from this one."
             if lost else None),
     }
+
+
+class ReplyFeedbackBody(BaseModel):
+    """A rating of one reply. LB-56, LB-83. `none` withdraws the last one.
+
+    Nothing else: who rated is the session's advocate, never a field here, and
+    when is the server's clock."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rating: Literal["up", "down", "none"]
+
+
+@app.post("/api/matters/{matter_id}/turns/{turn_id}/feedback",
+          dependencies=[CsrfProtected], status_code=201)
+def rate_reply(matter_id: str, turn_id: str, body: ReplyFeedbackBody,
+               advocate_id: Advocate) -> dict:
+    """Record a thumbs-up, a thumbs-down or its withdrawal on one reply.
+
+    ONLY A RELEASED REPLY ON THIS ADVOCATE'S MATTER, and the same 404 for a
+    reply that does not exist as for a matter that is not theirs.
+
+    IT DOES NOT TOUCH THE MATTER. The rating is added beside the file, so its
+    version does not move and a reply being prepared is not made stale by it.
+    Nor does it change the model, its instructions or any later answer: it is
+    review material (LB-56).
+
+    THE RATING RETURNED IS THE ONE READ BACK from the store after the write,
+    so the reply shows what was saved, not what was asked for.
+    """
+    import uuid as _uuid
+
+    from nm.open_matter.transcripts_api import is_released, project, ratings
+    from nm.shared.operation_contracts import save_stamp
+
+    m = _owned(matter_id, advocate_id)
+    store = application().store
+    rows, _problems = project(m, store.transcripts_for(m.id))
+    if not is_released(rows, turn_id):
+        raise HTTPException(status_code=404, detail="no such reply")
+    at = save_stamp()
+    store.record_feedback({"entry_id": f"fb_{_uuid.uuid4().hex[:12]}",
+                           "matter_id": m.id, "turn_id": turn_id,
+                           "rating": body.rating, "by": advocate_id, "at": at})
+    return {"state": "recorded", "matter_id": m.id, "turn_id": turn_id,
+            "rating": ratings(store.feedback_for(m.id)).get(turn_id, "unknown"),
+            "at": at}
 
 
 def _register_of(matter, *, source_current=None, checklist_projections=None):

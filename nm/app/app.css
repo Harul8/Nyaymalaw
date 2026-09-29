@@ -427,8 +427,25 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 .board-note li { margin: 0.15rem 0; overflow-wrap: anywhere; }
 .board-note .board-act { margin-left: 0.5rem; padding: 0.1rem 0.55rem; font-size: 0.76rem; }
 .board-act-state { color: var(--ink-3); }
-/* LB-83. When the answer was saved, quietly. */
-.answered-at { margin: 0.5rem 0 0; font-size: 0.7rem; color: var(--ink-3); }
+/* LB-83. The foot of every reply, at its left: copy, rate, then when the
+   answer was saved, quietly. */
+.reply-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem; margin: 0.35rem 0 0 -0.45rem; }
+.answered-at { margin: 0 0 0 0.35rem; font-size: 0.7rem; color: var(--ink-3); }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px;
+  min-height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--ink-3);
+  cursor: pointer; }
+.icon-btn:hover, .icon-btn[aria-expanded="true"], .icon-btn[aria-pressed="true"],
+.rate-toggle[data-rating="up"], .rate-toggle[data-rating="down"] { color: var(--accent); }
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--accent-w, rgba(0,0,0,.04)); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.icon-btn:disabled { cursor: default; opacity: 0.5; }
+.rate { position: relative; display: inline-flex; }
+.rate-pop { position: absolute; left: 0; bottom: 100%; z-index: 40; display: flex; gap: 0.2rem;
+  margin-bottom: 0.25rem; padding: 0.25rem; border: 1px solid var(--rule); border-radius: 10px;
+  background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
+.rate-pop[hidden] { display: none; }
+.reply-status { margin-left: 0.35rem; font-size: 0.72rem; color: var(--ink-3); }
+@media (prefers-reduced-motion: no-preference) { .icon-btn { transition: color .12s, background .12s; } }
 /* LB-82. While a reply is prepared: one legal word alone; a stop replaces it
    with the saved stop label. */
 .working { display: grid; gap: 0.2rem; }

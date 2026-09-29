@@ -314,6 +314,9 @@ class FileMatterStore:
         self._matters = self._root / "matters"
         self._metrics = self._root / "metrics"
         self._transcripts = self._root / "transcripts"
+        # Made on the first rating, like the transcripts: an installation
+        # nobody has rated a reply on keeps the directories it had.
+        self._feedback = self._root / "feedback"
         self._keys = self._root / "keys"
         self._matters.mkdir(parents=True, exist_ok=True)
         self._metrics.mkdir(parents=True, exist_ok=True)
@@ -710,3 +713,65 @@ class FileMatterStore:
             except Exception:  # noqa: BLE001 -- that IS the finding
                 lost.append(p.stem)
         return tuple(lost)
+
+    # ---------------------------------------------------------- feedback ---
+    #
+    # A RATING IS NOT A CHANGE TO THE MATTER (LB-56, LB-83). It is kept beside
+    # the file, like the metrics, so rating a reply never moves the matter's
+    # version. It carries identifiers, a rating and a time -- no client words --
+    # so, like the metrics, it is not sealed.
+
+    def record_feedback(self, feedback: dict) -> None:
+        """Add one rating. NOTHING IS OVERWRITTEN: each rating is its own file,
+        so a changed mind keeps its history.
+
+        The reply is the folder and the entry's place in the reply's sequence
+        is the name, so which reply an entry rates, and in what order, is known
+        even for an entry that cannot be read back -- the lesson `record_turn`
+        records. THE ORDER IS A SEQUENCE, NOT THE CLOCK: two clicks inside one
+        clock tick must not come back in either order. Each number is claimed
+        by an exclusive create, so two writers cannot take the same one.
+        """
+        matter = _storage_component(feedback["matter_id"], kind="matter ID")
+        turn = _storage_component(feedback["turn_id"], kind="turn ID")
+        folder = self._feedback / matter / turn
+        folder.mkdir(parents=True, exist_ok=True)
+        data = json.dumps(feedback).encode("utf8")
+        while True:
+            taken = [int(p.stem) for p in folder.glob("*.json") if p.stem.isdigit()]
+            path = folder / f"{max(taken, default=0) + 1:06d}.json"
+            try:
+                fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                             | getattr(os, "O_BINARY", 0))
+            except FileExistsError:
+                continue
+            break
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+    def feedback_for(self, matter_id: MatterId) -> tuple[dict, ...]:
+        """Every rating on one matter; each reply's in the order recorded.
+
+        AN ENTRY THAT CANNOT BE READ COMES BACK NAMED, with the reply it
+        belongs to, rather than vanishing: a lost thumbs-down must not read as
+        no rating at all. A write interrupted part-way reads the same way.
+        """
+        matter = _storage_component(matter_id, kind="matter ID")
+        root = self._feedback / matter
+        if not root.is_dir():
+            return ()
+        named = []
+        for p in root.glob("*/*.json"):
+            turn = p.parent.name
+            try:
+                row = json.loads(p.read_text(encoding="utf8"))
+                if (not isinstance(row, dict) or row.get("matter_id") != matter
+                        or row.get("turn_id") != turn):
+                    raise ValueError("the rating's identity conflicts with where it is kept")
+            except (OSError, ValueError) as exc:
+                row = {"matter_id": matter, "turn_id": turn, "unreadable": True,
+                       "why": f"{type(exc).__name__}: {exc}"}
+            named.append(((turn, int(p.stem) if p.stem.isdigit() else 0, p.name), row))
+        return tuple(row for _, row in sorted(named, key=lambda pair: pair[0]))

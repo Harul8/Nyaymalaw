@@ -1357,6 +1357,8 @@ function restoredTurn(turn) {
     at: turn.at || '',
     board_changes: Array.isArray(turn.board_changes) ? turn.board_changes : [],
     composed: Array.isArray(turn.composed) ? turn.composed : [],
+    // LB-83. The rating last saved on this reply, shown on its thumb.
+    rating: typeof turn.rating === 'string' ? turn.rating : 'none',
   } };
 }
 
@@ -1479,11 +1481,176 @@ function renderOpeningNote(note) {
 function answeredAt(answer) {
   const when = Date.parse(answer?.at || '');
   if (Number.isNaN(when)) return null;
-  const line = document.createElement('p');
+  const line = document.createElement('span');
   line.className = 'answered-at';
   line.textContent = new Date(when).toLocaleString(undefined, {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return line;
+}
+
+// A STEP'S DATE LINE, in one place: the reply shows it and the copy carries it.
+function nextStepLine(el) {
+  if (!el || !(el.by_when || el.no_deadline_reason)) return '';
+  return el.by_when ? `Next step, by ${el.by_when}`
+    : `Next step — no deadline: ${el.no_deadline_reason}`;
+}
+
+// LB-83, LB-98. WHAT THE COPY ICON COPIES: the reply as shown, in reading
+// order, each paragraph with its next-step line and references, then one line
+// naming it as NM's reply and when it was given, so a pasted copy keeps its
+// date and is never mistaken for a later view (LB-83-AC4).
+function replyText(answer, shown) {
+  const blocks = shown.map(({ text, step, refs }) => [text, nextStepLine(step),
+    refs && refs.length ? `References: ${refs.join(' · ')}` : ''].filter(Boolean).join('\n'));
+  const when = Date.parse(answer?.at || '');
+  blocks.push(Number.isNaN(when) ? '— NM reply' : `— NM reply, ${new Date(when).toLocaleString(
+    undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
+  return blocks.join('\n\n');
+}
+
+const REPLY_ICONS = {
+  copy: 'M7.5 6.5h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z'
+    + 'M13.5 6.5v-2a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h2',
+  up: 'M6 9.5v7.5H3.5V9.5z M6 9.5l3.2-6c1.1 0 1.9.9 1.9 2v2.7h4.1c.9 0 1.6.8 1.4 1.7'
+    + 'l-1.1 5.9c-.1.7-.7 1.2-1.4 1.2H6',
+};
+
+function replyIcon(name, { filled = false } = {}) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', REPLY_ICONS[name === 'down' ? 'up' : name]);
+  if (name === 'down') path.setAttribute('transform', 'rotate(180 10 10)');
+  path.setAttribute('fill', filled ? 'currentColor' : 'none');
+  path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '1.5');
+  path.setAttribute('stroke-linejoin', 'round'); path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+  return svg;
+}
+
+function replyIconButton(name, label) {
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'icon-btn';
+  button.setAttribute('aria-label', label); button.title = label;
+  button.appendChild(replyIcon(name));
+  return button;
+}
+
+function closeRatePops(except = null) {
+  for (const pop of document.querySelectorAll('.rate-pop:not([hidden])')) {
+    if (pop === except) continue;
+    pop.hidden = true;
+    pop.parentElement.querySelector('.rate-toggle')?.setAttribute('aria-expanded', 'false');
+  }
+}
+
+// LB-56, LB-83. THE RATING: one icon, and a pop-up holding a thumbs-up and a
+// thumbs-down. Choosing the chosen thumb again withdraws it. The thumb shown
+// as chosen is the rating the SERVER READ BACK after saving it, never the one
+// merely clicked: a save that failed must not look like one that landed.
+function rateControl(answer, status) {
+  const box = document.createElement('div');
+  box.className = 'rate';
+  const toggle = replyIconButton('up', 'Rate this reply');
+  toggle.classList.add('rate-toggle');
+  toggle.setAttribute('aria-haspopup', 'true');
+  toggle.setAttribute('aria-expanded', 'false');
+  const pop = document.createElement('div');
+  pop.className = 'rate-pop'; pop.hidden = true;
+  pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'Rate this reply');
+  const up = replyIconButton('up', 'Good reply');
+  const down = replyIconButton('down', 'Not a good reply');
+  pop.append(up, down);
+
+  const show = (rating) => {
+    answer.rating = rating;
+    up.setAttribute('aria-pressed', String(rating === 'up'));
+    down.setAttribute('aria-pressed', String(rating === 'down'));
+    up.replaceChildren(replyIcon('up', { filled: rating === 'up' }));
+    down.replaceChildren(replyIcon('down', { filled: rating === 'down' }));
+    const chosen = rating === 'up' || rating === 'down';
+    toggle.dataset.rating = rating;
+    toggle.replaceChildren(replyIcon(rating === 'down' ? 'down' : 'up', { filled: chosen }));
+    const said = rating === 'up' ? 'You rated this reply good'
+      : rating === 'down' ? 'You rated this reply not good'
+      : rating === 'unknown' ? 'Your last rating of this reply could not be read back'
+      : 'Rate this reply';
+    toggle.title = said; toggle.setAttribute('aria-label', said);
+  };
+  show(answer.rating || 'none');
+
+  const close = () => { pop.hidden = true; toggle.setAttribute('aria-expanded', 'false'); };
+  toggle.addEventListener('click', () => {
+    if (!pop.hidden) { close(); return; }
+    closeRatePops(pop);
+    pop.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    (answer.rating === 'down' ? down : up).focus();
+  });
+  box.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !pop.hidden) {
+      event.stopPropagation();
+      close();
+      toggle.focus();
+    }
+  });
+  const choose = async (want) => {
+    const rating = answer.rating === want ? 'none' : want;
+    up.disabled = true; down.disabled = true;
+    status.textContent = '';
+    try {
+      const saved = await api(`/api/matters/${encodeURIComponent(answer.matter_id)}`
+        + `/turns/${encodeURIComponent(answer.turn_id)}/feedback`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ rating }) });
+      show(saved.rating);
+      if (saved.rating === 'unknown') status.textContent = 'Your rating could not be read back.';
+      close();
+      toggle.focus();
+    } catch (e) {
+      if (e.obsolete) return;
+      status.textContent = e.status === 404
+        ? 'This reply cannot be rated: it is not saved as an answer on the file.'
+        : 'Your rating was not saved. Try again.';
+    } finally {
+      up.disabled = false; down.disabled = false;
+    }
+  };
+  up.addEventListener('click', () => choose('up'));
+  down.addEventListener('click', () => choose('down'));
+  box.append(toggle, pop);
+  return box;
+}
+
+// LB-83, LB-98. THE FOOT OF EVERY REPLY (owner, 28 September 2026): at its left
+// corner, copy, then rate, then the date and time. 'Copied' is said only once
+// the browser confirms; a refused copy says so and stays said.
+function replyFooter(entry, copyText) {
+  const answer = entry.answer;
+  const foot = document.createElement('div');
+  foot.className = 'reply-foot';
+  const status = document.createElement('span');
+  status.className = 'reply-status';
+  status.setAttribute('role', 'status');
+  const copy = replyIconButton('copy', 'Copy this reply');
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(copyText());
+      status.textContent = 'Copied';
+      setTimeout(() => { if (status.textContent === 'Copied') status.textContent = ''; }, 2500);
+    } catch {
+      status.textContent = 'Copy was not permitted by the browser. The reply stays selectable.';
+    }
+  });
+  foot.appendChild(copy);
+  if (answer.matter_id && answer.turn_id) foot.appendChild(rateControl(answer, status));
+  const at = answeredAt(answer);
+  if (at) foot.appendChild(at);
+  foot.appendChild(status);
+  return foot;
 }
 
 // LB-90. WHAT THIS MESSAGE CHANGED ON THE BOARD, and what waits for you
@@ -1841,6 +2008,12 @@ function renderTurn(entry) {
   for (const row of rows) renderElement(wrap, row.el);
   for (const paragraph of composed) renderParagraph(wrap, paragraph);
 
+  // The step and the saved passage a composed paragraph points at, by index.
+  function paragraphLinks(paragraph) {
+    const at = (index) => (Number.isInteger(index) ? entry.answer.elements[index] : null) || null;
+    return { carried: at(paragraph.carries), linked: at(paragraph.passage) };
+  }
+
   // ONE PARAGRAPH OF THE REPLY. Plain prose. A paragraph that carries a step in
   // its own words keeps the step's date line; a paragraph that relies on a
   // saved passage links it, opening the same source reader as the finding.
@@ -1850,17 +2023,13 @@ function renderTurn(entry) {
     const body = document.createElement('p');
     body.className = 'body'; body.textContent = paragraph.text;
     d.appendChild(body);
-    const carried = Number.isInteger(paragraph.carries)
-      ? entry.answer.elements[paragraph.carries] : null;
-    if (carried && (carried.by_when || carried.no_deadline_reason)) {
+    const { carried, linked } = paragraphLinks(paragraph);
+    if (nextStepLine(carried)) {
       const w = document.createElement('span');
       w.className = 'when';
-      w.textContent = carried.by_when ? `Next step, by ${carried.by_when}`
-        : `Next step — no deadline: ${carried.no_deadline_reason}`;
+      w.textContent = nextStepLine(carried);
       d.appendChild(w);
     }
-    const linked = Number.isInteger(paragraph.passage)
-      ? entry.answer.elements[paragraph.passage] : null;
     if (linked && linked.refs && linked.refs.length) {
       const r = document.createElement('span');
       r.className = 'refs'; fillReferences(r, linked);
@@ -1881,7 +2050,7 @@ function renderTurn(entry) {
     body.className = 'body'; body.textContent = el.text;
     d.appendChild(body);
 
-    if (el.by_when || el.no_deadline_reason) {
+    if (nextStepLine(el)) {
       const w = document.createElement('span');
       w.className = 'when';
       // SAID AS THE NEXT STEP. The section headings went with the plain-
@@ -1889,8 +2058,7 @@ function renderTurn(entry) {
       // advocate this paragraph is what to do next -- a recommended step with
       // no date read as one more paragraph of analysis. Every ACTION carries
       // this line, so this is where it is named.
-      w.textContent = el.by_when ? `Next step, by ${el.by_when}`
-        : `Next step — no deadline: ${el.no_deadline_reason}`;
+      w.textContent = nextStepLine(el);
       d.appendChild(w);
     }
     if (el.refs && el.refs.length) {
@@ -1970,8 +2138,16 @@ function renderTurn(entry) {
 
   const note = renderBoardNote(entry);
   if (note) wrap.appendChild(note);
-  const at = answeredAt(entry.answer);
-  if (at) wrap.appendChild(at);
+  // The copy is built when the icon is pressed, from exactly what is shown.
+  const shown = [
+    ...rows.map(({ el }) => ({ text: el.text, step: el, refs: el.refs })),
+    ...composed.map((paragraph) => {
+      const { carried, linked } = paragraphLinks(paragraph);
+      return { text: paragraph.text, step: carried, refs: linked?.refs };
+    }),
+    ...support.map((el) => ({ text: el.text, step: null, refs: el.refs })),
+  ];
+  wrap.appendChild(replyFooter(entry, () => replyText(entry.answer, shown)));
 
   // HOW THIS ANSWER WAS MADE -- gates, reads, calls and cost -- is not shown
   // in the conversation (owner, 28 September 2026). It is kept, in full and
@@ -3214,6 +3390,9 @@ document.addEventListener('keydown', (event) => {
 });
 document.addEventListener('click', (event) => {
   if (!$('files-menu').hidden && !event.target.closest('#matter-files')) closeFilesMenu();
+  // LB-83. A reply's rating pop-up closes on a click anywhere outside it.
+  const rating = event.target.closest?.('.rate');
+  closeRatePops(rating ? rating.querySelector('.rate-pop') : null);
 });
 window.addEventListener('nm:matter-changed', closeFilesMenu);
 window.addEventListener('nm:session-ended', closeFilesMenu);

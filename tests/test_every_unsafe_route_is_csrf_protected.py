@@ -85,7 +85,10 @@ def _unsafe_routes() -> list[tuple[str, APIRoute]]:
             continue
         if route.methods & UNSAFE:
             found.append((route.path, route))
-    return sorted(found)
+    # BY PATH AND METHOD, never by the route object: one path serving two
+    # unsafe methods (the advocate-memory PUT and DELETE) made the tuples
+    # compare routes, and the whole sweep raised before checking any of them.
+    return sorted(found, key=lambda pair: (pair[0], sorted(pair[1].methods)))
 
 
 def _is_protected(route: APIRoute) -> bool:

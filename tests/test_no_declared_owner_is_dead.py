@@ -124,6 +124,10 @@ REACHED_ELSEWHERE = {
     # board's opening edit and the new-matter form's correction post to it as
     # template literals in `nm/app/app.js`.
     "correct_opening",
+    # LB-83's rating route, registered the same way, with a BROWSER caller: the
+    # thumbs in each reply's footer post to it as a template literal in
+    # `nm/app/app.js`.
+    "rate_reply",
     "receive_upload_chunk", "complete_upload", "cancel_upload", "held_upload_content",
     # P18's two, registered the same way, and both with a BROWSER caller: the
     # Case file pane's Correct control posts the correction and the pane reads

@@ -30,6 +30,30 @@ def _with_own_words(row: dict, archive: dict | None) -> dict:
     return {**row, "message_source": "not_held"}
 
 
+#: What a reply's rating can be. `none` is a withdrawn rating, recorded like
+#: the others; `unknown` is a latest entry the store could not read back, and
+#: is NEVER shown as no rating (LB-56, LB-83).
+RATINGS = ("up", "down", "none")
+RELEASED = ("released", "legacy_released")
+
+
+def ratings(entries: tuple[dict, ...]) -> dict[str, str]:
+    """Each reply's CURRENT rating: its latest entry. Entries come oldest first."""
+    current: dict[str, str] = {}
+    for entry in entries:
+        rating = entry.get("rating")
+        current[str(entry.get("turn_id"))] = (
+            rating if not entry.get("unreadable") and rating in RATINGS else "unknown")
+    return current
+
+
+def is_released(rows: list[dict], turn_id: str) -> bool:
+    """Whether this reply is a released answer on the file -- the only kind
+    that is shown with a footer, and so the only kind that can be rated."""
+    return any(row.get("turn_id") == turn_id and row.get("committed") is True
+               and row.get("release_state") in RELEASED for row in rows)
+
+
 def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
     """Prefer atomic receipts; legacy release needs both applied and ungated evidence."""
     entries = matter.turn_receipts if isinstance(matter.turn_receipts, (tuple, list)) else ()

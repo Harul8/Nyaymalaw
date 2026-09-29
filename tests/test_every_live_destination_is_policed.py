@@ -98,6 +98,13 @@ class _RecordingStore:
     def record_metrics(self, metrics):
         self.reached.append("record_metrics")
 
+    def record_feedback(self, feedback):
+        self.reached.append("record_feedback")
+
+    def feedback_for(self, matter_id):
+        self.reached.append("feedback_for")
+        return ()
+
     def rekey(self, *a, **k):
         """An adapter extra the port does not declare."""
         self.reached.append("rekey")
@@ -162,6 +169,8 @@ def _arguments_for(method: str) -> tuple:
         "record_turn": ({"turn": 1},),
         "transcripts_for": ("m-1",),
         "record_metrics": ({"ok": True},),
+        "record_feedback": ({"rating": "up"},),
+        "feedback_for": ("m-1",),
     }[method]
 
 
