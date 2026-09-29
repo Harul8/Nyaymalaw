@@ -66,7 +66,7 @@ QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 LEG_DEPTH = 100      # each leg's list, for each wording
 RERANK_POOL = 60     # the merged head the reranker judges
 RRF_K = 60
-MAX_WORDINGS = 7
+MAX_WORDINGS = 9  # full dispute plus up to eight anchored phrase/variant queries
 RERANK_CHARS = 2000
 
 #: The legal tokens the BM25 index was built with, beside the lowercase whitespace

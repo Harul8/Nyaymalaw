@@ -298,11 +298,49 @@ def test_search_notes_never_become_an_advocates_legal_decision(tmp_path):
                         para_kind=ParaKind.ATTRIBUTABLE)
     result = EvidenceResult(Coverage.ANSWERED, (candidate,), search_note='Search was bounded.')
     grounds, decisions, relied = [], {}, []
-    engine._read_coverage(result, thread, TurnMetrics('synthetic-turn'), grounds, relied,
+    metrics = TurnMetrics('synthetic-turn')
+    engine._read_coverage(result, thread, metrics, grounds, relied,
                          turn=TurnInput(message='question', advocate_id='synthetic'),
                          concluded=decisions)
     assert not decisions and not relied
-    assert any('not been assessed' in e.text for e in grounds)
+    assert any('none has been shown to address this point' in e.text for e in grounds)
+    assert all(candidate.span not in e.text for e in grounds)
+    assert metrics.research_notes == ['Search was bounded.']
+    assert metrics.as_served()['research_notes'] == ['Search was bounded.']
+    assert 'research_notes' not in metrics.as_dict()
+
+
+def test_retrieval_internals_and_model_tiers_do_not_become_reply_items(tmp_path):
+    from nm.legal_brain.retrieve.evidence_port import ParaKind, SourceKind
+    from nm.shared.metrics_contracts import TurnMetrics
+    from nm.work_the_file.matter_contracts import Thread
+    from tests.test_turn_contract import build
+
+    engine, _ = build(tmp_path)
+    thread = Thread.create('synthetic thread')
+    candidate = replace(finding(), source_kind=SourceKind.AUTHORITY,
+                        para_kind=ParaKind.ATTRIBUTABLE, supports=None)
+    note = ('40 ranked paragraphs; 2-term lexical floor; query-term budget '
+            'omitted input terms')
+    metrics = TurnMetrics('synthetic-turn')
+    metrics.tier_downgrades.append({'read': 'consistency', 'from': 'hard',
+                                    'to': 'routine', 'model': 'scripted'})
+    grounds = []
+    engine._read_coverage(EvidenceResult(Coverage.ANSWERED, (candidate,),
+                                         search_note=note), thread, metrics,
+                          grounds, [])
+    engine._read_coverage(EvidenceResult(
+        Coverage.NOT_ASSESSED,
+        missing='the evidence bound of 3 rounds was reached before the search',
+        searched_stores=('bound_reached',)), thread, metrics, grounds, [])
+    said = ' '.join(e.text for e in (*grounds, *engine._tier_degraded(metrics)))
+    assert note in metrics.research_notes
+    assert all(term not in said.lower() for term in
+               ('lexical floor', 'query-term budget', 'ranked paragraphs',
+                'model tier', 'cheaper model', 'stronger model'))
+    assert '3 rounds' not in said
+    assert '3 rounds' in metrics.as_served()['gates_fired'][-1]['detail']
+    assert 'consistency review' in said
 
 
 def test_match_count_uses_the_index_tokenizer_not_substrings(tmp_path):

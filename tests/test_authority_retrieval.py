@@ -201,8 +201,12 @@ def test_confidence_reports_lexical_coverage_and_the_best_answer_leads(adapter):
 
 def test_the_provision_route_is_unaffected_by_the_authority_route(adapter):
     """Two different needs, two different stores, and neither silently answers
-    for the other."""
-    provision = adapter.fetch(EvidenceNeed(
+    for the other. A current-text read is explicit when no revision register is
+    installed; the strict historical adapter correctly reports not assessed."""
+    current = CorpusEvidenceAdapter(
+        CORPUS, Manifest.load(ROOT / "pipeline" / "manifest.yaml"),
+        authority_index=INDEX, current_text_when_unversioned=True)
+    provision = current.fetch(EvidenceNeed(
         question="section 6 of the specific relief act",
         governing_date=date(2026, 8, 30)))
     assert provision.coverage is Coverage.ANSWERED
@@ -363,14 +367,10 @@ def test_the_authoring_judge_is_counted_as_one_and_marked_as_inferred(identity):
     """2,222 judgments name only their authoring judge — "Srinivasachari, J."
     after the JUDGMENT heading — and no coram.
 
-    THE DECISION, and the reasoning that overturned my first one. I discarded
-    these, on the ground that the author is not the bench and counting them
-    would demote a Division Bench whose author signed alone. That risk is real
-    and it RUNS ONLY ONE WAY: one is the minimum bench, so an inferred size can
-    rank an authority below where it belongs and can never rank one above. A
-    recall cost, not a confidently wrong answer — and it is paid to keep 2,223
-    judgments usable, because the principles they state are good whatever the
-    coram was.
+    The number is retained to tell an advocate what the source exposed. An
+    authoring judge does not prove the coram; using it to compare benches can
+    wrongly demote this judgment. The hierarchy comparator therefore refuses
+    that comparison while leaving the source available to read.
 
     What is kept from the objection is the PROVENANCE. "Single judge" read off
     a signature and "single judge" read off a coram are different facts, and an
@@ -403,9 +403,9 @@ def test_the_authoring_judge_is_counted_as_one_and_marked_as_inferred(identity):
     assert "no coram stated" in ident.describe()
 
 
-def test_a_ranking_that_rests_on_an_inferred_bench_discloses_it(identity):
-    """The error only runs one way, so the disclosure only needs to run one
-    way: when the LOSER's bench was inferred, say it may have been larger."""
+def test_a_ranking_that_rests_on_an_inferred_bench_is_refused(identity):
+    """An authoring judge does not establish the full coram. Treating an
+    inferred single judge as a smaller bench can reverse the conclusion."""
     import sqlite3
 
     from nm.legal_brain.retrieve.identity_sources import Precedence, supersedes
@@ -421,5 +421,5 @@ def test_a_ranking_that_rests_on_an_inferred_bench_discloses_it(identity):
         con.close()
 
     verdict, why = supersedes(identity.case(stated), identity.case(inferred))
-    assert verdict is Precedence.LEFT
-    assert "may in fact have been larger" in why
+    assert verdict is Precedence.NOT_COMPARABLE
+    assert "coram" in why

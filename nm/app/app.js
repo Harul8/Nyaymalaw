@@ -1309,7 +1309,7 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
     }];
     reconcileIntent([]);
     repaint();
-    keepThreadAtLatest();
+    showConversationFromStart();
     return true;
   }
 
@@ -1331,7 +1331,7 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
     });
   }
   repaint();
-  keepThreadAtLatest();
+  showConversationFromStart();
   return true;
 }
 
@@ -1858,8 +1858,8 @@ function renderTurn(entry) {
     row.className = 'said-row';
     const b = document.createElement('div');
     b.className = 'brief brief-missing';
-    b.textContent = 'Your message on this turn is not held: it was not added to the file '
-      + 'because the checks had not cleared, and no conversation record of it was found.';
+    b.textContent = 'The original message for this turn is not available in the '
+      + 'conversation record.';
     row.appendChild(b);
     wrap.appendChild(row);
   }
@@ -2178,36 +2178,12 @@ function renderTurn(entry) {
   return wrap;
 }
 
-// REOPENED OR RELOADED, A CONVERSATION OPENS AT ITS LAST MESSAGE (owner,
-// 28 September 2026) and stays there while its late parts -- board notes,
-// fonts -- finish laying out. The first scroll, key, tap or click is
-// the advocate's own, and releases it; so do a few seconds of quiet.
-let releaseLatest = null;
-function keepAtLatest(container, toEnd) {
-  if (releaseLatest) releaseLatest();
-  const intents = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
-  const observer = new MutationObserver(() => toEnd());
-  let timer = null;
-  const release = () => {
-    observer.disconnect();
-    clearTimeout(timer);
-    intents.forEach((type) => container.removeEventListener(type, release));
-    if (releaseLatest === release) releaseLatest = null;
-  };
-  releaseLatest = release;
-  toEnd();
-  observer.observe(container, { childList: true, subtree: true });
-  intents.forEach((type) => container.addEventListener(type, release, { passive: true }));
-  timer = setTimeout(release, 4000);
-  document.fonts?.ready.then(() => { if (releaseLatest === release) toEnd(); });
-}
-
-function keepThreadAtLatest() {
+// Opening a saved matter starts with its first turn. New live replies still
+// follow the latest turn through the send path.
+function showConversationFromStart() {
   const t = $('thread');
-  keepAtLatest(t, () => {
-    t.scrollTop = t.scrollHeight;
-    $('jump-latest').hidden = true;
-  });
+  t.scrollTop = 0;
+  $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
 }
 
 function repaint() {
@@ -4995,8 +4971,7 @@ async function showHistory(matterId) {
 
     body.appendChild(card);
   });
-  // Reopened here too, the record opens at its last turn.
-  keepAtLatest(body, () => body.lastElementChild?.scrollIntoView({ block: 'end' }));
+  $('pane-history').scrollTop = 0;
 }
 
 $('history-matter').addEventListener('change', (ev) => showHistory(ev.target.value));

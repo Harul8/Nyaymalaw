@@ -108,11 +108,10 @@ class CaseIdentity:
     given -- 2,223 judgments, taken as one judge so they stay usable rather
     than being discarded.
 
-    The inference can only ever rank an authority BELOW where it belongs: one
-    is the minimum bench, so a Division Bench read as a single judge loses a
-    comparison it should win, and nothing is ever ranked higher than it is.
-    That is a recall cost, not a wrong answer — but a reader must still be able
-    to see which it was, so it travels with the record.
+    The inferred size describes the author, not the coram. It may understate a
+    Division Bench and cannot establish a relative bench ranking. It remains
+    visible for source inspection, but `supersedes` refuses a same-court
+    comparison that depends on it.
     """
 
     @property
@@ -121,7 +120,8 @@ class CaseIdentity:
 
     @property
     def bench_known(self) -> bool:
-        return bool(self.bench_size)
+        return bool(self.bench_size) and self.bench_source in {
+            "bench_header", "coram_header"}
 
     @property
     def bench_inferred(self) -> bool:
@@ -141,6 +141,8 @@ class CaseIdentity:
             return "bench not recorded"
         if self.bench_inferred:
             return "single judge (inferred from the authoring judge; no coram stated)"
+        if not self.bench_known:
+            return "bench size not verified"
         if n == 1:
             return "single judge"
         if n == 2:
@@ -151,31 +153,54 @@ class CaseIdentity:
 
 
 def supersedes(left: CaseIdentity, right: CaseIdentity) -> tuple[Precedence, str]:
-    """THE HIERARCHY RULE, with the reason attached.
+    """THE HIERARCHY RULE, for judgments already shown to decide one point.
 
         the Supreme Court binds every High Court (Art. 141)
         within one court, a larger bench supersedes a smaller one
 
-    A reason travels with the answer because an advocate who cannot see WHY one
-    authority was ranked above another has to take it on trust, and this is a
-    ranking they will act on.
+    This identity-only comparator cannot establish a shared proposition or
+    conflict. Its caller must establish that before presenting precedence as
+    relevant to the dispute. The reason records only court and bench status.
     """
     if left.tier is Tier.UNKNOWN or right.tier is Tier.UNKNOWN:
         return Precedence.NOT_COMPARABLE, (
             "one of the courts could not be identified, so seniority cannot be "
             "established. It is not assumed")
 
-    if left.tier != right.tier:
+    cross_court_precedence = {
+        frozenset((Tier.SUPREME, Tier.HC_OWN)),
+        frozenset((Tier.SUPREME, Tier.HC_OTHER)),
+        frozenset((Tier.SUPREME, Tier.SUBORDINATE)),
+        frozenset((Tier.HC_OWN, Tier.SUBORDINATE)),
+    }
+    if frozenset((left.tier, right.tier)) in cross_court_precedence:
         winner = Precedence.LEFT if left.tier > right.tier else Precedence.RIGHT
         higher, lower = ((left, right) if left.tier > right.tier else (right, left))
         return winner, (f"{higher.court or 'the higher court'} is senior to "
                         f"{lower.court or 'the other court'}")
 
+    same_court = normalise_court(left.court) == normalise_court(right.court)
+    if same_court and normalise_court(left.court) in (Court.HC_OTHER,
+                                                      Court.SUBORDINATE):
+        # Those enum members each collapse many distinct courts. The raw
+        # labels must agree before their benches can be compared.
+        same_court = ((left.court or "").strip().casefold()
+                      == (right.court or "").strip().casefold())
+    if not same_court:
+        return Precedence.NOT_COMPARABLE, (
+            "different courts at this level do not acquire precedence over "
+            "each other from bench size or forum binding status")
+
+    if left.bench_inferred or right.bench_inferred:
+        return Precedence.NOT_COMPARABLE, (
+            "at least one bench size was inferred from an authoring judge, "
+            "not stated by the coram; relative bench strength is unverified")
+
     if not (left.bench_known and right.bench_known):
         return Precedence.NOT_COMPARABLE, (
-            "same court, and the bench is not recorded for at least one of "
-            "them — a larger bench supersedes a smaller one, and that cannot "
-            "be applied blind")
+            "same court, and a bench size is not recorded or source-verified "
+            "for at least one judgment; relative bench strength cannot be "
+            "applied blind")
 
     if left.bench_size == right.bench_size:
         return Precedence.CO_ORDINATE, (
@@ -187,16 +212,8 @@ def supersedes(left: CaseIdentity, right: CaseIdentity) -> tuple[Precedence, str
               else Precedence.RIGHT)
     bigger, smaller = ((left, right) if left.bench_size > right.bench_size
                        else (right, left))
-    caveat = ""
-    if smaller.bench_inferred:
-        # The loser's size was inferred from its authoring judge. Say so: it
-        # may have been a Division Bench that signed with one name, in which
-        # case this ranking is too harsh on it. The error can only run this
-        # way, and the advocate can check in one click.
-        caveat = (" — though the smaller one's bench was inferred from its "
-                  "authoring judge and may in fact have been larger")
-    return winner, (f"{bigger.describe()} supersedes {smaller.describe()} in the "
-                    f"same court{caveat}")
+    return winner, (f"{bigger.describe()} has greater bench strength than "
+                    f"{smaller.describe()} in the same court")
 
 
 class IdentityIndex:

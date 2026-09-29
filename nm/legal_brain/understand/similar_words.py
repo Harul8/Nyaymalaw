@@ -28,8 +28,9 @@ from nm.shared.model_port import Prompt
 
 MAX_PHRASES = 4
 MAX_WORDINGS_EACH = 3
-MAX_WORDINGS = 6
+MAX_WORDINGS = 8
 MAX_WORDS_IN_A_WORDING = 14
+MAX_WORDS_IN_A_QUOTE = 32
 
 SCHEMA: dict = {
     "x-nm-read": "similar_words",
@@ -88,32 +89,70 @@ def _plain(text: str) -> str:
     return " ".join(str(text or "").split())
 
 
-def interpret(data: dict, words: str) -> tuple[str, ...]:
-    """The wordings the search may use, each anchored to the advocate's own phrase.
+def _anchored_quote(quoted: str, held: str) -> tuple[str, bool]:
+    """Only exact contiguous advocate text; partial salvage carries no variants.
 
-    Dropped, and never repaired: a phrase not found in the words; a wording naming an
+    A model may quote `unregistered agreement for sale` where the advocate
+    actually said `unregistered agreement dated ... agreed to sell`. The full
+    quote is invented, but `unregistered agreement` is still their exact text
+    and a useful narrow search. Search that fragment alone; model paraphrases
+    could depend on the unsupported part and are discarded.
+    """
+    if len(quoted.split()) > MAX_WORDS_IN_A_QUOTE:
+        return "", False
+    if quoted.casefold() in held:
+        return quoted, True
+    parts = quoted.split()
+    for width in range(len(parts) - 1, 1, -1):
+        for start in range(len(parts) - width + 1):
+            fragment = " ".join(parts[start:start + width])
+            if len(fragment) >= 12 and fragment.casefold() in held:
+                return fragment, False
+    return "", False
+
+
+def interpret(data: dict, words: str) -> tuple[str, ...]:
+    """Bounded search wordings that cover each anchored phrase before variants.
+
+    Dropped: a phrase with no exact fragment in the words; a wording naming an
     Act, a provision or any number; a wording longer than a phrase needs; a repeat.
+    Exact copied phrases are separate queries as well as part of the full message:
+    that preserves a material qualifier a paraphrase may omit. Earlier phrases
+    may not spend the entire budget before later phrases are searched.
     """
     held = _plain(words).casefold()
-    out: list[str] = []
+    anchors: list[tuple[str, tuple[str, ...]]] = []
     phrases = (data or {}).get("phrases")
     for row in (list(phrases) if isinstance(phrases, list) else [])[:MAX_PHRASES]:
         if not isinstance(row, dict):
             continue
-        quoted = _plain(row.get("quoted")).casefold()
-        if len(quoted) < 3 or quoted not in held:
+        quoted, complete = _anchored_quote(_plain(row.get("quoted")), held)
+        if len(quoted) < 3:
             continue
-        kept = 0
-        for wording in row.get("wordings") or ():
+        variants: list[str] = []
+        for wording in (row.get("wordings") or ()) if complete else ():
             text = _plain(wording)
             if (not text or len(text.split()) > MAX_WORDS_IN_A_WORDING
                     or _NAMES_LAW.search(text) or text.casefold() in held
-                    or text.casefold() in (w.casefold() for w in out)):
+                    or text.casefold() in (w.casefold() for w in variants)):
                 continue
-            out.append(text)
-            kept += 1
-            if kept >= MAX_WORDINGS_EACH:
+            variants.append(text)
+            if len(variants) >= MAX_WORDINGS_EACH:
                 break
-        if len(out) >= MAX_WORDINGS:
-            break
+        anchors.append((quoted, tuple(variants)))
+
+    out: list[str] = []
+
+    def add(text: str) -> None:
+        if text.casefold() not in (w.casefold() for w in out):
+            out.append(text)
+
+    for quoted, _ in anchors:
+        add(quoted)
+    for position in range(MAX_WORDINGS_EACH):
+        for _, variants in anchors:
+            if position < len(variants):
+                add(variants[position])
+            if len(out) >= MAX_WORDINGS:
+                return tuple(out[:MAX_WORDINGS])
     return tuple(out[:MAX_WORDINGS])

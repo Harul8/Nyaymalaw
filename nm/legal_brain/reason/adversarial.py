@@ -57,7 +57,7 @@ from nm.work_the_file.matter_contracts import ThreadId
 @refuses_blank_text("no_answer_because")
 @dataclass(frozen=True)
 class Attack:
-    """The case the other side will run, on the grounds they will run it."""
+    """A possible opposing argument, with the evidence needed to test it."""
 
     thread: ThreadId
     ground: str
@@ -70,6 +70,8 @@ class Attack:
     D7: *where an attack has no good answer, say so plainly and resolve it into
     what we do about it.* An unanswerable attack reported and left there is
     half a finding."""
+    evidence_needed: str = ""
+    """What must be checked before a predicted opposing position is credited."""
 
     def __post_init__(self) -> None:
         if not self.no_answer and blank(self.our_answer):
@@ -82,6 +84,10 @@ class Attack:
                 f"the attack on {self.ground!r} is marked unanswerable and "
                 f"stops there. D7 requires it resolved into what we do about "
                 f"it — a problem stated and abandoned is half a finding.")
+        if blank(self.evidence_needed):
+            raise ValueError(
+                f"the possible attack on {self.ground!r} names no evidence "
+                "that would establish its factual premise")
 
 
 @refuses_blank_text()
@@ -285,9 +291,15 @@ ATTACK_SCHEMA: dict = {
                                        "good answer. Required when "
                                        "`no_answer` is true.",
                     },
+                    "evidence_needed": {
+                        "type": "string",
+                        "description": "The specific missing account, record or witness needed "
+                                       "to test this possible argument. Do not state the "
+                                       "missing premise as a fact.",
+                    },
                 },
                 "required": ["ground", "their_case", "our_answer",
-                             "no_answer", "no_answer_because"],
+                             "no_answer", "no_answer_because", "evidence_needed"],
                 "additionalProperties": False,
             },
         },
@@ -297,13 +309,19 @@ ATTACK_SCHEMA: dict = {
 }
 
 ATTACK_SYSTEM = (
-    "You put the OTHER SIDE\'s case against an Indian advocate\'s client, at "
-    "its strongest.\n\n"
-    "Develop the strongest plausible opposing argument supported by this record. "
-    "Distinguish an argument already recorded from one anticipated conditionally; "
-    "never predict what a party or judge will actually do. Preserve missing "
-    "premises and adverse source limitations without weakening the argument.\n\n"
-    "For each, give our answer. Where there is NO good answer, say so — "
+    "You test the OTHER SIDE\'s possible case against an Indian advocate\'s client, "
+    "at its strongest.\n\n"
+    "Develop only an argument anchored in the supplied account and retrieved law. "
+    "An anticipated allegation is a hypothesis, never an established event or a "
+    "prediction of what a party or judge will do. In `evidence_needed`, name the "
+    "specific account, record or witness needed to establish any missing factual "
+    "premise. Do not turn a possible explanation of the other side's conduct "
+    "into a fact about what happened. Preserve adverse source limitations "
+    "without weakening the possible argument.\n\n"
+    "For each, give our answer from supplied material. Do not invent a fact "
+    "for our side to rebut a hypothetical fact for theirs; if our factual "
+    "answer is missing, identify what must be checked. Where there is NO "
+    "good answer, say so — "
     "`no_answer` true — distinguish no supported answer yet from an established "
     "unanswerable objection. Explain the missing material or supported response "
     "if one exists. Do not invent a remedy or authorise a concession."
@@ -448,6 +466,7 @@ def read_attacks(said: dict, thread: ThreadId) -> ReadAttacks:
                 our_answer=str(row.get("our_answer") or ""),
                 no_answer=bool(row.get("no_answer")),
                 no_answer_because=str(row.get("no_answer_because") or ""),
+                evidence_needed=str(row.get("evidence_needed") or "").strip(),
             ))
         except ValueError as exc:
             refused.append(str(exc))

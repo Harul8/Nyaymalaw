@@ -164,6 +164,7 @@ class DatedEvent:
     reference: str = ""
     certainty: Certainty = Certainty.ASSERTED
     refused: str | None = None
+    model_resolution_disagreed: str = ""
     corrects: str = ""
     """The id of the entry this REPLACES, or empty.
 
@@ -241,7 +242,8 @@ def looks_like_a_correction(message: str) -> str | None:
 CHART_HEADING = "THE CHRONOLOGY SO FAR"
 
 
-def build_prompt(quotable: Quotable, reference: date, existing: tuple = ()):
+def build_prompt(quotable: Quotable, reference: date | None, existing: tuple = (),
+                 *, current_date: date | None = None, anchor: str = ""):
     """The message, the reference date, and what was already said.
 
     The reference is passed EXPLICITLY and appears in the prompt. "Yesterday"
@@ -257,8 +259,19 @@ def build_prompt(quotable: Quotable, reference: date, existing: tuple = ()):
     """
     from nm.shared.model_port import Prompt
 
-    user = (f"Today is {reference.isoformat()}. Resolve every relative date "
-            f"against that.\n\n")
+    if anchor and reference is not None:
+        user = (f"The current turn date is {(current_date or reference).isoformat()}. "
+                f"The advocate explicitly paired a relative day with a calendar date "
+                f"in {anchor!r}. For relative dates in this same account use "
+                f"{reference.isoformat()} as the reference date; do not reinterpret "
+                "the advocate's explicit date against the current turn date.\n\n")
+    elif reference is None:
+        user = ("The account gives conflicting explicit relative-date anchors. "
+                "Leave relative dates unresolved; fully specified calendar dates "
+                "remain usable.\n\n")
+    else:
+        user = (f"Today is {reference.isoformat()}. Resolve every relative date "
+                f"against that.\n\n")
     if existing:
         # THE IDS, so `corrects` has something to name. Without them the field
         # cannot be filled and the read degrades to what it was before.
@@ -276,8 +289,9 @@ def build_prompt(quotable: Quotable, reference: date, existing: tuple = ()):
     return Prompt(system=SYSTEM, user=user)
 
 
-def interpret(quotable: Quotable, reference: date, data: dict,
+def interpret(quotable: Quotable, reference: date | None, data: dict,
               known: frozenset[str] = frozenset(),
+              *, anchored: bool = False,
               ) -> tuple[DatedEvent, ...]:
     """Turn the model's answer into chart rows, REFUSING what it cannot support.
 
@@ -313,7 +327,7 @@ def interpret(quotable: Quotable, reference: date, data: dict,
                          or not instruction or instruction == expr):
             corrects = ""
 
-        if not iso:
+        if not iso and not expr:
             # NO DATE IS AN ANSWER. The event is on the chart, undated.
             out.append(DatedEvent(event=event, state=DateState.UNDATED,
                                   certainty=certainty,
@@ -335,26 +349,38 @@ def interpret(quotable: Quotable, reference: date, data: dict,
                         f"what the advocate wrote"))
             continue
 
-        try:
-            on = date.fromisoformat(iso)
-        except ValueError:
-            out.append(DatedEvent(
-                event=event, state=DateState.UNDATED, certainty=certainty,
-                refused=f"{iso!r} is not a date"))
-            continue
-
         established = resolve_calendar_expression(expr, reference)
-        if established is None or established != on:
+        if established is None:
             out.append(DatedEvent(
                 event=event, state=DateState.UNDATED, certainty=certainty,
-                date_expression=expr, reference=reference.isoformat(),
+                date_expression=expr,
+                reference=reference.isoformat() if reference else "",
                 refused="the supplied expression does not reproducibly establish this date"))
             continue
 
+        if iso:
+            try:
+                on = date.fromisoformat(iso)
+            except ValueError:
+                out.append(DatedEvent(
+                    event=event, state=DateState.UNDATED, certainty=certainty,
+                    refused=f"{iso!r} is not a date"))
+                continue
+            if on != established and not (anchored and reference is not None
+                                          and expr.casefold() in ("today", "yesterday", "tomorrow")):
+                out.append(DatedEvent(
+                    event=event, state=DateState.UNDATED, certainty=certainty,
+                    date_expression=expr, reference=reference.isoformat() if reference else "",
+                    refused="the supplied expression does not reproducibly establish this date"))
+                continue
+        else:
+            on = established
+
         out.append(DatedEvent(
-            event=event, state=DateState.RESOLVED, on=on,
-            date_expression=expr, reference=reference.isoformat(),
-            certainty=certainty, corrects=corrects))
+            event=event, state=DateState.RESOLVED, on=established,
+            date_expression=expr, reference=reference.isoformat() if reference else "",
+            certainty=certainty, corrects=corrects,
+            model_resolution_disagreed=(iso if iso and on != established else "")))
     return tuple(out)
 
 

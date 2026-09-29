@@ -12,8 +12,10 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
+from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.open_matter.transcripts_api import project
 from nm.work_the_file.matter_contracts import Matter, MatterId
+from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
 
@@ -60,3 +62,43 @@ def test_an_admitted_turn_reads_back_from_its_receipt_unchanged():
     matter = _matter(admitted=True)
     rows, _ = project(matter, (_archive(message="an archive copy that differs"),))
     assert rows[0] == matter.turn_receipts[0].projected(matter.id)
+
+
+def test_blocked_messages_read_back_in_order_without_becoming_case_facts(tmp_path):
+    engine, store = build(tmp_path, intake=False)
+    first = engine.run(TurnInput(advocate_id="adv", message=WORDS))
+    later_words = "The opposing party may be Ravi Kumar; please check that name."
+    second = engine.run(TurnInput(advocate_id="adv", matter_id=first.matter.id,
+                                  message=later_words))
+
+    saved = store.load(first.matter.id)
+    rows, problems = project(saved, store.transcripts_for(saved.id))
+    assert not problems
+    assert [row["message"] for row in rows] == [WORDS, later_words]
+    assert all(row["committed"] and row["release_state"] == "released" for row in rows)
+    assert all(row["input_admitted"] is False for row in rows)
+    assert all(receipt.message == "" for receipt in saved.turn_receipts)
+    assert saved.facts == ()
+    assert all("derived" not in archive for archive in store.transcripts_for(saved.id))
+    assert first.answer.blocked and second.answer.blocked
+    question = first.answer.elements[0].text.lower()
+    assert "client" in question and "opposing party" in question
+    assert "capacity" not in question, "a step-only limit was made an admission blocker"
+
+
+def test_the_served_transcript_restores_the_words_of_a_blocked_turn(client, wired):
+    # This test exercises the missing-intake path; the shared client normally
+    # supplies completed intake so unrelated wire tests can reach legal work.
+    wired.engine = wired.engine.inner
+    sent = client.post("/api/turn", json={"message": WORDS})
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["blocked"] is True
+    matter_id = sent.json()["matter_id"]
+
+    read = client.get(f"/api/matters/{matter_id}/transcript")
+    assert read.status_code == 200, read.text
+    rows = read.json()["turns"]
+    assert len(rows) == 1
+    assert rows[0]["message"] == WORDS
+    assert rows[0]["message_source"] == "conversation_record"
+    assert rows[0]["input_admitted"] is False

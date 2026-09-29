@@ -174,8 +174,13 @@ def _sentence_around(text: str, index: int) -> str:
 
 def scripted_dates(user: str) -> str:
     """A deterministic stand-in for the model's date read."""
-    said = user.split("just said:", 1)[-1]
-    ref = re.search(r"Today is (\d{4}-\d{2}-\d{2})", user)
+    # Read only the current advocate section. The prompt may now contain a
+    # source-grounded relative-date anchor before that section, and scanning
+    # the whole prompt would turn NM's explanation into a chronology event.
+    marker = "[this turn]\n"
+    said = (user.split(marker, 1)[1].split("\n\n", 1)[0]
+            if marker in user else user)
+    ref = re.search(r"(?:Today is|use) (\d{4}-\d{2}-\d{2})(?: as the reference date)?", user)
     events = []
     for m in _SCRIPTED_DATE.finditer(said):
         day, month, year = m.group(1), m.group(2).lower(), m.group(3)
@@ -648,6 +653,7 @@ def scripted_attacks(user: str) -> str:
             "no_answer_because": ("concede it early and put the client on "
                                   "notice that it will be put to them"
                                   if none else ""),
+            "evidence_needed": "the opposing party's account and supporting material",
         })
     return json.dumps({"attacks": rows})
 

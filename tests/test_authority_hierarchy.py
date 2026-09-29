@@ -32,7 +32,8 @@ pytestmark = pytest.mark.class_a
 
 def case(court: str, bench: int | None = None, year: int = 2000,
          cid: str = "c") -> CaseIdentity:
-    return CaseIdentity(case_id=cid, court=court, year=year, bench_size=bench)
+    return CaseIdentity(case_id=cid, court=court, year=year, bench_size=bench,
+                        bench_source="bench_header" if bench else None)
 
 
 # ==================================================== the tier rule ========
@@ -111,6 +112,34 @@ def test_an_unrecorded_bench_blocks_the_comparison_rather_than_defaulting():
         case("Supreme Court of India", bench=5))
     assert verdict is Precedence.NOT_COMPARABLE
     assert "not recorded" in why
+
+
+def test_different_high_courts_do_not_gain_precedence_from_bench_size():
+    verdict, why = supersedes(
+        case("High Court of Telangana", bench=3),
+        case("High Court of Kerala", bench=1))
+    assert verdict is Precedence.NOT_COMPARABLE
+    assert "different courts" in why
+
+
+def test_an_inferred_author_is_not_a_verified_coram():
+    inferred = CaseIdentity(
+        case_id="uncertain", court="Supreme Court of India", bench_size=1,
+        bench_source="author_inline")
+    verdict, why = supersedes(
+        case("Supreme Court of India", bench=2), inferred)
+    assert verdict is Precedence.NOT_COMPARABLE
+    assert "coram" in why
+
+
+def test_a_bench_number_without_its_source_does_not_decide_precedence():
+    unverified = CaseIdentity(
+        case_id="unverified", court="Supreme Court of India", bench_size=1)
+    verdict, why = supersedes(
+        case("Supreme Court of India", bench=2), unverified)
+    assert verdict is Precedence.NOT_COMPARABLE
+    assert "source-verified" in why
+    assert unverified.describe() == "bench size not verified"
 
 
 def test_bench_strength_is_described_in_the_advocates_vocabulary():

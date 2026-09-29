@@ -180,3 +180,15 @@ def interpret(data: dict, offered: frozenset[str]) -> Accrual:
         limb = "the trigger, limb not stated"
     return Accrual(fact_id=fact_id, limb=limb,
                    why=why or "named as the event the period runs from")
+
+
+def unresolved_trigger_reason(trigger: str, dated) -> str:
+    """Distinguish a known event date from uncertainty about legal accrual."""
+    recorded = "; ".join(
+        f"{snippet(f.statement, 65)} ({f.date.isoformat()})"
+        for f in dated if getattr(f, "date", None) is not None)
+    return (f"The period runs from {trigger}. The dated events are recorded: "
+            f"{recorded}. I cannot establish which of these events, if any, "
+            "satisfies that legal trigger. Please clarify what happened and "
+            "whether it amounted to that event; the calendar dates themselves "
+            "are already on the file.")

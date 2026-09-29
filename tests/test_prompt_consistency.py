@@ -45,6 +45,7 @@ SITES = {
     "controlled_brain:run",
     "dispute:build_prompt",
     "dispute:fixed_allocation_repair",
+    "dispute:split_audit_prompt",
     "duty:build_prompt",
     "evidence_item:build_inventory_prompt",
     "factors:build_prompt",

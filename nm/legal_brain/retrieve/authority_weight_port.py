@@ -100,16 +100,16 @@ class Weighed:
 
 
 class AuthorityWeightPort(Protocol):
-    """The knowledge plane, asked to rank the authorities of one turn.
+    """The knowledge plane, asked to compare authorities on one legal point.
 
-    Takes the findings' LOCATORS rather than the findings, because the case
-    identity is what the rule needs and the locator is where the turn carries
-    it. Returns one `Weighing` per pair worth saying something about; a pair
-    the rule cannot reach at all produces nothing, and a pair it can reach but
-    cannot rank produces `NOT_RECORDED` with the reason.
+    Locators alone identify judgments; they do not establish that the same
+    proposition was decided. The ordinary model-facing call leaves
+    `same_proposition_established` false. A caller that has separately checked
+    both passages against the same proposition may set it true.
     """
 
-    def weigh(self, locators: tuple[str, ...]) -> Weighed: ...
+    def weigh(self, locators: tuple[str, ...], *,
+              same_proposition_established: bool = False) -> Weighed: ...
 
 
 __all__ = ["Standing", "Weighing", "Weighed", "AuthorityWeightPort"]

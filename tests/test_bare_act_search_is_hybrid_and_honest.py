@@ -241,7 +241,58 @@ def test_a_wording_must_be_anchored_to_the_advocate_s_words_and_name_no_law():
                       "section 115 hurt", "assault or criminal force"]},
         {"quoted": "stole her car", "wordings": ["theft of a motor vehicle"]},
     ]}
-    assert interpret(data, words) == ("voluntarily causing hurt", "assault or criminal force")
+    assert interpret(data, words) == (
+        "pushed her down and injured her knee", "voluntarily causing hurt",
+        "assault or criminal force")
+
+
+def test_each_later_anchored_phrase_gets_query_space_before_extra_variants():
+    phrases = ("first event", "second event", "third event", "fourth event")
+    words = "; ".join(phrases)
+    data = {"phrases": [
+        {"quoted": phrase, "wordings": [f"{name} description",
+                                          f"{name} alternative", f"{name} additional"]}
+        for phrase, name in zip(phrases, ("alpha", "beta", "gamma", "delta"))
+    ]}
+    chosen = interpret(data, words)
+    assert len(chosen) == 8
+    assert chosen[:4] == phrases
+    assert chosen[4:] == tuple(f"{name} description" for name in
+                               ("alpha", "beta", "gamma", "delta"))
+    parts = _Parts([_passage(1, "synthetic_relief_act_1963", "6", "t")],
+                   bm25=[1], vectors=[1])
+    _search(parts).search(words, similar=chosen, as_of=ON)
+    assert ("vectors", (words, *chosen)) in parts.asked
+
+
+def test_an_unanchored_or_law_naming_variant_cannot_use_the_search_budget():
+    words = "The owner blocked the gate, and the visitor fell."
+    data = {"phrases": [
+        {"quoted": "blocked the gate", "wordings": [
+            "obstructed entry", "section 341 wrongful restraint"]},
+        {"quoted": "stole a car", "wordings": ["vehicle theft"]},
+        {"quoted": "the visitor fell", "wordings": ["personal injury"]},
+    ]}
+    chosen = interpret(data, words)
+    assert chosen == ("blocked the gate", "the visitor fell",
+                      "obstructed entry", "personal injury")
+    assert "vehicle theft" not in chosen
+    assert "section 341 wrongful restraint" not in chosen
+
+
+def test_only_an_exact_fragment_of_an_imprecise_model_quote_is_searched():
+    words = ("She signed an unregistered agreement dated years ago and later "
+             "asked for a sale deed.")
+    data = {"phrases": [
+        {"quoted": "unregistered agreement for sale",
+         "wordings": ["registration required for a sale contract"]},
+        {"quoted": "forged title to the property",
+         "wordings": ["fraudulent conveyance"]},
+    ]}
+    chosen = interpret(data, words)
+    assert chosen == ("unregistered agreement",)
+    assert "registration required for a sale contract" not in chosen
+    assert "fraudulent conveyance" not in chosen
 
 
 # ========================== 5. on the served turn =============================
@@ -272,15 +323,13 @@ def _engine(tmp_path, port):
     return engine
 
 
-def test_every_dispute_is_searched_and_its_sections_arrive_as_candidates(tmp_path):
+def test_every_dispute_is_searched_without_publishing_unassessed_sections(tmp_path):
     port = _Port()
     out = _engine(tmp_path, port).run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE,
                                                 today=TODAY))
     assert len(port.calls) == len(out.matter.threads) == 3, "a dispute was not searched"
     shown = [e for e in out.answer.elements if "A searched section" in e.text]
-    assert len(shown) == 3 and all(e.thread for e in shown)
-    assert all("has not been assessed" in e.text for e in shown), (
-        "a candidate was shown without its limit")
+    assert not shown, "a search hit was published before applicability was checked"
     for thread in out.matter.threads:
         assert not any("searched::" in f.locator for f in thread.authorities), (
             "a search candidate was recorded as law the dispute rests on")

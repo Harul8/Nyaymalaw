@@ -199,7 +199,10 @@ def test_the_served_engine_executes_a_proposal_and_persists_its_limit(tmp_path):
     assert saved.turn_receipts
     payload = saved.turn_receipts[-1].answer
     limits = [e['text'] for e in payload['elements'] if e['disclosure']]
-    assert any('last retrieval added no new material' in line for line in limits)
+    assert any('Judgment research on this point remains incomplete' in line
+               for line in limits)
+    assert any('last retrieval added no new material' in note
+               for note in output.metrics.research_notes)
     assert all('win_at_any_cost' not in e['text'] for e in payload['elements'])
 
 
@@ -234,5 +237,8 @@ def test_invalid_model_proposal_does_not_bypass_the_served_turn(tmp_path):
     authority = [need for need in searches if need.want_authority]
     assert len(authority) == 1 and message in authority[0].question
     assert not any('Fabricated Act' in need.question for need in searches)
-    assert any('failed its source or action checks' in e.text for e in output.answer.elements)
+    assert any('Judgment research on this point remains incomplete' in e.text
+               for e in output.answer.elements)
+    assert any('failed its source or action checks' in note
+               for note in output.metrics.research_notes)
     assert all('Fabricated Act' not in e.text for e in output.answer.elements)

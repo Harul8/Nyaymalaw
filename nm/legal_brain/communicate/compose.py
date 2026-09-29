@@ -76,9 +76,13 @@ COMPOSE_CHECK_SYSTEM = (
     "checked work given to you; and every sentence that says something was done, "
     "recorded, corrected or changed on the file that the checked work does not report. "
     "Copy each such sentence exactly as written and say briefly why. A faithful "
-    "restatement of a passage or of the checked work is supported; the advocate's own "
-    "account of the facts is not law and is never listed. List nothing when every "
-    "sentence is supported.")
+    "restatement of a passage or of the checked work is supported. A factual "
+    "statement attributed to the advocate is supported by their supplied words; "
+    "those words are not proof that the allegation is true and are not a source "
+    "of law. Applying a retrieved rule to attributed facts is permissible when "
+    "both the rule and the factual premises are supplied; mark a conclusion "
+    "unsupported if it adds an unstated premise or overstates the rule. List "
+    "nothing when every sentence is supported.")
 
 _ITEM = re.compile(r"^E(\d{1,3})$")
 
@@ -369,7 +373,7 @@ def paragraphs_from(data: dict, answer: Answer) -> tuple[ReplyParagraph, ...]:
 
 
 def check_prompt(paragraphs: tuple[ReplyParagraph, ...], answer: Answer,
-                 items: tuple[int, ...]) -> Prompt:
+                 items: tuple[int, ...], *, own_words: tuple[str, ...] = ()) -> Prompt:
     """The reply, what it may state law from, and what it had to convey -- in that
     order, the items last."""
     reply = [{"paragraph": n, "text": p.text} for n, p in enumerate(paragraphs)]
@@ -384,9 +388,16 @@ def check_prompt(paragraphs: tuple[ReplyParagraph, ...], answer: Answer,
               **({"passage": snippet(e.source.text, PASSAGE_CHARS)}
                  if e.source is not None else {})}
              for i, e in enumerate(answer.elements)]
+    account = []
+    if own_words:
+        account = [snippet(own_words[0], 12000)]
+        account.extend(snippet(word, 600) for word in own_words[-60:]
+                       if word.strip() and word != own_words[0])
     user = ("THE REPLY:\n" + json.dumps(reply, ensure_ascii=False)
             + "\n\nTHE PASSAGES AND CHECKED WORK THE REPLY MAY STATE LAW FROM:\n"
             + json.dumps(basis, ensure_ascii=False)
+            + "\n\nTHE ADVOCATE'S SUPPLIED WORDS (attributed allegations, not law):\n"
+            + json.dumps(account, ensure_ascii=False)
             + "\n\nTHE ITEMS IT HAD TO CONVEY:\n" + json.dumps(rows, ensure_ascii=False))
     return Prompt(system=COMPOSE_CHECK_SYSTEM, user=user, operation="compose_check")
 

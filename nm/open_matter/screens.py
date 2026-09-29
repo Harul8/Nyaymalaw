@@ -353,6 +353,14 @@ def limits_the_step(kind: ScreenKind) -> bool:
     return bool(gate_id) and gate(gate_id).scope is Scope.STEP
 
 
+def admission_blockers(screens: tuple[Screen, ...]) -> tuple[ScreenKind, ...]:
+    """The outstanding screens that stop this turn's substantive admission."""
+    outstanding = _outstanding(screens)
+    found = {s.kind for s in from_stored(screens) if s.state is ScreenState.BLOCKED}
+    return tuple(kind for kind, _row in outstanding
+                 if not limits_the_step(kind) or kind in found)
+
+
 @implements("B3")
 def may_admit_substance(screens: tuple[Screen, ...],
                         emergency: bool = False) -> tuple[bool, str]:
@@ -378,11 +386,9 @@ def may_admit_substance(screens: tuple[Screen, ...],
     # ON, NOT WHAT MAY BE HELD (`limits_the_step`); it is carried to the reply as
     # a stated limit. One that RAN AND FOUND SOMETHING -- capacity recorded as in
     # doubt -- still holds the file until a person resolves it (B6).
-    found = {s.kind for s in from_stored(screens) if s.state is ScreenState.BLOCKED}
-    limit = {kind for kind, _row in outstanding
-             if limits_the_step(kind) and kind not in found}
-    blocking = tuple(row for kind, row in outstanding if kind not in limit)
-    limits = tuple(row for kind, row in outstanding if kind in limit)
+    blocked_kinds = set(admission_blockers(screens))
+    blocking = tuple(row for kind, row in outstanding if kind in blocked_kinds)
+    limits = tuple(row for kind, row in outstanding if kind not in blocked_kinds)
     if not blocking:
         return True, ("every screen that decides admission clears"
                       + (f"; stated limits: {'; '.join(limits)}" if limits else ""))
@@ -440,8 +446,7 @@ def capacity_screen(record, now: datetime) -> Screen:
         return Screen(kind=ScreenKind.CAPACITY, state=ScreenState.BLOCKED,
                       detail=position.said())
     return Screen(kind=ScreenKind.CAPACITY, state=ScreenState.NOT_ASSESSED,
-                  not_assessed_because=(position.said() +
-                      " No current capacity clearance is established."))
+                  not_assessed_because=position.said())
 
 
 @refuses_blank_text("scope", "decision_owner", "authority")

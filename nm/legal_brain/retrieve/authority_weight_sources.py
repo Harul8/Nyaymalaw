@@ -1,4 +1,4 @@
-"""Rank the authorities ONE TURN retrieved, using the rule that already exists.
+"""Compare verified authorities on a shared proposition using the hierarchy rule.
 
 LB-122. This module holds NO hierarchy rule of its own. `identity.supersedes`
 owns "a larger bench supersedes a smaller one within the same court, and a
@@ -6,9 +6,10 @@ senior court supersedes a junior one", and a second statement of it here would
 be the defect CLAUDE.md section 4 names -- two owners for one rule, one of them
 hardened and the other not.
 
-What this adds is the POPULATION: `supersedes` compares two identities, and
-until now nothing handed it the authorities of a served turn. Its only callers
-were tests.
+Locators identify the retrieved judgments but do not say what each decided.
+The ordinary port and tool therefore return an unresolved result. Only a
+caller that has established support for the same proposition can use the
+pairwise hierarchy rule.
 
 WHY PAIRWISE AND WHY BOUNDED. An advocate needs to know which of the
 authorities in front of them their court must follow, which is a question about
@@ -24,7 +25,7 @@ from itertools import combinations
 from nm.legal_brain.retrieve.authority_weight_port import Standing, Weighed, Weighing
 from nm.legal_brain.retrieve.identity_sources import IdentityIndex, Precedence, supersedes
 
-#: The most authorities compared in one turn. Above this the comparison is
+#: The most verified authorities compared in one turn. Above this the comparison is
 #: reported as bounded rather than run to completion -- see the module
 #: docstring. Chosen to cover a realistic authority round, not tuned.
 MOST_AUTHORITIES = 8
@@ -42,7 +43,8 @@ def case_id_of(locator: str) -> str:
     return text.split("::", 1)[0] if "::" in text else ""
 
 
-def weigh(locators: tuple[str, ...], index: IdentityIndex) -> Weighed:
+def weigh(locators: tuple[str, ...], index: IdentityIndex, *,
+          same_proposition_established: bool = False) -> Weighed:
     """Every pair of retrieved authorities worth saying something about.
 
     A pair whose identities the index does not hold at all produces NO ROW --
@@ -69,6 +71,17 @@ def weigh(locators: tuple[str, ...], index: IdentityIndex) -> Weighed:
         return Weighed(why=(
             "fewer than two distinct judgments were named by these authorities, "
             "so there is no pair to compare"))
+
+    # Locators establish which judgments were retrieved, nothing about which
+    # proposition either one decided. A shared search query or a shared
+    # Finding.proposition merely names the QUESTION; it is not an assessment
+    # of the holdings. In particular, comparing every pair from a search can
+    # call an unrelated senior-court judgment "superseding" an apt one.
+    # The model-facing tool supplies only locators and therefore cannot opt in.
+    if not same_proposition_established:
+        return Weighed(why=(
+            "these retrieved locators do not establish that the judgments "
+            "decide the same legal proposition; no pairwise precedence was assessed"))
 
     bounded = ids[:MOST_AUTHORITIES]
     out: list[Weighing] = []

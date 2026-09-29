@@ -80,6 +80,8 @@ class TurnMetrics:
     step_assessments: list[dict] = field(default_factory=list)
     evidence_rounds: int = 0
     evidence_bound_hit: bool = False
+    research_notes: list[str] = field(default_factory=list)
+    """Search diagnostics retained with the sealed turn, not answer prose."""
     route_reads: int = 0
     """B1 -- is this a matter at all?
 
@@ -253,6 +255,7 @@ class TurnMetrics:
             "presentation_reads": self.presentation_reads,
             "duty_reads": self.duty_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
+            "research_notes": list(self.research_notes),
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,
                  "detail": g.detail}
@@ -311,4 +314,5 @@ class TurnMetrics:
         record["violations"] = [
             {k: v for k, v in x.items() if k not in self._FREE_TEXT}
             for x in record["violations"]]
+        record.pop("research_notes", None)
         return record

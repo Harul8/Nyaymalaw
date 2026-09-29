@@ -158,6 +158,24 @@ def test_every_dispute_on_a_legal_message_gets_its_law(tmp_path):
         "a dispute's retrieved passage never reached the answer")
 
 
+def test_every_served_dispute_has_its_own_assessment_record(tmp_path):
+    """A source list on a secondary dispute cannot stand in for its assessment."""
+    engine, _ = build(tmp_path, evidence=_Recording())
+    out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE, today=TODAY))
+    assert not out.answer.blocked
+    for thread in out.matter.threads:
+        if not thread.posture.resolved:
+            continue
+        assert {"authorities", "deadlines", "gaps"} <= set(thread.assessed), (
+            f"{thread.label}: law was retrieved but no threshold assessment "
+            f"or open-question record was made")
+        assert thread.deadlines, (
+            f"{thread.label}: even an uncomputed clock needs a visible row")
+        assert "evidence" in thread.assessed and "issues" in thread.assessed, (
+            f"{thread.label}: material and issues were assessed only on the "
+            "focus dispute")
+
+
 def test_the_bound_on_disputes_is_said_when_it_binds(tmp_path, monkeypatch):
     monkeypatch.setattr(turn_module, "MAX_DISPUTE_LAW", 1)
     engine, _ = build(tmp_path, evidence=_Recording())
@@ -262,6 +280,8 @@ def test_a_sentence_the_check_names_as_unsupported_is_written_again(tmp_path, mo
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE, today=TODAY))
     assert len(calls) == 2 and "YOUR FIRST DRAFT FAILED THESE CHECKS" in calls[1]
+    assert THREE_AT_ONCE in checks[0]
+    assert "attributed allegations, not law" in checks[0]
     assert UNSUPPORTED in calls[1], "the repair round was not told what failed"
     assert out.answer.composed and out.answer.composed[0].text == clean
     assert all(UNSUPPORTED not in p.text for p in out.answer.composed)
@@ -326,3 +346,21 @@ def test_a_named_sentence_is_found_with_or_without_the_bold_marks():
                               "why": "no passage states it"}]}
     assert compose_module.unsupported(named, shown) == (
         "Boundary dispute: an owner may always remove a wall.",)
+
+
+def test_reply_checker_sees_attributed_facts_without_treating_them_as_law():
+    """A factual restatement is checked against the account, not model memory."""
+    answer = _told("The advocate says a dated refusal occurred.",
+                   Element(kind=ElementKind.FINDING,
+                           text="The alleged refusal needs to be checked."))
+    prompt = compose_module.check_prompt(
+        answer.composed, answer, compose_module.material(answer),
+        own_words=("The counterparty refused on 10 September 2026.",))
+    assert "The counterparty refused on 10 September 2026." in prompt.user
+    assert "attributed allegations, not law" in prompt.user
+    assert "Applying a retrieved rule to attributed facts" in prompt.system
+    # The factual account does not excuse an unsupported legal proposition.
+    bad = "An unregistered instrument always defeats the claim."
+    assert compose_module.unsupported(
+        {"unsupported": [{"sentence": bad, "why": "no source"}]},
+        (ReplyParagraph(bad),)) == (bad,)

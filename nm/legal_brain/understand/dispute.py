@@ -300,6 +300,34 @@ def build_prompt(quotable: Quotable):
               "duplicates of the existing disputes."))
 
 
+def split_audit_prompt(quotable: Quotable, provisional: DisputeRead):
+    """Independently challenge a first inventory that already found several disputes.
+
+    Literal source coverage proves only that every sentence was placed somewhere;
+    it cannot prove that one row did not swallow several contested rights. The
+    second read must produce a complete source-bound inventory, so a fuller
+    answer can replace the first only through the ordinary quotation guards.
+    """
+    from nm.shared.model_port import Prompt
+
+    base = build_prompt(quotable)
+    return Prompt(
+        system=(base.system + "\n\nINDEPENDENT SPLIT REVIEW. The first inventory "
+                "covered the words but may have grouped distinct claims. Examine "
+                "each alleged act for its contested right, harm, legal consequence, "
+                "evidence and potential relief. The same people, property, paragraph "
+                "or incident do not by themselves make one dispute. Equally, several "
+                "facts or remedies for one contested right do not require separate "
+                "entries. Return the complete corrected inventory from the source "
+                "units, not an amendment to the provisional rows."),
+        user=(base.user + "\n\nThe provisional reading contained "
+              f"{len(provisional.described)} entries. Recheck whether any entry "
+              "combines independently contested rights, including harms arising "
+              "during an incident about another right. Give each supported right "
+              "its own entry and allocate every source unit again."),
+    )
+
+
 def schema_for(quotable: Quotable, *,
                thread_ids: frozenset[str] = frozenset()) -> dict:
     """Make omission of a source unit a schema error, without dictating its meaning.

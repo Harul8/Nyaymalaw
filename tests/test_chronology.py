@@ -18,12 +18,15 @@ nothing downstream can tell it from a computed one.
 """
 from __future__ import annotations
 
+import json
 from datetime import date
 
 import pytest
 
 from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.shared.traceability_contracts import refuses
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_scripted import scripted_dates
 from nm.work_the_file.chronology import (
     DateState,
     build_prompt,
@@ -31,7 +34,10 @@ from nm.work_the_file.chronology import (
     conflicts,
     interpret,
 )
-from nm.work_the_file.matter_contracts import Certainty, Fact, Provenance
+from nm.work_the_file.matter_contracts import Certainty, Fact, Matter, Provenance, Thread
+from nm.work_the_file.date_resolution import contextual_reference
+from nm.legal_brain.orchestrate.turn import TurnInput
+from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
 
@@ -138,6 +144,64 @@ def test_a_resolved_date_names_what_it_was_counted_from():
     prompt = build_prompt(Quotable(turn="served yesterday"), TODAY)
     assert TODAY.isoformat() in prompt.user
     assert "NEVER ESTIMATE" in prompt.system
+
+
+def test_an_explicit_calendar_pair_anchors_relative_dates_across_scoped_accounts():
+    """A later submission date must not rewrite a relative date expressly fixed
+    by the advocate in the same account, even after disputes are separated."""
+    full = ("The first event happened yesterday, 27 September 2026. "
+            "A separate event also happened yesterday.")
+    reference, anchor = contextual_reference(full, date(2026, 9, 29))
+    assert reference == date(2026, 9, 28)
+    assert anchor == "yesterday, 27 September 2026"
+    scoped = Quotable(turn="A separate event also happened yesterday.")
+    read = interpret(scoped, reference, _model_said(
+        event="the separate event", date_expression="yesterday",
+        resolved="2026-09-28"), anchored=True)
+    assert read[0].on == date(2026, 9, 27)
+    assert read[0].reference == "2026-09-28"
+    assert read[0].model_resolution_disagreed == "2026-09-28"
+    assert "current turn date is 2026-09-29" in build_prompt(
+        scoped, reference, current_date=date(2026, 9, 29), anchor=anchor).user.lower()
+
+    # Without the source anchor, a wrong model resolution remains refused.
+    unanchored = interpret(scoped, date(2026, 9, 28), _model_said(
+        event="the separate event", date_expression="yesterday",
+        resolved="2026-09-28"))
+    assert unanchored[0].on is None
+
+
+def test_conflicting_source_anchors_never_fall_back_to_the_server_date():
+    message = ("Yesterday, 27 September 2026, the first event happened. "
+               "Today, 29 September 2026, another event happened.")
+    reference, _ = contextual_reference(message, date(2026, 9, 29))
+    assert reference is None
+    relative = interpret(Quotable(turn=message), reference, _model_said(
+        event="first event", date_expression="Yesterday", resolved="2026-09-28"))
+    assert relative[0].on is None
+    absolute = interpret(Quotable(turn=message), reference, _model_said(
+        event="first event", date_expression="27 September 2026", resolved=""))
+    assert absolute[0].on == date(2026, 9, 27)
+
+
+def test_scoped_date_read_uses_the_whole_account_anchor_without_importing_its_events(tmp_path):
+    full = ("The western boundary was enclosed yesterday, 27 September 2026. "
+            "The separate eastern entrance was locked yesterday.")
+    scoped = "The separate eastern entrance was locked yesterday."
+    engine, _ = build(tmp_path, intake=False)
+    turn = TurnInput(advocate_id="adv", message=scoped, today=date(2026, 9, 29))
+    rows = engine._read_dates(
+        turn, Matter.create(advocate_id="adv", title="file"),
+        Thread.create(label="eastern entrance"), TurnMetrics(turn.turn_id),
+        date_context=full)
+    assert len(rows) == 1 and rows[0].on == date(2026, 9, 27)
+    assert "western" not in rows[0].event.casefold()
+
+    reference, anchor = contextual_reference(full, turn.today)
+    prompt = build_prompt(Quotable(turn=scoped), reference,
+                          current_date=turn.today, anchor=anchor)
+    raw = json.loads(scripted_dates(prompt.user))
+    assert all("explicitly paired" not in row["event"] for row in raw["events"])
 
 
 def test_a_malformed_date_is_undated_and_never_partially_parsed():

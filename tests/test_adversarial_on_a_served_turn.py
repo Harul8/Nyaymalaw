@@ -16,13 +16,17 @@ omitted reads as "nothing found" when nobody looked.
 from __future__ import annotations
 
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
 from nm.legal_brain.orchestrate.turn import TurnInput
 from nm.legal_brain.reason import adversarial as adv
-from tests.test_turn_contract import build
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_scripted import ScriptedModelAdapter
+from nm.work_the_file.matter_contracts import Thread
+from tests.test_turn_contract import _model_config, build, finding
 
 pytestmark = pytest.mark.class_a
 
@@ -154,13 +158,14 @@ def test_an_unanswerable_attack_with_a_plan_is_accepted_and_rendered(tmp_path):
     read = adv.read_attacks({"attacks": [{
         "ground": "no receipt", "their_case": "repayment is unproved",
         "our_answer": "", "no_answer": True,
-        "no_answer_because": "concede it early and prepare the client"}]},
+        "no_answer_because": "concede it early and prepare the client",
+        "evidence_needed": "the complainant's account and payment records"}]},
         "th_1")
     assert len(read.attacks) == 1
     assert adv.unanswered(read.attacks) == ()
 
     text = " ".join(e.text for e in _run(tmp_path).answer.elements)
-    assert "No good answer" in text, (
+    assert "No supported answer yet" in text, (
         "an unanswerable attack was not rendered as one:\n" + text[:600])
 
 
@@ -170,7 +175,8 @@ def test_the_thread_comes_from_the_caller_and_not_from_the_model():
     is deriving."""
     read = adv.read_attacks({"attacks": [{
         "thread": "th_somewhere_else", "ground": "g", "their_case": "c",
-        "our_answer": "a", "no_answer": False, "no_answer_because": ""}]},
+        "our_answer": "a", "no_answer": False, "no_answer_because": "",
+        "evidence_needed": "the opposing statement"}]},
         "th_1")
     assert read.attacks[0].thread == "th_1"
 
@@ -179,6 +185,38 @@ def test_three_states_on_the_attack_read():
     assert adv.UNREAD_ATTACKS.state == "not_assessed"
     assert adv.read_attacks({"attacks": []}, "th_1").state == "none_put"
     assert adv.attacks_not_assessed("no account").state == "not_assessed"
+
+
+def test_an_opposing_story_without_a_way_to_check_it_is_refused():
+    read = adv.read_attacks({"attacks": [{
+        "ground": "responsibility", "their_case": "the client was responsible",
+        "our_answer": "the client disputes it", "no_answer": False,
+        "no_answer_because": "", "evidence_needed": "",
+    }]}, "th_1")
+    assert read.attacks == ()
+    assert any("names no evidence" in why for why in read.refused)
+
+
+def test_a_predicted_opposing_fact_is_conditional_and_names_the_missing_proof(tmp_path):
+    """An unrecorded opposing story must not read as a finding of what happened."""
+    model = ScriptedModelAdapter(_model_config(), structured_responses={
+        "attacks": {"attacks": [{
+            "ground": "responsibility for the event",
+            "their_case": "the client caused the event",
+            "our_answer": "the client's account disputes that",
+            "no_answer": False, "no_answer_because": "",
+            "evidence_needed": "the other party's account and the event recording",
+        }]}})
+    engine, _ = build(tmp_path, model=model)
+    thread = Thread.create("the disputed event")
+    out = engine._attacks(
+        TurnInput(advocate_id="adv_1", message="Assess the account."),
+        thread, SimpleNamespace(account="The client disputes responsibility."),
+        TurnMetrics("attack-turn"), sources=(finding(),))
+    said = " ".join(e.text for e in out if e.feature == "D7")
+    assert "possible opposing argument" in said
+    assert "not an established account" in said
+    assert "the other party's account and the event recording" in said
 
 
 @pytest.mark.eval_id("E-082")

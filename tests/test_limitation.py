@@ -27,8 +27,9 @@ from nm.legal_brain.procedure.limitation import (
     not_computed,
     period_in,
 )
+from nm.legal_brain.reason.accrual import unresolved_trigger_reason
 from nm.shared.traceability_contracts import refuses
-from nm.work_the_file.matter_contracts import Side
+from nm.work_the_file.matter_contracts import Fact, Provenance, Side
 
 pytestmark = pytest.mark.class_a
 
@@ -40,6 +41,18 @@ TODAY = date(2026, 8, 31)
 # defect this type exists for lived exactly in that gap.
 YEARS_12 = period_in("For possession of immovable property... twelve years.")
 YEARS_3 = period_in("For compensation for breach of contract... three years.")
+
+
+def test_a_dated_event_with_unsettled_legal_trigger_is_not_called_an_absent_date():
+    event = Fact.create(
+        statement="The boundary was enclosed by a wall.",
+        date=date(2026, 9, 27),
+        provenance=Provenance(kind="advocate_statement", turn="t1"))
+    reason = unresolved_trigger_reason("the date of dispossession", [event])
+    assert "2026-09-27" in reason
+    assert "boundary was enclosed" in reason
+    assert "which of these events, if any" in reason
+    assert "calendar dates themselves are already on the file" in reason
 
 
 # ================================ D2.0 — a date, never a narration ==========

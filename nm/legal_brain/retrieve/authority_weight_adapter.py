@@ -30,7 +30,8 @@ class CuratedAuthorityWeight:
         self._index = IdentityIndex(index_path)
 
     @implements("D3")
-    def weigh(self, locators: tuple[str, ...]) -> Weighed:
+    def weigh(self, locators: tuple[str, ...], *,
+              same_proposition_established: bool = False) -> Weighed:
         if not self._index.available:
             # AN UNBUILT INDEX RANKS NOTHING. It must not be able to report
             # that two authorities could not be compared either, because that
@@ -40,4 +41,6 @@ class CuratedAuthorityWeight:
             # turn shows nothing from it.
             return Weighed(why="the case identity index is not built on this "
                                "installation, so no authority is ranked")
-        return curated.weigh(locators, self._index)
+        return curated.weigh(
+            locators, self._index,
+            same_proposition_established=same_proposition_established)

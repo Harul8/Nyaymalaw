@@ -97,9 +97,8 @@ def screen(parties, held, advocate_id: str) -> Screen:
             kind=ScreenKind.CONFLICT,
             state=ScreenState.NOT_ASSESSED,
             not_assessed_because=(
-                "no party is named on this matter yet, so there is nobody to "
-                "check against your other files. Name the client and the party "
-                "against, and I will run it"))
+                "Please name the client and opposing party so I can check "
+                "conflicts against your other files before working on the legal issues."))
 
     ours = parties.names
     hits: list[str] = []
