@@ -130,6 +130,26 @@ def test_explicit_configuration_is_copied_once_and_not_writable(spec_root, monke
         app.environment["NM_MATTER_STORE"] = "replacement"
 
 
+def test_evaluation_ledger_reserves_for_the_served_model(spec_root, tmp_path):
+    from decimal import Decimal
+
+    from nm.shared.model_config import PRICES, load, reservation_micro_usd
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+
+    settings = _environment(spec_root)
+    settings.update(NM_MODEL_PROVIDER="openai",
+                    NM_MODEL_ROUTINE="gpt-4.1-mini-2025-04-14",
+                    NM_EVAL_BUDGET_FILE=str(tmp_path / "budget.db"))
+    model = OpenAIModelAdapter(load(settings), client=object())
+    app = composition.Application(root=spec_root, environment=settings, model=model)
+    ledger = app._model_adapter._call_budget
+
+    assert ledger.model == settings["NM_MODEL_ROUTINE"]
+    assert (ledger.price_in, ledger.price_out) == tuple(
+        Decimal(str(price)) for price in PRICES[settings["NM_MODEL_ROUTINE"]])
+    assert ledger.reservation == reservation_micro_usd(settings["NM_MODEL_ROUTINE"])
+
+
 def test_an_incomplete_explicit_mapping_never_borrows_ambient_tiers(tmp_path, monkeypatch):
     for name, value in _environment(tmp_path).items():
         monkeypatch.setenv(name, value)

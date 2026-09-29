@@ -1,136 +1,95 @@
-"""THE BOUNDED REPAIR MUST HELP MOST WHERE THE FIRST ANSWER WAS WORST.
+"""THE BOUNDED REPAIR IS TOLD WHAT WAS WRONG, AND GETS NO LOWER A BAR.
 
-`fixed_allocation_repair` exists for one measured failure, and its own
-docstring names it: *the model no longer has to invent an array and index that
-changing array in the same answer.* It hands the model a FIXED table and an
-enum over its indices, so the second attempt cannot be out of range.
+The dispute reading has one repair (LB-109, 29 September 2026). Its feedback
+names the rule the first answer broke -- "source units not labelled: S3", "S2
+names a thing that is not in the things list" -- because a repair told only that
+something was wrong repeats the same class of mistake, and "one of five things" is
+not an instruction anyone can act on.
 
-It also used to refuse to do that unless the first answer's `verdict` already
-agreed with its rows:
-
-    if data.get('verdict') != ('opens' if new else 'continues'):
-        return None
-
-So an answer that got the verdict wrong AS WELL AS the allocation fell through
-to the unconstrained schema, and the model repeated the same class of mistake.
-The repair declined in exactly the case that needed it.
-
-MEASURED 22 September 2026, three live runs of one four-dispute brief:
-
-    G-THREAD :: the inventory marks new disputes but the verdict denies new work
-    G-THREAD :: the allocation for S1 names dispute 6, and this inventory has 5
-
-The second is the failure this function was written for.
-
-THE RULE, STATED TWICE: the repair constrains whenever it can build a table,
-and the verdict is DERIVED from that table rather than carried from the answer
-being repaired. A value determined by the model's own other answers is not a
-question worth asking.
+The link repair this file used to test is gone with the reading it repaired: it
+could only re-point sentences among the disputes the first answer had listed, so it
+could never add the dispute the first answer merged away -- which is how a locked
+gate and a push during the argument ended up in a boundary dispute on the Farah
+Begum brief. Nothing from a failed answer is kept unless the repair gives it back
+under the same checks.
 """
 from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.understand import dispute
-from nm.work_the_file.matter_contracts import Thread
+from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.shared.metrics_contracts import TurnMetrics
+from nm.shared.model_port import ModelResult, Usage
+from nm.work_the_file.matter_contracts import Matter
+from tests.test_every_dispute_is_cleanly_identified import _Model, labelled
+from tests.test_matter_memory import _engine, _Recorder
+from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
 
 SAID = "First, the land at Kandi. Second, the cheque case. Third, the lease."
+COMPLETE = labelled(SAID, [("", "the land", "possession_of_property", ["First,"]),
+                           ("", "the cheque case", "cheque", ["Second,"]),
+                           ("", "the lease", "agreement", ["Third,"])])
+SHORT = labelled(SAID, [("", "the land", "possession_of_property", ["First,"]),
+                        ("", "the cheque case", "cheque", ["Second,"])])
 
 
-def _quotable() -> Quotable:
-    return Quotable(turn=SAID)
+def _run(tmp_path, *answers):
+    engine, _ = _engine(tmp_path, _Recorder())
+    prompts = []
+
+    def read(prompt, schema, key, tier):
+        prompts.append(prompt)
+        data = answers[min(len(prompts), len(answers)) - 1]
+        return ModelResult(text=None, tier=tier, data=data, model="controlled",
+                           provider="scripted", usage=Usage(0, 0, 0), latency_ms=0)
+
+    engine._read = read
+    metrics = TurnMetrics(turn_id="t")
+    result = engine._read_dispute(Matter.create(advocate_id="adv", title="File"),
+                                  TurnInput(message=SAID, advocate_id="adv"), metrics)
+    return result, prompts, metrics
 
 
-def _rows() -> list[dict]:
-    return [{"label": "the land", "thread_id": ""},
-            {"label": "the cheque case", "thread_id": ""},
-            {"label": "the lease", "thread_id": ""}]
+def test_the_repair_is_told_exactly_which_rule_failed(tmp_path):
+    result, prompts, _ = _run(tmp_path, SHORT, COMPLETE)
+    assert len(prompts) == 3, "first read, one repair, then an independent read"
+    assert "source units not labelled: S3" in prompts[1].user, (
+        "the repair was not told which sentence its first answer left out")
+    assert not result.refused and len(result.described) == 3
 
 
-def test_a_wrong_verdict_no_longer_stops_the_repair_constraining():
-    """THE RULE. A malformed first answer is the reason to constrain, not a
-    reason to decline."""
-    wrong = {"verdict": "continues", "disputes": _rows()}   # three NEW rows
-    assert dispute.fixed_allocation_repair(_quotable(), wrong, ()) is not None, (
-        "the repair declined over a verdict it could have derived, and the "
-        "retry then went out unconstrained -- which is how an out-of-range "
-        "allocation index survives a bounded repair")
+def test_a_repair_that_fails_again_is_refused_and_keeps_what_was_found(tmp_path):
+    result, prompts, _ = _run(tmp_path, SHORT, SHORT)
+    assert len(prompts) == 2, "one bounded repair, never a loop"
+    assert result.refused and not result.described
+    assert result.found == ("the land", "the cheque case")
 
 
-def test_the_repair_bounds_every_index_to_the_table_it_built():
-    """WHY IT MATTERS: the enum is the whole mechanism. Without it the model
-    indexes an array it is inventing in the same answer, and `dispute 6 of 5`
-    is what that looks like."""
-    prompt, schema, table = dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "continues", "disputes": _rows()}, ())
-    assert len(table) == 3
-    for unit in schema["properties"]["source_allocations"]["properties"].values():
-        assert unit["items"]["enum"] == [1, 2, 3], (
-            "an allocation index was left unbounded in the repair schema")
-    assert prompt is not None
+def test_a_sound_first_answer_gets_an_independent_read_without_repair(tmp_path):
+    result, prompts, metrics = _run(tmp_path, COMPLETE)
+    assert len(prompts) == 2 and metrics.binding_reads == 2
+    assert "LAST UNIT FIRST" in prompts[1].user
+    assert [d.label for d in result.described] == ["the land", "the cheque case", "the lease"]
 
 
-def test_the_verdict_is_derived_from_the_rows_that_survive():
-    """DERIVED, NOT CARRIED. Repairing the allocation while keeping the
-    verdict that contradicted it leaves the contradiction that caused the
-    repair."""
-    _prompt, _schema, table = dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "continues", "disputes": _rows()}, ())
-    merged = dispute.apply_fixed_allocation(
-        {"verdict": "continues", "disputes": _rows()},
-        {"source_allocations": {"S1": [1], "S2": [2], "S3": [3]}},
-        table)
-    assert merged["verdict"] == "opens", (
-        "every surviving row is new work, so the repaired answer still said "
-        "the file merely continues")
+def test_a_doubt_about_one_dispute_is_served_to_the_advocate(tmp_path):
+    message = ("Raghav locked Farah's eastern gate yesterday.\n\n"
+               "Raghav kept the gate locked today.")
+    one_dispute = labelled(message, [
+        ("Raghav", "eastern gate", "use_or_access", ["Raghav locked", "Raghav kept"]),
+    ], client="Farah")
+    incomplete_second = labelled(message, [
+        ("Raghav", "eastern gate", "use_or_access", ["Raghav locked"]),
+    ], client="Farah")
+    model = _Model(one_dispute, incomplete_second)
+    engine, _ = build(tmp_path, model=model)
 
+    out = engine.run(TurnInput(advocate_id="adv", message=message))
 
-def test_a_repair_over_existing_disputes_alone_still_continues():
-    """THE POSITIVE CONTROL for the derivation. Deriving `opens` whenever a
-    repair runs would open a duplicate on every ordinary later turn -- the
-    wrong-merge defect arriving through the repair path."""
-    threads = (Thread.create(label="the land"), Thread.create(label="the lease"))
-    rows = [{"label": t.label, "thread_id": t.id} for t in threads]
-    _prompt, _schema, table = dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "continues", "disputes": rows}, threads)
-    merged = dispute.apply_fixed_allocation(
-        {"verdict": "continues", "disputes": rows},
-        {"source_allocations": {"S1": [1], "S2": [2], "S3": [1]}},
-        table)
-    assert merged["verdict"] == "continues", (
-        "no row is new work, so nothing is opened")
-
-
-def test_a_verdict_that_over_claims_still_declines():
-    """THE ASYMMETRY, and it is the half that protects the advocate.
-
-    `opens` with NO new row says there is new work the inventory does not
-    show, and the likeliest reading is that a dispute was omitted. Deriving
-    `continues` from the rows would silently drop it -- the wrong-merge
-    defect. Under-claiming is recoverable from the rows; over-claiming means
-    something is missing from them and cannot be.
-    """
-    thread = Thread.create(label="the land")
-    only_existing = [{"label": thread.label, "thread_id": thread.id}]
-    assert dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "opens", "disputes": only_existing},
-        (thread,)) is None, (
-        "a verdict claiming new work the rows do not show was repaired, which "
-        "reconciles it by dropping whatever the model failed to list")
-
-
-def test_an_incoherent_table_still_declines():
-    """THE OTHER NEGATIVE CONTROL. Loosening the verdict precondition must not
-    loosen the ones that make the table itself trustworthy: a duplicated
-    existing id means the rows disagree about which dispute is which, and
-    there is nothing sound to constrain against."""
-    thread = Thread.create(label="the land")
-    twice = [{"label": "the land", "thread_id": thread.id},
-             {"label": "the land again", "thread_id": thread.id}]
-    assert dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "continues", "disputes": twice}, (thread,)) is None
-    assert dispute.fixed_allocation_repair(
-        _quotable(), {"verdict": "opens", "disputes": []}, ()) is None
+    assert len(out.matter.threads) == 1
+    said = [e.text for e in out.answer.elements if e.gate == "G-SPLIT"]
+    assert len(said) == 1
+    assert "I am not certain of this separation" in said[0]
+    assert "independent dispute reading was refused" in said[0]

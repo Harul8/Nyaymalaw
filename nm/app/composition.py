@@ -364,8 +364,19 @@ class Application:
             if not isinstance(self._model_adapter, OpenAIModelAdapter):
                 raise ValueError("A live evaluation budget requires the real OpenAI adapter.")
             from nm.shared.model_call_budget import CallBudget
+            from nm.shared.model_config import PRICES, reservation_micro_usd
+            from nm.shared.model_port import Tier
+
+            # THE LEDGER NAMES THE MODEL THIS SERVER IS CONFIGURED FOR, with its
+            # recorded price and worst-case reservation -- never a default pin that
+            # a configuration change would contradict on the first call.
+            routine = self.config.tiers[Tier.ROUTINE].model
+            worst = reservation_micro_usd(routine)   # refuses an unpriced model first
             self._model_adapter = self._model_adapter.with_call_budget(
-                CallBudget(Path(budget_path), settings.get("NM_EVAL_MAX_USD", "25")))
+                CallBudget(Path(budget_path), settings.get("NM_EVAL_MAX_USD", "25"),
+                           model=routine,
+                           price_per_million=tuple(str(p) for p in PRICES[routine]),
+                           reservation_micro_usd=worst))
         self.model = PolicedModel(
             inner=TracedModel(inner=self._model_adapter),
             policy=self._gate.policy, audit=self._egress_audit,

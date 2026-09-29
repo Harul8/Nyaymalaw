@@ -50,6 +50,31 @@ def test_empty_and_unassessed_files_never_finish():
         assert briefing.block(m)["state"] != "ready"
 
 
+def test_identical_current_and_pending_sentences_keep_their_own_turns(tmp_path):
+    """Binding by sentence text must not relabel an older account as this turn."""
+    from nm.legal_brain.understand.dispute import Dispute, DisputeRead
+    from nm.shared.metrics_contracts import TurnMetrics
+
+    sentence = "The gate was locked."
+    older = Fact.create(statement=sentence, provenance=Provenance(
+        kind="advocate_statement", turn="older-turn"))
+    file = matter().with_fact(older)
+    turn = TurnInput(advocate_id="adv", message=sentence, turn_id="current-turn")
+    inventory = DisputeRead(Dispute.OPENS, quoted=sentence, why="the gate is contested",
+                            described=(Described(sentence, "The gate", unit_ids=("S1", "S2"),
+                                                 allocation_unit_ids=("S1", "S2")),))
+    engine, _ = _engine(tmp_path, _Recorder())
+    engine._read_dispute = lambda _file, _turn, _metrics: inventory
+
+    saved, bound = engine._admit_facts(file, turn, TurnMetrics(turn_id=turn.turn_id))
+
+    assert not bound.blocks and bound.thread is not None
+    assert [row.unit_id for _, rows in bound.source_allocations for row in rows] == [
+        "S1", "S2"]
+    scoped = [f for f in saved.facts if f.id in bound.thread.chronology]
+    assert {f.provenance.turn for f in scoped} == {"older-turn", "current-turn"}
+
+
 def test_every_dispute_must_earn_current_review_and_it_never_closes_the_file():
     a, b = reviewed("Rent"), reviewed("Access")
     result = dispute_agenda.project(matter(a, b))
@@ -192,12 +217,14 @@ def test_prospective_positions_need_stated_evidence_and_do_not_invent_filing(rol
 
 def test_bad_focus_and_context_only_quotes_are_refused():
     row = {
-        "verdict": "continues",
+        "people": [],
+        "things": [],
+        "sentences": [{"unit": "S1", "role": "instruction", "about": []}],
         "why": "update",
-        "disputes": [],
         "focus_thread_id": "foreign",
         "focus_quote": "work this",
         "advance_quote": "",
+        "requirement_answers": [],
     }
     assert interpret(Quotable(turn="work this"), row, thread_ids=frozenset({"local"})).refused
     row["focus_thread_id"] = "local"

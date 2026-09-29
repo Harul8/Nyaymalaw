@@ -52,6 +52,11 @@ assurance/specification/prd/node_modules/
 *.sqlite3
 .code-review-graph/
 
+# These local model-evaluation reports quote saved matter sentences and IDs.
+# Keep only the redacted measurement summary in Git.
+/docs/backlog/evidence/legal-brain-20260929/*
+!/docs/backlog/evidence/legal-brain-20260929/README.md
+
 # Editors and OS
 .vscode/
 .idea/

@@ -222,7 +222,10 @@ SYSTEM = (
 _NAMES_NOBODY = re.compile(
     r"^(?:the\s+|a\s+|an\s+)?(?:"
     r"(?:my|our|his|her|their|its)?\s*"
-    r"(?:client|party|side|matter|case|them|him|her|us)"
+    # A PERSONAL PRONOUN is the purest case of the rule: "he" refers to someone
+    # without identifying them. A dispute labelled "Farah Begum v. he" was
+    # measured on 29 September 2026 (LB-109).
+    r"(?:client|party|side|matter|case|them|him|her|us|he|she|they|it|we|you|i|me)"
     r"|(?:opposite|opposing|other|another|adverse|rival)\s+"
     r"(?:party|parties|side|counsel)"
     r")$", re.I)

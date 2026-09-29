@@ -1115,16 +1115,10 @@ class TurnEngine:
         # what must be written over the standing theory.
         concluded: dict = {}
 
-        # G-SPLIT. THE COUNT IS REPORTED, AND THE FILE IS NOT SPLIT ON IT.
-        #
-        # This used to open a thread per dispute the read described. The read
-        # measures 2-3 of 6 across six briefs and is unstable on identical
-        # input, so the file is no longer split on it -- the advocate is told
-        # what the message looked like and invites the split themselves.
-        #
-        # `threading.py`'s asymmetry justified splitting because a wrong merge
-        # inverts the advice SILENTLY. This is the disclosure that makes it
-        # not silent.
+        # G-SPLIT. Source-bound allocations open separate working disputes,
+        # and the advocate sees their names and any uncertainty about the
+        # separation. The disclosure must also reach a one-dispute reading
+        # when the independent read was unavailable or disagreed.
         if bound.thread is None:
             # An ambiguous bind placed nothing. Reporting a count here would
             # be a finding about a message nobody managed to file.
@@ -1144,14 +1138,44 @@ class TurnEngine:
                          "this message reads as one dispute")
 
         split_note = None
-        if bound.thread is not None and bound.counted and bound.looks_like > 1:
+        if (bound.thread is not None and bound.counted
+                and (bound.looks_like > 1 or bound.doubts)):
+            # THE DISPUTES, NUMBERED AND NAMED (LB-109): the advocate checks the
+            # separation here, and corrects it in a sentence. Links are shown,
+            # never acted on.
+            order = [tid for tid, _spans in bound.allocations] or [bound.thread.id]
+            number = {tid: n for n, tid in enumerate(order, 1)}
+            rows = []
+            for tid in order:
+                held = matter.thread(tid)
+                if held is None:
+                    continue
+                linked = sorted({f"({number[other]}) {how}" for mine, other, how in bound.links
+                                 if mine == tid and other in number})
+                rows.append(f"({number[tid]}) {held.label}"
+                            + (f" — linked to {', '.join(linked)}" if linked else ""))
+            # A DOUBT IS SAID, NEVER RESOLVED SILENTLY. This includes an
+            # unavailable second reading and a doubtful single-dispute read.
+            doubt = ("" if not bound.doubts else
+                     " I am not certain of this separation: " + "; ".join(bound.doubts)
+                     + (". Confirm the grouping before relying on the separate "
+                        "assessments; tell me if these should be joined, split "
+                        "or renamed."
+                        if bound.looks_like > 1 else
+                        ". Tell me if this should be split or renamed."))
+            qualifier = "provisionally " if bound.doubts else ""
+            listing = (f"I have {qualifier}separated these instructions into "
+                       f"{bound.looks_like} "
+                       f"disputes: {'; '.join(rows)}. "
+                       f"The current focus is {dispute(bound.thread.label)}. "
+                       "If any of these should be split, joined or "
+                       "renamed, say so and I will correct it."
+                       if bound.looks_like > 1 else
+                       f"I have provisionally identified one dispute: "
+                       f"{dispute(bound.thread.label)}.")
             split_note = (Element(
                 kind=ElementKind.GROUND,
-                text=(f"I have organised these instructions across {bound.looks_like} "
-                      f"disputes on the board; {dispute(bound.thread.label)} is the one "
-                      "worked through in full on this message. "
-                      "Please check the allocation; you can change the focus "
-                      "or correct that organisation."),
+                text=listing + doubt,
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
 
         if bound.blocks:
@@ -2418,12 +2442,22 @@ class TurnEngine:
         read = dispute_reader.UNREAD
         read = self._read_dispute(matter, turn, metrics)
         if read.refused:
+            # WHAT WAS FOUND IS SHOWN, NOT ACTED ON (LB-109). The advocate
+            # confirms the disputes in a sentence; a partial reading is never
+            # filed as the whole matter, and never as one dispute.
+            found = ("" if not read.found else
+                     " These are the grievances I found, not yet separated into "
+                     "disputes: " + "; ".join(f"({n}) {line}" for n, line in
+                                                enumerate(read.found, 1))
+                     + ". Please tell me which are separate disputes and which "
+                       "belong together.")
             return matter, BindResult(
                 state=BindState.UNBINDABLE, thread=None, created=False,
                 reason="the full dispute inventory could not be established",
                 question=("I have kept your full instructions, but could not reliably "
                           "separate all the disputes and their shared instructions. "
-                          "I have not treated a partial reading as the whole matter."))
+                          "I have not treated a partial reading as the whole matter."
+                          + found))
         opens = True if read.opens else (False if read.continues else None)
         focus = turn.thread_id or read.focus_thread_id
         if read.advance and not focus and not read.described:
@@ -2437,15 +2471,20 @@ class TurnEngine:
                              "questions remain on the board; the matter has not been closed.",
                     counted=read is not dispute_reader.UNREAD)
         bound = bind(matter, allocation_text, fact, thread_hint=focus,
-                     opens_new_dispute=opens, described=read.described)
-        # WHETHER ANYONE COUNTED, carried out of the only place that knows.
-        bound = replace(bound, counted=read is not dispute_reader.UNREAD)
+                     opens_new_dispute=opens, described=read.described,
+                     source_accounts=((turn.turn_id, turn.message),
+                                      *((f.provenance.turn, f.statement) for f in pending)))
+        # WHETHER ANYONE COUNTED, carried out of the only place that knows --
+        # and where two readings disagreed, what the other one did (LB-109).
+        bound = replace(bound, counted=read is not dispute_reader.UNREAD,
+                        doubts=read.doubts)
         if bound.state is not BindState.BOUND or bound.thread is None:
             return matter, bound
         if (read.advance or read.focus_thread_id) and not read.described:
             return matter, replace(bound, allocations=((bound.thread.id, ()),))
         if bound.allocations:
             records = {t.id: t for t in (bound.thread, *bound.others)}
+            sources_by_thread = dict(bound.source_allocations)
             for tid, spans in bound.allocations:
                 thread = records[tid]
                 matter = matter.with_thread(thread)
@@ -2455,9 +2494,8 @@ class TurnEngine:
                 # account remains on the matter, outside every scoped chart.
                 ids = []
                 charted = []
-                for span in spans:
-                    origin = (turn.turn_id if span in turn.message else
-                              next(f.provenance.turn for f in pending if span in f.statement))
+                for source in sources_by_thread[tid]:
+                    span, origin = source.text, source.origin_turn
                     # A SPAN THIS MESSAGE DID NOT PUT FORWARD AS TRUE is not
                     # charted. An earlier turn's pending account was read on
                     # its own turn and is left as it was.
@@ -2953,110 +2991,42 @@ class TurnEngine:
                             context=on_file,
                             context_is="the list of threads already open "
                                        "on this matter, as we labelled them")
-        repair_attempted = False
-        try:
-            res = self._read(
-                      dispute_reader.build_prompt(quotable),
-                      dispute_reader.schema_for(
-                          quotable,
-                          thread_ids=frozenset(t.id for t in matter.threads)),
-                      "dispute", Tier.ROUTINE)
+        calls = []
+
+        def read_once(prompt, schema) -> dict:
+            res = self._read(prompt, schema, "dispute", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.binding_reads += 1
-            read = dispute_reader.interpret(quotable, res.data or {},
-                                            thread_ids=frozenset(t.id for t in matter.threads))
-            missing = dispute_reader.uncovered_paragraphs(quotable.words, read)
-            if read.refused or missing:
-                repair_attempted = True
-                # One bounded repair of the same contract. No scenario keywords,
-                # invented inventory, dropped quote guard or unlimited retry.
-                prompt = dispute_reader.build_prompt(quotable)
-                # THE REPAIR HAS TO MATCH THE FAULT, and there are two.
-                #
-                # `fixed_allocation_repair` builds its table FROM THE FIRST
-                # ANSWER'S ROWS and hands the model an enum over their indices.
-                # That is the right tool when the inventory is complete and the
-                # LINKING is wrong -- an index out of range, a verdict that
-                # under-claims -- because the rows are already correct and only
-                # need pinning.
-                #
-                # IT CANNOT ADD A DISPUTE THE FIRST ANSWER OMITTED. Its table
-                # has no row for one, and its enum cannot name what is not in
-                # the table. So where paragraphs went UNALLOCATED -- the reader
-                # stopped at the final subject and missed the others, which is
-                # the failure `uncovered_paragraphs` exists to catch -- the
-                # constrained schema makes recovery impossible, and the open
-                # one is what lets the model return a fuller inventory.
-                #
-                # Diagnosed once, here, rather than by each repair guessing.
-                fixed = (None if missing else dispute_reader.fixed_allocation_repair(
-                    quotable, res.data or {}, matter.threads))
-                feedback = ("Your previous inventory was incomplete or unsupported. "
-                            "Re-read the WHOLE message, not just its final subject. "
-                            "Return the full corrected inventory, including shared "
-                            "representation and task instructions on EACH affected dispute. "
-                            "Check that independently contested rights and chronologies have "
-                            "not been merged merely because parties or property overlap. "
-                            "Every quotation "
-                            "must remain literal; prefer source-unit IDs. "
-                            f"Validation: {read.refused or 'unallocated paragraphs'}. "
-                            "\nUnallocated paragraphs:\n"
-                            + "\n\n".join(missing))
-                if fixed:
-                    prompt, repair_schema, table = fixed
-                else:
-                    repair_schema = dispute_reader.schema_for(
-                        quotable,
-                        thread_ids=frozenset(t.id for t in matter.threads))
-                repaired = self._read(replace(prompt, user=prompt.user + "\n\n" + feedback),
-                    repair_schema, "dispute", Tier.ROUTINE)
-                metrics.record_call(repaired)
-                metrics.binding_reads += 1
-                repair_data = (dispute_reader.apply_fixed_allocation(
-                    res.data or {}, repaired.data or {}, table) if fixed else repaired.data or {})
-                read = dispute_reader.interpret(quotable, repair_data,
-                    thread_ids=frozenset(t.id for t in matter.threads))
-                if dispute_reader.uncovered_paragraphs(quotable.words, read):
-                    read = replace(read, refused="paragraphs were omitted "
-                                                   "from the dispute inventory")
+            calls.append(res)
+            return res.data or {}
+
+        # THE PROCEDURE HAS ONE OWNER (LB-109): label every source unit, repair
+        # once, read again in reverse order, compare. A measurement of it calls
+        # the same function, so the two cannot drift.
+        try:
+            read = dispute_reader.separate(
+                read_once, quotable, thread_ids=frozenset(t.id for t in matter.threads))
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the dispute read could not run: {exc}")
             return replace(dispute_reader.UNREAD, refused=(
-                "the incomplete inventory could not be repaired" if repair_attempted
+                "the incomplete inventory could not be repaired" if len(calls) > 0
                 else "the dispute inventory could not be read"))
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
             metrics.violate("C4", f"dispute read failed: "
                                   f"{type(exc).__name__}: {exc}")
             return replace(dispute_reader.UNREAD, refused=(
-                "the incomplete inventory could not be repaired" if repair_attempted
+                "the incomplete inventory could not be repaired" if len(calls) > 0
                 else "the dispute inventory could not be read"))
+        if read.second.startswith(("could not run", "refused")):
+            metrics.violate("C4", f"second dispute reading {read.second}")
+        if read.doubts:
+            metrics.violate("C4", "dispute separation uncertainty: "
+                                  + "; ".join(read.doubts))
 
         if read.refused:
             metrics.violate("C4", f"dispute read refused: {read.refused}")
             return read
-        if not matter.threads and len(read.described) > 1:
-            # Source-unit coverage proves placement, not separation. A single
-            # row can swallow several rights while every sentence is allocated.
-            # Challenge the first successful multi-dispute inventory once,
-            # then accept a fuller one only through the same source guards.
-            try:
-                reviewed = self._read(
-                    dispute_reader.split_audit_prompt(quotable, read),
-                    dispute_reader.schema_for(quotable),
-                    "dispute", Tier.ROUTINE)
-                metrics.record_call(reviewed)
-                metrics.binding_reads += 1
-                candidate = dispute_reader.interpret(quotable, reviewed.data or {})
-                if (not candidate.refused
-                        and not dispute_reader.uncovered_paragraphs(quotable.words, candidate)
-                        and len(candidate.described) > len(read.described)):
-                    read = candidate
-            except ModelError as exc:
-                metrics.violate("C4", f"independent dispute split review unavailable: {exc}")
-            except Exception as exc:  # noqa: BLE001 -- preserve the valid first read
-                metrics.violate("C4", "independent dispute split review failed: "
-                                f"{type(exc).__name__}: {exc}")
         if read.opens:
             # DISCLOSED. A split is the recoverable direction, but it is
             # still a decision about the advocate's file and they can see it.
@@ -5168,10 +5138,13 @@ class TurnEngine:
         metrics.fire(failure.gate_id, failure.state, failure.reason)
         said = failure.text
         if result.coverage is Coverage.NOT_ASSESSED:
-            said = ("I could not complete the source search for this point. "
-                    "It remains unassessed, so I have not drawn a conclusion from it.")
+            target = result.missing.strip() or "this point"
+            said = (f"I have not looked up {target}. No source search ran for "
+                    "this point, so I cannot draw a conclusion from it.")
         elif result.coverage is Coverage.HELD_NOT_FOUND:
-            said = ("A source listed as held could not be retrieved. "
+            target = result.missing.strip().rstrip(".") or "the needed source"
+            said = (f"I could not retrieve a source listed as held: {target}. "
+                    "That is a defect in my retrieval, not a gap in the law. "
                     "I have not relied on it for this point.")
         grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
                                text=said, disclosure=True))

@@ -46,6 +46,7 @@ from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.legal_brain.understand import dispute
 from nm.legal_brain.understand.dispute import Described, interpret
 from nm.legal_brain.understand.threading import bind
+from tests.test_every_dispute_is_cleanly_identified import labelled
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 
 
@@ -129,86 +130,71 @@ def test_a_read_that_did_not_run_still_produces_a_thread():
 
 # ------------------------------------------------- the quotation guard ------
 
+SAID = "First, the wall came down. Second, the cheque bounced."
+
+
 def test_a_dispute_the_advocate_did_not_describe_is_not_counted():
     """KEPT FROM BK-27, and it matters more now not less.
 
-    The count is stated to the advocate. A fabricated span inflating it would
-    put a number in front of them that nothing in their own words supports.
+    The count is stated to the advocate. A label pointing at a sentence the
+    advocate did not write would put a number in front of them that nothing in
+    their own words supports -- so the reading is refused, and what it had found
+    before the unsupported label is kept to show them.
     """
-    said = "First, the wall came down. Second, the cheque bounced."
-    read = interpret(Quotable(turn=said), {
-        "verdict": "cannot_tell", "quoted": "", "why": "no file yet",
-        "disputes": [
-            {"quoted": "the wall came down", "label": "trespass"},
-            {"quoted": "the cheque bounced", "label": "cheque"},
-            {"quoted": "he also assaulted the watchman", "label": "assault"},
-        ]})
-    assert [d.label for d in read.described] == ["trespass", "cheque"]
+    data = labelled(SAID, [("", "the wall", "possession_of_property", ["First,"]),
+                           ("", "the cheque", "cheque", ["Second,"])])
+    data["sentences"].append({"unit": "S3", "role": "act", "about": [
+        {"other_side": 0, "thing": 1, "kind": "bodily_harm", "dispute": "new"}]})
+    read = interpret(Quotable(turn=SAID), data)
+    assert read.refused and "not in the message" in read.refused
+    assert read.found == ("the wall", "the cheque") and not read.described
 
 
 def test_the_guard_can_be_seen_to_pass_something():
     """POSITIVE CONTROL. A guard that dropped everything would satisfy the
     test above for the wrong reason -- S11."""
-    said = "First, the wall came down. Second, the cheque bounced."
-    read = interpret(Quotable(turn=said), {
-        "verdict": "cannot_tell", "quoted": "", "why": "no file yet",
-        "disputes": [{"quoted": "the wall came down", "label": "trespass"}]})
-    assert len(read.described) == 1
+    read = interpret(Quotable(turn=SAID), labelled(
+        SAID, [("", "the wall", "possession_of_property", ["First,"]),
+               ("", "the cheque", "cheque", ["Second,"])]))
+    assert [d.label for d in read.described] == ["the wall", "the cheque"]
 
 
-def test_the_count_is_read_whatever_the_verdict_says():
-    """`verdict` is this message against the FILE; `described` is this message
-    against ITSELF. Still two questions, and the second still has no file in
-    it."""
-    said = "First, the wall came down. Second, the cheque bounced."
-    for verdict in ("continues", "opens", "cannot_tell"):
-        read = interpret(Quotable(turn=said), {
-            "verdict": verdict,
-            "quoted": "the wall came down" if verdict == "opens" else "",
-            "why": "because",
-            "disputes": [
-                {"quoted": "the wall came down", "label": "trespass"},
-                {"quoted": "the cheque bounced", "label": "cheque"},
-            ]})
-        assert len(read.described) == 2, f"the count was lost on {verdict!r}"
+def test_the_verdict_is_derived_from_the_labels_never_asked():
+    """`verdict` was a separate answer, and a reading that listed new disputes
+    while saying the file merely continued contradicted itself. Where every
+    sentence sits decides it: any new dispute opens new work."""
+    read = interpret(Quotable(turn=SAID), labelled(
+        SAID, [("", "the wall", "possession_of_property", ["First,"]),
+               ("", "the cheque", "cheque", ["Second,"])]))
+    assert read.opens and len(read.described) == 2
 
 
 # ===== the schema names only the disputes this matter actually holds =======
 
-def test_no_entry_may_name_a_dispute_that_is_not_on_this_matter():
+def test_no_label_may_name_a_dispute_that_is_not_on_this_matter():
     """THE RULE: the model is never shown an ID it could offer wrongly.
 
-    `interpret` refuses an entry naming a dispute the matter does not hold.
-    Listing the permitted values in the schema means the answer cannot be
-    formed in the first place -- the guard and the contract agreeing rather
-    than the guard cleaning up after it. Empty always belongs: it is how a
-    genuinely new dispute says so.
+    `interpret` refuses a sentence placed on a dispute the matter does not
+    hold. Listing the permitted values in the schema means the answer cannot
+    be formed in the first place -- the guard and the contract agreeing rather
+    than the guard cleaning up after it. `new` and `cannot_tell` always belong.
     """
-    item = dispute.schema_for(Quotable(turn="x"),
-                              thread_ids=frozenset({"th_1", "th_2"})
-                              )["properties"]["disputes"]["items"]
-    assert item["properties"]["thread_id"]["enum"] == ["", "th_1", "th_2"]
-    empty = dispute.schema_for(Quotable(turn="x"))["properties"]["disputes"]["items"]
-    assert empty["properties"]["thread_id"]["enum"] == [""]
+    about = dispute.schema_for(Quotable(turn="x"), thread_ids=frozenset({"th_1", "th_2"})
+                               )["properties"]["sentences"]["items"]["properties"]["about"]
+    assert about["items"]["properties"]["dispute"]["enum"] == [
+        "new", "cannot_tell", "th_1", "th_2"]
+    empty = dispute.schema_for(Quotable(turn="x"))["properties"]["sentences"]["items"]
+    assert empty["properties"]["about"]["items"]["properties"]["dispute"]["enum"] == [
+        "new", "cannot_tell"]
 
 
-def test_every_verdict_stays_available_on_a_file_with_no_disputes():
-    """THE NEGATIVE CONTROL, and it records a fix that was WRONG.
+def test_an_ordinary_continuing_message_describes_nothing_and_continues():
+    """THE NEGATIVE CONTROL, and it records a fix that was WRONG once.
 
-    Removing `continues` from a file with no disputes looks right -- nothing
-    is there to continue -- and it broke the commonest path in the product.
-    `continues` with no described entries is how an ordinary single-dispute
-    matter opens: the message adds detail, nothing is separated out, and
-    `bind` creates the first thread. Six tests went red before the premise was
-    checked.
-
-    What is contradictory is `continues` together with entries carrying no
-    thread_id, which is a cross-field condition no enum can state and which
-    `interpret` already refuses by name.
+    A message that adds nothing contested is how an ordinary single-dispute
+    matter opens: nothing is described, and `bind` creates the first thread. A
+    reading with no dispute must continue, not refuse and not open.
     """
-    for ids in (frozenset(), frozenset({"th_1"})):
-        schema = dispute.schema_for(Quotable(turn="and another thing"),
-                                    thread_ids=ids)
-        assert set(schema["properties"]["verdict"]["enum"]) == {
-            d.value for d in dispute.Dispute}, (
-            f"a verdict was withdrawn for thread_ids={set(ids)}")
+    said = "Please continue with the work."
+    read = interpret(Quotable(turn=said), labelled(said, [], instructions=["Please"]))
+    assert read.continues and not read.described and not read.refused

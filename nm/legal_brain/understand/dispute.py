@@ -1,4 +1,4 @@
-"""Does this message continue the dispute on the file, or open another one?
+"""Which disputes does this message describe, and which does it continue?
 
 WHY THIS EXISTS
 ---------------
@@ -14,44 +14,68 @@ There is. Measured, on a matter driven three turns:
     his own recovery suit for 11 lakhs     -> he is the PLAINTIFF
 
 One thread. `role=accused, side=defending`. The product would advise his own
-recovery suit as though he were defending it — which is the measured original
-defect, arriving through the binder instead of through the posture reader.
-
-And it was unreachable any other way: since only an identifier could open a
-second thread, a matter could not hold two disputes unless the advocate typed a
-case number. The golden set calls multi-thread files *the normal case*.
+recovery suit as though he were defending it.
 
 THE ASYMMETRY DECIDES THE DEFAULT, and `threading.py` states it at the top of
 its own docstring: a wrong SPLIT duplicates work, is visible, and is corrected
-in a turn. A wrong MERGE attaches one thread's posture, chronology and
+in a turn. A wrong MERGE attaches one dispute's posture, chronology and
 limitation to facts they do not govern, every citation stays correct, the board
 looks tidier, and the advice inverts silently.
 
-So this never guesses toward merging. Three answers, and the third is not a
-failure state:
+LB-109, OWNER, 29 SEPTEMBER 2026: "All the disputes should be cleanly
+identified" -- and then, after two readings each failed differently on the same
+briefs: "we can't run a matter, find an issue make fix, another matter another
+issue another patch, it goes on forever -- how do we structurally fix this?"
 
-    CONTINUES    bind, as before
-    OPENS        a new thread, stated so the advocate can correct it
-    CANNOT TELL  ASK — which is what rule 6 already does when several threads
-                 are open and nothing is decisive. The question is the answer.
+THE STRUCTURAL ANSWER: SMALL CLOSED QUESTIONS, AND THE CODE ASSEMBLES
+---------------------------------------------------------------------
+Measured the same day, on four briefs: asked to list the disputes, a model
+merged a locked gate and a push into one; asked to list grievances and join
+them, the cheaper model still packed two acts into one grievance while the
+stronger split one plot into seven disputes and called the opponent "he". Both
+failures come from the same place: THE MODEL WAS DECIDING IDENTITY IN FREE TEXT
+-- how many, which together, who -- and free text drifts.
 
-WHAT KEEPS IT HONEST
---------------------
-The same two guards the posture read uses, for the same reason. The model must
-QUOTE the words that make this a different dispute, and the span is checked
-against what the ADVOCATE wrote — never against the prompt, which carries this
-product's own questions and would otherwise let it quote itself.
+The model no longer writes final dispute rows. It makes two short lists -- the
+PEOPLE the message names and the THINGS in contest (a piece of property, an
+agreement, a cheque; for an offence, the incident itself) -- and then labels
+EVERY sentence: its ROLE (an act complained of, a fact about one, the other
+side's answer, shared background, an instruction) and, where it concerns a
+dispute, the other side and the thing BY NUMBER from those lists, and the KIND
+of wrong from a fixed list. `_group` forms ONE DISPUTE PER OTHER SIDE, THING AND
+KIND. The model still decides which number and kind each source unit gets; this
+is a semantic judgment, not something the schema can certify. A unit with two
+acts must be labelled as concerning both. Whether the message opens new work or
+continues the file is derived from the labels, never asked separately.
+
+ONLY AN INDEPENDENTLY CONTESTED ACT OPENS NEW WORK. Payment history, documents,
+answers and alternative remedies must attach to a unique act in this message,
+or name a dispute already on the file. When they cannot, the read is refused
+with its source-bound candidates for clarification. This keeps supporting facts
+from becoming separate cases merely because a sentence omitted the opponent.
+
+INSTRUCTIONS ARE NOT FACTS. "Please assess every dispute" was recorded as a
+material fact of both disputes on that brief and became their search words.
+An instruction reaches no dispute's words; background reaches every one.
+
+MAKE UNCERTAINTY VISIBLE (`separate`): every source unit must be labelled, and
+messages with two or more units are read again in reverse paragraph or unit
+order. Where the readings separate differently, the finer separation is used
+and the advocate is shown what the other reading joined. Duplicate board names
+and an unavailable independent reading are disclosed too. Two readings can
+still agree on a wrong semantic assignment; this procedure does not claim to
+prove that every dispute was identified correctly.
 """
 from __future__ import annotations
 
 import re
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.legal_brain.reason.requirements import ANSWER_ROWS, ANSWER_RULE
-from nm.shared.text_contracts import fold, refuses_blank_text
+from nm.shared.text_contracts import clean, fold, refuses_blank_text, snippet
 
 
 class Dispute(str, Enum):
@@ -62,83 +86,148 @@ class Dispute(str, Enum):
     CANNOT_TELL = "cannot_tell"
 
 
+#: Where a labelled sentence sits on the file, besides the ID of a dispute on it.
+NEW = "new"
+UNDECIDED = "cannot_tell"
+
+#: One authoring source for the boundary used by the prompt and strict schema.
+DISPUTE_DEFINITION = (
+    "A dispute is one contest between the client and another side over a primary "
+    "right or obligation, or one independently wrongful incident, capable of its "
+    "own outcome. Count rival accounts of that right or incident together. Separate "
+    "another right or incident only when one could succeed while another fails on "
+    "essential facts. Dates, payments, documents, excuses, denials and alternative "
+    "remedies concerning that contest support it."
+)
+
+OPPOSING_SIDE_RULE = (
+    "For each dispute, other_side is the party adverse to the client, whether "
+    "asserting or resisting the claim. A rival account does not reverse the sides. "
+    "Use 0 if no adverse party is identified; never invent one or name the client "
+    "as their own other side."
+)
+
+ACT_ANCHOR_RULE = (
+    "Use act for the assertion, demand, refusal, breach or independently wrongful "
+    "incident that first establishes a contest. A later rival explanation of that "
+    "same contest is answer. The agreement, payment or performance history, "
+    "documents and alternative relief are supporting fact or remedy unless "
+    "independently contested."
+)
+
+#: THE KINDS OF WRONG (owner-agreed, 29 September 2026). Generic on purpose: they
+#: separate a claim to a plot from a trespass on it and an agreement to sell it,
+#: and they name no Act, no section and no scenario.
+KINDS: dict[str, str] = {
+    "possession_of_property": "possession, occupation or title of property -- "
+                              "encroachment, trespass, dispossession, eviction",
+    "use_or_access": "a right to use or reach property -- a way, a gate, water, light",
+    "agreement": "an agreement or contract -- its performance, breach or refund",
+    "money_owed": "money owed -- a loan, a price, fees, rent, dues",
+    "cheque": "a cheque or other instrument dishonoured",
+    "bodily_harm": "harm, threat or force against a person",
+    "family_or_succession": "family or inheritance -- heirship, partition, "
+                            "maintenance, custody",
+    "employment": "employment or service",
+    "government_action": "an act or order of a government or public authority",
+    "other": "anything else",
+}
+
+#: What a sentence does in the message.
+ROLES: dict[str, str] = {
+    "act": ACT_ANCHOR_RULE,
+    "fact": "support for a contested act -- a date, payment, document, evidence, "
+            "admission or missing information",
+    "answer": "a party's rival account, excuse or defence to the same contested "
+              "right or incident, not a separate claim",
+    "remedy": "relief or an alternative sought for a contested act -- performance, "
+              "refund or compensation",
+    "background": "representation or matter-wide procedural status genuinely shared by "
+                  "every dispute -- client identity, whether any proceeding is filed; "
+                  "a fact about a particular right uses fact/about, even if it "
+                  "supports several disputes",
+    "instruction": "asks for work to be done and states no fact about the matter",
+}
+_ABOUT_A_DISPUTE = ("act", "fact", "answer", "remedy")
+
 DISPUTE_SCHEMA: dict = {
     "x-nm-read": "dispute",
     "type": "object",
     "properties": {
-        "verdict": {
-            "type": "string",
-            "enum": [d.value for d in Dispute],
-            "description": "'continues' if this message adds to the dispute "
-                           "already on the file. 'opens' if it describes a "
-                           "DIFFERENT dispute — a different proceeding, a "
-                           "different opponent, or a different subject matter. "
-                           "'cannot_tell' if it genuinely could be either.",
-        },
-        "quoted": {
-            "type": "string",
-            "description": "For 'opens', the EXACT words from the message that "
-                           "show this is a different dispute. Must appear "
-                           "verbatim. Empty for the other answers.",
-        },
-        "why": {
-            "type": "string",
-            "description": "One clause. Shown to the advocate so they can "
-                           "correct it.",
-        },
-        # HOW MANY, NOT WHETHER. `verdict` answers a question that only
-        # exists once the file holds something: does this add to THAT
-        # dispute. On the first turn there is no THAT, so the read was
-        # never made -- and one thread was created however many disputes
-        # the advocate had just described.
-        #
-        # A brief that opens `first ... second ... third ...` is the
-        # ordinary way a file is handed over, not an edge case.
-        "disputes": {
+        "people": {
             "type": "array",
-            "description": "EVERY distinct dispute this message describes, "
-                           "in the order they appear. A different "
-                           "proceeding, a different opponent or a different "
-                           "subject matter is a different dispute. One item "
-                           "may be appropriate. Include existing disputes receiving "
-                           "new facts, answers or instructions, with their thread IDs. "
-                           "Empty only for pure navigation with no substantive update.",
+            "description": "Every person or body the message names, each ONCE, by the "
+                           "name as the message first writes it -- never a pronoun or a "
+                           "description where a name is given.",
             "items": {
                 "type": "object",
                 "properties": {
-                    "quoted": {
-                        "type": "string",
-                        "description": "The EXACT words from the message "
-                                       "that describe THIS dispute. Must "
-                                       "appear verbatim. Prefer span_ids and leave this empty.",
-                    },
-                    "label": {
-                        "type": "string",
-                        "description": "A few words naming it, as an "
-                                       "advocate would on a file cover.",
-                    },
-                    "thread_id": {
-                        "type": "string",
-                        "description": ("Existing dispute ID when these instructions belong to it; "
-                                        "empty only for a genuinely new dispute. Never merge IDs."),
-                    },
-                    "additional_quotes": {
-                        "type": "array", "items": {"type": "string"},
-                        "description": ("Other exact spans belonging to THIS dispute, including "
-                                        "facts, corrections and requests. Shared instructions "
-                                        "must apply to this dispute."),
-                    },
-                    "span_ids": {
-                        "type": "array", "items": {"type": "string"},
-                        "description": "IDs of ALL source units relevant to this dispute, "
-                                       "including shared representation and task instructions. "
-                                       "Use these rather than recopying long quotations.",
-                    },
+                    "name": {"type": "string"},
+                    "is_client": {"type": "boolean",
+                                  "description": "True for whom the advocate acts for."},
                 },
-                "required": ["quoted", "label", "thread_id", "additional_quotes", "span_ids"],
-                "additionalProperties": False,
+                "required": ["name", "is_client"], "additionalProperties": False,
             },
         },
+        "things": {
+            "type": "array",
+            "description": DISPUTE_DEFINITION + " List every thing in contest, each "
+                           "ONCE, in a few words: a property right, an agreement, a "
+                           "cheque claim, a distinct debt, a right of way. A payment "
+                           "or refund amount alone supports its underlying contest. "
+                           "For an offence, the incident itself -- each incident its "
+                           "own entry.",
+            "items": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"], "additionalProperties": False,
+            },
+        },
+        "sentences": {
+            "type": "array",
+            "description": "EVERY source unit, each exactly once, in order.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "unit": {"type": "string"},
+                    "role": {"type": "string", "enum": list(ROLES),
+                             "description": "; ".join(f"{k}: {v}" for k, v in ROLES.items())},
+                    "about": {
+                        "type": "array",
+                        "description": "For act, fact, answer and remedy: the dispute or disputes "
+                                       "this sentence concerns. A fact about a particular "
+                                       "right belongs here, even if it supports several "
+                                       "disputes. Empty only for matter-wide background "
+                                       "and instructions.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "other_side": {
+                                    "type": "integer", "minimum": 0,
+                                    "description": "The number of the person on the other "
+                                                   "side in the people list; 0 if nobody "
+                                                   "is named. " + OPPOSING_SIDE_RULE},
+                                "thing": {"type": "integer", "minimum": 1,
+                                          "description": "The number of the thing in "
+                                                         "contest in the things list."},
+                                "kind": {"type": "string", "enum": list(KINDS),
+                                         "description": "; ".join(
+                                             f"{k}: {v}" for k, v in KINDS.items())},
+                                "dispute": {"type": "string",
+                                            "description": "'new', the ID of a dispute "
+                                                           "already on the file, or "
+                                                           "'cannot_tell'."},
+                            },
+                            "required": ["other_side", "thing", "kind", "dispute"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["unit", "role", "about"], "additionalProperties": False,
+            },
+        },
+        "why": {"type": "string",
+                "description": "One clause. Shown to the advocate so they can correct it."},
         "focus_thread_id": {"type": "string", "description":
                             "Existing dispute expressly prioritised by the advocate, else empty."},
         "focus_quote": {"type": "string", "description":
@@ -148,8 +237,8 @@ DISPUTE_SCHEMA: dict = {
                           "else empty. Not an acknowledgement, fact or request to stop."},
         "requirement_answers": ANSWER_ROWS,
     },
-    "required": ["verdict", "quoted", "why", "disputes", "focus_thread_id", "focus_quote",
-                 "advance_quote", "requirement_answers"],
+    "required": ["people", "things", "sentences", "why", "focus_thread_id",
+                 "focus_quote", "advance_quote", "requirement_answers"],
     # STRICT MODE REQUIRES IT. Without `additionalProperties: false` on
     # every object the provider cannot compile the grammar, and the
     # schema silently degrades to a hint.
@@ -157,55 +246,47 @@ DISPUTE_SCHEMA: dict = {
 }
 
 SYSTEM = (
-    "An Indian advocate is briefing a matter. You are told what is already on "
-    "the file and what they have just said. First inventory the ENTIRE current "
-    "message, including its opening, middle and final subjects. Only then "
-    "decide which entries continue existing disputes and which open new ones. "
-    "Different subjects within the current message are not existing file records. "
-    "An empty existing inventory means none is already recorded.\n\n"
-    "A different dispute means a different proceeding, a different opponent, "
-    "or a different subject matter, assessed in context. Do not equate additional "
-    "facts or legal issues within one dispute with another dispute.\n\n"
-    "Adding detail to what is already there — a date, a name, a document, an "
-    "answer to a question — CONTINUES. So does asking what to do about it.\n\n"
-    "Answer 'cannot_tell' where it genuinely could be either. That is a real "
-    "answer and it is better than a wrong one: the advocate will be asked, and "
-    "they know.\n\n"
-    "Map all substantive instructions in this message to the existing dispute "
-    "IDs supplied in context, or identify genuinely new disputes. A clarification, "
-    "correction, renamed description or new argument is not by itself a new dispute. "
-    "A single dispute can contain several remedies, defences and evidential issues. "
-    "An explicit instruction to split independently contested rights out of an "
-    "existing entry is a request to reorganise the board, not merely add detail. "
-    "Represent each requested separate working dispute, using the existing ID only "
-    "for the entry that remains; do not report the unchanged inventory as the split. "
-    "This organisational change does not establish facts or erase prior records. "
-    "Never silently merge existing disputes. Where allocation is genuinely unclear, "
-    "return cannot_tell rather than create a duplicate to avoid the question.\n\n"
-    "An advocate handing over a file commonly describes several disputes "
-    "at once. Keep independently described disputes distinct while recognising "
-    "shared parties, evidence and events. Enumeration alone is not proof that "
-    "the underlying disputes are separate.\n\n"
-    "Only supplied verbatim advocate words may support allocation, including "
-    "explicitly labelled earlier accounts still awaiting placement. Never use "
-    "a paraphrase, generated summary or file label as factual evidence.\n\n"
-    "Include continuing disputes when assigning a date, correction or answer; "
-    "collect all exact relevant spans, not just a label-sized fragment. Preserve "
-    "different chronologies and positions. Map explicitly shared instructions to "
-    "each affected dispute, never copy unrelated facts across them. For a pure "
-    "navigation instruction leave disputes empty and quote the requested focus or "
-    "advance. The agenda is a suggestion, not permission to override the advocate. "
-    "Account for every paragraph in the message through its relevant exact spans. "
-    "Include shared representation, proposed-claim or defence instructions, limits "
-    "on authority and the immediate question in the allocation for each affected "
-    "dispute. Do not discard those instructions when separating factual accounts. "
-    "A statement that nothing has been filed is not a statement that the client "
-    "has no prospective claim. Do not add unrelated parties or events to make "
-    "an allocation appear complete. Source units below have stable IDs for THIS "
-    "message only. Allocate their IDs; the application copies the original text. "
-    "Account for every source unit, allocating shared instructions to every "
-    "affected dispute. Source-unit boundaries do not determine dispute boundaries: "
-    "organise by independent subject, contested right, opponent and timeline."
+    f"An Indian advocate is briefing a matter. DISPUTE: {DISPUTE_DEFINITION}\n\n"
+    "Do three things, in order.\n\n"
+    "1. PEOPLE: list every person or body the message names, each once, by the name as "
+    "first written. Mark whom the advocate acts for.\n\n"
+    "2. THINGS IN CONTEST: list each contested right or incident once, in a few "
+    "words -- a property right, an agreement, a cheque claim, a distinct debt, a "
+    "right of way. An amount paid or requested as a refund supports its underlying "
+    "contest. Different assets or agreements name different things when the rights "
+    "can have independent outcomes. For an offence, the thing is the incident "
+    "itself, and each incident is its own entry.\n\n"
+    "3. LABEL EVERY SENTENCE (every source unit, exactly once): its role, and -- for "
+    "independently contested conduct or a right, a fact about it, a party's "
+    "answer, or a remedy sought -- which dispute it "
+    "concerns: the other side (by number from the people list), the thing (by number "
+    "from the things list) and the kind of wrong. Label each sentence on its own words. "
+    "A sentence describing two independently contested acts concerns both. Every "
+    "supporting sentence uses the numbers of the act it supports, even if that "
+    "sentence does not name the opponent. A payment, document, date, excuse or "
+    "alternative request for performance, refund or compensation supports an act; "
+    "it does not create a dispute unless it independently alleges contested "
+    "conduct or a right. " + ACT_ANCHOR_RULE + " " + OPPOSING_SIDE_RULE + "\n\n"
+    "BACKGROUND is only representation or matter-wide procedural status genuinely "
+    "shared by EVERY dispute. A fact about a particular asset, transaction, right "
+    "or incident is a fact with about entries for precisely the disputes it "
+    "supports, even if there is more than one. Do not spread it to unrelated "
+    "disputes merely because it appears early in the account.\n\n"
+    "THE FILE. You are told the disputes already on the file. A sentence that adds to one "
+    "of them -- a date, a document, an answer, a later act about the same thing -- gives "
+    "its ID as the dispute. 'new' is for a dispute not on the file, and 'cannot_tell' "
+    "for one that genuinely could be either; the advocate will then be asked, which is "
+    "better than a wrong answer. Never give one existing ID to a different thing. An "
+    "explicit instruction to split an entry already on the file is a request to "
+    "reorganise the board, not merely add detail: label the sentences of each requested "
+    "separate dispute with their own thing or kind, keeping the existing ID only for the "
+    "part that remains, and do not report the unchanged inventory as the split. That "
+    "change does not establish facts or erase prior records.\n\n"
+    "Only the advocate's own words are evidence. Earlier accounts still awaiting "
+    "placement are evidence, not new commands. A statement that nothing has been filed is "
+    "not a statement that the client has no claim. Record an explicit focus on an "
+    "existing dispute, or an explicit request to move on to the next dispute, only from "
+    "the current message; never infer either from an acknowledgement."
     + ANSWER_RULE
 )
 
@@ -219,10 +300,40 @@ class Described:
     label: str
     thread_id: str = ""
     additional_quotes: tuple[str, ...] = ()
+    opponent: str = ""
+    """Whom the client is against in it, in the advocate's own characters, or
+    empty. Never the product's guess: a name the advocate did not write, or one
+    that names nobody, is dropped."""
+    related: tuple[tuple[int, str], ...] = ()
+    """Other entries of the same reading this one is LINKED to, by position
+    (0-based) and how: the same opponent, the same thing, the same events.
+    Linked, never merged."""
+    unit_ids: tuple[str, ...] = ()
+    """The source-unit occurrences assigned to this dispute. Two sentences may
+    have identical words, so `spans` alone cannot identify which one was placed
+    here when independent readings are compared."""
+    allocation_unit_ids: tuple[str, ...] = ()
+    """Own and shared-background occurrences in source order for file allocation.
+    Kept apart from `unit_ids`: the comparison must consider this dispute's own
+    units only, while the file must preserve every occurrence it receives."""
 
     @property
     def spans(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self.quoted, *self.additional_quotes)))
+
+
+@dataclass(frozen=True)
+class UnitSignature:
+    """One source occurrence's role and named legal-dispute labels.
+
+    Targets carry the named opponent and contested thing, not the model's list
+    positions: two readings may enumerate people and things in different orders.
+    """
+
+    unit_id: str
+    text: str
+    role: str
+    targets: tuple[tuple[str, str, str, str], ...] = ()
 
 
 @refuses_blank_text("quoted", "why")
@@ -236,6 +347,28 @@ class DisputeRead:
     focus_thread_id: str = ""
     advance: bool = False
     requirement_answers: tuple[dict, ...] = ()
+    instructions: tuple[str, ...] = ()
+    """Sentences that only asked for work to be done. Kept as the advocate's words
+    on the matter; never a fact of any dispute, never a dispute's search words."""
+    found: tuple[str, ...] = ()
+    """What a REFUSED reading had found, one line per dispute it would have formed,
+    so the advocate can be shown it and asked -- never acted on."""
+    doubts: tuple[str, ...] = ()
+    """Where a second reading separated the message differently: said to the
+    advocate and asked, never resolved silently."""
+    shared: tuple[str, ...] = ()
+    """The background sentences given to every dispute."""
+    second: str = ""
+    """What the second reading found: agreed, disagreed, not needed (one
+    source unit), or why it did not count. Recorded, so a turn with no doubt can be
+    told from a turn nobody checked."""
+    shared_unit_ids: tuple[str, ...] = ()
+    """Background source occurrences, including where two have identical text."""
+    instruction_unit_ids: tuple[str, ...] = ()
+    """Instruction source occurrences, kept out of every dispute's facts."""
+    unit_signatures: tuple[UnitSignature, ...] = ()
+    """Source occurrence, role, named opponent and thing, kind, and file place.
+    Empty on older hand-authored reads; those retain the former comparison."""
     """EVERY dispute this message describes, each carrying the words it was
     read from.
 
@@ -257,424 +390,657 @@ class DisputeRead:
 UNREAD = DisputeRead(Dispute.CANNOT_TELL, why="the dispute read did not run")
 
 
-def build_prompt(quotable: Quotable):
-    """What is on the file, and what was just said.
+def build_prompt(quotable: Quotable, *, reverse: bool = False):
+    """What is on the file, and what was just said, unit by unit.
 
-    THE FILE IS CONTEXT AND THE MESSAGE IS THE EVIDENCE (B-108). Opening a
-    thread is the answer that creates something, so it carries a quotation --
-    and a span lifted out of the file would let an old dispute open a new
-    thread. The guard has always said so; the prompt now does too.
+    `reverse` lists the source units paragraph by paragraph, last paragraph first
+    (or last unit first when there is only one paragraph). The unit IDs are
+    unchanged. This gives a multi-unit single paragraph an independent ordering
+    too; the very message shape that previously received only one reading.
     """
     from nm.shared.model_port import Prompt
 
-    # BOTH QUESTIONS ARE ASKED, and the closing line is the last thing the
-    # model reads. It used to close on the binary one alone -- "does this
-    # continue that dispute, or open a different one?" -- and against the
-    # brief that found BK-27 the model answered exactly that and returned
-    # an EMPTY list of disputes. The schema and the system text both
-    # described the second question; nothing at the point of asking did.
+    units = source_units(quotable.words)
+    order = list(units)
+    heading = ("SOURCE UNITS (current message, then any earlier account still awaiting "
+               "placement; IDs are not quotation):")
+    if reverse:
+        blocks = _paragraph_units(quotable.words)
+        if len(blocks) == 1:
+            order = list(reversed(blocks[0]))
+            heading = ("SOURCE UNITS (listed LAST UNIT FIRST; the IDs keep the order "
+                       "the advocate wrote them in; IDs are not quotation):")
+        else:
+            order = [key for block in reversed(blocks) for key in block]
+            heading = ("SOURCE UNITS (listed LAST PARAGRAPH FIRST; the IDs keep the order "
+                       "the advocate wrote them in; IDs are not quotation):")
     return Prompt(
-        system=(SYSTEM + "\nFor this structured read, source_allocations is the authoritative "
-                "allocation: for EVERY source unit give the 1-based positions of the disputes "
-                "it belongs to. Shared representation and questions can belong to several. "
-                "Do not reproduce quotations. Leave the top-level quoted field empty; source "
-                "allocations supply the exact evidence. Every substantive unit needs an "
-                "allocation. Do not combine independently contested rights just because the "
-                "opponent is the same; their subject and chronology can differ."),
-        user=(f"{quotable.block()}\n\n"
-              "SOURCE UNITS (current message, then unallocated earlier account; "
-              "IDs are not quotation):\n"
-              + "\n".join(f"{key}: {value}" for key, value in source_units(quotable.words).items())
+        system=SYSTEM,
+        user=(f"{quotable.block()}\n\n{heading}\n"
+              + "\n".join(f"{key}: {units[key]}" for key in order)
               + "\n\n"
-              "1. Inventory the whole current message. Allocate each substantive "
-              "instruction to its existing dispute ID "
-              "or a genuinely new dispute, with all relevant exact spans. "
-              "Include shared instructions on every affected entry.\n"
-              "2. Then classify its relationship to the existing file, not "
-              "between subjects within the message. Distinguish clarification "
-              "from new work. Record explicit focus or "
-              "a request to advance separately; never infer either from an acknowledgement. "
-              "Earlier unallocated accounts are evidence awaiting placement, NOT new commands. "
-              "Only the current message controls focus, advance and checklist answers. "
-              "Resolve earlier accounts against the current clarification without opening "
-              "duplicates of the existing disputes."))
+              "List the people and the things in contest; then label every source unit "
+              "exactly once. Then record any explicit focus or request to move on, and "
+              "any checklist answers."))
 
 
-def split_audit_prompt(quotable: Quotable, provisional: DisputeRead):
-    """Independently challenge a first inventory that already found several disputes.
+def repair_prompt(prompt, refused: str):
+    """THE ONE BOUNDED REPAIR, told exactly which rule the first answer broke.
 
-    Literal source coverage proves only that every sentence was placed somewhere;
-    it cannot prove that one row did not swallow several contested rights. The
-    second read must produce a complete source-bound inventory, so a fuller
-    answer can replace the first only through the ordinary quotation guards.
+    No scenario keywords, no dropped guard, no unlimited retry -- and nothing
+    from the failed answer is kept unless the repair gives it back under the
+    same checks. One owner of this text, so the served turn and a measurement
+    of it cannot repair differently.
     """
-    from nm.shared.model_port import Prompt
-
-    base = build_prompt(quotable)
-    return Prompt(
-        system=(base.system + "\n\nINDEPENDENT SPLIT REVIEW. The first inventory "
-                "covered the words but may have grouped distinct claims. Examine "
-                "each alleged act for its contested right, harm, legal consequence, "
-                "evidence and potential relief. The same people, property, paragraph "
-                "or incident do not by themselves make one dispute. Equally, several "
-                "facts or remedies for one contested right do not require separate "
-                "entries. Return the complete corrected inventory from the source "
-                "units, not an amendment to the provisional rows."),
-        user=(base.user + "\n\nThe provisional reading contained "
-              f"{len(provisional.described)} entries. Recheck whether any entry "
-              "combines independently contested rights, including harms arising "
-              "during an incident about another right. Give each supported right "
-              "its own entry and allocate every source unit again."),
-    )
+    return replace(prompt, user=prompt.user + "\n\n" + (
+        "Your previous answer was refused: " + refused + ". Re-read the WHOLE message and "
+        "label EVERY source unit exactly once. An independently contested act, and "
+        "each fact, answer or remedy supporting it, names the same thing and kind by "
+        "their numbers in your lists. Support alone never creates a new dispute. "
+        + ACT_ANCHOR_RULE + " " + OPPOSING_SIDE_RULE + " "
+        "Background is limited to client identity and genuinely matter-wide "
+        "procedural status; scope every right-specific fact with about entries."))
 
 
 def schema_for(quotable: Quotable, *,
                thread_ids: frozenset[str] = frozenset()) -> dict:
-    """Make omission of a source unit a schema error, without dictating its meaning.
+    """The contract, with every closed answer space named.
 
-    AN ENTRY MAY NAME ONLY A DISPUTE THIS MATTER HOLDS. `interpret` refuses
-    one that does not ("a dispute ID is not on this matter"); naming the
-    permitted values here means the model is never shown an ID it could offer
-    wrongly. Empty always belongs: it is how a genuinely new dispute says so.
-
-    THE VERDICT IS DELIBERATELY NOT NARROWED, and the reason is worth keeping.
-    On 22 September 2026 a four-dispute brief was refused with "the inventory
-    marks new disputes but the verdict denies new work", and removing
-    `continues` from the enum on a file with no disputes looked like the fix.
-    It is not: `continues` with NO described entries is how an ordinary
-    single-dispute matter opens -- the message adds detail, nothing is
-    separated out, and `bind` creates the first thread. Narrowing the enum
-    broke that path and six tests with it.
-
-    What is actually contradictory is `continues` TOGETHER WITH entries that
-    carry no thread_id, which is a cross-field condition a JSON enum cannot
-    state. `interpret` owns it and keeps owning it.
-
-    THE GUARDS IN `interpret` STAY REGARDLESS. A schema is the model's
-    contract, not a proof about its output -- a provider that does not enforce
-    enums, a repaired payload, a future caller. The schema stops inviting an
-    answer; the guard still refuses it.
+    A UNIT ID THAT IS NOT IN THE MESSAGE IS NOT A UNIT, and an ID that is not
+    on this matter is not a dispute: both are enums, so the answer cannot be
+    formed. `interpret` refuses them anyway -- a schema is the model's
+    contract, not a proof about its output.
     """
     schema = deepcopy(DISPUTE_SCHEMA)
-    props = schema['properties']
-    props['verdict']['description'] = (
-        "opens if ANY inventory entry is genuinely new (empty thread_id), even when other "
-        "entries continue existing disputes. continues only when ALL entries match existing "
-        "thread IDs. cannot_tell if the distinction remains genuinely uncertain.")
-    props['quoted'] = {'type': 'string', 'enum': [''],
-                       'description': 'Exact evidence comes from source_allocations.'}
-    item = props['disputes']['items']
-    item['properties'] = {k: v for k, v in item['properties'].items()
-                          if k in ('label', 'thread_id')}
-    # AN ID THAT IS NOT ON THIS MATTER IS NOT AN ID. `interpret` refuses one
-    # ("a dispute ID is not on this matter"); naming the permitted values here
-    # means the model cannot offer one in the first place. Empty always
-    # belongs: it is how a genuinely new dispute says so.
-    item['properties']['thread_id'] = {
-        **item['properties'].get('thread_id', {'type': 'string'}),
-        'enum': ['', *sorted(thread_ids)]}
-    item['required'] = ['label', 'thread_id']
-    props['source_allocations'] = {
-        'type': 'object', 'additionalProperties': False,
-        'properties': {key: {'type': 'array', 'items': {'type': 'integer', 'minimum': 1},
-                             'description': text}
-                       for key, text in source_units(quotable.words).items()},
-        'required': list(source_units(quotable.words)),
-    }
-    schema['required'].append('source_allocations')
+    sentence = schema["properties"]["sentences"]["items"]["properties"]
+    sentence["unit"]["enum"] = list(source_units(quotable.words)) or ["S1"]
+    about = sentence["about"]["items"]["properties"]
+    about["dispute"]["enum"] = [NEW, UNDECIDED, *sorted(thread_ids)]
     return schema
 
 
-def fixed_allocation_repair(quotable: Quotable, data: dict, threads):
-    """Repair links over known targets plus the reader's proposed new entries.
+@dataclass(frozen=True)
+class _Entry:
+    """One labelled sentence's claim that it concerns one dispute."""
 
-    The model no longer has to invent an array and index that changing array in
-    the same answer. This does not invent disputes or relax source coverage.
-    """
-    from nm.shared.model_port import Prompt
+    unit: str
+    role: str
+    other_side: int
+    thing: int
+    kind: str
+    dispute: str
 
-    ids = {t.id for t in threads}
-    rows = data.get('disputes', [])
-    if (not rows or not isinstance(rows, list)
-            or any(not isinstance(r, dict) or not isinstance(r.get('label'), str)
-                   or not r['label'].strip() or r.get('thread_id') not in {'', *ids}
-                   for r in rows)):
-        return None
-    existing = [r['thread_id'] for r in rows if r['thread_id']]
-    new = [r for r in rows if not r['thread_id']]
-    # A DUPLICATED EXISTING ID MAKES THE TABLE ITSELF WRONG, so there is
-    # nothing to constrain against and this still declines.
-    if len(existing) != len(set(existing)):
-        return None
-    # A VERDICT MAY BE CORRECTED WHERE IT UNDER-CLAIMS, NEVER WHERE IT
-    # OVER-CLAIMS, and the asymmetry is the whole rule.
-    #
-    # This used to require `verdict == ('opens' if new else 'continues')`
-    # outright, so a first answer that got the verdict wrong AS WELL AS the
-    # allocation fell through to the unconstrained schema and the model
-    # repeated the same class of mistake -- the repair declining in exactly
-    # the case that needed it. Measured 22 September 2026 on one four-dispute
-    # brief: "the inventory marks new disputes but the verdict denies new
-    # work", then "the allocation for S1 names dispute 6, and this inventory
-    # has 5", which is the failure this function's own docstring describes.
-    #
-    # UNDER-CLAIMING IS RECOVERABLE: rows carrying new work and a verdict of
-    # `continues` disagree, and the rows are the evidence -- repairing adds
-    # nothing and drops nothing, and `apply_fixed_allocation` derives `opens`
-    # from the table.
-    #
-    # OVER-CLAIMING IS NOT. `opens` with no new row means the model says there
-    # is new work its own inventory does not show, and the likeliest reading
-    # is that a dispute was OMITTED. Deriving `continues` there would silently
-    # drop it -- the wrong-merge defect, which is the worst outcome in this
-    # module and what `test_repair_keeps_source_supported_new_work_and_refuses
-    # _to_drop_it` exists for. So that one still declines, and the read is
-    # refused rather than quietly reconciled.
-    if not new and data.get('verdict') == Dispute.OPENS.value:
-        return None
-    table = [{'label': t.label, 'thread_id': t.id} for t in threads]
-    table.extend({'label': r['label'], 'thread_id': ''} for r in new)
-    schema = schema_for(quotable)
-    alloc = schema['properties']['source_allocations']
-    for value in alloc['properties'].values():
-        value['items'] = {'type': 'integer', 'enum': list(range(1, len(table) + 1))}
-        value['minItems'] = 1
-    schema['properties'] = {
-        'source_allocations': alloc,
-        'focus_thread_id': {'type': 'string', 'enum': ['', *[t.id for t in threads]]},
-        'focus_quote': {'type': 'string', 'enum': ['', *source_units(quotable.turn).values()]},
-    }
-    schema['required'] = list(schema['properties'])
-    schema['x-nm-fixed-inventory'] = table
-    prompt = build_prompt(quotable)
-    prompt = Prompt(system=prompt.system + "\nThis is a link repair over a FIXED inventory. "
-                    "Return allocations and current explicit focus. Copy a full current "
-                    "source unit for focus_quote, or leave BOTH focus fields empty. "
-                    "Use only the fixed numbered targets; no new rows. The proposed new "
-                    "entries are NOT established facts. Every proposed new entry must have "
-                    "support in the advocate's actual words or this repair must fail. "
-                    "Read each source unit against EVERY target, not only target 1. "
-                    "A unit may contain several disputes; allocate it to each affected target. "
-                    "Shared representation or authority instructions reach all affected entries.",
-                    user=prompt.user + "\nFIXED TARGETS:\n" + "\n".join(
-                        f"{i}: {r['label']} ({r['thread_id']})" for i, r in enumerate(table, 1)))
-    return prompt, schema, table
-
-
-def apply_fixed_allocation(data: dict, repaired: dict, table: list) -> dict:
-    """Keep targeted rows; never silently discard proposed new work in repair."""
-    allocation = repaired.get('source_allocations', {})
-    if (not isinstance(allocation, dict)
-            or any(not isinstance(v, list) or not v
-                   or any(type(i) is not int or not 1 <= i <= len(table) for i in v)
-                   for v in allocation.values())):
-        return {**data, 'source_allocations': {}}
-    used = sorted({i for values in allocation.values() for i in values})
-    if any(i not in used for i, row in enumerate(table, 1) if not row['thread_id']):
-        return {**data, 'source_allocations': {}}
-    new_index = {old: n for n, old in enumerate(used, 1)}
-    kept = [table[i - 1] for i in used]
-    # DERIVED, NOT CARRIED. The verdict is a function of the rows that
-    # survived the repair -- anything without a thread_id is new work -- and
-    # carrying the first answer's verdict through was how a repaired
-    # allocation kept the contradiction that sent it for repair. Asking a
-    # model for a value determined by its own other answers is asking it to
-    # contradict itself; here the table is known, so nobody needs to ask.
-    verdict = 'opens' if any(not row['thread_id'] for row in kept) else 'continues'
-    return {**data, 'disputes': kept, 'quoted': '', 'verdict': verdict,
-            'focus_thread_id': repaired.get('focus_thread_id', ''),
-            'focus_quote': repaired.get('focus_quote', ''),
-            'source_allocations': {key: [new_index[i] for i in values]
-                                   for key, values in allocation.items()}}
-
-
-def _allocation_refusal(rows: object, allocations: object,
-                        units: dict) -> str | None:
-    """WHICH allocation rule failed, or None. Never "one of five things".
-
-    THE OLD MESSAGE WAS ONE SENTENCE FOR FIVE CONDITIONS -- *each source unit
-    must have a valid dispute allocation* -- and a refusal that names its
-    family instead of its member cannot be diagnosed from the record it
-    leaves. Measured 22 September 2026: a four-dispute brief failed here,
-    twice, through the bounded repair; the transcript said only that sentence,
-    and the next session had to re-run a live matter to find out which rule
-    had fired. A check that knows exactly what is wrong and reports a
-    category is spending the diagnosis it already computed.
-
-    IT IS ALSO WHAT THE REPAIR READS. The feedback prompt quotes
-    `read.refused` back to the model, so "one of these five" is the
-    instruction the model gets; naming the member makes the second attempt
-    address the thing that actually failed.
-    """
-    if not isinstance(rows, list):
-        return "the dispute inventory is not a list of entries"
-    if not isinstance(allocations, dict):
-        return "the source allocation is not a mapping of source unit to disputes"
-    missing = sorted(set(units) - set(allocations))
-    unknown = sorted(set(allocations) - set(units))
-    if missing or unknown:
-        said = []
-        if missing:
-            said.append("no allocation for " + ", ".join(missing))
-        if unknown:
-            said.append("allocated a source unit that is not in the message: "
-                        + ", ".join(unknown))
-        return "; ".join(said)
-    for key in sorted(allocations):
-        targets = allocations[key]
-        if not isinstance(targets, list):
-            return f"the allocation for {key} is not a list of dispute numbers"
-        if rows and not targets:
-            return f"{key} was allocated to no dispute"
-        for i in targets:
-            # `type(i) is not int` and NOT `isinstance`: `True` is an `int`
-            # and a bool here would index row 1 on every truthy answer.
-            if type(i) is not int:
-                return (f"the allocation for {key} names {i!r}, which is not a "
-                        f"dispute number")
-            if not 1 <= i <= len(rows):
-                return (f"the allocation for {key} names dispute {i}, and this "
-                        f"inventory has {len(rows)}")
-    return None
+    @property
+    def key(self) -> tuple:
+        # ONE DISPUTE PER OTHER SIDE, THING AND KIND -- or the dispute on the file
+        # the sentence names. Numbers from the reading's own lists, never text.
+        if self.dispute not in (NEW, UNDECIDED):
+            return ("file", self.dispute)
+        return ("new", self.other_side, self.thing, self.kind)
 
 
 def interpret(quotable: Quotable, data: dict, *,
               thread_ids: frozenset[str] = frozenset()) -> DisputeRead:
-    """Turn the model's answer into a verdict, or REFUSE it.
+    """Turn the sentence labels into disputes, or REFUSE them.
 
     A refusal lands on CANNOT_TELL, never on CONTINUES. Falling back to
     "continues" would make every failed read a silent merge, which is the
-    defect this module exists to close.
+    defect this module exists to close. A refusal names WHICH rule failed --
+    the repair quotes it back to the model.
     """
     if not isinstance(data, dict):
         return DisputeRead(Dispute.CANNOT_TELL,
                            refused="the dispute read returned nothing usable")
-
-    raw = (data.get("verdict") or "").strip().lower()
-    try:
-        verdict = Dispute(raw)
-    except ValueError:
+    units = source_units(quotable.words)
+    people = _people(data.get("people"), quotable)
+    things = _things(data.get("things"))
+    rows = data.get("sentences")
+    if people is None or things is None or not isinstance(rows, list):
         return DisputeRead(Dispute.CANNOT_TELL,
-                           refused=f"the model answered {raw!r}, which is not "
-                                   f"an answer to this question")
+                           refused="the people, things or sentences are not lists")
 
-    why = (data.get("why") or "").strip()
-    quoted = (data.get("quoted") or "").strip()
-
-    # THE COUNT IS READ ON EVERY VERDICT, because the two answers are
-    # about different things: `verdict` is this message against the FILE,
-    # `described` is this message against ITSELF. A brief that opens three
-    # disputes on an empty matter has no verdict worth having and three
-    # threads to create.
-    rows = data.get("disputes")
-    allocations = data.get('source_allocations')
-    if allocations is not None:
-        wrong = _allocation_refusal(rows, allocations, source_units(quotable.words))
+    entries: list[_Entry] = []
+    roles: dict[str, str] = {}
+    for position, row in enumerate(rows, 1):
+        wrong = _sentence_refusal(position, row, units, roles, people, len(things),
+                                  thread_ids)
         if wrong:
-            return DisputeRead(Dispute.CANNOT_TELL, refused=wrong)
-    described = _described(quotable, data)
-    if not isinstance(rows, list):
-        return DisputeRead(Dispute.CANNOT_TELL, described=described,
-                           refused="the dispute inventory is not a list of entries")
-    if len(described) != len(rows):
-        return DisputeRead(Dispute.CANNOT_TELL, described=described,
-                           refused=f"{len(rows) - len(described)} of {len(rows)} dispute "
-                                   f"entries were unreadable or unsupported by the source")
-    if any(d.thread_id and d.thread_id not in thread_ids for d in described):
-        return DisputeRead(Dispute.CANNOT_TELL, refused="a dispute ID is not on this matter")
-    existing = [d.thread_id for d in described if d.thread_id]
-    if len(existing) != len(set(existing)):
-        return DisputeRead(Dispute.CANNOT_TELL,
-                           refused="the inventory repeats one existing dispute as separate rows")
-    if (allocations is not None and verdict is Dispute.CONTINUES
-            and any(not d.thread_id for d in described)):
-        return DisputeRead(Dispute.CANNOT_TELL, described=described,
-                           refused="the inventory marks new disputes but the verdict denies "
-                                   "new work; distinguish genuinely new entries from existing IDs")
-    if described and (allocations is not None or any(row.get("span_ids") for row in rows)):
-        allocated = {fold(s) for d in described for s in d.spans}
-        missing = [key for key, text in source_units(quotable.words).items()
-                   if not any(fold(text) in span for span in allocated)]
-        if missing:
-            return DisputeRead(Dispute.CANNOT_TELL, described=described,
-                               refused="unallocated source units: " + ", ".join(missing))
+            return DisputeRead(Dispute.CANNOT_TELL, refused=wrong,
+                               found=_found(entries, people, things))
+        roles[row["unit"]] = row["role"]
+        if row["role"] in _ABOUT_A_DISPUTE:
+            for about in row["about"]:
+                dispute = about["dispute"]
+                if dispute == UNDECIDED and not thread_ids:
+                    dispute = NEW   # nothing on the file to be undecided about
+                entries.append(_Entry(row["unit"], row["role"], about["other_side"],
+                                      about["thing"], about["kind"], dispute))
+    missing = [key for key in units if key not in roles]
+    if missing:
+        return DisputeRead(Dispute.CANNOT_TELL, found=_found(entries, people, things),
+                           refused="source units not labelled: " + ", ".join(missing))
+    inconsistent = _placement_refusal(entries)
+    if inconsistent:
+        return DisputeRead(Dispute.CANNOT_TELL, found=_found(entries, people, things),
+                           refused=inconsistent)
+
     focus = data.get("focus_thread_id") or ""
     if focus and (focus not in thread_ids
                   or not Quotable(turn=quotable.turn).accepts(data.get("focus_quote") or "")):
-        return DisputeRead(Dispute.CANNOT_TELL,
+        return DisputeRead(Dispute.CANNOT_TELL, found=_found(entries, people, things),
                            refused="the requested focus is not source-bound to this matter")
     advance = bool(data.get("advance_quote")
                    and Quotable(turn=quotable.turn).accepts(data["advance_quote"]))
     answers = data.get("requirement_answers", [])
     answers = tuple(answers) if isinstance(answers, list) else ()
 
-    if verdict is not Dispute.OPENS:
-        return DisputeRead(verdict, quoted, why, described=described,
-                           focus_thread_id=focus, advance=advance, requirement_answers=answers)
+    background = tuple(units[k] for k in units if roles[k] == "background")
+    background_ids = tuple(k for k in units if roles[k] == "background")
+    instructions = tuple(units[k] for k in units if roles[k] == "instruction")
+    instruction_ids = tuple(k for k in units if roles[k] == "instruction")
+    groups, unanchored = _group(entries)
+    if unanchored:
+        return DisputeRead(Dispute.CANNOT_TELL, found=_found(entries, people, things),
+                           refused=unanchored)
+    client = next((p["name"] for p in people if p["is_client"] and p["name"]), "")
+    described = _linked(tuple(_described(group, units, background_ids, client, people, things)
+                              for group in groups), groups)
+    doubts = _identity_doubts(described)
+    if any(e.dispute == UNDECIDED for e in entries):
+        verdict = Dispute.CANNOT_TELL
+    elif any(group[0].key[0] == "new" for group in groups):
+        verdict = Dispute.OPENS
+    else:
+        verdict = Dispute.CONTINUES
+    return DisputeRead(verdict, described[0].quoted if described else "",
+                       clean(data.get("why")), described=described,
+                       focus_thread_id=focus, advance=advance,
+                       requirement_answers=answers, instructions=instructions,
+                       doubts=doubts, shared=background,
+                       shared_unit_ids=background_ids,
+                       instruction_unit_ids=instruction_ids,
+                       unit_signatures=_unit_signatures(units, roles, entries,
+                                                       people, things))
 
-    # OPENING A THREAD IS THE ANSWER THAT CREATES SOMETHING, so it carries the
-    # evidence. `continues` and `cannot_tell` both leave the file as it was.
-    if not quotable.accepts(quoted):
-        if not quoted and (allocations is not None
-                           or any(row.get("span_ids") for row in rows)) and described:
-            # IDs select exact current-message text. This records organisation,
-            # not a fact or an established procedural position.
-            return DisputeRead(verdict, described[0].quoted, why, described=described,
-                               focus_thread_id=focus, advance=advance,
-                               requirement_answers=answers)
-        # The span must be the ADVOCATE'S words. The file is CONTEXT on this
-        # read and not quotable, because a span lifted from there would let an
-        # old dispute open a new thread.
-        return DisputeRead(Dispute.CANNOT_TELL, quoted, why,
-                           refused=(f"the model said this opens a new dispute "
-                                    f"and {quotable.refusal(quoted)}"))
-    return DisputeRead(Dispute.OPENS, quoted, why, described=described,
-                       focus_thread_id=focus, advance=advance, requirement_answers=answers)
+
+def _unit_signatures(units: dict[str, str], roles: dict[str, str],
+                     entries: list[_Entry], people: list[dict],
+                     things: list[str]) -> tuple[UnitSignature, ...]:
+    """Compare meanings after resolving a model's local list numbers to names."""
+    targets: dict[str, set[tuple[str, str, str, str]]] = {}
+    for entry in entries:
+        opponent = people[entry.other_side - 1]["name"] if entry.other_side else ""
+        targets.setdefault(entry.unit, set()).add((
+            fold(opponent), fold(things[entry.thing - 1]), entry.kind, entry.dispute))
+    return tuple(UnitSignature(unit_id, text, roles[unit_id],
+                               tuple(sorted(targets.get(unit_id, ()))))
+                 for unit_id, text in units.items())
 
 
-def _described(quotable: Quotable, data: dict) -> tuple[Described, ...]:
-    """The disputes the message describes, each checked against the
-    advocate's own words.
+def _people(rows: object, quotable: Quotable) -> list[dict] | None:
+    """The people list, each name in the advocate's own characters -- or blank.
 
-    THE SAME GUARD AS THE SINGULAR ANSWER, applied per item and for the
-    same reason: a span the advocate did not write settles nothing, and a
-    span lifted out of the file would let an old dispute open a new
-    thread. An item that fails the guard is DROPPED rather than kept with
-    a warning -- a thread is created from these, and a thread created
-    from words nobody wrote is worse than one not created.
+    A name the advocate did not write, or one that names nobody ("he", "the
+    other side"), is blanked rather than dropped: its NUMBER still identifies the
+    same person across sentences, so the grouping holds; only the label loses a
+    name nobody wrote.
     """
-    rows = data.get("disputes")
+    from nm.legal_brain.understand.posture import names_nobody
+
     if not isinstance(rows, list):
-        return ()
-    out: list[Described] = []
-    for position, row in enumerate(rows, 1):
-        if not isinstance(row, dict):
+        return None
+    out = []
+    for row in rows:
+        row = row if isinstance(row, dict) else {}
+        name = clean(row.get("name") if isinstance(row.get("name"), str) else "")
+        if name and names_nobody(name):
+            name = ""
+        out.append({"name": snippet(quotable.verbatim(name), 60) if name else "",
+                    "is_client": row.get("is_client") is True})
+    return out
+
+
+def _things(rows: object) -> list[str] | None:
+    """What is contested, in the reading's words -- a label, not evidence: the
+    evidence of each dispute is the advocate's sentences it holds."""
+    if not isinstance(rows, list):
+        return None
+    return [snippet(clean(row.get("name") if isinstance(row, dict)
+                          and isinstance(row.get("name"), str) else ""), 70)
+            for row in rows]
+
+
+def _sentence_refusal(position: int, row: object, units: dict[str, str],
+                      seen: dict[str, str], people: list[dict], things: int,
+                      thread_ids: frozenset[str]) -> str | None:
+    """WHICH rule one labelled sentence breaks, or None."""
+    if not isinstance(row, dict):
+        return f"sentence entry {position} is not an entry"
+    unit = row.get("unit")
+    if not isinstance(unit, str) or unit not in units:
+        return f"sentence entry {position} names a source unit that is not in the message"
+    if unit in seen:
+        return f"{unit} is labelled twice"
+    if row.get("role") not in ROLES:
+        return f"{unit} has no role this reading knows"
+    about = row.get("about")
+    if not isinstance(about, list):
+        return f"{unit}: 'about' is not a list"
+    if row["role"] in _ABOUT_A_DISPUTE and not about:
+        return f"{unit} is labelled {row['role']} but names no dispute it concerns"
+    if row["role"] not in _ABOUT_A_DISPUTE and about:
+        return f"{unit} is {row['role']} but also names a dispute it concerns"
+    for item in about if row["role"] in _ABOUT_A_DISPUTE else ():
+        if not isinstance(item, dict):
+            return f"{unit}: a dispute it concerns is not an entry"
+        other, thing = item.get("other_side"), item.get("thing")
+        if type(other) is not int or not 0 <= other <= len(people):
+            return f"{unit} names a person who is not in the people list"
+        if other and people[other - 1]["is_client"]:
+            return f"{unit} names the client as the other side of their own dispute"
+        if type(thing) is not int or not 1 <= thing <= things:
+            return f"{unit} names a thing that is not in the things list"
+        if item.get("kind") not in KINDS:
+            return f"{unit} names a kind of wrong this reading does not know"
+        dispute = item.get("dispute")
+        if not isinstance(dispute, str) or (dispute not in (NEW, UNDECIDED)
+                                            and dispute not in thread_ids):
+            return f"{unit} names a dispute that is not on this matter"
+    return None
+
+
+def _placement_refusal(entries: list[_Entry]) -> str | None:
+    """A file ID and a contested right must each identify only one dispute.
+
+    Grouping by an existing ID is otherwise able to merge different opponents,
+    things or kinds even though the labels describe distinct work. Conversely,
+    placing one right both on and off the file duplicates it. Neither assignment
+    can be repaired by choosing a convenient row after the fact.
+    """
+    right_by_id: dict[str, tuple[int, str]] = {}
+    opponents_by_id: dict[str, set[int]] = {}
+    id_by_right: dict[tuple[int, int, str], str] = {}
+    for entry in entries:
+        if entry.dispute in (NEW, UNDECIDED):
             continue
-        allocations = data.get('source_allocations')
-        ids = ([key for key, targets in allocations.items() if position in targets]
-               if allocations is not None else row.get("span_ids", []))
-        if not isinstance(ids, list):
+        right = (entry.thing, entry.kind)
+        if right_by_id.setdefault(entry.dispute, right) != right:
+            return f"the file dispute {entry.dispute} is assigned to different contested rights"
+        if entry.other_side:
+            opponents_by_id.setdefault(entry.dispute, set()).add(entry.other_side)
+            if len(opponents_by_id[entry.dispute]) > 1:
+                return f"the file dispute {entry.dispute} is assigned to different opponents"
+        if entry.role != "act":
             continue
-        units = source_units(quotable.words)
-        if ids:
-            if any(not isinstance(key, str) or key not in units for key in ids):
-                continue
-            selected = tuple(dict.fromkeys(units[key] for key in ids))
-            span, extra = selected[0], list(selected[1:])
+        full_right = (entry.other_side, entry.thing, entry.kind)
+        if id_by_right.setdefault(full_right, entry.dispute) != entry.dispute:
+            return "one contested right is assigned to different disputes on the file"
+    for entry in entries:
+        if (entry.role == "act" and entry.dispute == NEW
+                and (entry.other_side, entry.thing, entry.kind) in id_by_right):
+            return "one contested right is labelled both new and already on the file"
+    return None
+
+
+def _group(entries: list[_Entry]) -> tuple[list[list[_Entry]], str | None]:
+    """Only contested acts open new work; support must attach unambiguously.
+
+    A named file dispute may receive facts, answers or remedies without a new
+    act this turn. A new dispute needs an act from the advocate's source units.
+    Supporting rows that omit the opponent inherit it only when one anchored
+    group matches their thing and kind; ambiguity is returned for repair.
+    """
+    groups: dict[tuple, list[_Entry]] = {}
+    for entry in entries:
+        if entry.role == "act" or entry.dispute not in (NEW, UNDECIDED):
+            groups.setdefault(entry.key, []).append(entry)
+    for entry in entries:
+        if entry.role == "act" or entry.dispute not in (NEW, UNDECIDED):
+            continue
+        if entry.dispute == NEW and entry.key in groups:
+            matches = [groups[entry.key]]
         else:
-            span = (row.get("quoted") or "").strip()
-            extra = row.get("additional_quotes", [])
-        label = (row.get("label") or "").strip()
-        if not span or not label or not quotable.accepts(span):
-            continue
-        if not isinstance(extra, list) or any(
-                not isinstance(s, str) or not quotable.accepts(s) for s in extra):
-            continue
-        target = row.get("thread_id", "")
-        if not isinstance(target, str):
-            continue
-        out.append(Described(span, label, target, tuple(extra)))
+            matches = [group for group in groups.values()
+                       if (entry.dispute == UNDECIDED or group[0].key[0] == "new")
+                       and _representative(group).thing == entry.thing
+                       and _representative(group).kind == entry.kind
+                       and (entry.other_side == 0
+                            or _representative(group).other_side == entry.other_side)]
+        if len(matches) != 1:
+            reason = ("has no independently contested act to support"
+                      if not matches else "could support multiple contested acts")
+            return list(groups.values()), f"{entry.unit} is {entry.role} but {reason}"
+        matches[0].append(entry)
+    positions = {id(entry): position for position, entry in enumerate(entries)}
+    ordered = sorted(groups.values(), key=lambda group: min(positions[id(e)] for e in group))
+    return ordered, None
+
+
+def _representative(group: list[_Entry]) -> _Entry:
+    """An act names a new dispute; otherwise prefer a named file opponent."""
+    return next((e for e in group if e.role == "act" and e.other_side),
+                next((e for e in group if e.role == "act"),
+                     next((e for e in group if e.other_side), group[0])))
+
+
+def _described(group: list[_Entry], units: dict[str, str], background_ids: tuple[str, ...],
+               client: str, people: list[dict], things: list[str]) -> Described:
+    """One dispute: its sentences and the shared background, in the order the
+    advocate wrote them."""
+    ids = {e.unit for e in group}
+    unit_ids = tuple(key for key in units if key in ids)
+    allocation_unit_ids = tuple(key for key in units if key in ids or key in background_ids)
+    words = list(dict.fromkeys(text for key, text in units.items()
+                               if key in ids or key in background_ids))
+    first = _representative(group)
+    opponent = people[first.other_side - 1]["name"] if first.other_side else ""
+    thing = things[first.thing - 1] or snippet(units[first.unit], 70)
+    return Described(words[0], _label(client, opponent, thing),
+                     "" if first.key[0] == "new" else first.dispute,
+                     tuple(words[1:]), opponent, unit_ids=unit_ids,
+                     allocation_unit_ids=allocation_unit_ids)
+
+
+def _label(client: str, opponent: str, thing: str) -> str:
+    """A file-cover name: "<client> v. <opponent> -- <thing contested>"."""
+    if client and opponent:
+        return f"{client} v. {opponent} — {thing}"
+    if opponent:
+        return f"Against {opponent} — {thing}"
+    if client:
+        return f"{client} — {thing}"
+    return thing
+
+
+def _linked(described: tuple[Described, ...],
+            groups: list[list[_Entry]]) -> tuple[Described, ...]:
+    """LINKED, NEVER MERGED: the same events (a sentence in both), the same
+    thing (by number), or the same opponent (by number)."""
+    out = []
+    for i, d in enumerate(described):
+        mine = _representative(groups[i])
+        units_i = {e.unit for e in groups[i]}
+        related = []
+        for j, other in enumerate(groups):
+            if i == j:
+                continue
+            theirs = _representative(other)
+            if units_i & {e.unit for e in other}:
+                related.append((j, "the same events"))
+            elif mine.key[0] == theirs.key[0] == "new" and mine.thing == theirs.thing:
+                related.append((j, "the same thing"))
+            elif (mine.key[0] == theirs.key[0] == "new" and mine.other_side
+                  and mine.other_side == theirs.other_side):
+                related.append((j, "the same opponent"))
+        out.append(replace(d, related=tuple(related)))
     return tuple(out)
+
+
+def _found(entries: list[_Entry], people: list[dict], things: list[str]) -> tuple[str, ...]:
+    """The disputes a refused reading would have formed, as lines to show."""
+    lines = []
+    candidates: dict[tuple, _Entry] = {}
+    for entry in entries:
+        candidates.setdefault(entry.key, entry)
+    for first in candidates.values():
+        thing = things[first.thing - 1] if 0 < first.thing <= len(things) else ""
+        who = (people[first.other_side - 1]["name"]
+               if 0 < first.other_side <= len(people) else "")
+        if thing:
+            lines.append(f"{thing} (against {who})" if who else thing)
+    return tuple(dict.fromkeys(lines))
+
+
+def _identity_doubts(described: tuple[Described, ...]) -> tuple[str, ...]:
+    """A board cannot silently certify two entries with the same visible name.
+
+    The two rights may genuinely differ in kind, or a reading may have split one
+    claim twice. Keep both source-bound entries and ask which it is; a duplicate
+    label alone cannot settle that semantic question.
+    """
+    labels: dict[str, list[int]] = {}
+    for position, entry in enumerate(described, 1):
+        labels.setdefault(fold(entry.label), []).append(position)
+    return tuple(
+        f"entries {', '.join(map(str, positions))} have the same name "
+        f"‘{described[positions[0] - 1].label}’; please confirm how they differ"
+        for positions in labels.values() if len(positions) > 1)
+
+
+# ============================ reading twice ==================================
+
+def separate(read, quotable: Quotable, *,
+             thread_ids: frozenset[str] = frozenset()) -> DisputeRead:
+    """THE PROCEDURE, ONE OWNER: read, repair once, read again reversed, compare.
+
+    `read(prompt, schema)` returns the model's answer as a dict. The served turn
+    and the measurement of it both call this, so they cannot read differently.
+    A model failure on the FIRST reading or its repair propagates to the caller;
+    one on the second is recorded in `second`, because the first reading stands.
+
+    The second reading runs wherever two or more source units can change order.
+    Where both readings stand and separate the message
+    differently, the FINER one is used -- a wrong split is one sentence to fix, a
+    wrong merge is silent -- and the difference is carried as `doubts`, to be
+    said and asked.
+    """
+    from nm.shared.model_port import ModelError
+
+    prompt = build_prompt(quotable)
+    schema = schema_for(quotable, thread_ids=thread_ids)
+    first = interpret(quotable, read(prompt, schema), thread_ids=thread_ids)
+    if first.refused:
+        again = interpret(quotable, read(repair_prompt(prompt, first.refused), schema),
+                          thread_ids=thread_ids)
+        if again.refused:
+            return replace(again, found=again.found or first.found)
+        first = again
+    if len(source_units(quotable.words)) < 2:
+        return replace(first, second="not needed: one source unit")
+    try:
+        second = interpret(quotable, read(build_prompt(quotable, reverse=True), schema),
+                           thread_ids=thread_ids)
+    except ModelError as exc:
+        return replace(first, second=f"could not run: {exc}", doubts=(*first.doubts,
+                       "the independent dispute reading could not run; the separation remains unconfirmed"))
+    if second.refused:
+        return replace(first, second=f"refused: {second.refused}", doubts=(*first.doubts,
+                       "the independent dispute reading was refused; the separation remains unconfirmed"))
+    return compare(first, second)
+
+
+def compare(first: DisputeRead, second: DisputeRead) -> DisputeRead:
+    """The finer of two readings, with what the other one joined as doubts.
+
+    A sentence called shared background by one reading and scoped to a dispute
+    by the other changes which thread receives it. That disagreement must not
+    vanish merely because the partitions of their remaining common units agree.
+    """
+    first_owned, second_owned = _own(first), _own(second)
+    first_shared = _scope(first.shared_unit_ids, first.shared)
+    second_shared = _scope(second.shared_unit_ids, second.shared)
+    first_instructions = _scope(first.instruction_unit_ids, first.instructions)
+    second_instructions = _scope(second.instruction_unit_ids, second.instructions)
+    common = first_owned & second_owned
+    a, b = _partition(first, common), _partition(second, common)
+    semantic_doubts = _signature_doubts(first, second)
+    same_partition = sorted(map(sorted, a)) == sorted(map(sorted, b))
+    if (first_owned == second_owned and first_shared == second_shared
+            and first_instructions == second_instructions
+            and same_partition and not semantic_doubts):
+        return replace(first, doubts=tuple(dict.fromkeys((*first.doubts, *second.doubts))),
+                       second="agreed")
+    if (len(first.described), len(first_owned), -len(first_shared)) >= (
+            len(second.described), len(second_owned), -len(second_shared)):
+        chosen, other = first, second
+    else:
+        chosen, other = second, first
+    mine, theirs = _partition(chosen, common), _partition(other, common)
+    doubts = (["one reading places part of your account on a particular "
+               "dispute; the other leaves it outside that dispute"]
+              if first_owned != second_owned else [])
+    if first_shared != second_shared:
+        doubts.append("one reading treats part of your account as shared "
+                      "background; the other gives it a different role")
+    if first_instructions != second_instructions:
+        doubts.append("one reading treats part of your account as an "
+                      "instruction; the other gives it a different role")
+    doubts.extend(semantic_doubts)
+    moved_support = _support_scope_doubt(first, second, first_owned, second_owned,
+                                          same_partition)
+    if moved_support:
+        doubts.append(moved_support)
+    else:
+        for block in theirs:
+            joined = sorted({n for n, mine_block in enumerate(mine) if block & mine_block})
+            if len(joined) > 1:
+                names = [chosen.described[n].label for n in joined]
+                doubts.append("a second reading of your message treated "
+                              + " and ".join(f"‘{name}’" for name in names)
+                              + " as one dispute")
+        for n, block in enumerate(mine):
+            split = [b for b in theirs if b & block]
+            if len(split) > 1:
+                doubts.append(f"a second reading divided ‘{chosen.described[n].label}’ "
+                              f"into {len(split)} disputes")
+    return replace(chosen, doubts=tuple(dict.fromkeys((*first.doubts, *second.doubts,
+                                                     *doubts))) or (
+        "a second reading of your message separated it differently",), second="disagreed")
+
+
+def _signature_doubts(first: DisputeRead, second: DisputeRead) -> list[str]:
+    """A matching source partition does not establish matching legal labels.
+
+    Older hand-authored readings have no source signatures and retain their
+    original partition-only comparison. New readings resolve model list numbers
+    to names before this check.
+    """
+    if not first.unit_signatures or not second.unit_signatures:
+        return []
+    left = {unit.unit_id: unit for unit in first.unit_signatures}
+    right = {unit.unit_id: unit for unit in second.unit_signatures}
+    if left.keys() != right.keys():
+        return ["the readings do not account for the same source sentences"]
+    doubts = []
+    for unit_id, one in left.items():
+        two = right[unit_id]
+        quote = f"‘{snippet(one.text, 90)}’"
+        if one.role != two.role:
+            doubts.append(f"the readings give {quote} different roles: "
+                          f"{_role_name(one.role)} versus {_role_name(two.role)}")
+        if one.targets == two.targets:
+            continue
+        if not one.targets or not two.targets:
+            continue  # role and background/instruction scope doubts explain this
+        dimensions = (
+            (0, "opposing parties"),
+            (1, "things in contest"),
+            (2, "kinds of wrong"),
+            (3, "new or existing dispute placement"),
+        )
+        changed = False
+        for index, name in dimensions:
+            if {target[index] for target in one.targets} != {
+                    target[index] for target in two.targets}:
+                doubts.append(f"the readings assign different {name} to {quote}")
+                changed = True
+        if not changed:
+            doubts.append(f"the readings associate {quote} with different disputes")
+    return doubts
+
+
+def _role_name(role: str) -> str:
+    return {
+        "act": "a contested act", "answer": "a party's answer",
+        "fact": "a supporting fact", "remedy": "a requested remedy",
+        "background": "shared background", "instruction": "an instruction",
+    }.get(role, role)
+
+
+def _support_scope_doubt(first: DisputeRead, second: DisputeRead,
+                         first_owned: set[tuple[str, str]],
+                         second_owned: set[tuple[str, str]],
+                         same_partition: bool) -> str | None:
+    """A support unit can move while the independently contested acts stay put.
+
+    In that case a merge/split warning misstates the disagreement. Preserve the
+    two dispute entries and ask which one receives the supporting material.
+    """
+    if (same_partition or first_owned != second_owned or not first.unit_signatures
+            or not second.unit_signatures):
+        return None
+    first_acts = {("unit", unit.unit_id) for unit in first.unit_signatures
+                  if unit.role == "act"}
+    second_acts = {("unit", unit.unit_id) for unit in second.unit_signatures
+                   if unit.role == "act"}
+    if (not first_acts or first_acts != second_acts
+            or sorted(map(sorted, _partition(first, first_acts)))
+               != sorted(map(sorted, _partition(second, second_acts)))):
+        return None
+
+    def attachments(read: DisputeRead) -> dict[tuple[str, str], set[frozenset]]:
+        out: dict[tuple[str, str], set[frozenset]] = {}
+        for described in read.described:
+            owned = _owned(read, described)
+            anchors = frozenset(owned & first_acts)
+            for source in owned - first_acts:
+                out.setdefault(source, set()).add(anchors)
+        return out
+
+    left, right = attachments(first), attachments(second)
+    moved = next((source for source in sorted(first_owned - first_acts)
+                  if left.get(source) != right.get(source)), None)
+    if moved:
+        words = next((unit.text for unit in first.unit_signatures
+                      if ("unit", unit.unit_id) == moved), "")
+        if words:
+            return (f"the readings place ‘{snippet(words, 90)}’ with different "
+                    "disputes; please confirm which contest it supports")
+    return ("the readings place supporting material with different disputes; "
+            "please confirm which contest it supports")
+
+
+def _owned(read: DisputeRead, described: Described) -> set[tuple[str, str]]:
+    """Use occurrence IDs for read-generated rows; retain old callers' spans.
+
+    Hand-authored `Described` values predate unit IDs and can still be compared
+    by text. The two namespaces cannot accidentally equate an ID to its text.
+    """
+    if described.unit_ids:
+        return {("unit", unit_id) for unit_id in described.unit_ids}
+    return {("text", span) for span in described.spans if span not in read.shared}
+
+
+def _scope(unit_ids: tuple[str, ...], words: tuple[str, ...]) -> set[tuple[str, str]]:
+    """Occurrence identity for new reads; text fallback for older constructed reads."""
+    if unit_ids:
+        return {("unit", unit_id) for unit_id in unit_ids}
+    return {("text", word) for word in words}
+
+
+def _own(read: DisputeRead) -> set[tuple[str, str]]:
+    return {source for d in read.described for source in _owned(read, d)}
+
+
+def _partition(read: DisputeRead, keep: set[tuple[str, str]]) -> list[set[tuple[str, str]]]:
+    """Each dispute's own source occurrences within `keep`, empty ones dropped."""
+    blocks = [_owned(read, d) & keep for d in read.described]
+    return [block for block in blocks if block]
+
+
+def _paragraphs(text: str) -> list[str]:
+    return [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
+
+
+def _paragraph_units(words: str) -> list[list[str]]:
+    """The source unit IDs of each paragraph of `words`, in order."""
+    units = source_units(words)
+    blocks, keys = [], iter(units)
+    for paragraph in _paragraphs(words):
+        count = len(source_units(paragraph))
+        blocks.append([next(keys) for _ in range(count)])
+    blocks.append(list(keys))   # anything left over (none, in practice)
+    return [b for b in blocks if b]
 
 
 def source_units(message: str) -> dict[str, str]:
@@ -688,15 +1054,24 @@ def pending_accounts(matter, current_turn: str) -> tuple:
 
     Repeated failed submissions are one recovery population. Superseded accounts
     and fully placed accounts do not return. This does not decide their meaning.
+
+    AN ACCOUNT WHOSE READING PLACED IT IS PLACED, even where some of its units
+    were deliberately charted nowhere -- an instruction ("please assess every
+    dispute") is never a fact of any dispute, and a reading that succeeds has
+    labelled every unit. Judged by its words alone, such an account would be
+    offered back as unplaced on every later turn, and its sentences read again
+    as new disputes.
     """
     scoped_ids = {fid for thread in matter.threads for fid in thread.chronology}
     # Superseded scoped facts were placed too; their original account must not
     # resurrect them merely because they no longer appear in a live chart.
     placed = [f for f in matter.facts if f.id in scoped_ids]
+    read_turns = {f.provenance.turn for f in placed}
     seen, pending = set(), []
     for fact in matter.facts:
         if (fact.provenance.kind != "advocate_statement" or fact.provenance.span
-                or fact.provenance.turn == current_turn or fact.superseded_by is not None):
+                or fact.provenance.turn == current_turn or fact.superseded_by is not None
+                or fact.provenance.turn in read_turns):
             continue
         key = fold(fact.statement)
         spans = [fold(f.statement) for f in placed]
@@ -706,18 +1081,3 @@ def pending_accounts(matter, current_turn: str) -> tuple:
         seen.add(key)
         pending.append(fact)
     return tuple(pending)
-
-
-def uncovered_paragraphs(message: str, read: DisputeRead) -> tuple[str, ...]:
-    """Structural omission check, not a claim that semantic allocation is correct.
-
-    Never manufacture a dispute from punctuation. A paragraph with no admitted
-    span must be reconsidered by the same reader before its inventory is used.
-    Pure navigation has no described inventory and is handled by its own fields.
-    """
-    if not read.described:
-        return ()
-    spans = [fold(s) for d in read.described for s in d.spans]
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", message) if p.strip()]
-    return tuple(p for p in paragraphs
-                 if not any(s in fold(p) or fold(p) in s for s in spans))

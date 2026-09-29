@@ -43,9 +43,6 @@ SITES = {
     "consistency:build_prompt",
     "consistency:repair_prompt",
     "controlled_brain:run",
-    "dispute:build_prompt",
-    "dispute:fixed_allocation_repair",
-    "dispute:split_audit_prompt",
     "duty:build_prompt",
     "evidence_item:build_inventory_prompt",
     "factors:build_prompt",
@@ -79,13 +76,34 @@ SITES = {
 #: PROMPT SITES THAT EXIST AND AWAIT THE OWNER'S REVIEW, named so the gap is visible
 #: rather than left as a red check nobody reads: the reply writer and its check
 #: (LB-76 item 4: "the owner reviews the rewritten guidance before it is used") and
-#: the similar-wordings read for the bare-act search (LB-106). A site moves to SITES
-#: when it has been reviewed; a NEW site in neither set still fails below.
+#: the similar-wordings read for the bare-act search (LB-106), and the grievance
+#: reading that replaced the dispute inventory (LB-109, 29 September 2026 --
+#: rewritten, so no longer the reviewed text). A site moves to SITES when it
+#: has been reviewed; a NEW site in neither set still fails below.
 PENDING_REVIEW = {
     "compose:build_prompt",
     "compose:check_prompt",
+    "dispute:build_prompt",
     "similar_words:build_prompt",
 }
+
+
+def _module(stem: str):
+    """The module a prompt site's stem names, reviewed or awaiting review.
+
+    THE MECHANICAL RULES BELOW HOLD FOR EVERY PROMPT THE PRODUCT SENDS. Review is
+    the owner reading the words; one policy owner, no known conflicting rule and no
+    reintroduced schema instruction are checks, and a prompt awaiting review is sent
+    all the same.
+    """
+    from assurance.common.module_roles import original_stem, sources_for_roles
+
+    root = Path(__file__).resolve().parents[1]
+    for path in sources_for_roles("core"):
+        if original_stem(path) == stem:
+            rel = Path(path).resolve().relative_to(root).with_suffix("")
+            return importlib.import_module(".".join(rel.parts))
+    raise AssertionError(f"no prompt module for {stem!r}")
 
 
 def _sites(root=None):
@@ -125,11 +143,9 @@ def test_all_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
 
 
 def test_composed_systems_have_one_policy_owner_and_no_known_conflicting_rules():
-    from assurance.common.module_roles import current_module
-
     reviewed = []
-    for name in sorted({site.split(":")[0] for site in SITES}):
-        module = importlib.import_module(current_module(f"nm.core.{name}"))
+    for name in sorted({site.split(":")[0] for site in SITES | PENDING_REVIEW}):
+        module = _module(name)
         for key, value in vars(module).items():
             if key.endswith("SYSTEM") and isinstance(value, str):
                 system = guided(Prompt(system=value, user="source data")).system
@@ -147,7 +163,9 @@ def test_composed_systems_have_one_policy_owner_and_no_known_conflicting_rules()
                 ):
                     assert conflict.casefold() not in system.casefold(), (name, key, conflict)
                 reviewed.append((name, key))
-    assert len(reviewed) == 21, reviewed
+    # 21 reviewed, and the reply writer and its check, the similar-wordings read and
+    # the grievance reading, awaiting the owner's review.
+    assert len(reviewed) == 24, reviewed
 
 
 def test_dispatched_interaction_checker_has_exact_data_and_current_owned_guidance(tmp_path):
@@ -873,10 +891,8 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
         "the whatsapp exchange",
         "the site engineer",
     )
-    for name in sorted({site.split(":")[0] for site in SITES}):
-        from assurance.common.module_roles import current_module
-
-        for key, schema in vars(importlib.import_module(current_module(f"nm.core.{name}"))).items():
+    for name in sorted({site.split(":")[0] for site in SITES | PENDING_REVIEW}):
+        for key, schema in vars(_module(name)).items():
             if key.endswith("SCHEMA") and isinstance(schema, dict):
                 descriptions = list(_descriptions(on_the_wire(schema)))
                 for description in descriptions:
@@ -907,7 +923,9 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
     # is not a second standalone read. Keep the population nonempty and exact.
     # The private explanation wording is a distinct independently owned read,
     # not a waiver of source, scope or final publication checks.
-    assert len(schemas) == 33, schemas
+    # With the prompts awaiting review: the reply and its check, the similar
+    # wordings, and the grievance reading.
+    assert len(schemas) == 36, schemas
     assert ("working_explanation", "WORKING_RATIONALE_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_REVIEW_SCHEMA") in schemas
     assert ("interaction_review", "COMMUNICATION_UNIT_REVIEW_SCHEMA") in schemas

@@ -21,10 +21,10 @@ def test_pending_account_survives_clarification_and_is_not_a_new_instruction():
     m = Matter.create(advocate_id='adv', title='File').with_fact(old)
     assert dispute.pending_accounts(m, 'now') == (old,)
     q = Quotable(turn='Work on the existing dispute.', file=old.statement)
-    assert len(dispute.schema_for(q)['properties']['source_allocations']['required']) == 3
-    data = payload()
-    data.update(verdict='continues', disputes=[], source_allocations={'S1': [], 'S2': [], 'S3': []},
-                focus_thread_id='held', focus_quote='First event.')
+    assert dispute.schema_for(q)['properties']['sentences']['items']['properties'][
+        'unit']['enum'] == ['S1', 'S2', 'S3']
+    data = answer(background=['S1', 'S2', 'S3'])
+    data.update(focus_thread_id='held', focus_quote='First event.')
     assert dispute.interpret(q, data, thread_ids=frozenset({'held'})).refused
     t = replace(Thread.create(label='Held'), chronology=(old.id,))
     m = m.with_thread(t)
@@ -45,7 +45,7 @@ def test_recovered_spans_keep_the_original_turn_not_the_clarification(tmp_path):
                      jurisdiction='Telangana')
     engine._read_dispute = lambda *args: dispute.DisputeRead(dispute.Dispute.OPENS,
         described=(dispute.Described(old.statement, 'Invoice', '', (turn.message,)),))
-    engine._admit_thread = lambda m, t, met, b, f: (m, b)
+    engine._admit_thread = lambda m, t, met, b, f, *_a, **_k: (m, b)
     m, bound = engine._admit_facts(m, turn, TurnMetrics(turn_id=turn.turn_id))
     assert not bound.blocks
     scoped = [f for f in m.facts if f.id in bound.thread.chronology]
@@ -79,58 +79,50 @@ def test_premise_projection_never_calls_missing_rows_established():
     assert out['threads'][0]['state'] == 'not_assessed'
 
 
-def payload(*spans):
-    return dict(verdict='cannot_tell', quoted='', why='Inventory',
-                disputes=[dict(quoted=s, label=f'Dispute {i}', thread_id='',
-                               additional_quotes=[], span_ids=[]) for i, s in enumerate(spans)],
-                focus_thread_id='', focus_quote='', advance_quote='', requirement_answers=[])
+def answer(*groups, background=(), instructions=(), belongs=None):
+    """A sentence-label reading: each group is the unit IDs of one dispute -- its
+    own thing, of kind `other`, against nobody named -- placed `new` unless
+    `belongs` puts it on the file."""
+    belongs = belongs or {}
+    labels = {}
+    for i, ids in enumerate(groups):
+        for unit in ids:
+            labels.setdefault(unit, []).append(dict(
+                other_side=0, thing=i + 1, kind='other', dispute=belongs.get(i, 'new')))
+    sentences = [dict(unit=u, role='act', about=about) for u, about in labels.items()]
+    sentences += [dict(unit=u, role='background', about=[]) for u in background]
+    sentences += [dict(unit=u, role='instruction', about=[]) for u in instructions]
+    return dict(people=[], things=[dict(name=f'Dispute {i}') for i in range(len(groups))],
+                sentences=sentences, why='Inventory', focus_thread_id='', focus_quote='',
+                advance_quote='', requirement_answers=[])
 
 
-def test_existing_inventory_repair_has_a_fixed_target_population():
-    from jsonschema import ValidationError, validate
-
+def test_existing_disputes_keep_their_ids_and_the_prompt_carries_the_principles_once():
     from nm.legal_brain.common.conversation import PRINCIPLES, guided
     from nm.work_the_file.matter_contracts import Thread
 
     a, b = Thread.create(label='First'), Thread.create(label='Second')
     q = Quotable(turn='One account. Another account.')
-    data = payload()
-    data.update(verdict='continues', disputes=[{'label': a.label, 'thread_id': a.id}])
-    prompt, schema, table = dispute.fixed_allocation_repair(q, data, (a, b))
-    assert guided(prompt).system.count(PRINCIPLES) == 1
-    assert 'FIXED TARGETS' in prompt.user and b.id in prompt.user
-    repaired = {'source_allocations': {'S1': [1], 'S2': [2]},
-                'focus_thread_id': '', 'focus_quote': ''}
-    validate(repaired, schema)
-    result = dispute.interpret(q, dispute.apply_fixed_allocation(data, repaired, table),
-                               thread_ids=frozenset({a.id, b.id}))
-    assert not result.refused and len(result.described) == 2
-    with pytest.raises(ValidationError):
-        validate({'source_allocations': {'S1': [1], 'S2': [3]}}, schema)
-    assert dispute.fixed_allocation_repair(q, {**data, 'verdict': 'opens'}, (a, b)) is None
+    assert guided(dispute.build_prompt(q)).system.count(PRINCIPLES) == 1
+    read = dispute.interpret(q, answer(['S1'], ['S2'], belongs={0: a.id, 1: b.id}),
+                             thread_ids=frozenset({a.id, b.id}))
+    assert read.continues and [d.thread_id for d in read.described] == [a.id, b.id]
 
 
-def test_repair_keeps_source_supported_new_work_and_refuses_to_drop_it():
+def test_new_work_beside_an_existing_dispute_opens_and_is_never_silently_dropped():
     from nm.work_the_file.matter_contracts import Thread
 
     a = Thread.create(label='Existing dispute')
     q = Quotable(turn='Existing debt. A separate access dispute. I act for A on both.')
-    data = payload()
-    data.update(verdict='opens', disputes=[{'label': a.label, 'thread_id': a.id},
-                                          {'label': 'New access', 'thread_id': ''}])
-    _, schema, table = dispute.fixed_allocation_repair(q, data, (a,))
-    assert len(table) == 2 and table[1]['thread_id'] == ''
-    assert schema['properties']['source_allocations']['properties']['S1']['items']['enum'] == [1, 2]
-    repaired = {'source_allocations': {'S1': [1], 'S2': [2], 'S3': [1, 2]},
-                'focus_thread_id': '', 'focus_quote': ''}
-    result = dispute.interpret(q, dispute.apply_fixed_allocation(data, repaired, table),
-                               thread_ids=frozenset({a.id}))
-    assert not result.refused and result.opens and len(result.described) == 2
-    dropped = {**repaired, 'source_allocations': {k: [1] for k in ['S1', 'S2', 'S3']}}
-    assert dispute.interpret(q, dispute.apply_fixed_allocation(data, dropped, table),
-                             thread_ids=frozenset({a.id})).refused
-    forged = {**data, 'disputes': [{'label': 'Unknown', 'thread_id': 'not-on-file'}]}
-    assert dispute.fixed_allocation_repair(q, forged, (a,)) is None
+    ids = frozenset({a.id})
+    read = dispute.interpret(q, answer(['S1'], ['S2'], background=['S3'],
+                                       belongs={0: a.id}), thread_ids=ids)
+    assert not read.refused and read.opens and len(read.described) == 2
+    dropped = answer(['S1'], background=['S3'], belongs={0: a.id})
+    assert dispute.interpret(q, dropped, thread_ids=ids).refused, (
+        "a reading that left the new work out was accepted as a continuation")
+    forged = answer(['S1', 'S2'], background=['S3'], belongs={0: 'not-on-file'})
+    assert dispute.interpret(q, forged, thread_ids=ids).refused
 
 
 def test_literal_gate_calls_use_the_registered_vocabulary_across_the_product():
@@ -202,31 +194,29 @@ def test_live_research_and_checklist_schemas_restrict_sources_to_supplied_materi
 
 
 @pytest.mark.parametrize('count', [2, 3, 5])
-def test_completely_omitted_paragraphs_are_visible_without_guessing_their_meaning(count):
+def test_completely_omitted_paragraphs_are_named_without_guessing_their_meaning(count):
     spans = [f'The instructions for distinct subject {i}.' for i in range(count)]
     text = '\n\n'.join(spans)
-    read = dispute.interpret(Quotable(turn=text), payload(spans[-1]))
-    assert dispute.uncovered_paragraphs(text, read) == tuple(spans[:-1])
-    complete = dispute.interpret(Quotable(turn=text), payload(*spans))
-    assert not dispute.uncovered_paragraphs(text, complete)
+    read = dispute.interpret(Quotable(turn=text), answer([f'S{count}']))
+    assert read.refused == 'source units not labelled: ' + ', '.join(
+        f'S{i}' for i in range(1, count))
+    complete = dispute.interpret(Quotable(turn=text),
+                                 answer(*[[f'S{i}'] for i in range(1, count + 1)]))
+    assert not complete.refused and len(complete.described) == count
 
 
 def test_rejected_candidate_cannot_certify_a_smaller_inventory():
     text = 'The first instruction. The second instruction.'
-    read = dispute.interpret(Quotable(turn=text),
-                             payload('The first instruction.', 'Invented words.'))
+    read = dispute.interpret(Quotable(turn=text), answer(['S1'], ['S9']))
     assert read.refused
-    assert [d.quoted for d in read.described] == ['The first instruction.']
+    assert read.found == ('Dispute 0',) and not read.described, (
+        "what a refused reading had found before the bad label must be shown, not certified")
     assert not read.continues
 
 
 def test_source_ids_copy_exact_words_including_quotes_without_model_transcription():
     text = 'I act for A on both claims.\n\nA wrote: “not yet”.\n\nB withheld payment.'
-    data = payload('', '')
-    data['verdict'] = 'opens'
-    data['disputes'][0]['span_ids'] = ['S1', 'S2', 'S2']
-    data['disputes'][1]['span_ids'] = ['S1', 'S3']
-    result = dispute.interpret(Quotable(turn=text), data)
+    result = dispute.interpret(Quotable(turn=text), answer(['S2'], ['S3'], background=['S1']))
     assert result.opens and not result.refused
     assert result.described[0].spans == ('I act for A on both claims.', 'A wrote: “not yet”.')
     assert result.described[1].spans == ('I act for A on both claims.', 'B withheld payment.')
@@ -234,38 +224,25 @@ def test_source_ids_copy_exact_words_including_quotes_without_model_transcriptio
 
 @pytest.mark.parametrize('ids', [['S999'], ['S1'], [None]])
 def test_source_ids_refuse_unknown_ids_or_omitted_units_even_in_one_paragraph(ids):
-    data = payload('')
-    data['disputes'][0]['span_ids'] = ids
-    assert dispute.interpret(Quotable(turn='First instruction. Second instruction.'), data).refused
+    assert dispute.interpret(Quotable(turn='First instruction. Second instruction.'),
+                             answer(ids)).refused
 
 
-def test_wrong_supplied_opening_quote_is_not_laundered_by_valid_ids():
-    data = payload('')
-    data.update(verdict='opens', quoted='invented')
-    data['disputes'][0]['span_ids'] = ['S1']
-    assert dispute.interpret(Quotable(turn='A claim.'), data).refused
-
-
-def test_dynamic_allocation_contract_requires_all_source_units_and_valid_targets():
+def test_the_label_contract_requires_every_source_unit_and_real_ids():
     from jsonschema import ValidationError, validate
     q = Quotable(turn='Shared instruction. First dispute. Second dispute.')
-    data = payload()
-    data.update(verdict='opens', disputes=[{'label': 'A', 'thread_id': ''},
-                                         {'label': 'B', 'thread_id': ''}],
-                source_allocations={'S1': [1, 2], 'S2': [1], 'S3': [2]})
+    data = answer(['S2'], ['S3'], background=['S1'])
     validate(data, dispute.schema_for(q))
     read = dispute.interpret(q, data)
     assert read.opens and not read.refused and len(read.described) == 2
     assert read.described[0].spans == ('Shared instruction.', 'First dispute.')
     assert read.described[1].spans == ('Shared instruction.', 'Second dispute.')
-    assert dispute.interpret(q, {**data, 'verdict': 'continues'}).refused
-    for mutation in ({'S1': [1], 'S2': [1]},
-                     {'S1': [1, 2], 'S2': [1], 'S3': [3]},
-                     {'S1': [1, 2], 'S2': [1], 'S3': []}):
-        bad = {**data, 'source_allocations': mutation}
-        assert dispute.interpret(q, bad).refused
+    for mutation in (answer(['S2'], background=['S1']),
+                     answer(['S2'], ['S3']),
+                     answer(['S2'], ['S3'], background=['S1'], belongs={1: 'elsewhere'})):
+        assert dispute.interpret(q, mutation).refused
     with pytest.raises(ValidationError):
-        validate({**data, 'source_allocations': {'S1': [1]}}, dispute.schema_for(q))
+        validate(answer(['S2'], ['S4'], background=['S1']), dispute.schema_for(q))
 
 
 def test_repair_outage_keeps_refusal_instead_of_falling_back_to_partial_admission(tmp_path):
@@ -277,7 +254,7 @@ def test_repair_outage_keeps_refusal_instead_of_falling_back_to_partial_admissio
         calls.append(prompt)
         if len(calls) == 2:
             raise ModelError('temporarily unavailable')
-        return ModelResult(text=None, tier=tier, data=payload('The second subject.'),
+        return ModelResult(text=None, tier=tier, data=answer(['S2']),
                            model='controlled', provider='scripted',
                            usage=Usage(0, 0, 0), latency_ms=0)
 
@@ -288,17 +265,18 @@ def test_repair_outage_keeps_refusal_instead_of_falling_back_to_partial_admissio
     assert len(calls) == 2 and result.refused
 
 
-def test_shared_instructions_survive_in_each_disputes_source_bound_spans():
+def test_shared_background_reaches_every_dispute_and_instructions_reach_none():
     shared = 'I act for the company on both proposed claims. No proceedings exist.'
     a, b = 'Payment on contract A is withheld.', 'The equipment on contract B was not returned.'
-    text = '\n\n'.join((shared, a, b))
-    data = payload(a, b)
-    for row in data['disputes']:
-        row['additional_quotes'] = [shared]
-    read = dispute.interpret(Quotable(turn=text), data)
-    assert not read.refused and not dispute.uncovered_paragraphs(text, read)
-    assert all(shared in d.spans for d in read.described)
+    ask = 'Please assess both.'
+    text = '\n\n'.join((shared, a, b, ask))
+    read = dispute.interpret(Quotable(turn=text),
+                             answer(['S3'], ['S4'], background=['S1', 'S2'], instructions=['S5']))
+    assert not read.refused
+    assert all('I act for the company on both proposed claims.' in d.spans
+               and 'No proceedings exist.' in d.spans for d in read.described)
     assert b not in read.described[0].spans and a not in read.described[1].spans
+    assert all(ask not in d.spans for d in read.described) and read.instructions == (ask,)
 
 
 @pytest.mark.parametrize('repair_succeeds', [True, False])
@@ -311,8 +289,8 @@ def test_production_read_repairs_once_or_reports_incomplete(tmp_path, repair_suc
 
     def read(prompt, schema, key, tier):
         calls.append(prompt)
-        data = (payload('The first subject.', 'The second subject.')
-                if len(calls) == 2 and repair_succeeds else payload('The second subject.'))
+        data = (answer(['S1'], ['S2'])
+                if len(calls) >= 2 and repair_succeeds else answer(['S2']))
         return ModelResult(text=None, tier=tier, data=data, model='controlled', provider='scripted',
                            usage=Usage(0, 0, 0), latency_ms=0)
 
@@ -320,11 +298,12 @@ def test_production_read_repairs_once_or_reports_incomplete(tmp_path, repair_suc
     result = engine._read_dispute(Matter.create(advocate_id='adv', title='File'),
         TurnInput(message=text, advocate_id='adv', jurisdiction='Telangana'),
         TurnMetrics(turn_id='t'))
-    assert len(calls) == 2
-    assert 'Unallocated paragraphs:' in calls[1].user
+    # A repaired reading of two paragraphs is then read again in reverse order.
+    assert len(calls) == (3 if repair_succeeds else 2)
+    assert 'source units not labelled: S1' in calls[1].user
     assert bool(result.refused) is not repair_succeeds
     if repair_succeeds:
-        assert len(result.described) == 2
+        assert len(result.described) == 2 and 'LAST PARAGRAPH FIRST' in calls[2].user
 
 
 def test_failed_inventory_never_admits_a_subset_as_a_complete_matter(tmp_path):

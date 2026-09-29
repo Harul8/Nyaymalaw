@@ -48,6 +48,8 @@ from nm.shared.text_contracts import refuses_blank_text, snippet
 from nm.shared.traceability_contracts import implements
 from nm.work_the_file.matter_contracts import Fact, Matter, Thread
 
+from .dispute import source_units
+
 # Decisive identifiers as they are actually written in Indian practice. Each
 # pattern captures a NUMBER OF RECORD -- something a registry assigned, which
 # is what makes it decisive. Descriptions never appear here.
@@ -88,6 +90,19 @@ class MergeProposal:
     question: str
 
 
+@dataclass(frozen=True)
+class SourceAllocation:
+    """One labelled source-unit occurrence, before it becomes a charted fact.
+
+    The words alone cannot identify the source: the same sentence may occur on
+    this turn and in an earlier account still awaiting placement.
+    """
+
+    unit_id: str
+    text: str
+    origin_turn: str
+
+
 @refuses_blank_text("question", "reason")
 @dataclass(frozen=True)
 class BindResult:
@@ -114,10 +129,57 @@ class BindResult:
     """Other working disputes inventoried by this turn, not yet advised on."""
     allocations: tuple[tuple[str, tuple[str, ...]], ...] = ()
     """Current-message spans scoped to dispute IDs, never a copied mixed brief."""
+    source_allocations: tuple[tuple[str, tuple[SourceAllocation, ...]], ...] = ()
+    """The same allocation by source occurrence, with the turn that actually
+    supplied each unit. String allocations remain for existing consumers."""
+    links: tuple[tuple[str, str, str], ...] = ()
+    """Disputes of this message that are LINKED -- (dispute, other, how): the
+    same opponent, the same events. Shown to the advocate; never a merge."""
+    doubts: tuple[str, ...] = ()
+    """Where a second reading separated the message differently. Said and
+    asked, never resolved silently."""
 
     @property
     def blocks(self) -> bool:
         return self.state is not BindState.BOUND
+
+
+def _source_index(message: str, accounts: tuple[tuple[str, str], ...]
+                  ) -> dict[str, SourceAllocation] | None:
+    """Bind prompt unit IDs to the original accounts, without matching text."""
+    if not accounts or any(not turn or not isinstance(words, str) or not words.strip()
+                           for turn, words in accounts):
+        return None
+    if "\n".join(words for _, words in accounts) != message:
+        return None
+    index = {}
+    for turn, words in accounts:
+        for text in source_units(words).values():
+            unit_id = f"S{len(index) + 1}"
+            index[unit_id] = SourceAllocation(unit_id, text, turn)
+    if [row.text for row in index.values()] != list(source_units(message).values()):
+        return None
+    return index
+
+
+def _allocated_sources(described, index: dict[str, SourceAllocation]
+                       ) -> tuple[SourceAllocation, ...] | None:
+    """Resolve occurrence IDs; permit legacy text only when it is unique."""
+    ids = tuple(getattr(described, "allocation_unit_ids", ()) or ())
+    if ids:
+        if len(ids) != len(set(ids)) or any(unit_id not in index for unit_id in ids):
+            return None
+        sources = tuple(index[unit_id] for unit_id in ids)
+        if {source.text for source in sources} != set(described.spans):
+            return None
+        return sources
+    sources = []
+    for span in described.spans:
+        matches = [row for row in index.values() if row.text == span]
+        if len(matches) != 1:
+            return None
+        sources.append(matches[0])
+    return tuple(sources)
 
 
 def identifiers_in(text: str) -> dict[str, str]:
@@ -148,7 +210,8 @@ def identifiers_in(text: str) -> dict[str, str]:
 @implements("C4")
 def bind(matter: Matter, message: str, fact: Fact,
          thread_hint: str | None = None,
-         opens_new_dispute: bool | None = None, described: tuple = ()) -> BindResult:
+         opens_new_dispute: bool | None = None, described: tuple = (),
+         source_accounts: tuple[tuple[str, str], ...] | None = None) -> BindResult:
     """Bind an account to exactly one thread, or refuse and ask.
 
     `thread_hint` is the advocate saying which thread they mean. It outranks
@@ -156,6 +219,13 @@ def bind(matter: Matter, message: str, fact: Fact,
     the person holding the file.
     """
     disclosed = identifiers_in(message)
+    source_index = (_source_index(message, source_accounts)
+                    if source_accounts is not None else None)
+    if source_accounts is not None and source_index is None:
+        return BindResult(BindState.UNBINDABLE, None, False,
+                          "source accounts do not match the message being bound",
+                          question="I could not reliably place the source accounts. "
+                                   "Which dispute should I work on?")
 
     # Successful source-bound inventory: keep each working dispute visible.
     # The model proposes organisation, not factual truth or legal completion.
@@ -182,14 +252,33 @@ def bind(matter: Matter, message: str, fact: Fact,
                                             "Or do they belong to an existing dispute? "
                                             "I have kept your instructions; those additions "
                                             "have not been recorded as separate disputes yet."))
-        made, allocations = {}, {}
+        made, allocations, source_allocations, order = {}, {}, {}, []
         for d in described:
+            sources = _allocated_sources(d, source_index) if source_index is not None else ()
+            if sources is None:
+                return BindResult(BindState.UNBINDABLE, None, False,
+                                  "dispute allocation does not identify its source occurrence",
+                                  question="I could not reliably place these instructions "
+                                           "on their original turns. Which dispute "
+                                           "should I work on?")
             thread = (matter.thread(d.thread_id) if d.thread_id
                       else Thread.create(label=_dispute_label(d)))
+            opponent = getattr(d, "opponent", "")
+            if not d.thread_id and opponent and not thread.posture.opponent:
+                # THE OPPONENT THE ADVOCATE NAMED FOR THIS DISPUTE, recorded when
+                # the dispute is opened. Only on a new record: an existing
+                # dispute's opponent changes by express correction, never here.
+                thread = replace(thread, posture=replace(thread.posture, opponent=opponent))
             thread = _with_identifiers(thread, identifiers_in("\n".join(d.spans)))
             made[thread.id] = thread
+            order.append(thread.id)
             allocations[thread.id] = tuple(dict.fromkeys(
                 (*allocations.get(thread.id, ()), *d.spans)))
+            if source_index is not None:
+                source_allocations[thread.id] = tuple(dict.fromkeys(
+                    (*source_allocations.get(thread.id, ()), *sources)))
+        links = tuple((order[i], order[j], how) for i, d in enumerate(described)
+                      for j, how in getattr(d, "related", ()) if j < len(order))
         if thread_hint and thread_hint not in made:
             target = matter.thread(thread_hint)
             if target is None:
@@ -198,12 +287,15 @@ def bind(matter: Matter, message: str, fact: Fact,
                                   question=("That dispute is not on this matter. "
                                             "Please select it again."))
             made[target.id], allocations[target.id] = target, ()
+            if source_index is not None:
+                source_allocations[target.id] = ()
         active = made[thread_hint] if thread_hint else next(iter(made.values()))
         return BindResult(BindState.BOUND, active, matter.thread(active.id) is None,
                           "instructions allocated to source-bound working disputes",
                           looks_like=len(made),
                           others=tuple(t for t in made.values() if t.id != active.id),
-                          allocations=tuple(allocations.items()))
+                          allocations=tuple(allocations.items()),
+                          source_allocations=tuple(source_allocations.items()), links=links)
 
     # 1. The advocate named the thread.
     if thread_hint:
@@ -350,7 +442,8 @@ def _dispute_label(d) -> str:
     """
     label = (getattr(d, "label", "") or "").strip()
     if label:
-        return snippet(label, 80)
+        # Room for "<client> v. <opponent> -- <thing fought over>" (LB-109).
+        return snippet(label, 120)
     return snippet(getattr(d, "quoted", ""), 80) or "a dispute"
 
 def _with_identifiers(thread: Thread, disclosed: dict[str, str]) -> Thread:

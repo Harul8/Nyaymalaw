@@ -1,93 +1,54 @@
 """Literal coverage cannot certify that independently contested rights were split.
 
-A first read can allocate every sentence to some row and still put two claims
-with different harm, evidence and relief in one working dispute. The bounded
-independent review must be able to replace that coarse inventory, without
-inventing words or duplicating a shared instruction.
+A reading can account for every sentence and still put two claims with different
+harm, evidence and relief in one working dispute. Since 29 September 2026
+(LB-109) the reading does not group at all: it labels each sentence with the other
+side, the thing contested (by number) and the kind of wrong, and the code forms one
+dispute per other side, thing and kind. A harm during an encounter about another
+right is a different kind of wrong, so it is its own dispute; the same encounter
+told in two sentences is one thing, so it cannot be split.
+
+The independent second reading that stood here for a day re-asked the same model
+and kept its answer only when it found MORE disputes. What replaced it reads the
+message twice as a check, and says where the two readings differ.
 """
 from __future__ import annotations
 
-import time
+import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.understand.dispute import source_units
-from nm.shared.metrics_contracts import TurnMetrics
-from nm.shared.model_port import require_schema
-from nm.shared.model_scripted import ScriptedModelAdapter
-from nm.work_the_file.matter_contracts import Matter
-from tests.test_turn_contract import _model_config, build
+from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.legal_brain.understand import dispute
+from tests.test_every_dispute_is_cleanly_identified import labelled
 
+pytestmark = pytest.mark.class_a
 
 MESSAGE = ("We act for the claimant. First, the neighbour blocked her entrance. "
            "During that encounter he struck her and injured her arm. "
            "Second, a different seller refused to complete a sale. "
            "Please assess every separate claim.")
+UNITS = dispute.source_units(MESSAGE)
 
 
-def _inventory(groups):
-    units = source_units(MESSAGE)
-    return {
-        "verdict": "opens", "quoted": "", "why": "separate contested rights",
-        "disputes": [{"label": label, "thread_id": ""} for label in groups],
-        "source_allocations": {
-            key: ([1, 2] if key in ("S1", "S5") and len(groups) == 2 else
-                  [1, 2, 3] if key in ("S1", "S5") else
-                  [1] if key == "S2" else
-                  [1] if key == "S3" and len(groups) == 2 else
-                  [2] if key == "S3" else
-                  [2] if len(groups) == 2 else [3])
-            for key in units
-        },
-        "focus_thread_id": "", "focus_quote": "", "advance_quote": "",
-        "requirement_answers": [],
-    }
+def _read(disputes):
+    return dispute.interpret(Quotable(turn=MESSAGE), labelled(
+        MESSAGE, disputes, background=["We act"], instructions=["Please assess"]))
 
 
-class _TwoInventories(ScriptedModelAdapter):
-    def __init__(self, first, reviewed):
-        super().__init__(_model_config())
-        self.inventories = iter((first, reviewed))
-        self.dispute_prompts = []
-
-    def structured(self, prompt, schema, tier, **kw):
-        if schema.get("x-nm-read") == "dispute":
-            self.dispute_prompts.append(prompt)
-            data = next(self.inventories)
-            require_schema(data, schema)
-            self.calls.append((tier, prompt))
-            return self._result(None, data, prompt, tier, time.perf_counter())
-        return super().structured(prompt, schema, tier, **kw)
+def test_a_harm_during_an_encounter_about_another_right_is_its_own_dispute():
+    read = _read([("", "her entrance", "use_or_access", ["First,"]),
+                  ("", "the blow during the encounter", "bodily_harm", ["During that"]),
+                  ("", "the sale", "agreement", ["Second,"])])
+    assert [d.label for d in read.described] == [
+        "her entrance", "the blow during the encounter", "the sale"]
+    spans = [set(d.spans) for d in read.described]
+    assert UNITS["S2"] in spans[0] and UNITS["S3"] not in spans[0]
+    assert UNITS["S3"] in spans[1] and UNITS["S2"] not in spans[1]
 
 
-def test_a_fuller_source_bound_inventory_replaces_a_covered_but_merged_one(tmp_path):
-    model = _TwoInventories(
-        _inventory(("access and injury", "sale")),
-        _inventory(("access", "injury", "sale")),
-    )
-    engine, _ = build(tmp_path, model=model, intake=False)
-    turn = TurnInput(advocate_id="adv", message=MESSAGE)
-    metrics = TurnMetrics(turn.turn_id)
-    read = engine._read_dispute(Matter.create(advocate_id="adv", title="file"),
-                                turn, metrics)
-    assert not read.refused, (metrics.gates_fired, metrics.violations)
-    assert [row.label for row in read.described] == ["access", "injury", "sale"]
-    spans = [set(row.spans) for row in read.described]
-    units = source_units(MESSAGE)
-    assert units
-    assert units["S2"] in spans[0] and units["S3"] not in spans[0]
-    assert units["S3"] in spans[1] and units["S2"] not in spans[1]
-    assert len(model.dispute_prompts) == 2
-    assert "INDEPENDENT SPLIT REVIEW" in model.dispute_prompts[1].system
-
-
-def test_a_review_cannot_replace_a_valid_inventory_with_unsupported_more_rows(tmp_path):
-    first = _inventory(("access and injury", "sale"))
-    unsupported = _inventory(("access", "injury", "sale"))
-    unsupported["source_allocations"]["S3"] = [4]
-    engine, _ = build(tmp_path, model=_TwoInventories(first, unsupported), intake=False)
-    turn = TurnInput(advocate_id="adv", message=MESSAGE)
-    metrics = TurnMetrics(turn.turn_id)
-    read = engine._read_dispute(Matter.create(advocate_id="adv", title="file"),
-                                turn, metrics)
-    assert not read.refused, (metrics.gates_fired, metrics.violations)
-    assert [row.label for row in read.described] == ["access and injury", "sale"]
+def test_the_same_encounter_told_in_two_sentences_is_one_dispute():
+    """THE POSITIVE CONTROL: the rule joins what shares a thing and a kind, or it
+    proves only that it never joins."""
+    read = _read([("", "her entrance", "use_or_access", ["First,", "During that"]),
+                  ("", "the sale", "agreement", ["Second,"])])
+    assert len(read.described) == 2
+    assert UNITS["S3"] in read.described[0].spans

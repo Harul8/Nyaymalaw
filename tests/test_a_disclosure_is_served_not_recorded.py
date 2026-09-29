@@ -202,9 +202,9 @@ def test_a_search_that_never_ran_says_so_and_borrows_no_neighbour(tmp_path):
 
     assert "G-NOTASSESSED" in _fired(out)
     said = _served(out)
-    assert "NOT looked up" in said, (
+    assert "not looked up whether Article 65 or Article 113 governs" in said, (
         "nothing was searched and the answer does not say so:\n" + said[:900])
-    assert "Nothing was searched." in said
+    assert "No source search ran for this point" in said
 
     # THE HALF THAT MATTERS. Saying it is easy; saying it WITHOUT borrowing a
     # neighbour's claim is the property, and only the bytes carry it.

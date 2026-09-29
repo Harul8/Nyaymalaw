@@ -41,6 +41,10 @@ CONTEXT_BUDGET: dict[Tier, int] = {
 # the baseline is auditable rather than a number nobody can reconstruct.
 PRICES: dict[str, tuple[float, float]] = {
     "gpt-4o-mini-2024-07-18": (0.15, 0.60),
+    # THE OWNER'S MODEL FROM 29 SEPTEMBER 2026 ("from here on use 4.1 mini only"),
+    # checked that day against the official model page: $0.40 input, $0.10 cached
+    # input, $1.60 output per million; 1M-token context, 32,768 output tokens.
+    "gpt-4.1-mini-2025-04-14": (0.40, 1.60),
     "gpt-5.1": (1.25, 10.00),
     # Independent-verifier evaluation pin; checked against the official model
     # page on 27 September 2026. The ledger and provider receipt name this
@@ -55,6 +59,26 @@ PRICES: dict[str, tuple[float, float]] = {
     "text-embedding-3-large": (0.13, 0.0),
     "scripted": (0.0, 0.0),
 }
+
+#: The most output one call can return, per pinned model: with the context budget
+#: above, what a spending reservation must cover so it can never under-count.
+MAX_OUTPUT: dict[str, int] = {
+    "gpt-4o-mini-2024-07-18": 16_384,
+    "gpt-4.1-mini-2025-04-14": 32_768,
+}
+
+
+def reservation_micro_usd(model: str, tier: Tier | None = None) -> int:
+    """The worst charge one call on `model` can make, in micro-USD: a full context
+    budget of input at its price plus its largest output at its price, rounded up
+    (tokens times USD per million tokens is micro-USD). Refuses a model whose price or
+    output ceiling is not recorded here."""
+    if model not in PRICES or model not in MAX_OUTPUT:
+        raise ConfigurationError(f"no recorded price and output ceiling for {model!r}")
+    price_in, price_out = PRICES[model]
+    budget = CONTEXT_BUDGET[tier or Tier.ROUTINE]
+    return math.ceil(budget * price_in + MAX_OUTPUT[model] * price_out)
+
 
 # A pin must name a version. These are the shapes a real dated snapshot takes;
 # a bare family name is an alias and is refused.
