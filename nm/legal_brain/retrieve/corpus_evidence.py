@@ -225,6 +225,7 @@ class CorpusEvidenceAdapter:
         #: composition root, which knows no register exists, turns it on, and a
         #: register once installed is never bypassed by it.
         self._current_text = current_text_when_unversioned
+        self._keys_cache: dict = {}
 
     @classmethod
     def from_published_corpus(
@@ -989,7 +990,18 @@ class CorpusEvidenceAdapter:
         return _Routed(entry=entry, provision=edge.provision, note=note)
 
     def _held_provision_keys(self, patterns: tuple[str, ...]) -> tuple[str, ...]:
-        """Actual routed key population; normalize identity, never infer a provision."""
+        """Actual routed key population; normalize identity, never infer a provision.
+
+        KEPT FOR AS LONG AS THE STORE IS UNCHANGED. The inventory is a scan of every
+        passage an Act's patterns match -- 0.9 seconds each time, measured 29 September
+        2026 -- and a turn now reads several sections per dispute (LB-106). The key is
+        the store's own size and write time, and its write-ahead log's, so any change
+        to the store is a new inventory; nothing here is remembered past one.
+        """
+        stamp = (tuple(patterns), self._store_stamp())
+        cached = self._keys_cache.get(stamp)
+        if cached is not None:
+            return cached
         keys = set()
         with sqlite3.connect(f"file:{self._db}?mode=ro", uri=True) as con:
             for pattern in patterns:
@@ -1005,7 +1017,20 @@ class CorpusEvidenceAdapter:
                             "The actual provision-key inventory is untyped or unbounded")
                     if key.strip():
                         keys.add(key)
-        return tuple(sorted(keys))
+        held = tuple(sorted(keys))
+        self._keys_cache = {k: v for k, v in self._keys_cache.items() if k[1] == stamp[1]}
+        self._keys_cache[stamp] = held
+        return held
+
+    def _store_stamp(self) -> tuple:
+        """The store's size and write time, with its write-ahead log's."""
+        def one(path: Path) -> tuple:
+            try:
+                st = path.stat()
+            except OSError:
+                return (None, None)
+            return (st.st_size, st.st_mtime_ns)
+        return (one(self._db), one(self._db.with_name(self._db.name + "-wal")))
 
     def _held_provision_passages(self, patterns: tuple[str, ...], section: str, entry):
         """THE UNION. EVERY identifier convention, and the store is NAMED.

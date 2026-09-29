@@ -264,6 +264,12 @@ READS: tuple[Read, ...] = (
          "words, and any failure shows the checked findings instead. Its length "
          "follows what it was shown, so its room is derived, never fixed.",
          echoes=True),
+    Read("similar_words", False,
+         "Statute-style wordings of the advocate's own phrases, used only to rank the "
+         "bare-act search (LB-106). It names no Act, provision or number -- the guard "
+         "drops a wording that does -- and each wording is anchored to a phrase copied "
+         "from the message, so it moves no date, amount or choice of law.",
+         echoes=True),
     Read("compose_check", False,
          "Says where the composed reply conveys each material item and copies the "
          "sentence, which is then found in the reply. It decides whether an item is "

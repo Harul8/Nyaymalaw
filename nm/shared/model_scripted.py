@@ -1158,7 +1158,13 @@ def scripted_compose_check(_user: str) -> str:
     return json.dumps({"items": [], "unsupported": []})
 
 
+def scripted_similar_words(_user: str) -> str:
+    """No other wordings offline: the search runs on the advocate's own words."""
+    return json.dumps({"phrases": []})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "similar_words": scripted_similar_words,
     "compose": scripted_compose,
     "compose_check": scripted_compose_check,
     "claim_verification": scripted_claim_verification,

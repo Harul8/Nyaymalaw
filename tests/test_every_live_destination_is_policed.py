@@ -301,8 +301,11 @@ def test_the_composition_root_polices_every_live_destination():
              and node.func.id == "PolicedPort"]
     ports = [keyword.value.id for call in calls for keyword in call.keywords
              if keyword.arg == "port" and isinstance(keyword.value, ast.Name)]
+    # LB-106 (29 September 2026): the bare-act search sends the advocate's words to this
+    # machine's models and index, so it is a destination, admitted like the rest.
     expected = {"StorePort", "DirectoryPort", "UploadPort", "MailPort", "TranscriptionPort",
-                "LiveTranscriptionPort", "DocumentTextPort", "DocumentDerivativePort"}
+                "LiveTranscriptionPort", "DocumentTextPort", "DocumentDerivativePort",
+                "SectionSearchPort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"

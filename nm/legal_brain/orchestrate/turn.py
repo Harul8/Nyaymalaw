@@ -89,11 +89,13 @@ from nm.legal_brain.retrieve.evidence_port import (
     TreatmentState,
     is_current_text,
 )
+from nm.legal_brain.retrieve.section_search_port import SectionSearch, SectionSearchPort
 from nm.legal_brain.retrieve.source_excerpt import capture as capture_source
 from nm.legal_brain.understand import briefing as briefing_mod
 from nm.legal_brain.understand import dispute as dispute_reader
 from nm.legal_brain.understand import posture as posture_reader
 from nm.legal_brain.understand import route as route_reader
+from nm.legal_brain.understand import similar_words as similar_reader
 from nm.legal_brain.understand.threading import BindResult, BindState, bind
 from nm.legal_brain.verify import consistency, grounding, output_checks, step_dependency
 from nm.legal_brain.verify import duty as duty_reader
@@ -643,10 +645,15 @@ class TurnEngine:
                  authority_weight: "AuthorityWeightPort | None" = None,
                  interim_relief: "InterimReliefPort | None" = None,
                  procedural: "ProceduralPeriodPort | None" = None,
-                 filing: "FilingRequirementPort | None" = None) -> None:
+                 filing: "FilingRequirementPort | None" = None,
+                 sections: "SectionSearchPort | None" = None) -> None:
         from nm.arrive.advocate_contracts import utcnow
 
         self._clock = clock or utcnow
+        # LB-106's BARE-ACT SEARCH. Absent -- an installation with no search index --
+        # each dispute keeps its exact routes and nothing else is claimed; present but
+        # unable to run, it says so on the dispute.
+        self._sections = sections
         self._professional_approval = professional_approval
         self._store = store
         self._evidence = evidence
@@ -3151,6 +3158,11 @@ class TurnEngine:
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on,
                             turn, concluded)
+        # LB-106. THE SECTIONS THIS DISPUTE NEEDS, by meaning and by words. The text
+        # of a section is the same whichever side we act for, so this runs side-blind
+        # as the provision read does -- but not on a turn whose answer is refused.
+        candidates = () if blocked else self._search_sections(
+            turn, thread, metrics, grounds, retrieved)
 
         if not side_blind:
             self._investigate(turn, thread, need, result, metrics, grounds,
@@ -3304,7 +3316,9 @@ class TurnEngine:
         # gate; what a served turn may spend is what the advocate will read.
         found = None
         if not blocked:
-            found = self._requirements(thread, tuple(relied_on), metrics,
+            # The searched sections are read for what the dispute needs too (LB-106):
+            # each need names its passage, so a need from a candidate says so.
+            found = self._requirements(thread, (*relied_on, *candidates), metrics,
                                        context=memory.as_context() if memory else "",
                                        concluded=concluded, facts=facts, turn=turn)
         if found is not None:
@@ -3548,10 +3562,11 @@ class TurnEngine:
             result = self._fetch(need, metrics, exploratory=False)
             retrieved_here.extend(result.findings)
             self._read_coverage(result, thread, metrics, grounds, relied_here, scoped, concluded)
+            candidates = self._search_sections(scoped, thread, metrics, grounds, retrieved_here)
             if thread.posture.resolved:
                 self._judgment_round(scoped, thread, need, result, metrics, grounds,
                                      relied_here, retrieved_here, concluded, exploratory=False)
-            found = self._requirements(thread, tuple(relied_here), metrics,
+            found = self._requirements(thread, (*relied_here, *candidates), metrics,
                                        context=memory.as_context(), concluded=concluded,
                                        facts=matter.facts, turn=scoped)
             settled = replace(
@@ -4726,6 +4741,66 @@ class TurnEngine:
                 searched_stores=("bound_reached",))
         metrics.evidence_rounds += 1
         return self._evidence.fetch(need)
+
+    def _similar_words(self, words: str, label: str, metrics: TurnMetrics) -> tuple[str, ...]:
+        """Statute-style wordings of the advocate's own phrases, for the search only
+        (LB-106; owner, 29 September 2026: "use only my words ... we can use words
+        similar to my words"). Unavailable, the search runs on the words alone, said."""
+        try:
+            res = self._read(similar_reader.build_prompt(words, dispute=label),
+                             similar_reader.SCHEMA, "similar_words", Tier.ROUTINE)
+            metrics.record_call(res)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "degraded",
+                         f"other wordings for the bare-act search were not read: {exc}")
+            return ()
+        return similar_reader.interpret(res.data or {}, words)
+
+    def _search_sections(self, turn: TurnInput, thread: Thread, metrics: TurnMetrics,
+                         grounds: list[Element], retrieved: list[Finding]) -> tuple[Finding, ...]:
+        """THE BARE-ACT SECTIONS THIS DISPUTE NEEDS, found by meaning and by words.
+
+        LB-106 (owner, 29 September 2026). The exact routes still run first -- the
+        cause's Limitation article, a section the advocate names -- and what they read
+        is what the answer rests on. What this finds are CANDIDATES: read word for word,
+        shown with their rank and the limit that whether each governs has not been
+        assessed, given to what the dispute needs and to the reply, and never relied on
+        as the governing provision (CLAUDE.md section 5: a search may rank, never
+        identify).
+
+        Returns the candidates, already added to `retrieved` so the grounding gate lets
+        the reply quote them.
+        """
+        if self._sections is None:
+            return ()
+        words = turn.message.strip()
+        similar = self._similar_words(words, thread.label, metrics)
+        try:
+            found = self._sections.search(words, similar=similar, as_of=turn.today)
+        except Exception as exc:  # noqa: BLE001 -- ERROR with traceback, then said (section 7)
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "the bare-act search failed on thread %s", thread.id)
+            metrics.violate("H3", f"the bare-act search failed: {type(exc).__name__}: {exc}")
+            found = SectionSearch(False, note=f"the search failed ({type(exc).__name__})")
+        if not found.ran:
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I could not search the bare acts by meaning for this dispute: "
+                      f"{found.note}. Only the provisions its cause of action points to, "
+                      "and any you named, were read.")))
+            return ()
+        known = {f.locator for f in retrieved}
+        fresh = tuple(f for f in found.candidates if f.locator not in known)
+        retrieved.extend(fresh)
+        # SHOWN AS CANDIDATES. `turn` and `concluded` are withheld on purpose: a
+        # searched section is not a decision about which provision the dispute rests on.
+        self._read_coverage(EvidenceResult(
+            coverage=Coverage.ANSWERED, findings=fresh,
+            searched_stores=("bare-act search",), search_note=found.note),
+            thread, metrics, grounds, [])
+        return fresh
 
     def _judgment_round(self, turn, thread, need, result, metrics, grounds,
                         relied_on, retrieved, concluded, *,

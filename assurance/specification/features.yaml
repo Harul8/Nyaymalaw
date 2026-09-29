@@ -1013,16 +1013,28 @@ features:
   - Where no provision-version register is installed, a held provision is read as the library's **current
     text and says so** on the passage and once in the answer; with a register installed, the dated read
     stands and current text is never presented as the wording on an earlier date.
+  - '**Bare-act sections are searched by meaning as well as by words** for every dispute (owner, 29 September
+    2026): the advocate''s words for the dispute, and similar wordings each tied to a phrase the advocate
+    wrote, go to the vector index and to BM25; the lists are merged and the best passages reranked; the
+    top sections are read word for word by the one reader of provisions and given to the dispute as **search
+    candidates — ranked, never asserted to govern**. Acts outside the curated list, or not in force on
+    the date, are set aside and named. New Acts are added by a job the owner runs, which appends vectors,
+    BM25 and passages at the next positions and rewrites the lineage record.'
   never:
   - Never browse without a stop condition. Unbounded research is a defect.
   - Never drop an inconvenient case. Adverse authority is disclosed and distinguished.
   - Never use a citation whose supporting passage cannot be read back.
   - Never cite law that contradicts the brief without noticing that it does.
+  - Never let a similarity score decide which Act governs, remove a candidate before ranking, or search
+    a passage a model wrote. Never query an index with a model other than the one recorded for it, and
+    never serve from vectors, BM25 and passages whose counts disagree.
   produces:
   - '`ResearchTask { proposition, decision_it_changes, sources_permitted, stop_condition, result, negative_results[]
     }` and a set of `Finding`s.'
   eval_prose:
-  - '**Class A** — every ResearchTask names a decision and a stop condition.'
+  - '**Class A** — every ResearchTask names a decision and a stop condition. A search set whose vectors,
+    BM25 index, passages or recorded model disagree with its lineage record is refused, and the refusal
+    is said; after an append, vector n is still passage n.'
   - '**Class B** — where retrieved law diverges from the advocate''s stated position, the divergence is
     reported. Every answer identifies at least one thing that would strengthen the case and is not in
     the file, or states expressly that there is none. Every dispute a legal message touches has its law

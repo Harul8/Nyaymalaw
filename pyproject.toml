@@ -20,6 +20,15 @@ dependencies = [
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
 knowledge = ["openpyxl>=3.1"]
+# Local bare-act vector, BM25 and reranking search. The model weights remain
+# separate local artefacts; installing this extra does not download or build an index.
+semantic = [
+    "numpy>=2.0",
+    "faiss-cpu>=1.15",
+    "bm25s>=0.3",
+    "sentence-transformers>=6.1",
+    "torch>=2.6",
+]
 # PDF text for the evaluation-set labeller. Nothing in the served product
 # reads a PDF, so this stays out of the runtime dependency set.
 acquisition = ["pymupdf>=1.24"]

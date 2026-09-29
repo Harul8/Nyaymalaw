@@ -1,7 +1,8 @@
 # Baseline — what the corpus actually holds
 
-**Every figure here was measured, not carried forward.** Measured 29 August 2026
-against `legal_database/vector_store/` at `VERSION` as of that date.
+**Every figure here was measured, not carried forward.** The initial baseline was
+measured 29 August 2026 against `legal_database/vector_store/` at `VERSION` as
+of that date. Later measurements carry their own date and store.
 
 **The rule this file exists to enforce:** *no claim about corpus coverage is made
 without naming the store it was measured from.* The corpus holds the same Act
@@ -171,6 +172,24 @@ Each of these was retrieved verbatim on 29 August 2026, with its locator:
 | Negotiable Instruments Act 1881 **s.138** with provisos (a)–(c) | `the_negotiable_instruments_act_1881` | HELD |
 | Indian Evidence Act 1872 **s.65** — secondary evidence | `the_indian_evidence_act_1872` | HELD |
 | Limitation Act 1963 **Article 65** | `the_limitation_act_1963`, `schedule_article` | HELD |
+
+### 2.3 Bare-act search artefacts, measured 29 September 2026
+
+The bare-act search set contains **414,710 passages** in `chunks.db`
+(`doc_type='bare_act'`, positions 0–414,709), **414,710 vectors** in
+`bareacts_v3.index` (1,024 dimensions, inner product on normalised vectors),
+and **414,710 documents** in `bareacts_v3_bm25s`. The recorded embedding model
+is `BAAI/bge-large-en-v1.5`. The lineage job encoded 60 sampled passages and
+compared each with the vector at its own position: 60/60 met its threshold;
+the lowest similarity was 0.9391 and the mean was 0.9981. These figures are
+recorded in `.nm/retrieval/bare_acts.lineage.json` and read from the three
+members under `legal_database/vector_store/`.
+
+The product now combines word and vector search over those passages, reranks
+the merged results, and reads candidate sections through the provision reader.
+Ranking does not establish which Act governs. The append job has passed offline
+tests but has not been run on a new real Act. A new Act also needs a reviewed
+curated-manifest entry before the product will read its sections as candidates.
 
 ---
 
@@ -448,7 +467,7 @@ Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
 | Duplicate Act identifiers | present across the corpus | Coverage is a union query, never a lookup (`act-1`) |
 | `legal.db` `case_section_links` | **0 rows** | The judgement→section table is empty. The chunks layer's own `sections_cited` covers **4.9%** of attributable paragraphs, so *which authorities interpret this provision* is not answerable today except for the Constitution, the IPC, the CrPC and the CPC |
 | Subsequent treatment | **≤14.5%** of judgements have any citator entry | Treatment is `NOT_CHECKED` on a miss, and a `NOT_CHECKED` authority cannot carry a proposition alone. **The product may not claim to verify that an authority is still good law** |
-| The authority index | **built 30 Aug 2026** — 451,548 paragraphs in 32s, 1.1GB, 564,232 excluded as non-attributable | Lexical FTS5 only. It matches WORDS, not meaning: a question naming the provision rather than the subject returns generic results until the query is seeded from the resolved provision's marginal note (`_subject_of`). Semantic retrieval would need embeddings and is not built |
+| The authority index | **built 30 Aug 2026** — 451,548 paragraphs in 32s, 1.1GB, 564,232 excluded as non-attributable | Judgment retrieval uses lexical FTS5. It matches words rather than meaning: a question naming the provision rather than the subject returns generic results until the query is seeded from the resolved provision's marginal note (`_subject_of`). Semantic judgment retrieval has not been built; the bare-act search set in section 2.3 is separate |
 
 ---
 

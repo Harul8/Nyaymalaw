@@ -295,6 +295,25 @@ class Application:
                 identity_index=(settings.get("NM_IDENTITY_INDEX")
                                 or (self.root / ".nm" / "identity.db")),
                 current_text_when_unversioned=True)
+        # LB-106. THE BARE-ACT SEARCH (owner, 29 September 2026): the earlier system's
+        # vector index, BM25 index and passage store and the same two models, reused as
+        # they are, with the search rebuilt here. Only where the library is read in place
+        # and the index is there; it checks its lineage before it will run and says why
+        # when it will not. The advocate's words go only to this machine's models and
+        # index, and that destination is admitted like every other.
+        self.sections = None
+        if (evidence is None and not published_corpus
+                and (corpus_path / "bareacts_v3.index").is_file()):
+            from nm.legal_brain.retrieve.hybrid_sections import HybridSections
+            from nm.legal_brain.retrieve.section_search_port import SectionSearchPort
+
+            self.sections = PolicedPort(
+                inner=HybridSections(
+                    corpus_path, self.manifest, read_provision=self.evidence.read_provision,
+                    models=self.root / ".nm" / "models",
+                    lineage=self.root / ".nm" / "retrieval" / "bare_acts.lineage.json"),
+                gate=self._gate, port=SectionSearchPort, sink=Sink.INDEX,
+                processor_id=INDEX_PROCESSOR)
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
         # and the evidence adapter came to hold different provision patterns
@@ -398,7 +417,8 @@ class Application:
                                  interim_relief=self.interim_relief,
                                  procedural=self.procedural,
                                  filing=self.filing,
-                                 professional_approval=self.directory.professional_approval)
+                                 professional_approval=self.directory.professional_approval,
+                                 sections=self.sections)
 
         self.documents = None
         from nm.open_matter.document_permission import build_quarantine
@@ -509,7 +529,8 @@ class Application:
                           interim_relief=self.interim_relief,
                           procedural=self.procedural,
                           filing=self.filing,
-                          professional_approval=self.directory.professional_approval)
+                          professional_approval=self.directory.professional_approval,
+                          sections=self.sections)
 
     def _model_for(self, advocate_id: str, *, session_current: Callable[[], bool] | None):
         """One authenticated external-text dispatch owner for both reasoning paths."""
@@ -972,6 +993,9 @@ class Application:
                                if hasattr(self.live_dictation.inner, "readiness")
                                else "not assessed -- this live adapter reports no readiness"),
             "corpus": "readable" if self.evidence.available else "NOT READABLE",
+            # LB-106. WHETHER THE BARE-ACT SEARCH CAN RUN, said before a turn relies on it.
+            "section_search": (self.sections.readiness() if self.sections is not None
+                               else "not configured -- no bare-act search index here"),
             # Each retrieval capability reports its OWN readiness. One rolled-up
             # "corpus: readable" would let an unbuilt authority index hide
             # behind a readable provision store, and the advocate would learn

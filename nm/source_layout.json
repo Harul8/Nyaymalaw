@@ -205,6 +205,7 @@
     "nm.legal_brain.retrieve.coverage_sources": "knowledge",
     "nm.legal_brain.retrieve.dated_provisions": "bootstrap",
     "nm.legal_brain.retrieve.evidence_port": "ports",
+    "nm.legal_brain.retrieve.hybrid_sections": "adapters",
     "nm.legal_brain.retrieve.identity_sources": "knowledge",
     "nm.legal_brain.retrieve.investigation": "core",
     "nm.legal_brain.retrieve.jurisdiction_sources": "knowledge",
@@ -223,6 +224,7 @@
     "nm.legal_brain.retrieve.search_authority": "adapters",
     "nm.legal_brain.retrieve.search_policed": "adapters",
     "nm.legal_brain.retrieve.search_port": "ports",
+    "nm.legal_brain.retrieve.section_search_port": "ports",
     "nm.legal_brain.retrieve.source_excerpt": "core",
     "nm.legal_brain.retrieve.source_excerpt_contracts": "domain",
     "nm.legal_brain.retrieve.source_registry_sources": "knowledge",
@@ -253,6 +255,7 @@
     "nm.legal_brain.understand.parties": "core",
     "nm.legal_brain.understand.posture": "core",
     "nm.legal_brain.understand.route": "core",
+    "nm.legal_brain.understand.similar_words": "core",
     "nm.legal_brain.understand.threading": "core",
     "nm.legal_brain.understand.tool_ask_advocate": "core",
     "nm.legal_brain.understand.tool_propose_conversation": "core",
@@ -394,14 +397,14 @@
     "nm.work_the_file.write_tools": "core"
   },
   "expected_roles": {
-    "adapters": 39,
+    "adapters": 40,
     "bootstrap": 18,
-    "core": 183,
+    "core": 184,
     "domain": 94,
     "edge": 13,
     "infrastructure": 1,
     "knowledge": 18,
-    "ports": 25
+    "ports": 26
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",
