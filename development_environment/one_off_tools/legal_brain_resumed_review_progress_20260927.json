@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "record": "27 September 2026 build record 11 — actual work review and bounded wording repair",
+  "checkpoint": "Resumed from committed checkpoint 02764a9. Joined communication, prompt and served-history population: 217 passed, zero failures/errors, 105.745 seconds. Separate communication and merits repair population: 48 passed, zero failures/errors, 32.038 seconds. The populations overlap and are not added as unique tests. The owner renewed the fictional-only preview for two hours within the original USD5 ledger. Live retesting is pending. Earlier six failures remain unchanged. No client cutover, legal acceptance or full-gate promotion.",
+  "rows": [
+    {
+      "id": "LB-131",
+      "progress": "Complete explicit negative communication judgments now return to the author through the same bounded feedback-and-repair mechanism as merits failures. Each new wording proposal receives its own independent exact review. Missing or malformed judgments, lost currentness or authority, cancellation and exhausted allowances stop without another dispatch. Repeated failed proposals stop even if the reviewer's explanatory wording changes. The original instruction and failed checks remain saved. All attempted author and judge work shares the original token, cost, step, child and time allowance.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/brain_evaluation.py; tests/test_communication_repairs_share_the_original_task.py; .nm/legal-brain-communication-repair-owned-20260927.xml",
+      "gaps": "Controlled transport and negative controls do not establish independent semantic judgment accuracy. Live repair quality, expert evaluation and broader output-check acceptance remain open. No false or unknown verdict was converted to PASS."
+    },
+    {
+      "id": "LB-141",
+      "progress": "Explicit communication protocol four binds actual tool-work receipts into the independently reviewed subject. The shared registry owns its schema, builder, interpreter and subject projection. Earlier protocols one through three preserve their exact subjects, dispatch identities and saved verdicts. Mandatory exact response and current-instruction quotations remain required. Returned tool material is diagnostic data, never facts, legal support or permission. The reviewed prompt inventory includes the actual new builder and schema.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/interaction_review.py; backend/nm/core/interaction_subject.py; tests/test_communication_reviews_see_actual_work.py; tests/test_prompt_consistency.py; .nm/legal-brain-resumed-work-and-history-20260927.xml",
+      "gaps": "New receipt context has controlled verification, not live semantic calibration. Correct source words and execution receipts cannot establish legal applicability or inference. The independent legal verifier and professional sign-off remain necessary."
+    },
+    {
+      "id": "LB-154",
+      "progress": "One strict saved-envelope decoder now serves both source capture and attempted-work projection. The work-aware reviewer receives the complete actual invocation/outcome population, including unavailable, refused and outcome-unknown work and delegated attempts. Counts, identities and exact receipt citations are checked. Offered or requested tools are not represented as work performed. Oversized populations refuse rather than silently truncate. Checked law and document windows retain their separate owners.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/tool_sources.py; backend/nm/core/work_receipts.py; tests/test_communication_reviews_see_actual_work.py",
+      "gaps": "Execution provenance does not establish legal truth or unrestricted action authority. Broader tool capability and complex-matter live acceptance remain open. Historical review identities were not changed to acquire the new receipt fields."
+    },
+    {
+      "id": "LB-164",
+      "progress": "The served evaluation now seals the actual completed repair selection in the existing journal. A checked repaired response reopens and records display through the original portable interaction ID without exposing internal proof IDs. The original failed review remains failed. Readers validate every exact attempt and diagnostic-parent linkage, preserve whole-evaluation reservations and recheck current permissions and output owners. Controlled served POST, checked GET, display acknowledgement and historical reopening passed without additional model requests.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/evaluation_history.py; backend/nm/core/reviewed_preview.py; backend/nm/core/preview_seen.py; backend/nm/core/preview_display.py; tests/test_repaired_preview_keeps_its_original_history.py; .nm/legal-brain-resumed-work-and-history-20260927.xml",
+      "gaps": "The six earlier live interactions remain diagnostic failures. The renewed two-hour approval retains the original USD5 durable ledger and existing unknown USD0.03 reservation. No successful complete complex-matter journey or client release is claimed. Actual Chrome retesting remains to be performed."
+    }
+  ]
+}

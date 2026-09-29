@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "record": "27 September 2026 build record 18 — reachable components, not acceptance",
+  "checkpoint": "Plan-first inspection remains the sequencing rule: 193 Before Build requirements and 501 exact clauses, no further browser submission. Current controlled composition regression: 193 passing cases in .nm/evaluations/composed-plan-components-20260927.xml; earlier overlapping suites are not added to this population. Source inspection distinguishes component wiring, mandatory curated legal populations, qualified approval and semantic/browser acceptance. Original USD5 ledger remains USD0.224073; grant expired, no new paid call, reset or client cutover. BK-85-AC3 stays NOT_RUN.",
+  "rows": [
+    {
+      "id": "LB-151",
+      "progress": "Encrypted account-owned working preferences are now reachable through authenticated view/edit/delete routes, the normal profile UI and the controlled context factory. Only approved short/standard/detailed, prose/bullets, authority-position, date-format, supported court IDs and standing switches are typed. Each new turn acquires the current account setting; an old turn retains its exact original prefix and history. Settings cannot become client facts, legal support, instructions to ignore guards or another account's preference.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/advocate_memory.py; backend/nm/domain/advocate_memory.py; backend/nm/edge/advocate_memory_routes.py; tests/test_advocate_memory.py; tests/test_working_preferences_keep_context_scope_and_history.py; tests/advocate-preferences.test.cjs; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Approved typed vocabulary only: free-form standing instructions and unsupported court IDs are not implemented. Delete removes active settings, not sealed prior prefixes or backups. Actual browser profile presentation and professional/model-quality acceptance remain pending."
+    },
+    {
+      "id": "LB-148",
+      "progress": "An owner-file playbook catalogue and on-demand reader are installed in actual tool discovery and the principles prefix. Five guides provide bounded practice navigation, not current legal rules or deterministic matter routing. Optional exact Act/section or reporter pointers are read back through existing evidence/search owners. Changed guide content changes the guide/context identity. Model prose cannot edit the catalogue or certify a pointer.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "docs/blueprint/PRACTICE_PLAYBOOKS.json; backend/nm/ports/practice_playbooks.py; backend/nm/adapters/practice_playbooks.py; backend/nm/core/practice_playbooks.py; tests/test_practice_playbooks_are_navigation_not_legal_authority.py; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Five navigation guides are not a full curated practice library or counsel approval. Several guides have no curated source pointers. Exact pointer resolution does not establish relevance, applicability, completeness or current law."
+    },
+    {
+      "id": "LB-156",
+      "progress": "Date-qualified provision candidates now have exact wording/amendment/commencement/ending/transition span ownership and half-open effective intervals, with explicit source-version identities, digests and attributable expiring review receipts. The actual controlled read_provision tool uses the adapter's dated reader. Missing interval proof leaves held words accessible as unassessed source windows rather than inventing a supporting Finding from an Act-level lifetime. Repealed-code refusals do not silently substitute successors.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/knowledge/provision_revision.py; backend/nm/knowledge/source_registry.py; backend/nm/adapters/evidence/corpus.py; backend/nm/bootstrap/dated_provisions.py; tests/test_provision_revisions_need_owned_interval_proof.py; tests/test_dated_provision_capture_reaches_the_actual_tools.py; .nm/evaluations/dated-source-capture-corrected.xml; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Production has no populated, authenticated provision-revision registry yet. Its loader, qualified-artifact lookup and composition are separate current engineering work; historical source acquisition/curation and qualified legal approval are not supplied by synthetic fixtures. A source-reader text view is not interval approval."
+    },
+    {
+      "id": "LB-158",
+      "progress": "Actual tool discovery now offers source-bound limitation selection proposals and reviewed event-based calculation. Selection uses exact owned observations, primary clauses and independently sealed judgments; the composed resolver recomputes current subjects and saved review receipts. Arithmetic preserves inferred/unknown legal premises, competing event dates and clock-moving factors. It never confirms an allegation, replaces Fact.date or registers its conditional date as a filing deadline.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/reviewed_limitation_selection.py; backend/nm/core/event_limitation_calculation.py; backend/nm/core/calculation_tools.py; backend/nm/bootstrap/composition.py; tests/test_event_limitation_selections_need_sealed_review.py; .nm/event-limitation-selection-regression-final-20260927.xml (109 unique cases); .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Fresh proposal review currently completes after the author terminal; an automatic same-request post-review calculation continuation is not claimed. Interest arithmetic and legal fee schedules remain separate missing components/data. Live accrual-selection accuracy and professional acceptance are unmeasured."
+    },
+    {
+      "id": "LB-163",
+      "progress": "A private working-record owner now reconstructs the entire original request, scoped needs, current facts, held legal windows, owned documents and actual executed work. Candidate annotations record analysis area, considered/kept/set-aside disposition, exact support and dependencies without author-written PASS. Source support and request scope are independently saved and reconstructed. Completion cannot be derived from an empty list or the author's chosen narrow subset.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/domain/working_record.py; backend/nm/core/working_record.py; backend/nm/core/working_scope.py; tests/test_working_record_is_source_owned_and_independently_scoped.py; tests/test_raw_legal_windows_are_reopened_by_the_same_source_owner.py; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Scope and coverage sufficiency remain semantic judgments, not mathematical guarantees. Exact support alone does not satisfy duty/consistency and all channel-release checks for annotation prose; private explanations are not displayed as advice. Input-only notes without legal support do not manufacture a legal Finding. Live comprehensive-brief acceptance is pending."
+    },
+    {
+      "id": "LB-165",
+      "progress": "Whole-request independent scope checks examine every owned area and need by dispute, require exact original-request words, and name only already independently checked annotations as coverage. Seven applicable working-analysis areas are required for a comprehensive requested brief, with unknown or inapplicable reasons retained. Narrow questions and acknowledgements are not forced into seven headings. Actual composition shares the same transactional journal with source and wording reviews.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/working_scope.py; backend/nm/core/brain_evaluation.py; backend/nm/bootstrap/composition.py; tests/test_working_record_is_source_owned_and_independently_scoped.py; tests/test_working_evaluation_uses_one_actual_check_budget.py; .nm/evaluations/composed-plan-components-20260927.xml (193); .nm/evaluations/serial-review-and-loop-boundaries.xml (44 including four serial-composition controls)",
+      "gaps": "A checked question may correctly leave the requested analysis outstanding. No matter closure or client-ready release follows from private working completeness. Actual serial source/wording/scope child spends reconcile with one saved allowance; live semantic calibration and professional acceptance remain pending."
+    },
+    {
+      "id": "LB-70",
+      "progress": "Checked private preview can show a collapsed Work recorded panel containing neutral completeness counts and labels from actual execution receipts. Natural response paragraphs remain the default. No raw queries, model prompts, inner deliberation, candidate annotation words or scope-judge reasons are displayed. Counts describe requested working analysis, explicitly not matter closure, factual truth or legal truth. Missing scope remains not assessed.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/reviewed_preview.py; backend/nm/core/working_record.py; frontend/brain-preview.js; tests/brain-preview.test.cjs (32 actual controller cases); tests/test_private_brain_preview_controller.py; .nm/evaluations/dated-source-preview-final.xml; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "Detailed annotation explanations by dispute are intentionally withheld until all their own channel checks exist. Controlled DOM checks are not native browser layout, accessibility or expert-comprehension proof. Full board progression and completed multi-dispute browser acceptance remain pending."
+    },
+    {
+      "id": "LB-92",
+      "progress": "The private checked-answer path now binds a reference to its exact independently released source package and reuses the normal saved-passage/current-document reader and shared drawer. Authenticated reads validate actor, grant, matter/turn/paragraph/reference identity, complete saved checks and current version. The source read starts no model and fabricates no canonical TurnReceipt. Saved relied-on words remain distinct from today's local text, with changed-source disclosure and the existing full-document controls.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/reviewed_preview.py; backend/nm/edge/reviewed_preview.py; backend/nm/edge/api.py; frontend/source-reader.js; frontend/brain-preview.js; tests/test_private_source_reader_reuses_checked_source_owners.py; tests/brain-preview.test.cjs; .nm/evaluations/composed-plan-components-20260927.xml",
+      "gaps": "This private reader covers exact captured legal source bindings. Citation-label presence alone cannot open a source. Native-browser interaction, complete claim-to-dependant traversal and private uploaded-document evidence bindings remain distinct acceptance/integration obligations."
+    },
+    {
+      "id": "LB-97",
+      "progress": "Casefile original-document opening now uses only the actual opaque owned upload identity carried by source attribution. The original-view route rechecks session, scope, matter/asset versions, exact bytes/digest, local reading permission, quarantine and retention before transport, bounded at 8MiB. Text uses textContent; PDF uses an isolated sandboxed no-referrer blob frame; DOCX is a guarded download rather than pretend inline HTML. Blob resources are revoked on close or context change.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/original_source_locators.py; backend/nm/edge/original_documents.py; backend/nm/edge/api.py; frontend/matter-workspace.js; tests/test_original_casefile_source_opening.py; tests/original-casefile-source.test.cjs; agent G10 actual ASGI population 52/52 and DOM population 12/12",
+      "gaps": "Legacy filename-only records are not guessed into upload identities. Text extraction is not factual admission or authenticity proof. Native PDF/DOCX viewer acceptance, adversarial production files and private uploaded-source package traversal remain pending."
+    },
+    {
+      "id": "LB-155",
+      "progress": "Four conversational private-file tools are installed in actual discovery and the authenticated preview composition: read owned inputs, propose an inferred legal premise, propose a product decision, and withdraw an exact private inferred premise into a provenance-preserving unestablished tombstone. Exact reserved arguments, current sources, observations, original instruction, actor/scope and before/after projections are replayed at transactional commit. The model cannot overwrite a human choice, settle law, grant consent, confirm a fact or authorize an external act. Late source revocation now produces a saved refusal instead of an operational crash, without applying the mutation or expanding admitted scope.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/private_file_tools.py; backend/nm/core/dependency.py; backend/nm/core/loop.py; backend/nm/adapters/store/loop_log.py; backend/nm/bootstrap/composition.py; tests/test_private_file_proposals_use_actual_sources_and_atomic_history.py (63); agent G04 selected existing regression population (201); both zero failures/errors/skips",
+      "gaps": "These are private candidates, not independently accepted merits or advocate decisions. Existing human authority/acceptance routes remain the only route to consequential human choices. Early in-loop independent checking, generic action/deadline producer wrappers and monetary-selection producers remain separately identified engineering work. No new live journey or client cutover is claimed."
+    },
+    {
+      "id": "LB-88",
+      "progress": "The existing shared normal-application body font now starts at the planned 16CSSpx rather than 15CSSpx. This is a token-level correction in the current stylesheet, with no claim that colour contrast, responsive layouts, focus order, assistive technology or comprehension have been measured.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "frontend/app.css; existing protected UI/controller checks retained; .nm/evaluations/composed-plan-components-20260927.xml does not certify rendered accessibility",
+      "gaps": "Native browser presentation sweep, WCAG measurements, narrow viewport and screen-reader acceptance remain open. The font token alone is not enterprise-grade visual or accessibility acceptance."
+    }
+  ]
+}

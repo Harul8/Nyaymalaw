@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "record": "27 September 2026 build record 16 — live question with an unestablished legal premise",
+  "checkpoint": "Actual Chrome interaction ten pv_814e2c52_0685_4be3_8232_2d1e9ef84a85 ran on current server identity 85409304c8f541a3 under protocol six. Five GPT-4o mini tool invocations read the file, inspected read_matter, read the current owner guide, reread the file and asked a question. One GPT-5.1 review returned six positive judgments and the whole-unit question label. The private preview displayed that question and saved the display/history; the composer cleared. No facts, disputes or law were established/retrieved. The question embeds an unestablished succession-law framework and entitlement premise. Independent source review confirms existing instructions already reject question-based legal-premise bypass: this is a semantic false positive, not a missing literal rule. Total durable ledger USD0.224073, including unchanged unknown USD0.03; original USD5 cap and finite fictional permission/expiry unchanged. No successful complex-matter journey or professional acceptance. Further live submissions paused for the generalized premise-boundary fix.",
+  "rows": [
+    {
+      "id": "LB-141",
+      "progress": "OPEN LIVE DIAGNOSTIC: a question carrying an unestablished legal framework and applied entitlement premise was classified as non-merits and passed all six judgments without law retrieval. The existing question/whole-unit rules were present but the verifier misapplied them. Planned general correction: separately inventory stated and presupposed material premises with exact text spans; declared legal/applicability/action premises override a conflicting harmless-question label; unsupported factual premises fail faithfulness. Neutral factual questions remain eligible. Use an explicit new owned review protocol rather than rewriting saved protocols one through six. No name, statute, matter or wording-specific branch is permitted.",
+      "verification": "Live diagnostic reproduced; fix pending",
+      "evidence": "backend/nm/core/interaction_review.py; backend/nm/core/brain_evaluation.py; backend/nm/core/reviewed_preview.py; development_environment/reviews/LEGAL_BRAIN_BROWSER_REVIEW_20260927.md; .nm/evaluations/live-interaction-10-question-20260927.png; saved interaction pv_814e2c52_0685_4be3_8232_2d1e9ef84a85 and its communication_work_references check",
+      "gaps": "Premise-inventory contract, both-direction controlled tests, semantic calibration and live regression remain pending. Deterministic quotation checks cannot prove the verifier noticed every implied premise. Existing 492 and 151 scoped test populations do not certify this live result."
+    },
+    {
+      "id": "LB-164",
+      "progress": "Chrome displayed and saved the independently checked private question, original instruction and history interaction ten; the composer became empty and compact. The private/client-release flags remained correct, but a checked private question is not evidence of useful completed legal work. Preserve the positive original review and observed false-positive diagnosis rather than rewriting either. Reopening the same interaction starts no new author or verifier work.",
+      "verification": "Live diagnostic reproduced; fix pending",
+      "evidence": "frontend/brain-preview.js; .nm/evaluations/live-interaction-10-question-20260927.png; development_environment/reviews/LEGAL_BRAIN_BROWSER_REVIEW_20260927.md; saved interaction pv_814e2c52_0685_4be3_8232_2d1e9ef84a85",
+      "gaps": "The current matter is unfinished with zero established disputes/facts and no retrieved law in this attempt. No second golden-composite matter may be reported as run. Re-test the corrected semantic boundary before continuing the conversation."
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "record": "27 September 2026 build record 12 — live follow-through diagnostics",
+  "checkpoint": "Diagnostics: actual Chrome interaction seven failed and remains failed (pv_766e9875_d20b_4c5d_b249_31c91fbe40df). No unchecked response, established dispute or retrieved law was displayed. Total charged ledger USD0.132996 includes the retained unknown USD0.03 reservation. Stable joined controls: 246 passed, zero failures/errors/skips, 123.685 seconds. Separate current/earlier-account and terminal population: 89 passed; populations overlap and are not summed. Exact generated guide and 274-module layer checks pass. No live success, professional acceptance, full-gate promotion or normal-client cutover is claimed.",
+  "rows": [
+    {
+      "id": "LB-131",
+      "progress": "Diagnostics: the live author ended after reading the file with a promise of future research rather than performing requested work. One immutable effect-to-stop owner now supplies both actual loop stopping and the operational terminal contract sent to the lead. An admitted terminal response or question ends this loop immediately and schedules no further work. Genuine acknowledgements and necessary questions remain available. The sole principles owner now binds each detail to its own source turn/event and distinguishes a new event from a correction or continuation. Earlier accounts remain attributed, never silently substituted into the current account.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "docs/blueprint/LEGAL_BRAIN_PRINCIPLES.md; backend/nm/core/principles_generated.py; backend/nm/core/tools.py; backend/nm/core/loop.py; backend/nm/core/brain_context.py; tests/test_current_accounts_and_terminal_proposals_have_explicit_boundaries.py; .nm/legal-brain-resumed-stable-contracts-20260927.xml",
+      "gaps": "Conveying source/stop contracts and enforcing exact recorded boundaries does not prove model compliance. The seventh live author substituted an older event detail; no full complex-matter journey has passed. False/unknown reviews still cannot become positive evidence."
+    },
+    {
+      "id": "LB-141",
+      "progress": "Diagnostics: the live independent reviewer marked faithfulness false but supplied source selectors instead of actual required quotations and abbreviated other citations. Explicit protocol five now distinguishes source-field metadata from exact contiguous quotation values in both prompt and schema descriptions. Task relevance is judged against the advocate's current objective and actual work, not the author's terminal tool or a promise of later work. Exact substring, duplicate, missing-population and false/null checks remain strict. Protocols one through four retain their recorded subjects and verdicts; no historical failed proof is upgraded or redispatched.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/interaction_review.py; tests/test_communication_quotes_are_words_not_selectors.py; tests/test_communication_evidence_roles_are_owned.py; tests/test_prompt_consistency.py; .nm/legal-brain-resumed-stable-contracts-20260927.xml",
+      "gaps": "Protocol five has controlled verification, not live semantic calibration. No malformed quotation was normalized into a PASS, and no false or unknown verdict was removed. Merits verification and qualified professional acceptance remain open."
+    },
+    {
+      "id": "LB-154",
+      "progress": "The source/quotation clarification retains the complete actual work-receipt population introduced by protocol four, including failed and unavailable work. Tool names and selected response kinds describe what the author attempted; they cannot redefine the advocate's requested task or establish success. Proposals do not count as completed research, delivered advice or release. Prior-source attribution and action permissions retain their existing owners.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/work_receipts.py; backend/nm/core/interaction_review.py; tests/test_communication_reviews_see_actual_work.py; tests/test_communication_quotes_are_words_not_selectors.py; .nm/legal-brain-resumed-stable-contracts-20260927.xml",
+      "gaps": "Receipts prove attempts and attributable outcomes, not legal accuracy or applicability. Successful retrieval, multi-dispute reasoning, checklist completion and complex-matter history acceptance still require live verification."
+    },
+    {
+      "id": "LB-164",
+      "progress": "Diagnostics: all seven live attempts remain saved failures. A separate code review found repaired recorded evaluations could fail after execution because the neutral result recorder assumed fictional mode. The shared recorder now validates every attempt and sealed replay against its original admitted mode, actor and file. Mixed-mode/actor/file substitutions refuse. Recorded evaluations still cannot read or acknowledge the fictional preview; normal clients remain on the existing TurnEngine. Stable served tests prove exact replay and checked synthetic display without extra model work.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/evaluation_history.py; tests/test_evaluation_results_keep_their_admitted_mode.py; tests/test_repaired_preview_keeps_its_original_history.py; .nm/legal-brain-admitted-mode-final-20260927.xml; .nm/legal-brain-resumed-stable-contracts-20260927.xml; .nm/evaluations/live-interaction-7-failed-20260927.png",
+      "gaps": "No paid eighth interaction has run yet. The existing two-hour permission expires at 13:36:05 UTC and retains the original USD5 ledger. Earlier failed attempts and the unknown reservation remain charged. Successful end-to-end browser work, semantic calibration and counsel acceptance remain open."
+    }
+  ]
+}

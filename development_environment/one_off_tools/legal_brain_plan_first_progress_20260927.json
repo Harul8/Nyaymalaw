@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "record": "27 September 2026 build record 17 — plan-first engineering reconciliation",
+  "checkpoint": "Owner requires finite plan-to-code engineering completeness before further browser submissions. Audit population: 193 requirements, 501 clauses. No new live submission; original USD5 ledger unchanged at USD0.224073. The known question-premise diagnostic remains historical negative evidence. Protocol seven and governing-law composition have scoped controlled proof only. Calculation input producers, full strict replay, working-record completeness and other source-backed omissions remain open. No legal-brain completion, canonical gate, professional sign-off or ordinary-client cutover is claimed.",
+  "rows": [
+    {
+      "id": "LB-141",
+      "progress": "A new owned protocol seven requires a server-owned whole-text premise inventory, exact spans for stated and presupposed material assumptions, separate three-state basis assessments and source-role binding. Legal, applicability, action and permission premises cannot be exempted by a contradictory harmless-question label. Unsupported factual premises fail faithfulness. Neutral questions remain eligible. Original protocols one through six and raw judgments are preserved.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "tests/test_communication_premises_require_their_own_assessment.py; .nm/legal-brain-premise-v7-focused-20260927.xml (79); .nm/legal-brain-premise-v7-wire-20260927.xml (4); 83 unique named cases, zero overlap, failures, errors or skips",
+      "gaps": "Semantic inventory completeness and support relevance remain model judgments requiring live measurement. A bounded output limit may leave complex inventories unassessed. Neither exact spans nor scripted judgments establish expert legal quality. Exhaustive engineering reconciliation is still in progress before browser work."
+    },
+    {
+      "id": "LB-164",
+      "progress": "Protocol-seven private interaction review is exercised through the actual authenticated transport: neutral wording can be displayed and recorded as seen, while factual/legal premise failures and ambiguous inventory are withheld without extra provider or author calls. Historical versions one through six retain original words and verdicts with no upgraded acceptance or redispatch. Version and schema inventories now include seven while continuing to reject unknown eight.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/core/interaction_review.py; tests/test_communication_premises_require_their_own_assessment.py; .nm/legal-brain-premise-v7-wire-20260927.xml; tests/test_historical_work_reviews_bind_the_actual_population.py",
+      "gaps": "No successful multi-dispute live journey is claimed. The prior server remains protocol six and must not process a new paid submission during the plan-first audit. Approval expiry and remaining original budget must be checked before later browser work."
+    },
+    {
+      "id": "LB-120",
+      "progress": "DIAGNOSTIC: trusted controlled composition omitted the existing governing-law adapter from its practice-table population. Four real composed controls reproduced the gap across substantive, procedural and evidentiary limbs and the complete field population. Composition now supplies all existing table owners using named fields. Unknown dates and pending proceedings remain unknown; navigation never certifies current law or applicability.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "backend/nm/bootstrap/composition.py; tests/test_composed_practice_tables_reach_their_actual_owners.py; .nm/evaluations/composed-practice-before.xml (4 reproduced); .nm/evaluations/composed-practice-after.xml (23 passed)",
+      "gaps": "This closes the missing adapter connection only. Historical per-provision interval selection, source completeness and professional review are not established by a succession-table result. The law must still be retrieved and checked for the actual matter."
+    },
+    {
+      "id": "LB-156",
+      "progress": "The existing governing-code navigation owner is now reachable from the actual controlled tool composition. It supplies its curated succession and origin while preserving an unknown governing Act when dates or procedural status are missing. The plan-first audit explicitly separates this repaired connection from the still-open historical provision-revision selection requirement.",
+      "verification": "Controlled checks passed; acceptance incomplete",
+      "evidence": "tests/test_composed_practice_tables_reach_their_actual_owners.py; tests/test_a_governing_answer_carries_its_rule.py; tests/test_legal_brain_tool_catalogue.py; .nm/evaluations/composed-practice-after.xml",
+      "gaps": "LB-156-AC4 per-provision temporal selection remains an engineering gap. No default current wording is substituted for absent dated text and no historical source coverage is invented. Broader retrieval acceptance remains incomplete."
+    }
+  ]
+}
