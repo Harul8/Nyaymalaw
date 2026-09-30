@@ -18,10 +18,8 @@ def test_identical_current_and_pending_sentences_keep_distinct_sources():
     sentence = "The gate is locked."
     accounts = (("current", sentence), ("earlier", sentence))
     described = (
-        Described(sentence, "Current access", unit_ids=("S1",),
-                  allocation_unit_ids=("S1",)),
-        Described(sentence, "Earlier access", unit_ids=("S2",),
-                  allocation_unit_ids=("S2",)),
+        Described(sentence, "Current access", allocation_unit_ids=("S1",)),
+        Described(sentence, "Earlier access", allocation_unit_ids=("S2",)),
     )
 
     result = bind(Matter.create("adv", "File"), "\n".join(text for _, text in accounts),
@@ -34,21 +32,25 @@ def test_identical_current_and_pending_sentences_keep_distinct_sources():
     assert [spans for _, spans in result.allocations] == [(sentence,), (sentence,)]
 
 
-def test_unidentified_duplicate_source_is_refused_instead_of_guessing_current():
+def test_a_dispute_without_sentence_numbers_is_refused_never_matched_by_words():
+    """Words cannot say which of two identical sentences was meant, so a dispute is
+    placed by its sentence numbers alone -- refused without them, even where the
+    words happen to be unique."""
     sentence = "The gate is locked."
     accounts = (("current", sentence), ("earlier", sentence))
     message = "\n".join(text for _, text in accounts)
 
-    ambiguous = bind(Matter.create("adv", "File"), message, _fact(sentence),
-                     described=(Described(sentence, "Access"),),
-                     source_accounts=accounts)
-    assert ambiguous.blocks and not ambiguous.source_allocations
+    for words, sources in ((message, accounts), (sentence, (("current", sentence),))):
+        unnumbered = bind(Matter.create("adv", "File"), words, _fact(sentence),
+                          described=(Described(sentence, "Access"),),
+                          source_accounts=sources)
+        assert unnumbered.blocks and not unnumbered.source_allocations
 
-    unique = bind(Matter.create("adv", "File"), sentence, _fact(sentence),
-                  described=(Described(sentence, "Access"),),
-                  source_accounts=(("current", sentence),))
-    assert not unique.blocks
-    assert unique.source_allocations[0][1][0].origin_turn == "current"
+    numbered = bind(Matter.create("adv", "File"), sentence, _fact(sentence),
+                    described=(Described(sentence, "Access", allocation_unit_ids=("S1",)),),
+                    source_accounts=(("current", sentence),))
+    assert not numbered.blocks
+    assert numbered.source_allocations[0][1][0].origin_turn == "current"
 
 
 def test_source_unit_ids_must_resolve_to_the_described_words():

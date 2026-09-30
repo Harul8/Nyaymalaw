@@ -61,7 +61,7 @@ def test_identical_current_and_pending_sentences_keep_their_own_turns(tmp_path):
     file = matter().with_fact(older)
     turn = TurnInput(advocate_id="adv", message=sentence, turn_id="current-turn")
     inventory = DisputeRead(Dispute.OPENS, quoted=sentence, why="the gate is contested",
-                            described=(Described(sentence, "The gate", unit_ids=("S1", "S2"),
+                            described=(Described(sentence, "The gate",
                                                  allocation_unit_ids=("S1", "S2")),))
     engine, _ = _engine(tmp_path, _Recorder())
     engine._read_dispute = lambda _file, _turn, _metrics: inventory
@@ -217,9 +217,10 @@ def test_prospective_positions_need_stated_evidence_and_do_not_invent_filing(rol
 
 def test_bad_focus_and_context_only_quotes_are_refused():
     row = {
-        "people": [],
-        "things": [],
-        "sentences": [{"unit": "S1", "role": "instruction", "about": []}],
+        "client": "",
+        "disputes": [],
+        "background": [],
+        "instructions": ["S1"],
         "why": "update",
         "focus_thread_id": "foreign",
         "focus_quote": "work this",
@@ -263,13 +264,15 @@ def test_served_engine_keeps_scoped_accounts_and_persists_all_disputes(tmp_path,
     def inventory(_):
         return json.dumps(
             {
-                "verdict": "cannot_tell",
-                "quoted": "",
+                "client": "",
                 "why": "opening",
                 "disputes": [
-                    {"quoted": text, "label": label, "thread_id": "", "additional_quotes": []}
-                    for text, label in zip(spans, ("Rent", "Access"), strict=True)
+                    {"other_side": "", "contested": label, "kind": "other",
+                     "on_file": "new", "sentences": [unit]}
+                    for unit, label in (("S1", "Rent"), ("S2", "Access"))
                 ],
+                "background": [],
+                "instructions": [],
                 "focus_thread_id": "",
                 "focus_quote": "",
                 "advance_quote": "",

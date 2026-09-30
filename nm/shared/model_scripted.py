@@ -230,63 +230,50 @@ def scripted_dates(user: str) -> str:
 _ENUMERATES = ("first,", "second,", "third,", "fourth,", "fifth,")
 
 def scripted_dispute(user: str) -> str:
-    """A deterministic stand-in for the model's dispute read."""
-    # The prompt's SOURCE UNITS are copied from the advocate's words. Read all
-    # of them in their original ID order: a blank line between paragraphs is
-    # still part of the brief, and the second reading lists paragraphs in
-    # reverse order without changing those IDs. Never scan the product's own
-    # closing instructions or file-context headings for dispute markers.
+    """A deterministic stand-in for the model's dispute read.
+
+    The prompt's SOURCE UNITS are the advocate's words; the product's own closing
+    instructions and file-context headings are never scanned for dispute markers.
+    A message that enumerates (`first ... second ...`) is one dispute per item; one
+    that only marks something off as separate is one new dispute; anything else
+    describes no dispute and continues the file. Every sentence no dispute holds is
+    shared background.
+    """
     units = _units_shown(user)
     said = ("\n".join(units[key] for key in sorted(units, key=lambda k: int(k[1:])))
             if units else user.split("[this turn]\n", 1)[-1].split("\n\n", 1)[0])
-    navigation = {"focus_thread_id": "", "focus_quote": "", "advance_quote": "",
-                  "requirement_answers": []}
-
-    # HOW MANY DISPUTES, counted the same deterministic way. The product
-    # reads this with a model; the double marks off on the same ordinal
-    # words an advocate uses to enumerate a file -- `first ... second ...`
-    # -- which is exactly the shape that produced one thread for three
-    # disputes before `bind` could count.
-    described = _described_spans(said)
-
-    # THE GRIEVANCE SHAPE (LB-109), restated from that inventory by the one
-    # conversion the adapter also uses for controlled answers written the old way.
-    for needle in _OPENS_A_DISPUTE:
-        if needle in said.lower():
-            return json.dumps(_grievances(
-                {"verdict": "opens", "why": f"the advocate marks it off with {needle!r}",
-                 "disputes": described or [{"quoted": said, "label": snippet(said, 60),
-                                            "thread_id": "", "additional_quotes": []}],
-                 **navigation}, units, ()))
-    return json.dumps(_grievances(
-        {"verdict": "continues", "why": "it adds detail to what is on the file",
-         "disputes": described, **navigation}, units, ()))
+    spans = _described_spans(said)
+    needle = next((n for n in _OPENS_A_DISPUTE if n in said.lower()), "")
+    if not spans and needle:
+        spans = [said]
+    disputes, held = [], set()
+    for span in spans:
+        ids = [k for k, text in units.items() if text in span or span in text]
+        held.update(ids)
+        disputes.append({"other_side": "", "contested": snippet(span, 60), "kind": "other",
+                         "on_file": "new", "sentences": ids})
+    return json.dumps({
+        "client": "", "disputes": disputes,
+        "background": [k for k in units if k not in held], "instructions": [],
+        "why": (f"the advocate marks it off with {needle!r}" if disputes
+                else "it adds detail to what is on the file"),
+        "focus_thread_id": "", "focus_quote": "", "advance_quote": "",
+        "requirement_answers": []})
 
 
-def _described_spans(said: str) -> list[dict]:
-    """The disputes a message enumerates, for the double.
-
-    SPANS ARE CUT FROM `said` AND NEVER COMPOSED, because
-    `dispute.interpret` checks every one against the advocate's own words
-    and drops what it cannot find. A double that invented a label would
-    have its items silently discarded and would look like a model that
-    found nothing -- which is the failure the guard exists to cause, and
-    a poor way to discover it.
-    """
-    cuts = [(said.lower().index(w), w) for w in _ENUMERATES if w in said.lower()]
+def _described_spans(said: str) -> list[str]:
+    """The disputes a message enumerates, for the double: spans CUT from `said`,
+    never composed, so every one is the advocate's own words."""
+    cuts = sorted((said.lower().index(w), w) for w in _ENUMERATES if w in said.lower())
     if len(cuts) < 2:
         return []
-    cuts.sort()
     out = []
     for n, (start, _word) in enumerate(cuts):
         end = cuts[n + 1][0] if n + 1 < len(cuts) else len(said)
         span = said[start:end].strip()
-        if len(span) < 12:
-            continue
-        out.append({"quoted": span, "label": snippet(span, 60),
-                    "thread_id": "", "additional_quotes": [], "span_ids": []})
+        if len(span) >= 12:
+            out.append(span)
     return out
-
 
 
 def _units_shown(user: str) -> dict[str, str]:
@@ -304,61 +291,6 @@ def _units_shown(user: str) -> dict[str, str]:
             if separator and key.startswith("S") and key[1:].isdigit() and value:
                 units[key] = value
     return units
-
-
-def _grievances_from_inventory(data: dict, prompt: Prompt, schema: Mapping[str, Any]) -> dict:
-    """A controlled answer written the old way, for the schema actually asked."""
-    about = (schema['properties']['sentences']['items']['properties']['about']['items']
-             ['properties'])
-    on_file = tuple(v for v in about['dispute'].get('enum', [])
-                    if v not in ('new', 'cannot_tell'))
-    return _grievances(data, _units_shown(prompt.user), on_file)
-
-
-def _grievances(data: dict, units: dict[str, str], on_file: tuple[str, ...]) -> dict:
-    """A controlled or scripted answer written as a dispute INVENTORY, restated as
-    the sentence labels the product now asks for (LB-109). TEST-DOUBLE TRANSPORT
-    ONLY: nothing is guessed.
-
-    Each inventory row becomes one THING in contest, and every source unit its own
-    words cover is labelled an act about it, of kind `other`, against nobody named.
-    A unit no row covers is SHARED BACKGROUND where there are several rows -- on an
-    enumerated brief it is the representation ahead of "First, ... Second, ..." --
-    and is left unlabelled where there is one, so the product's refusal still sees
-    it. With no rows at all every unit is background, which is how an ordinary
-    continuing message reads. The row's label is the thing's name; no person is
-    invented.
-
-    WHERE THE ROW SITS ON THE FILE follows the old verdict, which is what the
-    fixture meant by it: its own thread ID; else, on `continues`, the one
-    dispute on the file when there is exactly one; `cannot_tell` stays so; and
-    otherwise it is new.
-    """
-    verdict = data.get('verdict')
-    rows = [r for r in (data.get('disputes') or []) if isinstance(r, dict)]
-    things, about = [], {}
-    for number, row in enumerate(rows, 1):
-        spans = [row.get('quoted') or '', *(row.get('additional_quotes') or [])]
-        dispute = row.get('thread_id') or (
-            on_file[0] if verdict == 'continues' and len(on_file) == 1 else
-            'cannot_tell' if verdict in ('continues', 'cannot_tell') and on_file else 'new')
-        things.append({'name': row.get('label') or ''})
-        for key, text in units.items():
-            if any(span and (span in text or text in span) for span in spans):
-                about.setdefault(key, []).append(
-                    {'other_side': 0, 'thing': number, 'kind': 'other', 'dispute': dispute})
-    sentences = []
-    for key in sorted(units, key=lambda k: int(k[1:])):
-        if key in about:
-            sentences.append({'unit': key, 'role': 'act', 'about': about[key]})
-        elif len(rows) != 1:
-            sentences.append({'unit': key, 'role': 'background', 'about': []})
-    return {'people': [], 'things': things, 'sentences': sentences,
-            'why': data.get('why') or '',
-            'focus_thread_id': data.get('focus_thread_id') or '',
-            'focus_quote': data.get('focus_quote') or '',
-            'advance_quote': data.get('advance_quote') or '',
-            'requirement_answers': data.get('requirement_answers') or []}
 
 
 def scripted_role(user: str) -> str:
@@ -1423,9 +1355,6 @@ class ScriptedModelAdapter:
             halves = {'independent': ('yes', 'yes'), 'dependent': ('unknown', 'no')}
             data['right_if_in_time'], data['right_if_out_of_time'] = halves.get(
                 said, ('unknown', 'unknown'))
-        if (schema.get('x-nm-read') == 'dispute' and isinstance(data, dict)
-                and 'sentences' in schema.get('properties', {}) and 'sentences' not in data):
-            data = _grievances_from_inventory(data, prompt, schema)
         if (schema.get('x-nm-read') == 'investigation'
                 and 'basis_id' not in schema.get('properties', {})):
             data.pop('basis_id', None)

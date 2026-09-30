@@ -205,14 +205,12 @@ READS: tuple[Read, ...] = (
          "makes it unreachable.",
          echoes=True),
     Read("dispute", False,
-         "Lists the people and the things in contest, and labels every sentence "
-         "of a message -- its role, and for a dispute the other side, the thing "
-         "and the kind of wrong from a fixed list; the code forms one dispute per "
-         "other side, thing and kind, and a second reading in another order says "
-         "where it differs (LB-109). Wrong, it puts the right analysis on the "
-         "wrong dispute -- listed to the advocate by number and name, and "
-         "correctable in a sentence. It moves no date, amount or choice of law "
-         "itself.",
+         "Lists the disputes in a message -- other side, what is contested, kind, "
+         "new or on the file, and the numbers of its sentences -- and which "
+         "sentences are shared background or instructions (LB-109). Wrong, it "
+         "puts the right analysis on the wrong dispute -- listed to the advocate "
+         "by number and name, and correctable in a sentence. It moves no date, "
+         "amount or choice of law itself.",
          echoes=True),
     Read("requirements", False,
          "Applicable needs extracted from retrieved passages; no tick or legal conclusion. "

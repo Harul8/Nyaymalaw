@@ -21,8 +21,8 @@ def test_pending_account_survives_clarification_and_is_not_a_new_instruction():
     m = Matter.create(advocate_id='adv', title='File').with_fact(old)
     assert dispute.pending_accounts(m, 'now') == (old,)
     q = Quotable(turn='Work on the existing dispute.', file=old.statement)
-    assert dispute.schema_for(q)['properties']['sentences']['items']['properties'][
-        'unit']['enum'] == ['S1', 'S2', 'S3']
+    assert dispute.schema_for(q)['properties']['background']['items'][
+        'enum'] == ['S1', 'S2', 'S3']
     data = answer(background=['S1', 'S2', 'S3'])
     data.update(focus_thread_id='held', focus_quote='First event.')
     assert dispute.interpret(q, data, thread_ids=frozenset({'held'})).refused
@@ -44,7 +44,8 @@ def test_recovered_spans_keep_the_original_turn_not_the_clarification(tmp_path):
     turn = TurnInput(message='It is a separate dispute.', advocate_id='adv',
                      jurisdiction='Telangana')
     engine._read_dispute = lambda *args: dispute.DisputeRead(dispute.Dispute.OPENS,
-        described=(dispute.Described(old.statement, 'Invoice', '', (turn.message,)),))
+        described=(dispute.Described(old.statement, 'Invoice', '', (turn.message,),
+                                     allocation_unit_ids=('S1', 'S2')),))
     engine._admit_thread = lambda m, t, met, b, f, *_a, **_k: (m, b)
     m, bound = engine._admit_facts(m, turn, TurnMetrics(turn_id=turn.turn_id))
     assert not bound.blocks
@@ -80,21 +81,16 @@ def test_premise_projection_never_calls_missing_rows_established():
 
 
 def answer(*groups, background=(), instructions=(), belongs=None):
-    """A sentence-label reading: each group is the unit IDs of one dispute -- its
-    own thing, of kind `other`, against nobody named -- placed `new` unless
-    `belongs` puts it on the file."""
+    """A dispute reading: each group is the sentence IDs of one dispute, of kind
+    `other`, against nobody named -- placed `new` unless `belongs` puts it on the
+    file."""
     belongs = belongs or {}
-    labels = {}
-    for i, ids in enumerate(groups):
-        for unit in ids:
-            labels.setdefault(unit, []).append(dict(
-                other_side=0, thing=i + 1, kind='other', dispute=belongs.get(i, 'new')))
-    sentences = [dict(unit=u, role='act', about=about) for u, about in labels.items()]
-    sentences += [dict(unit=u, role='background', about=[]) for u in background]
-    sentences += [dict(unit=u, role='instruction', about=[]) for u in instructions]
-    return dict(people=[], things=[dict(name=f'Dispute {i}') for i in range(len(groups))],
-                sentences=sentences, why='Inventory', focus_thread_id='', focus_quote='',
-                advance_quote='', requirement_answers=[])
+    return dict(client='', disputes=[
+        dict(other_side='', contested=f'Dispute {i}', kind='other',
+             on_file=belongs.get(i, 'new'), sentences=list(ids))
+        for i, ids in enumerate(groups)],
+        background=list(background), instructions=list(instructions), why='Inventory',
+        focus_thread_id='', focus_quote='', advance_quote='', requirement_answers=[])
 
 
 def test_existing_disputes_keep_their_ids_and_the_prompt_carries_the_principles_once():
@@ -198,7 +194,7 @@ def test_completely_omitted_paragraphs_are_named_without_guessing_their_meaning(
     spans = [f'The instructions for distinct subject {i}.' for i in range(count)]
     text = '\n\n'.join(spans)
     read = dispute.interpret(Quotable(turn=text), answer([f'S{count}']))
-    assert read.refused == 'source units not labelled: ' + ', '.join(
+    assert read.refused == 'sentences not placed: ' + ', '.join(
         f'S{i}' for i in range(1, count))
     complete = dispute.interpret(Quotable(turn=text),
                                  answer(*[[f'S{i}'] for i in range(1, count + 1)]))
@@ -290,7 +286,7 @@ def test_production_read_repairs_once_or_reports_incomplete(tmp_path, repair_suc
     def read(prompt, schema, key, tier):
         calls.append(prompt)
         data = (answer(['S1'], ['S2'])
-                if len(calls) >= 2 and repair_succeeds else answer(['S2']))
+                if len(calls) == 2 and repair_succeeds else answer(['S2']))
         return ModelResult(text=None, tier=tier, data=data, model='controlled', provider='scripted',
                            usage=Usage(0, 0, 0), latency_ms=0)
 
@@ -298,12 +294,11 @@ def test_production_read_repairs_once_or_reports_incomplete(tmp_path, repair_suc
     result = engine._read_dispute(Matter.create(advocate_id='adv', title='File'),
         TurnInput(message=text, advocate_id='adv', jurisdiction='Telangana'),
         TurnMetrics(turn_id='t'))
-    # A repaired reading of two paragraphs is then read again in reverse order.
-    assert len(calls) == (3 if repair_succeeds else 2)
-    assert 'source units not labelled: S1' in calls[1].user
+    assert len(calls) == 2
+    assert 'sentences not placed: S1' in calls[1].user
     assert bool(result.refused) is not repair_succeeds
     if repair_succeeds:
-        assert len(result.described) == 2 and 'LAST PARAGRAPH FIRST' in calls[2].user
+        assert len(result.described) == 2
 
 
 def test_failed_inventory_never_admits_a_subset_as_a_complete_matter(tmp_path):

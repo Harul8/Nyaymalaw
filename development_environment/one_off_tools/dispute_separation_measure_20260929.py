@@ -1,4 +1,4 @@
-"""LB-109: measure the sentence-label dispute reading on labelled briefs and on
+"""LB-109: measure the dispute reader on labelled briefs and on
 automatic variants of each. A PAID RUN on GPT-4.1 mini -- nothing is sent without
 --run.
 
@@ -15,18 +15,16 @@ own paragraph, an extra instruction added. A reading that is right on a brief an
 wrong on its variant has learnt the wording, not the rule.
 
 Each reading is made exactly as a served first turn makes it: `dispute.separate`,
-the one owner of the procedure (label, repair once, read again reversed, compare),
-through the same guided prompt and token ceiling. It is scored against the brief's
+the one owner of the procedure (read, repair once), through the same guided prompt
+and token ceiling. It is scored against the brief's
 ANCHORS -- phrases that must land together in one dispute and apart from the other
 disputes' -- and its instructions, which must reach no dispute. Anchors name no
 party, so the renamed variant is scored by the same anchors.
 
-Four outcomes per reading, because the owner's rule is that a doubt is said and
-asked, never guessed:
-    correct            every dispute separated right, nothing asked
-    correct, asked     right, but the two readings disagreed and the advocate is asked
-    wrong, said        wrong, but a disagreement or a refusal is put to the advocate
-    wrong, silent      wrong and nothing says so -- THE ONE THAT MUST BE ZERO
+Three outcomes per reading:
+    correct            every dispute separated right
+    wrong, said        the reading was refused and what it found is put to the advocate
+    wrong, silent      wrong and nothing says so
 
 The spend ledger pins GPT-4.1 mini at its recorded price and a per-call reservation
 covering its worst case, and holds the whole batch under the owner's cap. Where the
@@ -153,6 +151,98 @@ BRIEFS: dict[str, Brief] = {
         {"Mohammed Irfan": "Thomas Mathew", "Irfan": "Thomas",
          "Deepa Builders": "Sunrise Constructions"},
         "ONE dispute told at length -- the control against splitting"),
+    # HELD-OUT BRIEFS, written 30 September 2026 from the golden set's scenarios
+    # (docs/GOLDEN_SET.md), after the prompt had been tuned on the seven above and
+    # before the reader ever saw these. The expected disputes are the golden set's,
+    # not a reading of the model's output. Each dispute's anchor sits in its own
+    # sentence, because the score is taken sentence by sentence.
+    "gs08_three_family": Brief(
+        None,
+        "We act for Ayesha Begum in Hyderabad. Her husband, Salim Qureshi, pronounced "
+        "talaq on 2 August 2026, and she disputes that it was validly pronounced. She has "
+        "a maintenance claim against him; she has no income of her own. Their child is six "
+        "and lives with her, and Salim now wants custody. Please advise.", {
+            "the talaq": ("pronounced talaq",),
+            "maintenance": ("maintenance claim",),
+            "the child": ("child is six",),
+        }, ("Please advise",),
+        {"Ayesha Begum": "Rukhsana Bano", "Salim Qureshi": "Imtiaz Khan", "Salim": "Imtiaz"},
+        "GS-08 held out: three family disputes, one opponent, one kind"),
+    "gs09_five_postures": Brief(
+        None,
+        "My client Ramesh Goud runs a small workshop in Hyderabad. A cheque he drew for "
+        "Rs 4 lakh in favour of a supplier, Anand Traders, was dishonoured and the supplier "
+        "has filed a complaint against him. A fitter he dismissed in May 2026, Srinu, has "
+        "raised a dispute before the Labour Court. His landlord, Venkat Rao, has filed an "
+        "eviction petition against him for the workshop premises. Last week a customer, "
+        "Bhaskar, assaulted him at the workshop over a delayed repair. He also wants to "
+        "recover Rs 11 lakh that another customer, Lakshmi Enterprises, owes him for "
+        "completed work. Please tell me where he stands on each.", {
+            "the cheque complaint": ("cheque he drew",),
+            "the dismissal": ("fitter he dismissed",),
+            "the eviction": ("eviction petition",),
+            "the assault": ("assaulted him",),
+            "the recovery": ("recover Rs 11 lakh",),
+        }, ("tell me where he stands",),
+        {"Ramesh Goud": "Kiran Varma", "Anand Traders": "Sai Suppliers", "Srinu": "Raju",
+         "Venkat Rao": "Hari Prasad", "Bhaskar": "Mohan",
+         "Lakshmi Enterprises": "Sri Balaji Works"},
+        "GS-09 held out: one client in five disputes against five others, on both sides"),
+    "gs10_same_parties": Brief(
+        None,
+        "We act for K. Rachamma, the landlord of a shop in Secunderabad let to N. Mohan "
+        "Kumar. She has filed an eviction petition against him for wilful default in paying "
+        "rent since January 2026. Separately, she holds a money decree against the same "
+        "tenant from 2023 for earlier arrears, which has not been satisfied, and she wants "
+        "to execute it. Please advise on both.", {
+            "the eviction": ("eviction petition",),
+            "the decree": ("money decree",),
+        }, ("Please advise on both",),
+        {"K. Rachamma": "S. Lalitha", "N. Mohan Kumar": "P. Ravi Teja"},
+        "GS-10 held out: two disputes between the same landlord and tenant"),
+    "gs12_land_and_assault": Brief(
+        None,
+        "My client Narsimha's neighbour, Yadagiri, took over a strip of his land yesterday "
+        "and put up a fence on it. When Narsimha objected, Yadagiri beat him up badly and "
+        "injured his knee. What should we do?", {
+            "the land": ("took over a strip",),
+            "the assault": ("beat him up badly",),
+        }, ("What should we do",),
+        {"Narsimha": "Anjaiah", "Yadagiri": "Pochaiah"},
+        "GS-12 held out: a property wrong and an assault in one encounter"),
+    "gs13_two_cheques": Brief(
+        None,
+        "We act for Suresh Traders. A cheque for Rs 2 lakh from Prakash Rao bounced on "
+        "3 March 2026, and we sent the demand notice on 15 April 2026. Another cheque from "
+        "him, for Rs 1.5 lakh, was returned unpaid on 10 September 2026; no notice has been "
+        "sent on it yet. Can we still do something?", {
+            "the first cheque": ("bounced on 3 March",),
+            "the second cheque": ("Another cheque",),
+        }, ("Can we still do something",),
+        {"Suresh Traders": "Laxmi Agencies", "Prakash Rao": "Gopi Reddy"},
+        "GS-13 held out: two cheques from one drawer, each on its own dates"),
+    "gs16_two_trespasses": Brief(
+        None,
+        "We act for Mallesh, who owns a farm near Medak. In March 2024 his neighbour "
+        "Ramulu's men trespassed onto the farm and cut down six trees. Last week they "
+        "entered the farm again and damaged the borewell. He wants to lodge complaints "
+        "about both.", {
+            "March 2024": ("cut down six trees",),
+            "last week": ("damaged the borewell",),
+        }, (),
+        {"Mallesh": "Yellaiah", "Ramulu": "Balaiah"},
+        "GS-16 held out: two incidents on one farm by the same people"),
+    "gs14_one_debt": Brief(
+        None,
+        "We act for Srinivasa Agencies. They supplied goods to Durga Stores on invoices "
+        "dated June to August 2021, totalling Rs 6.4 lakh, and were never paid. The "
+        "invoices look time-barred. But on 12 February 2024 the proprietor of Durga Stores "
+        "wrote a letter acknowledging that Rs 6.4 lakh was due and asking for more time. "
+        "Can we still sue for the money?", {
+            "the debt": ("supplied goods", "acknowledging that Rs 6.4 lakh"),
+        }, ("Can we still sue",),
+        {"Srinivasa Agencies": "Venkateswara Traders", "Durga Stores": "Kanaka Stores"},
+        "GS-14 held out: ONE debt with an acknowledgment -- the control against splitting"),
 }
 
 ADDED = "Please keep each dispute separate and give me the deadline for each."
@@ -233,21 +323,12 @@ def _score(read, disputes: dict[str, tuple[str, ...]], asks: tuple[str, ...]) ->
         if where(phrase):
             reasons.append(f"the instruction {phrase!r} reached a dispute")
     passed = not reasons
-    said = bool(read.doubts or read.refused)
-    outcome = ("correct" if passed and not said else "correct, asked" if passed
-               else "wrong, said" if said else "wrong, silent")
-    return {"outcome": outcome, "reasons": reasons, "second": read.second,
-            "doubts": list(read.doubts), "found_when_refused": list(read.found),
+    outcome = ("correct" if passed else "wrong, said" if read.refused else "wrong, silent")
+    return {"outcome": outcome, "reasons": reasons, "found_when_refused": list(read.found),
             "disputes": [{"label": d.label, "words": list(d.spans),
-                          "own_source_units": list(d.unit_ids)} for d in read.described],
-            "shared": list(read.shared),
-            "shared_source_units": list(read.shared_unit_ids),
-            "instructions": list(read.instructions),
-            "instruction_source_units": list(read.instruction_unit_ids),
-            "unit_signatures": [
-                {"unit": unit.unit_id, "text": unit.text, "role": unit.role,
-                 "targets": [list(target) for target in unit.targets]}
-                for unit in read.unit_signatures]}
+                          "source_units": list(d.allocation_unit_ids)}
+                         for d in read.described],
+            "instructions": list(read.instructions)}
 
 
 def plan(briefs: dict[str, Brief], repeats: int) -> list[tuple[str, str, int]]:
@@ -268,6 +349,9 @@ def main(argv=None) -> int:
     ap.add_argument("--run", action="store_true", help="make the provider calls (paid)")
     ap.add_argument("--repeats", type=int, default=2, help="readings of each original")
     ap.add_argument("--max-usd", default="1", help="the owner's cap for this ledger")
+    ap.add_argument("--stop-at-usd", type=float, default=None,
+                    help="stop before a reading once the ledger has charged this much "
+                         "(the ledger's cap must also cover one call's worst-case reservation)")
     args = ap.parse_args(argv)
     briefs = _briefs()
     order = plan(briefs, args.repeats)
@@ -343,6 +427,9 @@ def main(argv=None) -> int:
         if (name, variant, repeat) in saved:
             rows.append(saved[(name, variant, repeat)])
             continue
+        if (not stopped and args.stop_at_usd is not None
+                and spend.status()["charged_usd"] + 0.01 > args.stop_at_usd):
+            stopped = f"the approved spend of USD {args.stop_at_usd} was reached"
         if stopped:
             rows.append({"brief": name, "variant": variant, "repeat": repeat,
                          "outcome": "NOT MEASURED", "reasons": [stopped]})
@@ -355,10 +442,7 @@ def main(argv=None) -> int:
             prompt = guided(prompt)
             got = adapter.structured(prompt, schema, Tier.ROUTINE, max_tokens=ceiling.for_read(
                 "dispute", prompt, echoes=True))
-            kind = ("repair" if "previous answer was refused" in prompt.user
-                    else "second" if any(marker in prompt.user for marker in
-                                         ("LAST PARAGRAPH FIRST", "LAST UNIT FIRST"))
-                    else "first")
+            kind = "repair" if "previous answer was refused" in prompt.user else "first"
             calls.append({"kind": kind, "tokens_in": got.usage.tokens_in,
                           "tokens_out": got.usage.tokens_out})
             why = refuse_partial(got.completion, doing="the dispute read")
@@ -388,7 +472,6 @@ def main(argv=None) -> int:
         save(rows)
         print(f"  {name} / {variant} #{repeat}: {score['outcome'].upper()}"
               + ("" if not score["reasons"] else f" -- {'; '.join(score['reasons'])}")
-              + (f" [doubt: {'; '.join(score['doubts'])}]" if score["doubts"] else "")
               + f"  ({len(calls)} calls, ${cost:.4f})", flush=True)
 
     tally = {}
@@ -401,8 +484,7 @@ def main(argv=None) -> int:
     out.write_text(json.dumps({
         "measured_at": measured_at.isoformat(timespec="seconds"),
         "model": MODEL, "reader_sha256": reader_hash,
-        "procedure": "dispute.separate (label, repair once, reversed "
-                                     "second reading, compare)",
+        "procedure": "dispute.separate (read, repair once)",
         "tally": tally, "readings": len(rows), "spend": status,
         "briefs": {n: {"sha256": hashlib.sha256(b.text.encode("utf8")).hexdigest(),
                        "shape": b.shape, "expected": {k: list(v) for k, v in b.disputes.items()},
@@ -410,6 +492,12 @@ def main(argv=None) -> int:
                    for n, b in briefs.items()},
         "rows": rows}, indent=2, ensure_ascii=False), encoding="utf8")
     print("Outcomes: " + ", ".join(f"{k} {v}" for k, v in sorted(tally.items())))
+    for label, held_out in (("tuning briefs", False), ("held-out golden briefs", True)):
+        part = {}
+        for row in rows:
+            if row["brief"].startswith("gs") is held_out:
+                part[row["outcome"]] = part.get(row["outcome"], 0) + 1
+        print(f"  {label}: " + ", ".join(f"{k} {v}" for k, v in sorted(part.items())))
     print(f"Spent (ledger, charged): USD {status['charged_usd']:.4f} of {status['maximum_usd']}")
     print(f"Evidence: {out}")
     return 0

@@ -46,7 +46,7 @@ from nm.legal_brain.common.quotable_contracts import Quotable
 from nm.legal_brain.understand import dispute
 from nm.legal_brain.understand.dispute import Described, interpret
 from nm.legal_brain.understand.threading import bind
-from tests.test_every_dispute_is_cleanly_identified import labelled
+from tests.test_every_dispute_is_cleanly_identified import listed
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 
 
@@ -136,15 +136,15 @@ SAID = "First, the wall came down. Second, the cheque bounced."
 def test_a_dispute_the_advocate_did_not_describe_is_not_counted():
     """KEPT FROM BK-27, and it matters more now not less.
 
-    The count is stated to the advocate. A label pointing at a sentence the
+    The count is stated to the advocate. A dispute pointing at a sentence the
     advocate did not write would put a number in front of them that nothing in
-    their own words supports -- so the reading is refused, and what it had found
-    before the unsupported label is kept to show them.
+    their own words supports -- so the reading is refused, and only the disputes
+    resting on the advocate's own sentences are kept to show them.
     """
-    data = labelled(SAID, [("", "the wall", "possession_of_property", ["First,"]),
-                           ("", "the cheque", "cheque", ["Second,"])])
-    data["sentences"].append({"unit": "S3", "role": "act", "about": [
-        {"other_side": 0, "thing": 1, "kind": "bodily_harm", "dispute": "new"}]})
+    data = listed(SAID, [("", "the wall", "possession_of_property", ["First,"]),
+                         ("", "the cheque", "cheque", ["Second,"])])
+    data["disputes"].append({"other_side": "", "contested": "the blow",
+                             "kind": "bodily_harm", "on_file": "new", "sentences": ["S3"]})
     read = interpret(Quotable(turn=SAID), data)
     assert read.refused and "not in the message" in read.refused
     assert read.found == ("the wall", "the cheque") and not read.described
@@ -153,17 +153,17 @@ def test_a_dispute_the_advocate_did_not_describe_is_not_counted():
 def test_the_guard_can_be_seen_to_pass_something():
     """POSITIVE CONTROL. A guard that dropped everything would satisfy the
     test above for the wrong reason -- S11."""
-    read = interpret(Quotable(turn=SAID), labelled(
+    read = interpret(Quotable(turn=SAID), listed(
         SAID, [("", "the wall", "possession_of_property", ["First,"]),
                ("", "the cheque", "cheque", ["Second,"])]))
     assert [d.label for d in read.described] == ["the wall", "the cheque"]
 
 
-def test_the_verdict_is_derived_from_the_labels_never_asked():
+def test_the_verdict_is_derived_from_where_the_disputes_sit_never_asked():
     """`verdict` was a separate answer, and a reading that listed new disputes
-    while saying the file merely continued contradicted itself. Where every
-    sentence sits decides it: any new dispute opens new work."""
-    read = interpret(Quotable(turn=SAID), labelled(
+    while saying the file merely continued contradicted itself. Any new dispute
+    opens new work."""
+    read = interpret(Quotable(turn=SAID), listed(
         SAID, [("", "the wall", "possession_of_property", ["First,"]),
                ("", "the cheque", "cheque", ["Second,"])]))
     assert read.opens and len(read.described) == 2
@@ -171,21 +171,20 @@ def test_the_verdict_is_derived_from_the_labels_never_asked():
 
 # ===== the schema names only the disputes this matter actually holds =======
 
-def test_no_label_may_name_a_dispute_that_is_not_on_this_matter():
+def test_no_answer_may_name_a_dispute_that_is_not_on_this_matter():
     """THE RULE: the model is never shown an ID it could offer wrongly.
 
-    `interpret` refuses a sentence placed on a dispute the matter does not
-    hold. Listing the permitted values in the schema means the answer cannot
-    be formed in the first place -- the guard and the contract agreeing rather
-    than the guard cleaning up after it. `new` and `cannot_tell` always belong.
+    `interpret` refuses a dispute placed on one the matter does not hold.
+    Listing the permitted values in the schema means the answer cannot be formed
+    in the first place. `new` and `cannot_tell` always belong.
     """
-    about = dispute.schema_for(Quotable(turn="x"), thread_ids=frozenset({"th_1", "th_2"})
-                               )["properties"]["sentences"]["items"]["properties"]["about"]
-    assert about["items"]["properties"]["dispute"]["enum"] == [
+    def on_file(**kw):
+        return dispute.schema_for(Quotable(turn="x"), **kw)["properties"]["disputes"][
+            "items"]["properties"]["on_file"]["enum"]
+
+    assert on_file(thread_ids=frozenset({"th_1", "th_2"})) == [
         "new", "cannot_tell", "th_1", "th_2"]
-    empty = dispute.schema_for(Quotable(turn="x"))["properties"]["sentences"]["items"]
-    assert empty["properties"]["about"]["items"]["properties"]["dispute"]["enum"] == [
-        "new", "cannot_tell"]
+    assert on_file() == ["new", "cannot_tell"]
 
 
 def test_an_ordinary_continuing_message_describes_nothing_and_continues():
@@ -196,5 +195,5 @@ def test_an_ordinary_continuing_message_describes_nothing_and_continues():
     reading with no dispute must continue, not refuse and not open.
     """
     said = "Please continue with the work."
-    read = interpret(Quotable(turn=said), labelled(said, [], instructions=["Please"]))
+    read = interpret(Quotable(turn=said), listed(said, [], instructions=["Please"]))
     assert read.continues and not read.described and not read.refused

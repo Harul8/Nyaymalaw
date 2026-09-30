@@ -437,12 +437,14 @@ def test_live_turn_updates_an_existing_item_without_an_extra_reply_read(tmp_path
     def reader(_):
         return json.dumps(
             {
-                "verdict": "continues",
-                "quoted": "",
+                "client": "",
                 "why": "Existing dispute",
                 "disputes": [
-                    {"quoted": quote, "label": t.label, "thread_id": t.id, "additional_quotes": []}
+                    {"other_side": "", "contested": t.label, "kind": "other",
+                     "on_file": t.id, "sentences": ["S1"]}
                 ],
+                "background": [],
+                "instructions": [],
                 "focus_thread_id": "",
                 "focus_quote": "",
                 "advance_quote": "",

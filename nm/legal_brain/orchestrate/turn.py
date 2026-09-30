@@ -1138,8 +1138,7 @@ class TurnEngine:
                          "this message reads as one dispute")
 
         split_note = None
-        if (bound.thread is not None and bound.counted
-                and (bound.looks_like > 1 or bound.doubts)):
+        if bound.thread is not None and bound.counted and bound.looks_like > 1:
             # THE DISPUTES, NUMBERED AND NAMED (LB-109): the advocate checks the
             # separation here, and corrects it in a sentence. Links are shown,
             # never acted on.
@@ -1154,28 +1153,14 @@ class TurnEngine:
                                  if mine == tid and other in number})
                 rows.append(f"({number[tid]}) {held.label}"
                             + (f" — linked to {', '.join(linked)}" if linked else ""))
-            # A DOUBT IS SAID, NEVER RESOLVED SILENTLY. This includes an
-            # unavailable second reading and a doubtful single-dispute read.
-            doubt = ("" if not bound.doubts else
-                     " I am not certain of this separation: " + "; ".join(bound.doubts)
-                     + (". Confirm the grouping before relying on the separate "
-                        "assessments; tell me if these should be joined, split "
-                        "or renamed."
-                        if bound.looks_like > 1 else
-                        ". Tell me if this should be split or renamed."))
-            qualifier = "provisionally " if bound.doubts else ""
-            listing = (f"I have {qualifier}separated these instructions into "
-                       f"{bound.looks_like} "
+            listing = (f"I have separated these instructions into {bound.looks_like} "
                        f"disputes: {'; '.join(rows)}. "
                        f"The current focus is {dispute(bound.thread.label)}. "
                        "If any of these should be split, joined or "
-                       "renamed, say so and I will correct it."
-                       if bound.looks_like > 1 else
-                       f"I have provisionally identified one dispute: "
-                       f"{dispute(bound.thread.label)}.")
+                       "renamed, say so and I will correct it.")
             split_note = (Element(
                 kind=ElementKind.GROUND,
-                text=listing + doubt,
+                text=listing,
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
 
         if bound.blocks:
@@ -2439,7 +2424,6 @@ class TurnEngine:
         # So the read runs whenever EITHER question is live, and is skipped
         # only when a number of record decides the binding on a matter that
         # already has threads. That is one extra call on a first turn.
-        read = dispute_reader.UNREAD
         read = self._read_dispute(matter, turn, metrics)
         if read.refused:
             # WHAT WAS FOUND IS SHOWN, NOT ACTED ON (LB-109). The advocate
@@ -2474,10 +2458,8 @@ class TurnEngine:
                      opens_new_dispute=opens, described=read.described,
                      source_accounts=((turn.turn_id, turn.message),
                                       *((f.provenance.turn, f.statement) for f in pending)))
-        # WHETHER ANYONE COUNTED, carried out of the only place that knows --
-        # and where two readings disagreed, what the other one did (LB-109).
-        bound = replace(bound, counted=read is not dispute_reader.UNREAD,
-                        doubts=read.doubts)
+        # WHETHER ANYONE COUNTED, carried out of the only place that knows.
+        bound = replace(bound, counted=read is not dispute_reader.UNREAD)
         if bound.state is not BindState.BOUND or bound.thread is None:
             return matter, bound
         if (read.advance or read.focus_thread_id) and not read.described:
@@ -3000,9 +2982,8 @@ class TurnEngine:
             calls.append(res)
             return res.data or {}
 
-        # THE PROCEDURE HAS ONE OWNER (LB-109): label every source unit, repair
-        # once, read again in reverse order, compare. A measurement of it calls
-        # the same function, so the two cannot drift.
+        # THE PROCEDURE HAS ONE OWNER (LB-109): read, repair once. A measurement
+        # of it calls the same function, so the two cannot drift.
         try:
             read = dispute_reader.separate(
                 read_once, quotable, thread_ids=frozenset(t.id for t in matter.threads))
@@ -3018,12 +2999,6 @@ class TurnEngine:
             return replace(dispute_reader.UNREAD, refused=(
                 "the incomplete inventory could not be repaired" if len(calls) > 0
                 else "the dispute inventory could not be read"))
-        if read.second.startswith(("could not run", "refused")):
-            metrics.violate("C4", f"second dispute reading {read.second}")
-        if read.doubts:
-            metrics.violate("C4", "dispute separation uncertainty: "
-                                  + "; ".join(read.doubts))
-
         if read.refused:
             metrics.violate("C4", f"dispute read refused: {read.refused}")
             return read

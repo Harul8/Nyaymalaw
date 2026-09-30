@@ -135,9 +135,6 @@ class BindResult:
     links: tuple[tuple[str, str, str], ...] = ()
     """Disputes of this message that are LINKED -- (dispute, other, how): the
     same opponent, the same events. Shown to the advocate; never a merge."""
-    doubts: tuple[str, ...] = ()
-    """Where a second reading separated the message differently. Said and
-    asked, never resolved silently."""
 
     @property
     def blocks(self) -> bool:
@@ -164,22 +161,16 @@ def _source_index(message: str, accounts: tuple[tuple[str, str], ...]
 
 def _allocated_sources(described, index: dict[str, SourceAllocation]
                        ) -> tuple[SourceAllocation, ...] | None:
-    """Resolve occurrence IDs; permit legacy text only when it is unique."""
+    """Resolve the dispute's sentence numbers -- never its words, which two
+    sentences can share."""
     ids = tuple(getattr(described, "allocation_unit_ids", ()) or ())
-    if ids:
-        if len(ids) != len(set(ids)) or any(unit_id not in index for unit_id in ids):
-            return None
-        sources = tuple(index[unit_id] for unit_id in ids)
-        if {source.text for source in sources} != set(described.spans):
-            return None
-        return sources
-    sources = []
-    for span in described.spans:
-        matches = [row for row in index.values() if row.text == span]
-        if len(matches) != 1:
-            return None
-        sources.append(matches[0])
-    return tuple(sources)
+    if (not ids or len(ids) != len(set(ids))
+            or any(unit_id not in index for unit_id in ids)):
+        return None
+    sources = tuple(index[unit_id] for unit_id in ids)
+    if {source.text for source in sources} != set(described.spans):
+        return None
+    return sources
 
 
 def identifiers_in(text: str) -> dict[str, str]:
@@ -240,18 +231,14 @@ def bind(matter: Matter, message: str, fact: Fact,
                                         "Which dispute should I work on?"))
         if (matter.threads and any(not d.thread_id for d in described)
                 and opens_new_dispute is not True):
-            # Legacy single-dispute reads may continue the sole record, but
-            # cannot spawn duplicates from a clarification.
-            if len(matter.threads) == 1 and opens_new_dispute is False and len(described) == 1:
-                described = (replace(described[0], thread_id=matter.threads[0].id),)
-            else:
-                proposed = "; ".join(d.label for d in described if not d.thread_id)
-                return BindResult(BindState.AMBIGUOUS, None, False,
-                                  "existing and new disputes were not distinguished",
-                                  question=(f"Should I add these as separate disputes: {proposed}? "
-                                            "Or do they belong to an existing dispute? "
-                                            "I have kept your instructions; those additions "
-                                            "have not been recorded as separate disputes yet."))
+            # A clarification must not spawn duplicates: ask.
+            proposed = "; ".join(d.label for d in described if not d.thread_id)
+            return BindResult(BindState.AMBIGUOUS, None, False,
+                              "existing and new disputes were not distinguished",
+                              question=(f"Should I add these as separate disputes: {proposed}? "
+                                        "Or do they belong to an existing dispute? "
+                                        "I have kept your instructions; those additions "
+                                        "have not been recorded as separate disputes yet."))
         made, allocations, source_allocations, order = {}, {}, {}, []
         for d in described:
             sources = _allocated_sources(d, source_index) if source_index is not None else ()
@@ -341,22 +328,13 @@ def bind(matter: Matter, message: str, fact: Fact,
             f"({', '.join(f'{k}={v}' for k, v in disclosed.items())}): opening a "
             f"new thread rather than attaching it to an existing one")
 
-    # 4. Nothing on the file yet -- ONE THREAD PER DISPUTE DESCRIBED.
-    #
-    # This returned exactly one thread however many disputes the message
-    # carried, and the engine did not even run the read, on the reasoning
-    # that with no thread yet there is nothing to confuse it with. There
-    # is: the disputes inside the message, with each other. A brief
-    # opening `first ... second ... third ...` is how a file is handed
-    # over, and it produced one thread with one posture across all three.
+    # From here no dispute list was read: every read dispute was placed above.
+
+    # 4. Nothing on the file yet: the first thread.
     if not matter.threads:
-        made = _per_dispute(message, described, disclosed)
         return BindResult(
-            BindState.BOUND, made[0], True,
-            ("the first thread on this matter" if len(made) == 1 else
-             f"this message appears to describe {len(described)} disputes; "
-             f"it is on one thread until you say otherwise"),
-            looks_like=len(described))
+            BindState.BOUND, _with_identifiers(Thread.create(label=_label(message)), disclosed),
+            True, "the first thread on this matter")
 
     # 5. ONE OPEN THREAD AND NOTHING DECISIVE. Not automatically a
     #    continuation -- that was the defect. `opens_new_dispute` is read
@@ -366,20 +344,12 @@ def bind(matter: Matter, message: str, fact: Fact,
             # STATED, not silent. `created=True` puts it on the board where
             # the advocate can see the split and say if it is wrong -- and
             # a wrong split is the recoverable direction.
-            # THE SAME COUNT APPLIES HERE. A later message can open two
-            # disputes as easily as the first one can, and splitting only
-            # the first would leave the second welded to it -- the very
-            # merge this branch exists to avoid.
-            made = _per_dispute(message, described, disclosed)
             return BindResult(
-                BindState.BOUND, made[0], True,
-                ("this describes a different dispute from the one on the "
-                 "file, so it opens its own thread rather than inheriting "
-                 "that thread's posture and limitation" if len(made) == 1
-                 else f"this appears to describe {len(described)} disputes, "
-                      f"none of them the one on the file; it opens one "
-                      f"thread until you say otherwise"),
-                looks_like=len(described))
+                BindState.BOUND,
+                _with_identifiers(Thread.create(label=_label(message)), disclosed), True,
+                "this describes a different dispute from the one on the file, so it "
+                "opens its own thread rather than inheriting that thread's posture "
+                "and limitation")
         if opens_new_dispute is False:
             return BindResult(BindState.BOUND, matter.threads[0], False,
                               "the only thread on this matter, continued")
@@ -407,30 +377,6 @@ def bind(matter: Matter, message: str, fact: Fact,
             "You can also select the dispute on the board. Your instructions are saved."))
 
 
-
-def _per_dispute(message: str, described: tuple,
-                 disclosed: dict[str, str]) -> list[Thread]:
-    """ONE thread, whatever the count says. The count is DISCLOSED.
-
-    This used to return one thread per dispute the read described, and the
-    read is not good enough to act on: 3/6, 2/6, 2/6 across six briefs,
-    unstable on identical input, and blind to a four-dispute enumeration.
-
-    `threading.py`\'s asymmetry justified splitting on the ground that a
-    wrong merge inverts the advice SILENTLY. It is not silent now -- the
-    engine states the count and invites the advocate to separate the file
-    -- and a wrong split costs more than the docstring assumed: three
-    threads, three posture gates, and a cross-file pass arguing across
-    fragments of one transaction.
-
-    THE LABEL STILL COMES FROM THE READ where there is one, because a
-    thread called after the first dispute is better than one called after
-    the opening words of the brief -- which is how a three-dispute file
-    came to be filed under `My client is Ravi Kumar, a retired bank
-    employee`.
-    """
-    label = _dispute_label(described[0]) if described else _label(message)
-    return [_with_identifiers(Thread.create(label=label), disclosed)]
 
 def _dispute_label(d) -> str:
     """A file-cover name for one dispute.
