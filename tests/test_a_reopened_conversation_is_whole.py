@@ -12,7 +12,7 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from nm.open_matter.transcripts_api import project
 from nm.work_the_file.matter_contracts import Matter, MatterId
 from tests.test_turn_contract import build

@@ -37,10 +37,10 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
-from nm.legal_brain.reason import issue_contracts as issue_domain
-from nm.legal_brain.reason.issue_contracts import Issue, IssueKind
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.reason import issue_contracts as issue_domain
+from nm.Archives.legal_brain.reason.issue_contracts import Issue, IssueKind
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore
@@ -122,7 +122,7 @@ def test_an_issue_survives_a_read_that_forgets_it(tmp_path):
 
 
 def test_they_come_back_from_the_store_typed(tmp_path):
-    """`Thread.issues` is untyped because `nm.legal_brain.reason.issue_contracts` imports
+    """`Thread.issues` is untyped because `nm.Archives.legal_brain.reason.issue_contracts` imports
     `nm.work_the_file.matter_contracts`, so the store returns plain dicts. Left implicit, the
     next turn would merge dicts against Issues, match nothing, and every issue
     would look new every turn — this defect arriving through its own repair.
@@ -157,7 +157,7 @@ def test_the_same_question_asked_twice_is_one_issue():
 def test_the_standing_issue_wins_a_match():
     """It carries a disposition a fresh read knows nothing about. Overwriting
     it would be the deletion again, wearing an update's clothes."""
-    from nm.legal_brain.reason.issue_contracts import Disposition, DispositionState
+    from nm.Archives.legal_brain.reason.issue_contracts import Disposition, DispositionState
 
     standing = replace(
         _issue("Was notice served?"),
@@ -197,7 +197,7 @@ def test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept():
 def test_the_read_is_shown_what_is_already_on_the_thread():
     """Without this the read cannot restate anything — it does not know what
     is there, so every phrasing is a new issue."""
-    from nm.legal_brain.reason.issues import build_prompt
+    from nm.Archives.legal_brain.reason.issues import build_prompt
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
@@ -229,14 +229,14 @@ def test_a_restated_question_does_not_become_a_second_issue():
     any similarity test — which is why NOTHING HERE COMPARES SENTENCES. The
     read is shown the thread and names the id.
     """
-    from nm.legal_brain.reason.issues import read
+    from nm.Archives.legal_brain.reason.issues import read
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
                       proof="the account", id="iss_aaa"),)
     said = {"issues": [{"statement": "Is the claim time-barred?",
                         "kind": "threshold", "runs_against": "moving",
-                        "quoted": "the account", "restates": "iss_aaa"}]}
+                        "sentences": ["S1"], "restates": "iss_aaa"}]}
     spotted = read(said, "t", Quotable(file="the account"), standing).issues
     assert [i.id for i in spotted] == ["iss_aaa"], (
         "the read named an id and it was not carried, so the merge has "
@@ -249,14 +249,14 @@ def test_an_id_the_thread_does_not_hold_is_dropped():
     anyway; one pointing at ANOTHER thread's issue would merge two threads'
     work. Both are the silent direction, so the id is checked against what
     this thread actually holds."""
-    from nm.legal_brain.reason.issues import read
+    from nm.Archives.legal_brain.reason.issues import read
 
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
                       proof="the account", id="iss_aaa"),)
     said = {"issues": [{"statement": "A genuinely different question?",
                         "kind": "threshold", "runs_against": "moving",
-                        "quoted": "the account", "restates": "iss_elsewhere"}]}
+                        "sentences": ["S1"], "restates": "iss_elsewhere"}]}
     spotted = read(said, "t", Quotable(file="the account"), standing).issues
     assert spotted and spotted[0].id != "iss_elsewhere"
     assert len(issue_domain.merge(standing, spotted)) == 2

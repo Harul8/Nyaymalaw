@@ -1,6 +1,6 @@
 """The propose_legal_premise door; exact proposal checks stay in the native owner."""
 
-from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
+from nm.Archives.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.private_file_tools import _CONTROLS, PREMISE, SCHEMAS, VERSION

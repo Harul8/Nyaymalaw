@@ -34,7 +34,7 @@ import pytest
 
 from nm.advise import decision_contracts as decision_domain
 from nm.advise.decision_contracts import DecidedBy, Decision
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore
@@ -223,7 +223,7 @@ def test_the_alternatives_are_read_out_of_the_sentence_the_adapter_writes():
     contract the adapter already keeps, and a second channel for one fact is
     the shape this build refuses. If the wording changes this returns nothing
     — worse than a wrong list, and visibly worse."""
-    from nm.legal_brain.orchestrate.turn import _arguable
+    from nm.Archives.legal_brain.orchestrate.turn import _arguable
 
     assert _arguable("… routes to X. Also arguable: Article 65; Article 58") \
         == ("Article 65", "Article 58")

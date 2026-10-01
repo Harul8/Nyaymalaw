@@ -9,11 +9,11 @@ from unittest.mock import Mock
 import pytest
 
 from nm.advise.decision_contracts import DecidedBy, Decision, from_stored
-from nm.legal_brain.reason import premise
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason, digest
-from nm.legal_brain.procedure.reviewed_limitation_selection import selection_inventory
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.reason import premise
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason, digest
+from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import selection_inventory
+from nm.Archives.legal_brain.orchestrate.tools import (
     Boundary,
     PreparedToolResult,
     ToolContext,

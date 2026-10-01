@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.verify import consistency
-from nm.legal_brain.orchestrate.turn import TurnEngine
+from nm.Archives.legal_brain.verify import consistency
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_port import Completion, ModelError, ModelResult, Usage
 

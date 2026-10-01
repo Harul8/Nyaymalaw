@@ -9,20 +9,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.communicate.register_contracts import PEER
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
-from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.communicate.register_contracts import PEER
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
+from nm.Archives.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.Archives.legal_brain.orchestrate.tools import (
     Boundary,
     PreparedToolResult,
     ToolContext,
     ToolRefused,
     ToolRegistry,
 )
-from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
-from nm.legal_brain.understand import brain_context
-from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
+from nm.Archives.legal_brain.reason import requirements
+from nm.Archives.legal_brain.reason.requirements_contracts import Force, Requirement, State, checklist, key
+from nm.Archives.legal_brain.understand import brain_context
+from nm.Archives.legal_brain.understand.brain_context import ContextRefused, ContextSession, assemble_brief
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.file_mutation import MutationRefused, prepare_requirement_answer
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance, Thread

@@ -6,11 +6,11 @@ from dataclasses import replace
 import pytest
 
 from nm.advise.answer_contracts import Element, ElementKind
-from nm.legal_brain.understand import briefing, posture
-from nm.legal_brain.understand.dispute import Described, interpret
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.understand.threading import _with_identifiers, bind
-from nm.legal_brain.orchestrate.turn import ScreenResult, TurnInput, _with_screens
+from nm.Archives.legal_brain.understand import briefing, posture
+from nm.Archives.legal_brain.understand.dispute import Described, interpret
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.understand.threading import _with_identifiers, bind
+from nm.Archives.legal_brain.orchestrate.turn import ScreenResult, TurnInput, _with_screens
 from nm.open_matter.screens import Screen, ScreenKind, ScreenState
 from nm.shared.model_scripted import SCRIPTED_READS
 from nm.work_the_file import dispute_agenda
@@ -52,7 +52,7 @@ def test_empty_and_unassessed_files_never_finish():
 
 def test_identical_current_and_pending_sentences_keep_their_own_turns(tmp_path):
     """Binding by sentence text must not relabel an older account as this turn."""
-    from nm.legal_brain.understand.dispute import Dispute, DisputeRead
+    from nm.Archives.legal_brain.understand.dispute import Dispute, DisputeRead
     from nm.shared.metrics_contracts import TurnMetrics
 
     sentence = "The gate was locked."
@@ -129,7 +129,7 @@ def test_a_retrieved_trigger_cannot_certify_a_model_selected_event(tmp_path, eve
     from datetime import date
     from types import SimpleNamespace
 
-    from nm.legal_brain.reason import premise
+    from nm.Archives.legal_brain.reason import premise
 
     engine, _ = _engine(tmp_path, _Recorder())
     dated = [replace(fact(f"Recorded event {i}"), date=date(2020 + i, 2, 3))

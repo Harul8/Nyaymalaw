@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind, StopReason
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind, StopReason
 from nm.shared.model_port import Prompt, ProviderUnavailable, ToolCall
 from nm.work_the_file.original_instruction import (
     InstructionRefused,

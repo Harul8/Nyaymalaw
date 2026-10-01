@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     PreparedToolResult,

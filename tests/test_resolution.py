@@ -18,10 +18,10 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.reason.cause import interpret
-from nm.legal_brain.retrieve.corpus_evidence import EXAMINED_CEILING
-from nm.legal_brain.retrieve.evidence_port import (
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.reason.cause import interpret
+from nm.Archives.legal_brain.retrieve.corpus_evidence import EXAMINED_CEILING
+from nm.Archives.legal_brain.retrieve.evidence_port import (
     Binding,
     EvidenceNeed,
     EvidencePort,
@@ -31,7 +31,7 @@ from nm.legal_brain.retrieve.evidence_port import (
     SourceKind,
     Treatment,
 )
-from nm.legal_brain.retrieve.resolution_sources import (
+from nm.Archives.legal_brain.retrieve.resolution_sources import (
     CODE_TITLES,
     CORRESPONDS,
     LIMITATION_ARTICLE,
@@ -186,41 +186,39 @@ def test_every_edge_names_what_it_was_curated_from():
 
 @pytest.mark.eval_id("E-051")
 def test_the_cause_read_refuses_a_span_the_advocate_never_wrote():
-    """The posture reader's guard, applied to routing.
+    """The posture reader's guard, applied to routing -- by sentence NUMBER.
 
     The model is shown this product's own questions alongside the advocate's
     words. A guard checking the span against everything the model SAW let the
     extractor quote us back to ourselves and settle a posture nobody stated;
     the same hole here would settle a cause nobody described and send an exact
-    lookup into an Article about a different suit.
+    lookup into an Article about a different suit. The read now names the
+    advocate's sentences by number (LB-76 change 2), and a number that is not
+    one of theirs settles nothing.
     """
     said = "the goods were supplied against invoices and nothing was paid"
 
     good = interpret(Quotable(turn=said), {"cause": "goods_sold_price",
-                            "quoted": "the goods were supplied", "why": "x"})
+                            "sentences": ["S1"], "why": "x"})
     assert good.cause is CauseOfAction.GOODS_SOLD_PRICE
-    assert good.refused is None
+    assert good.refused is None and good.quoted == said
 
-    invented = interpret(Quotable(turn=said), {"cause": "money_lent",
-                                "quoted": "we lent him the money", "why": "x"})
-    assert invented.cause is CauseOfAction.NOT_ESTABLISHED
-    assert "nothing the advocate wrote" in (invented.refused or "")
+    for invented in (["S2"], [], ["we lent him the money"]):
+        read = interpret(Quotable(turn=said), {"cause": "money_lent",
+                                               "sentences": invented, "why": "x"})
+        assert read.cause is CauseOfAction.NOT_ESTABLISHED
+        assert "without naming any of the advocate's own sentences" in (read.refused or "")
 
     # OUT OF VOCABULARY IS BLANKED, never accepted (B-042, B-055).
-    out = interpret(Quotable(turn=said), {"cause": "wibble", "quoted": "the goods", "why": "x"})
+    out = interpret(Quotable(turn=said), {"cause": "wibble", "sentences": ["S1"], "why": "x"})
     assert out.cause is CauseOfAction.NOT_ESTABLISHED
     assert "closed" in (out.refused or "")
 
     # `cannot_tell` IS AN ORDINARY ANSWER and not a refusal: nothing was
     # established, nothing was declined, and the two are different facts.
-    unsure = interpret(Quotable(turn=said), {"cause": "cannot_tell", "quoted": "", "why": "x"})
+    unsure = interpret(Quotable(turn=said), {"cause": "cannot_tell", "sentences": [], "why": "x"})
     assert unsure.cause is CauseOfAction.NOT_ESTABLISHED
     assert unsure.refused is None
-
-    # A CAUSE WITH NOTHING QUOTED settles nothing.
-    bare = interpret(Quotable(turn=said), {"cause": "money_lent", "quoted": "", "why": "x"})
-    assert bare.cause is CauseOfAction.NOT_ESTABLISHED
-    assert "nothing quoted" in (bare.refused or "")
 
 
 # ================ D3B / E-054 — across the 2024 codes =======================
@@ -297,8 +295,8 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
     scanned the source for `limit 40` and failed on the comment explaining the
     fix, which is what a source scan is worth.
     """
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
     from tests.test_retrieval_trust_boundaries import index
 
     body = ("the doctrine of adverse possession requires animus possidendi "
@@ -332,8 +330,8 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
 def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
     """THE POSITIVE CONTROL. A disclosure that fires on every answer teaches
     the advocate to ignore it, which costs more than it buys."""
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
     from tests.test_retrieval_trust_boundaries import index
 
     body = ("the doctrine of adverse possession requires animus possidendi "
@@ -371,8 +369,8 @@ def test_the_turn_routes_a_determinate_question_without_a_named_provision(
     So this drives the REAL adapter — manifest, chunk store, routing — with a
     question that names no provision at all.
     """
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(
         "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
@@ -404,8 +402,8 @@ def test_a_provision_the_advocate_named_outranks_the_graph(tmp_path):
     do, and the mirror of the defect where keyword scoring outvoted a named
     Act on `possession`.
     """
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(
         "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
@@ -428,7 +426,7 @@ def test_the_engine_sets_the_cause_so_the_graph_can_be_consulted(tmp_path):
     fills it on a served turn, because every other test here would pass with
     the wiring absent.
     """
-    from nm.legal_brain.orchestrate.turn import TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     seen: list[str | None] = []

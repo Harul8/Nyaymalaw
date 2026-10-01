@@ -11,10 +11,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode
-from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
-from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode
+from nm.Archives.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.Archives.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.Archives.legal_brain.orchestrate.tools import (
     Boundary,
     ToolContext,
     ToolRefused,
@@ -162,7 +162,7 @@ def test_every_separated_door_still_crosses_the_registry_before_any_native_port(
 
 
 def test_the_three_factories_do_not_retain_duplicate_separated_handlers():
-    from nm.legal_brain.orchestrate import tool_catalogue, tool_discovery, tools
+    from nm.Archives.legal_brain.orchestrate import tool_catalogue, tool_discovery, tools
 
     rows, _ = actual_rows()
     separated_handlers = {row.handler.__name__ for row in rows}
@@ -218,7 +218,7 @@ def test_complete_actual_application_and_optional_population_have_physical_owned
 
 @pytest.mark.parametrize("name", ["finish_research", "finish_opposition"])
 def test_child_finish_definition_and_actual_dispatch_stay_in_child_only_owned_file(name):
-    from nm.legal_brain.orchestrate import nested_research
+    from nm.Archives.legal_brain.orchestrate import nested_research
 
     declared = [owner for owner in load_layout()["modules"] if owner.endswith(".tool_" + name)]
     assert len(declared) == 1

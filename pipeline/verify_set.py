@@ -11,7 +11,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from nm.legal_brain.retrieve.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
+from nm.Archives.legal_brain.retrieve.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
 
 CHUNKS = "legal_database/vector_store/chunks.db"
 ATTRIBUTABLE = ATTRIBUTABLE_LABELS

@@ -19,7 +19,7 @@ without being established.
 
 So relief becomes a FIRST-CLASS FILE OBJECT with the discipline every other
 computed fact here carries: three states, an attributed basis, and a claim the
-served next step is checked against (`nm.legal_brain.verify.consistency`).
+served next step is checked against (`nm.Archives.legal_brain.verify.consistency`).
 
 THE FIVE COORDINATES, AND WHY PROPORTIONALITY IS NOT ONE OF THE FOUR
 ---------------------------------------------------------------------
@@ -65,8 +65,8 @@ import hashlib
 from dataclasses import dataclass
 from enum import Enum
 
-from nm.legal_brain.procedure.interim_relief_port import InterimRelief
-from nm.legal_brain.reason.premise import SUFFICIENT, Basis
+from nm.Archives.legal_brain.procedure.interim_relief_port import InterimRelief
+from nm.Archives.legal_brain.reason.premise import SUFFICIENT, Basis
 from nm.shared.spoken_contracts import named
 from nm.shared.text_contracts import blank, refuses_blank_text
 from nm.shared.traceability_contracts import implements
@@ -248,7 +248,7 @@ class Relief:
 
     IT IS NOT A SIXTH COORDINATE and it is deliberately not read by
     `delivers`. Whether an interim injunction will be granted is decided on
-    its own test (`nm.legal_brain.procedure.interim_relief_sources`), not on whether the FINAL
+    its own test (`nm.Archives.legal_brain.procedure.interim_relief_sources`), not on whether the FINAL
     relief is available, valuable, timely and enforceable -- and the reverse
     is equally false. Folding it into the five would make each answer the
     other's question, which is the defect LB-123 exists to refuse.
@@ -453,7 +453,7 @@ def consistency_claims(position: ReliefPosition | None,
                        ) -> tuple[tuple[str, str], ...]:
     """Relief as (id, sentence) facts the served step must not contradict.
 
-    ONE OWNER FEEDS `nm.legal_brain.verify.consistency.claims_for`. Relief lives in `core`
+    ONE OWNER FEEDS `nm.Archives.legal_brain.verify.consistency.claims_for`. Relief lives in `core`
     and `consistency` lives in `core`; this returns raw pairs rather than
     `Claim` objects so `consistency` need not be imported here, which would be
     the cycle. The wording carries the RESERVATION the step is allowed to make

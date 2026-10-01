@@ -15,10 +15,8 @@
 // implements exactly what `renderTurn` touches. If it ever needs more than
 // that, the honest move is a real DOM, not a bigger stub.
 //
-// app.js binds listeners at load, so every id it reaches for must exist. They
-// are created on demand rather than listed, because a list would need
-// updating every time the page grows an element and would fail as "missing
-// stub" rather than as anything meaningful.
+// Evaluate the actual renderer and its text helpers, without booting the app's
+// unrelated session, preferences and network controllers.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -26,13 +24,18 @@ import { dirname, join } from "node:path";
 import vm from "node:vm";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const app = readFileSync(join(here, "..", "..", "frontend", "app.js"), "utf8");
-// Renderer-only harness: real browser tests own application boot and sessions.
-// Refuse a changed entry point rather than silently evaluating no population.
-if ((app.match(/^boot\(\);$/gm) || []).length !== 1) {
-  throw new Error("expected one application boot entry point");
-}
-const rendererSource = app.replace(/^boot\(\);$/m, "");
+const app = readFileSync(join(here, "..", "..", "nm", "app", "app.js"), "utf8");
+const between = (start, end) => {
+  const a = app.indexOf(start);
+  const b = app.indexOf(end, a + start.length);
+  if (a < 0 || b < 0 || b <= a) throw new Error(`renderer boundary moved: ${start}`);
+  return app.slice(a, b);
+};
+const rendererSource = between("function appendReplyBody(", "const REPLY_ICONS")
+  + "\n" + between("async function restoreConversation(", "function restoredTurn(")
+  + "\n" + between("function restoredTurn(turn) {", "function renderBriefing(")
+  + "\n" + between("function renderTurn(entry) {", "function showConversationFromStart()")
+  + "\n" + between("function showConversationFromStart()", "function repaint()");
 
 // ---------------------------------------------------------- the stub DOM ---
 function el(tag) {
@@ -101,6 +104,15 @@ const context = {
   // tree-only harness deliberately does not simulate layout or invoke its
   // callback; the three real-browser widths measure that separate boundary.
   ResizeObserver: class { observe() {} },
+  state: { matterId: null, ended: false, advocate: null },
+  renderOpeningNote: () => el("div"),
+  renderBoardNote: () => null,
+  stateBlock: (_kind, message) => Object.assign(el("div"), { textContent: message }),
+  replyFooter: (_entry, copyText) => Object.assign(el("div"), { copyText }),
+  openSourceReader() {},
+  $: id => document.getElementById(id),
+  withOpeningNotes: turns => turns,
+  reconcileIntent() {},
 };
 context.globalThis = context;
 vm.createContext(context);
@@ -255,6 +267,75 @@ if (!inputOnly.textContent.includes('Your brief is saved.')
     || !inputOnly.textContent.includes('no new conclusions were saved')
     || inputOnly.textContent.includes('brief was NOT saved')) {
   fails.push('input-only persistence is presented as either a full save or a lost brief');
+}
+
+// A source label embedded in prose is linked in place and copied once. History
+// uses the same restored-turn projection and renderer as the open conversation.
+const label = 'Specific Relief Act s.6';
+const locator = 'synthetic::sra::6::';
+const prose = `**Eastern gate**: The passage is ${label}.`;
+const start = prose.indexOf(label);
+const source = { label, locator, text: 'Synthetic retrieved passage.' };
+const citedElement = mk('ground', 'Synthetic retrieved passage.',
+  { refs: [locator], source });
+const composed = [{ text: prose, passage: null, carries: null,
+  cites: [[start, start + label.length, 0]] }];
+const saved = { committed: true, release_state: 'released', message: 'Open the eastern gate.',
+  matter_id: 'matter_a', turn_id: 'turn_a', elements: [citedElement], composed,
+  at: '2026-09-30T10:00:00Z' };
+const flat = node => [node, ...node.children.flatMap(flat)];
+for (const entry of [{ brief: saved.message, answer: saved }, context.restoredTurn(saved)]) {
+  const rendered = context.renderTurn(entry);
+  const body = flat(rendered).find(node => node.className === 'body');
+  const links = flat(body).filter(node => node.className === 'citation-link');
+  const copy = flat(rendered).find(node => typeof node.copyText === 'function')?.copyText();
+  if (body?.textContent !== prose.replaceAll('**', '') || links.length !== 1
+      || links[0]?.textContent !== label) {
+    fails.push('the saved inline citation was not rendered in the reply as served');
+  }
+  if (!copy?.includes(label) || copy.includes(locator) || copy.includes('**')) {
+    fails.push('the copied reply differs from its visible inline citation');
+  }
+}
+const boldProse = `The passage is **${label}**.`;
+const boldStart = boldProse.indexOf(label);
+const boldEntry = { brief: saved.message, answer: { ...saved, composed: [{
+  text: boldProse, passage: null, carries: null,
+  cites: [[boldStart, boldStart + label.length, 0]],
+}] } };
+const boldReply = context.renderTurn(boldEntry);
+const strong = flat(boldReply).find(node => node.tagName === 'STRONG');
+if (strong?.textContent !== label || !flat(strong).some(node => node.className === 'citation-link')
+    || boldReply.textContent.includes('**')) {
+  fails.push('a citation inside bold prose broke the saved text or its link');
+}
+const damaged = { brief: saved.message, answer: { ...saved, composed: [{
+  text: prose, passage: null, carries: null, cites: [[-1, 500, 0], null],
+}] } };
+const damagedReply = context.renderTurn(damaged);
+const damagedBody = flat(damagedReply).find(node => node.className === 'body');
+if (damagedBody?.textContent !== prose.replaceAll('**', '')
+    || flat(damagedBody).some(node => node.className === 'citation-link')) {
+  fails.push('bad saved citation metadata changed or hid the reply words');
+}
+
+// Reopening a saved matter restores the whole transcript in record order and
+// starts at the first turn, even when the conversation is taller than its pane.
+const thread = document.getElementById('thread');
+thread.scrollHeight = 900; thread.clientHeight = 200; thread.scrollTop = 700;
+context.state.railGeneration = 1;
+context.repaint = () => thread.replaceChildren(...context.state.turns.map(context.renderTurn));
+const second = { ...saved, message: 'The next instruction.', turn_id: 'turn_b',
+  composed: [{ text: 'The second reply.', passage: null, carries: null, cites: [] }] };
+context.api = async path => {
+  if (path !== '/api/matters/matter_a/transcript') throw Error(`wrong transcript: ${path}`);
+  return { turns: [saved, second], opening_changes: [] };
+};
+await context.restoreConversation('matter_a', 1);
+const bubbles = flat(thread).filter(node => node.className === 'brief').map(node => node.textContent);
+if (JSON.stringify(bubbles) !== JSON.stringify([saved.message, second.message])
+    || thread.scrollTop !== 0 || document.getElementById('jump-latest').hidden) {
+  fails.push('reopening the matter did not show its saved conversation from first to last');
 }
 
 if (fails.length) {

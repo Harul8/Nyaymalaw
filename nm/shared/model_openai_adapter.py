@@ -349,6 +349,9 @@ class OpenAIModelAdapter:
             # for validating the actual returned bytes. The port owns this
             # check so every adapter applies the same contract.
             try:
+                # A quote-bearing enum is open only on the provider wire because
+                # that grammar cannot compile it. The returned value still has
+                # to meet the original closed contract here, for every read.
                 require_schema(data, schema)
             except SchemaViolation as exc:
                 fail(exc)

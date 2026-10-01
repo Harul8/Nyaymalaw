@@ -28,7 +28,7 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopIdentity,
     LoopMode,
@@ -166,7 +166,7 @@ def _ledger() -> dict:
 
 
 def _research() -> dict:
-    from nm.legal_brain.retrieve import research as rs
+    from nm.Archives.legal_brain.retrieve import research as rs
 
     r = rs.Research(id="res_1", objective="whether the marker was blue",
                    issue="colour at delivery", created_at="2026-09-12",
@@ -222,7 +222,7 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     # THE RESEARCH RECORD, rebuilt through its own reader: rounds, the
     # adverse search's state and the reliance's five verdicts all survive.
     assert reloaded.research == original.research
-    from nm.legal_brain.retrieve.research import all_from_stored
+    from nm.Archives.legal_brain.retrieve.research import all_from_stored
     (back,) = all_from_stored(reloaded.research)
     assert back.rounds == 1 and back.adverse[0].state.value == "ran"
     assert back.reliances[0].verified_citation is True
@@ -403,7 +403,7 @@ def test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn(
     """
     from datetime import date as _date
 
-    from nm.legal_brain.orchestrate.turn import TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, store = build(tmp_path)

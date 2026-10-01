@@ -6,8 +6,8 @@ from unittest.mock import Mock
 import pytest
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.legal_brain.evaluate.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
-from nm.legal_brain.verify.verifier import VERIFICATION_SCHEMA
+from nm.Archives.legal_brain.evaluate.evaluation_models import AUTHOR, VERIFIER, VerifierOnly, bounded_pair
+from nm.Archives.legal_brain.verify.verifier import VERIFICATION_SCHEMA
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission, ModelPermissionRefused
 from nm.shared.model_config import load
 from nm.shared.model_port import ConfigurationError, Prompt, Tier
@@ -83,10 +83,10 @@ def test_actual_owned_verification_uses_a_bounded_read_not_an_extra_author_call(
 
 
 def test_current_composed_independent_reads_fit_the_verifier_only_capability():
-    from nm.legal_brain.communicate.working_explanation import WORKING_RATIONALE_SCHEMA
-    from nm.legal_brain.verify.consistency import CONSISTENCY_SCHEMA
-    from nm.legal_brain.verify.duty import DUTY_SCHEMA
-    from nm.legal_brain.verify.working_scope import (
+    from nm.Archives.legal_brain.communicate.working_explanation import WORKING_RATIONALE_SCHEMA
+    from nm.Archives.legal_brain.verify.consistency import CONSISTENCY_SCHEMA
+    from nm.Archives.legal_brain.verify.duty import DUTY_SCHEMA
+    from nm.Archives.legal_brain.verify.working_scope import (
         REQUEST_DEMAND_SCHEMA,
         WORKING_SCOPE_SCHEMA,
     )
@@ -107,7 +107,7 @@ def test_current_composed_independent_reads_fit_the_verifier_only_capability():
 
 
 def test_the_larger_scope_cap_does_not_expand_claim_review_or_admit_unowned_schemas():
-    from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
+    from nm.Archives.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
 
     inner = Mock()
     model = VerifierOnly(inner)

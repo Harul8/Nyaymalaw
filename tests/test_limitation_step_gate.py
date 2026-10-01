@@ -6,9 +6,9 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.orchestrate.turn import TurnEngine
-from nm.legal_brain.procedure import limitation
-from nm.legal_brain.verify import step_dependency
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
+from nm.Archives.legal_brain.procedure import limitation
+from nm.Archives.legal_brain.verify import step_dependency
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_port import ModelError
 from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
@@ -130,11 +130,13 @@ def test_dependency_schema_binds_the_whole_candidate_without_mutating_the_base()
     schema = step_dependency.schema_for(step)
     # A WELL-FORMED ANSWER UNDER THE CURRENT CONTRACT, which since 23 September
     # 2026 carries the two halves the verdict is derived from.
-    data = {"dependence": "independent", "step": step, "reason": "No legal outcome asserted.",
+    data = {"dependence": "independent", "step": step_dependency.step_id(step),
+            "reason": "No legal outcome asserted.",
             "right_if_in_time": "yes", "right_if_out_of_time": "yes"}
     validate(data, schema)
+    assert step_dependency.assess(data, step, "file").dependence         is step_dependency.Dependence.INDEPENDENT
     with pytest.raises(ValidationError):
-        validate({**data, "step": "Provisional view"}, schema)
+        validate({**data, "step": step_dependency.step_id("Provisional view")}, schema)
     assert "enum" not in step_dependency.SCHEMA["properties"]["step"]
     assert step_dependency.assess({**data, "step": "Provisional view"}, step, "file").dependence \
         is step_dependency.Dependence.UNKNOWN
@@ -161,3 +163,18 @@ def test_unavailable_classifier_does_not_release_a_directive(tmp_path, monkeypat
         engine._limitation_step("Proceed", None, TurnMetrics(turn_id="test-turn"), "t", "").gate
         == "G-LIMITATION"
     )
+
+
+def test_a_step_that_quotes_is_still_bound_and_its_schema_holds_no_quotation_mark():
+    """THE STEP'S OWN WORDS NEVER GO INTO THE SCHEMA. A step quoting a provision
+    carried a double quotation mark, the provider refused the strict schema, and the
+    read could not run (the Farah Begum turn, 30 September 2026). The digest binds
+    the verdict to the whole step just as exactly."""
+    import json
+
+    step = 'Preserve the gate and note when possession "becomes adverse".'
+    enum = step_dependency.schema_for(step)["properties"]["step"]["enum"]
+    assert enum == [step_dependency.step_id(step)] and not any('"' in v for v in enum)
+    assert step_dependency.step_id(step) != step_dependency.step_id(step + " ")
+    shown = json.loads(step_dependency.build_prompt(step, "ctx").user)
+    assert shown["step_text"] == step and shown["step"] == enum[0]

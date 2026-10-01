@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT ))
 from assurance.common._console import utf8_console  # noqa: E402
-from nm.legal_brain.retrieve.source_registry_sources import (  # noqa: E402
+from nm.Archives.legal_brain.retrieve.source_registry_sources import (  # noqa: E402
     Assessment,
     inventory_sources,
 )

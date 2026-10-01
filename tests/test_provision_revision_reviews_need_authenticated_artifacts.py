@@ -9,13 +9,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from cryptography.hazmat.primitives import serialization
 
-from nm.legal_brain.retrieve.provision_review import (
+from nm.Archives.legal_brain.retrieve.provision_review import (
     CRITERION,
     FINDINGS,
     RUBRIC,
     build_revision_review_owner,
 )
-from nm.legal_brain.retrieve.provision_revision_sources import RevisionReviewRequest, SelectionState
+from nm.Archives.legal_brain.retrieve.provision_revision_sources import RevisionReviewRequest, SelectionState
 from tests.p03_evidence_support import TrustHarness
 from tests.test_provision_revisions_need_owned_interval_proof import CHECKED, population
 
@@ -293,7 +293,7 @@ def test_unusable_original_records_do_not_become_absent_success(tmp_path, raw):
 def test_review_fails_closed_if_its_original_grant_changes_during_the_lookup(tmp_path, monkeypatch):
     fixture = ReviewedFixture(tmp_path)
     ref, record = fixture.write()
-    from nm.legal_brain.retrieve import provision_review
+    from nm.Archives.legal_brain.retrieve import provision_review
 
     actual = provision_review.problems_for_record
     calls = 0

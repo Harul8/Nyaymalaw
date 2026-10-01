@@ -108,6 +108,12 @@ def answer_from_payload(value: dict):
     # as they were: its reply is empty, never composed after the fact.
     if isinstance(value, dict) and "composed" not in value:
         value = {**value, "composed": []}
+    # A reply saved before inline citations existed linked at most one passage
+    # per paragraph and cited nothing inline; never reconstructed after the fact.
+    if isinstance(value, dict) and isinstance(value.get("composed"), list):
+        value = {**value, "composed": [
+            ({**row, "cites": []} if isinstance(row, dict) and "cites" not in row else row)
+            for row in value["composed"]]}
     answer = _answer_value(Answer, value)
     # Section is a domain projection, not caller-authored authority. Comparing
     # the canonical round-trip also refuses representations the decoder ignored.

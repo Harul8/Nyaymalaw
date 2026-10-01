@@ -42,8 +42,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
-from nm.legal_brain.reason import theory as theory_reader
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.reason import theory as theory_reader
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore
@@ -99,7 +99,7 @@ def test_it_comes_back_from_the_store_typed(tmp_path):
     """A DEFECT WITH A DELAY ON IT, caught within the minute.
 
     `Thread.theory` is typed `object` because `nm.domain` may not import
-    `nm.legal_brain.reason.theory` — domain holds the state, core holds the reading of it —
+    `nm.Archives.legal_brain.reason.theory` — domain holds the state, core holds the reading of it —
     so the generic decoder hands back a plain dict. The value round-trips
     fine, and the NEXT turn touches `.theme` on a dict and the whole revision
     path fails.

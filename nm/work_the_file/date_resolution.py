@@ -50,6 +50,12 @@ def contextual_reference(message: str, reference: date) -> tuple[date | None, st
 def resolve(expression: str, reference: date | None) -> date | None:
     text = " ".join(expression.casefold().strip().split())
     text = re.sub(r"^(?:on|dated)\s+", "", text)
+    # "Yesterday, 27 September 2026": the explicit calendar date is the date; the
+    # relative word beside it only confirms it (measured refused on the Farah Begum
+    # brief, 30 September 2026).
+    paired = _DAY_THEN_DATE.fullmatch(text) or _DATE_THEN_DAY.fullmatch(text)
+    if paired:
+        return resolve(paired.group("calendar"), reference)
     offset = _RELATIVE_DAY.get(text)
     if offset is not None:
         if reference is None:

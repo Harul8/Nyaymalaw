@@ -563,7 +563,7 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     assert receipt.validated_answer().elements
     held = receipt.answer["elements"]
     assert len(held) == len(answer["elements"])
-    from nm.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
+    from nm.Archives.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
 
     for recorded, served in zip(held, answer["elements"], strict=True):
         recorded = dict(recorded)

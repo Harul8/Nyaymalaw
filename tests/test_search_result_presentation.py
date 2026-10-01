@@ -106,8 +106,8 @@ def test_shipped_search_renderer_does_not_turn_an_index_score_into_confidence():
 
 def test_served_case_discovery_uses_actual_position_not_score_bands():
     from nm.app.api import _discovery_dict, _search_position
-    from nm.legal_brain.retrieve.evidence_port import Coverage
-    from nm.legal_brain.retrieve.search_port import CaseDiscovery, CaseHit, IndexIdentity
+    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
+    from nm.Archives.legal_brain.retrieve.search_port import CaseDiscovery, CaseHit, IndexIdentity
 
     identity = IndexIdentity("authority", "dated-build", "source", "generation-one", 3, 4,
                              "India")

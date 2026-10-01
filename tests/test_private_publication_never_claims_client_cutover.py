@@ -5,10 +5,10 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import AssessmentService
-from nm.legal_brain.verify.brain_publication import PrivatePublicationService
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+from nm.Archives.legal_brain.verify.brain_publication import PrivatePublicationService
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
 from nm.shared.budget_contracts import Budget
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StaleWrite

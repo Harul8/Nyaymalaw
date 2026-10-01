@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.output_checks import OutputSubjects, run_output_checks
+from nm.Archives.legal_brain.verify.output_checks import OutputSubjects, run_output_checks
 from nm.work_the_file import cascade
 from nm.work_the_file.matter_contracts import Matter, Thread
 

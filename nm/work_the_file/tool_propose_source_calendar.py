@@ -1,6 +1,6 @@
 """The propose_source_calendar door over exact, unadjusted native calendar candidates."""
 
-from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
+from nm.Archives.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.deadline_proposals import _CONTROLS, CALENDAR, SCHEMAS, VERSION

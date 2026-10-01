@@ -57,7 +57,7 @@ def _app(tmp_path, *, index_dir=None, missing_index=False):
     from fastapi.testclient import TestClient
 
     from assurance.journeys.served import PASSWORD, served
-    from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+    from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
 
     root = tmp_path / "store"
     if missing_index:
@@ -337,7 +337,7 @@ def test_the_record_survives_a_restart_and_keeps_its_budget(tmp_path):
     from fastapi.testclient import TestClient
 
     from assurance.journeys.served import PASSWORD, served
-    from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+    from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
 
     client = _app(tmp_path)
     matter_id, version = _matter(client)
@@ -419,8 +419,8 @@ def test_every_search_port_method_is_gated_by_the_policed_wrapper():
     refuses to delegate one it does not define, so a method added to the port
     and forgotten here would raise on first use. This asks the question
     statically, before a route finds out."""
-    from nm.legal_brain.retrieve.search_policed import PolicedSearch
-    from nm.legal_brain.retrieve.search_port import CorpusSearchPort
+    from nm.Archives.legal_brain.retrieve.search_policed import PolicedSearch
+    from nm.Archives.legal_brain.retrieve.search_port import CorpusSearchPort
 
     port = {n for n in dir(CorpusSearchPort) if not n.startswith("_")}
     defined = {n for n in vars(PolicedSearch) if not n.startswith("_")}
@@ -439,7 +439,7 @@ def test_a_withdrawn_source_version_marks_the_attached_input_withdrawn(tmp_path)
     from fastapi.testclient import TestClient
 
     from assurance.journeys.served import PASSWORD, served
-    from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+    from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
     from tests.test_turn_contract import _Evidence
 
     authority, identity = syn.build(tmp_path / "index")
@@ -503,7 +503,7 @@ def test_an_installation_with_no_generation_reports_no_withdrawals_and_says_why(
     installation: the legacy layout has no withdrawal record. The evidence
     port's `readiness()` is where a caller learns whether a generation is
     bound; an empty set is not a clean bill and `clean_bill` never reads it."""
-    from nm.legal_brain.retrieve.evidence_port import EvidencePort
+    from nm.Archives.legal_brain.retrieve.evidence_port import EvidencePort
     from tests.test_turn_contract import _Evidence
 
     assert EvidencePort.withdrawn_sources(_Evidence()) == frozenset()

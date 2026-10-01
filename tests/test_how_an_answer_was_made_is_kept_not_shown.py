@@ -11,7 +11,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from nm.open_matter.transcripts_api import project
 from tests.test_model_calls_are_kept import OPENING, _engine
 

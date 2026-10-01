@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_release import ReviewRefused, shared_review_budget
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, shared_review_budget
 from tests.test_working_evaluation_uses_one_actual_check_budget import (
     composed_working_case,
     run_composed_working,

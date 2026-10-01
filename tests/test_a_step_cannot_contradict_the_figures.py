@@ -40,7 +40,7 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_port import ModelError
 from nm.shared.model_scripted import SCRIPTED_READS, ScriptedModelAdapter
 from nm.shared.store_file_store import FileMatterStore
@@ -259,8 +259,8 @@ def test_every_limitation_state_becomes_a_claim(state):
     report `consistent` because it had nothing to compare against, and
     nothing would say so.
     """
-    from nm.legal_brain.procedure import limitation
-    from nm.legal_brain.verify.consistency import claims_for
+    from nm.Archives.legal_brain.procedure import limitation
+    from nm.Archives.legal_brain.verify.consistency import claims_for
     from nm.work_the_file.matter_contracts import Side
 
     made = {
@@ -291,7 +291,7 @@ def test_an_absent_register_is_a_claim_and_not_a_silence():
     window either way — and dropping the claim would let exactly that
     sentence through.
     """
-    from nm.legal_brain.verify.consistency import claims_for
+    from nm.Archives.legal_brain.verify.consistency import claims_for
 
     ids = [c.id for c in claims_for(None, None, "plaintiff", TODAY)]
     assert "register" in ids

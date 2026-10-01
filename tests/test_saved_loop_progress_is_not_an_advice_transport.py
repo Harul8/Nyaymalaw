@@ -10,7 +10,7 @@ import pytest
 from fastapi import HTTPException
 
 from nm.advise.turn_receipt_contracts import fingerprint
-from nm.legal_brain.communicate.loop_progress import (
+from nm.Archives.legal_brain.communicate.loop_progress import (
     AUTHORITY_STAGE,
     OPPOSITION_STAGE,
     PROVISION_STAGE,
@@ -23,7 +23,7 @@ from nm.legal_brain.communicate.loop_progress import (
     resume_position,
     sse_frame,
 )
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopIdentity,
     LoopMode,
@@ -32,7 +32,7 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     StopReason,
     digest,
 )
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     ToolEnvelope,
@@ -329,7 +329,7 @@ def test_actual_opposition_receipt_marks_one_dispute_but_not_private_words(tmp_p
 
 
 def test_typed_source_read_stays_shared_and_candidate_set_aside_is_not_progress():
-    from nm.legal_brain.retrieve.tool_sources import SourceCapture, source_envelope
+    from nm.Archives.legal_brain.retrieve.tool_sources import SourceCapture, source_envelope
     from tests.test_independent_claim_verifier import finding
 
     record = scoped_work(stop=False)
@@ -397,7 +397,7 @@ def test_typed_source_read_stays_shared_and_candidate_set_aside_is_not_progress(
 
 
 def test_whole_progress_checks_one_historic_scope_even_with_many_dispute_events(monkeypatch):
-    from nm.legal_brain.communicate import loop_progress
+    from nm.Archives.legal_brain.communicate import loop_progress
 
     record, _created = opening_work()
     actual = loop_progress.recorded_scope
@@ -686,7 +686,7 @@ def test_route_refuses_a_record_transplanted_between_matters(client):
 
 def collect_stream(*, disconnect_after=None, revoke_after=None, owner_lost_after=None):
     """Drive the actual route generator so buffering cannot hide its checks."""
-    from nm.legal_brain.communicate.loop_progress_api import router
+    from nm.Archives.legal_brain.communicate.loop_progress_api import router
 
     record = work()
     count = [0]

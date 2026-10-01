@@ -8,8 +8,8 @@ import pytest
 
 from nm.advise.answer_contracts import Element, ElementKind
 from nm.advise.turn_receipt_contracts import answer_payload
-from nm.legal_brain.retrieve.evidence_port import SourceDocument
-from nm.legal_brain.retrieve.source_excerpt import capture
+from nm.Archives.legal_brain.retrieve.evidence_port import SourceDocument
+from nm.Archives.legal_brain.retrieve.source_excerpt import capture
 from tests.test_conversation_recovery_journey import reopen
 from tests.test_opening_journey import saved
 from tests.test_the_journey_login_to_logout import BRIEF, _advise, _open_matter

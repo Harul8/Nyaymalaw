@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.reason.adversarial import (
+from nm.Archives.legal_brain.reason.adversarial import (
     Attack,
     Coordinate,
     Exposure,
@@ -27,7 +27,7 @@ from nm.legal_brain.reason.adversarial import (
     unanswered,
     unvaried,
 )
-from nm.legal_brain.reason.theory import (
+from nm.Archives.legal_brain.reason.theory import (
     Argument,
     Stance,
     Theory,

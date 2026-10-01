@@ -23,7 +23,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
 from nm.shared.traceability_contracts import refuses
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_scripted import scripted_dates
@@ -36,7 +36,7 @@ from nm.work_the_file.chronology import (
 )
 from nm.work_the_file.matter_contracts import Certainty, Fact, Matter, Provenance, Thread
 from nm.work_the_file.date_resolution import contextual_reference
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -324,3 +324,16 @@ def test_the_chart_is_ordered_and_keeps_what_it_could_not_date():
 
 def test_an_empty_thread_has_an_empty_chart_and_not_an_error():
     assert chart((), ()) == ()
+
+
+@pytest.mark.parametrize("said", ["Yesterday, 27 September 2026", "yesterday: 27 September 2026",
+                                  "27 September 2026, yesterday"])
+def test_an_explicit_date_beside_a_relative_word_is_that_date(said):
+    """THE WRITTEN DATE GOVERNS. "Yesterday, 27 September 2026" was refused as not
+    reproducible on the Farah Begum brief (30 September 2026), leaving a dated wall
+    undated; the calendar date is explicit, and the relative word only confirms it --
+    whatever day the message is read on."""
+    from nm.work_the_file.date_resolution import resolve
+
+    for reference in (date(2026, 9, 28), date(2026, 9, 30), None):
+        assert resolve(said, reference) == date(2026, 9, 27)

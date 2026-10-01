@@ -1,0 +1,1690 @@
+"""Evidence from the real corpus.
+
+Rules from `docs/BASELINE.md` are enforced here rather than remembered, because
+each has already produced a wrong answer in this project:
+
+  act-1  COVERAGE IS A UNION across every store and identifier convention.
+         The same Act is held under `the_specific_relief_act_1963` (13 sections)
+         and `UNION OF INDIA_1963_1_THE SPECIFIC RELIEF ACT, 1963` (all 44).
+         Querying one store reports a gap that is not there.
+
+  S3     A ZERO RESULT NAMES THE INDEX IT CAME FROM. `case_name` holds party
+         names, so a subject search against it returns zero -- and zero reads
+         exactly like "not in the corpus".
+
+  bind-1 Binding status is COMPUTED from court and date against the matter's
+         jurisdiction (`nm/Archives/legal_brain/retrieve/jurisdiction_sources.py`), never asserted here.
+
+Absence is never inferred from a hit count. It is computed against the
+manifest, which is what makes the three-state answer possible at all.
+
+THE AUTHORITY INDEX IS SEPARATE, AND ITS ABSENCE IS VISIBLE
+------------------------------------------------------------
+Case-law retrieval reads `.nm/authority.db`, built offline by
+`pipeline/build_authority_index.py`. When that index is absent this adapter
+returns NOT_ASSESSED naming it -- it does NOT fall back to scanning
+`chunks.db`. A fallback with different recall, swapped in silently, is the
+"three stores, three answers" defect wearing a helpful face: the advocate would
+have no way to know which retrieval answered them.
+"""
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from collections import Counter
+from dataclasses import dataclass
+from datetime import date, timedelta
+from fnmatch import fnmatchcase
+from pathlib import Path
+
+from nm.Archives.legal_brain.common.citation_contracts import (
+    ProvisionKeyState,
+    bind_provision_key,
+    last_wanted_section,
+    provision_label,
+    wanted_section,
+)
+from nm.Archives.legal_brain.retrieve.citator_sources import Citator
+from nm.Archives.legal_brain.retrieve.evidence_port import (
+    CURRENT_TEXT_BASIS,
+    Binding,
+    Coverage,
+    EvidenceNeed,
+    EvidenceResult,
+    Finding,
+    Origin,
+    ParaKind,
+    SourceDocument,
+    SourceKind,
+    Treatment,
+    kind_for_corpus_label,
+)
+from nm.Archives.legal_brain.retrieve.identity_sources import IdentityIndex
+from nm.Archives.legal_brain.retrieve.jurisdiction_sources import binding_status
+from nm.Archives.legal_brain.retrieve.manifest_sources import (
+    CorpusPublicationRefused,
+    Manifest,
+    PublishedCorpus,
+    title_without_year,
+)
+from nm.Archives.legal_brain.retrieve.provision_revision_sources import RevisionSelection, SelectionState
+from nm.Archives.legal_brain.retrieve.provision_search_port import (
+    ProvisionCandidate,
+    ProvisionSearchResult,
+)
+from nm.Archives.legal_brain.retrieve.resolution_sources import (
+    CODE_TITLES,
+    article_for,
+    corresponding,
+    governs,
+)
+from nm.shared.clock_contracts import FORUM
+from nm.shared.text_contracts import snippet
+from nm.shared.traceability_contracts import implements
+from nm.work_the_file.matter_contracts import CauseOfAction
+
+#: How many ranked paragraphs the authority search EXAMINES in one turn.
+#:
+#: A bound and not a filter, and the difference is the whole of H4. It caps
+#: work; it does not decide relevance. When it binds, the answer says so and
+#: says how many were not examined -- so a miss caused by the ceiling can be
+#: told apart from an absence in the corpus.
+
+def _section_order(number: str) -> tuple:
+    """Sections sort as an advocate reads them: 2, 2A, 3, 10 -- not 10, 2, 2A."""
+    digits = re.match(r"(\d+)", number or "")
+    return (int(digits.group(1)) if digits else 10**9, number or "")
+
+EXAMINED_CEILING = 40
+
+
+class JudgmentReaderUnavailable(RuntimeError):
+    """The paragraph reader cannot check or open hybrid judgment results."""
+
+# A whole-manifest provision search is bounded by actual source rows, not by
+# the number of hits. Exceeding either bound is NOT_ASSESSED, never a clean miss.
+_PROVISION_SEARCH_ATOM_CEILING = 100_000
+_PROVISION_SEARCH_TEXT_CEILING = 64_000_000
+_PROVISION_SEARCH_STORE_CEILING = 500
+_PROVISION_SEARCH_INDEX = "chunks.db bare_act full provision text"
+_PROVISION_WORD = re.compile(r"[^\W_]+", re.UNICODE)
+_PROVISION_STOP = frozenset({
+    "a", "an", "and", "as", "at", "by", "for", "from", "in", "is", "of",
+    "on", "or", "the", "to", "under", "with",
+})
+
+
+def _squash(text: str) -> str:
+    """Whitespace collapsed, case folded: the form containment is judged in."""
+    return " ".join((text or "").split()).lower()
+
+
+def assemble_section(atoms: list[tuple[str, str]]) -> str:
+    """THE WHOLE TEXT OF ONE PROVISION, from every atom a store holds for it.
+
+    ONE COPY, and both readers call it: the provision a turn retrieves
+    (`_union_lookup`) and the provision the document reader shows (LB-92).
+
+    `atoms` is `(atom_type, full_text)` in the store's own order. Each atom's
+    `full_text` is a label line -- "<Act> . s.18(2)(a): <heading>" -- and then
+    the provision's own words.
+
+    THE MEASURED DEFECT, 26 September 2026. Both readers took ONE atom per
+    section -- the section head where there was one, else whichever came
+    first or was longest. Where a store keeps the head as a heading only, or
+    has no head at all, that one atom is part of the section: Limitation Act
+    s.18 came back as sub-section (1) alone, without (2) or the Explanation
+    the acknowledgment cases turn on. Across the 3,402 provisions the manifest
+    intends, 760 were returned part-read, and every one was marked resolved
+    and supporting.
+
+    THE TEXT IS THE UNION, IN ORDER, WITH NOTHING SAID TWICE. The head leads
+    and is kept whole, label included, so a section it already carries in full
+    reads exactly as it did; every other atom adds its own words -- its label
+    line dropped -- unless those words are already in the text. Verbatim
+    throughout: nothing is paraphrased, reordered within an atom or supplied.
+    """
+    ordered = ([a for a in atoms if a[0] == "section_head"]
+               + [a for a in atoms if a[0] != "section_head"])
+    parts: list[str] = []
+    for _atom_type, full_text in ordered:
+        text = (full_text or "").strip()
+        if not text:
+            continue
+        # The label is the first line; the words are the rest. The first atom
+        # keeps its label, because the text has always begun with one.
+        head, _, rest = text.partition("\n")
+        words = rest.strip() or head
+        if parts and _squash(words) in _squash(" ".join(parts)):
+            continue
+        parts.append(text if not parts else words)
+    return " ".join(" ".join(parts).split())
+
+
+@dataclass(frozen=True)
+class _Routed:
+    """What the graph resolved: the Act, the provision, and the disclosure."""
+
+    entry: object
+    provision: str
+    note: str
+
+
+@dataclass(frozen=True)
+class HeldProvisionPassage:
+    """Exact assembled text held, without an assessed historical interval."""
+    ref: str
+    text: str
+    locator: str
+    store: str
+    snapshot_id: str | None
+
+    def as_record(self) -> dict:
+        from dataclasses import asdict
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ProvisionRevisionRead:
+    evidence: EvidenceResult
+    selection: RevisionSelection
+    passages: tuple[HeldProvisionPassage, ...] = ()
+
+
+
+class CorpusEvidenceAdapter:
+    """Reads the bare-act chunks and, when built, the authority index.
+
+    Read-only throughout. It never writes to the corpus.
+    """
+
+    def __init__(self, corpus_dir: str | Path, manifest: Manifest,
+                 jurisdiction: str = FORUM,
+                 authority_index: str | Path | None = None,
+                 identity_index: str | Path | None = None, *,
+                 source_registry=None, revision_source_bytes=None,
+                 revision_review_owner=None, revision_checked_at=None,
+                 current_text_when_unversioned: bool = False) -> None:
+        self._dir = Path(corpus_dir)
+        self._db = self._dir / "chunks.db"
+        self._manifest = manifest
+        self._jurisdiction = jurisdiction
+        self._authority_db = Path(authority_index) if authority_index else None
+        self._identity = IdentityIndex(
+            identity_index or (Path(authority_index).parent / "identity.db"
+                               if authority_index else "nonexistent"))
+        self._citator = Citator(self._dir / "citator.json", identity=self._identity)
+        self._denied: set[str] | None = None
+        self._published_snapshot: PublishedCorpus | None = None
+        self._source_registry = source_registry
+        self._revision_source_bytes = revision_source_bytes
+        self._revision_review_owner = revision_review_owner
+        self._revision_checked_at = revision_checked_at
+        #: LB-156, owner direction of 29 September 2026. With NO provision-
+        #: version register installed at all, a held provision is read as the
+        #: library's CURRENT TEXT, labelled so on the passage -- "current text
+        #: may be read separately with its own date and version, without
+        #: establishing the historical proposition". Off by default: only the
+        #: composition root, which knows no register exists, turns it on, and a
+        #: register once installed is never bypassed by it.
+        self._current_text = current_text_when_unversioned
+        self._keys_cache: dict = {}
+
+    @classmethod
+    def from_published_corpus(
+        cls,
+        publication_root: str | Path,
+        *,
+        corpus_database: str = "corpus/chunks.db",
+        coverage_manifest: str = "corpus/manifest.yaml",
+        authority_index: str = "indexes/authority.db",
+        identity_index: str = "indexes/identity.db",
+        jurisdiction: str = FORUM,
+        source_registry=None, revision_review_owner=None, revision_checked_at=None,
+    ) -> "CorpusEvidenceAdapter":
+        """Bind one request adapter to one fully verified active generation.
+
+        A fresh adapter observes a later atomic cutover.  An adapter already in
+        use remains on its immutable generation, so one legal answer can never
+        mix files from before and after the pointer replacement.
+        """
+        snapshot = PublishedCorpus.open(publication_root, verify_all=True)
+        return cls.from_published_snapshot(
+            snapshot,
+            corpus_database=corpus_database,
+            coverage_manifest=coverage_manifest,
+            authority_index=authority_index,
+            identity_index=identity_index,
+            jurisdiction=jurisdiction,
+            source_registry=source_registry, revision_review_owner=revision_review_owner,
+            revision_checked_at=revision_checked_at,
+        )
+
+    @classmethod
+    def from_published_snapshot(
+        cls,
+        snapshot: PublishedCorpus,
+        *,
+        corpus_database: str = "corpus/chunks.db",
+        coverage_manifest: str = "corpus/manifest.yaml",
+        authority_index: str = "indexes/authority.db",
+        identity_index: str = "indexes/identity.db",
+        jurisdiction: str = FORUM,
+        source_registry=None, revision_review_owner=None, revision_checked_at=None,
+    ) -> "CorpusEvidenceAdapter":
+        """Build from an already-bound snapshot shared by all retrieval ports."""
+        database = snapshot.member_path(corpus_database)
+        manifest = Manifest.load(snapshot.member_path(coverage_manifest))
+        authority = (
+            snapshot.member_path(authority_index)
+            if snapshot.has_member(authority_index) else None
+        )
+        identity = (
+            snapshot.member_path(identity_index)
+            if snapshot.has_member(identity_index) else None
+        )
+        adapter = cls(
+            database.parent,
+            manifest,
+            jurisdiction=jurisdiction,
+            authority_index=authority,
+            identity_index=identity,
+            source_registry=source_registry,
+            revision_source_bytes=snapshot.get_source,
+            revision_review_owner=revision_review_owner,
+            revision_checked_at=revision_checked_at,
+        )
+        adapter._db = database
+        adapter._published_snapshot = snapshot
+        return adapter
+
+    # ----------------------------------------------------------- readiness ---
+    @property
+    def available(self) -> bool:
+        try:
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+        except CorpusPublicationRefused:
+            return False
+        return self._db.exists()
+
+    @property
+    def authority_available(self) -> bool:
+        return self.available and bool(self._authority_db and self._authority_db.exists())
+
+    @property
+    def published_snapshot_id(self) -> str | None:
+        return (
+            self._published_snapshot.snapshot_id
+            if self._published_snapshot is not None else None
+        )
+
+    def withdrawn_sources(self) -> frozenset[str]:
+        """The generation's withdrawals, read from its durable events. P21.
+
+        Only when a published generation is bound: the legacy layout has no
+        withdrawal record to read, and inventing an empty one would be the
+        clean bill EVAL-014 refuses.
+        """
+        if self._published_snapshot is None:
+            return frozenset()
+        from nm.Archives.legal_brain.retrieve.manifest_sources import withdrawn_versions
+
+        return withdrawn_versions(self._published_snapshot.root)
+
+    def readiness(self) -> dict:
+        """Three states per capability, reported at /api/health.
+
+        A capability that cannot run must be visible BEFORE a turn depends on
+        it, not discovered as an empty answer afterwards.
+        """
+        if self._published_snapshot is not None:
+            try:
+                self._published_snapshot.require_usable()
+            except CorpusPublicationRefused as exc:
+                return {name: f"NOT ASSESSED -- {exc}" for name in (
+                    "provisions", "authorities", "citator", "identity", "denylist",
+                )}
+        return {
+            "provisions": "readable" if self.available else "NOT READABLE",
+            "authorities": ("readable" if self.authority_available else
+                            "INDEX NOT BUILT -- run pipeline/build_authority_index.py"),
+            "citator": (f"{self._citator.entries} entries"
+                        if self._citator.available else "NOT READABLE"),
+            "identity": (
+                f"{self._identity.stats().get('cases', '?')} cases, "
+                f"{self._identity.stats().get('with_bench', '?')} with a bench"
+                if self._identity.available else
+                "INDEX NOT BUILT -- run pipeline/build_identity_index.py"),
+            # LISTED, NOT EXCLUDED. Measured 27 September 2026: all 44 ids on
+            # the list name a store `chunks.db` does not hold, so this said
+            # "44 chunk(s) excluded" while excluding none. What a read held
+            # back is said by that read.
+            "denylist": (f"{len(self._denylist())} chunk id(s) listed; each read "
+                         f"reports what it held back"),
+        }
+
+    def accrual_trigger(self, cause: str) -> str:
+        """When the period for this cause STARTS, from the curated Article.
+
+        THE ADAPTER OWNS THIS BECAUSE `core` MAY NOT IMPORT `knowledge`
+        (layercheck), and the trigger is curated in `resolution.py` beside the
+        Article it belongs to. Copying it into the engine would be a second
+        home for a legal fact.
+
+        EMPTY FOR AN UNKNOWN OR UNCURATED CAUSE, and the engine then behaves
+        as it did before. A cause nobody has curated a trigger for is not one
+        this product knows enough about to refuse on.
+        """
+        from nm.Archives.legal_brain.retrieve.resolution_sources import accrual_trigger_for
+
+        return accrual_trigger_for(cause)
+
+    def _denylist(self) -> set[str]:
+        """Chunks the corpus itself marks as contaminated.
+
+        A denylist that ships beside the data and is never applied is worse
+        than none: it records that someone knew the text was bad.
+        """
+        if self._denied is None:
+            path = self._dir / "contamination_denylist.json"
+            if not path.exists():
+                self._denied = set()
+            else:
+                doc = json.loads(path.read_text(encoding="utf8", errors="replace"))
+                self._denied = set(doc.get("chunk_ids") or ())
+        return self._denied
+
+    def _screen(self, rows: list, chunk_at: int) -> tuple[list, int]:
+        """THE DENYLIST, APPLIED AND COUNTED. ONE OWNER.
+
+        Every read that holds back a contaminated chunk does it here and gets
+        the count back to say. Four readers each skipped with a bare
+        `continue`, so a provision or judgment with a passage held back read
+        exactly like one that never had it.
+        """
+        denied = self._denylist()
+        kept = [row for row in rows if row[chunk_at] not in denied]
+        return kept, len(rows) - len(kept)
+
+    @staticmethod
+    def _held_back(excluded: int) -> str | None:
+        return (f"{excluded} passage(s) were held back because the corpus's own "
+                f"contamination denylist names them; the text shown is without them."
+                if excluded else None)
+
+    # --------------------------------------------------------------- fetch ---
+    def fetch(self, need: EvidenceNeed) -> EvidenceResult:
+        return self._guarded(lambda: self._fetch(need))
+
+    def read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
+        """ONE PROVISION OF ONE NAMED ACT, read exactly. See the port. LB-156.
+
+        THE TITLE IS MATCHED EXACTLY, year included, because a yearless title
+        is not an identity: `Consumer Protection Act` is two Acts in this
+        manifest, and choosing between them by date is deciding which law
+        governs -- the question this method refuses to answer. Where the
+        yearless title matches, the Acts it could mean are NAMED so the caller
+        can choose; nothing is chosen for them.
+
+        The section is taken in the corpus's key form, or as a reference the
+        one provision pattern in `nm.Archives.legal_brain.common.citation_contracts` reads -- `Article 65`
+        becomes `Article_65` there, not here.
+        """
+        return self._guarded(lambda: self._read_provision(act, section, as_of))
+
+    def search_provisions(
+        self, query: str, act: str | None = None, limit: int = 20
+    ) -> ProvisionSearchResult:
+        """Rank complete held sections, without selecting law or claiming support.
+
+        ``act`` is an exact manifest title, year included, only a search filter.
+        An omitted Act searches every manifest entry; rank never changes that
+        entry's status into the governing Act. Candidates have no legal text,
+        locator, date assessment or source capture. The caller must perform an
+        exact dated ``read_provision`` before making a legal proposition.
+        """
+        if type(query) is not str or not query.strip() or len(query) > 500:
+            raise ValueError("the provision query must contain 1-500 characters")
+        if act is not None and (type(act) is not str or not act.strip() or len(act) > 500):
+            raise ValueError("the Act filter must be an exact, nonblank title")
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError("provision search limit must be between 1 and 20")
+
+        requested = act.strip() if act is not None else None
+        words = tuple(dict.fromkeys(word for word in _PROVISION_WORD.findall(query.lower())
+                                    if len(word) >= 2 and word not in _PROVISION_STOP))
+        if len(words) > 24:
+            raise ValueError("the provision query has more than 24 searchable terms")
+        if not words:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why="The query has no searchable provision terms; no text search ran.")
+
+        if requested is not None:
+            entry = self._manifest.act(requested)
+            if entry is None:
+                title = title_without_year(requested).lower()
+                possibilities = tuple(e.act_name for e in self._manifest.entries
+                                      if title and title_without_year(e.act_name).lower() == title)
+                detail = (f" Exact titles under that name: {'; '.join(possibilities)}."
+                          if possibilities else "")
+                return ProvisionSearchResult(
+                    query, requested, "curated manifest", Coverage.NOT_HELD,
+                    why=f"No Act titled {requested!r} is in the manifest; a year-qualified "
+                        f"exact title is required.{detail}")
+            entries = (entry,)
+        else:
+            entries = self._manifest.entries
+        if not entries:
+            return ProvisionSearchResult(
+                query, requested, "curated manifest", Coverage.NOT_ASSESSED,
+                why="The manifest has no Act population to search.")
+        if not self.available:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why="The held bare-act database or its published generation is not readable.")
+
+        try:
+            return self._search_provision_text(query, requested, words, entries, limit)
+        except (sqlite3.Error, OSError, ValueError, TypeError, CorpusPublicationRefused) as exc:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                why=f"The bounded held-provision scan could not complete: {exc}")
+
+    def _search_provision_text(self, query, requested, words, entries, limit):
+        """Scan actual manifest-matched stores, assembling every section once."""
+        store_owner = {}
+        sections = {}
+        excluded = atoms_read = text_chars = 0
+        connection = sqlite3.connect(f"file:{self._db}?mode=ro", uri=True)
+        try:
+            for entry in entries:
+                for pattern in entry.act_patterns:
+                    rows = connection.execute(
+                        "select distinct act_id from chunks "
+                        "where doc_type='bare_act' and act_id like ? limit 501",
+                        (pattern,),
+                    ).fetchall()
+                    if len(rows) > _PROVISION_SEARCH_STORE_CEILING:
+                        raise ValueError("a manifest pattern exceeded the store read bound")
+                    for (store,) in rows:
+                        if (type(store) is not str or not store or len(store) > 500
+                                or "::" in store):
+                            raise ValueError("a bare-act store identifier is malformed")
+                        old = store_owner.setdefault(store, entry)
+                        if old.act_name != entry.act_name:
+                            raise ValueError("one bare-act store matches two manifest Acts")
+                        if len(store_owner) > _PROVISION_SEARCH_STORE_CEILING:
+                            raise ValueError("the manifest scope exceeded the store read bound")
+
+            if not store_owner:
+                return ProvisionSearchResult(
+                    query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                    why="No actual bare-act store matched the manifest search scope.")
+
+            for store, entry in sorted(store_owner.items()):
+                current_section = None
+                current_atoms = []
+
+                def finish_section(section, atoms, owner, store_id):
+                    if section is None or not atoms:
+                        return
+                    # The same sole assembler used by exact provision and
+                    # document reads; a heading or sub-clause is never a whole.
+                    full_text = assemble_section(atoms)
+                    if full_text:
+                        key = (owner.act_name, section)
+                        if len(full_text) > len(sections.get(key, ("", ""))[0]):
+                            sections[key] = (full_text, store_id)
+
+                cursor = connection.execute(
+                    "select act_id, section_number, atom_type, chunk_id, blob from chunks "
+                    "where doc_type='bare_act' and act_id=? and section_number is not null "
+                    "order by section_number, pos", (store,),
+                )
+                while batch := cursor.fetchmany(512):
+                    atoms_read += len(batch)
+                    if atoms_read > _PROVISION_SEARCH_ATOM_CEILING:
+                        raise ValueError("the provision atom scan exceeded its read bound")
+                    kept, held_back = self._screen(batch, 3)
+                    excluded += held_back
+                    for _store, section, atom_type, _chunk_id, blob in kept:
+                        if (type(section) is not str or not section.strip()
+                                or len(section) > 500 or "::" in section):
+                            raise ValueError("a held provision has an invalid section key")
+                        if type(blob) is not str:
+                            raise ValueError("a held provision has no text blob")
+                        text_chars += len(blob)
+                        if text_chars > _PROVISION_SEARCH_TEXT_CEILING:
+                            raise ValueError("the provision text scan exceeded its read bound")
+                        if section != current_section:
+                            finish_section(current_section, current_atoms, entry, store)
+                            current_section, current_atoms = section, []
+                        record = json.loads(blob)
+                        if not isinstance(record, dict) or not isinstance(
+                            record.get("full_text"), str
+                        ) or not record["full_text"].strip():
+                            raise ValueError("a held provision atom has no searchable text")
+                        current_atoms.append((atom_type, record["full_text"]))
+                finish_section(current_section, current_atoms, entry, store)
+
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+        finally:
+            connection.close()
+
+        if not sections:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.NOT_ASSESSED,
+                searched_stores=tuple(sorted(store_owner)), excluded_atoms=excluded,
+                snapshot_id=self.published_snapshot_id,
+                why="The matched bare-act stores supplied no readable provision sections.",
+            )
+
+        query_text = " ".join(words)
+        ranked = []
+        for (act_title, section), (text, store) in sections.items():
+            text_lower = text.lower()
+            tokens = Counter(_PROVISION_WORD.findall(text_lower))
+            matched = tuple(word for word in words if word in tokens)
+            if not matched:
+                continue
+            score = (100 * len(matched)
+                     + min(40, sum(min(tokens[word], 5) for word in matched))
+                     + (50 if query_text in text_lower else 0))
+            ranked.append((-score, act_title, _section_order(section), section, store, matched))
+        ranked.sort()
+        candidates = tuple(
+            ProvisionCandidate(act_title, section, f"{store}::{section}::section",
+                               position, matched)
+            for position, (_score, act_title, _order, section, store, matched)
+            in enumerate(ranked[:limit], 1)
+        )
+        common = dict(
+            searched_stores=tuple(sorted(store_owner)), sections_scanned=len(sections),
+            excluded_atoms=excluded, candidates=candidates,
+            snapshot_id=self.published_snapshot_id,
+        )
+        if not candidates:
+            return ProvisionSearchResult(
+                query, requested, _PROVISION_SEARCH_INDEX, Coverage.SEARCHED_NO_MATCH,
+                why=(f"Searched {len(sections)} assembled sections in "
+                     f"{_PROVISION_SEARCH_INDEX}; no lexical candidate matched. "
+                     "This does not establish absence of relevant law. "
+                     f"{excluded} contaminated atom(s) were withheld."),
+                **common,
+            )
+        return ProvisionSearchResult(
+            query, requested, _PROVISION_SEARCH_INDEX, Coverage.ANSWERED,
+            why=("Ranked wording matches only; no Act applicability or dated legal "
+                 f"support was assessed. {excluded} contaminated atom(s) were withheld."),
+            **common,
+        )
+
+    def _read_provision(self, act: str, section: str, as_of: date) -> EvidenceResult:
+        return self._read_provision_at_date(act, section, as_of).evidence
+
+    def read_provision_at_date(self, act: str, section: str,
+                               as_of: date | None) -> ProvisionRevisionRead:
+        """Optional dated read, with exact held passages even if not assessed.
+
+        The legacy Finding codec is unchanged; it cannot honestly encode an
+        unknown provision interval. Unknown text is therefore outside Findings.
+        """
+        if as_of is not None and type(as_of) is not date:
+            raise ValueError("governing date is an exact calendar date or missing")
+        result = self._guarded(lambda: self._read_provision_at_date(act, section, as_of))
+        if type(result) is EvidenceResult:
+            return ProvisionRevisionRead(result, RevisionSelection(
+                SelectionState.NOT_ASSESSED, None, section, as_of,
+                result.missing or "the corpus read could not be assessed"))
+        return result
+
+    def _read_provision_at_date(self, act: str, section: str,
+                                as_of: date | None) -> ProvisionRevisionRead:
+        def unknown(evidence):
+            return ProvisionRevisionRead(evidence, RevisionSelection(
+                SelectionState.NOT_ASSESSED, None, section, as_of,
+                evidence.missing or "the exact provision identity is unavailable"))
+
+        entry = self._manifest.act((act or "").strip())
+        if entry is None:
+            title = title_without_year(act).lower()
+            could_mean = [e.act_name for e in self._manifest.entries
+                          if title and title_without_year(e.act_name).lower() == title]
+            missing = (f"no Act titled {act!r} is in the curated manifest; an "
+                       f"exact title with its year is required.")
+            if could_mean:
+                missing += f" Under that title it holds: {'; '.join(could_mean)}."
+            return unknown(EvidenceResult(coverage=Coverage.NOT_HELD, missing=missing,
+                                           searched_stores=("manifest",)))
+        key = wanted_section(section or "") or (section or "").strip()
+        if not key:
+            return unknown(EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=f"no provision of {entry.act_name} was named to read",
+                searched_stores=("manifest",)))
+        return self._dated_read(entry, key, as_of, None)
+
+    def read_provision_revision(self, act: str, section: str, as_of: date,
+                                subject_id: str) -> ProvisionRevisionRead:
+        """Revalidate a captured exact revision; never substitute a new one."""
+        result = self.read_provision_at_date(act, section, as_of)
+        if result.selection.state is SelectionState.SELECTED \
+                and result.selection.revision.subject_id != subject_id:
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.NOT_ASSESSED,
+                missing="the captured provision revision is no longer the unique current selection",
+                searched_stores=result.evidence.searched_stores), RevisionSelection(
+                    SelectionState.REFUSED, result.selection.source_id,
+                    result.selection.section, as_of,
+                    "exact captured revision identity mismatch; replacement was not selected"),
+                result.passages)
+        return result
+
+    def _guarded(self, read) -> EvidenceResult:
+        """EVERY READ OF THE CORPUS PASSES HERE. ONE OWNER.
+
+        Permission to use a retained generation is checked at each boundary.
+        And a corpus that cannot be read at all is NOT_ASSESSED -- nothing
+        was searched. It was reported as HELD_NOT_FOUND, which tells the
+        advocate the corpus holds the provision and retrieval failed: a claim
+        about a search that never ran.
+        """
+        try:
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            if not self.available:
+                return EvidenceResult(
+                    coverage=Coverage.NOT_ASSESSED,
+                    missing=f"the corpus is not readable at {self._db}",
+                    searched_stores=())
+            result = read()
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            return result
+        except CorpusPublicationRefused as exc:
+            return EvidenceResult(
+                coverage=Coverage.NOT_ASSESSED,
+                missing=f"Published legal source is not usable: {exc}",
+                searched_stores=(),
+            )
+
+    def _fetch(self, need: EvidenceNeed) -> EvidenceResult:
+        if need.want_authority:
+            return self._fetch_authority(need)
+
+        # H3 — RESOLUTION BEFORE SEARCH, AND BEFORE KEYWORDS.
+        #
+        # The graph gets the first word. Where the cause of action resolves,
+        # BOTH the Act and the provision come from the edge, exactly, and no
+        # keyword is consulted at all.
+        #
+        # It has to come first to be worth anything. Run after the keyword
+        # resolver, it never fires on the case it was built for: "is the claim
+        # still in time" matches no keyword, so `resolve` returns nothing, and
+        # the turn ends at "no Act in the curated manifest governs this
+        # question" before any edge is reached. That is B-065 precisely — and
+        # it happened on twenty-three consecutive served turns.
+        routed = self._route(need)
+        if routed is not None:
+            return self._read(routed.entry, routed.provision, need, routed.note)
+
+        resolved = self._manifest.resolve(need.question, on=need.governing_date,
+                                          account=need.account)
+        entry, superseded = resolved.entry, resolved.superseded
+        # THE GUESS TRAVELS WITH EVERY OUTCOME, not only with success.
+        #
+        # This used to be attached to the one return that produced
+        # findings, so a WRONG inference that found nothing was reported as
+        # a flat fact about the Act it had guessed: "Specific Relief Act,
+        # 1963 is held, but no specific provision was identified" -- on a
+        # question about LIMITATION, where the Act had been picked off the
+        # word `possession`. Every word true, the whole misleading.
+        #
+        # The guess matters MOST when it produced nothing, because that is
+        # when the advocate has no other signal that the wrong Act was read.
+        note = resolved.note() or None
+        if entry is None:
+            missing = ("no Act in the curated manifest governs this question. "
+                       "The manifest states INTENDED coverage, so this is an "
+                       "honest gap rather than a failed lookup.")
+            if superseded is not None:
+                # The keyword match WAS an Act we hold -- it was simply not in
+                # force on the governing date. Saying "not held" there would be
+                # a lie about the corpus and hide a real answer.
+                missing = (
+                    f"{superseded.act_name} matched this question but was not in "
+                    f"force on {need.governing_date.isoformat()} (in force "
+                    f"{superseded.in_force_from or 'unrecorded'} to "
+                    f"{superseded.in_force_to or 'date'}), and the successor "
+                    f"instrument is not resolvable from the manifest alone. "
+                    f"Provision correspondence across the 2024 codes is slice 5.")
+            return EvidenceResult(coverage=Coverage.NOT_HELD, missing=missing,
+                                  searched_stores=("manifest",),
+                                  assumption=note)
+
+        section = self._wanted_section(need)
+        if section is None:
+            return EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=(f"{entry.act_name} is held, but no specific provision "
+                         f"was identified in the question to retrieve, and the "
+                         f"cause of action was not established well enough to "
+                         f"look one up."),
+                searched_stores=("manifest",),
+                assumption=note,
+            )
+        return self._read(entry, section, need, note)
+
+    def _read(self, entry, section: str, need: EvidenceNeed,
+              note: str | None) -> EvidenceResult:
+        """Look the provision up and answer in three states. ONE OWNER.
+
+        Both paths into retrieval end here — the graph's exact route and the
+        manifest's keyword match — so the union lookup, the HELD-BUT-NOT-FOUND
+        rule and the disclosure are written once. Two copies of "zero hits, and
+        the manifest decides which of the two states this is" would drift
+        within a slice, and the half that drifted would report a corpus gap for
+        an Act held in full.
+        """
+        return self._dated_read(entry, section, need.governing_date, note).evidence
+
+    def _dated_read(self, entry, section, as_of, note) -> ProvisionRevisionRead:
+        try:
+            binding = bind_provision_key(section, self._held_provision_keys(entry.act_patterns))
+        except (sqlite3.Error, ValueError):
+            selection = RevisionSelection(SelectionState.NOT_ASSESSED, None, section, as_of,
+                "The actual routed provision-key inventory could not be assessed.")
+            return ProvisionRevisionRead(EvidenceResult(Coverage.NOT_ASSESSED,
+                missing=selection.reason, searched_stores=(), assumption=note), selection)
+        if binding.state is ProvisionKeyState.AMBIGUOUS:
+            selection = RevisionSelection(SelectionState.NOT_ASSESSED, None, section, as_of,
+                "Multiple actual source keys encode this provision; no key was selected.")
+            return ProvisionRevisionRead(EvidenceResult(Coverage.NOT_ASSESSED,
+                missing=selection.reason, searched_stores=entry.act_patterns,
+                assumption=note), selection)
+        held_section = binding.key if binding.state is ProvisionKeyState.BOUND else section
+        passages, stores, excluded = self._held_provision_passages(
+            entry.act_patterns, held_section, entry)
+        selection = RevisionSelection(
+            SelectionState.NOT_ASSESSED, None, section, as_of,
+            "provision revision registry, exact historical authorities "
+            "and owned review are missing")
+        if self._source_registry is not None:
+            from nm.Archives.legal_brain.retrieve.source_registry_sources import BindingState
+            bound = self._source_registry.resolve(entry.act_name)
+            if bound.state is BindingState.BOUND and self._revision_checked_at is not None:
+                revision_key = self._source_registry.resolve_provision_key(
+                    bound.source_ids[0], section)
+                if revision_key.state is ProvisionKeyState.AMBIGUOUS:
+                    return ProvisionRevisionRead(EvidenceResult(Coverage.NOT_ASSESSED,
+                        missing=revision_key.reason, searched_stores=stores,
+                        assumption=note), RevisionSelection(SelectionState.NOT_ASSESSED,
+                        bound.source_ids[0], section, as_of, revision_key.reason), passages)
+                selection = self._source_registry.select_provision_revision(
+                    bound.source_ids[0], revision_key.key or section, as_of,
+                    checked_at=self._revision_checked_at(),
+                    source_bytes=self._revision_source_bytes,
+                    review_owner=self._revision_review_owner)
+            else:
+                selection = RevisionSelection(
+                    SelectionState.NOT_ASSESSED, None, section, as_of,
+                    "the exact manifest Act lacks one explicit canonical binding "
+                    "or review check date")
+        if as_of is not None and not entry.in_force_on(as_of) and passages:
+            # The named repealed/not-yet-effective code remains THAT code.
+            # The historical port can represent this known negative interval.
+            findings = tuple(self._provision_finding(
+                entry, section, passage.text, passage.locator, passage.store,
+                as_of, entry.in_force_from, entry.in_force_to,
+                "Act lifetime excludes this date; provision version not established")
+                for passage in passages)
+            selection = RevisionSelection(
+                SelectionState.REFUSED, selection.source_id, section, as_of,
+                f"G-INFORCE: the exact named Act was not in force on {as_of.isoformat()}",
+                selection.candidate_ids)
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.ANSWERED, findings, searched_stores=stores,
+                assumption=note, search_note=self._held_back(excluded)), selection, passages)
+        if selection.state is SelectionState.SELECTED:
+            revision, wording = selection.revision, selection.wording
+            finding = self._provision_finding(
+                entry, revision.section, wording.text,
+                f"provision_revision::{revision.subject_id}::wording",
+                wording.authority.version_id, as_of, revision.effective_from,
+                revision.effective_until - timedelta(days=1)
+                if revision.effective_until else None,
+                "exact provision interval assessed by the captured qualified-review owner; "
+                "applicability to the matter is not established")
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.ANSWERED, (finding,), searched_stores=stores,
+                assumption=note, search_note=self._held_back(excluded)), selection, passages)
+        if (passages and self._current_text and self._source_registry is None
+                and (entry.in_force_from or entry.in_force_to)):
+            # THE CURRENT TEXT, SAID TO BE THE CURRENT TEXT. Nothing here claims
+            # the wording applied on the matter's date: the limit is written into
+            # the passage's own basis, so every place the passage is shown or
+            # quoted carries it. The selection stays NOT_ASSESSED -- the
+            # historical question is still unanswered, and a caller that asks
+            # for the revision is told so.
+            reason = current_text_reason(as_of)
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.ANSWERED, tuple(self._provision_finding(
+                    entry, section, passage.text, passage.locator, passage.store,
+                    as_of, entry.in_force_from, entry.in_force_to, reason)
+                    for passage in passages),
+                searched_stores=stores, assumption=note,
+                search_note=self._held_back(excluded)), selection, passages)
+        if passages:
+            return ProvisionRevisionRead(EvidenceResult(
+                Coverage.NOT_ASSESSED, missing=selection.reason,
+                searched_stores=stores, assumption=note,
+                search_note=self._held_back(excluded)), selection, passages)
+        if excluded:
+            # EVERY PASSAGE FOUND WAS HELD BACK. Neither neighbour is true: it
+            # was retrieved, so this is no retrieval defect, and text is held
+            # under that number, so it is no plain gap. No text that can be
+            # relied on is held, and the reason is said.
+            return ProvisionRevisionRead(EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=(f"the only text held for {provision_label(entry.act_name, section)} "
+                         f"is on the corpus's contamination denylist, so none is held "
+                         f"that can be relied on."),
+                searched_stores=stores, assumption=note,
+                search_note=self._held_back(excluded)), selection)
+
+        # Zero hits. The manifest -- not the hit count -- decides which of the
+        # two remaining states this is.
+        if self._manifest.intends(entry, section):
+            return ProvisionRevisionRead(EvidenceResult(
+                coverage=Coverage.HELD_NOT_FOUND,
+                missing=(f"{provision_label(entry.act_name, section)} is declared as intended "
+                         f"coverage but was not retrieved from {', '.join(stores)}. "
+                         f"This is a RETRIEVAL DEFECT, not a corpus gap."),
+                searched_stores=stores,
+                assumption=note,
+            ), selection)
+        return ProvisionRevisionRead(EvidenceResult(
+            coverage=Coverage.NOT_HELD,
+            missing=f"{provision_label(entry.act_name, section)} is not held in the corpus.",
+            searched_stores=stores,
+            assumption=note,
+        ), selection)
+
+    def _provision_finding(self, entry, section, text, locator, store, as_of,
+                           valid_from, valid_to, reason):
+        return Finding(
+            proposition=provision_label(entry.act_name, section),
+            source_kind=SourceKind.PROVISION,
+            ref=provision_label(entry.act_name, section), span=text,
+            locator=locator, store=store, binding=Binding.BINDING,
+            binding_for=self._jurisdiction, binding_reason=reason, supports=True,
+            para_kind=ParaKind.UNKNOWN, treatment=Treatment.statutory(),
+            valid_from=valid_from, valid_to=valid_to, governing_date=as_of,
+            origin=Origin.RESOLVED)
+
+    # ------------------------------------------------------------ internals ---
+    def _wanted_section(self, need: EvidenceNeed) -> str | None:
+        """WHICH provision the question asks for.
+
+        The pattern lives in `nm/Archives/legal_brain/common/citation_contracts.py` and is shared with the
+        grounding gate. It used to be a second copy here, and when the gate's
+        copy was hardened against `O.S. 442/2023` parsing as "section 442",
+        this one was not -- so a realistic brief retrieved section 442 of the
+        Specific Relief Act, found nothing, and reported a corpus gap.
+        """
+        # THIS TURN FIRST, then the thread. "What is the limitation on that?"
+        # names no section; the section it means is the one named two turns
+        # ago, and the alternative is telling the advocate their own file holds
+        # no provision.
+        return (need.provision_hint or wanted_section(need.question)
+                or last_wanted_section(need.account))
+
+    @implements("D4")
+    def _route(self, need: EvidenceNeed) -> "_Routed | None":
+        """H3. The Act AND the provision the cause of action points at.
+
+        `None` where nothing resolves, and that is the ordinary case rather
+        than a failure — the question then goes to the keyword resolver and, if
+        that finds nothing either, to search, carrying its own confidence. What
+        this may never do is return a near neighbour: an exact lookup that
+        guesses is the wrong-Act defect with better manners.
+
+        THE ADVOCATE'S OWN WORDS OUTRANK THE GRAPH. Where they have named a
+        section, `_wanted_section` has it and no routing is needed or wanted;
+        this fires only where the question is determinate and unspecified.
+        """
+        if not need.cause_of_action:
+            return None
+        if wanted_section(need.question):
+            # THE ADVOCATE NAMED A PROVISION. Routing past it would substitute
+            # this product's view of the cause for their instruction, which is
+            # the one thing an exact lookup must never do.
+            return None
+        try:
+            cause = CauseOfAction(need.cause_of_action)
+        except ValueError:
+            # OUT OF VOCABULARY IS NOT A ROUTE. It reaches here only if a
+            # caller bypassed the reader's guard, and accepting it would make
+            # an unvetted string a routing decision.
+            return None
+        edge = article_for(cause)
+        if edge is None:
+            return None
+        entry = self._manifest.act(edge.act)
+        if entry is None or not entry.in_force_on(need.governing_date):
+            # THE GRAPH ROUTES TO AN ACT THE MANIFEST DOES NOT DECLARE, or does
+            # not declare as in force on this date. The edge is not wrong; the
+            # corpus simply cannot serve it, and pretending otherwise would
+            # report a retrieval defect as a legal answer.
+            return None
+
+        note = (f"I resolved one possible starting point for "
+                f"{cause.value.replace('_', ' ')}: "
+                f"{edge.act}, {edge.provision.replace('_', ' ')}. "
+                "This is a provision to examine, not a finding that it governs "
+                "the claim or that a limitation period has begun.")
+        if edge.alternatives:
+            # WHAT ELSE IT COULD HAVE BEEN, named. A wrong route is then
+            # visible at a glance instead of after the advocate has acted on it.
+            note += f" Also arguable: {'; '.join(edge.alternatives).replace('_', ' ')}"
+        return _Routed(entry=entry, provision=edge.provision, note=note)
+
+    def _held_provision_keys(self, patterns: tuple[str, ...]) -> tuple[str, ...]:
+        """Actual routed key population; normalize identity, never infer a provision.
+
+        KEPT FOR AS LONG AS THE STORE IS UNCHANGED. The inventory is a scan of every
+        passage an Act's patterns match -- 0.9 seconds each time, measured 29 September
+        2026 -- and a turn now reads several sections per dispute (LB-106). The key is
+        the store's own size and write time, and its write-ahead log's, so any change
+        to the store is a new inventory; nothing here is remembered past one.
+        """
+        stamp = (tuple(patterns), self._store_stamp())
+        cached = self._keys_cache.get(stamp)
+        if cached is not None:
+            return cached
+        keys = set()
+        with sqlite3.connect(f"file:{self._db}?mode=ro", uri=True) as con:
+            for pattern in patterns:
+                rows = con.execute(
+                    "select distinct section_number from chunks "
+                    "where doc_type='bare_act' and act_id like ? "
+                    "and section_number is not null limit 20001", (pattern,)).fetchall()
+                if len(rows) > 20000:
+                    raise ValueError("The actual provision-key inventory exceeded its read bound")
+                for (key,) in rows:
+                    if type(key) is not str or len(key) > 500:
+                        raise ValueError(
+                            "The actual provision-key inventory is untyped or unbounded")
+                    if key.strip():
+                        keys.add(key)
+        held = tuple(sorted(keys))
+        self._keys_cache = {k: v for k, v in self._keys_cache.items() if k[1] == stamp[1]}
+        self._keys_cache[stamp] = held
+        return held
+
+    def _store_stamp(self) -> tuple:
+        """The store's size and write time, with its write-ahead log's."""
+        def one(path: Path) -> tuple:
+            try:
+                st = path.stat()
+            except OSError:
+                return (None, None)
+            return (st.st_size, st.st_mtime_ns)
+        return (one(self._db), one(self._db.with_name(self._db.name + "-wal")))
+
+    def _held_provision_passages(self, patterns: tuple[str, ...], section: str, entry):
+        """THE UNION. EVERY identifier convention, and the store is NAMED.
+
+        The first version stopped at the first pattern that hit. It worked only
+        because the fuller store happened to be listed first in the manifest —
+        reverse the order and Specific Relief Act s.6 comes back NOT FOUND from
+        an Act that holds all 44 sections. That is B-164 exactly, sitting
+        latent behind a line of YAML.
+
+        `act-1` says coverage is the union across every store AND that the
+        answer names which store supplied it. Both halves are load-bearing: a
+        union that short-circuits is an ordering assumption, and a store name
+        that reports only where the search stopped cannot support the claim.
+
+        Where two stores both hold the section, the FULLER TEXT wins. The thin
+        copies are not merely incomplete, they are truncated, and a scattered
+        13-section copy of a 44-section Act is exactly what produced the false
+        gap in the first place.
+        """
+        stores: list[str] = []
+        candidates: list[HeldProvisionPassage] = []
+        excluded = 0
+        con = sqlite3.connect(f"file:{self._db}?mode=ro", uri=True)
+        try:
+            for pattern in patterns:
+                stores.append(pattern)
+                # EVERY ATOM OF THE SECTION, in the store's order -- never one.
+                # The provision is assembled from all of them (`assemble_section`);
+                # one atom was part of the section for 760 of 3,402 provisions.
+                by_store: dict[str, list[tuple[str, str]]] = {}
+                rows, held_back = self._screen(con.execute(
+                        """select act_id, atom_type, chunk_id, blob from chunks
+                           where doc_type='bare_act' and act_id like ? and section_number=?
+                           order by act_id, pos""",
+                        (pattern, section)).fetchall(), 2)
+                excluded += held_back
+                for act_id, atom_type, _chunk_id, blob in rows:
+                    by_store.setdefault(act_id, []).append(
+                        (atom_type, json.loads(blob).get("full_text") or ""))
+                if not by_store:
+                    continue
+                act_id, text = max(((store, assemble_section(atoms))
+                                    for store, atoms in by_store.items()),
+                                   key=lambda pair: len(pair[1]))
+                if not text:
+                    continue
+                candidates.append(HeldProvisionPassage(
+                    ref=provision_label(entry.act_name, section),
+                    text=text,
+                    locator=f"{act_id}::{section}::section",
+                    store=act_id,
+                    snapshot_id=self.published_snapshot_id,
+                ))
+        finally:
+            con.close()
+
+        if not candidates:
+            return (), tuple(stores), excluded
+        # The fullest text wins, and EVERY store searched is named.
+        best = max(candidates, key=lambda f: len(f.text))
+        return (best,), tuple(stores), excluded
+
+    # ------------------------------------------------------ document reader ---
+
+    def document(self, locator: str, kind: str, *, start: int = 0,
+                 count: int | None = None) -> SourceDocument:
+        from dataclasses import replace
+
+        document = self._whole_document(locator, kind)
+        if document.state == "read":
+            document = replace(document, locator=locator, kind=kind)
+        return document.window(start, count)
+
+    def _whole_document(self, locator: str, kind: str) -> SourceDocument:
+        """The whole Act or judgment a saved passage came from. LB-92.
+
+        A READ OF WHAT IS HELD, and nothing else: the same database the passage
+        was retrieved from, the generation currently bound, no search, no model
+        call, no successor-statute substitution. The donor build resolved a
+        missing citation by fetching the successor sanhita and rendering it
+        under the original reference; LB-91 refuses exactly that, and so does
+        this method -- an unreadable locator returns `not_held` by name rather
+        than the nearest thing that would fill the pane.
+
+        THE TARGET IS LOCATED OR IT IS NOT. `target` names the segment the
+        passage came from; where the locator's segment is absent from the
+        current generation it stays `None`, and the reader says the passage
+        could not be located instead of highlighting a neighbour.
+        """
+        if not self.available:
+            return SourceDocument(
+                state="no_reader",
+                missing="the corpus is not readable on this installation")
+        parts = (locator or "").split("::")
+        if len(parts) != 3 or not parts[0].strip():
+            return SourceDocument(
+                state="not_held",
+                missing=f"{locator!r} is not a locator this corpus can resolve")
+        if kind == "provision" and parts[0] == "provision_revision":
+            if parts[2] != "wording" or self._source_registry is None \
+                    or self._revision_source_bytes is None:
+                return SourceDocument(
+                    state="not_held",
+                    missing="the exact revision wording source owner is unavailable")
+            try:
+                version, span, text = self._source_registry.read_revision_source(
+                    parts[1], source_bytes=self._revision_source_bytes)
+                if self._published_snapshot is not None:
+                    self._published_snapshot.require_usable()
+            except (ValueError, OSError, UnicodeError, CorpusPublicationRefused) as exc:
+                return SourceDocument(
+                    state="not_held", missing=f"exact revision readback refused: {exc}")
+            return SourceDocument(
+                state="read", label=version.source.display_name,
+                store=version.version_id, snapshot_id=self.published_snapshot_id or "",
+                segments=((f"Held source; cited character span {span.start}:{span.end}", text),),
+                target=0,
+                missing="Text readback alone does not revalidate dated interval approval.")
+        if kind == "provision":
+            return self._act_document(parts[0], parts[1])
+        if kind == "authority":
+            return self._judgment_document(parts[0], parts[1])
+        return SourceDocument(
+            state="not_held", missing=f"{kind!r} is not a kind of source this reader holds")
+
+    def _act_document(self, act_id: str, section: str) -> SourceDocument:
+        """Every section of one Act, in its own order, with the cited one marked."""
+        names = {entry.act_name for entry in self._manifest.entries
+                 if any(fnmatchcase(act_id.lower(), pattern.lower().replace('%', '*')
+                                    .replace('_', '?')) for pattern in entry.act_patterns)}
+        label = next(iter(names)) if len(names) == 1 else "Legislation"
+        rows = self._rows(
+            self._db,
+            """select section_number, atom_type, chunk_id, blob from chunks
+               where doc_type='bare_act' and act_id=? order by pos""",
+            (act_id,))
+        if rows is None:
+            return SourceDocument(
+                state="no_reader",
+                missing="the provision store could not be opened for reading")
+        # EVERY ATOM OF EVERY SECTION, assembled by the one function the turn's
+        # reader uses. This kept the LONGEST ATOM per section, which is the same
+        # defect in a second place: the reader showed s.18(1) as section 18.
+        atoms: dict[str, list[tuple[str, str]]] = {}
+        rows, excluded = self._screen(rows, 2)
+        for section_number, atom_type, _chunk_id, blob in rows:
+            atoms.setdefault(str(section_number or "").strip(), []).append(
+                (atom_type, json.loads(blob).get("full_text") or ""))
+        best: dict[str, tuple[str, str]] = {}
+        for number, section_atoms in atoms.items():
+            body = assemble_section(section_atoms)
+            if not body:
+                continue
+            heading = number.replace('_', ' ')
+            best[number] = (heading if heading.startswith('Article ') else
+                            f"Section {heading}" if heading else "Provision", body)
+        if not best:
+            return SourceDocument(
+                state="not_held",
+                missing=f"this corpus holds no readable text for {label}")
+        ordered = sorted(best.items(), key=lambda item: _section_order(item[0]))
+        segments = tuple(value for _, value in ordered)
+        wanted = str(section or "").strip()
+        target = next((i for i, (number, _) in enumerate(ordered) if number == wanted), None)
+        return SourceDocument(
+            state="read", label=label, store=act_id,
+            snapshot_id=self.published_snapshot_id or "",
+            segments=segments, target=target, excluded=excluded,
+            missing="" if target is not None else
+            f"the cited provision could not be located in the text held for {label}")
+
+    def _judgment_document(self, case_id: str, chunk_id: str) -> SourceDocument:
+        """Every attributable paragraph of one judgment, in its stored order."""
+        if not (self._authority_db and self._authority_db.exists()):
+            return SourceDocument(
+                state="no_reader",
+                missing="the authority index is not built on this installation")
+        rows = self._rows(
+            self._authority_db,
+            """select rowid, para_type, chunk_id, text, case_name, court, year from paras
+               where case_id=? order by rowid""",
+            (case_id,))
+        if rows is None:
+            return SourceDocument(
+                state="no_reader",
+                missing="the authority index could not be opened for reading")
+        segments, target = [], None
+        # THE CASE IS NAMED BY ITS NAME. `IdentityIndex.describe()` returns
+        # the bench ("3-judge bench"), which is detail about a judgment the
+        # advocate has not been told the name of.
+        named = next((f"{r[4]} ({r[5]}, {r[6]})" for r in rows), "")
+        rows, excluded = self._screen(rows, 2)
+        for _, para_type, para_chunk, body, _case_name, _court, _year in rows:
+            spoken = " ".join((body or "").split())
+            if not spoken:
+                continue
+            if para_chunk == chunk_id:
+                target = len(segments)
+            segments.append((str(para_type or "paragraph"), spoken))
+        if not segments:
+            return SourceDocument(
+                state="not_held",
+                missing="this corpus holds no readable paragraphs for this judgment")
+        ident = self._identity.case(case_id)
+        bench = f" — {ident.describe()}" if ident else ""
+        return SourceDocument(
+            state="read", label=f"{named or 'Judgment'}{bench}",
+            store="authority_index", snapshot_id=self.published_snapshot_id or "",
+            segments=tuple(segments), target=target, excluded=excluded,
+            missing="" if target is not None else
+            "the cited paragraph could not be located in the judgment as held")
+
+    def _rows(self, database, sql: str, values: tuple):
+        """Read-only, and a store that will not open says so rather than
+        returning an empty result that reads exactly like an empty document."""
+        try:
+            con = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            return con.execute(sql, values).fetchall()
+        except sqlite3.Error:
+            return None
+        finally:
+            con.close()
+
+    # ---------------------------------------------------------- authorities ---
+    def _fetch_authority(self, need: EvidenceNeed) -> EvidenceResult:
+        if not self.authority_available:
+            # NOT an empty result. The capability exists and its index does
+            # not, and those are different sentences.
+            #
+            # NOT_ASSESSED, which the gate matrix defines for a store "absent,
+            # unopenable, or never built" (G-NOTASSESSED). This returned
+            # HELD_NOT_FOUND -- "the corpus holds this and retrieval failed" --
+            # for a search that never ran; the state predates NOT_ASSESSED.
+            return EvidenceResult(
+                coverage=Coverage.NOT_ASSESSED,
+                missing=(
+                    "the authority index is not built, so no judgment was "
+                    "searched. No claim about the held population can be made. Build it with "
+                    "`python pipeline/build_authority_index.py`."),
+                searched_stores=("authority_index:absent",),
+            )
+
+        terms = self._terms(need)
+        if not terms:
+            return EvidenceResult(
+                coverage=Coverage.NOT_ASSESSED,
+                missing="no searchable terms were identified in the question.",
+                searched_stores=("authority_index",))
+
+        con = None
+        try:
+            con = sqlite3.connect(f"file:{self._authority_db}?mode=ro", uri=True)
+            identity = dict(con.execute("select key, value from identity"))
+            if not identity or not identity.get("corpus_version"):
+                return EvidenceResult(
+                    coverage=Coverage.NOT_ASSESSED,
+                    missing="the authority index carries no corpus identity; nothing was searched",
+                    searched_stores=())
+            rows = con.execute(
+                """select rowid, case_id, case_name, court, year, para_type, chunk_id, text
+                   from paras where paras match ?
+                   order by rank limit ?""",
+                ('text:(' + " OR ".join(f'"{t}"' for t in terms) + ')',
+                 EXAMINED_CEILING + 1)).fetchall()
+            # Count matches with the SAME tokenizer as retrieval. Substring
+            # matching counted 'title' in 'entitlement' yet rejected porter
+            # inflections that FTS had actually matched. Bound every probe to
+            # the candidate rows, never rescan the corpus to score a result.
+            matched_by_row = {r[0]: 0 for r in rows[:EXAMINED_CEILING]}
+            if matched_by_row:
+                slots = ','.join('?' for _ in matched_by_row)
+                for term in terms:
+                    for (row_id,) in con.execute(
+                        f'select rowid from paras where rowid in ({slots}) and paras match ?',
+                        [*matched_by_row, f'text:"{term}"'],
+                    ):
+                        matched_by_row[row_id] += 1
+        except sqlite3.Error as exc:
+            return EvidenceResult(
+                coverage=Coverage.NOT_ASSESSED,
+                missing=f"the authority index could not be queried: {exc}",
+                searched_stores=("authority_index",))
+        finally:
+            if con is not None:
+                con.close()
+
+        # H4 — A CEILING THAT BINDS IS REPORTED, never silent.
+        #
+        # This was `limit 40`, and forty is a TOP-K CUT ON A SIMILARITY ORDER,
+        # which is the one thing H4 names: *no top-k or absolute-threshold
+        # cut... any similarity exclusion is an outlier rejection with a
+        # recorded, measured gap, and it names what it rejected.* The
+        # forty-first paragraph was discarded with no count and no trace, so a
+        # miss caused by the cut was indistinguishable from an absence in the
+        # corpus — the defect shape this whole product is organised against.
+        #
+        # The ceiling stays, because an unbounded scan of 451,553 attributable
+        # paragraphs on every turn is not a retrieval strategy. What changes is
+        # that it is VISIBLE when it binds, exactly as `MAX_EVIDENCE_ROUNDS` is
+        # visible through `evidence_bound_hit`.
+        truncated = len(rows) > EXAMINED_CEILING
+        rows = rows[:EXAMINED_CEILING]
+        rows, excluded = self._screen(rows, 6)
+
+        findings: list[Finding] = []
+        # THE STRUCTURAL FLOOR. A paragraph matching one incidental word of a
+        # multi-word question has not answered it -- FTS ORs the terms, so
+        # "doctrine" alone will match tens of thousands of paragraphs.
+        #
+        # This is a LEXICAL COVERAGE test, not a similarity threshold: PRD H4
+        # forbids an absolute cut on a score, because a score cut discards
+        # things that might be right and leaves no trace. Every rejection here
+        # is counted and the count is reported.
+        floor = 2 if len(terms) >= 2 else 1
+        thin = 0
+        for row_id, case_id, case_name, court, year, para_type, chunk_id, text in rows:
+            if not kind_for_corpus_label(para_type).attributable:
+                # G-ATTRIB. Counsel's submission is 14.8% of the corpus and
+                # reads exactly like a holding, so it is dropped here rather
+                # than ranked lower.
+                continue
+            matched = matched_by_row[row_id]
+            if matched < floor:
+                thin += 1
+                continue
+            findings.append(self._judgment_finding(
+                (case_id, case_name, court, year, para_type, chunk_id, text,
+                 # Lexical coverage of the question, NOT a relevance score. It
+                 # says how much of what was asked this paragraph contains, and
+                 # nothing at all about whether it answers it.
+                 round(matched / len(terms), 2)),
+                proposition=snippet(need.question, 200), jurisdiction=need.jurisdiction,
+                governing_date=need.governing_date))
+
+        findings.sort(key=lambda f: -(f.confidence or 0.0))
+        cut = (f"The index returned more than {EXAMINED_CEILING} ranked "
+               f"matches and only the first {EXAMINED_CEILING} were "
+               f"examined. There may be authority I did not reach; this is "
+               f"a bound on my search, not a statement about the corpus."
+               if truncated else None)
+        omitted = len(set(self._primary_terms(need)) - set(terms))
+        query_note = (f"Searched authority index paragraph text for: {', '.join(terms)}. "
+                      f"Examined {len(rows)} ranked paragraph(s); {thin} failed "
+                      f"the {floor}-term lexical floor. This does not assess semantic support.")
+        if omitted:
+            query_note += (f" The query-term budget omitted {omitted} further input term(s); "
+                           "a narrower query may reach different material.")
+        if not findings:
+            query_note += (" No attributable candidate survived this search. "
+                           "That is not proof that the corpus holds no relevant authority.")
+        return EvidenceResult(
+            coverage=Coverage.ANSWERED if findings else Coverage.SEARCHED_NO_MATCH,
+            findings=tuple(findings), missing=query_note if not findings else None,
+            searched_stores=("authority_index",),
+            search_note=" ".join(x for x in (self._era_note(need), query_note, cut,
+                                             self._held_back(excluded)) if x))
+
+    def judgment_findings(self, rows, *, proposition: str, jurisdiction: str,
+                          governing_date: date) -> tuple[dict[str, Finding], int]:
+        """JUDGMENT PARAGRAPHS A SEARCH RANKED, as judgment Findings, by chunk id.
+
+        THE ONE WAY A JUDGMENT PARAGRAPH BECOMES A FINDING: the word search above and
+        the hybrid judgment search (LB-106) both come through `_judgment_finding`, so
+        binding, treatment, the bench and the paragraph kind are decided once. Rows are
+        `(case_id, case_name, court, year, para_type, chunk_id, text, score)`, the score
+        being the search's own. A paragraph that is not the court deciding, reasoning or
+        ordering yields no Finding (G-ATTRIB); one on the corpus's denylist is held back
+        and counted.
+        """
+        rows = list(rows)
+        if not rows:
+            return {}, 0
+        if not (self._authority_db and self._authority_db.is_file()):
+            raise JudgmentReaderUnavailable("the authority paragraph reader is unavailable")
+        try:
+            con = sqlite3.connect(f"file:{self._authority_db}?mode=ro", uri=True)
+            try:
+                chunks = [str(row[5]) for row in rows]
+                marks = ",".join("?" for _ in chunks)
+                readable = {
+                    (str(case_id), str(chunk_id)): (
+                        str(case_name), str(court), str(year), str(para_type),
+                        " ".join((text or "").split()))
+                    for case_id, chunk_id, case_name, court, year, para_type, text in con.execute(
+                        f"select case_id, chunk_id, case_name, court, year, para_type, text "
+                        f"from paras "
+                        f"where chunk_id in ({marks}) order by rowid", chunks)
+                    if " ".join((text or "").split())
+                }
+            finally:
+                con.close()
+        except sqlite3.Error as exc:
+            raise JudgmentReaderUnavailable(
+                f"the authority paragraph reader could not be queried ({exc})") from exc
+
+        kept, held_back = self._screen(rows, 5)
+        found = {}
+        for row in kept:
+            if (readable.get((str(row[0]), str(row[5])))
+                    == (str(row[1]), str(row[2]), str(row[3]), str(row[4]),
+                        " ".join(str(row[6]).split()))
+                    and kind_for_corpus_label(row[4]).attributable
+                    and " ".join(str(row[6]).split())):
+                found[str(row[5])] = self._judgment_finding(
+                    row, proposition=proposition, jurisdiction=jurisdiction,
+                    governing_date=governing_date)
+        return found, held_back
+
+    def _judgment_finding(self, row, *, proposition: str, jurisdiction: str,
+                          governing_date: date) -> Finding:
+        case_id, case_name, court, year, para_type, chunk_id, text, score = row
+        ruling = binding_status(court, year, jurisdiction)
+        ident = self._identity.case(case_id)
+        bench = f"; {ident.describe()}" if ident else ""
+        return Finding(
+            proposition=proposition,
+            source_kind=SourceKind.AUTHORITY,
+            ref=f"{case_name} ({court}, {year}{bench})",
+            span=" ".join((text or "").split()),
+            locator=f"{case_id}::{chunk_id}::{para_type}",
+            store="authority_index",
+            binding=ruling.status,
+            binding_for=jurisdiction,
+            binding_reason=f"{ruling.rule}: {ruling.reason}",
+            supports=None,
+            para_kind=kind_for_corpus_label(para_type),
+            treatment=self._citator.treatment(case_name, case_id=case_id),
+            governing_date=governing_date,
+            origin=Origin.SEARCHED,
+            confidence=score,
+        )
+
+    # Words that say WHAT KIND of thing is wanted rather than what it is about.
+    # In an authority search "is there any judgment we can rely on" is entirely
+    # scaffolding -- `want_authority` already carries that meaning -- and
+    # letting those words occupy the term budget is what returned three
+    # judgments about substantial questions of law for a query about summary
+    # possession.
+    _SCAFFOLD = {
+        "the", "a", "an", "of", "for", "and", "our", "we", "is", "in", "to", "on",
+        "what", "which", "client", "matter", "case", "act", "under", "there",
+        "any", "judgment", "judgement", "judgments", "ruling", "authority",
+        "authorities", "precedent", "rely", "relied", "whether", "please",
+        "does", "should", "would", "could", "can", "tell", "give", "need",
+        "want", "know", "help", "about", "with", "from", "this", "that",
+        "have", "has", "been", "was", "were", "are", "will", "shall",
+    }
+
+    #: WORDS THAT CANNOT CARRY A LEGAL SUBJECT. Grammar, not vocabulary -- each
+    #: set is CLOSED in English, the way `_FIRST_PERSON` is, and none of them
+    #: names a topic. They extend `_SCAFFOLD`, which already made the same call
+    #: for a shorter list.
+    #:
+    #: MEASURED 23 September 2026, every authority query served on the live
+    #: matters that day -- fifteen. Most of each eight-term budget went on:
+    #:
+    #:     list numbering    one, first, second, third, three, so
+    #:     function words    at, her, he, it, but, do, not, them, still, had
+    #:     the file's dates  february 2018, august 2019, october 2026, 88 2025
+    #:
+    #: -- "one, eviction", "first, dissolution", and twice "three, connected,
+    #: but, separate, matters, do, not, them". A judgment paragraph matched on
+    #: "at" and "not" is incidental by construction.
+    _FUNCTION = {
+        "i", "me", "my", "you", "your", "he", "him", "his", "she", "her", "hers",
+        "it", "its", "they", "them", "their", "us", "at", "by", "into", "over",
+        "since", "before", "after", "until", "upon", "onto", "within", "between",
+        "against", "through", "during", "but", "or", "so", "if", "because",
+        "while", "though", "although", "as", "than", "do", "did", "done", "not",
+        "no", "had", "be", "being", "still", "yet", "also", "just", "now", "then",
+        "some", "all", "each", "every", "these", "those", "who", "whom", "whose",
+        "when", "where", "how", "why", "here", "very", "only", "even", "again",
+        "said", "say", "says", "told", "tell", "get", "got", "go", "went",
+    }
+    #: A brief's own numbering: "First, ...", "Two, arrears." They order the
+    #: advocate's list and say nothing about any of its items.
+    _LIST_MARKERS = {
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "first", "second", "third", "fourth", "fifth", "sixth",
+        "firstly", "secondly", "thirdly", "fourthly", "lastly", "finally",
+        "next", "another", "other",
+    }
+    _MONTHS = {
+        "january", "february", "march", "april", "may", "june", "july",
+        "august", "september", "october", "november", "december",
+        "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct",
+        "nov", "dec",
+    }
+
+    @classmethod
+    def _primary_terms(cls, need: EvidenceNeed) -> list[str]:
+        """The advocate's words that can carry a legal subject, in their order.
+
+        A BARE NUMBER IS KEPT ONLY WHERE IT IS A PROVISION the question cites
+        -- "section 138", "Article 64" -- through
+        `nm.Archives.legal_brain.common.citation_contracts`, the one
+        owner of that pattern. Every other bare number in a brief is this
+        file's own date, amount or case number ("2019", "88", "45,000"), and a
+        judgment paragraph sharing one of those shares nothing that matters.
+
+        A DESIGNATION MIXING DIGITS AND LETTERS IS ALWAYS KEPT -- "53A",
+        "138A". It is a provision whether or not "s." precedes it, and
+        `test_query_numbers_and_truncation_remain_visible` holds that line:
+        losing a section number is the failure this search exists to avoid.
+        """
+        from nm.Archives.legal_brain.common.citation_contracts import provisions_cited
+
+        cited = {str(n).lower() for n in provisions_cited(need.question)}
+        words = re.findall(r"[^\W_]+", need.question.lower())
+        # THE MATTER'S OWN PARTIES ARE NEVER SEARCHED FOR -- exact tokens of the
+        # names on the file, nothing inferred. See `EvidenceNeed.parties`.
+        named = {t for key in (need.parties or ()) for t in re.findall(r"[^\W_]+", key)
+                 if len(t) > 1}
+        drop = (cls._SCAFFOLD | cls._FUNCTION | cls._LIST_MARKERS | cls._MONTHS
+                | named)
+        return list(dict.fromkeys(
+            w for w in words
+            if len(w) > 1 and w not in drop
+            and (not w.isdigit() or w in cited)))
+
+    @classmethod
+    def _subject_terms(cls, need: EvidenceNeed) -> list[str]:
+        """The legal subject the turn already settled, as search words.
+
+        THE CALLER WAS MEANT TO SUPPLY THIS, and `_terms` says so: "the caller
+        puts the resolved provision's subject FIRST". The one caller that
+        searches authority -- the investigation lane -- selects a literal
+        sentence of the brief and supplies nothing else, so the subject never
+        arrived. It is on the need already: `cause_of_action`, read ONCE on the
+        turn and carried into every fetch made from it.
+
+        FROM THE PRODUCT'S OWN CLOSED VOCABULARY, never from model text, so
+        this puts no model-written law into a search. A cause that was not
+        established contributes nothing -- an unknown subject is not searched
+        for as though it were known.
+        """
+        cause = (need.cause_of_action or "").strip().lower()
+        if not cause or cause in ("not_established", "cannot_tell"):
+            return []
+        drop = cls._SCAFFOLD | cls._FUNCTION
+        return [w for w in cause.split("_") if len(w) > 1 and w not in drop]
+
+    @classmethod
+    def _terms(cls, need: EvidenceNeed) -> list[str]:
+        """The search terms, in the order they will be spent.
+
+        The budget is small, so ORDER IS THE WHOLE DESIGN. The caller puts the
+        resolved provision's subject FIRST and the advocate's phrasing after,
+        because the question names the section and the section names the
+        subject -- and taking six terms positionally from the question alone
+        spends every slot on scaffolding.
+        """
+        # THE SUBJECT FIRST, THEN THE ADVOCATE'S WORDS, as this docstring has
+        # always said. Eight slots, spent on words that can find law.
+        seen = list(dict.fromkeys([*cls._subject_terms(need),
+                                   *cls._primary_terms(need)]))[:8]
+        # D3B — THE SUBJECT UNDER THE OTHER CODE, ADDED TO THE TERMS.
+        #
+        # "Case law is overwhelmingly pre-2024 and cites the old numbering, so
+        # a system searching only the new number retrieves almost nothing"
+        # (T-051). A charge under BNS s.329 has its authority under IPC s.447,
+        # and searching the new number alone finds a corpus that appears empty
+        # on a subject it holds thousands of judgments about.
+        #
+        # ADDED, never substituted. H4 forbids discarding anything that might
+        # be right, and the advocate's own words stay at the front of the
+        # budget — this widens recall rather than redirecting it.
+        seen.extend(w for w in cls._corresponding_terms(need) if w not in seen)
+        return seen
+
+    @implements("D4")
+    def _era_note(self, need: EvidenceNeed) -> str | None:
+        """THE ERA RULE, said out loud when a code is named.
+
+        *The governing date is the date of the CONDUCT*, not the date of the
+        advice — and the two now sit on opposite sides of 1 July 2024 for most
+        of what an advocate carries. An advocate reading authority under IPC
+        s.447 on a 2025 charge needs to know which of those the retrieval
+        thought it was answering, because both answers are defensible and only
+        one is theirs.
+
+        `None` where no code is named: this speaks only when there is something
+        to be wrong about.
+        """
+        low = need.question.lower()
+        named = [act for act in CODE_TITLES
+                 if title_without_year(act).lower() in low]
+        if not named:
+            return None
+        return (f"Conduct on {need.governing_date.isoformat()} is governed by "
+                f"{governs(need.governing_date)}. If the conduct happened on a "
+                f"different date from the one on this file, say so — the "
+                f"governing date is the date of the conduct, not of the advice.")
+
+    @classmethod
+    @implements("D4")
+    def _corresponding_terms(cls, need: EvidenceNeed) -> list[str]:
+        """Subject words for the same provision under the other code.
+
+        Returns nothing when the question names no provision this graph holds a
+        verified pair for, which is the ordinary case. The pair list is short
+        and deliberately so: an unverified correspondence would send the
+        advocate to authority on a different subject, which is worse than
+        retrieving nothing.
+        """
+        section = wanted_section(need.question)
+        if not section:
+            return []
+        # WHICH CODE THE SECTION IS IN MUST BE STATED, never inferred from the
+        # digits. `s.447` means different things in different codes, and a
+        # lookup on the number alone is the wrong-Act defect one level down --
+        # the one CLAUDE.md §5 measured matching the Indian Easements Act to
+        # the Indian Evidence Act on the shared word `Indian`.
+        low = need.question.lower()
+        named = [act for act in CODE_TITLES
+                 if title_without_year(act).lower() in low]
+        for act in named:
+            match = corresponding(act, section)
+            if match is None:
+                continue
+            # The SUBJECT, not the number: the old judgment says "criminal
+            # trespass", and matching digits across codes is exactly the
+            # wrong-Act defect one level down.
+            return [w for w in re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}",
+                                          match.subject.lower())
+                    if w not in cls._SCAFFOLD]
+        return []
+
+
+def default_authority_index(root: Path) -> Path:
+    return Path(root) / ".nm" / "authority.db"
+
+
+def current_text_reason(as_of: date | None) -> str:
+    """THE LIMIT A CURRENT-TEXT PASSAGE CARRIES, in the words the advocate reads.
+
+    One owner, so the passage, the reply and the board say the same thing.
+    """
+    on = f"on {as_of.isoformat()}" if as_of is not None else "on the matter's date"
+    return (f"{CURRENT_TEXT_BASIS}; no amendment register is installed, so whether "
+            f"this was the wording in force {on} has not been checked")
+
+
+def in_force_on(entry, day: date) -> bool:
+    if entry.in_force_from and day < entry.in_force_from:
+        return False
+    if entry.in_force_to and day > entry.in_force_to:
+        return False
+    return True

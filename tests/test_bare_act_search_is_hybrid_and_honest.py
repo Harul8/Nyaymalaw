@@ -33,12 +33,12 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.retrieve import hybrid_sections as hybrid
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, Origin
-from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.retrieve.section_search_port import SectionSearch
-from nm.legal_brain.understand.similar_words import interpret
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.retrieve import hybrid_sections as hybrid
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, Origin
+from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.Archives.legal_brain.retrieve.section_search_port import SectionSearch
+from nm.Archives.legal_brain.understand.similar_words import interpret
 from tests.test_a_disclosure_is_served_not_recorded import THREE_AT_ONCE, TODAY
 from tests.test_turn_contract import _Evidence, build, finding
 
@@ -323,13 +323,46 @@ def _engine(tmp_path, port):
     return engine
 
 
-def test_every_dispute_is_searched_without_publishing_unassessed_sections(tmp_path):
+def _relying_needs(user):
+    """A controlled needs read that relies on the searched section it was given."""
+    shown = "Searched Act, 1990 s.9" in user
+    return json.dumps({"requirements": [{
+        "need": "Show the searched section's condition is met on this file.",
+        "why": "The section found by search sets it.",
+        "span": "A searched section's words.", "source": "Searched Act, 1990 s.9",
+        "force": "required", "answer": "", "answer_quote": "", "due_expression": ""}]
+        if shown else []})
+
+
+def test_a_searched_section_reaches_the_reply_only_where_the_disputes_needs_rely_on_it(
+        tmp_path, monkeypatch):
+    """THE RULE CHANGED, BY THE OWNER, 30 September 2026 (LB-76 change 4). Sections
+    found by search were held back and never reached a reply, so the Farah Begum
+    reply quoted no law at all. Now a searched section is shown -- its words, its
+    saved passage for the reader, and the limit that it was found by search with
+    its applicability unconfirmed -- WHERE THE DISPUTE'S NEEDS READ, reading the
+    passage against the dispute, RELIES ON IT. Shown by rerank order alone, a push
+    was answered with homicide and acid-attack sections. Search ranks; the reading
+    decides what is shown; neither decides which Act governs."""
+    from nm.shared.model_scripted import SCRIPTED_READS
+
     port = _Port()
     out = _engine(tmp_path, port).run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE,
                                                 today=TODAY))
     assert len(port.calls) == len(out.matter.threads) == 3, "a dispute was not searched"
+    assert not [e for e in out.answer.elements if "A searched section" in e.text], (
+        "a searched section nothing relied on reached the reply")
+
+    monkeypatch.setitem(SCRIPTED_READS, "requirements", _relying_needs)
+    port = _Port()
+    out = _engine(tmp_path / "relied", port).run(TurnInput(
+        advocate_id="adv_1", message=THREE_AT_ONCE, today=TODAY))
     shown = [e for e in out.answer.elements if "A searched section" in e.text]
-    assert not shown, "a search hit was published before applicability was checked"
+    assert shown, "a searched section the needs relied on did not reach the reply"
+    for e in shown:
+        assert e.disclosure and e.source is not None and e.refs == (e.source.locator,)
+        assert "Found by search for this dispute; whether it applies has not been " \
+               "confirmed." in e.text
     for thread in out.matter.threads:
         assert not any("searched::" in f.locator for f in thread.authorities), (
             "a search candidate was recorded as law the dispute rests on")

@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.retrieve.evidence_port import Finding, Origin
+from nm.Archives.legal_brain.retrieve.evidence_port import Finding, Origin
 from tests.test_independent_claim_verifier import finding
 
 pytestmark = pytest.mark.class_a

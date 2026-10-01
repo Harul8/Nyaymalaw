@@ -4,9 +4,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.procedure.governing_law_port import Limb, Pending
-from nm.legal_brain.orchestrate.loop_contracts import StopReason
-from nm.legal_brain.orchestrate.tools import Assessment
+from nm.Archives.legal_brain.procedure.governing_law_port import Limb, Pending
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StopReason
+from nm.Archives.legal_brain.orchestrate.tools import Assessment
 from nm.shared.model_port import ToolCall
 from tests.test_controlled_brain_composition_keeps_the_account_boundary import _compose, _scope
 from tests.test_the_loop_records_work_before_using_it import _limits, _response
@@ -45,7 +45,7 @@ def test_composed_governing_lookup_reaches_curation_without_inventing_unknown_pr
 
 
 def test_composed_practice_table_population_is_explicit_and_complete(client, monkeypatch):
-    from nm.legal_brain.orchestrate import tool_catalogue
+    from nm.Archives.legal_brain.orchestrate import tool_catalogue
 
     app, _, scope = _scope(client)
     captured = []

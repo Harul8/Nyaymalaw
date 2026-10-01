@@ -112,8 +112,8 @@ The procedure, after any fix:
    from one module.** An enumerator scoped to a module misses the member added
    to a sibling module an hour later — which is exactly what happened to
    `test_every_declared_schema_is_satisfiable_when_nothing_was_established`,
-   written in the morning against `nm/legal_brain/understand/posture.py` and already blind to
-   `nm/legal_brain/understand/dispute.py` by the afternoon.
+   written in the morning against `nm/Archives/legal_brain/understand/posture.py` and already blind to
+   `nm/Archives/legal_brain/understand/dispute.py` by the afternoon.
 
 This applies to build fixes, test fixes and stress-test findings alike.
 
@@ -165,7 +165,7 @@ full, and the gate then correctly withheld the turn. Two correct components,
 one useless answer, and the defect living in the gap between them. Every unit
 test passed.
 
-`nm/legal_brain/common/citation_contracts.py` is now the only module permitted to define such a
+`nm/Archives/legal_brain/common/citation_contracts.py` is now the only module permitted to define such a
 pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
 on a second one.
 
@@ -264,7 +264,7 @@ python pipeline/releasegate.py --write     # measure the corpus, score assurance
 
 `assurance/specification/release.yaml` holds authored thresholds with an owner and a cadence.
 `pipeline/releasegate.py` measures, scores every row **PASS / FAIL / NOT MEASURED**,
-and writes `assurance/specification/coverage.yaml`. `nm/legal_brain/retrieve/coverage_sources.py` reads that same file
+and writes `assurance/specification/coverage.yaml`. `nm/Archives/legal_brain/retrieve/coverage_sources.py` reads that same file
 at turn time, so the release decision and the advocate-facing disclosure
 (`G-COVERAGE`) rest on ONE measurement and cannot disagree.
 
@@ -282,7 +282,7 @@ on every authority turn that *no High Court output is held for this
 jurisdiction.* **4,280 are held, and every one of them binds** — Andhra Pradesh
 High Court judgements are Telangana judgements, which is a standing decision
 recorded in `BASELINE.md` §1.1 and already implemented correctly in
-`nm/legal_brain/retrieve/jurisdiction_sources.py`.
+`nm/Archives/legal_brain/retrieve/jurisdiction_sources.py`.
 
 *Binding is a RELATIONSHIP, not a court name.* A zero from the wrong index
 reads exactly like absence — the trap this file already records against the
@@ -333,11 +333,17 @@ sitting on disk.
 
 ## The previous build — `C:/Users/rahul/Agentified NM`
 
-**No code comes from there. Not a file, not a function, not a pattern.**
-That tree is the build that reached 217 stories and produced advice an
-advocate could not use. Importing any of it reintroduces the assumptions
-that failed, and they are not obvious on inspection — that is what made
-them expensive the first time.
+**Relaxed by the owner on 30 September 2026:** *"you are free to reuse good and
+better old code from agentifiednm repo"*. Its `main` branch holds the pipeline
+the owner liked -- dispute understanding, hybrid search and reranking, numbered
+citation tags rendered by code, and the reading pane opened at the exact
+passage. Reuse what is good, and bring it in the way anything else comes in:
+through this project's rules and tests, never wholesale.
+
+The earlier rule, and why it existed: that tree is the build that reached 217
+stories and produced advice an advocate could not use, and its assumptions are
+not obvious on inspection. So what is taken is read first and taken for what it
+does, not for what surrounds it.
 
 **Data and measurements outside `legal_database/` may be used.** Two
 artefacts were surveyed on 29 August 2026 and both were declined:
@@ -349,7 +355,7 @@ artefacts were surveyed on 29 August 2026 and both were declined:
 
 **The dense index is only knowable as unusable because it shipped an
 `identity.json`.** That is the entire argument for defect shape S11, and it
-is now enforced by `nm/legal_brain/retrieve/artefact_sources.py` — using that real artefact as
+is now enforced by `nm/Archives/legal_brain/retrieve/artefact_sources.py` — using that real artefact as
 the counterexample its test must reject, because a synthetic fixture would
 prove only that the check compiles.
 

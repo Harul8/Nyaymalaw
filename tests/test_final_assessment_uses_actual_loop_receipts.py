@@ -5,16 +5,16 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import (
+from nm.Archives.legal_brain.verify.brain_assessment import (
     AssessmentRefused,
     AssessmentService,
     captured_retrievals,
 )
-from nm.legal_brain.verify.brain_release import IndependentReview, prepare_claims
-from nm.legal_brain.retrieve.evidence_port import Coverage
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind
-from nm.legal_brain.verify.output_checks import BoundarySubjects, OutputSubjects
-from nm.legal_brain.verify.verifier import VerifiedRelease, release_verified
+from nm.Archives.legal_brain.verify.brain_release import IndependentReview, prepare_claims
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind
+from nm.Archives.legal_brain.verify.output_checks import BoundarySubjects, OutputSubjects
+from nm.Archives.legal_brain.verify.verifier import VerifiedRelease, release_verified
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import response
 

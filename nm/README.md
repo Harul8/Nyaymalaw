@@ -5,7 +5,7 @@ stable reading positions, not importable folder names or a mandatory runtime pat
 
 - 01 — [Arrive](arrive/README.md): identity, account and workspace access.
 - 02 — [Open a matter](open_matter/README.md): brief, engagement, screens and intake.
-- 03 — [Legal brain](legal_brain/README.md): understand, retrieve, reason, verify and converse.
+- 03 — [Legal brain](Archives/legal_brain/README.md): understand, retrieve, reason, verify and converse.
 - 04 — [Work the file](work_the_file/README.md): facts, disputes, checklist and deadlines.
 - 05 — [Advise](advise/README.md): options, recommendation and reassessment.
 - 06 — [Act](act/README.md): permitted action, drafting and preparation.
@@ -28,15 +28,15 @@ or a claim that every planned feature is built. Requirements remain in Before
 Build; status requires current evidence. Architectural import permissions remain
 explicit in `source_layout.json` and are enforced across every phase.
 
-Inside 03, read [common](legal_brain/common/README.md) for shared rules, then
-[understand](legal_brain/understand/README.md),
-[retrieve](legal_brain/retrieve/README.md),
-[reason](legal_brain/reason/README.md),
-[procedure](legal_brain/procedure/README.md),
-[verify](legal_brain/verify/README.md),
-[communicate](legal_brain/communicate/README.md),
-[orchestrate](legal_brain/orchestrate/README.md) and
-[evaluate](legal_brain/evaluate/README.md). This is a review order: real work may
+Inside 03, read [common](Archives/legal_brain/common/README.md) for shared rules, then
+[understand](Archives/legal_brain/understand/README.md),
+[retrieve](Archives/legal_brain/retrieve/README.md),
+[reason](Archives/legal_brain/reason/README.md),
+[procedure](Archives/legal_brain/procedure/README.md),
+[verify](Archives/legal_brain/verify/README.md),
+[communicate](Archives/legal_brain/communicate/README.md),
+[orchestrate](Archives/legal_brain/orchestrate/README.md) and
+[evaluate](Archives/legal_brain/evaluate/README.md). This is a review order: real work may
 loop back as the file, law and permissions change.
 
 See [the full project map](../docs/PROJECT_STRUCTURE.md) for tooling, tests,

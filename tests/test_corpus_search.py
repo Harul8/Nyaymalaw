@@ -21,10 +21,10 @@ import sqlite3
 
 import pytest
 
-from nm.legal_brain.retrieve import search_authority as authority
-from nm.legal_brain.retrieve.evidence_port import Coverage, Origin
-from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
-from nm.legal_brain.retrieve.search_port import CorpusSearch, IndexIdentity, SearchHit
+from nm.Archives.legal_brain.retrieve import search_authority as authority
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, Origin
+from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.Archives.legal_brain.retrieve.search_port import CorpusSearch, IndexIdentity, SearchHit
 from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
@@ -180,7 +180,7 @@ def test_the_search_surface_cannot_identify_an_act():
     this surface has no way to return an Act at all, so the exact-match path
     is the only path an Act can come down.
     """
-    from nm.legal_brain.retrieve.search_port import CorpusSearchPort
+    from nm.Archives.legal_brain.retrieve.search_port import CorpusSearchPort
 
     methods = [n for n in dir(CorpusSearchPort) if not n.startswith("_")]
     # P21 GREW THIS SURFACE, and the population is re-registered rather than

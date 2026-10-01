@@ -628,7 +628,7 @@ GATES: tuple[Gate, ...] = (
         # cause, which is work here and not an action there.
         recovery=Recovery.SYSTEM,
         visible="D5's counterexample, and it ran for a whole slice: "
-                "`nm/legal_brain/reason/proof_contracts.py` refused an OBTAINABLE position with "
+                "`nm/Archives/legal_brain/reason/proof_contracts.py` refused an OBTAINABLE position with "
                 "nothing named that would obtain it, refused an ABSENT one "
                 "with no dead end, and drew `uncovered` from the ELEMENTS so "
                 "the coverage gate could not certify itself \u2014 and "

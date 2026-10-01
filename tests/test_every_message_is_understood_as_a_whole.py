@@ -29,8 +29,8 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, BoardChange, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import answer_from_payload, answer_payload
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
-from nm.legal_brain.understand import route as route_reader
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.understand import route as route_reader
 from nm.open_matter.transcripts_api import project
 from nm.shared.model_port import Prompt, ProviderUnavailable, Tier
 from nm.shared.model_scripted import ScriptedModelAdapter

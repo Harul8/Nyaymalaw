@@ -28,7 +28,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_port import ModelPort, Prompt, Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import KEEP, Call, TracedModel, read_name

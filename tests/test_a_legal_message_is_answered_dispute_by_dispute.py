@@ -41,13 +41,13 @@ from nm.advise.answer_contracts import (
     ReplyParagraph,
     Route,
 )
-from nm.legal_brain.communicate import compose as compose_module
-from nm.legal_brain.orchestrate import turn as turn_module
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, current_text_reason
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, is_current_text
-from nm.legal_brain.retrieve.provision_revision_sources import SelectionState
-from nm.legal_brain.verify import grounding
+from nm.Archives.legal_brain.communicate import compose as compose_module
+from nm.Archives.legal_brain.orchestrate import turn as turn_module
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, current_text_reason
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, is_current_text
+from nm.Archives.legal_brain.retrieve.provision_revision_sources import SelectionState
+from nm.Archives.legal_brain.verify import grounding
 from nm.shared.model_scripted import SCRIPTED_READS
 from tests.test_a_disclosure_is_served_not_recorded import THREE_AT_ONCE, TODAY
 from tests.test_provision_revisions_need_owned_interval_proof import (
@@ -136,9 +136,27 @@ class _Recording(_Evidence):
         return super().fetch(need)
 
 
+class _Judgments:
+    """A judgment search port that records the words each dispute was searched with."""
+
+    def __init__(self):
+        self.words = []
+
+    def search(self, words, *, similar=(), as_of, jurisdiction, limit=4):
+        from nm.Archives.legal_brain.retrieve.section_search_port import SectionSearch
+
+        self.words.append(words)
+        return SectionSearch(True, (), note="searched")
+
+    def readiness(self):
+        return "ready"
+
+
 def test_every_dispute_on_a_legal_message_gets_its_law(tmp_path):
     evidence = _Recording()
     engine, _ = build(tmp_path, evidence=evidence)
+    judgments = _Judgments()
+    engine.inner._judgments = judgments
     out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE, today=TODAY))
     threads = out.matter.threads
     assert len(threads) == 3, [t.label for t in threads]
@@ -150,30 +168,38 @@ def test_every_dispute_on_a_legal_message_gets_its_law(tmp_path):
         stem = t.label.rstrip("…").strip()
         assert any(stem in q for q in provisions), (
             f"no provision was looked up on {t.label!r}'s own words")
-    judgments = [n for n in evidence.needs if n.want_authority]
-    assert len({n.question for n in judgments}) >= 3, (
-        "each dispute with a settled side gets its own judgment search")
+    # JUDGMENTS ARE SEARCHED THE WAY SECTIONS ARE (LB-106; owner, 30 September 2026),
+    # through the judgment search on each dispute's own words -- not the older word
+    # search through the evidence adapter.
+    assert len(set(judgments.words)) == len(threads) == 3, (
+        "each dispute gets its own judgment search")
+    assert not [n for n in evidence.needs if n.want_authority], (
+        "the older word-only judgment search still runs per message")
     shown = {e.thread for e in out.answer.elements if e.source is not None}
     assert {t.id for t in threads} <= shown, (
         "a dispute's retrieved passage never reached the answer")
 
 
-def test_every_served_dispute_has_its_own_assessment_record(tmp_path):
-    """A source list on a secondary dispute cannot stand in for its assessment."""
+def test_every_served_dispute_is_worked_the_same_way_and_nothing_else_is_computed(tmp_path):
+    """EVERY DISPUTE BY ONE MECHANISM, AND ONLY WHAT THE PASSAGES GIVE (LB-76; owner, 30
+    September 2026: "this analysis should come from retrieved passages only"). The focus
+    and every other dispute record the same assessment -- the law looked for and the open
+    questions -- and none computes a limitation deadline, an issue list, a proof table, an
+    evidence list, a theory or the opposing case per message."""
     engine, _ = build(tmp_path, evidence=_Recording())
     out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE, today=TODAY))
     assert not out.answer.blocked
-    for thread in out.matter.threads:
-        if not thread.posture.resolved:
-            continue
-        assert {"authorities", "deadlines", "gaps"} <= set(thread.assessed), (
-            f"{thread.label}: law was retrieved but no threshold assessment "
-            f"or open-question record was made")
-        assert thread.deadlines, (
-            f"{thread.label}: even an uncomputed clock needs a visible row")
-        assert "evidence" in thread.assessed and "issues" in thread.assessed, (
-            f"{thread.label}: material and issues were assessed only on the "
-            "focus dispute")
+    assessed = [set(thread.assessed) for thread in out.matter.threads]
+    for thread, keys in zip(out.matter.threads, assessed):
+        assert {"authorities", "gaps"} <= keys, (
+            f"{thread.label}: its law or its open questions were not recorded")
+        assert not keys & {"deadlines", "issues", "proof", "evidence", "theory",
+                           "recommendation", "premises"}, (
+            f"{thread.label}: an analysis left the per-message path and still ran: "
+            f"{sorted(keys & {'deadlines', 'issues', 'proof', 'evidence', 'theory'})}")
+    assert out.metrics.llm_calls <= 4 + 4 * len(out.matter.threads) + 2, (
+        "more model calls than the lean path makes: "
+        f"{out.metrics.llm_calls} for {len(out.matter.threads)} disputes")
 
 
 def test_the_bound_on_disputes_is_said_when_it_binds(tmp_path, monkeypatch):
@@ -262,7 +288,7 @@ def _composer(first, second=None):
     def respond(user):
         calls.append(user)
         text = second if (second is not None and len(calls) > 1) else first
-        return json.dumps({"paragraphs": [{"text": text, "passage": "", "carries": ""}]})
+        return json.dumps({"paragraphs": [{"text": text, "carries": ""}]})
     return respond, calls
 
 

@@ -7,18 +7,18 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import AssessmentService
-from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.verify.brain_publication import PrivatePublicationService
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
-from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-from nm.legal_brain.communicate.reviewed_preview import MARKER, ReviewedPreviewService
-from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+from nm.Archives.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.Archives.legal_brain.verify.brain_publication import PrivatePublicationService
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.Archives.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
+from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.Archives.legal_brain.communicate.reviewed_preview import MARKER, ReviewedPreviewService
+from nm.Archives.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.open_matter.screens import Screen, ScreenKind, ScreenState
 from nm.shared.authority_contracts import Act, ActingAs, permits
 from nm.shared.budget_contracts import Budget

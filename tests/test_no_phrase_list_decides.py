@@ -50,7 +50,7 @@ import pathlib
 import pytest
 
 from nm.advise.answer_contracts import Route
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 
 pytestmark = pytest.mark.class_a
 
@@ -112,7 +112,7 @@ def test_the_route_is_read_and_never_counted():
     words, it need not be a greeting; it can be the actual dispute. Let the
     model decide.* Both lists and both length rules are gone.
     """
-    from nm.legal_brain.orchestrate import turn as turn_module
+    from nm.Archives.legal_brain.orchestrate import turn as turn_module
 
     src = (pathlib.Path(turn_module.__file__)).read_text(encoding="utf-8")
     code = chr(10).join(ln for ln in src.splitlines()

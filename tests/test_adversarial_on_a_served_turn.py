@@ -21,8 +21,8 @@ from types import SimpleNamespace
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.reason import adversarial as adv
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.reason import adversarial as adv
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.work_the_file.matter_contracts import Thread

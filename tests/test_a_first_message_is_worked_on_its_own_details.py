@@ -23,7 +23,7 @@ import json
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from nm.shared.model_scripted import SCRIPTED_READS
 from tests.test_turn_contract import build
 

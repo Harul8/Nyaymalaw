@@ -9,14 +9,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate import runtime_capture
-from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
-from nm.legal_brain.evaluate.runtime_port_tape import CONTRACTS
-from nm.legal_brain.orchestrate.controlled_registry_composition import ControlledRegistryPorts
-from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
+from nm.Archives.legal_brain.evaluate import runtime_capture
+from nm.Archives.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
+from nm.Archives.legal_brain.evaluate.runtime_port_tape import CONTRACTS
+from nm.Archives.legal_brain.orchestrate.controlled_registry_composition import ControlledRegistryPorts
+from nm.Archives.legal_brain.orchestrate.tool_catalogue import PracticeTables
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.Archives.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
 from tests.test_runtime_capture_uses_the_actual_protected_journal import admitted_runtime
 
 pytestmark = pytest.mark.class_a

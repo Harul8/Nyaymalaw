@@ -9,7 +9,7 @@ import sqlite3
 
 import pytest
 
-from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
 from tests.test_the_journey_login_to_logout import _sign_in, _tab
 from tests.test_the_workspace_respects_its_current_context import journey as _base_journey
 from tests.test_the_workspace_respects_its_current_context import page as _base_page

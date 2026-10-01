@@ -24,9 +24,9 @@ from nm.close.retention_contracts import (
     RetentionState,
     Tombstone,
 )
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
-from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
-from nm.legal_brain.orchestrate.tools import Assessment, Availability, Boundary, ToolContext, ToolRegistry
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
+from nm.Archives.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+from nm.Archives.legal_brain.orchestrate.tools import Assessment, Availability, Boundary, ToolContext, ToolRegistry
 from nm.open_matter.document_local import LocalDocumentText
 from nm.open_matter.document_text_port import (
     DocumentFormat,

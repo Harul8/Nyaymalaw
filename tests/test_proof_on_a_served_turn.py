@@ -2,7 +2,7 @@
 
 WHAT WAS MISSING, AND FOR HOW LONG
 ------------------------------------
-`nm/legal_brain/reason/proof_contracts.py` has carried D5's whole contract since slice 7. A position
+`nm/Archives/legal_brain/reason/proof_contracts.py` has carried D5's whole contract since slice 7. A position
 cannot be HELD without material, cannot be OBTAINABLE without saying what would
 obtain it, cannot be ABSENT without naming the dead end, and `uncovered` draws
 its population from the ELEMENTS so the coverage gate cannot certify itself.
@@ -15,8 +15,8 @@ constructs in production.
 
 THE DIVISION OF LABOUR IS THE DESIGN, AND THESE TEST IT SEPARATELY
 --------------------------------------------------------------------
-    the LAW    what a cause requires   `nm/legal_brain/reason/elements_sources.py`, curated
-    the FILE   what is held for each   `nm/legal_brain/reason/proof_read.py`, read + guarded
+    the LAW    what a cause requires   `nm/Archives/legal_brain/reason/elements_sources.py`, curated
+    the FILE   what is held for each   `nm/Archives/legal_brain/reason/proof_read.py`, read + guarded
 
 A model asked "what are the elements of specific performance" answers
 plausibly and differently every call. If the element list came back from the
@@ -30,12 +30,12 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
-from nm.legal_brain.reason import proof, proof_read
-from nm.legal_brain.reason.elements_adapter import CuratedElements
-from nm.legal_brain.reason.elements_sources import ELEMENTS, WITHHELD, elements_for, why_not
-from nm.legal_brain.reason.proof_contracts import ProofPosition, ProofStatus, Standard
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.reason import proof, proof_read
+from nm.Archives.legal_brain.reason.elements_adapter import CuratedElements
+from nm.Archives.legal_brain.reason.elements_sources import ELEMENTS, WITHHELD, elements_for, why_not
+from nm.Archives.legal_brain.reason.proof_contracts import ProofPosition, ProofStatus, Standard
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
 from nm.shared.store_file_store import FileMatterStore
@@ -368,12 +368,12 @@ def test_a_cause_with_no_curated_elements_names_the_reason(tmp_path):
 
 
 def _metrics():
-    from nm.legal_brain.orchestrate.turn import TurnMetrics
+    from nm.Archives.legal_brain.orchestrate.turn import TurnMetrics
     return TurnMetrics(turn_id="turn_1", matter_id="mat_1")
 
 
 def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
-    """THE WHOLE POINT. Every refusal in `nm/legal_brain/reason/proof_contracts.py` was correct for
+    """THE WHOLE POINT. Every refusal in `nm/Archives/legal_brain/reason/proof_contracts.py` was correct for
     a slice and none of it ran, because nothing constructed a position."""
     engine, _ = _engine(tmp_path)
     from nm.work_the_file.matter_contracts import Thread

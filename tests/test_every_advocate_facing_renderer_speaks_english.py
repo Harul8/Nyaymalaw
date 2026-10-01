@@ -173,7 +173,7 @@ def test_the_population_is_the_whole_product_and_is_not_empty():
     """A sweep over nothing passes. This is what says it looked."""
     population = _population()
     assert len(population) > 100, len(population)
-    assert any(where == "nm/legal_brain/orchestrate/turn.py" for where, _ in population)
+    assert any(where == "nm/Archives/legal_brain/orchestrate/turn.py" for where, _ in population)
     assert any(where.startswith("nm/edge/") for where, _ in population)
 
 
@@ -386,7 +386,7 @@ def _names_a_label(expr: ast.expr) -> bool:
 def test_a_held_string_in_prose_is_never_read_as_a_quotation():
     """THE RULE, on the renderer itself: whatever the string holds, the marks
     around it are not ones G-QUOTE reads as quoting retrieved text."""
-    from nm.legal_brain.verify.grounding import quoted_spans
+    from nm.Archives.legal_brain.verify.grounding import quoted_spans
     from nm.shared.spoken_contracts import dispute, named
 
     for label in _LIVE_LABELS:
@@ -402,7 +402,7 @@ def test_a_quotation_the_string_really_carries_is_still_checked():
     """NEGATIVE CONTROL. `named` fixes the DELIMITER and leaves the content
     alone: a double-quoted passage inside the string is a quotation that string
     makes, and hiding it from the gate would be a loosening."""
-    from nm.legal_brain.verify.grounding import quoted_spans
+    from nm.Archives.legal_brain.verify.grounding import quoted_spans
     from nm.shared.spoken_contracts import named
 
     inner = 'the notice says "possession shall be handed over forthwith"'
@@ -415,7 +415,7 @@ def test_the_file_memory_names_a_dispute_without_quoting_it():
     shown a double-quoted label quotes it back, and G-QUOTE withholds."""
     from dataclasses import replace
 
-    from nm.legal_brain.verify.grounding import quoted_spans
+    from nm.Archives.legal_brain.verify.grounding import quoted_spans
     from nm.work_the_file.matter_contracts import Thread
     from nm.work_the_file.summary_contracts import _established_on
 

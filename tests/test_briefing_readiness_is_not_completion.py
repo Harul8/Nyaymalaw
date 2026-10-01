@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.orchestrate.lead_contracts import Action
-from nm.legal_brain.understand import briefing
+from nm.Archives.legal_brain.orchestrate.lead_contracts import Action
+from nm.Archives.legal_brain.understand import briefing
 from nm.shared.traceability_contracts import refuses
 from nm.work_the_file.matter_contracts import Matter
 
@@ -200,7 +200,7 @@ def test_a_paused_gap_stops_the_loop_and_blocks_completion(tmp_path):
     claiming intake done."""
     from dataclasses import replace
 
-    from nm.legal_brain.reason.gaps import Gap, GapKind
+    from nm.Archives.legal_brain.reason.gaps import Gap, GapKind
 
     c = _client(tmp_path)
     mid, ver, _ = _open_matter(c)

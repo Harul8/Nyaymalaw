@@ -471,7 +471,7 @@ def test_no_reproduction_declaration_outlives_its_row():
     A declaration table rots in one direction: the defect is fixed, the entry
     stays, and the next reader believes a gap that has been closed. Same
     arrangement as `UNWIRED` in test_reached_from_production, whose stale
-    `nm.legal_brain.common.reads_contracts` entry failed the build the hour that module was wired.
+    `nm.Archives.legal_brain.common.reads_contracts` entry failed the build the hour that module was wired.
     """
     rows = {r["id"]: r for r in _register()}
     stale = []

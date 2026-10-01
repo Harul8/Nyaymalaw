@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.model_port import ModelResult, Usage
 from nm.work_the_file.matter_contracts import Matter

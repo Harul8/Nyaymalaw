@@ -2,7 +2,7 @@
 
 WHY THIS FILE EXISTS, AND WHAT IT FOUND ON ITS FIRST RUN
 ----------------------------------------------------------
-`nm/legal_brain/common/reads_contracts.py` says, in its own source: *"`tests/test_reads_registry.py`
+`nm/Archives/legal_brain/common/reads_contracts.py` says, in its own source: *"`tests/test_reads_registry.py`
 fails the build on a schema in `nm/` that is not here, so a twelfth read cannot
 be added without someone deciding which kind it is."*
 
@@ -44,7 +44,7 @@ import pathlib
 
 import pytest
 
-from nm.legal_brain.common import reads_contracts as reads
+from nm.Archives.legal_brain.common import reads_contracts as reads
 from tests.test_turn_contract import briefed  # noqa: F401
 
 pytestmark = pytest.mark.class_a
@@ -223,7 +223,7 @@ def test_a_read_that_is_not_decisive_is_allowed_to_be_empty():
 
 
 def test_no_second_copy_of_the_decisive_set_exists():
-    """`nm.legal_brain.common.reads_contracts` decides which reads are decisive, and nothing else.
+    """`nm.Archives.legal_brain.common.reads_contracts` decides which reads are decisive, and nothing else.
 
     A hardcoded set of keys in the adapter -- which is where the check runs --
     would be a second owner for one truth (S9), and it would drift the day a
@@ -231,7 +231,7 @@ def test_no_second_copy_of_the_decisive_set_exists():
     guard six, with nothing to notice.
 
     THE FIRST VERSION OF THIS CHECK WAS A SUBSTRING SCAN FOR THE WORD
-    "decisive" and it flagged `nm/legal_brain/reason/cause.py`, where the word appears in a
+    "decisive" and it flagged `nm/Archives/legal_brain/reason/cause.py`, where the word appears in a
     comment about enum values. A check whose signal is the English language is
     noise, and noise that fails the build gets deleted rather than heeded. It
     now looks for the thing itself: a collection literal naming two or more
@@ -254,7 +254,7 @@ def test_no_second_copy_of_the_decisive_set_exists():
                     f"{sorted(named & keys)}")
     assert not offenders, (
         "these hold their own set of decisive reads. Call "
-        "`nm.legal_brain.common.reads_contracts.BY_KEY` instead -- a second copy guards the reads "
+        "`nm.Archives.legal_brain.common.reads_contracts.BY_KEY` instead -- a second copy guards the reads "
         "it knew about on the day it was written:\n  "
         + "\n  ".join(offenders))
 
@@ -276,7 +276,7 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
     an answer that never mentions it — CLAUDE.md §8."""
     from datetime import date
 
-    from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.model_traced import TracedModel
     from nm.shared.store_file_store import FileMatterStore
@@ -344,20 +344,20 @@ def test_no_read_asks_for_the_hard_tier_while_none_is_earned():
 
     So this is the inverse of the check it replaces. It was
     `test_every_decisive_read_asks_for_the_hard_tier`; the register in
-    nm/legal_brain/common/tiers_contracts.py is empty again, and the slice-0 guard already fails the
+    nm/Archives/legal_brain/common/tiers_contracts.py is empty again, and the slice-0 guard already fails the
     build on a `Tier.HARD` that is not declared there. This asserts the other
     half -- that the reads went BACK, rather than being left half-escalated by
     an incomplete revert.
     """
-    source = (ROOT / "nm/legal_brain/orchestrate/turn.py").read_text(encoding="utf8")
+    source = (ROOT / "nm/Archives/legal_brain/orchestrate/turn.py").read_text(encoding="utf8")
     asking_hard = _hard_tier_reads(source)
 
-    from nm.legal_brain.common.tiers_contracts import HARD_TIER_STEPS
+    from nm.Archives.legal_brain.common.tiers_contracts import HARD_TIER_STEPS
     if HARD_TIER_STEPS:
         pytest.skip("an escalation is declared again; this check is the "
                     "withdrawal and does not apply")
     assert not asking_hard, (
-        "these reads ask for the hard tier while nm/legal_brain/common/tiers_contracts.py declares "
+        "these reads ask for the hard tier while nm/Archives/legal_brain/common/tiers_contracts.py declares "
           f"no step has earned it: {asking_hard}")
 
 
@@ -412,7 +412,7 @@ def test_the_judge_is_not_the_model_under_test():
 
 
 def test_an_absent_hard_tier_degrades_out_loud():
-    """`nm/legal_brain/common/reads_contracts.py`: a decisive read that quietly falls back to the
+    """`nm/Archives/legal_brain/common/reads_contracts.py`: a decisive read that quietly falls back to the
     cheap tier is the same defect as a screen that could not run returning a
     clean result -- the answer looks identical and is worth less.
 

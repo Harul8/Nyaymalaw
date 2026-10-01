@@ -15,7 +15,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.procedure.limitation import (
+from nm.Archives.legal_brain.procedure.limitation import (
     Applied,
     Factor,
     FactorKind,
@@ -27,7 +27,7 @@ from nm.legal_brain.procedure.limitation import (
     not_computed,
     period_in,
 )
-from nm.legal_brain.reason.accrual import unresolved_trigger_reason
+from nm.Archives.legal_brain.reason.accrual import unresolved_trigger_reason
 from nm.shared.traceability_contracts import refuses
 from nm.work_the_file.matter_contracts import Fact, Provenance, Side
 

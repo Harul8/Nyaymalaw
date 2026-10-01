@@ -220,7 +220,7 @@ def test_the_one_read_funnel_refuses_before_returning():
     covered without its author knowing this rule exists."""
     import inspect
 
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 
     source = inspect.getsource(TurnEngine._read)
     assert "refuse_partial" in source
@@ -233,7 +233,7 @@ def test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise():
     """The mechanism BK-29-AC1 asks for already exists; this keeps it. A read
     that quotes gets room proportional to what it was shown, and a read whose
     answer is a fixed shape gets a number stated once, in one table."""
-    from nm.legal_brain.common import ceiling
+    from nm.Archives.legal_brain.common import ceiling
     from nm.shared.model_port import Prompt
 
     short = Prompt(system="s", user="a brief")
@@ -244,7 +244,7 @@ def test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise():
 
 
 def test_an_unlisted_read_gets_the_floor_and_not_an_invented_number():
-    from nm.legal_brain.common import ceiling
+    from nm.Archives.legal_brain.common import ceiling
     from nm.shared.model_port import Prompt
 
     assert ceiling.for_read("a_read_nobody_listed", Prompt(system="s", user="u"),
@@ -255,7 +255,7 @@ def test_the_derived_ceiling_is_bounded_at_both_ends():
     """The floor stops a one-line brief producing a ceiling too small for the
     JSON around an empty answer; the cap stops a pasted judgment producing a
     request the provider refuses."""
-    from nm.legal_brain.common import ceiling
+    from nm.Archives.legal_brain.common import ceiling
     from nm.shared.model_port import Prompt
 
     assert ceiling.for_echo(Prompt(system="", user="x")) == ceiling.FLOOR

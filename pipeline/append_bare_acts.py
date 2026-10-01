@@ -59,7 +59,7 @@ sys.path.insert(0, str(ROOT))
 from assurance.common._console import utf8_console  # noqa: E402
 
 utf8_console()
-from nm.legal_brain.retrieve.hybrid_sections import (  # noqa: E402
+from nm.Archives.legal_brain.retrieve.hybrid_sections import (  # noqa: E402
     DOC_TYPE,
     EMBED_MODEL,
     bm25_tokens,

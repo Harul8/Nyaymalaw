@@ -3,9 +3,9 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, digest
-from nm.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
-from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, digest
+from nm.Archives.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
+from nm.Archives.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
 from tests.test_runtime_capture_uses_the_actual_protected_journal import NOW, admitted_runtime
 
 pytestmark = pytest.mark.class_a

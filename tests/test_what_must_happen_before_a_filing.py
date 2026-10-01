@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.citation_contracts import provision_label
-from nm.legal_brain.common.curation_contracts import Curation
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.procedure import institution_sources as curated
-from nm.legal_brain.procedure.institution_port import Against
-from nm.legal_brain.reason import thresholds
+from nm.Archives.legal_brain.common.citation_contracts import provision_label
+from nm.Archives.legal_brain.common.curation_contracts import Curation
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.procedure import institution_sources as curated
+from nm.Archives.legal_brain.procedure.institution_port import Against
+from nm.Archives.legal_brain.reason import thresholds
 from nm.work_the_file.matter_contracts import CauseOfAction
 from tests.test_turn_contract import build
 
@@ -190,7 +190,7 @@ def test_an_unwired_installation_keeps_the_maps_own_reason(tmp_path):
     """AN ABSENT PORT IS NOT A FINDING. With no curated table the row must read
     exactly as it did before this work existed -- never as one that looked and
     found nothing (CLAUDE.md section 9)."""
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
@@ -215,7 +215,7 @@ def test_a_threshold_with_its_own_renderer_is_not_said_twice(tmp_path):
     Declared rather than written inline, so the next threshold to get a
     dedicated renderer is an entry in that set rather than a duplicated line.
     """
-    from nm.legal_brain.orchestrate.turn import _THRESHOLDS_RENDERED_ELSEWHERE
+    from nm.Archives.legal_brain.orchestrate.turn import _THRESHOLDS_RENDERED_ELSEWHERE
 
     assert thresholds.Threshold.LIMITATION in _THRESHOLDS_RENDERED_ELSEWHERE
 

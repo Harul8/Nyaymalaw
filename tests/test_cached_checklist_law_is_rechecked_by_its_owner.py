@@ -5,9 +5,9 @@ from unittest.mock import Mock
 import pytest
 
 from nm.app import api
-from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
-from nm.legal_brain.retrieve.checklist_sources import bind_source_current
-from nm.legal_brain.retrieve.evidence_port import SourceDocument
+from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard
+from nm.Archives.legal_brain.retrieve.checklist_sources import bind_source_current
+from nm.Archives.legal_brain.retrieve.evidence_port import SourceDocument
 from nm.work_the_file import projections_api as projections
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 from tests.test_controlled_generations_use_bytes_not_version_labels import practice
@@ -180,7 +180,7 @@ def test_matter_list_uses_one_bound_source_generation_for_all_rows(client, monke
 
 
 def test_matter_list_refuses_a_source_change_between_rows(client, monkeypatch, tmp_path):
-    from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
+    from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard
 
     app = api.application()
     for title in ("One source world", "Another source world"):
@@ -215,7 +215,7 @@ def test_matter_list_refuses_a_source_change_between_rows(client, monkeypatch, t
 @pytest.mark.parametrize("view", ["board", "cover", "summary", "list"])
 def test_every_served_view_reconstructs_the_private_checklist_population_once(
         client, monkeypatch, view):
-    from nm.legal_brain.reason import requirements
+    from nm.Archives.legal_brain.reason import requirements
 
     app = api.application()
     matter = replace(Matter.create("adv_demo", "One checked projection"), version=1)
@@ -238,7 +238,7 @@ def test_every_served_view_reconstructs_the_private_checklist_population_once(
 @pytest.mark.parametrize("change", ["session", "version", "subject", "generation"])
 def test_no_positive_projection_is_served_after_its_actual_subject_changes(
         client, monkeypatch, change):
-    from nm.legal_brain.orchestrate.controlled_generations import GenerationUnavailable
+    from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationUnavailable
 
     app = api.application()
     matter = replace(Matter.create("adv_demo", "Serving boundary"), version=1)

@@ -2,7 +2,7 @@
 
 `("ratio", "reasoning", "order")` was written out, by hand, in six places:
 
-    nm/legal_brain/retrieve/corpus_evidence.py   what a Finding may be built from
+    nm/Archives/legal_brain/retrieve/corpus_evidence.py   what a Finding may be built from
     pipeline/build_authority_index.py   what goes INTO the searchable index
     pipeline/releasegate.py             what RG-04 counts as retrievable
     development_environment/one_off_tools/find_goldens2.py           which judgments qualify as
@@ -18,7 +18,7 @@ criterion scoring an index it is not describing -- B-044 verbatim, where a
 zero from the wrong key read as absence and reached the advocate.
 
 CLAUDE.md §4 asks the question this file answers: not "where is the other
-copy" but WHAT MAKES A SECOND COPY IMPOSSIBLE. `nm/legal_brain/retrieve/evidence_port.py` owns
+copy" but WHAT MAKES A SECOND COPY IMPOSSIBLE. `nm/Archives/legal_brain/retrieve/evidence_port.py` owns
 the mapping; `ATTRIBUTABLE_LABELS` is derived from it and never authored; and
 this refuses the seventh copy at the build.
 
@@ -34,7 +34,7 @@ from pathlib import Path
 import pytest
 
 from assurance.common.homes import tooling_sources
-from nm.legal_brain.retrieve.evidence_port import (
+from nm.Archives.legal_brain.retrieve.evidence_port import (
     ATTRIBUTABLE_LABELS,
     ParaKind,
     kind_for_corpus_label,
@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FINGERPRINT = {"ratio", "reasoning", "order"}
 
 #: The one module allowed to write them down.
-OWNER = Path("nm/legal_brain/retrieve/evidence_port.py")
+OWNER = Path("nm/Archives/legal_brain/retrieve/evidence_port.py")
 
 
 def _literal_label_sets(tree: ast.AST) -> list[int]:

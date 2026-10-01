@@ -1,6 +1,6 @@
 """The read_private_file_inputs door over current source and private-file owners."""
 
-from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
+from nm.Archives.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 from nm.work_the_file.private_file_tools import _CONTROLS, READ, SCHEMAS, VERSION

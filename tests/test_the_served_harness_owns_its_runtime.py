@@ -9,7 +9,7 @@ import pytest
 
 from assurance.journeys.served import KEY, served
 from nm.app import composition
-from nm.legal_brain.retrieve.evidence_port import Coverage
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
 from nm.shared.model_port import ConfigurationError, Prompt, Tier
 
 pytestmark = pytest.mark.class_a

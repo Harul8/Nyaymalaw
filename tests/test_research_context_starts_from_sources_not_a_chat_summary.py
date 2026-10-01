@@ -8,7 +8,7 @@ from dataclasses import replace
 import pytest
 
 from nm.advise.turn_receipt_contracts import fingerprint
-from nm.legal_brain.understand.brain_context import (
+from nm.Archives.legal_brain.understand.brain_context import (
     AssessmentState,
     ContextPolicy,
     ContextRefused,
@@ -18,8 +18,8 @@ from nm.legal_brain.understand.brain_context import (
     UncertaintyDimension,
     assemble_brief,
 )
-from nm.legal_brain.retrieve.research_context import ResearchFinding, ResearchSession, ResearchTask
-from nm.legal_brain.verify.verifier import EvidenceSpan
+from nm.Archives.legal_brain.retrieve.research_context import ResearchFinding, ResearchSession, ResearchTask
+from nm.Archives.legal_brain.verify.verifier import EvidenceSpan
 from nm.shared.model_port import ToolCall, ToolMessage
 from tests.test_brain_context_is_a_checked_file_projection import file_fixture, snapshot, tools
 from tests.test_independent_claim_verifier import finding
@@ -91,7 +91,7 @@ def test_actual_controlled_runner_dispatches_the_fresh_task_source_context_not_a
     tmp_path, changed_request, generation
 ):
     """Real sealed-store caller with a scripted provider; never client acceptance."""
-    from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StopReason, digest
     from tests.test_the_controlled_brain_is_actually_wired import _brain
     from tests.test_the_loop_records_work_before_using_it import PROMPT, _limits, _response
 

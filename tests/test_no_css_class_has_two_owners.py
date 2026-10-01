@@ -29,7 +29,7 @@ WHY THIS TEST AND NOT "BE CAREFUL WITH CLASS NAMES"
 CLAUDE.md §4 asks the question this file is the answer to: not *where is the
 other copy* but *what makes a second copy impossible?* The same question was
 answered for provision-reference patterns by `tests/test_citation_patterns.py`
--- `nm/legal_brain/common/citation_contracts.py` is the only module permitted to define one, and a
+-- `nm/Archives/legal_brain/common/citation_contracts.py` is the only module permitted to define one, and a
 scan fails the build on a second.
 
 This is that rule for the stylesheet. A class may be declared in one place.

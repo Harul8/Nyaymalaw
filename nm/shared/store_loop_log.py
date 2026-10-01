@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from nm.act.action_proposal_tool import PreparedActionMutation
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopIdentity, LoopRecord
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopIdentity, LoopRecord
 from nm.shared.store_port import StaleWrite, StorePort
 from nm.work_the_file.deadline_proposals import DeadlineProposalMutation
 from nm.work_the_file.private_file_tools import PrivateFileMutation
@@ -41,9 +41,9 @@ class MatterLoopLog:
         return self._append(identity, event)
 
     def append_mutation(self, identity, event, mutation) -> LoopRecord:
-        from nm.legal_brain.orchestrate.loop_contracts import StepKind
-        from nm.legal_brain.reason.grounded_file_tools import GroundedReadingMutation
-        from nm.legal_brain.reason.source_writes import SourceRequirementMutation
+        from nm.Archives.legal_brain.orchestrate.loop_contracts import StepKind
+        from nm.Archives.legal_brain.reason.grounded_file_tools import GroundedReadingMutation
+        from nm.Archives.legal_brain.reason.source_writes import SourceRequirementMutation
         from nm.work_the_file.file_mutation_contracts import FileMutation
 
         approved = (FileMutation, SourceRequirementMutation, GroundedReadingMutation,

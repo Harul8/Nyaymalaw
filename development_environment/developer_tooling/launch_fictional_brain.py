@@ -108,9 +108,9 @@ def validate_authorization(record: dict, *, actor: str, matter_ids: tuple[str, .
                            now: datetime) -> datetime:
     """Fail closed on scope, matter ownership, attestations, consent and money."""
     from nm.app.model_permission import require_permission
-    from nm.legal_brain.evaluate.evaluation_models import AUTHOR as CODE_AUTHOR
-    from nm.legal_brain.evaluate.evaluation_models import VERIFIER as CODE_VERIFIER
-    from nm.legal_brain.verify.interaction_review import COMMUNICATION_PROTOCOL_VERSIONS
+    from nm.Archives.legal_brain.evaluate.evaluation_models import AUTHOR as CODE_AUTHOR
+    from nm.Archives.legal_brain.evaluate.evaluation_models import VERIFIER as CODE_VERIFIER
+    from nm.Archives.legal_brain.verify.interaction_review import COMMUNICATION_PROTOCOL_VERSIONS
     from nm.shared.model_config import ModelConfig, TierConfig
     from nm.shared.model_port import Tier
 
@@ -179,7 +179,7 @@ def validate_authorization(record: dict, *, actor: str, matter_ids: tuple[str, .
 
 
 def _models_and_config(settings):
-    from nm.legal_brain.evaluate.evaluation_models import bounded_pair
+    from nm.Archives.legal_brain.evaluate.evaluation_models import bounded_pair
     from nm.shared.model_config import load
     from nm.shared.model_port import Tier
 
@@ -215,11 +215,11 @@ def _models_and_config(settings):
 def _install_grant(application, *, record, fingerprint, authorization_path, actor,
                    matter_ids, approval_reference, expires, pair):
     from nm.app.model_permission import require_permission
-    from nm.legal_brain.evaluate.controlled_evaluations_composition import ControlledEvaluation
-    from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
-    from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, digest
-    from nm.legal_brain.verify.brain_release import ReviewService
-    from nm.legal_brain.verify.verifier import IndependentVerifier
+    from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import ControlledEvaluation
+    from nm.Archives.legal_brain.orchestrate.controlled_brain import EvaluationScope
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, digest
+    from nm.Archives.legal_brain.verify.brain_release import ReviewService
+    from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
     from nm.shared.budget_contracts import Budget
     from nm.shared.store_loop_log import MatterLoopLog
 

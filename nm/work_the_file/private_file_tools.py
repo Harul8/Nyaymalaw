@@ -14,8 +14,8 @@ from dataclasses import asdict, dataclass, replace
 from datetime import date
 
 from nm.advise.decision_contracts import DecidedBy, Decision, _question, from_stored, merge
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     PreparedToolResult,
@@ -26,11 +26,11 @@ from nm.legal_brain.orchestrate.tools import (
     ToolRefused,
     object_schema,
 )
-from nm.legal_brain.procedure.reviewed_limitation_selection import _owned_population, _sources
-from nm.legal_brain.reason import premise
-from nm.legal_brain.reason.source_writes import _parent
-from nm.legal_brain.retrieve.evidence_port import Finding
-from nm.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import _owned_population, _sources
+from nm.Archives.legal_brain.reason import premise
+from nm.Archives.legal_brain.reason.source_writes import _parent
+from nm.Archives.legal_brain.retrieve.evidence_port import Finding
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
 from nm.shared.clock_contracts import today as forum_today
 from nm.shared.json_values import same_json_value
 from nm.shared.model_port import SchemaViolation, require_schema

@@ -385,7 +385,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     So a mutation with an anchor the source does not contain is planted, and
     the SAME function has to report it.
     """
-    planted = [("a mutation whose line no longer exists", "nm/legal_brain/orchestrate/turn.py",
+    planted = [("a mutation whose line no longer exists", "nm/Archives/legal_brain/orchestrate/turn.py",
                 "    def _a_method_no_rename_ever_produced(self):",
                 "x", "some_test", "E-000")]
     reported = _stale_anchors(planted)
@@ -401,7 +401,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     # happened. Presence alone passed it: both mutations ran, mutated the
     # wrong line, and were reported as SURVIVED -- which reads as a weak test
     # and was really an anchor that had stopped being specific.
-    ambiguous = [("a mutation whose anchor is not unique", "nm/legal_brain/orchestrate/turn.py",
+    ambiguous = [("a mutation whose anchor is not unique", "nm/Archives/legal_brain/orchestrate/turn.py",
                   "        return None", "x", "some_test", "E-000")]
     reported = _stale_anchors(ambiguous)
     assert reported and "matches" in reported[0], (

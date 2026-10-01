@@ -122,6 +122,14 @@ DERIVED_SECTIONS: tuple[str, ...] = (
     "issues", "theory", "proof", "decisions", "deadlines", "gaps",
     "authorities")
 
+#: WHAT THE PER-MESSAGE WORK DERIVES FOR EVERY DISPUTE (LB-76; owner, 30 September
+#: 2026: the law retrieved for it, and what it needs asked). A dispute whose work holds
+#: these is reviewed on the available record. The other derived sections are no longer
+#: computed per message and stay NOT ASSESSED -- said so on the summary, never
+#: counted as done -- so a review cannot wait forever on work nothing runs.
+WORKED_SECTIONS: tuple[str, ...] = ("gaps", "authorities")
+assert set(WORKED_SECTIONS) <= set(DERIVED_SECTIONS)
+
 #: The same, for sections the MATTER owns rather than a thread.
 #:
 #: Two tuples and one `_states` function. The alternative -- a second
@@ -440,7 +448,7 @@ def _established_on(thread: Thread) -> list[str]:
 
 def _requirement_state(thread, facts=(), *, classifications=()) -> dict:
     """Three states for the checklist itself, counted rather than asserted."""
-    from nm.legal_brain.reason.requirements_contracts import summary
+    from nm.Archives.legal_brain.reason.requirements_contracts import summary
     return summary(thread, facts, classifications=classifications)
 
 

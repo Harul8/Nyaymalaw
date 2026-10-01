@@ -7,15 +7,15 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import (
+from nm.Archives.legal_brain.understand.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,
     assemble_brief,
     saved_source_references,
 )
-from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     RegisteredTool,
@@ -168,7 +168,7 @@ def test_contrary_facts_outside_initial_scope_survive_source_projection_and_comp
 
 
 def test_stable_prefix_indexes_schemas_without_paying_for_a_second_schema_copy():
-    from nm.legal_brain.orchestrate.loop_contracts import digest
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
 
     marker = "FULL_SCHEMA_PROPERTY_IS_SENT_EXACTLY_ONCE"
     definition = ToolDefinition("deep_tool", "A declared tool.", object_schema({

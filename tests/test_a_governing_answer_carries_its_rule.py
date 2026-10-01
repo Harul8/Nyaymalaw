@@ -21,8 +21,8 @@ from datetime import date, timedelta
 
 import pytest
 
-from nm.legal_brain.procedure import governing_law_sources as curated
-from nm.legal_brain.procedure.governing_law_port import Governing, Limb, Pending
+from nm.Archives.legal_brain.procedure import governing_law_sources as curated
+from nm.Archives.legal_brain.procedure.governing_law_port import Governing, Limb, Pending
 
 pytestmark = pytest.mark.class_a
 

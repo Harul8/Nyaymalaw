@@ -6,11 +6,11 @@ from unittest.mock import Mock
 import pytest
 
 from nm.app import api
-from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import LoopMode, StopReason, digest
-from nm.legal_brain.verify.brain_release import ReviewService
-from nm.legal_brain.verify.verifier import IndependentVerifier
-from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
+from nm.Archives.legal_brain.orchestrate.controlled_brain import EvaluationScope
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopMode, StopReason, digest
+from nm.Archives.legal_brain.verify.brain_release import ReviewService
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
 from nm.shared.budget_contracts import Completion
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelResult, Prompt, Tier, ToolCall, Usage, require_schema
@@ -139,7 +139,7 @@ def test_scope_is_finite_and_an_ended_session_cannot_compose_the_loop(client):
 
 
 def test_actual_application_assembles_checks_without_forging_missing_owner_subjects(client):
-    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
+    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
 
     app, matter, scope = _scope(client)
     held = finding()

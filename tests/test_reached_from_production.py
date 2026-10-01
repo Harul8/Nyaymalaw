@@ -71,7 +71,7 @@ UNWIRED: dict[str, str] = {
     # whether a proceeding was pending at commencement. Until then the table
     # is exercised by its own suite and reaches no advocate, which is the
     # honest state and is declared here rather than implied by silence.
-    "nm.legal_brain.procedure.governing_law_adapter":
+    "nm.Archives.legal_brain.procedure.governing_law_adapter":
         "LB-120: no criminal cause exists in the closed CauseOfAction "
         "vocabulary, so no served turn can reach it. Wired by a criminal "
         "cause plus the offence-date and pending-proceeding reads.",
@@ -160,20 +160,20 @@ UNWIRED: dict[str, str] = {
         "PostgreSQL is reachable on this machine, so the adapter is built and "
         "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
         "the registry honest about."),
-    # `nm.legal_brain.reason.premise` WAS HERE. P22 wired it on 12 September 2026:
-    # `nm.legal_brain.orchestrate.turn._premises` builds the three premises before the
+    # `nm.Archives.legal_brain.reason.premise` WAS HERE. P22 wired it on 12 September 2026:
+    # `nm.Archives.legal_brain.orchestrate.turn._premises` builds the three premises before the
     # arithmetic, `assess` blocks on an unestablished one and marks an
     # inferred accrual CONDITIONAL, and the digest travels onto the register
     # and the cover. The declaration went the moment the import landed, as
     # `test_no_declaration_outlives_its_wiring` requires.
     # `nm.work_the_file.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
-    # it on 12 September 2026: `nm.legal_brain.orchestrate.turn` observes the file after ADMIT-B,
+    # it on 12 September 2026: `nm.Archives.legal_brain.orchestrate.turn` observes the file after ADMIT-B,
     # settles every value it derives against its inputs, and the projections
     # refuse to present a stale one as current. The declaration went the
     # moment the import landed, as `test_no_declaration_outlives_its_wiring`
     # requires -- a declaration that outlives its wiring is the next unwired
     # module's hiding place.
-    # `nm.legal_brain.common.reads_contracts` WAS HERE. It is wired as of 5 September 2026 -- not by
+    # `nm.Archives.legal_brain.common.reads_contracts` WAS HERE. It is wired as of 5 September 2026 -- not by
     # the tier escalation it was built for, which still needs a hard-tier
     # model, but by the general form of B-088: a DECISIVE read that answers
     # with nothing fires G-READ, and the model port asks the table which reads
@@ -188,7 +188,7 @@ UNWIRED: dict[str, str] = {
         "The served nm.open_matter.uploads_api path accepts sealed original-byte "
         "receipts through MediaAdmission, but does not invoke this helper "
         "or claim extraction. Full reading and correction remain unbuilt.",
-    "nm.legal_brain.common.tiers_contracts":
+    "nm.Archives.legal_brain.common.tiers_contracts":
         "S0's tier vocabulary. Consulted by the model config through the "
         "environment rather than by import.",
 }
@@ -315,7 +315,7 @@ def test_the_scan_can_see_an_unreached_module():
 #: because nothing else in the build knows it: `features.yaml` names slices and
 #: evals, and the module tree names files, and no edge connects them.
 #: ONE MODULE MAY CARRY SEVERAL FEATURES, and the first version of this map
-#: allowed only one. `nm/legal_brain/reason/adversarial.py` holds both the adversarial pass
+#: allowed only one. `nm/Archives/legal_brain/reason/adversarial.py` holds both the adversarial pass
 #: (D7) and salvage (D8) — it named D7, and D8, the one feature whose status
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
@@ -325,7 +325,7 @@ OWNER: dict[str, tuple[str, ...]] = {
     # Article lookup. Named against D4 rather than given a feature of its own,
     # because what it adds is a condition on reading the right provision and
     # not a new promise to the advocate.
-    "nm.legal_brain.procedure.governing_law_adapter": ("D4",),
+    "nm.Archives.legal_brain.procedure.governing_law_adapter": ("D4",),
     # P38's restore serves the persistence promise the store makes -- one
     # matter, versioned and sealed -- so it is named against I1 rather than
     # given a feature of its own. What it adds is that the promise survives
@@ -364,7 +364,7 @@ OWNER: dict[str, tuple[str, ...]] = {
     # P11's worker publishes what a turn accepted, so it serves the turn
     # contract rather than a promise of its own.
     "nm.shared.worker": ("I1",),
-    "nm.legal_brain.reason.premise": ("D2",),
+    "nm.Archives.legal_brain.reason.premise": ("D2",),
     # P18's currency ledger answers A3's re-orientation promise -- what moved
     # since the advocate was last here, and what they may still rely on -- so
     # it is named against A3 rather than given a feature of its own. The
@@ -465,7 +465,7 @@ def test_every_unwired_module_names_a_feature_that_exists():
     assert not missing, f"OWNER names features that do not exist: {missing}"
 
     unowned = sorted(m for m in UNWIRED
-                     if m not in OWNER and not m.startswith("nm.legal_brain.common.tiers_contracts"))
+                     if m not in OWNER and not m.startswith("nm.Archives.legal_brain.common.tiers_contracts"))
     assert not unowned, (
         f"these modules are UNWIRED and name no feature, so the status check "
         f"above skips them entirely: {unowned}")
@@ -490,10 +490,10 @@ def test_every_unwired_module_names_a_feature_that_exists():
 #: A declaration whose reason has gone is deleted; the defect it named is not.
 UNTYPED: dict[str, str] = {
     "TurnRoute":
-        "B1. NAMING DRIFT — represented by `nm.legal_brain.understand.route.ReadRoute`: its "
+        "B1. NAMING DRIFT — represented by `nm.Archives.legal_brain.understand.route.ReadRoute`: its "
         "`route`, `mode` and `statement` fields are the contract's route, mode "
-        "and stated reading. Implementation owner: `nm/legal_brain/understand/route.py`, wired "
-        "by `nm/legal_brain/orchestrate/turn.py::_read_route`.",
+        "and stated reading. Implementation owner: `nm/Archives/legal_brain/understand/route.py`, wired "
+        "by `nm/Archives/legal_brain/orchestrate/turn.py::_read_route`.",
     "ConflictScreen":
         "B3. GENERIC REPRESENTATION — `nm.open_matter.conflict.screen` produces "
         "`nm.open_matter.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
@@ -503,7 +503,7 @@ UNTYPED: dict[str, str] = {
         "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
         "`nm.open_matter.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
         "and the recorded release model is `screens.Release`. Implementation "
-        "owners: `nm/legal_brain/orchestrate/turn.py` and `nm/open_matter/screens.py`.",
+        "owners: `nm/Archives/legal_brain/orchestrate/turn.py` and `nm/open_matter/screens.py`.",
     "Reorientation":
         "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
         "`cascade` being UNWIRED: nothing composes a re-orientation.",
@@ -513,12 +513,12 @@ UNTYPED: dict[str, str] = {
     "SessionSeal":
         "I1. GENUINELY ABSENT — zero mentions.",
     "ThresholdMap":
-        "D1. NAMING DRIFT — `nm/legal_brain/reason/thresholds.py` defines `Threshold` and "
+        "D1. NAMING DRIFT — `nm/Archives/legal_brain/reason/thresholds.py` defines `Threshold` and "
         "the map is a plain dict. Either the PRD names the dict or the code "
         "names the type; today neither points at the other.",
     "LimitationComputation":
         "D2. NAMING DRIFT — implemented as `Limitation` in "
-        "`nm/legal_brain/procedure/limitation.py`. The contract is met and the name is not.",
+        "`nm/Archives/legal_brain/procedure/limitation.py`. The contract is met and the name is not.",
 }
 
 

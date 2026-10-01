@@ -95,7 +95,7 @@ def _opening_offer(body: dict) -> tuple[str, dict, dict | None]:
     # in the page. A title that is given still wins, as it always did.
     title = body.get("title")
     if title is None or title == "":
-        from nm.legal_brain.orchestrate.turn import _matter_name
+        from nm.Archives.legal_brain.orchestrate.turn import _matter_name
 
         title = _matter_name("", parties)
     return _text(title, "title", 200), parties, brief

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from nm.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
+from nm.Archives.legal_brain.retrieve.source_excerpt_contracts import SourceExcerpt
 from nm.shared.text_contracts import blank, refuses_blank_text
 from nm.work_the_file.matter_contracts import ThreadId
 
@@ -192,6 +192,12 @@ class ReplyParagraph:
     text: str
     passage: int | None = None
     carries: int | None = None
+    cites: tuple[tuple[int, int, int], ...] = ()
+    """INLINE CITATIONS, several to a paragraph (LB-76 change 5, owner, 30 September
+    2026): `(start, end, element)` -- the characters of `text` that name a saved
+    passage, each a link opening that element's source at the exact passage. The
+    words are the source's own label, written by code from the retrieved item,
+    never typed by the model (the previous build's citation tags, reused)."""
 
 
 @refuses_blank_text("mode_statement")
@@ -224,32 +230,36 @@ class Answer:
                     and paragraph.text != self.elements[paragraph.carries].text:
                 raise ValueError(
                     "a carried paragraph must be its element's checked words, verbatim")
+            for start, end, index in paragraph.cites:
+                source = (self.elements[index].source
+                          if 0 <= index < len(self.elements) else None)
+                if source is None or paragraph.text[start:end] != source.label \
+                        or not 0 <= start < end <= len(paragraph.text):
+                    raise ValueError("a citation must be a saved source's own label, "
+                                     "at the place it names")
         if self.route is Route.NON_MATTER:
             return
         if not self.elements:
             raise ValueError("a matter-route answer must contain at least one element")
         # PRD E2, BY PURPOSE (owner, 28 September 2026). A blocked turn leads
-        # with its blocker; a recommending turn leads with its recommendation;
-        # an unblocked explanation or assessment leads with its answer, which
-        # the type leaves to the work because only a reading can tell an answer
-        # from background. Purpose governs presentation, not permission,
-        # grounding or truth -- and how the reply is WRITTEN is guidance
-        # (`register_contracts.REPLY_CRAFT`), not this rule.
-        if self.mode in (Mode.EXPLANATION, Mode.ASSESSMENT) and not self.blocked:
+        # with its blocker. An unblocked turn leads with its answer, which the
+        # type leaves to the work because only a reading can tell an answer from
+        # background: no turn computes a next step per message any more (LB-76;
+        # owner, 30 September 2026 -- the reply gives what the retrieved law says
+        # and requires, then asks for what the file lacks), so there is no
+        # recommendation to put first. Purpose governs presentation, not
+        # permission, grounding or truth -- and how the reply is WRITTEN is
+        # guidance (`register_contracts.REPLY_CRAFT`), not this rule.
+        if not self.blocked:
             return
         first = self.elements[0]
         if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):
-            # If the recommendation is not at the top, the analysis was written
-            # toward a verdict and not toward a step.
+            # A stopped turn that does not lead with what stops it has hidden the
+            # one thing the advocate must answer before anything moves.
             raise ValueError(
-                "the first content element must be an ACTION or a blocking "
-                "QUESTION, never background (PRD E2). Got "
+                "a blocked answer's first content element must be an ACTION or a "
+                "blocking QUESTION, never background (PRD E2). Got "
                 f"{first.kind.value!r}.")
-        if not any(e.kind in (ElementKind.ACTION, ElementKind.QUESTION)
-                   for e in self.elements):
-            raise ValueError(
-                "every recommending turn contains a recommendation or a blocking "
-                "question (PRD E2). An answer with neither has failed.")
 
     @property
     def loud_signals(self) -> tuple[Element, ...]:

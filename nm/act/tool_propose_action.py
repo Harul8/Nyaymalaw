@@ -1,7 +1,7 @@
 """The propose_action door over the native preparation-only drafting-content owner."""
 
 from nm.act.action_proposal_tool import SCHEMA, VERSION
-from nm.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
+from nm.Archives.legal_brain.orchestrate.tools import RegisteredTool, ToolKind
 from nm.shared.authority_contracts import Act
 from nm.shared.model_port import ToolDefinition
 

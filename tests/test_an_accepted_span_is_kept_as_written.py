@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
 
 pytestmark = pytest.mark.class_a
 
@@ -73,7 +73,7 @@ def test_the_proof_read_keeps_the_advocates_words(monkeypatch):
     accepted-advocate span that reaches prose -- as "It is held on ..." in the
     answer and as an ESTABLISHED line in the file memory -- so both renderers
     are covered by keeping the right string once, here."""
-    from nm.legal_brain.reason import proof_read
+    from nm.Archives.legal_brain.reason import proof_read
 
     source = proof_read.__loader__.get_source(proof_read.__name__)
     assert "quotable.verbatim(" in source, (

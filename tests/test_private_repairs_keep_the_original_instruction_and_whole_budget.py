@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.evaluate.brain_evaluation import (
+from nm.Archives.legal_brain.evaluate.brain_evaluation import (
     ANSWER_REPAIR_OWNERS,
     CheckFeedback,
     EvaluationService,
@@ -13,10 +13,10 @@ from nm.legal_brain.evaluate.brain_evaluation import (
     completed_child_within_grant,
     dispatch_steps,
 )
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
-from nm.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
-from nm.legal_brain.verify.brain_assessment import AssessmentService
-from nm.legal_brain.verify.output_checks import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
+from nm.Archives.legal_brain.retrieve.coverage_contracts import CoveragePosition, CoverageState
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+from nm.Archives.legal_brain.verify.output_checks import (
     BoundarySubjects,
     OutputSubjects,
     run_boundary_checks,

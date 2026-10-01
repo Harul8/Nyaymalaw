@@ -42,8 +42,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.citation_contracts import cases_named, provisions_cited
-from nm.legal_brain.retrieve.jurisdiction_sources import Court, binding_status
+from nm.Archives.legal_brain.common.citation_contracts import cases_named, provisions_cited
+from nm.Archives.legal_brain.retrieve.jurisdiction_sources import Court, binding_status
 from nm.shared.gates_contracts import GATES
 from nm.shared.traceability_contracts import refuses
 

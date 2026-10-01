@@ -578,7 +578,7 @@ def test_first_person_language_never_arrives_from_our_own_notes():
     Given a matter where the advocate spoke only of events, it must stay
     false however much this product has written into the account.
     """
-    from nm.legal_brain.understand.posture import speaks_of_the_representation
+    from nm.Archives.legal_brain.understand.posture import speaks_of_the_representation
 
     fact = Fact(id="f1", statement="a cheque was dishonoured on 3 March",
                 provenance=SAID)
@@ -721,7 +721,7 @@ def test_the_carry_asks_the_same_question_guard_two_asks():
     drift from the guard it has to agree with, and the drift is invisible:
     the carry would admit a sentence guard 2 then refuses, which is the state
     this whole change exists to leave behind."""
-    from nm.legal_brain.understand import posture as posture_reader
+    from nm.Archives.legal_brain.understand import posture as posture_reader
     from nm.shared.text_contracts import speaks_of_the_representation
 
     assert posture_reader.speaks_of_the_representation is (
@@ -748,7 +748,7 @@ def test_being_unfiled_and_having_a_side_are_asked_for_as_two_facts():
     had written "We want an injunction urgently". Eight threads, one sentence,
     no side, and both matters refused on every turn including the correction.
     """
-    from nm.legal_brain.understand.posture import SYSTEM
+    from nm.Archives.legal_brain.understand.posture import SYSTEM
 
     assert "TWO DIFFERENT FACTS" in SYSTEM, (
         "the prompt no longer separates whether a proceeding exists from "

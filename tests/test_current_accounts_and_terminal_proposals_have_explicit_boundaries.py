@@ -6,11 +6,11 @@ from copy import deepcopy
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession
-from nm.legal_brain.common.conversation import PRINCIPLES
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-from nm.legal_brain.orchestrate.tools import TERMINAL_CONTRACT, TERMINAL_REASONS, Effect, ToolRefused
+from nm.Archives.legal_brain.understand.brain_context import ContextRefused, ContextSession
+from nm.Archives.legal_brain.common.conversation import PRINCIPLES
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.Archives.legal_brain.orchestrate.tools import TERMINAL_CONTRACT, TERMINAL_REASONS, Effect, ToolRefused
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from tests.test_prior_instructions_admit_assertions_not_new_user_messages import registry_fixture

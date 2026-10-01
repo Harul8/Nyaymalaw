@@ -50,7 +50,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput, TurnRefused
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput, TurnRefused
 from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_turn_contract import _model_config, build
 
@@ -192,9 +192,11 @@ def test_the_derived_population_is_drawn_from_the_write_back():
     import ast
     import inspect
 
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 
-    tree = ast.parse(inspect.getsource(TurnEngine._run).lstrip())
+    # THE ONE WRITER of every dispute's conclusions (LB-76), which `_run` calls.
+    assert "self._conclude(" in inspect.getsource(TurnEngine._run)
+    tree = ast.parse(inspect.getsource(TurnEngine._conclude).lstrip())
     written = set()
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -204,7 +206,7 @@ def test_the_derived_population_is_drawn_from_the_write_back():
                 written.add(kw.arg)
 
     assert written, (
-        "no `concluded.get(...)` write-back found in `_run` -- the scan is "
+        "no `concluded.get(...)` write-back found in `_conclude` -- the scan is "
         "broken, and a scan that sees nothing passes everything")
     missing = sorted(written - set(DERIVED) - {"assessed", "reservations"})
     assert not missing, (

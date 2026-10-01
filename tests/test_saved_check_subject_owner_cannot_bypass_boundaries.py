@@ -7,11 +7,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import AssessmentRefused, AssessmentService
-from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
-from nm.legal_brain.verify.brain_release import ReviewRefused, captured_findings, prepare_claims
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.verify.verifier import EvidencePackage
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentRefused, AssessmentService
+from nm.Archives.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, captured_findings, prepare_claims
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.Archives.legal_brain.verify.verifier import EvidencePackage
 from nm.shared.budget_contracts import Spend
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_port import Prompt, Tier, ToolCall

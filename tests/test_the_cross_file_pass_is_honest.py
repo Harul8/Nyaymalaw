@@ -37,8 +37,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import _label_of
-from nm.legal_brain.reason.adversarial import build_exposure_prompt
+from nm.Archives.legal_brain.orchestrate.turn import _label_of
+from nm.Archives.legal_brain.reason.adversarial import build_exposure_prompt
 
 pytestmark = pytest.mark.class_a
 

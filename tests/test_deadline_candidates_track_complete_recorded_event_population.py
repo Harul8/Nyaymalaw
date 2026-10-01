@@ -329,9 +329,9 @@ def test_legacy_or_missing_exact_proof_cannot_borrow_a_current_label(produced, c
 def test_prior_calendar_receipt_requires_current_exact_native_population_proof(
     proposal_case, produced, control
 ):
-    from nm.legal_brain.verify.brain_release import ReviewRefused
-    from nm.legal_brain.orchestrate.tools import ToolRefused
-    from nm.legal_brain.reason.working_record import WorkingRecordOwner
+    from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+    from nm.Archives.legal_brain.orchestrate.tools import ToolRefused
+    from nm.Archives.legal_brain.reason.working_record import WorkingRecordOwner
     from nm.work_the_file.deadline_proposals import _prior_calendar
 
     case, _, _, state = proposal_case
@@ -450,9 +450,9 @@ def test_actual_authenticated_views_reopen_current_native_population_without_wri
 
 
 def test_actual_grounded_file_registry_writer_uses_same_native_population_closure(produced):
-    from nm.legal_brain.reason.grounded_file_tools import grounded_file_tools
-    from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
-    from nm.legal_brain.orchestrate.tools import Boundary, PreparedToolResult, ToolContext, ToolRegistry
+    from nm.Archives.legal_brain.reason.grounded_file_tools import grounded_file_tools
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
+    from nm.Archives.legal_brain.orchestrate.tools import Boundary, PreparedToolResult, ToolContext, ToolRegistry
     from nm.shared.model_port import ToolCall
 
     saved, outcome = produced

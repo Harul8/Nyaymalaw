@@ -2,9 +2,9 @@
 
 import pytest
 
-from nm.legal_brain.communicate.working_explanation import WorkingExplanationService
-from nm.legal_brain.verify.brain_release import ReviewService
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.communicate.working_explanation import WorkingExplanationService
+from nm.Archives.legal_brain.verify.brain_release import ReviewService
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_controlled_brain_composition_keeps_the_account_boundary import _compose, _scope
 from tests.test_independent_claim_verifier import Judge
@@ -39,7 +39,7 @@ def test_actual_composition_uses_one_source_scope_and_final_boundary_population(
     assert brain.fee_selection_review.owner.source_owner is brain.working_review.owner
     assert (
         brain.registry._tools["court_fee"].handler.__module__
-        == "nm.legal_brain.procedure.tool_court_fee"
+        == "nm.Archives.legal_brain.procedure.tool_court_fee"
     )
     assert not app.store.load(_matter.id).loop_records
     assert not app.store.load(_matter.id).turn_receipts

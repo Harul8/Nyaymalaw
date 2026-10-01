@@ -6,15 +6,15 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, StepKind, StopReason, digest
-from nm.legal_brain.reason.opposition_work import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, StepKind, StopReason, digest
+from nm.Archives.legal_brain.reason.opposition_work import (
     OppositionRequest,
     case_basis,
     opposition_status_tool,
     reusable_work,
     status_for_work,
 )
-from nm.legal_brain.orchestrate.tools import ToolRefused
+from nm.Archives.legal_brain.orchestrate.tools import ToolRefused
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from tests.test_independent_claim_verifier import finding

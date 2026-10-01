@@ -6,16 +6,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate import runtime_model_tape
-from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused
-from nm.legal_brain.evaluate.runtime_model_tape import (
+from nm.Archives.legal_brain.evaluate import runtime_model_tape
+from nm.Archives.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused
+from nm.Archives.legal_brain.evaluate.runtime_model_tape import (
     ModelRole,
     ModelTapeCapture,
     ModelTapeReplay,
     validate_model_exchange,
 )
-from nm.legal_brain.orchestrate.tools import object_schema
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.orchestrate.tools import object_schema
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ModelResult,
@@ -405,7 +405,7 @@ def test_opaque_model_json_is_exact_and_bad_post_dispatch_json_is_incomplete():
 def test_byte_bound_refuses_large_request_before_dispatch_and_marks_large_response_incomplete(
     monkeypatch,
 ):
-    from nm.legal_brain.evaluate import runtime_port_tape
+    from nm.Archives.legal_brain.evaluate import runtime_port_tape
 
     actual, tape = model(), ModelTapeCapture()
     observed = tape.wrap(ModelRole.LEAD, actual)

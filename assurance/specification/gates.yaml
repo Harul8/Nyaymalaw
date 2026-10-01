@@ -439,7 +439,7 @@ gates:
   scope: turn
   persistence: turn
   recovery: system
-  visible: 'D5''s counterexample, and it ran for a whole slice: `nm/legal_brain/reason/proof_contracts.py`
+  visible: 'D5''s counterexample, and it ran for a whole slice: `nm/Archives/legal_brain/reason/proof_contracts.py`
     refused an OBTAINABLE position with nothing named that would obtain it, refused an ABSENT one with
     no dead end, and drew `uncovered` from the ELEMENTS so the coverage gate could not certify itself
     — and nothing ever built a `ProofPosition`, so none of it ran on a served turn. It DISCLOSES rather

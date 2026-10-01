@@ -4,10 +4,10 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.retrieve.dated_provisions import dated_provision_reader
-from nm.legal_brain.retrieve.evidence_port import Coverage
-from nm.legal_brain.retrieve.tool_sources import findings_from_envelope
-from nm.legal_brain.orchestrate.tools import Assessment, Availability, foundation_tools
+from nm.Archives.legal_brain.retrieve.dated_provisions import dated_provision_reader
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
+from nm.Archives.legal_brain.retrieve.tool_sources import findings_from_envelope
+from nm.Archives.legal_brain.orchestrate.tools import Assessment, Availability, foundation_tools
 from tests.test_provision_revisions_need_owned_interval_proof import (
     BEFORE,
     BOUNDARY,

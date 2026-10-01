@@ -15,7 +15,7 @@ from datetime import date
 from nm.arrive.advocate_contracts import utcnow
 from nm.close import retention as rt
 from nm.close.retention_contracts import RequestedAction, RequestScope, RetentionState
-from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
 from nm.open_matter.document_text_port import (
     DOCUMENT_OPERATION,
     DOCUMENT_PROCESSOR,

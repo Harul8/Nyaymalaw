@@ -35,7 +35,7 @@ shipped an `identity.json` — it was built with a 384-dimensional model against
 product that queries at 3072, and querying across embedding models does not
 error, it returns plausible and confidently wrong neighbours. Every derived
 artefact in this project therefore records what it came from, and
-`nm/legal_brain/retrieve/artefact_sources.py` refuses one whose identity does not match.
+`nm/Archives/legal_brain/retrieve/artefact_sources.py` refuses one whose identity does not match.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ utf8_console()
 CORPUS = ROOT / "legal_database" / "vector_store"
 OUT = ROOT / ".nm" / "authority.db"
 
-from nm.legal_brain.retrieve.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
+from nm.Archives.legal_brain.retrieve.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
 
 #: WHAT THE INDEX HOLDS, read from the contract that also decides what
 #: may be quoted. This was a local copy, and RG-04 held another one --

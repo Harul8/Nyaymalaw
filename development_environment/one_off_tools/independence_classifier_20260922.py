@@ -64,7 +64,7 @@ VARIANT = "baseline"
 #: limitation period on requesting a charge sheet. A harness that measures a
 #: prompt the product does not send measures something else.
 def _context() -> str:
-    from nm.legal_brain import step_dependency
+    from nm.Archives.legal_brain.verify import step_dependency
     return step_dependency.position_context(
         ours=True,
         why=("the date of the last acknowledgement is unresolved, so whether "
@@ -150,7 +150,7 @@ URGENCY_RULE = (
 
 
 def measure(run: bool) -> int:
-    from nm.legal_brain import step_dependency
+    from nm.Archives.legal_brain.verify import step_dependency
 
     if not run:
         print(f"{len(CASES)} labelled steps; {sum(1 for _, l, _ in CASES if l == 'dependent')} "
@@ -165,7 +165,7 @@ def measure(run: bool) -> int:
     from nm.shared.model_call_budget import CallBudget
     from nm.shared.model_config import load, load_dotenv
     from nm.shared.model_openai_adapter import OpenAIModelAdapter
-    from nm.legal_brain.conversation import guided
+    from nm.Archives.legal_brain.common.conversation import guided
     from nm.shared.model_port import Tier
 
     # THE SAME LEDGER AS THE LIVE MATTERS, so this spend is counted with theirs

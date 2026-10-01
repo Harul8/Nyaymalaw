@@ -37,8 +37,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.traceability_contracts import refuses
@@ -413,7 +413,7 @@ def test_an_act_named_earlier_is_carried_by_exact_title_only(tmp_path):
     said. An exact title is their instruction. A keyword hit across four turns
     is a guess with more evidence behind it than any single turn could supply.
     """
-    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
+    from nm.Archives.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     manifest = Manifest.load(
         pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
@@ -455,7 +455,7 @@ def test_a_narrative_takes_the_latest_provision_and_a_question_the_first():
     keep answering about the first, forever — and be correct about a provision
     nobody asked about.
     """
-    from nm.legal_brain.common.citation_contracts import last_wanted_section, wanted_section
+    from nm.Archives.legal_brain.common.citation_contracts import last_wanted_section, wanted_section
 
     account = ("turn 1: this is about section 6 of the Specific Relief Act\n"
                "turn 4: now I am asking about section 53A")
@@ -490,7 +490,7 @@ def test_our_own_question_can_never_settle_a_posture():
     CHECKS AGAINST WHAT THE PERSON WROTE, NEVER AGAINST WHAT WE COMPOSED. It is
     the same rule as `test_composed_text_is_not_a_citation`, one layer up.
     """
-    from nm.legal_brain.understand.posture import interpret
+    from nm.Archives.legal_brain.understand.posture import interpret
 
     ours = ("Whose side are we on in this matter — do we act for the party "
             "moving, or the party answering?")
@@ -575,7 +575,7 @@ def test_a_descriptor_that_names_nobody_is_not_recorded():
     The rule is GRAMMAR, not a vocabulary list. A phrase whose only content
     word is a noun of representation names nobody, however it is inflected.
     """
-    from nm.legal_brain.understand.posture import interpret, names_nobody
+    from nm.Archives.legal_brain.understand.posture import interpret, names_nobody
 
     for junk in ("our client", "my client", "the client", "client",
                  "the party", "his client", "them"):
@@ -626,7 +626,7 @@ def test_the_role_read_never_fires_without_first_person_representation():
     names two parties and speaks of neither in the first person, so it does not
     fire, and the reinstatement defect stays impossible.
     """
-    from nm.legal_brain.understand.posture import speaks_of_the_representation
+    from nm.Archives.legal_brain.understand.posture import speaks_of_the_representation
 
     assert not speaks_of_the_representation(
         "the landlord has issued a quit notice to the tenant")
@@ -650,7 +650,7 @@ def test_an_out_of_vocabulary_role_is_blanked_not_coerced():
     one provider: `strict` is off, and `claimant` -- outside an eleven-value
     enum -- reached the core once already.
     """
-    from nm.legal_brain.understand.posture import interpret_role
+    from nm.Archives.legal_brain.understand.posture import interpret_role
 
     role, why = interpret_role({"role": "claimant", "why": "the workman"})
     assert role is None, "an invented role was accepted"
@@ -722,7 +722,7 @@ def test_every_declared_schema_is_satisfiable_when_nothing_was_established():
     Derived from the declared schemas rather than a list of them, so a schema
     added in a later slice is covered the day it is written.
     """
-    from nm.legal_brain.understand import posture as reader
+    from nm.Archives.legal_brain.understand import posture as reader
     from nm.shared.model_port import SchemaViolation, require_schema
 
     schemas = {n: getattr(reader, n) for n in dir(reader)
@@ -818,7 +818,7 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
     That is backwards: an unverifiable guess is exactly the case where the
     advocate has no other signal that the wrong Act was read.
     """
-    from nm.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
+    from nm.Archives.legal_brain.retrieve.manifest_sources import ActBasis, Manifest
 
     manifest = Manifest.load(
         pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
@@ -835,7 +835,7 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
     # And the note reaches the disclosure on every outcome, not only success.
     import inspect
 
-    from nm.legal_brain.retrieve import corpus_evidence as corpus
+    from nm.Archives.legal_brain.retrieve import corpus_evidence as corpus
 
     body = inspect.getsource(corpus.CorpusEvidenceAdapter.fetch)
     returns = body.count("return EvidenceResult(")
@@ -867,8 +867,8 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     turn succeeded, and the test failed on `turns_applied` — telling me the
     fixture was wrong rather than the product.
     """
-    from nm.legal_brain.orchestrate.turn import TurnRefused
-    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+    from nm.Archives.legal_brain.orchestrate.turn import TurnRefused
+    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
     from tests.test_turn_contract import finding
 
     store = FileMatterStore(tmp_path, key=KEY)

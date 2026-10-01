@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop import LoopRunner
-from nm.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
+from nm.Archives.legal_brain.orchestrate.loop import LoopRunner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StepKind, StopReason
 from nm.shared.model_anthropic_adapter import AnthropicModelAdapter
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_port import Tier, ToolCall, ToolMessage

@@ -57,7 +57,7 @@ def _rel(path) -> str:
 def containment_guards(sources) -> list[tuple[str, int]]:
     """`fold(a) in fold(b)` — the exact shape all seven guards used.
 
-    Both sides folded with the BASE fold. `nm.legal_brain.verify.grounding` asks a different
+    Both sides folded with the BASE fold. `nm.Archives.legal_brain.verify.grounding` asks a different
     question with `_citation_fold` — is this quotation in the retrieved
     authority — and is not swept by this, which is why the check is on the
     call and not on the word "in".
@@ -162,9 +162,9 @@ def test_the_six_reads_are_actually_covered():
         for mod, fns in functions_named(sources, needle).items():
             readers.setdefault(mod, []).extend(fns)
 
-    for mod in ("nm/legal_brain/reason/cause.py", "nm/legal_brain/understand/posture.py",
-                "nm/work_the_file/chronology.py", "nm/legal_brain/understand/dispute.py",
-                "nm/legal_brain/reason/issues.py", "nm/legal_brain/reason/factors.py",
+    for mod in ("nm/Archives/legal_brain/reason/cause.py", "nm/Archives/legal_brain/understand/posture.py",
+                "nm/work_the_file/chronology.py", "nm/Archives/legal_brain/understand/dispute.py",
+                "nm/Archives/legal_brain/reason/issues.py", "nm/Archives/legal_brain/reason/factors.py",
                 "nm/work_the_file/evidence_item.py"):
         assert any("quotable" in _params(f) for f in builders.get(mod, [])), (
             f"{mod} builds a prompt that does not carry what may be quoted")
@@ -185,7 +185,7 @@ def test_the_scan_catches_a_planted_hand_guard():
 
 
 def test_the_scan_leaves_a_different_question_alone():
-    """THE BOUND. `nm.legal_brain.verify.grounding` asks whether a quotation is in the
+    """THE BOUND. `nm.Archives.legal_brain.verify.grounding` asks whether a quotation is in the
     RETRIEVED AUTHORITY, which is a different question with a different right
     answer, and folds with `_citation_fold`. A scan that swept it would push
     the citation pivot into the base fold to satisfy itself."""
@@ -211,7 +211,7 @@ def test_the_scan_catches_a_prompt_and_a_guard_that_disagree():
 def test_the_prompt_says_what_the_guard_will_take():
     """END TO END, on one value: the block names the section, and `accepts`
     takes exactly what the block put in it."""
-    from nm.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING, Quotable
+    from nm.Archives.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING, Quotable
 
     q = Quotable(turn="the cheque bounced on 3 March",
                  file="We act for the payee.",
@@ -231,7 +231,7 @@ def test_nothing_quotable_is_said_rather_than_left_silent():
     """AN ABSENT INPUT MUST NEVER READ AS PERMISSION. A read handed nothing
     quotable and told nothing about it quotes the context and is refused for
     doing what the prompt implied."""
-    from nm.legal_brain.common.quotable_contracts import NOTHING_HEADING, Quotable
+    from nm.Archives.legal_brain.common.quotable_contracts import NOTHING_HEADING, Quotable
 
     q = Quotable(context="only our own rendering")
     assert NOTHING_HEADING in q.block()
@@ -317,7 +317,7 @@ def test_the_issue_read_keeps_the_account_and_the_reason_is_recorded():
     difference between paying it and not noticing it is this test.
     """
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "nm/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
+            / "nm/Archives/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
     issues = turn[turn.index("def _issues("):]
     issues = issues[:issues.index("\n    @implements")]
     assert "context=account" in issues, (
@@ -333,7 +333,7 @@ def test_the_reads_that_take_notes_say_which_they_take():
     `memory.account` is a decision, and a decision with no reason beside it
     reads as an inconsistency to whoever finds it next."""
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "nm/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
+            / "nm/Archives/legal_brain/orchestrate/turn.py").read_text(encoding="utf-8")
     # THE NOTES, HOWEVER THEY ARE PREFIXED. The cause read now puts a line
     # scoping it to the active dispute ahead of them (79e2da5), which is the
     # same trade with an instruction in front -- counting the exact
@@ -348,7 +348,7 @@ def test_the_refusal_says_which_of_the_three_things_went_wrong():
     """Nothing quoted, nothing to check against, and a span that is not
     theirs are three different facts, and the advocate acts differently on
     each."""
-    from nm.legal_brain.common.quotable_contracts import Quotable
+    from nm.Archives.legal_brain.common.quotable_contracts import Quotable
 
     q = Quotable(turn="we act for the payee")
     assert "nothing quoted" in q.refusal("")

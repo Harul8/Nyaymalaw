@@ -9,9 +9,9 @@ import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
 from nm.advise.turn_receipt_contracts import TurnReceipt, answer_payload
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
-from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables, catalogue_tools
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, digest
+from nm.Archives.legal_brain.orchestrate.tool_catalogue import PracticeTables, catalogue_tools
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -20,14 +20,14 @@ from nm.legal_brain.orchestrate.tools import (
     ToolRefused,
     ToolRegistry,
 )
-from nm.legal_brain.procedure.filing_requirement_adapter import CuratedFilingRequirements
-from nm.legal_brain.procedure.governing_law_adapter import CuratedGoverningLaw
-from nm.legal_brain.procedure.institution_adapter import CuratedPreInstitution
-from nm.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
-from nm.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
-from nm.legal_brain.reason.elements_adapter import CuratedElements
-from nm.legal_brain.retrieve.authority_weight_port import Weighed
-from nm.legal_brain.retrieve.evidence_port import (
+from nm.Archives.legal_brain.procedure.filing_requirement_adapter import CuratedFilingRequirements
+from nm.Archives.legal_brain.procedure.governing_law_adapter import CuratedGoverningLaw
+from nm.Archives.legal_brain.procedure.institution_adapter import CuratedPreInstitution
+from nm.Archives.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
+from nm.Archives.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
+from nm.Archives.legal_brain.reason.elements_adapter import CuratedElements
+from nm.Archives.legal_brain.retrieve.authority_weight_port import Weighed
+from nm.Archives.legal_brain.retrieve.evidence_port import (
     Coverage,
     EvidenceResult,
     Origin,
@@ -35,11 +35,11 @@ from nm.legal_brain.retrieve.evidence_port import (
     Treatment,
     TreatmentState,
 )
-from nm.legal_brain.retrieve.provision_search_port import (
+from nm.Archives.legal_brain.retrieve.provision_search_port import (
     ProvisionCandidate,
     ProvisionSearchResult,
 )
-from nm.legal_brain.retrieve.search_port import (
+from nm.Archives.legal_brain.retrieve.search_port import (
     CaseDiscovery,
     CaseExpansion,
     CaseHit,
@@ -247,8 +247,8 @@ def test_exact_file_read_refuses_other_actor_or_stale_file_and_keeps_committed_w
 
 
 def test_catalogue_reads_the_current_transaction_inside_the_actual_controlled_loop(tmp_path):
-    from nm.legal_brain.orchestrate.loop_contracts import StopReason
-    from nm.legal_brain.orchestrate.tools import ToolRegistry
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import StopReason
+    from nm.Archives.legal_brain.orchestrate.tools import ToolRegistry
     from tests.test_the_controlled_brain_is_actually_wired import _brain
     from tests.test_the_loop_records_work_before_using_it import _limits, _response
 

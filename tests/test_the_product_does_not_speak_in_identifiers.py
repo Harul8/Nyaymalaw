@@ -48,7 +48,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 #: is not computed now" is already English. Rewriting it would be changing a
 #: line because a scan matched it, which is the opposite of drawing the
 #: population from the code.
-ALLOWED = {("nm/legal_brain/orchestrate/turn.py", "d.value")}
+ALLOWED = {("nm/Archives/legal_brain/orchestrate/turn.py", "d.value")}
 
 
 def _sources():
@@ -206,9 +206,9 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
     """A phrase that is the value with its underscores swapped for spaces is
     the same identifier wearing a coat. `balance of probabilities` needs the
     `on the` an advocate would actually write."""
-    from nm.legal_brain.reason.issue_contracts import Effect, IssueKind
-    from nm.legal_brain.reason.proof_contracts import Standard
-    from nm.legal_brain.retrieve.evidence_port import Binding
+    from nm.Archives.legal_brain.reason.issue_contracts import Effect, IssueKind
+    from nm.Archives.legal_brain.reason.proof_contracts import Standard
+    from nm.Archives.legal_brain.retrieve.evidence_port import Binding
     from nm.work_the_file.evidence_item import Form, Holder
     from nm.work_the_file.matter_contracts import Side
 

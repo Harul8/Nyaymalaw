@@ -127,7 +127,7 @@ def dispute(label: str) -> str:
 
 #: The marks `named` delimits with. Typographic SINGLE quotes, because the
 #: grounding gate reads straight and curly DOUBLE quotes as a quotation of
-#: retrieved text (`nm.legal_brain.verify.grounding._QUOTED`) and deliberately ignores
+#: retrieved text (`nm.Archives.legal_brain.verify.grounding._QUOTED`) and deliberately ignores
 #: single ones.
 _OPEN, _CLOSE = "‘", "’"
 

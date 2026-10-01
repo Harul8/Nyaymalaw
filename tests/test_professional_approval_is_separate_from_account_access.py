@@ -157,7 +157,7 @@ def test_current_approval_does_not_grant_matter_authority(client):
 
 def test_revoked_approval_refuses_core_handoff_replay_but_not_safety_revocation(client):
     from nm.app.api import application
-    from nm.legal_brain.orchestrate.turn import TurnInput, TurnRefused
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput, TurnRefused
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     approval = approve_fixture_account(client.directory)
@@ -240,7 +240,7 @@ def test_runtime_failure_of_the_professional_port_cannot_break_login_or_session(
 @pytest.mark.parametrize("change", ["missing", "malformed", "expired", "future"])
 def test_live_exception_is_rechecked_against_the_actual_approval_owner(client, monkeypatch, change):
     from nm.app.api import application
-    from nm.legal_brain.orchestrate.turn import TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     approval = approve_fixture_account(client.directory, valid_for=timedelta(minutes=30))

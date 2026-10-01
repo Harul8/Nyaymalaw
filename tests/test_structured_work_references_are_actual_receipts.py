@@ -8,11 +8,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
-from nm.legal_brain.verify.brain_finalization import CheckRead
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
-from nm.legal_brain.verify.interaction_review import (
+from nm.Archives.legal_brain.evaluate.brain_evaluation import EvaluationService
+from nm.Archives.legal_brain.verify.brain_finalization import CheckRead
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.evaluate.evaluation_models import VerifierOnly
+from nm.Archives.legal_brain.verify.interaction_review import (
     COMMUNICATION_PROTOCOL_VERSIONS,
     COMMUNICATION_WORK_REFERENCE_SCHEMA,
     CRITERIA,
@@ -25,10 +25,10 @@ from nm.legal_brain.verify.interaction_review import (
     communication_subject,
     interpret_work_reference_review,
 )
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
-from nm.legal_brain.communicate.preview_display import displayed_questions
-from nm.legal_brain.orchestrate.tools import TERMINAL_CONTRACT
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
+from nm.Archives.legal_brain.communicate.preview_display import displayed_questions
+from nm.Archives.legal_brain.orchestrate.tools import TERMINAL_CONTRACT
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Budget, Completion, Spend
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelResult, Prompt, Tier, ToolCall, Usage, require_schema

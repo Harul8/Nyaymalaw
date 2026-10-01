@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.reason import issues, requirements
-from nm.legal_brain.reason.issue_contracts import from_stored, merge
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.reason import issues, requirements
+from nm.Archives.legal_brain.reason.issue_contracts import from_stored, merge
 from nm.shared.text_contracts import fold
 from nm.work_the_file import dependency
 from nm.work_the_file.file_mutation_contracts import FileMutation
@@ -189,7 +189,7 @@ def prepare_issue(matter, *, advocate_id, current_version, turn_id, message,
     _quote(message, quoted)
     thread = _thread(matter, thread_id)
     row = {"statement": statement, "kind": kind, "runs_against": runs_against,
-           "quoted": message, "restates": ""}
+           "sentences": list(Quotable(turn=message).sentences), "restates": ""}
     read = issues.read({"issues": [row]}, thread_id, Quotable(turn=message))
     if not read.examined or read.refused or len(read.issues) != 1:
         raise MutationRefused("the existing issue owner could not ground that question")

@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, assemble_section
+from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, assemble_section
 
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = "The Limitation Act, 1963 . s.18{part}: Effect of acknowledgment in writing."
@@ -122,7 +122,7 @@ def test_every_intended_provision_is_read_whole_from_its_store(corpus):
     """The population is the manifest's whole intended coverage, not a sample."""
     import sys
     sys.path.insert(0, str(ROOT ))
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
     manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     ids = [r[0] for r in corpus.execute(
         "select distinct act_id from chunks where doc_type='bare_act'")]
@@ -171,7 +171,7 @@ def test_held_section_words_remain_readable_without_an_unreviewed_legal_finding(
     corpus, question, section, must_hold
 ):
     """The dated reader preserves held words but does not certify their currency."""
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
     adapter = CorpusEvidenceAdapter(CORPUS, Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
     read = adapter.read_provision_at_date(question.rsplit(" section ", 1)[0],
                                           section, date(2025, 9, 1))
@@ -182,8 +182,8 @@ def test_held_section_words_remain_readable_without_an_unreviewed_legal_finding(
     assert all(piece in span for piece in must_hold), (
         f"{question}: the held text lacks {[p for p in must_hold if p not in span]}")
 
-    from nm.legal_brain.orchestrate.tools import Assessment, Availability
-    from nm.legal_brain.retrieve.tool_sources import findings_from_envelope
+    from nm.Archives.legal_brain.orchestrate.tools import Assessment, Availability
+    from nm.Archives.legal_brain.retrieve.tool_sources import findings_from_envelope
     from tests.test_dated_provision_capture_reaches_the_actual_tools import tool
 
     offered = tool(adapter).handler({

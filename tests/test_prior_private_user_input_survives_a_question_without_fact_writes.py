@@ -8,16 +8,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import (
+from nm.Archives.legal_brain.understand.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,
     assemble_brief,
 )
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
-from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopLimits, LoopMode, LoopRecord, StepKind
+from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.Archives.legal_brain.orchestrate.tools import Boundary, foundation_tools
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall, estimate_tokens
 from nm.work_the_file.matter_contracts import Thread

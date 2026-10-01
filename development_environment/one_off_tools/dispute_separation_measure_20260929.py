@@ -256,7 +256,7 @@ def _paragraphs(text: str) -> list[str]:
 def variants(brief: Brief) -> dict[str, tuple[str, tuple[str, ...]]]:
     """name -> (words, instruction phrases). A variant identical to the brief is
     left out: it would measure the brief twice and call it robustness."""
-    from nm.legal_brain.understand.dispute import source_units
+    from nm.Archives.legal_brain.understand.dispute import source_units
 
     text = brief.text
     out = {"original": (text, brief.asks)}
@@ -372,10 +372,10 @@ def main(argv=None) -> int:
     # the Python bundle does not. Keep full certificate and hostname checks.
     import truststore
     truststore.inject_into_ssl()
-    from nm.legal_brain.common import ceiling
-    from nm.legal_brain.common.conversation import guided
-    from nm.legal_brain.common.quotable_contracts import Quotable
-    from nm.legal_brain.understand import dispute
+    from nm.Archives.legal_brain.common import ceiling
+    from nm.Archives.legal_brain.common.conversation import guided
+    from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+    from nm.Archives.legal_brain.understand import dispute
     from nm.shared.budget_contracts import refuse_partial
     from nm.shared.model_call_budget import CallBudget
     from nm.shared.model_config import PRICES, load, reservation_micro_usd

@@ -3,8 +3,8 @@
     from nm.close import retention as rt
 
 `nm.close.retention_contracts` holds the STATE and the transition rule; this holds the
-decisions and the persistence shape, on the same split `nm.legal_brain.orchestrate.delegation`
-keeps over `nm.legal_brain.orchestrate.delegation_contracts` and for the same reason:
+decisions and the persistence shape, on the same split `nm.Archives.legal_brain.orchestrate.delegation`
+keeps over `nm.Archives.legal_brain.orchestrate.delegation_contracts` and for the same reason:
 an agent, a model or
 a client may construct a request, and none of them may decide whether it is
 approved, whether a hold releases, or whether the declared scope is gone.

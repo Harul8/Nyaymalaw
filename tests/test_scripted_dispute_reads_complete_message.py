@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.understand import dispute
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.understand import dispute
 from nm.shared.model_scripted import scripted_dispute
 
 

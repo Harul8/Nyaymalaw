@@ -41,7 +41,7 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
 from nm.work_the_file import evidence_item as inventory
 from nm.work_the_file.evidence_item import (
     EvidenceItem,
@@ -226,7 +226,7 @@ def test_the_turn_persists_the_merged_inventory():
     every turn, which passes every test above and changes nothing."""
     import inspect
 
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._inventory)
     assert 'concluded["evidence"]' in body, (
@@ -259,7 +259,7 @@ def test_what_is_carried_is_not_recited():
     """
     import inspect
 
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 
     body = inspect.getsource(TurnEngine._inventory)
     assert "for item in live:" in body, "the merged list is what is walked"

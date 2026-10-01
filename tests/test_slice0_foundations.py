@@ -21,7 +21,7 @@ import pytest
 from assurance.common.module_roles import classify_sources, load_module_roles, sources_for_roles
 from assurance.gate.layercheck import check
 from assurance.gate.layercheck import main as layercheck_main
-from nm.legal_brain.common.tiers_contracts import HARD_TIER_STEPS, PERMITTED
+from nm.Archives.legal_brain.common.tiers_contracts import HARD_TIER_STEPS, PERMITTED
 from nm.shared.model_config import TierConfig, load
 from nm.shared.traceability_contracts import refuses
 from tests.source_role_fixtures import role_tree
@@ -200,7 +200,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     undeclared = [u for u in uses if u.rsplit(":", 1)[0] not in PERMITTED]
     assert not undeclared, (
         "these steps request the expensive tier and are not in "
-        "nm/legal_brain/common/tiers_contracts.py with the measurement that justifies them: "
+        "nm/Archives/legal_brain/common/tiers_contracts.py with the measurement that justifies them: "
         + ", ".join(undeclared))
 
     for step in HARD_TIER_STEPS:
@@ -209,9 +209,9 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
 
 @pytest.mark.class_a
 def test_a_hard_tier_promotion_without_a_measurement_cannot_be_declared():
-    from nm.legal_brain.common.tiers_contracts import HardTierStep
+    from nm.Archives.legal_brain.common.tiers_contracts import HardTierStep
     with pytest.raises(ValueError, match="not a measurement"):
-        HardTierStep(step="nm/legal_brain/orchestrate/turn.py", measurement="  ",
+        HardTierStep(step="nm/Archives/legal_brain/orchestrate/turn.py", measurement="  ",
                      measured_at="2026-08-30", delta="")
 
 
@@ -228,7 +228,7 @@ def test_every_turn_writes_metrics_with_latency_calls_tokens_and_model_mix(tmp_p
     """
     import json
 
-    from nm.legal_brain.orchestrate.turn import TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

@@ -9,17 +9,17 @@ from dataclasses import replace
 import pytest
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.legal_brain.verify.brain_finalization import SavedCheckReader
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.evaluate.controlled_evaluations_composition import (
+from nm.Archives.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import (
     EvaluationUnavailable,
     _current_admission,
 )
-from nm.legal_brain.verify.interaction_review import InteractionReviewService
-from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
-from nm.legal_brain.reason.matter_support import REFERENCE_KEYS, captured_documents
-from nm.legal_brain.communicate.reviewed_preview import ReviewedPreviewService
+from nm.Archives.legal_brain.verify.interaction_review import InteractionReviewService
+from nm.Archives.legal_brain.verify.interaction_subject import InteractionSubjectOwner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
+from nm.Archives.legal_brain.reason.matter_support import REFERENCE_KEYS, captured_documents
+from nm.Archives.legal_brain.communicate.reviewed_preview import ReviewedPreviewService
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from tests.test_document_words_reach_review_without_becoming_facts_or_law import (

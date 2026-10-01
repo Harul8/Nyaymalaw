@@ -50,10 +50,10 @@ from nm.arrive.advocate_contracts import (
     utcnow,
 )
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnRefused
-from nm.legal_brain.retrieve.search_port import ResolutionState
-from nm.legal_brain.understand import briefing as _briefing
-from nm.legal_brain.understand.advocate_memory_routes_api import install_advocate_memory_routes
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnRefused
+from nm.Archives.legal_brain.retrieve.search_port import ResolutionState
+from nm.Archives.legal_brain.understand import briefing as _briefing
+from nm.Archives.legal_brain.understand.advocate_memory_routes_api import install_advocate_memory_routes
 from nm.open_matter.commission_contracts import (
     Commission,
     Deadline,
@@ -618,7 +618,7 @@ class TurnRequest(BaseModel):
 #:
 #: The mechanism is not new. `nm/shared/identity_contracts.py` already existed (in
 #: `tools/`) so a mutation record could not certify code it never saw, and
-#: `nm/legal_brain/retrieve/artefact_sources.py` makes the same argument about the dense index:
+#: `nm/Archives/legal_brain/retrieve/artefact_sources.py` makes the same argument about the dense index:
 #: the only reason that index was KNOWABLY unusable is that it shipped an
 #: identity. A running process is an artefact and needs one too.
 try:
@@ -869,7 +869,7 @@ def _source_view(source, element, recorded_at, offset=0, view="passage", documen
     # from the corpus, was taken down by the capability that reads more of it.
     # A reader that cannot run is a missing Full document button, never a lost
     # passage, so its failure is caught here and named rather than propagated.
-    from nm.legal_brain.retrieve.evidence_port import SourceDocument
+    from nm.Archives.legal_brain.retrieve.evidence_port import SourceDocument
 
     try:
         held = application().evidence.document(source.locator, source.kind)
@@ -910,7 +910,7 @@ def _stored_document(held, source, element, recorded_at, offset: int,
     body = "\n\n".join(f"{heading}\n{content}" for heading, content in held.segments)
     from hashlib import sha256
 
-    from nm.legal_brain.retrieve.source_excerpt import document_anchor
+    from nm.Archives.legal_brain.retrieve.source_excerpt import document_anchor
     identity = sha256(json.dumps([held.store, held.snapshot_id, body],
                                 ensure_ascii=False).encode("utf8")).hexdigest()
     if document_identity and document_identity != identity:
@@ -1080,8 +1080,8 @@ def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
     rebuilds it from the owned file and actually reopens its supporting law.
     Board, diary and handover may reuse it only inside this checked request.
     """
-    from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
-    from nm.legal_brain.reason import requirements
+    from nm.Archives.legal_brain.orchestrate.generations_port import GenerationUnavailable
+    from nm.Archives.legal_brain.reason import requirements
 
     installed = application()
     if generation is _GENERATION_NOT_BOUND:
@@ -1122,7 +1122,7 @@ def _checked_checklists(matter, request, *, generation=_GENERATION_NOT_BOUND):
 
 
 def _registers(held, *, request=None) -> dict:
-    from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
+    from nm.Archives.legal_brain.orchestrate.generations_port import GenerationUnavailable
 
     registers = {}
     generation = None
@@ -1287,7 +1287,7 @@ def state_premise(matter_id: str, thread_id: str, kind: str,
     """
     from dataclasses import replace as _replace
 
-    from nm.legal_brain.reason.premise import Kind
+    from nm.Archives.legal_brain.reason.premise import Kind
     from nm.shared.clock_contracts import today as _today
 
     valid = {k.value for k in Kind}
@@ -1374,8 +1374,8 @@ def state_relief(matter_id: str, thread_id: str, body: ReliefStatement,
     from dataclasses import replace as _replace
 
     from nm.advise import relief as relief_mod
-    from nm.legal_brain.procedure.interim_relief_port import InterimRelief
-    from nm.legal_brain.reason.premise import Basis
+    from nm.Archives.legal_brain.procedure.interim_relief_port import InterimRelief
+    from nm.Archives.legal_brain.reason.premise import Basis
     from nm.shared.clock_contracts import today as _today
 
     coord_types = {
@@ -4405,12 +4405,12 @@ def _stale(m, expected: int) -> None:
 
 
 def _research_rows(m):
-    from nm.legal_brain.retrieve import research as rs
+    from nm.Archives.legal_brain.retrieve import research as rs
     return rs.all_from_stored(getattr(m, "research", ()) or ())
 
 
 def _research_or_404(m, research_id: str):
-    from nm.legal_brain.retrieve import research as rs
+    from nm.Archives.legal_brain.retrieve import research as rs
     found = rs.find(_research_rows(m), research_id)
     if found is None:
         # THE SAME 404 FOR "NOT ON THIS MATTER" AND "DOES NOT EXIST", for the
@@ -4466,7 +4466,7 @@ def start_research(matter_id: str, body: ResearchRequest,
     advocate sees the cases now and the file remembers what was asked of
     which index, with what result, for the restart.
     """
-    from nm.legal_brain.retrieve import research as rs
+    from nm.Archives.legal_brain.retrieve import research as rs
     from nm.shared.clock_contracts import today as _today
 
     m = _owned(matter_id, advocate_id)
@@ -4647,7 +4647,7 @@ def attach_source(matter_id: str, research_id: str, body: AttachRequest,
     `index:locator` and digested on its text, so a republished or withdrawn
     source reaches every conclusion that cites it.
     """
-    from nm.legal_brain.retrieve import research as rs
+    from nm.Archives.legal_brain.retrieve import research as rs
     from nm.shared.clock_contracts import today as _today
     from nm.work_the_file import dependency
 
@@ -5584,14 +5584,14 @@ def _loop_session_current(request: Request, advocate_id: str) -> bool:
                 and directory.identity(advocate_id) is not None)
 
 
-from nm.legal_brain.communicate.loop_progress_api import (  # noqa: E402
+from nm.Archives.legal_brain.communicate.loop_progress_api import (  # noqa: E402
     router as loop_progress_router,
 )
-from nm.legal_brain.communicate.preview_seen_api import router as preview_seen_router  # noqa: E402
-from nm.legal_brain.communicate.reviewed_preview_api import (  # noqa: E402
+from nm.Archives.legal_brain.communicate.preview_seen_api import router as preview_seen_router  # noqa: E402
+from nm.Archives.legal_brain.communicate.reviewed_preview_api import (  # noqa: E402
     router as reviewed_preview_router,
 )
-from nm.legal_brain.evaluate.brain_preview_api import router as brain_preview_router  # noqa: E402
+from nm.Archives.legal_brain.evaluate.brain_preview_api import router as brain_preview_router  # noqa: E402
 from nm.open_matter.document_reading_api import router as document_reading_router  # noqa: E402
 
 app.include_router(loop_progress_router(

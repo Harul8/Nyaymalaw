@@ -191,6 +191,33 @@ class TurnMetrics:
     def violate(self, rule: str, detail: str, *, gating: bool = False) -> None:
         self.violations.append(Violation(rule=rule, detail=detail, gating=gating))
 
+    #: The counts a piece of work adds up. `stages`, `grounding`, the outcome and the
+    #: latency belong to the turn and are never taken from a part of it.
+    _SUMMED = ("llm_calls", "retries", "tokens_in", "tokens_out", "cached_tokens",
+               "cost_usd", "evidence_rounds", "route_reads", "posture_reads",
+               "binding_reads", "chronology_reads", "cause_reads", "presentation_reads",
+               "duty_reads")
+    _LISTED = ("tier_downgrades", "violations", "gates_fired", "step_assessments",
+               "research_notes")
+
+    def child(self) -> "TurnMetrics":
+        """A fresh record for ONE PIECE of this turn's work done side by side with others
+        (LB-76; owner, 30 September 2026: disputes are worked in parallel). Each piece
+        counts into its own, and `absorb` adds them back in a fixed order -- so no count
+        is lost to two threads writing one number, and the sealed record reads dispute by
+        dispute rather than interleaved."""
+        return TurnMetrics(turn_id=self.turn_id, matter_id=self.matter_id)
+
+    def absorb(self, part: "TurnMetrics") -> None:
+        """Everything a piece of the work counted, added to this turn's record."""
+        for name in self._SUMMED:
+            setattr(self, name, getattr(self, name) + getattr(part, name))
+        for name in self._LISTED:
+            getattr(self, name).extend(getattr(part, name))
+        for key, calls in part.model_mix.items():
+            self.model_mix[key] = self.model_mix.get(key, 0) + calls
+        self.evidence_bound_hit = self.evidence_bound_hit or part.evidence_bound_hit
+
     def fire(self, gate_id: str, state: str, detail: str) -> Response:
         """Record a gate firing and return what the matrix says to do.
 

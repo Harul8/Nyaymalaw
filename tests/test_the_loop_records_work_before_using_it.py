@@ -8,9 +8,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.orchestrate.loop import LoopRunner
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.orchestrate.loop import LoopRunner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopIdentity,
     LoopLimits,
@@ -20,7 +20,7 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     StopReason,
     digest,
 )
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,

@@ -24,7 +24,7 @@ from __future__ import annotations
 import pytest
 
 from nm.advise.answer_contracts import Element, ElementKind
-from nm.legal_brain.verify import grounding
+from nm.Archives.legal_brain.verify import grounding
 from nm.shared.metrics_contracts import TurnMetrics
 
 pytestmark = pytest.mark.class_a
@@ -37,7 +37,7 @@ CLEAN = ("An opposing argument on delay: the claim was brought late "
 
 
 def _engine(tmp_path):
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.store_file_store import FileMatterStore
     from tests.test_turn_contract import KEY, _Evidence, _model_config

@@ -7,10 +7,10 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.procedure import calculation_tools as calculations
-from nm.legal_brain.reason.grounded_file_tools import GroundedReadingMutation, grounded_file_tools
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StepKind, StopReason, digest
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.procedure import calculation_tools as calculations
+from nm.Archives.legal_brain.reason.grounded_file_tools import GroundedReadingMutation, grounded_file_tools
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopMode, StepKind, StopReason, digest
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -309,8 +309,8 @@ def test_event_currency_tracks_its_own_actual_source_and_retains_conflicting_rea
 def test_event_observations_roundtrip_and_reach_checked_context_and_read_thread(tmp_path):
     from dataclasses import asdict
 
-    from nm.legal_brain.understand.brain_context import assemble_brief
-    from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+    from nm.Archives.legal_brain.understand.brain_context import assemble_brief
+    from nm.Archives.legal_brain.orchestrate.tool_catalogue import catalogue_tools
     from nm.shared.store_file_store import FileMatterStore
 
     matter, detail = fresh()
@@ -395,7 +395,7 @@ def test_actual_application_registry_can_record_fresh_event_observations(client)
     model.tool_call.side_effect = respond
     app.model.inner.inner = model
     brain = _compose(app, scope)
-    from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
     from nm.shared.budget_contracts import Budget
 
     # The actual application loads only the schemas it inspected; the full

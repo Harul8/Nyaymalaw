@@ -12,18 +12,18 @@ from unittest.mock import Mock
 import pytest
 
 from nm.app.composition import Application
-from nm.legal_brain.orchestrate import controlled_registry_composition as controlled_registry
-from nm.legal_brain.verify.brain_release import ReviewService
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain
-from nm.legal_brain.orchestrate.controlled_registry_composition import (
+from nm.Archives.legal_brain.orchestrate import controlled_registry_composition as controlled_registry
+from nm.Archives.legal_brain.verify.brain_release import ReviewService
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain
+from nm.Archives.legal_brain.orchestrate.controlled_registry_composition import (
     ControlledRegistryPorts,
     assemble_controlled_registry,
 )
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, StopReason
-from nm.legal_brain.evaluate.strict_replay import PermissionTape, Tape
-from nm.legal_brain.orchestrate.tools import Boundary, ToolContext, ToolRefused
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult, SourceDocument
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, StopReason
+from nm.Archives.legal_brain.evaluate.strict_replay import PermissionTape, Tape
+from nm.Archives.legal_brain.orchestrate.tools import Boundary, ToolContext, ToolRefused
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.open_matter.commission_contracts import Commission
 from nm.shared.authority_contracts import capacity_for, permits
 from nm.shared.model_port import ToolCall

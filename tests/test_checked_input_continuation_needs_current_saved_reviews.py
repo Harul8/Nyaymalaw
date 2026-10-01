@@ -5,10 +5,10 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.procedure.reviewed_limitation_selection import prepare_limitation_selections
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import prepare_limitation_selections
 from tests.test_event_limitation_selections_need_sealed_review import GENERATION, _fixture, _run
 from tests.test_independent_claim_verifier import response
 from tests.test_interest_is_exact_source_owned_and_independently_selected import _actual
@@ -228,7 +228,7 @@ def test_interest_owner_uses_the_same_exact_continuation_contract(
 
 
 def test_explicit_requested_subset_does_not_become_whole_file_at_continuation(tmp_path):
-    from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
     from nm.shared.budget_contracts import Budget
     from nm.shared.model_port import ToolCall
     from tests.test_the_loop_records_work_before_using_it import _response
@@ -251,7 +251,7 @@ def test_explicit_requested_subset_does_not_become_whole_file_at_continuation(tm
             Budget(max_ms=60000, max_tokens=100000, max_cost_usd=1, max_children=3), 8, 500
         ),
     )
-    from nm.legal_brain.procedure.reviewed_limitation_selection import LimitationSelectionReviewService
+    from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import LimitationSelectionReviewService
 
     selection = LimitationSelectionReviewService(
         brain.reviewer, source_generation=GENERATION, source_current=source_current
@@ -284,8 +284,8 @@ def test_explicit_requested_subset_does_not_become_whole_file_at_continuation(tm
 def test_actual_whole_file_new_thread_remains_in_owned_scope_without_widening_request(tmp_path):
     from types import SimpleNamespace
 
-    from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
-    from nm.legal_brain.reason.working_record import PROPOSE_TOOL, READ_TOOL, WorkingRecordReviewService
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
+    from nm.Archives.legal_brain.reason.working_record import PROPOSE_TOOL, READ_TOOL, WorkingRecordReviewService
     from nm.shared.budget_contracts import Budget
     from nm.shared.model_port import ToolCall
     from nm.work_the_file.write_tools import write_tools

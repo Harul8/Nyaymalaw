@@ -10,13 +10,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import ContextPolicy, ContextSession, assemble_brief
-from nm.legal_brain.orchestrate.controlled_brain import EvaluationScope
-from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
-from nm.legal_brain.orchestrate.loop import LoopRunner
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.understand.brain_context import ContextPolicy, ContextSession, assemble_brief
+from nm.Archives.legal_brain.orchestrate.controlled_brain import EvaluationScope
+from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.orchestrate.generations_port import GenerationUnavailable
+from nm.Archives.legal_brain.orchestrate.loop import LoopRunner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopIdentity,
     LoopLimits,
@@ -24,15 +24,15 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     LoopRecord,
     digest,
 )
-from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
-from nm.legal_brain.evaluate.runtime_capture import (
+from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.Archives.legal_brain.evaluate.replay_capture_contracts import ReplayCaptureRefused, ReplayProfile
+from nm.Archives.legal_brain.evaluate.runtime_capture import (
     PURPOSE,
     SUFFIX,
     RuntimeCaptureOwner,
     is_capture_record,
 )
-from nm.legal_brain.evaluate.strict_replay import FrozenPrinciples, build_registry, run_isolated
+from nm.Archives.legal_brain.evaluate.strict_replay import FrozenPrinciples, build_registry, run_isolated
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import Prompt, ToolCall
 from nm.shared.store_file_store import FileMatterStore

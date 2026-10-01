@@ -11,8 +11,8 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime
 from enum import Enum
 
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.reason.requirements_contracts import Outcome, key, restored
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.reason.requirements_contracts import Outcome, key, restored
 from nm.work_the_file.matter_contracts import Certainty, FactBasis, Matter, Thread
 
 ALLOWED_FIELDS = frozenset({"facts", "threads", "dependencies"})

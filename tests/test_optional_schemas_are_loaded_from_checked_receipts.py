@@ -7,17 +7,17 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import (
+from nm.Archives.legal_brain.understand.brain_context import (
     ContextPolicy,
     ContextRefused,
     ContextSession,
     assemble_brief,
 )
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import LoopMode, StepKind, StopReason
-from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
-from nm.legal_brain.orchestrate.tool_offers import OfferRefused
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopMode, StepKind, StopReason
+from nm.Archives.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.Archives.legal_brain.orchestrate.tool_offers import OfferRefused
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -169,7 +169,7 @@ def test_forged_or_changed_inspection_cannot_load_any_schema(tmp_path, changed):
     brain, matter, _ = setup(tmp_path)
     state = brain.registry.offer_state()
     call = ToolCall("inspection", "inspect_tool", {"name": "optional_read"})
-    from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, digest
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, digest
 
     identity = LoopIdentity(matter.id, "advocate", "turn", digest("prompt"),
         brain.principles.load().version, brain.registry.version, matter.version, LoopMode.SYNTHETIC)
@@ -196,7 +196,7 @@ def test_loading_history_survives_checked_compaction_not_an_authored_state_flag(
     session = ContextSession(brain.principles.load(), brain.registry.definitions,
         assemble_brief(matter, advocate_id="advocate"), provider="scripted", model="recorded-v1",
         policy=ContextPolicy(max_tokens=100000), tool_offer=offer)
-    from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, digest
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, digest
 
     identity = LoopIdentity(matter.id, "advocate", "turn", digest("prompt"),
         brain.principles.load().version, brain.registry.version, matter.version, LoopMode.SYNTHETIC)
@@ -320,7 +320,7 @@ def test_a_loader_receipt_refused_after_the_handler_does_not_load_the_schema(tmp
 @pytest.mark.parametrize("mutation", ["added", "removed", "changed", "missing"])
 def test_replay_refuses_a_per_dispatch_offer_that_does_not_follow_sealed_loading(
         tmp_path, mutation):
-    from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord
+    from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord
     from nm.shared.model_port import SchemaViolation
 
     brain, matter, _ = setup(tmp_path)

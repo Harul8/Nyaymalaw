@@ -3,8 +3,8 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import _saved_review, saved_package_reviews
-from nm.legal_brain.verify.brain_release import ReviewRefused, prepare_claims
+from nm.Archives.legal_brain.verify.brain_assessment import _saved_review, saved_package_reviews
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, prepare_claims
 from nm.shared.budget_contracts import Spend
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case
 from tests.test_independent_claim_verifier import finding, response
@@ -62,7 +62,7 @@ def test_later_actual_checks_do_not_rewrite_a_historical_review_but_default_repl
 def test_new_paid_subject_without_explicit_budget_uses_actual_prior_check_allowance(
     tmp_path, children,
 ):
-    from nm.legal_brain.verify.brain_finalization import SavedCheckReader
+    from nm.Archives.legal_brain.verify.brain_finalization import SavedCheckReader
     from nm.shared.model_config import ModelConfig, TierConfig
     from nm.shared.model_port import Prompt, Tier
     from nm.shared.model_scripted import ScriptedModelAdapter

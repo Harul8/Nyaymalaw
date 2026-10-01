@@ -24,9 +24,9 @@ import time
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.understand import dispute
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.understand import dispute
 from nm.shared.model_port import require_schema
 from nm.shared.model_scripted import ScriptedModelAdapter
 from tests.test_turn_contract import _model_config, build
@@ -131,6 +131,7 @@ def test_identical_sentences_are_kept_apart_by_their_numbers():
     out = dispute.interpret(Quotable(turn=text), data)
     assert not out.refused and out.described[0].allocation_unit_ids == ("S1", "S2")
     assert out.described[0].spans == ("The gate is locked.",)
+    assert out.shared_unit_ids == ("S1",)
 
 
 # ======== 2. every sentence placed, only where it can be; else refused ==========

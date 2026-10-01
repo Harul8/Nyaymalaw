@@ -11,8 +11,8 @@ from unittest.mock import Mock
 import pytest
 
 from nm.act.action_proposal_tool import action_proposal_tools
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.reason.working_record import WorkingRecordOwner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.reason.working_record import WorkingRecordOwner
 from nm.work_the_file.deadline_proposals import deadline_proposal_tools
 from nm.work_the_file.private_file_tools import private_file_tools
 from nm.work_the_file.write_tools import write_tools

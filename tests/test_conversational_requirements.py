@@ -6,9 +6,9 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import (
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.reason import requirements
+from nm.Archives.legal_brain.reason.requirements_contracts import (
     Force,
     Requirement,
     State,
@@ -223,7 +223,7 @@ def test_force_is_not_invented_from_document_type(kind, force):
 
 
 def test_session_return_does_not_change_the_idempotent_request_identity():
-    from nm.legal_brain.orchestrate.turn import TurnEngine
+    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
     turn = TurnInput(advocate_id='adv', message='These are my instructions',
                      session_reference='old-session')
     assert TurnEngine._offer(turn, 'matter') == TurnEngine._offer(
@@ -465,4 +465,9 @@ def test_live_turn_updates_an_existing_item_without_an_extra_reply_read(tmp_path
     saved = store.load(m.id)
     assert checklist(saved.threads[0], saved.facts)[0].state is State.UNAVAILABLE
     assert out.metrics.binding_reads == 1
-    assert any(quote in p.user and "CHECKLIST CONTEXT" in p.user for p in engine._model.prompts)
+    # THE REPLY WRITER IS GIVEN THE ITEM AS THE FILE NOW HOLDS IT (LB-76; owner, 30
+    # September 2026): the dispute's needs, each with its state, reach the one model
+    # that writes the reply -- no separate recommendation read exists to carry them.
+    assert any(p.operation == "compose" and req.need in p.user
+               and '"file_holds": "unavailable"' in p.user
+               for p in engine._model.prompts), "the updated item never reached the reply"

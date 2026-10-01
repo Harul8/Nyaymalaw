@@ -7,19 +7,19 @@ from dataclasses import asdict, replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_finalization import CheckRead
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.verify.interaction_review import (
+from nm.Archives.legal_brain.verify.brain_finalization import CheckRead
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.verify.interaction_review import (
     COMMUNICATION_PROTOCOL_VERSIONS,
     InteractionReviewService,
     communication_contract,
     communication_requires_work,
     whole_text_unit,
 )
-from nm.legal_brain.verify.interaction_subject import InteractionSubject
-from nm.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind, digest
-from nm.legal_brain.communicate.preview_display import interaction_text
-from nm.legal_brain.orchestrate.work_receipts import require_work_receipts, work_receipts
+from nm.Archives.legal_brain.verify.interaction_subject import InteractionSubject
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopEvent, LoopRecord, StepKind, digest
+from nm.Archives.legal_brain.communicate.preview_display import interaction_text
+from nm.Archives.legal_brain.orchestrate.work_receipts import require_work_receipts, work_receipts
 from nm.shared.budget_contracts import Spend
 from nm.work_the_file.file_mutation_contracts import neutral
 from tests.test_communication_evidence_roles_are_owned import EvidenceJudge

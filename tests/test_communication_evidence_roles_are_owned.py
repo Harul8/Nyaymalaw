@@ -8,10 +8,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.verify.brain_finalization import CheckRead
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluate.evaluation_models import VerifierOnly
-from nm.legal_brain.verify.interaction_review import (
+from nm.Archives.legal_brain.verify.brain_finalization import CheckRead
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.evaluate.evaluation_models import VerifierOnly
+from nm.Archives.legal_brain.verify.interaction_review import (
     COMMUNICATION_EVIDENCE_REVIEW_SCHEMA,
     COMMUNICATION_PROTOCOL_VERSIONS,
     CRITERIA,
@@ -22,7 +22,7 @@ from nm.legal_brain.verify.interaction_review import (
     interpret_evidence_review,
     whole_text_unit,
 )
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Completion, Spend
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelResult, Prompt, Tier, Usage, require_schema
@@ -230,7 +230,7 @@ def test_actual_schema_accepts_the_extra_words_empty_population_but_no_missing_r
 
 
 def test_actual_application_can_dispatch_read_and_acknowledge_the_distinct_v3_review(client):
-    from nm.legal_brain.communicate.preview_display import displayed_questions
+    from nm.Archives.legal_brain.communicate.preview_display import displayed_questions
     from nm.shared.store_loop_log import MatterLoopLog
 
     app, matter, author, _ = approved(client)

@@ -30,7 +30,7 @@ import sqlite3
 
 import pytest
 
-from nm.legal_brain.retrieve import hybrid_sections as hybrid
+from nm.Archives.legal_brain.retrieve import hybrid_sections as hybrid
 from pipeline import append_bare_acts as job
 
 pytestmark = pytest.mark.class_a

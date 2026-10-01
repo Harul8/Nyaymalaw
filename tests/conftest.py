@@ -93,6 +93,19 @@ def pytest_configure(config):
         _class_a_full_selection = not _class_a_selection_problems
 
 
+def pytest_collection_modifyitems(config, items):
+    """THE TESTS WHOSE RULE THE OWNER SUPERSEDED (LB-76, 30 September 2026) are skipped
+    with what they depend on said -- from ONE list, `tests/superseded_by_lb76.py`, so
+    the whole population is read in one place and none is silently lost."""
+    from tests.superseded_by_lb76 import SUPERSEDED
+
+    for item in items:
+        why = SUPERSEDED.get(item.nodeid)
+        if why is not None:
+            item.add_marker(pytest.mark.skip(
+                reason=f"LB-76 (owner, 30 September 2026): not run per message -- {why}"))
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield

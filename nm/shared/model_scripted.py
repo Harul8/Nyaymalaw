@@ -21,7 +21,7 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from nm.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING
+from nm.Archives.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_budget import estimate_tokens, guard_budget, guard_tool_budget
 from nm.shared.model_config import CONTEXT_BUDGET, ModelConfig, TierConfig
@@ -310,7 +310,7 @@ def scripted_role(user: str) -> str:
 #: A phrase list is fine HERE and is not fine in the product, for exactly the
 #: reason `scripted_posture` gives about its own regex: this stands in for a
 #: model on a deterministic path, and the product's own answer is a model read
-#: with guards (`nm/legal_brain/reason/cause.py`) precisely because no list can be complete.
+#: with guards (`nm/Archives/legal_brain/reason/cause.py`) precisely because no list can be complete.
 _SCRIPTED_CAUSE = (
     ("goods were supplied", "goods_sold_price"),
     ("goods sold", "goods_sold_price"),
@@ -327,26 +327,39 @@ _SCRIPTED_CAUSE = (
 )
 
 
+def _numbered(user: str) -> dict[str, str]:
+    """The advocate's sentences a numbered prompt shows, by number -- read from the
+    advocate's section only, never from this product's own instructions."""
+    start = (user or "").find(WORDS_HEADING)
+    shown = {}
+    for line in (user or "")[start:].splitlines() if start >= 0 else ():
+        if line.startswith(CONTEXT_HEADING):
+            break
+        key, separator, value = line.partition(": ")
+        if separator and key.startswith("S") and key[1:].isdigit():
+            shown[key] = value
+    return shown
+
+
+def _naming(user: str, needle: str) -> list[str]:
+    """The number of the first sentence carrying `needle`, as a read would name it."""
+    return next(([k] for k, v in _numbered(user).items() if needle in v.lower()), [])
+
+
 def scripted_cause(user: str) -> str:
     """A deterministic stand-in for the model's cause read.
 
-    THE QUOTED SPAN IS THE ADVOCATE'S OWN WORDS, taken from `user`, because
-    `nm.legal_brain.reason.cause.interpret` refuses a span that is not — and a double that
-    could not satisfy the product's own guard would prove the guard untested
-    rather than satisfied.
+    IT NAMES THE ADVOCATE'S SENTENCE BY NUMBER, from the numbered sentences the
+    prompt shows, because `nm.Archives.legal_brain.reason.cause.interpret` refuses a
+    number that is not one of theirs -- and a double that could not satisfy the
+    product's own guard would prove the guard untested rather than satisfied.
     """
-    said = user.split("just asked:", 1)[-1]
-    whole = user or ""
     for needle, cause in _SCRIPTED_CAUSE:
-        for haystack in (said, whole):
-            i = haystack.lower().find(needle)
-            if i >= 0:
-                return json.dumps({
-                    "cause": cause,
-                    "quoted": haystack[i:i + len(needle)],
-                    "why": f"the account mentions {needle}",
-                })
-    return json.dumps({"cause": "cannot_tell", "quoted": "",
+        named = _naming(user, needle)
+        if named:
+            return json.dumps({"cause": cause, "sentences": named,
+                               "why": f"the account mentions {needle}"})
+    return json.dumps({"cause": "cannot_tell", "sentences": [],
                        "why": "the account does not name a cause this "
                               "product routes on"})
 
@@ -457,31 +470,25 @@ _SCRIPTED_ISSUES = (
 def scripted_issues(user: str) -> str:
     """A deterministic stand-in for the model's issue read.
 
-    THE QUOTED SPAN IS TAKEN FROM THE PROMPT, because `issues.read` refuses a
-    quotation that is not in the advocate's account -- a double that could not
-    satisfy the product's own guard would prove the guard untested rather than
-    satisfied.
+    IT NAMES THE ADVOCATE'S SENTENCES BY NUMBER, because `issues.read` refuses a
+    number that is not theirs -- a double that could not satisfy the product's
+    own guard would prove the guard untested rather than satisfied.
 
     It reads the FILE block only. The instructions above it contain words like
     "limitation" and "notice", and matching those would spot issues from the
     product's own prompt -- which is not a defect a real model would have, so
     a double with it would test something no advocate can reach.
     """
-    block = user or ""
-    start = block.find(WORDS_HEADING)
-    block = block[start:] if start >= 0 else block
-    lower = block.lower()
-
     rows = []
     for needle, kind, against in _SCRIPTED_ISSUES:
-        i = lower.find(needle)
-        if i < 0:
+        named = _naming(user, needle)
+        if not named:
             continue
         rows.append({
             "statement": f"Whether the {needle} point is made out",
             "kind": kind,
             "runs_against": against,
-            "quoted": block[i:i + len(needle)],
+            "sentences": named,
             # EMPTY, WHICH IS THE ORDINARY ANSWER. A double that always
             # restated would make the merge look like it deduplicated
             # everything; one that never can would leave the restatement path

@@ -220,8 +220,8 @@ def _without_unresolved_limitation(user: str) -> str:
 
 def _limitation_gate(adapter, user: str, step: str) -> bool:
     """True when G-LIMITATION would withhold this step, through the real code."""
-    from nm.legal_brain import step_dependency
-    from nm.legal_brain.conversation import guided
+    from nm.Archives.legal_brain.verify import step_dependency
+    from nm.Archives.legal_brain.common.conversation import guided
     from nm.shared.model_port import Tier
 
     facts = user.split("THE COMPUTED FACTS:\n", 1)[1].split("\n\n", 1)[0]
@@ -269,7 +269,7 @@ def _candidate_contradicted(data: dict, step: str, offered: frozenset[str]) -> b
 
 
 def cases() -> list[tuple[str, str, str, frozenset[str], str]]:
-    from nm.legal_brain import consistency
+    from nm.Archives.legal_brain.verify import consistency
     out = []
     for row in json.loads((EVIDENCE / "consistency-population.json").read_text(encoding="utf8")):
         # A RECORD CUT AT 4,000 CHARACTERS IS NOT WHAT PRODUCTION SENT. The
@@ -293,7 +293,7 @@ def cases() -> list[tuple[str, str, str, frozenset[str], str]]:
 def measure(run: bool) -> int:
     from dataclasses import replace
 
-    from nm.legal_brain import consistency
+    from nm.Archives.legal_brain.verify import consistency
 
     population = cases()
     if not run:
@@ -305,7 +305,7 @@ def measure(run: bool) -> int:
     from nm.shared.model_call_budget import CallBudget
     from nm.shared.model_config import load, load_dotenv
     from nm.shared.model_openai_adapter import OpenAIModelAdapter
-    from nm.legal_brain.conversation import guided
+    from nm.Archives.legal_brain.common.conversation import guided
     from nm.shared.model_port import Prompt, Tier
 
     load_dotenv(ROOT / ".env")

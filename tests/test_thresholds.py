@@ -12,8 +12,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.procedure.limitation import compute, not_computed, period_in
-from nm.legal_brain.reason.thresholds import (
+from nm.Archives.legal_brain.procedure.limitation import compute, not_computed, period_in
+from nm.Archives.legal_brain.reason.thresholds import (
     Threshold,
     ThresholdAnswer,
     ThresholdState,

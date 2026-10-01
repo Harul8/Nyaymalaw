@@ -11,10 +11,10 @@ server tomorrow fails here, not silently in front of an advocate.
 import re
 from pathlib import Path
 
-from nm.legal_brain.communicate.loop_progress import label_states
+from nm.Archives.legal_brain.communicate.loop_progress import label_states
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = (ROOT / 'nm' / 'legal_brain' / 'communicate' / 'loop-progress.js').read_text(
+SCRIPT = (ROOT / 'nm' / 'Archives' / 'legal_brain' / 'communicate' / 'loop-progress.js').read_text(
     encoding='utf8')
 
 

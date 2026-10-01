@@ -5,8 +5,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.conversation import with_evidence
-from nm.legal_brain.retrieve.evidence_port import (
+from nm.Archives.legal_brain.common.conversation import with_evidence
+from nm.Archives.legal_brain.retrieve.evidence_port import (
     Binding,
     Coverage,
     EvidenceResult,
@@ -14,7 +14,7 @@ from nm.legal_brain.retrieve.evidence_port import (
     SourceKind,
     Treatment,
 )
-from nm.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import Prompt
 from nm.shared.model_scripted import ScriptedModelAdapter

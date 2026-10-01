@@ -18,25 +18,25 @@ from nm.arrive.directory_port import DirectoryPort
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.mail_port import MailPort
 from nm.arrive.store_directory import FileDirectory
-from nm.legal_brain.orchestrate.turn import TurnEngine
-from nm.legal_brain.procedure.filing_requirement_adapter import (
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
+from nm.Archives.legal_brain.procedure.filing_requirement_adapter import (
     CuratedFilingRequirements,
 )
-from nm.legal_brain.procedure.governing_law_adapter import CuratedGoverningLaw
-from nm.legal_brain.procedure.institution_adapter import CuratedPreInstitution
-from nm.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
-from nm.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
-from nm.legal_brain.reason.elements_adapter import CuratedElements
-from nm.legal_brain.retrieve.authority_weight_adapter import CuratedAuthorityWeight
-from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, default_authority_index
-from nm.legal_brain.retrieve.coverage_sources import CoverageProfile
-from nm.legal_brain.retrieve.manifest_sources import (
+from nm.Archives.legal_brain.procedure.governing_law_adapter import CuratedGoverningLaw
+from nm.Archives.legal_brain.procedure.institution_adapter import CuratedPreInstitution
+from nm.Archives.legal_brain.procedure.interim_relief_adapter import CuratedInterimRelief
+from nm.Archives.legal_brain.procedure.procedural_period_adapter import CuratedProceduralPeriods
+from nm.Archives.legal_brain.reason.elements_adapter import CuratedElements
+from nm.Archives.legal_brain.retrieve.authority_weight_adapter import CuratedAuthorityWeight
+from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter, default_authority_index
+from nm.Archives.legal_brain.retrieve.coverage_sources import CoverageProfile
+from nm.Archives.legal_brain.retrieve.manifest_sources import (
     CorpusPublicationRefused,
     Manifest,
     PublishedCorpus,
 )
-from nm.legal_brain.retrieve.search_authority import AuthorityIndexSearch
-from nm.legal_brain.retrieve.search_policed import PolicedSearch
+from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
+from nm.Archives.legal_brain.retrieve.search_policed import PolicedSearch
 from nm.open_matter.speech_local_whisper import LocalWhisper
 from nm.open_matter.speech_vosk_live import VoskLive
 from nm.open_matter.transcription_port import LiveTranscriptionPort, TranscriptionPort
@@ -240,7 +240,7 @@ class Application:
         )
         published_corpus = (corpus_path / "current.json").is_file()
         published_snapshot = None
-        from nm.legal_brain.retrieve.provision_registry_composition import load_provision_registry
+        from nm.Archives.legal_brain.retrieve.provision_registry_composition import load_provision_registry
 
         self.provision_registry = load_provision_registry(
             None, source_generation="not_established", generation_current=lambda *_: False)
@@ -272,7 +272,7 @@ class Application:
             self.provision_registry = load_provision_registry(
                 published_snapshot, source_generation=published_snapshot.snapshot_id,
                 generation_current=registry_generation_current)
-            from nm.legal_brain.retrieve.provision_review import build_revision_review_owner
+            from nm.Archives.legal_brain.retrieve.provision_review import build_revision_review_owner
 
             revision_reviews = build_revision_review_owner(
                 base=self.root, artifact_refs=self.provision_registry.review_artifact_refs,
@@ -302,18 +302,38 @@ class Application:
         # when it will not. The advocate's words go only to this machine's models and
         # index, and that destination is admitted like every other.
         self.sections = None
-        if (evidence is None and not published_corpus
-                and (corpus_path / "bareacts_v3.index").is_file()):
-            from nm.legal_brain.retrieve.hybrid_sections import HybridSections
-            from nm.legal_brain.retrieve.section_search_port import SectionSearchPort
+        # AND THE JUDGMENTS, THE SAME WAY (LB-106; owner, 30 September 2026: "both acts and
+        # judgements should be retrieved same way"): the earlier system's judgment index,
+        # word index and passages, through the same mechanism and the same two models,
+        # loaded once for both. It checks its own lineage record and says why when it
+        # will not run.
+        self.judgments = None
+        if evidence is None and not published_corpus:
+            from nm.Archives.legal_brain.retrieve.hybrid_sections import SearchModels
 
-            self.sections = PolicedPort(
-                inner=HybridSections(
-                    corpus_path, self.manifest, read_provision=self.evidence.read_provision,
-                    models=self.root / ".nm" / "models",
-                    lineage=self.root / ".nm" / "retrieval" / "bare_acts.lineage.json"),
-                gate=self._gate, port=SectionSearchPort, sink=Sink.INDEX,
-                processor_id=INDEX_PROCESSOR)
+            models = SearchModels(self.root / ".nm" / "models")
+            lineage = self.root / ".nm" / "retrieval"
+            if (corpus_path / "bareacts_v3.index").is_file():
+                from nm.Archives.legal_brain.retrieve.hybrid_sections import HybridSections
+                from nm.Archives.legal_brain.retrieve.section_search_port import SectionSearchPort
+
+                self.sections = PolicedPort(
+                    inner=HybridSections(
+                        corpus_path, self.manifest,
+                        read_provision=self.evidence.read_provision, models=models,
+                        lineage=lineage / "bare_acts.lineage.json"),
+                    gate=self._gate, port=SectionSearchPort, sink=Sink.INDEX,
+                    processor_id=INDEX_PROCESSOR)
+            if (corpus_path / "caselaws_v2.index").is_file():
+                from nm.Archives.legal_brain.retrieve.hybrid_judgments import HybridJudgments
+                from nm.Archives.legal_brain.retrieve.section_search_port import JudgmentSearchPort
+
+                self.judgments = PolicedPort(
+                    inner=HybridJudgments(
+                        corpus_path, read_judgments=self.evidence.judgment_findings,
+                        models=models, lineage=lineage / "judgments.lineage.json"),
+                    gate=self._gate, port=JudgmentSearchPort, sink=Sink.INDEX,
+                    processor_id=INDEX_PROCESSOR)
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
         # and the evidence adapter came to hold different provision patterns
@@ -429,7 +449,8 @@ class Application:
                                  procedural=self.procedural,
                                  filing=self.filing,
                                  professional_approval=self.directory.professional_approval,
-                                 sections=self.sections)
+                                 sections=self.sections,
+                                 judgments=self.judgments)
 
         self.documents = None
         from nm.open_matter.document_permission import build_quarantine
@@ -483,7 +504,7 @@ class Application:
 
     def source_generation_guard(self):
         """The actual small source/table binding, never a caller-authored label."""
-        from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
+        from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard
 
         manifest_path = (self._published_snapshot.member_path("corpus/manifest.yaml")
                          if self._published_snapshot else self.root / "pipeline" / "manifest.yaml")
@@ -499,11 +520,11 @@ class Application:
                                      session_current: Callable[[], bool],
                                      generation_guard=None):
         """Request-bound cached law; missing source evidence never becomes a tick."""
-        from nm.legal_brain.orchestrate.controlled_generations import (
+        from nm.Archives.legal_brain.orchestrate.controlled_generations import (
             GenerationGuard,
             GenerationUnavailable,
         )
-        from nm.legal_brain.retrieve.checklist_sources import bind_source_current
+        from nm.Archives.legal_brain.retrieve.checklist_sources import bind_source_current
 
         if type(expected_version) is not int or expected_version < 1:
             raise ValueError("A checklist projection names its exact captured file version")
@@ -541,7 +562,7 @@ class Application:
                           procedural=self.procedural,
                           filing=self.filing,
                           professional_approval=self.directory.professional_approval,
-                          sections=self.sections)
+                          sections=self.sections, judgments=self.judgments)
 
     def _model_for(self, advocate_id: str, *, session_current: Callable[[], bool] | None):
         """One authenticated external-text dispatch owner for both reasoning paths."""
@@ -565,30 +586,30 @@ class Application:
         The same account permission wraps every model dispatch, not just startup.
         No external filing, settlement, media release or legal approval is a tool.
         """
-        from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-        from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-        from nm.legal_brain.orchestrate.controlled_generations import GenerationUnavailable
-        from nm.legal_brain.orchestrate.controlled_registry_composition import (
+        from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+        from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+        from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationUnavailable
+        from nm.Archives.legal_brain.orchestrate.controlled_registry_composition import (
             ControlledRegistryPorts,
             assemble_controlled_registry,
         )
-        from nm.legal_brain.orchestrate.tool_catalogue import PracticeTables
-        from nm.legal_brain.orchestrate.tools import Boundary
-        from nm.legal_brain.procedure.reviewed_limitation_selection import (
+        from nm.Archives.legal_brain.orchestrate.tool_catalogue import PracticeTables
+        from nm.Archives.legal_brain.orchestrate.tools import Boundary
+        from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import (
             LimitationSelectionReviewService,
         )
-        from nm.legal_brain.understand import parties
-        from nm.legal_brain.understand.advocate_memory import preference_context
-        from nm.legal_brain.verify import output_checks
-        from nm.legal_brain.verify.brain_assessment import AssessmentService
-        from nm.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
-        from nm.legal_brain.verify.brain_publication import PrivatePublicationService
-        from nm.legal_brain.verify.checklist_review import ChecklistReviewService
-        from nm.legal_brain.verify.interaction_review import (
+        from nm.Archives.legal_brain.understand import parties
+        from nm.Archives.legal_brain.understand.advocate_memory import preference_context
+        from nm.Archives.legal_brain.verify import output_checks
+        from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+        from nm.Archives.legal_brain.verify.brain_finalization import FinalizationService, SavedCheckReader
+        from nm.Archives.legal_brain.verify.brain_publication import PrivatePublicationService
+        from nm.Archives.legal_brain.verify.checklist_review import ChecklistReviewService
+        from nm.Archives.legal_brain.verify.interaction_review import (
             COMMUNICATION_PROTOCOL_VERSIONS,
             InteractionReviewService,
         )
-        from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
+        from nm.Archives.legal_brain.verify.interaction_subject import InteractionSubjectOwner
         from nm.open_matter import screens
         from nm.open_matter.commission_contracts import Commission
         from nm.shared.authority_contracts import Act, capacity_for, permits
@@ -602,7 +623,7 @@ class Application:
                 or interaction_protocol_version not in COMMUNICATION_PROTOCOL_VERSIONS):
             raise ValueError("Interaction review uses an explicit owned protocol version")
         generations = self.source_generation_guard()
-        from nm.legal_brain.retrieve.checklist_sources import (
+        from nm.Archives.legal_brain.retrieve.checklist_sources import (
             bind_source_current,
             bind_window_current,
         )
@@ -650,7 +671,7 @@ class Application:
             # permission-bound author. Ordinary TurnEngine composition is not
             # changed to consume the evaluation ledger or verifier allowance.
             model = controlled_model
-        from nm.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
+        from nm.Archives.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
 
         playbooks = FilePracticePlaybooks()
         playbook_snapshot = playbooks.load()
@@ -677,7 +698,7 @@ class Application:
         def document_current(matter, span):
             # Re-open through the owned local service, not metadata equality or
             # a model's assertion that the uploaded document remains readable.
-            from nm.legal_brain.reason.matter_support import REFERENCE_KEYS
+            from nm.Archives.legal_brain.reason.matter_support import REFERENCE_KEYS
             from nm.open_matter.matter_documents_port import DocumentRefused
             from nm.open_matter.upload_port import UploadRefused
             from nm.shared.storage_errors_port import (
@@ -744,21 +765,21 @@ class Application:
         early_review = None
         input_continuations = None
         if reviewer is not None:
-            from nm.legal_brain.orchestrate.checked_input_continuation import (
+            from nm.Archives.legal_brain.orchestrate.checked_input_continuation import (
                 CheckedInputContinuationService,
             )
-            from nm.legal_brain.procedure.reviewed_limitation_selection import (
+            from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import (
                 prepare_limitation_selections,
             )
-            from nm.legal_brain.reason.matter_support import captured_documents
-            from nm.legal_brain.reason.working_record import WorkingRecordReviewService
-            from nm.legal_brain.retrieve.tool_sources import findings_from_record
-            from nm.legal_brain.verify.brain_release import ReviewRefused
-            from nm.legal_brain.verify.early_independent_review import (
+            from nm.Archives.legal_brain.reason.matter_support import captured_documents
+            from nm.Archives.legal_brain.reason.working_record import WorkingRecordReviewService
+            from nm.Archives.legal_brain.retrieve.tool_sources import findings_from_record
+            from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+            from nm.Archives.legal_brain.verify.early_independent_review import (
                 EarlyIndependentReviewService,
                 EarlyReviewSubject,
             )
-            from nm.legal_brain.verify.working_scope import WorkingScopeService
+            from nm.Archives.legal_brain.verify.working_scope import WorkingScopeService
             from nm.shared.clock_contracts import today as forum_today
 
             working_review = WorkingRecordReviewService(reviewer=reviewer, owner=working_owner)
@@ -824,7 +845,7 @@ class Application:
                 document_current=document_current),
                 today=forum_today, jurisdiction=FORUM, coverage=self.coverage,
                 authority=current_authority)
-            from nm.legal_brain.communicate.working_explanation import WorkingExplanationService
+            from nm.Archives.legal_brain.communicate.working_explanation import WorkingExplanationService
 
             working_explanations = WorkingExplanationService(
                 working=working_review, scope=working_scope, finalizer=finalizer,
@@ -870,24 +891,24 @@ class Application:
                 if reviewer is not None else None)
 
     def evaluate_private_work(self, **arguments):
-        from nm.legal_brain.evaluate.controlled_evaluations_composition import evaluate
+        from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import evaluate
 
         return evaluate(self, now=utcnow, **arguments)
 
     def read_reviewed_private_source(self, **arguments):
-        from nm.legal_brain.evaluate.controlled_evaluations_composition import (
+        from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import (
             reviewed_preview_source,
         )
 
         return reviewed_preview_source(self, now=utcnow, **arguments)
 
     def read_reviewed_private_preview(self, **arguments):
-        from nm.legal_brain.evaluate.controlled_evaluations_composition import reviewed_preview
+        from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import reviewed_preview
 
         return reviewed_preview(self, now=utcnow, **arguments)
 
     def record_private_preview_seen(self, **arguments):
-        from nm.legal_brain.evaluate.controlled_evaluations_composition import record_preview_seen
+        from nm.Archives.legal_brain.evaluate.controlled_evaluations_composition import record_preview_seen
 
         return record_preview_seen(self, now=utcnow, **arguments)
 
@@ -902,7 +923,7 @@ class Application:
         it through the composition root keeps one owner of the rule and no
         provider knowledge on the serving path.
         """
-        from nm.legal_brain.retrieve.jurisdiction_sources import binding_status
+        from nm.Archives.legal_brain.retrieve.jurisdiction_sources import binding_status
 
         return binding_status(court, year, FORUM)
 
@@ -934,7 +955,7 @@ class Application:
                     f"for {case_id!r}, so the generation itself is recorded")
         from datetime import datetime, timezone
 
-        from nm.legal_brain.retrieve.manifest_sources import (
+        from nm.Archives.legal_brain.retrieve.manifest_sources import (
             CorpusDependency,
             record_corpus_dependency,
         )
@@ -1007,6 +1028,8 @@ class Application:
             # LB-106. WHETHER THE BARE-ACT SEARCH CAN RUN, said before a turn relies on it.
             "section_search": (self.sections.readiness() if self.sections is not None
                                else "not configured -- no bare-act search index here"),
+            "judgment_search": (self.judgments.readiness() if self.judgments is not None
+                                else "not configured -- no judgment search index here"),
             # Each retrieval capability reports its OWN readiness. One rolled-up
             # "corpus: readable" would let an unbuilt authority index hide
             # behind a readable provision store, and the advocate would learn

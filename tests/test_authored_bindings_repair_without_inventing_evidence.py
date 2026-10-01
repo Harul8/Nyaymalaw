@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_assessment import AssessmentService
-from nm.legal_brain.verify.brain_release import ProposalBindingRefused, ReviewRefused, prepare_claims
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+from nm.Archives.legal_brain.verify.brain_release import ProposalBindingRefused, ReviewRefused, prepare_claims
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from tests.test_claims_reach_the_independent_review_from_the_saved_loop import _case

@@ -16,7 +16,7 @@ report `unknown` and the check would degrade to nothing exactly where it
 matters most. So the owner is here, and `assurance/common/_fingerprint.py` re-exports it.
 One definition; CLAUDE.md §4 is about what refuses the second copy.
 
-This is the same argument `nm/legal_brain/retrieve/artefact_sources.py` makes about the dense
+This is the same argument `nm/Archives/legal_brain/retrieve/artefact_sources.py` makes about the dense
 index: the only reason that 437MB index was KNOWABLY unusable is that it
 shipped an `identity.json`. Every artefact this project produces carries its
 identity, and a process serving turns is one.

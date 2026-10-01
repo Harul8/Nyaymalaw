@@ -2,8 +2,8 @@
 
 import pytest
 
-from nm.legal_brain.understand.dispute import Described
-from nm.legal_brain.understand.threading import bind
+from nm.Archives.legal_brain.understand.dispute import Described
+from nm.Archives.legal_brain.understand.threading import bind
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 
 

@@ -4,10 +4,10 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_release import ReviewService
-from nm.legal_brain.verify.interaction_review import COMMUNICATION_UNIT_REVIEW_SCHEMA, CRITERIA
-from nm.legal_brain.communicate.preview_display import displayed_questions
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.brain_release import ReviewService
+from nm.Archives.legal_brain.verify.interaction_review import COMMUNICATION_UNIT_REVIEW_SCHEMA, CRITERIA
+from nm.Archives.legal_brain.communicate.preview_display import displayed_questions
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.shared.store_loop_log import MatterLoopLog

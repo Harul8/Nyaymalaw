@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard, GenerationUnavailable
-from nm.legal_brain.retrieve.manifest_sources import PublishedCorpus, withdraw_corpus
+from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard, GenerationUnavailable
+from nm.Archives.legal_brain.retrieve.manifest_sources import PublishedCorpus, withdraw_corpus
 from tests.test_immutable_corpus_publication import NOW, _publish
 
 pytestmark = pytest.mark.class_a

@@ -51,7 +51,7 @@ import time
 from dataclasses import dataclass, field, replace
 from typing import Any, Mapping
 
-from nm.legal_brain.common.reads_contracts import is_decisive
+from nm.Archives.legal_brain.common.reads_contracts import is_decisive
 from nm.shared.model_port import (
     EmbeddingResult,
     ModelPort,
@@ -190,7 +190,7 @@ def _is_empty(result: ModelResult, schema: Mapping[str, Any] | None = None
 def _decisive(read: str) -> bool:
     """Does being wrong about this read change a number the advocate acts on?
 
-    Asked of `nm.legal_brain.common.reads_contracts`, which is the ONE table that decides it. A list
+    Asked of `nm.Archives.legal_brain.common.reads_contracts`, which is the ONE table that decides it. A list
     here would be a second owner for one truth.
     """
     return is_decisive(read)
@@ -252,7 +252,7 @@ class TracedModel:
                                              max_tokens=max_tokens)
             except TierUnavailable:
                 # THE TIER IS NOT CONFIGURED HERE, AND THE ANSWER IS WORTH
-                # LESS FOR IT. `nm/legal_brain/common/reads_contracts.py` is explicit: a decisive
+                # LESS FOR IT. `nm/Archives/legal_brain/common/reads_contracts.py` is explicit: a decisive
                 # read that quietly falls back to the cheap tier is the same
                 # defect as a screen that could not run returning a clean
                 # result -- the answer looks identical and is worth less.

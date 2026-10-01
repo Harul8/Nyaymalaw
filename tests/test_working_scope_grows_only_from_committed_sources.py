@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.verify.brain_release import ReviewRefused
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason, digest
-from nm.legal_brain.orchestrate.tools import ToolRegistry
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason, digest
+from nm.Archives.legal_brain.orchestrate.tools import ToolRegistry
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import ToolCall
 from nm.work_the_file.file_mutation import assertion_identity, dispute_identity

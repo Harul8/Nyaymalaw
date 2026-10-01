@@ -6,9 +6,9 @@ population can pass by disappearing, and a pause never answers a question.
 
 from __future__ import annotations
 
-from nm.legal_brain.reason import requirements
+from nm.Archives.legal_brain.reason import requirements
 from nm.work_the_file import dependency
-from nm.work_the_file.summary_contracts import DERIVED_SECTIONS
+from nm.work_the_file.summary_contracts import WORKED_SECTIONS
 
 
 def _value(row, name, default=""):
@@ -40,7 +40,9 @@ def project(matter, *, after_thread_id=None, source_current=None,
             n.name.endswith(" on " + thread.id) and n.currency is not dependency.Currency.CURRENT
             for n in ledger.nodes
         )
-        missing = tuple(s for s in DERIVED_SECTIONS if s not in thread.assessed)
+        # WHAT THE PER-MESSAGE WORK DERIVES (LB-76): a review cannot wait on work
+        # nothing runs any more.
+        missing = tuple(s for s in WORKED_SECTIONS if s not in thread.assessed)
         if thread.deferred_reason:
             status, reason = "paused", thread.deferred_reason
         elif thread.posture.conflicts:

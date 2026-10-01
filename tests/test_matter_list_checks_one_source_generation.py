@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.orchestrate.generations_port import GenerationUnavailable
+from nm.Archives.legal_brain.orchestrate.generations_port import GenerationUnavailable
 from nm.work_the_file.matter_contracts import Matter
 
 pytestmark = pytest.mark.class_a

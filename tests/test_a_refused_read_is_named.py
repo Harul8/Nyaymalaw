@@ -52,8 +52,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.orchestrate.turn import TurnEngine, TurnInput
-from nm.legal_brain.reason.elements_adapter import CuratedElements
+from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
+from nm.Archives.legal_brain.reason.elements_adapter import CuratedElements
 from nm.shared.model_port import ModelError
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import TracedModel
@@ -182,7 +182,7 @@ REACHED_BY: dict[str, str] = {
 
 def _refuse_independent_claim():
     """The new dispatcher is not a fictional brief through the legacy engine."""
-    from nm.legal_brain.verify.verifier import IndependentVerifier
+    from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
     from tests.test_independent_claim_verifier import Judge, package
 
     subject = package()

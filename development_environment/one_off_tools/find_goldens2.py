@@ -22,7 +22,7 @@ utf8_console()
 
 SUMMARIES = "legal_database/vector_store/case_summaries_v3_chunks.json"
 CHUNKS = "legal_database/vector_store/chunks.db"
-from nm.legal_brain.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
+from nm.Archives.legal_brain.retrieve.evidence_port import ATTRIBUTABLE_LABELS  # noqa: E402
 
 ATTRIBUTABLE = ATTRIBUTABLE_LABELS
 

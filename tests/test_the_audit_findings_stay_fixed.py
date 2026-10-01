@@ -232,7 +232,7 @@ def test_a_missing_index_count_is_none_and_not_zero():
     CLAUDE.md's worked example is this shape: `table.get(kind, 0.0)` made
     every unlisted atom type score worse than every listed one.
     """
-    src = _code(ROOT / "nm/legal_brain/retrieve/search_authority.py")
+    src = _code(ROOT / "nm/Archives/legal_brain/retrieve/search_authority.py")
     assert "rows.get(key, 0)" not in src, (
         "a missing count reads as zero again")
     assert "def num(key: str) -> int | None:" in src, (

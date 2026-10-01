@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.reason.gaps import (
+from nm.Archives.legal_brain.reason.gaps import (
     Gap,
     GapKind,
     Question,
@@ -352,7 +352,7 @@ def test_answer_length_is_a_function_of_live_threads_not_turn_number(tmp_path):
     """
     from datetime import date as _date
 
-    from nm.legal_brain.orchestrate.turn import TurnInput
+    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

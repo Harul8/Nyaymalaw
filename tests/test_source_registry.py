@@ -7,8 +7,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.retrieve.provenance_sources import Standing, Treatment
-from nm.legal_brain.retrieve.source_registry_sources import (
+from nm.Archives.legal_brain.retrieve.provenance_sources import Standing, Treatment
+from nm.Archives.legal_brain.retrieve.source_registry_sources import (
     BindingState,
     CanonicalSource,
     LegalReview,

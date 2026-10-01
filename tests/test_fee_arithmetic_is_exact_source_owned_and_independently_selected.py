@@ -15,13 +15,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-from nm.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind
-from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
-from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
-from nm.legal_brain.procedure.fee_calculation_contracts import (
+from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.Archives.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, LoopMode, StepKind
+from nm.Archives.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.Archives.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.Archives.legal_brain.procedure.fee_calculation_contracts import (
     FeeBand,
     FeeInputs,
     FeeNotAssessed,
@@ -29,7 +29,7 @@ from nm.legal_brain.procedure.fee_calculation_contracts import (
     compute_fee,
     fee_literal,
 )
-from nm.legal_brain.procedure.reviewed_fee_selection import (
+from nm.Archives.legal_brain.procedure.reviewed_fee_selection import (
     COMPUTE,
     PROPOSE,
     READ,
@@ -37,10 +37,10 @@ from nm.legal_brain.procedure.reviewed_fee_selection import (
     FeeSelectionReviewService,
     fee_tools,
 )
-from nm.legal_brain.reason.working_record import WorkingRecordOwner
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.reason.working_record import WorkingRecordOwner
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
 from nm.shared.budget_contracts import Budget
 from nm.shared.model_port import Tier, ToolCall
 from nm.shared.store_file_store import FileMatterStore
@@ -657,7 +657,7 @@ def test_restart_reads_actual_encrypted_sources_and_saved_review_not_a_cached_bi
 
 
 def _authenticated_fee_case(client):
-    from nm.legal_brain.retrieve.evidence_port import SourceDocument
+    from nm.Archives.legal_brain.retrieve.evidence_port import SourceDocument
     from tests.test_private_file_proposals_use_actual_sources_and_atomic_history import (
         authenticated_case,
     )
@@ -827,8 +827,8 @@ def test_actual_authenticated_fee_entry_cannot_be_self_authorized(client, contro
 def test_actual_admitted_document_schedule_is_private_attributed_and_revocation_refuses_review(
     tmp_path,
 ):
-    from nm.legal_brain.orchestrate.tool_catalogue import catalogue_tools
-    from nm.legal_brain.reason.matter_support import REFERENCE_KEYS
+    from nm.Archives.legal_brain.orchestrate.tool_catalogue import catalogue_tools
+    from nm.Archives.legal_brain.reason.matter_support import REFERENCE_KEYS
     from nm.open_matter.matter_documents_port import DocumentRefused
     from tests.test_admitted_documents_are_owned_exact_and_sealed import (
         analyse,
@@ -1032,7 +1032,7 @@ def test_fee_schedule_cannot_be_an_assertion_or_cross_source_literal(tmp_path):
 def test_actual_late_source_revocation_during_math_withholds_receipt_data_and_retains_spend(
     tmp_path, monkeypatch
 ):
-    from nm.legal_brain.procedure import tool_court_fee
+    from nm.Archives.legal_brain.procedure import tool_court_fee
 
     values = _actual(tmp_path)
     checked = values[3].review(values[1], budget=values[1].budget)

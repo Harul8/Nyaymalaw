@@ -2,7 +2,8 @@
 
 The current product manifest owns classification. Immutable journey history and
 the subsequent legal-brain relocation map compose former identities into current
-ones. No manifest is imported, executed or used to grant dependency permissions.
+ones, including the later archival package move. No manifest is imported,
+executed or used to grant dependency permissions.
 """
 from __future__ import annotations
 
@@ -21,6 +22,23 @@ _MODULE = re.compile(r"nm(?:\.[a-zA-Z_]\w*)*\Z", re.ASCII)
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
 _BRAIN_STAGES = frozenset({"understand", "retrieve", "reason", "procedure", "verify",
                            "communicate", "orchestrate", "evaluate", "common"})
+_OLD_BRAIN_MODULE = "nm.legal_brain"
+_ARCHIVED_BRAIN_MODULE = "nm.Archives.legal_brain"
+_OLD_BRAIN_PATH = "nm/legal_brain/"
+_ARCHIVED_BRAIN_PATH = "nm/Archives/legal_brain/"
+
+
+def _archived_module(module: str) -> str:
+    """Compose an historical brain identity with its current package location."""
+    if module == _OLD_BRAIN_MODULE or module.startswith(_OLD_BRAIN_MODULE + "."):
+        return _ARCHIVED_BRAIN_MODULE + module[len(_OLD_BRAIN_MODULE):]
+    return module
+
+
+def _archived_path(path: str) -> str:
+    if path.startswith(_OLD_BRAIN_PATH):
+        return _ARCHIVED_BRAIN_PATH + path[len(_OLD_BRAIN_PATH):]
+    return path
 
 
 class LayoutError(ValueError):
@@ -147,16 +165,17 @@ def load_module_roles(*, root: Path = ROOT) -> ModuleRoles:
     relocated, relocation_roles, relocation_assets = _brain_relocations(
         root=root, historical=historical,
     )
-    changed = sorted(relocated.get(row["module"], row["module"])
+    changed = sorted(_archived_module(relocated.get(row["module"], row["module"]))
                      for row in historical["modules"]
-                     if roles.get(relocated.get(row["module"], row["module"])) != row["role"])
+                     if roles.get(_archived_module(relocated.get(row["module"], row["module"]))) != row["role"])
     if changed:
         raise LayoutError(f"migrated source owners missing or reclassified: {changed}")
-    changed = sorted(module for module, role in relocation_roles.items()
-                     if roles.get(module) != role)
+    changed = sorted(_archived_module(module) for module, role in relocation_roles.items()
+                     if roles.get(_archived_module(module)) != role)
     if changed:
         raise LayoutError(f"relocated source owners missing or reclassified: {changed}")
-    if any(assets.get(name) != path for name, path in relocation_assets.items()):
+    if any(assets.get(name) != _archived_path(path)
+           for name, path in relocation_assets.items()):
         raise LayoutError("relocated browser owners differ from the served asset map")
     layout = classify_sources(root=root, roles=roles)
     owned_assets = {name: root / path for name, path in assets.items()}
@@ -285,10 +304,10 @@ def _brain_relocations(
 
 
 def legacy_modules(*, root: Path = ROOT) -> Mapping[str, str]:
-    """Exact original->current identities through both moves, never a verdict."""
+    """Exact original-to-current identities through each physical move."""
     historical, originals = _journey_modules(root=root)
     relocated, _, _ = _brain_relocations(root=root, historical=historical)
-    return MappingProxyType({old: relocated.get(module, module)
+    return MappingProxyType({old: _archived_module(relocated.get(module, module))
                              for old, module in originals.items()})
 
 
@@ -296,7 +315,7 @@ def current_module(old_module: str, *, root: Path = ROOT) -> str:
     historical, originals = _journey_modules(root=root)
     relocated, _, _ = _brain_relocations(root=root, historical=historical)
     before = originals.get(old_module, old_module)
-    module = relocated.get(before, before)
+    module = _archived_module(relocated.get(before, before))
     load_module_roles(root=root).role(module)
     return module
 

@@ -9,11 +9,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate.brain_evaluation import EvaluationResult
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.evaluate.evaluation_history import record_repaired_evaluation, resolve_preview_parent
-from nm.legal_brain.orchestrate.loop import _budget_from
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.evaluate.brain_evaluation import EvaluationResult
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.evaluate.evaluation_history import record_repaired_evaluation, resolve_preview_parent
+from nm.Archives.legal_brain.orchestrate.loop import _budget_from
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopEvent,
     LoopMode,
     LoopOutcome,
@@ -21,8 +21,8 @@ from nm.legal_brain.orchestrate.loop_contracts import (
     StopReason,
     digest,
 )
-from nm.legal_brain.verify.verifier import IndependentVerifier
-from nm.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.working_scope import WORKING_SCOPE_SCHEMA
 from nm.shared.budget_contracts import Budget, Completion
 from nm.shared.model_port import ModelResult, Tier, ToolCall, Usage
 from nm.shared.store_loop_log import MatterLoopLog

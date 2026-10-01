@@ -10,16 +10,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.orchestrate.loop import LoopRunner
-from nm.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopLimits, LoopMode, digest
-from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.evaluate.replay_capture_contracts import (
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.orchestrate.loop import LoopRunner
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopIdentity, LoopLimits, LoopMode, digest
+from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.Archives.legal_brain.evaluate.replay_capture_contracts import (
     ReplayCaptureRefused,
     StrictReplayCapture,
     inspect_capture,
 )
-from nm.legal_brain.evaluate.strict_replay import (
+from nm.Archives.legal_brain.evaluate.strict_replay import (
     FrozenPrinciples,
     PermissionTape,
     Tape,
@@ -493,7 +493,7 @@ def test_one_shot_worker_guard_blocks_spawn_without_installing_a_live_process_ho
     import sys
 
     source = (
-        "from nm.legal_brain.evaluate.strict_replay import _install_worker_boundary; "
+        "from nm.Archives.legal_brain.evaluate.strict_replay import _install_worker_boundary; "
         "import subprocess, sys; _install_worker_boundary(); "
         "subprocess.Popen([sys.executable, '-c', 'print(1)'])"
     )

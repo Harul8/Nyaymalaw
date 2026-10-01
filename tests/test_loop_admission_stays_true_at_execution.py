@@ -6,8 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.understand.brain_context import ContextRefused
-from nm.legal_brain.orchestrate.loop_contracts import StopReason
+from nm.Archives.legal_brain.understand.brain_context import ContextRefused
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StopReason
 from nm.shared.model_port import Tier, ToolCall
 from nm.work_the_file.matter_contracts import Fact, Provenance, Thread
 from tests.test_the_controlled_brain_is_actually_wired import _brain
@@ -115,7 +115,7 @@ def test_tool_contract_drift_after_a_provider_call_refuses_before_its_handler(tm
 
 @pytest.mark.parametrize("source", ["constructor", "export"])
 def test_tool_parameter_dictionaries_do_not_share_mutable_admission_state(source):
-    from nm.legal_brain.orchestrate.tools import ToolRegistry
+    from nm.Archives.legal_brain.orchestrate.tools import ToolRegistry
     from tests.test_the_loop_records_work_before_using_it import ALLOW, _registry
 
     original = _registry()
@@ -131,7 +131,7 @@ def test_tool_parameter_dictionaries_do_not_share_mutable_admission_state(source
 
 @pytest.mark.parametrize("phase", ["before", "handler", "after"])
 def test_tool_contract_changes_during_invocation_cannot_return_a_receipt(tmp_path, phase):
-    from nm.legal_brain.orchestrate.tools import ToolContext, ToolRefused
+    from nm.Archives.legal_brain.orchestrate.tools import ToolContext, ToolRefused
     from tests.test_the_loop_records_work_before_using_it import ALLOW, _identity
 
     store, _model, brain = _brain(tmp_path)

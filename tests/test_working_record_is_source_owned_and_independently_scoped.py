@@ -9,18 +9,18 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.common.principles_file_adapter import FilePrinciples
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
-from nm.legal_brain.orchestrate.loop_contracts import (
+from nm.Archives.legal_brain.common.principles_file_adapter import FilePrinciples
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain, EvaluationScope
+from nm.Archives.legal_brain.orchestrate.loop_contracts import (
     LoopLimits,
     LoopMode,
     StepKind,
     StopReason,
     digest,
 )
-from nm.legal_brain.orchestrate.tool_discovery import discovery_tools
-from nm.legal_brain.orchestrate.tools import Boundary, foundation_tools
-from nm.legal_brain.reason.working_record import (
+from nm.Archives.legal_brain.orchestrate.tool_discovery import discovery_tools
+from nm.Archives.legal_brain.orchestrate.tools import Boundary, foundation_tools
+from nm.Archives.legal_brain.reason.working_record import (
     PROPOSE_TOOL,
     READ_TOOL,
     WorkingRecordOwner,
@@ -29,12 +29,12 @@ from nm.legal_brain.reason.working_record import (
     receipt_progress,
     working_record_tools,
 )
-from nm.legal_brain.reason.working_record_contracts import AnalysisArea
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
-from nm.legal_brain.verify.brain_finalization import SavedCheckReader
-from nm.legal_brain.verify.brain_release import ReviewRefused, ReviewService
-from nm.legal_brain.verify.verifier import IndependentVerifier
-from nm.legal_brain.verify.working_scope import (
+from nm.Archives.legal_brain.reason.working_record_contracts import AnalysisArea
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.Archives.legal_brain.verify.brain_release import ReviewRefused, ReviewService
+from nm.Archives.legal_brain.verify.verifier import IndependentVerifier
+from nm.Archives.legal_brain.verify.working_scope import (
     CHECK_NAME,
     REQUEST_DEMAND_SCHEMA,
     WORKING_SCOPE_SCHEMA,

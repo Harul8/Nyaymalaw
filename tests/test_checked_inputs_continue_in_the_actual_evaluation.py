@@ -5,11 +5,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
-from nm.legal_brain.procedure.calculation_tools import calculation_tools
-from nm.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
-from nm.legal_brain.procedure.reviewed_limitation_selection import (
+from nm.Archives.legal_brain.evaluate.brain_evaluation import EvaluationService
+from nm.Archives.legal_brain.procedure.calculation_tools import calculation_tools
+from nm.Archives.legal_brain.orchestrate.checked_input_continuation import CheckedInputContinuationService
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind
+from nm.Archives.legal_brain.procedure.reviewed_limitation_selection import (
     LimitationSelectionReviewService,
     prepare_limitation_selections,
     resolve_limitation_inputs,

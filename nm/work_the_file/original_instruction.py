@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopMode, LoopRecord, StepKind, digest
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopMode, LoopRecord, StepKind, digest
 from nm.shared.model_port import Prompt
 
 LEAD_OPERATION = "controlled_legal_brain"

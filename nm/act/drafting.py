@@ -8,7 +8,7 @@ WHAT IS REUSED, AND WHY EACH ONE MATTERS
 ------------------------------------------
 Nothing here re-answers a question the product already answers:
 
-    quotations   `nm.legal_brain.retrieve.research.quote_fidelity` (P21). *Are these the
+    quotations   `nm.Archives.legal_brain.retrieve.research.quote_fidelity` (P21). *Are these the
                  source's words* has one owner, and it already distinguishes
                  VERBATIM from DIFFERS on a whitespace-only fold -- the
                  distinction that stops a paraphrase being reported as a
@@ -38,7 +38,7 @@ from nm.act.drafting_contracts import (
     refuse_filing_claim,
 )
 from nm.advise.advice_decision_contracts import AdviceDecision
-from nm.legal_brain.retrieve.research import QuoteState, quote_fidelity
+from nm.Archives.legal_brain.retrieve.research import QuoteState, quote_fidelity
 from nm.shared.text_contracts import blank, clean, snippet
 
 
@@ -129,7 +129,7 @@ def export(brief: DrafterBrief) -> dict:
     ends with those words and CHOICE-09 is why: the connectors are disabled and
     the decision's `approval` field reads `None`.
     """
-    from nm.legal_brain.retrieve.research import digest_of
+    from nm.Archives.legal_brain.retrieve.research import digest_of
 
     body = "\n".join(
         f"[{c.provenance.value}] {c.text}"

@@ -30,20 +30,25 @@ def _row(before, after, role, *, original=False):
 
 
 def _tree(root):
-    roles = {"nm": "domain", "nm.legal_brain": "domain",
-             "nm.legal_brain.understand": "domain", "nm.legal_brain.common": "domain",
-             "nm.legal_brain.communicate": "domain",
-             "nm.legal_brain.understand.reading": "core",
-             "nm.legal_brain.common.contracts": "ports",
-             "nm.legal_brain.understand.tool_ask_advocate": "core"}
-    packages = {"nm", "nm.legal_brain", "nm.legal_brain.understand",
-                "nm.legal_brain.common", "nm.legal_brain.communicate"}
+    roles = {"nm": "domain", "nm.Archives": "domain",
+             "nm.Archives.legal_brain": "domain",
+             "nm.Archives.legal_brain.understand": "domain",
+             "nm.Archives.legal_brain.common": "domain",
+             "nm.Archives.legal_brain.communicate": "domain",
+             "nm.Archives.legal_brain.understand.reading": "core",
+             "nm.Archives.legal_brain.common.contracts": "ports",
+             "nm.Archives.legal_brain.understand.tool_ask_advocate": "core"}
+    packages = {"nm", "nm.Archives", "nm.Archives.legal_brain",
+                "nm.Archives.legal_brain.understand",
+                "nm.Archives.legal_brain.common",
+                "nm.Archives.legal_brain.communicate"}
     for module in roles:
         relative = module.replace(".", "/")
         path = root / (relative + ("/__init__.py" if module in packages else ".py"))
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("", encoding="utf8")
-    asset_path = "nm/legal_brain/communicate/sources.js"
+    asset_path = "nm/Archives/legal_brain/communicate/sources.js"
+    historical_asset_path = "nm/legal_brain/communicate/sources.js"
     (root / asset_path).write_text("/* source reader */", encoding="utf8")
     current = {"schema": 1, "modules": roles,
                "expected_roles": dict(Counter(roles.values())),
@@ -61,7 +66,7 @@ def _tree(root):
     relocation = {"schema": 1, "modules": relocated_rows,
                   "expected_roles": dict(Counter(row["role"] for row in relocated_rows)),
                   "browser_assets": {"sources.js": {
-                      "old_path": "nm/legal_brain/sources.js", "path": asset_path,
+                      "old_path": "nm/legal_brain/sources.js", "path": historical_asset_path,
                       "sha256_before": "0" * 64}}}
     for name, value in [(CURRENT, current), (HISTORY, history), (RELOCATION, relocation)]:
         _write(root, name, value)
@@ -74,23 +79,26 @@ def test_original_and_first_journey_identities_compose_without_rewriting_history
     layout = load_module_roles(root=tmp_path)
     assert set(layout.roles) == set(current["modules"])
     assert legacy_modules(root=tmp_path) == {
-        "nm.core.original_read": "nm.legal_brain.understand.reading",
-        "nm.ports.contracts": "nm.legal_brain.common.contracts",
+        "nm.core.original_read": "nm.Archives.legal_brain.understand.reading",
+        "nm.ports.contracts": "nm.Archives.legal_brain.common.contracts",
     }
     for before in ["nm.core.original_read", "nm.legal_brain.reading",
-                   "nm.legal_brain.understand.reading"]:
-        assert current_module(before, root=tmp_path) == "nm.legal_brain.understand.reading"
+                   "nm.legal_brain.understand.reading",
+                   "nm.Archives.legal_brain.understand.reading"]:
+        assert current_module(before, root=tmp_path) == (
+            "nm.Archives.legal_brain.understand.reading"
+        )
     assert current_module("nm.legal_brain.tool_ask_advocate", root=tmp_path) == (
-        "nm.legal_brain.understand.tool_ask_advocate"
+        "nm.Archives.legal_brain.understand.tool_ask_advocate"
     )
-    assert original_stem(tmp_path / "nm/legal_brain/understand/reading.py", root=tmp_path) == (
+    assert original_stem(tmp_path / "nm/Archives/legal_brain/understand/reading.py", root=tmp_path) == (
         "original_read"
     )
     assert (tmp_path / HISTORY).read_bytes() == history_before
 
 
-@pytest.mark.parametrize("module", ["nm.legal_brain.understand.reading",
-                                   "nm.legal_brain.understand.tool_ask_advocate"])
+@pytest.mark.parametrize("module", ["nm.Archives.legal_brain.understand.reading",
+                                   "nm.Archives.legal_brain.understand.tool_ask_advocate"])
 def test_both_historical_and_later_tool_roles_survive_adjusted_current_counts(tmp_path, module):
     current, _, _ = _tree(tmp_path)
     current["modules"][module] = "adapters"
@@ -102,7 +110,7 @@ def test_both_historical_and_later_tool_roles_survive_adjusted_current_counts(tm
 
 def test_a_new_relocation_cannot_overrule_an_original_role(tmp_path):
     current, _, relocation = _tree(tmp_path)
-    current["modules"]["nm.legal_brain.understand.reading"] = "adapters"
+    current["modules"]["nm.Archives.legal_brain.understand.reading"] = "adapters"
     current["expected_roles"] = dict(Counter(current["modules"].values()))
     relocation["modules"][0]["role"] = "adapters"
     relocation["expected_roles"] = dict(Counter(row["role"] for row in relocation["modules"]))
@@ -190,6 +198,7 @@ def test_browser_relocations_are_exact_and_bound_to_the_served_owner(tmp_path, c
 
 def test_leaving_the_old_python_copy_is_not_accepted_as_a_compatibility_alias(tmp_path):
     _tree(tmp_path)
+    (tmp_path / "nm/legal_brain").mkdir()
     (tmp_path / "nm/legal_brain/reading.py").write_text("", encoding="utf8")
     with pytest.raises(LayoutError, match="unclassified"):
         load_module_roles(root=tmp_path)
@@ -197,6 +206,7 @@ def test_leaving_the_old_python_copy_is_not_accepted_as_a_compatibility_alias(tm
 
 def test_historical_custody_hashes_are_not_a_claim_of_current_verified_bytes(tmp_path):
     _tree(tmp_path)
-    path = tmp_path / "nm/legal_brain/understand/reading.py"
+    path = tmp_path / "nm/Archives/legal_brain/understand/reading.py"
     path.write_text('"""A later independently tested change."""\n', encoding="utf8")
-    assert load_module_roles(root=tmp_path).role("nm.legal_brain.understand.reading") == "core"
+    assert load_module_roles(root=tmp_path).role(
+        "nm.Archives.legal_brain.understand.reading") == "core"

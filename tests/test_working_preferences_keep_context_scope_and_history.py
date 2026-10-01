@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.understand.advocate_memory import PreferenceContext
-from nm.legal_brain.understand.advocate_memory_contracts import Preferences
-from nm.legal_brain.understand.brain_context import ContextRefused, ContextSession
+from nm.Archives.legal_brain.understand.advocate_memory import PreferenceContext
+from nm.Archives.legal_brain.understand.advocate_memory_contracts import Preferences
+from nm.Archives.legal_brain.understand.brain_context import ContextRefused, ContextSession
 from tests.test_brain_context_is_a_checked_file_projection import (
     file_fixture,
     session_fixture,
@@ -86,7 +86,7 @@ def test_actual_composition_reads_explicitly_approved_account_preferences(client
     from unittest.mock import Mock
 
     from nm.arrive.advocate_contracts import utcnow
-    from nm.legal_brain.understand.advocate_memory import save_memory
+    from nm.Archives.legal_brain.understand.advocate_memory import save_memory
     from nm.shared.model_port import ToolCall
     from tests.test_controlled_brain_composition_keeps_the_account_boundary import _compose, _scope
     from tests.test_the_loop_records_work_before_using_it import _limits, _response

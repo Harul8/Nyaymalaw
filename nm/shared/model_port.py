@@ -447,7 +447,17 @@ def on_the_wire(schema) -> dict:
     """
     def strip(value):
         if isinstance(value, dict):
-            return {k: strip(v) for k, v in value.items() if k not in NM_SCHEMA_KEYS}
+            out = {k: strip(v) for k, v in value.items() if k not in NM_SCHEMA_KEYS}
+            # A CLOSED LIST THE PROVIDER CANNOT COMPILE IS SENT OPEN. Strict
+            # structured output refuses a double quotation mark inside an enum
+            # value, and a list built from real words -- a step quoting a
+            # provision, an advocate's sentence quoting a letter -- refused the
+            # whole call (the Farah Begum turn, 30 September 2026). Every read that
+            # closes a list from text also checks the answer itself, so the list
+            # goes open here, once, for every schema.
+            if any(isinstance(v, str) and '"' in v for v in out.get("enum") or ()):
+                out.pop("enum")
+            return out
         if isinstance(value, list):
             return [strip(v) for v in value]
         return value

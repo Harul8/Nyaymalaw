@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import date
 
-from nm.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
 
 
 @dataclass(frozen=True)

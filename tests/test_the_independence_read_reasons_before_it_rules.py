@@ -1,6 +1,6 @@
 """THE STEP-INDEPENDENCE READ REASONS BEFORE IT RULES, AND IS GIVEN THE TEST.
 
-`nm.legal_brain.verify.step_dependency` decides whether a proposed step may pass G-LIMITATION
+`nm.Archives.legal_brain.verify.step_dependency` decides whether a proposed step may pass G-LIMITATION
 while the limitation position is unresolved. A model sits inside that gate
 boundary -- R2, "the open hole" -- and until 23 September 2026 nobody had
 measured how it behaves.
@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.verify import step_dependency
+from nm.Archives.legal_brain.verify import step_dependency
 
 pytestmark = pytest.mark.class_a
 

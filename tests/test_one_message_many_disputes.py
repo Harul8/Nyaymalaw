@@ -42,10 +42,10 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.understand import dispute
-from nm.legal_brain.understand.dispute import Described, interpret
-from nm.legal_brain.understand.threading import bind
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.understand import dispute
+from nm.Archives.legal_brain.understand.dispute import Described, interpret
+from nm.Archives.legal_brain.understand.threading import bind
 from tests.test_every_dispute_is_cleanly_identified import listed
 from nm.work_the_file.matter_contracts import Fact, Matter, Provenance
 

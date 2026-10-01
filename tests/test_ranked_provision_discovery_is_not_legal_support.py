@@ -7,10 +7,10 @@ import sqlite3
 
 import pytest
 
-from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.retrieve.evidence_port import Coverage, Origin
-from nm.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
-from nm.legal_brain.retrieve.provision_search_port import ProvisionSearchPort
+from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, Origin
+from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest, ManifestEntry
+from nm.Archives.legal_brain.retrieve.provision_search_port import ProvisionSearchPort
 
 pytestmark = pytest.mark.class_a
 
@@ -93,7 +93,7 @@ def test_denied_atoms_cannot_rank_and_truncated_scan_is_unassessed(tmp_path, mon
     assert no_match.coverage is Coverage.SEARCHED_NO_MATCH
     assert no_match.excluded_atoms == 1 and not no_match.candidates
     monkeypatch.setattr(
-        "nm.legal_brain.retrieve.corpus_evidence._PROVISION_SEARCH_ATOM_CEILING", 1)
+        "nm.Archives.legal_brain.retrieve.corpus_evidence._PROVISION_SEARCH_ATOM_CEILING", 1)
     bounded = adapter.search_provisions("acknowledgment")
     assert bounded.coverage is Coverage.NOT_ASSESSED and not bounded.candidates
     assert "bound" in bounded.why

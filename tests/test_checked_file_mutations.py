@@ -7,22 +7,22 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import StopReason
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StopReason
+from nm.Archives.legal_brain.orchestrate.tools import (
     Boundary,
     PreparedToolResult,
     ToolContext,
     ToolRefused,
     ToolRegistry,
 )
-from nm.legal_brain.reason.issue_contracts import (
+from nm.Archives.legal_brain.reason.issue_contracts import (
     Disposition,
     DispositionState,
     Issue,
     IssueKind,
     from_stored,
 )
-from nm.legal_brain.reason.requirements_contracts import (
+from nm.Archives.legal_brain.reason.requirements_contracts import (
     Force,
     Requirement,
     State,

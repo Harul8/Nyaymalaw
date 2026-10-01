@@ -58,7 +58,7 @@ An advocate can revisit earlier stages, and legal reasoning itself is iterative.
 |---|---|
 | 01 — [Arrive](../nm/arrive/README.md) | `store_directory.py`, `store_pending_accounts.py`, `professional_access.py`; account routes currently remain in `app/api.py` |
 | 02 — [Open a matter](../nm/open_matter/README.md) | `opening_contracts.py`, `commission_contracts.py`, `screens.py`, `intake.py`, `quarantine.py`, `document_permission.py` |
-| 03 — [Legal brain](../nm/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
+| 03 — [Legal brain](../nm/Archives/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
 | 04 — [Work the file](../nm/work_the_file/README.md) | `casefile.py`, `file_mutation.py`, `dispute_agenda.py`, `deadlines.py`, `summary.py` |
 | 05 — [Advise](../nm/advise/README.md) | `advice_contracts.py`, `options.py`, `reassessment.py`, `relief.py` |
 | 06 — [Act](../nm/act/README.md) | `action.py`, `drafting.py`, `hearing.py` |
@@ -67,14 +67,14 @@ An advocate can revisit earlier stages, and legal reasoning itself is iterative.
 | 09 — [Leave](../nm/leave/README.md) | `sign_out.py`; served logout and cookie removal remain in `app/api.py` |
 
 The legal brain is grouped by responsibility, not by a fixed cognitive sequence.
-Its [03.00–03.08 reading map](../nm/legal_brain/README.md) begins with shared
+Its [03.00–03.08 reading map](../nm/Archives/legal_brain/README.md) begins with shared
 guidance, then follows understanding, retrieval, reasoning, procedure,
 verification, communication, orchestration and evaluation. The index gives
 actual per-folder populations and each capability README lists every file with
 its purpose. Descriptive filenames distinguish contracts, ports, adapters,
 native source owners, reasoning services and actual tool entry points.
 
-Common files stay in [legal_brain/common](../nm/legal_brain/common/README.md) only
+Common files stay in [legal_brain/common](../nm/Archives/legal_brain/common/README.md) only
 when they genuinely serve multiple capabilities. Capability-specific contracts
 are not moved into a generic contracts folder, and there is no parallel tool dump.
 The legacy turn path remains `legal_brain/orchestrate/turn.py`;

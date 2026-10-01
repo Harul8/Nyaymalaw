@@ -25,8 +25,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind, Signal
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
 from tests.test_turn_contract import _Evidence, build, confirmed, finding
 
 pytestmark = pytest.mark.class_a

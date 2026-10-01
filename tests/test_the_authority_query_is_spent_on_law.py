@@ -33,8 +33,8 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-from nm.legal_brain.retrieve.evidence_port import EvidenceNeed
+from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+from nm.Archives.legal_brain.retrieve.evidence_port import EvidenceNeed
 
 pytestmark = pytest.mark.class_a
 

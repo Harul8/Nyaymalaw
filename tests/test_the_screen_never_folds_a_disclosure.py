@@ -91,7 +91,8 @@ def test_only_plain_ground_is_ever_folded():
     src = _app_js()
 
     predicate = _fold_predicate(src)
-    assert re.search(r"let support = entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
+    assert re.search(r"let support = composed\.length \? \[\] : "
+                     r"entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
     assert "el.kind === 'ground'" in predicate, (
         f"the fold no longer restricts itself to ground elements, so an "
         f"ACTION could be collapsed: {predicate}")
@@ -119,8 +120,10 @@ def test_the_spoken_half_is_the_complement_and_not_a_second_list():
     """
     src = _app_js()
     _fold_predicate(src)
-    assert re.search(r"let support = entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
-    assert re.search(r"let spoken = entry\.answer\.elements\.filter\(\s*"
+    assert re.search(r"let support = composed\.length \? \[\] : "
+                     r"entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
+    assert re.search(r"let spoken = composed\.length \? \[\] : "
+                     r"entry\.answer\.elements\.filter\(\s*"
                      r"\(el\) => !foldsAsSupport\(el\)\);", src), (
         "spoken must negate the identical support owner, not repeat or narrow its predicate")
 

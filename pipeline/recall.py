@@ -12,7 +12,7 @@ T-055 is explicit about the one thing that makes this number worth having:
 
 That is not a stylistic preference. A sample I write is a sample of the
 questions I already know the router handles — every edge in
-`nm/legal_brain/retrieve/resolution_sources.py` would score, the number would be high, and it
+`nm/Archives/legal_brain/retrieve/resolution_sources.py` would score, the number would be high, and it
 would measure nothing except my own memory of what I built this morning.
 
 So the runner is built, the format is fixed, and the sample is EMPTY until an
@@ -82,9 +82,9 @@ def score(doc: dict) -> dict:
     landed. NEVER an average that hides a miss: misses are listed."""
     from datetime import date
 
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.evidence_port import EvidenceNeed
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.evidence_port import EvidenceNeed
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(
         ROOT / "legal_database" / "vector_store",

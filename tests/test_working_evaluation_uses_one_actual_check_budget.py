@@ -6,13 +6,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.evaluate.brain_evaluation import EvaluationService
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits
-from nm.legal_brain.reason.working_record import area_id
-from nm.legal_brain.reason.working_record_contracts import AnalysisArea
-from nm.legal_brain.verify.brain_finalization import SavedCheckReader
-from nm.legal_brain.verify.interaction_review import InteractionReviewService
-from nm.legal_brain.verify.interaction_subject import InteractionSubjectOwner
+from nm.Archives.legal_brain.evaluate.brain_evaluation import EvaluationService
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits
+from nm.Archives.legal_brain.reason.working_record import area_id
+from nm.Archives.legal_brain.reason.working_record_contracts import AnalysisArea
+from nm.Archives.legal_brain.verify.brain_finalization import SavedCheckReader
+from nm.Archives.legal_brain.verify.interaction_review import InteractionReviewService
+from nm.Archives.legal_brain.verify.interaction_subject import InteractionSubjectOwner
 from nm.shared.budget_contracts import Budget
 from nm.shared.store_loop_log import MatterLoopLog
 from tests.test_communication_premises_require_their_own_assessment import PremiseJudge

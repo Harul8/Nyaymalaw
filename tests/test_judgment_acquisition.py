@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain.retrieve.acquisition_sources import (
+from nm.Archives.legal_brain.retrieve.acquisition_sources import (
     POLICY_ID,
     POLICY_VERSION,
     AcquiredArtifact,
@@ -20,7 +20,7 @@ from nm.legal_brain.retrieve.acquisition_sources import (
     select_candidates,
     stage_acquisition,
 )
-from nm.legal_brain.retrieve.source_registry_sources import RightsState
+from nm.Archives.legal_brain.retrieve.source_registry_sources import RightsState
 from pipeline import fetch_judgments, scrape_judgments
 from pipeline import reconcile_acquisition as reconcile_cli
 

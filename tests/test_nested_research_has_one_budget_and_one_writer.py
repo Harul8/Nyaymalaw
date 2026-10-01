@@ -6,9 +6,9 @@ from dataclasses import replace
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.orchestrate.nested_research import ResearchDispatcher
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.Archives.legal_brain.orchestrate.nested_research import ResearchDispatcher
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     Boundary,
@@ -122,7 +122,7 @@ def test_real_parent_dispatch_shares_spend_and_never_creates_a_second_writer(tmp
     assert brain.run(matter_id="mat_loop", turn_id="nested-1", message="Assess the first dispute.",
                      selected_issue_ids=("dispute_one",), limits=LIMITS) == output
     assert model.tool_call.call_count == 4  # Replay cannot spend or dispatch again.
-    from nm.legal_brain.verify.brain_release import captured_findings
+    from nm.Archives.legal_brain.verify.brain_release import captured_findings
 
     assert captured_findings(output) == (finding(),)
 
@@ -205,7 +205,7 @@ def test_interrupted_parent_reservation_is_charged_and_child_is_not_repeated(tmp
 
 @pytest.mark.parametrize("changed", ["grant", "refund", "steps", "children"])
 def test_parent_rejects_forged_child_accounting(changed):
-    from nm.legal_brain.orchestrate.loop import _checked_child_budget
+    from nm.Archives.legal_brain.orchestrate.loop import _checked_child_budget
 
     grant = DelegationGrant(LIMITS.budget, POLICY)
     budget = grant.budget.spend_on(Spend(children=1, tokens=10, cost_usd=0.01))
@@ -240,9 +240,9 @@ def test_child_model_and_tool_steps_count_against_parent_ceiling(tmp_path):
 
 
 def test_a_late_source_append_never_replaces_the_fresh_admitted_prefix():
-    from nm.legal_brain.understand.brain_context import ContextRefused
-    from nm.legal_brain.retrieve.research_context import ResearchFinding
-    from nm.legal_brain.verify.verifier import EvidenceSpan
+    from nm.Archives.legal_brain.understand.brain_context import ContextRefused
+    from nm.Archives.legal_brain.retrieve.research_context import ResearchFinding
+    from nm.Archives.legal_brain.verify.verifier import EvidenceSpan
     from tests.test_research_context_starts_from_sources_not_a_chat_summary import fixture
 
     session = fixture(sources=(), captured=())

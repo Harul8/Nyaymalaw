@@ -14,19 +14,19 @@ from fastapi.testclient import TestClient
 
 from nm.arrive.advocate_contracts import utcnow
 from nm.arrive.directory_port import DirectoryPort, MemoryStale, MemoryUnavailable
-from nm.legal_brain.understand.advocate_memory import (
+from nm.Archives.legal_brain.understand.advocate_memory import (
     decode_memory,
     delete_memory,
     preference_context,
     save_memory,
 )
-from nm.legal_brain.understand.advocate_memory_contracts import (
+from nm.Archives.legal_brain.understand.advocate_memory_contracts import (
     CHOICES,
     AdvocateMemory,
     PreferenceKey,
     Preferences,
 )
-from nm.legal_brain.understand.advocate_memory_routes_api import install_advocate_memory_routes
+from nm.Archives.legal_brain.understand.advocate_memory_routes_api import install_advocate_memory_routes
 
 pytestmark = pytest.mark.class_a
 PATH = "/api/account/advocate-memory"

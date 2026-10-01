@@ -5,10 +5,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from nm.legal_brain.retrieve.checklist_sources import bind_source_current, bind_window_current
-from nm.legal_brain.orchestrate.controlled_generations import GenerationGuard
-from nm.legal_brain.retrieve.evidence_port import SourceDocument
-from nm.legal_brain.retrieve.manifest_sources import PublishedCorpus, withdraw_corpus
+from nm.Archives.legal_brain.retrieve.checklist_sources import bind_source_current, bind_window_current
+from nm.Archives.legal_brain.orchestrate.controlled_generations import GenerationGuard
+from nm.Archives.legal_brain.retrieve.evidence_port import SourceDocument
+from nm.Archives.legal_brain.retrieve.manifest_sources import PublishedCorpus, withdraw_corpus
 from tests.test_controlled_generations_use_bytes_not_version_labels import practice
 from tests.test_immutable_corpus_publication import NOW, _publish
 from tests.test_independent_claim_verifier import finding

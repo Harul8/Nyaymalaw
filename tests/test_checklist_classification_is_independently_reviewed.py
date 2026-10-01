@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
-from nm.legal_brain.reason import requirements
-from nm.legal_brain.reason.requirements_contracts import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopLimits, StepKind, StopReason
+from nm.Archives.legal_brain.reason import requirements
+from nm.Archives.legal_brain.reason.requirements_contracts import (
     Force,
     Outcome,
     Requirement,
@@ -17,8 +17,8 @@ from nm.legal_brain.reason.requirements_contracts import (
     checklist,
     key,
 )
-from nm.legal_brain.verify.brain_assessment import AssessmentService
-from nm.legal_brain.verify.checklist_review import ChecklistReviewService, classifications_for
+from nm.Archives.legal_brain.verify.brain_assessment import AssessmentService
+from nm.Archives.legal_brain.verify.checklist_review import ChecklistReviewService, classifications_for
 from nm.shared.model_port import ProviderUnavailable, ToolCall
 from nm.work_the_file import deadlines, dispute_agenda, summary
 from nm.work_the_file.matter_contracts import Certainty, Thread

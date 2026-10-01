@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.verify import consistency
+from nm.Archives.legal_brain.verify import consistency
 
 pytestmark = pytest.mark.class_a
 

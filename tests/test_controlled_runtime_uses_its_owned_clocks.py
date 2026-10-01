@@ -4,8 +4,8 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from nm.legal_brain.orchestrate.controlled_brain import ControlledBrain
-from nm.legal_brain.orchestrate.loop_contracts import StopReason
+from nm.Archives.legal_brain.orchestrate.controlled_brain import ControlledBrain
+from nm.Archives.legal_brain.orchestrate.loop_contracts import StopReason
 from nm.shared.model_port import ToolCall
 from tests.test_the_controlled_brain_is_actually_wired import _brain
 from tests.test_the_loop_records_work_before_using_it import _limits, _response

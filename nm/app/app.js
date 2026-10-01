@@ -1492,18 +1492,30 @@ function answeredAt(answer) {
 // dispute). The one mark a composed reply may carry is **name**; it becomes a
 // <strong> through the DOM, never through HTML, so no other text is ever read
 // as markup. An unpaired mark is left as written.
-function appendWithBold(into, text) {
-  const parts = String(text || '').split(/\*\*([^*\n]+?)\*\*/);
-  parts.forEach((part, i) => {
-    if (!part) return;
-    if (i % 2) {
-      const strong = document.createElement('strong');
-      strong.textContent = part;
-      into.appendChild(strong);
-    } else {
-      into.appendChild(document.createTextNode(part));
+function appendReplyBody(into, text, cites, citation) {
+  // Parse the whole paragraph before dividing it around citations. A bold
+  // span can contain a linked source label; parsing each side separately would
+  // print its two ** markers and make the saved reply read differently.
+  const words = String(text || '');
+  const run = (parent, from, to) => {
+    let at = from;
+    for (const [start, end, index] of cites) {
+      if (start < from || end > to || start < at) continue;
+      if (start > at) parent.appendChild(document.createTextNode(words.slice(at, start)));
+      parent.appendChild(citation(index, words.slice(start, end)));
+      at = end;
     }
-  });
+    if (at < to) parent.appendChild(document.createTextNode(words.slice(at, to)));
+  };
+  let at = 0;
+  for (const mark of words.matchAll(/\*\*([^*\n]+?)\*\*/g)) {
+    run(into, at, mark.index);
+    const strong = document.createElement('strong');
+    run(strong, mark.index + 2, mark.index + mark[0].length - 2);
+    into.appendChild(strong);
+    at = mark.index + mark[0].length;
+  }
+  run(into, at, words.length);
 }
 
 // A STEP'S DATE LINE, in one place: the reply shows it and the copy carries it.
@@ -2041,7 +2053,19 @@ function renderTurn(entry) {
     d.className = 'el reply';
     const body = document.createElement('p');
     body.className = 'body';
-    appendWithBold(body, paragraph.text);
+    // LB-76 change 5. INLINE CITATIONS: each is the saved source's own label,
+    // placed by the server, and opens the reader at that exact passage.
+    const cites = (Array.isArray(paragraph.cites) ? paragraph.cites : [])
+      .filter((c) => {
+        if (!Array.isArray(c) || c.length !== 3) return false;
+        const [start, end, index] = c;
+        return Number.isInteger(start) && Number.isInteger(end) && Number.isInteger(index)
+          && 0 <= start && start < end && end <= paragraph.text.length
+          && entry.answer.elements[index]?.source?.label === paragraph.text.slice(start, end);
+      })
+      .sort((a, b) => a[0] - b[0]);
+    appendReplyBody(body, paragraph.text, cites,
+      (index, label) => inlineCitation(entry.answer.elements[index], label));
     d.appendChild(body);
     const { carried, linked } = paragraphLinks(paragraph);
     if (nextStepLine(carried)) {
@@ -2087,6 +2111,22 @@ function renderTurn(entry) {
       d.appendChild(r);
     }
     into.appendChild(d);
+  }
+
+  // One inline citation: a link into the reader where the saved source is bound
+  // to this answer, the label as plain words where it is not. Never a link
+  // manufactured for a source the answer does not hold.
+  function inlineCitation(el, label) {
+    const bound = el && el.source && el.refs.includes(el.source.locator)
+      && entry.answer.matter_id && entry.answer.turn_id;
+    if (!bound) return document.createTextNode(label);
+    const link = document.createElement('button');
+    link.type = 'button'; link.className = 'citation-link';
+    link.textContent = label;
+    link.setAttribute('aria-label', `Open saved passage: ${label}`);
+    link.addEventListener('click', () => openSourceReader(entry.answer, el,
+      entry.answer.elements.indexOf(el), link));
+    return link;
   }
 
   function fillReferences(row, el) {
@@ -2163,6 +2203,9 @@ function renderTurn(entry) {
     ...rows.map(({ el }) => ({ text: el.text, step: el, refs: el.refs })),
     ...composed.map((paragraph) => {
       const { carried, linked } = paragraphLinks(paragraph);
+      // Inline citation labels are already in these exact words. Their raw
+      // locators were never printed beside the prose, so the copy must not
+      // append them as a second, internal-looking reference list.
       return { text: paragraph.text, step: carried, refs: linked?.refs };
     }),
     ...support.map((el) => ({ text: el.text, step: null, refs: el.refs })),

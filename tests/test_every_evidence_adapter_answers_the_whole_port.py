@@ -51,7 +51,7 @@ import pathlib
 import pytest
 
 from assurance.common.homes import tooling_sources
-from nm.legal_brain.retrieve.evidence_port import EvidencePort
+from nm.Archives.legal_brain.retrieve.evidence_port import EvidencePort
 
 pytestmark = pytest.mark.class_a
 
@@ -234,7 +234,7 @@ def test_the_sweep_can_see_the_population():
     assert len(found) > 5, (
         f"the scan found almost no evidence adapters, so the sweep below is "
         f"checking nothing: {sorted(found)}")
-    assert any("nm/legal_brain/retrieve/corpus_evidence.py" in k for k in found), (
+    assert any("nm/Archives/legal_brain/retrieve/corpus_evidence.py" in k for k in found), (
         "the scan missed the real adapter")
     assert any(k.startswith("tests/") for k in found), (
         "the scan missed every test double, which is the population that "
@@ -277,7 +277,7 @@ def test_a_real_adapter_overrides_them():
     """The other side of the control: the defaults are a floor, not the
     answer. If the real adapter inherited them silently, health would report
     NOT READABLE on a working corpus and nothing would say why."""
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
 
     # EVERY MEMBER, from the Protocol. This was a list of three written here,
     # and `document` and `read_provision` were added to the port after it --

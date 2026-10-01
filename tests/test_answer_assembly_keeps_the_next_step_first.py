@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from nm.advise.answer_contracts import Answer, Element, ElementKind, Mode, Route
-from nm.legal_brain.orchestrate.turn import _with_screens
+from nm.Archives.legal_brain.orchestrate.turn import _with_screens
 from nm.shared.model_scripted import SCRIPTED_READS
 
 pytestmark = pytest.mark.class_a
@@ -37,9 +37,11 @@ def test_real_operative_element_leads_without_erasing_or_retyping_support(kind, 
     assert all(e.kind is ElementKind.GROUND and e.disclosure for e in prefix)
 
 
-def test_background_alone_is_still_refused_not_relabelled_as_a_step():
-    """PRD E2, by purpose (28 September 2026): a recommending turn never leads
-    with background, and background alone is refused."""
+def test_a_blocked_answer_never_leads_with_background():
+    """PRD E2, by purpose (28 September 2026): a stopped turn leads with what stops it,
+    and background alone is refused there. An unblocked turn leads with its answer: no
+    next step is computed per message (LB-76; owner, 30 September 2026), so there is
+    none to put first."""
     support = Element(kind=ElementKind.GROUND, text="Only background")
     with pytest.raises(ValueError, match="first content element"):
         Answer(
@@ -47,7 +49,11 @@ def test_background_alone_is_still_refused_not_relabelled_as_a_step():
             mode=Mode.FULL_BRIEF,
             mode_statement="Assessment",
             elements=_with_screens([support], SimpleNamespace(rows=())),
+            blocked=True, blocked_reason="G-POSTURE: posture unresolved",
         )
+    served = Answer(route=Route.MATTER, mode=Mode.FULL_BRIEF, mode_statement="Assessment",
+                    elements=_with_screens([support], SimpleNamespace(rows=())))
+    assert served.elements[0] is support
 
 
 @pytest.mark.parametrize("party", ["Unquoted Person", "Nova Surety"])
@@ -72,7 +78,6 @@ def test_served_party_disclosure_survives_answer_assembly_and_history(client, mo
     )
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["elements"][0]["kind"] in {"action", "question"}
     text = "did not record every name" if party == "Unquoted Person" else "did not cover"
     notices = [e for e in body["elements"] if text in e["text"]]
     assert len(notices) == 1, body["elements"]

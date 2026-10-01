@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.understand import dispute
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.understand import dispute
 from tests.test_every_dispute_is_cleanly_identified import listed
 
 pytestmark = pytest.mark.class_a

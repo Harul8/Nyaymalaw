@@ -12,8 +12,8 @@ from dataclasses import asdict, dataclass, replace
 
 from nm.act import action, drafting
 from nm.act.action_contracts import ActionProposal
-from nm.legal_brain.orchestrate.loop_contracts import digest
-from nm.legal_brain.orchestrate.tools import (
+from nm.Archives.legal_brain.orchestrate.loop_contracts import digest
+from nm.Archives.legal_brain.orchestrate.tools import (
     Assessment,
     Availability,
     PreparedToolResult,
@@ -23,7 +23,7 @@ from nm.legal_brain.orchestrate.tools import (
     ToolRefused,
     object_schema,
 )
-from nm.legal_brain.reason.source_writes import _parent
+from nm.Archives.legal_brain.reason.source_writes import _parent
 from nm.shared.json_values import same_json_value
 from nm.shared.model_port import require_schema
 from nm.work_the_file.file_mutation_contracts import FileMutation, neutral

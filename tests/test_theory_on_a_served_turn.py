@@ -20,8 +20,8 @@ from datetime import date
 import pytest
 
 from nm.advise.answer_contracts import ElementKind
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.reason import theory as th
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.reason import theory as th
 from nm.work_the_file.matter_contracts import Fact, Provenance, Side
 from tests.test_turn_contract import build
 
@@ -52,7 +52,7 @@ def _text(out):
 
 @pytest.mark.eval_id("E-080")
 def test_a_theory_reaches_the_advocate(tmp_path):
-    """`nm/legal_brain/reason/theory.py` had a complete unit suite and no production caller
+    """`nm/Archives/legal_brain/reason/theory.py` had a complete unit suite and no production caller
     for a slice (B-079). Everything below is meaningless without this."""
     findings = [e.text for e in _run(tmp_path).answer.elements
                 if e.kind is ElementKind.FINDING and e.text.startswith("Theory:")]

@@ -29,9 +29,9 @@ from datetime import date
 
 import pytest
 
-from nm.legal_brain.common.quotable_contracts import Quotable
-from nm.legal_brain.orchestrate.turn import TurnInput
-from nm.legal_brain.understand import posture
+from nm.Archives.legal_brain.common.quotable_contracts import Quotable
+from nm.Archives.legal_brain.orchestrate.turn import TurnInput
+from nm.Archives.legal_brain.understand import posture
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
