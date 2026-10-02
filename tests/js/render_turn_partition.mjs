@@ -269,6 +269,54 @@ if (!inputOnly.textContent.includes('Your brief is saved.')
   fails.push('input-only persistence is presented as either a full save or a lost brief');
 }
 
+// A structured turn failure still drives recovery, but its object must never
+// be serialized into the advocate-facing message. The unsaved brief and the
+// same-turn retry stay on screen.
+context.performance = { now: () => 0 };
+context.cookie = () => '';
+context.state.sessionGeneration = 1;
+context.fetch = async () => ({ ok: false, status: 503, json: async () => ({
+  detail: { why: 'The message could not be interpreted completely.',
+    committed: 'not_committed', internal_id: 'private-receipt' }
+}) });
+vm.runInContext('const UNSAFE = new Set(["POST"]);\n'
+  + between('async function api(', 'advocatePreferences ='), context);
+let failedTurn;
+try { await context.api('/api/turn', {method: 'POST'}, {sessionBound: false}); }
+catch (error) { failedTurn = error; }
+const unsaved = context.renderTurn({
+  brief: 'My original unsaved brief.', turnId: 'turn-one', state: 'not_committed',
+  error: failedTurn?.message, refusal: failedTurn?.detail,
+});
+if (!failedTurn || failedTurn.detail?.committed !== 'not_committed'
+    || !unsaved.textContent.includes('My original unsaved brief.')
+    || !unsaved.textContent.includes('Send this brief again')
+    || !unsaved.textContent.includes('The message could not be interpreted completely.')
+    || unsaved.textContent.includes('private-receipt')
+    || unsaved.textContent.includes('"committed"')) {
+  fails.push('structured turn failure lost the readable reason, brief, or safe retry');
+}
+const overLimit = context.renderTurn({
+  brief: 'An unsaved long brief.', turnId: 'too-long', state: 'not_committed',
+  error: 'This conversation exceeds the configured model context limit.',
+  refusal: {committed: 'not_committed', retryable: false},
+});
+if (!overLimit.textContent.includes('An unsaved long brief.')
+    || !overLimit.textContent.includes('Sending the same turn again will not')
+    || overLimit.textContent.includes('Send this brief again')) {
+  fails.push('a deterministic context limit was presented as retryable');
+}
+context.fetch = async () => ({ ok: false, status: 503, json: async () => ({
+  detail: { committed: 'not_committed', internal_id: 'private-receipt' }
+}) });
+let withoutReason;
+try { await context.api('/api/turn', {method: 'POST'}, {sessionBound: false}); }
+catch (error) { withoutReason = error; }
+if (!withoutReason?.message.includes('The server could not complete this request')
+    || withoutReason.message.includes('private-receipt')) {
+  fails.push('an unlabelled structured failure leaked metadata instead of readable fallback');
+}
+
 // A source label embedded in prose is linked in place and copied once. History
 // uses the same restored-turn projection and renderer as the open conversation.
 const label = 'Specific Relief Act s.6';

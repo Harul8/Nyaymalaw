@@ -17,8 +17,8 @@ import json
 import logging
 import os
 import uuid
-from dataclasses import asdict, replace
-from datetime import date
+from dataclasses import replace
+from datetime import date, datetime, timezone
 from math import ceil
 from pathlib import Path
 from typing import Annotated, Literal
@@ -39,9 +39,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool
 
-from nm.advise import brief_contracts as brief
-from nm.advise.answer_contracts import Answer
 from nm.app.static_assets import browser_assets_router
+from nm.Archives.legal_brain.retrieve.search_port import ResolutionState
+from nm.Archives.legal_brain.understand.advocate_memory_routes_api import (
+    install_advocate_memory_routes,
+)
 from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import (
     PASSWORD_RESET_MINUTES,
@@ -50,10 +52,8 @@ from nm.arrive.advocate_contracts import (
     utcnow,
 )
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
-from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput, TurnRefused
-from nm.Archives.legal_brain.retrieve.search_port import ResolutionState
-from nm.Archives.legal_brain.understand import briefing as _briefing
-from nm.Archives.legal_brain.understand.advocate_memory_routes_api import install_advocate_memory_routes
+from nm.arrive.professional_access import read_professional_status
+from nm.brain.turn import BrainRefused, BrainService, BrainTurn, chat_matter_id
 from nm.open_matter.commission_contracts import (
     Commission,
     Deadline,
@@ -155,12 +155,14 @@ def set_application(app_) -> None:
 class _Released(BaseModel):
     turn_id: str
     matter_id: str | None
+    chat_id: str | None = None
     route: str
     mode: str
     mode_statement: str
     blocked: bool
     blocked_reason: str | None
     elements: list[dict]
+    material: list[dict] = []
     metrics: dict
     replayed: bool
     # A receipt establishes a saved released response. `input_admitted`
@@ -184,83 +186,9 @@ class _Released(BaseModel):
     composed: list[dict] = []
 
 
-def _release(output, *, request=None) -> _Released:
-    """THE BYTE BOUNDARY. Nothing reaches the transport except through here.
-
-    By the time this runs, the core has already asserted its invariants and
-    committed. This function re-checks the two properties that would be
-    catastrophic to get wrong at the edge, because being right in the core is
-    not the same as being right on the wire.
-    """
-    answer: Answer = output.answer
-
-    if output.metrics.gating_violations:
-        # Belt and braces: the core raises before reaching here, so arriving in
-        # this branch means a caller bypassed the engine.
-        raise HTTPException(status_code=409, detail="output gated by a grounding violation")
-
-    for element in answer.elements:
-        if element.signal.is_loud and element.collapsible:
-            raise HTTPException(
-                status_code=500,
-                detail=f"refusing to emit: {element.signal.value} marked collapsible")
-
-    from nm.advise.turn_receipt_contracts import release_index
-
-    receipts, problems = release_index(output.matter) if output.matter else ({}, [])
-    receipt = receipts.get(output.turn_id)
-    if output.matter is not None and (problems or receipt is None):
-        raise HTTPException(status_code=500, detail="released response has no valid saved receipt")
-    if output.matter is not None and request is not None:
-        projections, source_current, require_current = _checked_checklists(output.matter, request)
-        briefing = _briefing.block(output.matter, source_current=source_current,
-                                  checklist_projections=projections)
-        require_current()
-    else:
-        briefing = _briefing.block(output.matter)
-    return _Released(
-        turn_id=output.turn_id,
-        matter_id=output.matter.id if output.matter else None,
-        route=answer.route.value,
-        mode=answer.mode.value,
-        mode_statement=answer.mode_statement,
-        blocked=answer.blocked,
-        blocked_reason=answer.blocked_reason,
-        elements=[
-            {
-                "kind": e.kind.value,
-                "text": e.text,
-                "thread": e.thread,
-                "by_when": e.by_when.isoformat() if e.by_when else None,
-                "no_deadline_reason": e.no_deadline_reason,
-                "signal": e.signal.value,
-                "collapsible": e.collapsible,
-                "disclosure": e.disclosure,
-                "refs": list(e.refs),
-                "source": (e.source.header() if e.source else None),
-                # BK-37. WHICH QUESTION THIS ELEMENT ANSWERS.
-                #
-                # Computed HERE and not in the browser, because a renderer
-                # that decided sections for itself would be a second opinion
-                # about what an element IS -- two correct components and the
-                # disagreement visible only on a screen nobody diffed. The
-                # assignment is pure and has one owner in
-                # `nm/advise/brief_contracts.py`; the client groups and does not judge.
-                "section": brief.section_of(e).value,
-            }
-            for e in answer.elements
-        ],
-        metrics=output.metrics.as_served(),
-        replayed=output.replayed,
-        committed=("replayed" if output.replayed else "committed") if receipt
-        else "not_committed" if output.matter else "not_applicable",
-        input_admitted=receipt.input_admitted if receipt is not None else False,
-        matter_version=output.matter.version if output.matter else None,
-        briefing=briefing,
-        board_changes=[asdict(change) for change in answer.board_changes],
-        at=receipt.recorded_at if receipt is not None else None,
-        composed=[asdict(paragraph) for paragraph in answer.composed],
-    )
+def _release(output) -> _Released:
+    """Validate the new brain's served response at the HTTP byte boundary."""
+    return _Released.model_validate(output.as_dict())
 
 
 # ------------------------------------------------------------------ routes ---
@@ -563,6 +491,7 @@ class TurnRequest(BaseModel):
     # comes from the session, and there is no field here to override it with.
     message: NonBlank = Field(min_length=1)
     matter_id: str | None = None
+    chat_id: str | None = None
     thread_id: str | None = None
     turn_id: str | None = None
     today: date | None = None
@@ -618,7 +547,8 @@ class TurnRequest(BaseModel):
 #:
 #: The mechanism is not new. `nm/shared/identity_contracts.py` already existed (in
 #: `tools/`) so a mutation record could not certify code it never saw, and
-#: `nm/Archives/legal_brain/retrieve/artefact_sources.py` makes the same argument about the dense index:
+#: `nm/Archives/legal_brain/retrieve/artefact_sources.py` makes the same
+#: argument about the dense index:
 #: the only reason that index was KNOWABLY unusable is that it shipped an
 #: identity. A running process is an artefact and needs one too.
 try:
@@ -838,7 +768,7 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
 
     response.headers["Cache-Control"] = "no-store"
     matter = application().store.load(matter_id)
-    if matter is None or matter.advocate_id != advocate_id:
+    if matter is None or matter.advocate_id != advocate_id or not matter.brain_ready:
         raise HTTPException(404, "No accessible saved source.")
     receipts, problems = release_index(matter)
     receipt = receipts.get(turn_id)
@@ -945,6 +875,112 @@ def _stored_document(held, source, element, recorded_at, offset: int,
             "full_document_available": True}
 
 
+def _brain_chat_rows(matter) -> tuple[list[dict], list[str]]:
+    """Read back only complete conversation replies committed on this file."""
+    from nm.brain.material_state import sourced_detail_for_display
+
+    rows = []
+    problems = []
+    seen = set()
+    for entry in matter.brain_chat:
+        if not isinstance(entry, dict):
+            problems.append("a saved conversation turn is unreadable")
+            continue
+        turn_id = entry.get("turn_id")
+        response = entry.get("response")
+        message = entry.get("message")
+        if (not isinstance(turn_id, str) or not turn_id.strip()
+                or turn_id in seen or not isinstance(message, str)
+                or not message.strip() or not isinstance(response, dict)
+                or entry.get("matter_id") != str(matter.id)
+                or entry.get("committed") is not True
+                or entry.get("release_state") != "released"
+                or response.get("turn_id") != turn_id
+                or entry.get("elements") != response.get("elements")
+                or not isinstance(entry.get("at"), str)
+                or entry.get("at") != response.get("at")):
+            problems.append(f"{turn_id}: saved conversation reply is inconsistent")
+            continue
+        try:
+            released = _Released.model_validate(response)
+        except ValueError:
+            problems.append(f"{turn_id}: saved conversation reply is unreadable")
+            continue
+        seen.add(turn_id)
+        public = released.model_dump(mode="json")
+        material = []
+        for proposal in public["material"]:
+            if proposal.get("kind") == "dispute":
+                material.append(proposal)
+                continue
+            safe = sourced_detail_for_display(proposal, message)
+            if safe is None:
+                problems.append(f"{turn_id}: a saved material detail has no exact source")
+            else:
+                material.append(safe)
+        public["material"] = material
+        rows.append({**public,
+                     "message": message, "message_source": "conversation_record",
+                     "at": entry.get("at"), "committed": True,
+                     "release_state": "released", "withheld_by": []})
+    return rows, problems
+
+
+@app.get("/api/chats")
+def chats(advocate_id: Advocate, response: Response) -> dict:
+    """List owned conversations that have not yet established a matter board."""
+    response.headers["Cache-Control"] = "no-store"
+    held = application().store.list_for(advocate_id)
+    listed = []
+    incomplete = bool(held.unreadable)
+    for matter in held:
+        if matter.brain_ready:
+            continue
+        rows, problems = _brain_chat_rows(matter)
+        if (not rows or not matter.brain_chat
+                or rows[0]["turn_id"] != matter.brain_chat[0].get("turn_id")):
+            incomplete = True
+            continue
+        chat_id = rows[0].get("chat_id")
+        if (type(chat_id) is not str or not chat_id.strip()
+                or chat_matter_id(advocate_id, chat_id) != matter.id
+                or any(row.get("chat_id") != chat_id for row in rows)):
+            incomplete = True
+            continue
+        last_at = rows[-1]["at"]
+        try:
+            dated = datetime.fromisoformat(last_at)
+            if dated.tzinfo is None or dated.utcoffset() is None:
+                raise ValueError("undated conversation turn")
+            last_at = dated.astimezone(timezone.utc).isoformat()
+        except (TypeError, ValueError):
+            last_at = None
+            problems.append("a saved conversation date is unreadable")
+        if problems:
+            incomplete = True
+        listed.append({"chat_id": chat_id,
+                       "preview": " ".join(rows[-1]["message"].split())[:120],
+                       "last_at": last_at, "turn_count": len(rows),
+                       "state": "incomplete" if problems else "ok"})
+    listed.sort(key=lambda row: (row["last_at"] or "", row["chat_id"]), reverse=True)
+    return {"state": "incomplete" if incomplete else "ok", "chats": listed,
+            "chat_count": len(listed), "unavailable": incomplete}
+
+
+@app.get("/api/chats/{chat_id}")
+def chat(chat_id: str, advocate_id: Advocate, response: Response) -> dict:
+    """Read back an owned conversation before it has a matter board."""
+    response.headers["Cache-Control"] = "no-store"
+    matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+    if (matter is None or matter.advocate_id != advocate_id
+            or matter.brain_ready):
+        raise HTTPException(status_code=404, detail="no such conversation")
+    rows, problems = _brain_chat_rows(matter)
+    return {"state": "incomplete" if problems else "ok", "chat_id": chat_id,
+            "matter_id": None, "turns": rows, "turn_count": len(rows),
+            "release_problems": problems}
+
+
 @app.get("/api/matters/{matter_id}/transcript")
 def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     """THE CONVERSATION, AS IT WAS SERVED. For review, later.
@@ -960,7 +996,7 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     read rather than after it.
     """
     m = application().store.load(matter_id)
-    if m is None or m.advocate_id != advocate_id:
+    if m is None or m.advocate_id != advocate_id or not m.brain_ready:
         raise HTTPException(status_code=404, detail="no such matter")
 
     store = application().store
@@ -970,6 +1006,12 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     from nm.open_matter.transcripts_api import project, ratings
 
     projected, release_problems = project(m, turns)
+    brain_rows, brain_problems = _brain_chat_rows(m)
+    projected = sorted([*projected, *brain_rows],
+                       key=lambda row: (str(row.get("at") or ""), str(row["turn_id"])))
+    release_problems.extend(brain_problems)
+    if len({row["turn_id"] for row in projected}) != len(projected):
+        release_problems.append("conversation turn identities overlap")
     # LB-56, LB-83. Each reply comes back with the rating last given to it, so
     # a reopened matter shows the thumb the advocate chose.
     rated = ratings(store.feedback_for(matter_id))
@@ -1051,6 +1093,9 @@ def rate_reply(matter_id: str, turn_id: str, body: ReplyFeedbackBody,
     m = _owned(matter_id, advocate_id)
     store = application().store
     rows, _problems = project(m, store.transcripts_for(m.id))
+    brain_rows, brain_problems = _brain_chat_rows(m)
+    rows.extend(brain_rows)
+    _problems.extend(brain_problems)
     if not is_released(rows, turn_id):
         raise HTTPException(status_code=404, detail="no such reply")
     at = save_stamp()
@@ -1163,6 +1208,11 @@ def matters(advocate_id: Advocate, request: Request) -> dict:
     Bounded by MATTER count -- never by threads, turns or facts.
     """
     held = application().store.list_for(advocate_id)
+    visible = tuple(matter for matter in held if matter.brain_ready)
+    visible_ids = {matter.id for matter in visible}
+    held = replace(held, matters=visible,
+                   saved_at=tuple((matter_id, at) for matter_id, at in held.saved_at
+                                  if matter_id in visible_ids))
     # THE REGISTER IS ON THE THREADS AND WAS NEVER READ. BK-33.
     #
     # Both projections take a register and both were called without one, so
@@ -1181,7 +1231,7 @@ def matters(advocate_id: Advocate, request: Request) -> dict:
 def matter(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     """THE THREAD BOARD. One row per thread, bounded by THREAD count."""
     m = application().store.load(matter_id)
-    if m is None or m.advocate_id != advocate_id:
+    if m is None or m.advocate_id != advocate_id or not m.brain_ready:
         # The same response whether it does not exist or belongs to someone
         # else: a failed lookup must disclose nothing about what exists.
         raise HTTPException(status_code=404, detail="no such matter")
@@ -1193,12 +1243,21 @@ def matter(matter_id: str, advocate_id: Advocate, request: Request) -> dict:
     # than recomputing it. Passing `None` said "nobody has assessed the
     # deadlines on this matter", which was false on every matter that had
     # ever been advised on.
+    from nm.brain.conversation import IncompleteConversation
+    from nm.brain.history import from_turns, released_older_turns
     from nm.open_matter.opening_contracts import opening_form, recorded_brief
 
     projections, source_current, require_current = _checked_checklists(m, request)
     register = _register_of(m, source_current=source_current, checklist_projections=projections)
+    try:
+        prior_conversation = from_turns(
+            released_older_turns(application().store, m), state="ok").messages
+    except IncompleteConversation:
+        # The board must not invent a citation to unreadable older material.
+        prior_conversation = ()
     result = {**board_projection(m, register, source_current=source_current,
-                                checklist_projections=projections),
+                                checklist_projections=projections,
+                                prior_conversation=prior_conversation),
               "opening_brief": recorded_brief(m),
               # F-B-02. What the board's edit form starts from.
               "opening_form": opening_form(m)}
@@ -3748,7 +3807,7 @@ def declare_emergency(matter_id: str, body: dict, advocate_id: Advocate) -> dict
     # A screen exception is a professional act, unlike an ordinary capacity
     # report, instruction or recorded danger. Revocation above remains available
     # when approval lapses. A supplied request field cannot self-approve.
-    if application().engine.professional_access(advocate_id)["state"] != "approved":
+    if _professional_access(advocate_id)["state"] != "approved":
         raise HTTPException(
             status_code=403,
             detail="This screen exception needs current operator-reviewed professional approval. "
@@ -3837,7 +3896,7 @@ def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
     governing, target_ref, _ = _emergency_target(m, now)
     history = [Declaration.from_stored(x) for x in (m.emergencies or ())]
     unreadable = sum(d is None for d in history)
-    approval = application().engine.professional_access(advocate_id)
+    approval = _professional_access(advocate_id)
     permitted = (governing is not None and governing.active_at(now)
                  and governing.actor_id == advocate_id and approval["state"] == "approved")
     return {
@@ -4094,7 +4153,7 @@ def concede(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
 def _owned(matter_id: str, advocate_id: str):
     """The matter, or the same 404 whether it is absent or somebody else's."""
     m = application().store.load(matter_id)
-    if m is None or m.advocate_id != advocate_id:
+    if m is None or m.advocate_id != advocate_id or not m.brain_ready:
         raise HTTPException(status_code=404, detail="no such matter")
     return m
 
@@ -4212,7 +4271,7 @@ def matter_summary(matter_id: str, advocate_id: Advocate, request: Request) -> d
         m = application().store.load(matter_id)
     except Exception as exc:  # noqa: BLE001 -- reported, never swallowed
         return matter_memory.unbuildable(f"the matter could not be read: {exc}")
-    if m is None or m.advocate_id != advocate_id:
+    if m is None or m.advocate_id != advocate_id or not m.brain_ready:
         raise HTTPException(status_code=404, detail="no such matter")
     projections, source_current, require_current = _checked_checklists(m, request)
     result = matter_memory.build(m, source_current=source_current,
@@ -4225,36 +4284,15 @@ def matter_summary(matter_id: str, advocate_id: Advocate, request: Request) -> d
 def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released:
     from nm.shared.external_ai_contracts import ModelPermissionRefused
 
-    payload = TurnInput(
-        advocate_id=advocate_id,
-        message=req.message,
-        matter_id=req.matter_id,
-        # The advocate naming a thread OUTRANKS every heuristic. The only
-        # source better than a number of record is the person holding the file.
-        thread_id=req.thread_id,
-        # THE FORUM'S DATE, not the server's (BK-14). `nm/app/app.js` sends
-        # no `today`, so this default IS the production path -- and
-        # `date.today()` meant "the date where this process happens to
-        # run". A server keeping UTC is a day behind India from 18:30
-        # UTC, so every limitation period computed in that window was a
-        # day short.
-        today=req.today or forum_today(),
-        jurisdiction=req.jurisdiction,
-        work_product=req.work_product,
-        parties=dict(req.parties or {}),
-        release=dict(req.release or {}),
-        capacity=dict(req.capacity) if req.capacity is not None else None,
-        keep_in_matter=req.keep_in_matter,
+    turn_id = req.turn_id or f"turn_{uuid.uuid4().hex[:12]}"
+    payload = BrainTurn(
+        advocate_id=advocate_id, message=req.message, turn_id=turn_id,
+        matter_id=req.matter_id, chat_id=req.chat_id,
         expected_version=req.expected_version,
-        session_reference=request.state.account_session.reference,
-        request_offer=req.model_dump(mode="json", exclude={"turn_id"}),
-        **({"turn_id": req.turn_id} if req.turn_id else {}),
+        offer=req.model_dump(mode="json", exclude={"turn_id"}),
     )
-    # The engine reconciles an exact durable receipt BEFORE stale new-work
-    # admission, and both happen before any model read. Changing the caller's
-    # expected version on retry would change its original instructions.
-
     wired = application()
+
     def session_current():
         session = wired.directory.session(
             request.cookies.get('nm_session', ''),
@@ -4262,43 +4300,27 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         return bool(session and session.advocate_id == advocate_id)
 
     try:
-        engine: TurnEngine = wired.engine_for(advocate_id, session_current=session_current)
-        output = engine.run(payload)
+        model = wired._model_for(advocate_id, session_current=session_current)
+        output = BrainService(store=wired.store, model=model,
+                              legal_search=wired.legal_search).run(payload)
     except ModelPermissionRefused as exc:
-        # Do not assert that an interrupted/replayed turn could never have
-        # committed. The durable receipt remains the authority for retries.
         raise HTTPException(403, detail={
             "code": "model_permission_required", "why": str(exc),
-            "turn_id": req.turn_id, "committed": "unknown",
+            "turn_id": turn_id, "committed": "not_committed",
         }) from exc
-    except TurnRefused as exc:
-        # 422 with the REASON, not just the refusal. The disclosures assert no
-        # law -- they say what could not be established -- so passing them
-        # through the byte boundary is safe, and withholding them as well would
-        # leave the advocate with a dead end.
-        raise HTTPException(status_code=422, detail={
-            "withheld_by": list(getattr(exc, "gates", ())),
-            "why": getattr(exc, "message", str(exc)),
-            "not_established": list(getattr(exc, "disclosures", ())),
-            # A WITHHELD TURN IS STILL A TURN THAT RAN. The id is what makes
-            # a retry the SAME turn rather than a second one.
-            "turn_id": req.turn_id,
-            "committed": ("previously_committed" if exc.prior_receipt_saved
-                          else exc.persistence),
-            **({"matter_id": exc.matter_id, "matter_version": exc.matter_version}
-               if exc.persistence == "input_only" else {}),
-            **({"prior_receipt_saved": True, "release_state": "replay_refused"}
-               if exc.prior_receipt_saved else {}),
+    except BrainRefused as exc:
+        raise HTTPException(status_code=exc.status, detail={
+            "why": exc.why, "turn_id": turn_id, "committed": exc.committed,
+            "chat_id": req.chat_id, "retryable": exc.retryable,
         }) from exc
     except StaleWrite as exc:
         raise HTTPException(status_code=409, detail={
-            "why": str(exc),
-            "turn_id": req.turn_id,
+            "why": str(exc), "turn_id": turn_id,
             "committed": "not_committed",
             "expected_version": getattr(exc, "expected_version", req.expected_version),
             "matter_version": getattr(exc, "matter_version", None),
         }) from exc
-    return _release(output, request=request)
+    return _release(output)
 
 
 @app.get("/api/search")
@@ -4867,10 +4889,12 @@ def _workspace(identity) -> dict:
 
 def _professional_status(directory, identity, now) -> dict:
     """Expose only derived approval; unavailable approval never blocks sign-in."""
-    from nm.arrive.professional_access import read_professional_status
+    return read_professional_status(directory.professional_approval, identity.id, now)
 
-    return read_professional_status(
-        lambda account_id: directory.professional_approval(account_id), identity.id, now)
+
+def _professional_access(advocate_id: str) -> dict:
+    return read_professional_status(application().directory.professional_approval,
+                                    advocate_id, utcnow())
 
 
 # Public authentication never diagnoses account existence; the directory's
@@ -5587,11 +5611,15 @@ def _loop_session_current(request: Request, advocate_id: str) -> bool:
 from nm.Archives.legal_brain.communicate.loop_progress_api import (  # noqa: E402
     router as loop_progress_router,
 )
-from nm.Archives.legal_brain.communicate.preview_seen_api import router as preview_seen_router  # noqa: E402
+from nm.Archives.legal_brain.communicate.preview_seen_api import (  # noqa: E402
+    router as preview_seen_router,
+)
 from nm.Archives.legal_brain.communicate.reviewed_preview_api import (  # noqa: E402
     router as reviewed_preview_router,
 )
-from nm.Archives.legal_brain.evaluate.brain_preview_api import router as brain_preview_router  # noqa: E402
+from nm.Archives.legal_brain.evaluate.brain_preview_api import (  # noqa: E402
+    router as brain_preview_router,
+)
 from nm.open_matter.document_reading_api import router as document_reading_router  # noqa: E402
 
 app.include_router(loop_progress_router(

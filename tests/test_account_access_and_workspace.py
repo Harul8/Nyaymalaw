@@ -120,7 +120,7 @@ def test_a_legacy_advocate_without_a_firm_gets_a_truthful_private_workspace(clie
     }
 
 
-def test_active_workspace_reaches_the_masthead_before_matter_rendering(client):
+def test_workspace_identity_stays_in_profile_and_masthead_shows_name_only(client):
     advocate_id = _register(client, "visible-workspace@chambers.in")
     login = TestClient(client.app).post("/api/login", json={
         "advocate_id": advocate_id, "password": PASSWORD,
@@ -130,10 +130,12 @@ def test_active_workspace_reaches_the_masthead_before_matter_rendering(client):
     page = (ROOT / "nm/app/index.html").read_text(encoding="utf8")
     script = (ROOT / "nm/app/app.js").read_text(encoding="utf8")
     show = script.index("function showApplication(advocate, workspace, professionalApproval)")
-    workspace = script.index("$('workspace-name').textContent", show)
-    matters = script.index("showMatterList();", show)
-    assert show < workspace < matters
-    assert 'id="workspace-context" aria-label="Active workspace"' in page
+    workspace = script.index("$('profile-workspace').textContent", show)
+    reveal = script.index("$('masthead').hidden = false;", show)
+    assert show < workspace < reveal
+    assert 'id="who-name"' in page
+    assert 'id="workspace-context"' not in page
+    assert 'id="profile-workspace"' in page
     assert not re.search(r'<select\b[^>]*(?:workspace|firm)', page, re.I)
 
 

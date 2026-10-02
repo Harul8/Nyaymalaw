@@ -97,7 +97,8 @@ try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
 catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
 function draftHasWork(intent) {
-  return Boolean(intent && (intent.text.trim() || intent.pending.length
+  return Boolean(intent && ((intent.chatId && !intent.matterId)
+    || intent.text.trim() || intent.pending.length
     || intent.intake || (intent.intakeOpen
       && Object.values(intent.fields || {}).some(value => String(value).trim()))));
 }
@@ -127,7 +128,7 @@ async function saveProtectedDraft({previousKey = null} = {}) {
     }
     const snapshot = {
       key:held.key, advocate:held.advocate, workspace:held.workspace,
-      matterId:held.matterId, text:held.text, intake:held.intake,
+      matterId:held.matterId, chatId:held.chatId, text:held.text, intake:held.intake,
       intakeOpen:held.intakeOpen, fields:held.fields, capacity:held.capacity,
       opening:held.opening || null,
       editedAt:held.editedAt || Date.now(),
@@ -167,7 +168,7 @@ function clearDraftNotices() {
 
 function showDraftRestored() {
   clearTimeout(restoredTimer);
-  const anchor = activeIntent?.matterId ? $('message') : $('intake').querySelector('h2');
+  const anchor = $('message');
   anchor.insertAdjacentElement('beforebegin', $('draft-restored'));
   $('draft-restored').textContent = 'Draft restored';
   restoredTimer = setTimeout(() => { $('draft-restored').textContent = ''; }, 5000);
@@ -226,7 +227,8 @@ async function openDraftRecovery() {
     for (const saved of drafts) {
       const intent = saved.intent;
       if (intent.advocate !== state.advocate || intent.workspace !== state.workspace
-          || intent.key !== context.key || intent.matterId !== context.matterId
+          || (intent.key !== context.key
+            && (context.matterId || intent.matterId || !intent.chatId))
           || !draftHasWork(intent)) continue;
       count += 1;
       const button = document.createElement('button');
@@ -252,11 +254,14 @@ async function openDraftRecovery() {
           intentContexts.set(intent.key, intent);
           activeIntent = null;
           if (intent.matterId) { showTab('advise'); await showThreadBoard(intent.matterId); }
-          else startMatter();
+          else {
+            if (intent.chatId) await restorePendingChat(intent.chatId);
+            else startMatter();
+          }
           if (session !== state.sessionGeneration || !ownsIntent(intent)) return;
           closeDraftRecovery();
           showDraftRestored();
-          (intent.matterId ? $('message') : $('in-title')).focus();
+          $('message').focus();
         } catch (error) {
           if (current()) {
             panel.appendChild(stateBlock('loud', `Draft was not opened: ${error.message}`));
@@ -282,8 +287,9 @@ window.addEventListener('storage', (event) => {
   }
 });
 
-function intentKey(matterId) {
-  return JSON.stringify([state.advocate, state.workspace, matterId || 'unsaved-opening']);
+function intentKey(matterId, chatId = null) {
+  return JSON.stringify([state.advocate, state.workspace,
+    matterId || chatId || 'unsaved-opening']);
 }
 
 function ownsIntent(intent) {
@@ -324,19 +330,19 @@ function restoreIntent() {
   openingSections();
   $('in-capacity').checked = Boolean(intent && intent.capacity);
   $('intake-state').textContent = '';
-  showIntake(Boolean(intent && intent.intakeOpen));
+  showIntake(false);
 }
 
-function selectIntent(matterId, { opening = false } = {}) {
+function selectIntent(matterId, { opening = false, chatId = null } = {}) {
   snapshotIntent();
   clearDraftNotices();
   closeDraftRecovery();
   if (!state.advocate || (!matterId && !opening)) activeIntent = null;
   else {
-    const key = intentKey(matterId);
+    const key = intentKey(matterId, chatId);
     if (!intentContexts.has(key)) intentContexts.set(key, {
       key, advocate: state.advocate, workspace: state.workspace,
-      matterId: matterId || null, text: '', intake: null, intakeOpen: opening,
+      matterId: matterId || null, chatId, text: '', intake: null, intakeOpen: false,
       fields: {}, capacity: false, pending: [],
     });
     activeIntent = intentContexts.get(key);
@@ -397,6 +403,7 @@ function keepDraft() {
 function clearPrivileged() {
   advocatePreferences?.clear();
   closeSourceReader(false);
+  closeDisputeReader(false);
   if (draftVault) draftVault.lock();
   closeDraftRecovery();
   clearDraftNotices();
@@ -448,7 +455,7 @@ function clearPrivileged() {
   $('opening-record').hidden = true;
   $('in-capacity').checked = false;
   // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
-  ['who-name', 'workspace-name', 'profile-name', 'profile-email', 'profile-workspace']
+  ['who-name', 'profile-name', 'profile-email', 'profile-workspace']
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
   closeFilesMenu();
   $('matter-files').hidden = true;
@@ -706,7 +713,13 @@ async function api(path, options, { sessionBound = true } = {}) {
   }
   if (!res.ok) {
     const detail = (body && (body.detail || body.message)) || `HTTP ${res.status}`;
-    const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    // Structured refusals carry recovery state, not display text. Keep the
+    // object for callers, but never turn it into JSON in a visible error.
+    const readable = typeof detail === 'string' ? detail
+      : [detail?.why, detail?.message].find(value =>
+        typeof value === 'string' && value.trim())
+        || `The server could not complete this request (HTTP ${res.status}).`;
+    const err = new Error(readable);
     err.status = res.status;
     // Keep the STRUCTURE. A withheld turn carries which gate withheld it and
     // what could not be established, and flattening that to a message string
@@ -853,11 +866,12 @@ function staleDeadlineFields(dl, t) {
 
 // F-B. THE THREE VIEWS OF THE MATTER WORKSPACE, and the stylesheet draws each:
 //   list     My work's matters, and nothing else
-//   opening  a new matter's intake form, and nothing else -- no list, no board
+//   opening  the chat before its first saved board is available
 //   matter   the matter board on the left, the chat on the right
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
   syncBoardHost();
+  updateWorkspace();
 }
 
 // Move, never clone, the board: the list still belongs to My work and the
@@ -877,6 +891,7 @@ window.addEventListener('resize', syncBoardHost);
 // opening. Any render still in flight for the old matter loses the right to
 // paint, because the generation it holds is no longer current.
 function closeOpenMatter() {
+  closeDisputeReader(false);
   state.railGeneration += 1;
   state.matterId = null;
   state.matterVersion = null;
@@ -885,7 +900,8 @@ function closeOpenMatter() {
   $('thread').textContent = '';
   $('pane-advise').dataset.matterId = '';
   $('back').hidden = true;
-  $('matter-board').hidden = true;
+  $('opening-board-status').hidden = true;
+  $('opening-board-status').replaceChildren();
   $('opening-fields').replaceChildren();
   $('opening-record').hidden = true;
   closeFilesMenu();
@@ -918,6 +934,20 @@ function matterFields(dl, m) {
     : { pill: 'unknown', text: 'no unresolved posture recorded' });
 }
 
+async function restorePendingChat(chatId) {
+  const session = state.sessionGeneration;
+  const restored = await api(`/api/chats/${encodeURIComponent(chatId)}`);
+  if (session !== state.sessionGeneration) return;
+  if (restored.state !== 'ok' || restored.chat_id !== chatId) {
+    throw new Error('The saved conversation is incomplete.');
+  }
+  startMatter(chatId);
+  if (session !== state.sessionGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  state.turns = restored.turns.map(restoredTurn);
+  reconcileIntent(restored.turns);
+  repaint();
+}
+
 async function showMatterList({ preserveIntent = false } = {}) {
   if (!preserveIntent) selectIntent(null);
   closeOpenMatter();
@@ -931,9 +961,9 @@ async function showMatterList({ preserveIntent = false } = {}) {
   const body = $('rail-body');
   body.replaceChildren(stateBlock('building', 'Loading matters…'));
 
-  let data;
+  let data, chatData;
   try {
-    data = await api('/api/matters');
+    [data, chatData] = await Promise.all([api('/api/matters'), api('/api/chats')]);
   } catch (e) {
     if (generation !== state.railGeneration) return;
     // NEVER render an unreadable board as an empty one.
@@ -946,17 +976,43 @@ async function showMatterList({ preserveIntent = false } = {}) {
   }
   if (generation !== state.railGeneration) return;
 
-  $('rail-meta').textContent = `${data.row_count} matter${data.row_count === 1 ? '' : 's'}`;
-  const incomplete = data.state !== 'ok';
+  $('rail-meta').textContent = `${data.row_count} matter${data.row_count === 1 ? '' : 's'}`
+    + (chatData.chat_count ? ` · ${chatData.chat_count} chat${chatData.chat_count === 1 ? '' : 's'}` : '');
+  const incomplete = data.state !== 'ok' || chatData.state !== 'ok';
   const notice = incomplete ? stateBlock('unbuildable',
-    'Some matters could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
+    'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
-  if (!data.matters.length) {
+  if (!data.matters.length && !chatData.chats.length) {
     body.replaceChildren(notice || stateBlock('empty', 'No matters yet. Start with a new brief.'));
     return;
   }
 
-  body.replaceChildren(...data.matters.map((m) => {
+  const pendingRows = chatData.chats.map((chat) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', `Continue chat: ${chat.preview}`);
+    const title = document.createElement('div');
+    title.className = 'r-title';
+    title.textContent = chat.preview || 'Conversation';
+    const details = document.createElement('div');
+    details.className = 'hint';
+    details.textContent = `Chat · ${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`;
+    row.append(title, details);
+    const open = () => restorePendingChat(chat.chat_id).catch((error) => {
+      body.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
+    });
+    row.onclick = open;
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        open();
+      }
+    });
+    return row;
+  });
+  body.replaceChildren(...pendingRows, ...data.matters.map((m) => {
     const row = document.createElement('div');
     row.className = 'row' + (m.blocked ? ' loud' : '');
     row.dataset.matterId = m.matter_id;
@@ -981,7 +1037,9 @@ async function showMatterList({ preserveIntent = false } = {}) {
 }
 
 async function showThreadBoard(
-  matterId, { restore = true, closeNavigator = true, adoptOpening = false } = {}) {
+  matterId, { restore = true, closeNavigator = true, adoptOpening = false,
+    deferBoard = false } = {}) {
+  closeDisputeReader(false);
   // Only a confirmed opening operation may transfer its local draft to the
   // newly saved shell. Selecting a list row must never imply this transfer.
   if (adoptOpening && ownsIntent(activeIntent) && !activeIntent.matterId
@@ -1005,7 +1063,7 @@ async function showThreadBoard(
   if (closeNavigator) toggleMatters(false);
   // F-B-02. AN OPEN MATTER IS ITS BOARD ON THE LEFT AND ITS CHAT ON THE RIGHT,
   // whether it was started from Home or opened from My work.
-  setWorkView('matter');
+  setWorkView(deferBoard ? 'opening' : 'matter');
   state.matterId = matterId;
   state.matterVersion = null;
   state.matterReady = false;
@@ -1022,11 +1080,9 @@ async function showThreadBoard(
   $('rail-title').textContent = 'Matter board';
   $('rail-meta').textContent = '';
   $('back').hidden = false;
-  $('matter-board').hidden = false;
-  $('board-state').replaceChildren(stateBlock('building', 'Reading the matter board…'));
-  // THE BOARD IS READ ON ITS OWN, so a thread board that fails to load does
-  // not leave the matter's details saying they are still being read.
-  renderMatterBoard(matterId, generation);
+  $('opening-board-status').hidden = true;
+  $('opening-board-status').replaceChildren();
+  if (deferBoard) showMatterStatus('building', 'Reading the matter board…');
   const body = $('rail-body');
   body.replaceChildren();
 
@@ -1047,7 +1103,15 @@ async function showThreadBoard(
     body.replaceChildren(stateBlock(
       'unbuildable', `The matter could not be loaded: ${e.message}`));
     $('rail-meta').textContent = 'Matter could not be loaded';
+    if (deferBoard) showOpeningBoardFailure(matterId,
+      `The saved matter could not be read: ${e.message}`);
     return;
+  }
+
+  if (deferBoard) {
+    $('opening-board-status').hidden = true;
+    $('opening-board-status').replaceChildren();
+    setWorkView('matter');
   }
 
   $('rail-meta').textContent = '';
@@ -1078,53 +1142,432 @@ async function showThreadBoard(
   if (restore && !(await restoreConversation(matterId, generation))) return;
   if (generation !== state.railGeneration) return;
 
-  renderDisputeAgenda(body, data.agenda);
+  renderDisputeBoard(body, data.agenda, data.proposed_disputes,
+    data.material_record, data.requirements_record);
 }
 
-function renderDisputeAgenda(body, agenda) {
+function requirementsFor(record, row) {
+  const rows = record?.by_dispute?.[row.id || row.thread_id];
+  return Array.isArray(rows) ? rows : [];
+}
+
+function requirementStatusFor(record, row) {
+  const status = record?.status_by_dispute?.[row.id || row.thread_id];
+  if (['ok', 'partial', 'unavailable', 'unassessed'].includes(status)) return status;
+  return record && record.state !== 'ok' ? 'unavailable' : 'unassessed';
+}
+
+function renderDisputeBoard(body, agenda, projection, materialRecord = null,
+                            requirementsRecord = null) {
   body.replaceChildren();
-  if (!agenda || !Array.isArray(agenda.disputes)) {
+  const worked = Array.isArray(agenda?.disputes) ? agenda.disputes : null;
+  const proposed = Array.isArray(projection?.rows) ? projection.rows : null;
+  if (!worked) {
     body.appendChild(stateBlock('unbuildable', 'Dispute progress could not be read.'));
+  }
+  if (!proposed) {
+    body.appendChild(stateBlock('unbuildable', 'Proposed disputes could not be read.'));
+  } else if (projection.state !== 'ok') {
+    body.appendChild(stateBlock('unbuildable',
+      'Some proposed disputes could not be read. Reopen the matter before relying on this list.'));
+  }
+  if (worked && !worked.some((row) => row.thread_id === state.disputeFocus)) {
+    state.disputeFocus = null;
+  }
+  if (!(worked?.length || proposed?.length)) {
+    if (worked && proposed && projection.state === 'ok') {
+      body.appendChild(stateBlock('empty', 'No disputes identified yet.'));
+    }
     return;
   }
-  const rows = agenda.disputes;
-  if (!rows.some((r) => r.thread_id === state.disputeFocus)) state.disputeFocus = null;
   const heading = document.createElement('h3');
-  heading.textContent = 'Disputes'; body.appendChild(heading);
-  const automatic = document.createElement('button');
-  automatic.type = 'button'; automatic.className = 'dispute-focus';
-  automatic.textContent = 'Whole matter';
-  automatic.setAttribute('aria-pressed', String(!state.disputeFocus));
-  automatic.onclick = () => { state.disputeFocus = null; renderDisputeAgenda(body, agenda); body.querySelector('button').focus(); };
-  body.appendChild(automatic);
-  const labels = { not_assessed: 'Not yet reviewed', needs_review: 'Needs review',
-    needs_information: 'Needs information', waiting: 'Waiting for information',
-    paused: 'Paused', reviewed: 'Reviewed on current record' };
-  for (const row of rows) {
-    const item = document.createElement('section'); item.className = 'dispute-row';
+  heading.textContent = 'Disputes';
+  body.appendChild(heading);
+  const instruction = document.createElement('p'); instruction.className = 'hint';
+  instruction.textContent = 'Double-click for details. Press Enter or tap to open.';
+  body.appendChild(instruction);
+  const list = document.createElement('ul'); list.className = 'dispute-proposal-list';
+  const focusButtons = [];
+  const setFocus = (threadId) => {
+    state.disputeFocus = threadId;
+    for (const [button, id] of focusButtons) {
+      button.setAttribute('aria-pressed', String(id === threadId));
+    }
+  };
+  const addRow = (row, isWorked) => {
+    const uncertain = !isWorked && row.identification === 'needs_clarification';
+    const unassessed = !isWorked && row.identification !== 'identified' && !uncertain;
+    const item = document.createElement('li');
+    item.className = uncertain ? 'dispute-proposal-item uncertain' : 'dispute-proposal-item';
     const button = document.createElement('button'); button.type = 'button';
-    button.className = 'dispute-focus'; button.textContent = row.label;
-    button.setAttribute('aria-pressed', String(state.disputeFocus === row.thread_id));
-    button.onclick = () => {
-      state.disputeFocus = row.thread_id; renderDisputeAgenda(body, agenda);
-      const selected = body.querySelector('[aria-pressed="true"]'); if (selected) selected.focus();
-    };
+    button.className = isWorked ? 'dispute-proposal-button dispute-focus'
+      : 'dispute-proposal-button';
+    button.dataset.matterId = state.matterId || '';
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-controls', 'dispute-reader');
+    button.title = 'Double-click to read details';
+    if (isWorked) {
+      button.setAttribute('aria-pressed', String(state.disputeFocus === row.thread_id));
+      focusButtons.push([button, row.thread_id]);
+    }
+    const label = document.createElement('span');
+    label.textContent = row.label?.trim() || row.statement;
+    button.appendChild(label);
+    if (uncertain || unassessed) {
+      const status = document.createElement('span');
+      status.className = 'dispute-proposal-status';
+      status.textContent = uncertain ? 'Provisional' : 'Not assessed';
+      button.appendChild(status);
+    }
+    const open = () => openDisputeReader(
+      row, button, isWorked ? setFocus : null, materialRecord, requirementsRecord);
+    let pointerType = null;
+    button.addEventListener('pointerdown', (event) => { pointerType = event.pointerType; });
+    button.addEventListener('click', (event) => {
+      const isTouch = pointerType === 'touch';
+      pointerType = null;
+      if (isTouch || event.detail === 0) open();
+    });
+    button.addEventListener('dblclick', open);
     item.appendChild(button);
-    const status = document.createElement('p'); status.className = 'dispute-status';
-    status.textContent = labels[row.status] || 'Progress not established'; item.appendChild(status);
-    if (row.thread_id === agenda.next_thread_id) status.textContent += ' · Next to review';
-    const need = document.createElement('p'); need.className = 'dispute-need';
-    need.textContent = row.next_need || 'No next step recorded.'; item.appendChild(need);
-    renderRequirements(item, row);
-    body.appendChild(item);
-  }
-  const note = document.createElement('p'); note.className = 'hint';
-  note.textContent = rows.length ? 'Select a dispute to focus your next message. Other disputes remain open.'
-    : 'The disputes will appear here as your brief is assessed.';
-  body.appendChild(note);
+    const labels = requirementsFor(requirementsRecord, row)
+      .map(need => typeof need?.label === 'string' ? need.label.trim() : '')
+      .filter(Boolean);
+    if (labels.length) {
+      const requirements = document.createElement('ul');
+      requirements.className = 'dispute-requirement-labels';
+      for (const text of labels) {
+        const labelItem = document.createElement('li');
+        labelItem.textContent = text;
+        requirements.appendChild(labelItem);
+      }
+      item.appendChild(requirements);
+    }
+    if (requirementStatusFor(requirementsRecord, row) === 'partial') {
+      const coverage = document.createElement('p');
+      coverage.className = 'hint';
+      coverage.textContent = 'Legal research incomplete; see details.';
+      item.appendChild(coverage);
+    }
+    list.appendChild(item);
+  };
+  for (const row of worked || []) addRow(row, true);
+  for (const row of proposed || []) addRow(row, false);
+  body.appendChild(list);
 }
 
-// F-B-17. WHAT THIS DISPUTE NEEDS, read out of the passages retrieved for it.
+let disputeReaderTrigger = null;
+
+function closeDisputeReader(restoreFocus = true) {
+  if (!restoreFocus) {
+    disputeReaderTrigger = null;
+    $('dispute-reader-title').textContent = '';
+    $('dispute-reader-body').replaceChildren();
+  }
+  if ($('dispute-reader').open) $('dispute-reader').close();
+}
+
+function appendMaterialRows(host, rows) {
+  const list = document.createElement('ul');
+  list.className = 'dispute-reader-material-list';
+  const basisLabels = {
+    stated: 'As stated in your message',
+    attributed: 'Attributed to another person',
+    described_record: 'Described record; not examined',
+    inferred: 'Inference to check',
+    uncertain: 'Uncertain account',
+    hypothetical: 'Hypothetical',
+  };
+  const relationLabels = {
+    adds: 'Adds to earlier account',
+    corrects: 'Corrects earlier account',
+    contradicts: 'Conflicts with earlier account',
+    withdraws: 'Withdraws earlier account',
+  };
+  for (const detail of rows) {
+    const item = document.createElement('li');
+    const description = document.createElement('p');
+    const category = typeof detail.kind === 'string' && detail.kind
+      ? detail.kind[0].toUpperCase() + detail.kind.slice(1) : 'Detail';
+    description.textContent = `${category}: ${detail.statement || ''}`;
+    item.appendChild(description);
+    const attribution = document.createElement('p');
+    attribution.className = 'hint';
+    attribution.textContent = [basisLabels[detail.basis] || 'Attribution unassessed',
+      relationLabels[detail.relation]].filter(Boolean).join(' · ');
+    item.appendChild(attribution);
+    if (detail.why_material) {
+      const relevance = document.createElement('p');
+      relevance.textContent = `Relevance: ${detail.why_material}`;
+      item.appendChild(relevance);
+    }
+    if (detail.quoted) {
+      const sourceLabel = document.createElement('p');
+      sourceLabel.className = 'dispute-reader-source';
+      sourceLabel.textContent = 'Source: your saved message';
+      sourceLabel.dataset.sourceTurnId = detail.source_turn_id || '';
+      item.appendChild(sourceLabel);
+      const source = document.createElement('blockquote');
+      source.textContent = detail.quoted;
+      item.appendChild(source);
+    }
+    for (const prior of detail.prior_references || []) {
+      const reference = document.createElement('blockquote');
+      reference.textContent = `Earlier ${prior.role === 'nm' ? 'NM reply' : 'your message'}: ${prior.quoted}`;
+      item.appendChild(reference);
+    }
+    list.appendChild(item);
+  }
+  host.appendChild(list);
+}
+
+function openDisputeReader(row, trigger, setFocus = null, materialRecord = null,
+                           requirementsRecord = null) {
+  const dialog = $('dispute-reader');
+  disputeReaderTrigger = trigger;
+  const label = row.label?.trim() || row.statement;
+  $('dispute-reader-title').textContent = label;
+  const body = $('dispute-reader-body'); body.replaceChildren();
+  if (row.statement && row.statement !== label) {
+    const statement = document.createElement('p');
+    statement.textContent = row.statement; body.appendChild(statement);
+  }
+  if (!setFocus && row.identification === 'needs_clarification') {
+    const status = document.createElement('p');
+    status.className = 'dispute-reader-status'; status.textContent = 'Provisional';
+    body.appendChild(status);
+  } else if (!setFocus && row.identification !== 'identified') {
+    const status = document.createElement('p');
+    status.className = 'dispute-reader-status';
+    status.textContent = 'Identification has not been assessed.';
+    body.appendChild(status);
+  }
+  if (row.why_material) {
+    const reason = document.createElement('p');
+    reason.textContent = `Why listed: ${row.why_material}`;
+    body.appendChild(reason);
+  }
+  if (row.clarification && row.identification !== 'identified') {
+    const clarification = document.createElement('p');
+    clarification.textContent = `To clarify: ${row.clarification}`;
+    body.appendChild(clarification);
+  }
+  if (row.quoted) {
+    const sourceLabel = document.createElement('p');
+    sourceLabel.className = 'dispute-reader-source';
+    sourceLabel.textContent = 'Source: your saved message';
+    sourceLabel.dataset.sourceTurnId = row.source_turn_id;
+    body.appendChild(sourceLabel);
+    const source = document.createElement('blockquote');
+    source.textContent = row.quoted; body.appendChild(source);
+  }
+  for (const prior of row.prior_references || []) {
+    const reference = document.createElement('blockquote');
+    reference.textContent = `Earlier ${prior.role === 'nm' ? 'NM reply' : 'your message'}: ${prior.quoted}`;
+    body.appendChild(reference);
+  }
+  renderLegalRequirements(body, row, requirementsRecord);
+  if (setFocus && !row.why_material && !row.quoted) {
+    const missing = document.createElement('p');
+    missing.className = 'hint';
+    missing.textContent = 'No identification reason or source passage is stored with this dispute.';
+    body.appendChild(missing);
+  }
+  if (materialRecord?.state) {
+    const linkedMaterial = materialRecord.by_dispute?.[row.id || row.thread_id] || [];
+    const material = document.createElement('section');
+    material.className = 'dispute-reader-material';
+    const heading = document.createElement('h3');
+    heading.textContent = 'Material from the conversation';
+    material.appendChild(heading);
+    const explanation = document.createElement('p');
+    explanation.className = 'hint';
+    explanation.textContent = 'Linked to this dispute. These sourced readings of the account are not findings.';
+    material.appendChild(explanation);
+    if (materialRecord.state !== 'ok') {
+      const incomplete = document.createElement('p');
+      incomplete.className = 'hint';
+      incomplete.textContent = 'Some saved material could not be read. Reopen the matter before relying on this record.';
+      material.appendChild(incomplete);
+    }
+    if (Array.isArray(linkedMaterial) && linkedMaterial.length) {
+      appendMaterialRows(material, linkedMaterial);
+    } else {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = 'No material is linked to this dispute yet.';
+      material.appendChild(empty);
+    }
+    body.appendChild(material);
+    if (Array.isArray(materialRecord.matter) && materialRecord.matter.length) {
+      const matterWide = document.createElement('section');
+      matterWide.className = 'dispute-reader-material';
+      const title = document.createElement('h3');
+      title.textContent = 'Matter-wide material';
+      matterWide.appendChild(title);
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.textContent = 'Recorded for the matter as a whole; not specifically linked to this dispute.';
+      matterWide.appendChild(note);
+      appendMaterialRows(matterWide, materialRecord.matter);
+      body.appendChild(matterWide);
+    }
+    if (Array.isArray(materialRecord.unresolved) && materialRecord.unresolved.length) {
+      const unassigned = document.createElement('details');
+      unassigned.className = 'dispute-reader-material';
+      const title = document.createElement('summary');
+      title.textContent = `Unassigned material (${materialRecord.unresolved.length})`;
+      unassigned.appendChild(title);
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.textContent = materialRecord.unverified_count > 0
+        ? `${materialRecord.unverified_count} older ${materialRecord.unverified_count === 1 ? 'reading has' : 'readings have'} not been independently grounded. Shown from your saved words, they are excluded from legal research until checked.`
+        : 'These details have not been assigned to a dispute.';
+      unassigned.appendChild(note);
+      appendMaterialRows(unassigned, materialRecord.unresolved);
+      body.appendChild(unassigned);
+    }
+  }
+  if (setFocus) {
+    const work = document.createElement('section');
+    work.className = 'dispute-reader-work';
+    const heading = document.createElement('h3');
+    heading.textContent = 'Current work'; work.appendChild(heading);
+    const statuses = { not_assessed: 'Not yet reviewed', needs_review: 'Needs review',
+      needs_information: 'Needs information', waiting: 'Waiting for information',
+      paused: 'Paused', reviewed: 'Reviewed on current record' };
+    const status = document.createElement('p');
+    status.textContent = statuses[row.status] || 'Progress not established';
+    work.appendChild(status);
+    if (row.next_need) {
+      const next = document.createElement('p');
+      next.textContent = row.next_need; work.appendChild(next);
+    }
+    renderRequirements(work, row);
+    body.appendChild(work);
+    const focus = document.createElement('button');
+    focus.type = 'button'; focus.className = 'ghost';
+    focus.textContent = state.disputeFocus === row.thread_id
+      ? 'Return to whole matter' : 'Focus next message on this dispute';
+    focus.addEventListener('click', () => {
+      setFocus(state.disputeFocus === row.thread_id ? null : row.thread_id);
+      closeDisputeReader();
+    });
+    body.appendChild(focus);
+  }
+  if (!dialog.open) dialog.showModal();
+  $('dispute-reader-close').focus();
+}
+
+function renderLegalRequirements(host, row, record) {
+  const section = document.createElement('section');
+  section.className = 'dispute-reader-requirements';
+  const heading = document.createElement('h3');
+  heading.textContent = 'Legal requirements';
+  section.appendChild(heading);
+  const status = requirementStatusFor(record, row);
+  if (status !== 'ok' && status !== 'partial') {
+    const unavailable = document.createElement('p');
+    unavailable.className = 'hint';
+    unavailable.textContent = status === 'unassessed'
+      ? 'Legal requirements have not been assessed for this dispute yet. '
+        + 'This is not a conclusion about the governing law.'
+      : 'Legal requirements could not be read for this dispute right now. '
+        + 'This does not establish that no law applies.';
+    section.appendChild(unavailable);
+    host.appendChild(section);
+    return;
+  }
+  if (status === 'partial') {
+    const coverage = document.createElement('p');
+    coverage.className = 'hint';
+    coverage.textContent = 'Legal research is incomplete. Listed items use checked passages from the available corpus.';
+    section.appendChild(coverage);
+    const diagnostics = record?.diagnostics_by_dispute?.[row.id || row.thread_id];
+    if (Array.isArray(diagnostics)) {
+      for (const reason of diagnostics) {
+        if (typeof reason !== 'string' || !reason.trim()) continue;
+        const detail = document.createElement('p');
+        detail.className = 'hint';
+        detail.textContent = reason;
+        section.appendChild(detail);
+      }
+    }
+  }
+  const rows = requirementsFor(record, row);
+  if (!rows.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'No requirements are recorded for this dispute yet. '
+      + 'This is not a conclusion about the governing law.';
+    section.appendChild(empty);
+    host.appendChild(section);
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'dispute-reader-requirements-list';
+  for (const need of rows) {
+    const item = document.createElement('li');
+    const label = document.createElement('h4');
+    label.textContent = need.label || 'Requirement';
+    item.appendChild(label);
+    for (const [title, value] of [
+      ['What is needed', need.need], ['Why it matters', need.why],
+      ['Legal force', need.force === 'required' ? 'Required if cited law applies'
+        : need.force === 'strengthening' ? 'Strengthening' : 'Not assessed'],
+      ['Conversation record', need.record_status === 'mentioned'
+        ? 'Related material was mentioned; it has not been examined.'
+        : need.record_status === 'not_mentioned'
+          ? 'No related material is linked in the current conversation record.'
+          : 'Not assessed'],
+    ]) {
+      if (!value) continue;
+      const detail = document.createElement('p');
+      detail.textContent = `${title}: ${value}`;
+      item.appendChild(detail);
+    }
+    if (Array.isArray(need.sources) && need.sources.length) {
+      for (const source of need.sources) {
+        const citation = document.createElement('p');
+        citation.className = 'dispute-requirement-source';
+        citation.textContent = [source.title, source.kind, source.locator]
+          .filter(value => typeof value === 'string' && value.trim()).join(' · ');
+        item.appendChild(citation);
+        const verification = source.verification;
+        if (verification && verification.support_excerpt) {
+          const support = document.createElement('p');
+          support.textContent = `Supporting words: “${verification.support_excerpt}”`;
+          item.appendChild(support);
+        }
+        if (verification && verification.scope_excerpt) {
+          const scope = document.createElement('p');
+          scope.textContent = `Limiting condition: “${verification.scope_excerpt}”`;
+          item.appendChild(scope);
+        }
+        const passage = document.createElement('blockquote');
+        passage.textContent = source.text || '';
+        item.appendChild(passage);
+      }
+    } else {
+      const missing = document.createElement('p');
+      missing.className = 'hint';
+      missing.textContent = 'No supporting passage is recorded for this item.';
+      item.appendChild(missing);
+    }
+    list.appendChild(item);
+  }
+  section.appendChild(list);
+  host.appendChild(section);
+}
+
+$('dispute-reader-close').addEventListener('click', () => closeDisputeReader());
+$('dispute-reader').addEventListener('close', () => {
+  const trigger = disputeReaderTrigger;
+  disputeReaderTrigger = null;
+  if (trigger?.isConnected && state.matterId === trigger.dataset.matterId) trigger.focus();
+});
+
+// F-B-17. WHAT THIS DISPUTE NEEDS, read in the worked dispute's detail pane.
 //
 // Every row states which passage requires it and shows those words, because a
 // requirement an advocate cannot check is this product inventing law and
@@ -1142,7 +1585,7 @@ function renderRequirements(item, row) {
     const none = document.createElement('p');
     none.className = 'requirement-none';
     // Nothing retrieved is not the same as nothing needed, and the board must
-    // not let the advocate read the first as the second.
+    // not let the reader treat the first as the second.
     none.textContent = 'What this dispute needs has not been established yet.';
     item.appendChild(none);
     return;
@@ -1246,37 +1689,23 @@ function renderOpeningBrief(record) {
   field(dl, 'capacity', (brief.capacity?.state || 'not_assessed').replaceAll('_', ' '));
 }
 
-// F-B-02. THE MATTER BOARD IS MY WORK'S ROW FOR THIS MATTER. It is read from
-// the same `/api/matters` My work lists and drawn by the same `matterFields`,
-// so the board and the list cannot say two different things about one file.
-// It is read whenever the thread board is -- which includes after every
-// message -- so what later messages add reaches it.
-async function renderMatterBoard(matterId, generation) {
-  const fields = $('board-fields');
-  const st = $('board-state');
-  let d;
-  try {
-    d = await api('/api/matters');
-  } catch (e) {
-    if (e.obsolete || generation !== state.railGeneration) return;
-    fields.replaceChildren();
-    st.replaceChildren(stateBlock('unbuildable',
-      `The matter board could not be read: ${e.message}. This is a failure to read, `
-      + 'not an empty file.'));
-    return;
-  }
-  if (generation !== state.railGeneration) return;
-  const m = (d.matters || []).find((row) => row.matter_id === matterId);
-  fields.replaceChildren();
-  if (!m) {
-    st.replaceChildren(stateBlock('unbuildable',
-      'This matter is not in the matter list, so its board cannot be shown. It has not '
-      + 'been deleted; reload before relying on the board.'));
-    return;
-  }
-  st.textContent = '';
-  $('board-title').textContent = m.matter;
-  matterFields(fields, m);
+function showMatterStatus(kind, message) {
+  const status = $('opening-board-status');
+  status.hidden = false;
+  status.replaceChildren(stateBlock(kind, message));
+}
+
+function showOpeningBoardFailure(matterId, message) {
+  const status = $('opening-board-status');
+  status.hidden = false;
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'ghost';
+  retry.textContent = 'Retry matter board';
+  retry.addEventListener('click', () => showThreadBoard(matterId, {
+    restore: false, closeNavigator: false, deferBoard: true,
+  }));
+  status.replaceChildren(stateBlock('unbuildable', message), retry);
 }
 
 // BK-33. THE SERVED CONVERSATION, READ BACK.
@@ -1909,8 +2338,8 @@ function renderTurn(entry) {
       }
     } else {
       f.textContent = entry.state === 'unknown'
-        ? `The response could not be received: ${entry.error}`
-        : `The turn was refused: ${entry.error}`;
+        ? `I couldn't confirm the response: ${entry.error}`
+        : `I couldn't complete this message: ${entry.error}`;
     }
 
     // BK-36. WAS IT SAVED, AND WHAT DO I DO NOW.
@@ -1936,13 +2365,18 @@ function renderTurn(entry) {
                      + 'under the current permission. No new answer was saved or released. '
                      + 'Review the current declaration before making a new request.',
     };
+    if (entry.state === 'not_committed' && entry.refusal?.retryable === false) {
+      SAID.not_committed = 'Your brief was NOT saved. Sending the same turn '
+        + 'again will not resolve this limit.';
+    }
     if (SAID[entry.state]) {
       const d = document.createElement('div');
       d.className = 'refusal-gap';
       d.textContent = SAID[entry.state];
       f.appendChild(d);
     }
-    if (entry.turnId && ['unknown', 'not_committed'].includes(entry.state)) {
+    if (entry.turnId && ['unknown', 'not_committed'].includes(entry.state)
+        && entry.refusal?.retryable !== false) {
       const again = document.createElement('button');
       again.className = 'ghost';
       again.textContent = 'Send this brief again';
@@ -2249,15 +2683,14 @@ function sizeComposer() {
 
 function updateWorkspace() {
   const intakeOpen = !$('intake').hidden && !openingEdit;
-  const nothingYet = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
-  $('composer').hidden = nothingYet || intakeOpen;
+  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list';
+  $('pane-advise').classList.toggle('empty-chat',
+    $('pane-advise').dataset.view === 'opening' && !state.turns.length);
   // F-B-04. The file icon is offered for an open matter, and on a new matter's
   // form, where Recover a draft is the one record that already applies.
   const filesShown = Boolean(state.matterId) || intakeOpen;
   $('matter-files').hidden = !filesShown;
   if (!filesShown) closeFilesMenu();
-  // F-B-02. Not while a reply is being prepared: the file is moving under it.
-  $('board-edit').disabled = Boolean(activeDelivery || !state.matterId || !state.matterReady);
   $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady));
   if (!activeDelivery) $('send').textContent = state.matterId && !state.matterReady
     ? 'Loading file…' : 'Send';
@@ -2300,11 +2733,13 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
   const pending = activeIntent.pending.find((entry) => entry.brief === message
     && (entry.request.thread_id || null) === (state.disputeFocus || null)
     && entry.request.work_product === workProduct && matchesIntake(entry, state.intake)
-    && ['unknown', 'not_committed', 'sending'].includes(entry.state));
+    && ['unknown', 'not_committed', 'sending'].includes(entry.state)
+    && entry.refusal?.retryable !== false);
   if (pending) { consumeComposer(pending); await deliver(pending); return; }
   const entry = { brief: message, turnId: newTurnId(), state: 'sending',
     context: activeIntent,
-    request: { matter_id: state.matterId, thread_id: state.disputeFocus, expected_version: state.matterVersion,
+    request: { matter_id: state.matterId, chat_id: activeIntent.chatId || null,
+      thread_id: state.disputeFocus, expected_version: state.matterVersion,
       parties: { ...((state.intake && state.intake.parties) || {}) },
       release: { ...((state.intake && state.intake.release) || {}) },
       capacity: state.intake && state.intake.capacity ? { ...state.intake.capacity } : null,
@@ -2312,7 +2747,8 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
   // This serialized envelope never changes across navigation, reauthentication
   // or retry. Only the rendering attempt receives a fresh lifetime.
   entry.envelope = JSON.stringify({
-    message: entry.brief, matter_id: entry.request.matter_id, thread_id: entry.request.thread_id, turn_id: entry.turnId,
+    message: entry.brief, matter_id: entry.request.matter_id,
+    chat_id: entry.request.chat_id, thread_id: entry.request.thread_id, turn_id: entry.turnId,
     parties: entry.request.parties, release: entry.request.release,
     capacity: entry.request.capacity,
     expected_version: entry.request.expected_version, work_product: entry.request.work_product,
@@ -2378,10 +2814,16 @@ async function deliver(entry) {
     // A saved opening acquires a file identity, but its original turn envelope
     // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
     const previousKey = intent.key;
+    if (answer.chat_id && !intent.chatId) {
+      intentContexts.delete(intent.key);
+      intent.chatId = answer.chat_id;
+      intent.key = intentKey(intent.matterId, intent.chatId);
+      intentContexts.set(intent.key, intent);
+    }
     if (answer.matter_id && !intent.matterId) {
       intentContexts.delete(intent.key);
       intent.matterId = answer.matter_id;
-      intent.key = JSON.stringify([intent.advocate, intent.workspace, intent.matterId]);
+      intent.key = intentKey(intent.matterId, intent.chatId);
       intentContexts.set(intent.key, intent);
     }
     if (!current()) return;
@@ -2391,7 +2833,7 @@ async function deliver(entry) {
     if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
     if (state.matterId) await showThreadBoard(state.matterId, {
-      restore: false, closeNavigator: false,
+      restore: false, closeNavigator: false, deferBoard: !entry.request.matter_id,
     });
   } catch (e) {
     // clearPrivileged already freezes an abandoned attempt as unknown. Neither
@@ -2411,12 +2853,23 @@ async function deliver(entry) {
     }
     if (e.status === 409) entry.state = 'stale';
     if (!current()) return;
-    if (entry.state === 'input_only' && entry.refusal.matter_id === state.matterId) {
+    if (entry.state === 'input_only' && entry.refusal?.matter_id) {
+      const openedId = entry.refusal.matter_id;
+      if (!intent.matterId && !entry.request.matter_id) {
+        const previousKey = intent.key;
+        intentContexts.delete(previousKey);
+        intent.matterId = openedId;
+        intent.key = intentKey(openedId);
+        intentContexts.set(intent.key, intent);
+        intent.pending = intent.pending.filter((item) => item !== entry);
+        state.matterId = openedId;
+        await saveProtectedDraft({previousKey});
+      }
       if (Number.isInteger(entry.refusal.matter_version)) {
         state.matterVersion = entry.refusal.matter_version;
       }
-      await showThreadBoard(state.matterId, {
-        restore: false, closeNavigator: false,
+      await showThreadBoard(openedId, {
+        restore: false, closeNavigator: false, deferBoard: !entry.request.matter_id,
       }).catch(() => {});
     }
     if (entry.state === 'stale' && state.matterId) {
@@ -2857,24 +3310,26 @@ function fillOpeningForm(form) {
 async function openOpeningEdit() {
   const matterId = state.matterId;
   if (!matterId || !state.matterReady || activeDelivery || openingEdit) return;
-  const trigger = $('board-edit');
+  const trigger = $('files-toggle');
+  if (trigger.disabled) return;
   trigger.disabled = true;
   let data;
   try {
     data = await api(`/api/matters/${encodeURIComponent(matterId)}`);
   } catch (e) {
     if (!e.obsolete && state.matterId === matterId) {
-      $('board-state').replaceChildren(stateBlock('loud',
-        `The matter details could not be opened for editing: ${e.message}. Nothing was changed.`));
+      showMatterStatus('loud',
+        `The matter details could not be opened for editing: ${e.message}. Nothing was changed.`);
     }
     return;
   } finally {
+    trigger.disabled = false;
     updateWorkspace();
   }
   if (state.matterId !== matterId || activeDelivery || openingEdit) return;
   if (!data?.opening_form || !Number.isInteger(data.version)) {
-    $('board-state').replaceChildren(stateBlock('loud',
-      'The recorded details could not be established, so they cannot be edited. Reopen the matter.'));
+    showMatterStatus('loud',
+      'The recorded details could not be established, so they cannot be edited. Reopen the matter.');
     return;
   }
   snapshotIntent();
@@ -2913,7 +3368,7 @@ function closeOpeningEdit({ restore = true } = {}) {
   if ($('opening-edit').open) $('opening-edit').close();
   if (restore) {
     restoreIntent();
-    if (edit.trigger.isConnected && !$('matter-board').hidden) edit.trigger.focus();
+    if (edit.trigger.isConnected && state.matterId === edit.matterId) edit.trigger.focus();
   }
 }
 
@@ -2998,7 +3453,6 @@ async function saveOpeningEdit() {
   await showThreadBoard(edit.matterId, { restore: false, closeNavigator: false }).catch(() => {});
 }
 
-$('board-edit').addEventListener('click', openOpeningEdit);
 $('in-cancel').addEventListener('click', () => closeOpeningEdit());
 // Escape closes the dialog; the form goes home with it, unsaved changes discarded.
 $('opening-edit').addEventListener('cancel', (ev) => {
@@ -3117,17 +3571,18 @@ $('intake').addEventListener('submit', async (ev) => {
   }
 });
 
-// F-B-01. A NEW MATTER BELONGS TO HOME, and it opens on the intake form alone:
-// no list of other matters and no board, because there is no matter yet.
-function startMatter() {
+// A new matter begins with only the chat. Its first turn opens the saved file;
+// the board appears after its details have been read back.
+function startMatter(chatId = null) {
+  if (typeof chatId !== 'string') chatId = null;
   state.workTab = 'home';
   showTab('advise');
   setWorkView('opening');
-  selectIntent(null, { opening: true });
-  // A NEW FORM IS A NEW MATTER. Only an opening whose reply was lost keeps its
-  // identity, so a retry can find the file the server may already hold; any
-  // other identity left on this draft would reopen a matter already made.
-  if (activeIntent.opening && !activeIntent.opening.uncertain) activeIntent.opening = null;
+  selectIntent(null, { opening: true, chatId });
+  activeIntent.intakeOpen = false;
+  activeIntent.intake = null;
+  state.intake = null;
+  showIntake(false);
   toggleMatters(false);
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
@@ -3137,8 +3592,7 @@ function startMatter() {
   $('matter-heading').textContent = 'New matter';
   $('matter-heading').removeAttribute('title');
   window.dispatchEvent(new Event('nm:matter-changed'));
-  if (!$('intake').hidden) $('in-client').focus();
-  else $('message').focus();
+  $('message').focus();
 }
 
 // F-A-18, F-B-01. Home's one button starts a new matter, under Home.
@@ -3322,17 +3776,20 @@ function fileSize(bytes) {
 /* F-B-04, later the same day. THE MATTER'S RECORDS, under the same icon.
  *
  * Owner: "if any of these are important and must be kept, keep those files
- * under the same files icon folder". All six are kept -- each serves something
+ * under the same files icon folder". The six records remain -- each serves something
  * nothing else does: recording a danger (Protective handoff), the capacity
  * correction a blocked turn points to and the recorded instructions (Matter
  * cover), the inspectable record of the file and where each statement came
  * from (Case file, Attributed file), the review record of what was served
  * (History), and an unsent message brought back (Recover a draft). Only the
- * last applies before a new matter is saved.
+ * last applies before a new matter is saved. Editing matter details is an
+ * action beside those records.
  */
 const MATTER_RECORDS = [
   { id: 'records-cover', label: 'Matter cover & instructions', matter: true,
     open: () => window.NMMatterRecords?.open('cover') },
+  { id: 'records-edit', label: 'Edit matter details', matter: true,
+    open: () => openOpeningEdit() },
   { id: 'records-casefile', label: 'Case file', matter: true,
     open: () => { $('casefile-matter').value = ''; showTab('casefile'); } },
   { id: 'records-attributed', label: 'Attributed file', matter: true,
@@ -3348,14 +3805,15 @@ function matterRecords() {
   part.className = 'files-records';
   const head = document.createElement('p');
   head.className = 'files-head';
-  head.textContent = 'Matter records';
+  head.textContent = 'Matter details and records';
   part.appendChild(head);
   for (const record of MATTER_RECORDS) {
     if (record.matter && !state.matterId) continue;
     const button = document.createElement('button');
     button.type = 'button'; button.id = record.id; button.className = 'files-record';
     button.textContent = record.label;
-    button.disabled = record.matter && !state.matterReady;
+    button.disabled = (record.matter && !state.matterReady)
+      || (record.id === 'records-edit' && Boolean(activeDelivery));
     button.addEventListener('click', () => { closeFilesMenu(); record.open(); });
     part.appendChild(button);
   }
@@ -5078,7 +5536,6 @@ function showApplication(advocate, workspace, professionalApproval) {
     .filter(Boolean).join(' · ') || 'Not recorded yet';
   $('professional-approval').textContent = professionalApproval?.state === 'approved'
     ? 'Professional profile approved' : 'Professional profile not approved';
-  $('workspace-name').textContent = workspace.label;
   $('profile-workspace').textContent = workspace.label;
   $('gate').hidden = true;
   $('masthead').hidden = false;

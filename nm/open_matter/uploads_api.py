@@ -131,7 +131,7 @@ class UploadService:
 
     def owned(self, matter_id: str, actor_id: str) -> Matter:
         matter = self.store.load(MatterId(_identity(matter_id)))
-        if matter is None or matter.advocate_id != actor_id:
+        if matter is None or matter.advocate_id != actor_id or not matter.brain_ready:
             raise UploadRefused(404, "no such matter")
         return matter
 

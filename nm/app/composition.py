@@ -18,7 +18,6 @@ from nm.arrive.directory_port import DirectoryPort
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.mail_port import MailPort
 from nm.arrive.store_directory import FileDirectory
-from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
 from nm.Archives.legal_brain.procedure.filing_requirement_adapter import (
     CuratedFilingRequirements,
 )
@@ -37,6 +36,7 @@ from nm.Archives.legal_brain.retrieve.manifest_sources import (
 )
 from nm.Archives.legal_brain.retrieve.search_authority import AuthorityIndexSearch
 from nm.Archives.legal_brain.retrieve.search_policed import PolicedSearch
+from nm.brain.retrieval import HybridSearcher
 from nm.open_matter.speech_local_whisper import LocalWhisper
 from nm.open_matter.speech_vosk_live import VoskLive
 from nm.open_matter.transcription_port import LiveTranscriptionPort, TranscriptionPort
@@ -64,6 +64,7 @@ from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
 
 ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_LEGAL_SEARCH = object()
 
 def build_model(config: ModelConfig) -> ModelPort:
     """Pick the adapter by PROVIDER NAME ALONE.
@@ -114,6 +115,7 @@ def build_mail(settings, root, key, gate):
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, evidence=None, search=None,
+                 legal_search=_DEFAULT_LEGAL_SEARCH,
                  directory=None, uploads=None, mail=None, transcriber=None,
                  live_dictation=None,
                  document_text=None, document_derivatives=None, document_quarantine=None,
@@ -128,6 +130,12 @@ class Application:
         settings = MappingProxyType(dict(os.environ if environment is None else environment))
         self.environment = settings
         self.root = root or ROOT
+        self.legal_search = (HybridSearcher.local(
+            root=self.root,
+            corpus_dir=Path(settings.get("NM_CORPUS_DIR") or
+                            self.root / "legal_database" / "vector_store"))
+                             if legal_search is _DEFAULT_LEGAL_SEARCH
+                             else legal_search)
         self.audit_root = Path(audit_root) if audit_root is not None else self.root / ".nm"
         self.config = load(dict(settings))
         # Only trusted composition may install finite expiring evaluation
@@ -440,18 +448,6 @@ class Application:
         # measures nothing and says so, rather than reading as an empty one.
         self.filing = CuratedFilingRequirements(self.root / "pipeline" / "manifest.yaml")
         self.governing = CuratedGoverningLaw()
-        self.engine = TurnEngine(store=self.store, evidence=self.evidence,
-                                 model=self.model, coverage=self.coverage,
-                                 elements=self.elements,
-                                 pre_institution=self.pre_institution,
-                                 authority_weight=self.authority_weight,
-                                 interim_relief=self.interim_relief,
-                                 procedural=self.procedural,
-                                 filing=self.filing,
-                                 professional_approval=self.directory.professional_approval,
-                                 sections=self.sections,
-                                 judgments=self.judgments)
-
         self.documents = None
         from nm.open_matter.document_permission import build_quarantine
 
@@ -547,22 +543,6 @@ class Application:
             raise ValueError("A checklist source owner needs its actual generation guard")
         return bind_source_current(self.evidence, guard,
             owned_current=owned_current, session_current=session_current)
-
-    def engine_for(self, advocate_id: str, *,
-                   session_current: Callable[[], bool] | None = None) -> TurnEngine:
-        """Authenticated turn route; generic tooling remains deny-by-default."""
-        if not isinstance(self._model_adapter, OpenAIModelAdapter):
-            return self.engine
-        bound = self._model_for(advocate_id, session_current=session_current)
-        return TurnEngine(store=self.store, evidence=self.evidence, model=bound,
-                          coverage=self.coverage, elements=self.elements,
-                          pre_institution=self.pre_institution,
-                          authority_weight=self.authority_weight,
-                          interim_relief=self.interim_relief,
-                          procedural=self.procedural,
-                          filing=self.filing,
-                          professional_approval=self.directory.professional_approval,
-                          sections=self.sections, judgments=self.judgments)
 
     def _model_for(self, advocate_id: str, *, session_current: Callable[[], bool] | None):
         """One authenticated external-text dispatch owner for both reasoning paths."""
@@ -668,8 +648,8 @@ class Application:
         model = self._model_for(scope.advocate_id, session_current=session_current)
         if controlled_model is not None:
             # Only the trusted finite evaluation grant supplies this already
-            # permission-bound author. Ordinary TurnEngine composition is not
-            # changed to consume the evaluation ledger or verifier allowance.
+            # permission-bound author. Ordinary chat composition does not
+            # consume the evaluation ledger or verifier allowance.
             model = controlled_model
         from nm.Archives.legal_brain.retrieve.practice_playbooks_adapter import FilePracticePlaybooks
 

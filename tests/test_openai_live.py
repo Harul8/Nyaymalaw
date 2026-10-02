@@ -36,7 +36,7 @@ def test_the_pinned_snapshot_is_real_and_answers(adapter):
                system="You are a test harness. Obey literally."),
         Tier.ROUTINE, max_tokens=16)
     assert r.text and "ACK" in r.text.upper()
-    assert r.model == "gpt-4o-mini-2024-07-18"
+    assert r.model == adapter.resolved_model(Tier.ROUTINE)
     assert r.usage.tokens_in > 0 and r.usage.tokens_out > 0
     assert r.usage.cost_usd > 0, "a live call that costs nothing is not being metered"
 

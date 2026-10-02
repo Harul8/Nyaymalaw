@@ -1110,7 +1110,28 @@ class Matter:
     rather than certifying anything.
     """
 
+    brain_ready: bool = True
+    brain_chat: tuple[dict, ...] = ()
+    brain_opening_summary: str = ""
     version: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.brain_ready) is not bool:
+            raise ValueError("matter readiness must be a boolean")
+        if (type(self.brain_chat) is not tuple
+                or any(type(turn) is not dict for turn in self.brain_chat)):
+            raise ValueError("matter conversation must be a sequence of turn records")
+        if type(self.brain_opening_summary) is not str:
+            raise ValueError("matter opening summary must be text")
+        turn_ids = set()
+        for turn in self.brain_chat:
+            turn_id = turn.get("turn_id")
+            if (type(turn_id) is not str or not turn_id.strip()
+                    or turn_id in turn_ids
+                    or turn.get("matter_id") != self.id
+                    or turn.get("advocate_id") != self.advocate_id):
+                raise ValueError("matter conversation turn has invalid provenance")
+            turn_ids.add(turn_id)
 
     @staticmethod
     def create(advocate_id: str, title: str) -> "Matter":

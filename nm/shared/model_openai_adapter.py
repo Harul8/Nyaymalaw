@@ -13,6 +13,8 @@ lives in the same package.
 from __future__ import annotations
 
 import json
+import ssl
+import sys
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -97,11 +99,23 @@ class OpenAIModelAdapter:
                 "An unconfigured key is a hard failure, never a silent no-op."
             )
         import httpx
+        # On Windows, the system's trusted roots may include the organisation's
+        # HTTPS inspection CA. Keep certificate and hostname verification on;
+        # certifi alone can reject an otherwise trusted endpoint on this host.
+        verify: bool | ssl.SSLContext = True
+        if sys.platform == "win32":
+            try:
+                import truststore
+            except ImportError as exc:
+                raise ConfigurationError(
+                    "Windows HTTPS trust requires the truststore package") from exc
+            verify = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         # The approved recipient must not redirect text/credentials elsewhere.
         # Disable implicit environment proxies as well as transport redirects.
         kwargs: dict[str, Any] = {
             "api_key": cfg.api_key, "max_retries": 0,
-            "http_client": httpx.Client(follow_redirects=False, trust_env=False),
+            "http_client": httpx.Client(
+                follow_redirects=False, trust_env=False, verify=verify),
             "base_url": cfg.base_url or "https://api.openai.com/v1",
         }
         self._client = OpenAI(**kwargs)

@@ -17,7 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 # The model adapters. Deliberately optional and per-provider: nothing in
 # No core-role journey file may import these; layercheck refuses that dependency.
-openai = ["openai>=1.40"]
+openai = ["openai>=1.40", "truststore>=0.9; platform_system == 'Windows'"]
 anthropic = ["anthropic>=0.40"]
 knowledge = ["openpyxl>=3.1"]
 # Local bare-act vector, BM25 and reranking search. The model weights remain

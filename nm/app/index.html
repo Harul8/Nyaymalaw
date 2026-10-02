@@ -275,8 +275,8 @@
 
 <!-- ================== F-A-17 — THE RIBBON ==================
      THE SAME ON EVERY PAGE after sign-in, and OUTSIDE every page, so no page
-     can scroll it away or be shown without it. Row 1 says who is signed in and
-     in which workspace; row 2 is the four places to go. -->
+     can scroll it away or be shown without it. Row 1 names who is signed in;
+     row 2 is the four places to go. Workspace identity remains in Profile. -->
 <header class="masthead" id="masthead" hidden>
   <div class="ribbon-row">
     <div class="brand">
@@ -289,14 +289,9 @@
            authentication (B-082); this renders who the SERVER says is signed
            in, and cannot be edited into someone else. -->
       <span class="who-name" id="who-name">—</span>
-      <div class="workspace-context" id="workspace-context" aria-label="Active workspace">
-        <span class="workspace-label">Active workspace</span>
-        <strong id="workspace-name">—</strong>
-      </div>
 
       <!-- THE PERSON MENU: the profile, the signed-in devices and Sign out.
-           On a phone the name and workspace above step aside and are read
-           here instead. -->
+           On a phone the name above is read here instead. -->
       <div class="account-menu" id="account-menu">
         <button type="button" id="account-toggle" class="account-toggle"
                 aria-haspopup="true" aria-expanded="false" aria-controls="account-panel">
@@ -386,27 +381,6 @@
       <h2 id="rail-title">Matters</h2>
       <button id="back" class="ghost" hidden>&larr; My matters</button>
     </div>
-    <!-- F-B-02. THIS MATTER ONLY, read from the same record My work lists. -->
-    <section id="matter-board" class="matter-board" aria-labelledby="board-title" hidden>
-      <div class="row static">
-        <div class="board-head">
-          <h3 id="board-title" class="r-title"></h3>
-          <!-- F-B-02, owner 28 September 2026: edit the opening details or add
-               what was missing. Deadline, position and last worked are
-               calculated, so the form does not offer them. -->
-          <button type="button" id="board-edit" class="board-edit" aria-label="Edit matter details"
-                  title="Edit matter details" disabled>
-            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
-              <path d="M13.6 2.9a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L7.3 16.2 3 17l.8-4.3z
-                       M12.4 4.1l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5"
-                    stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-        <dl id="board-fields" class="r-fields"></dl>
-      </div>
-      <div id="board-state"></div>
-    </section>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
   </aside>
@@ -423,8 +397,8 @@
              protective handoff, draft recovery). The saved-status line is gone. -->
         <div class="matter-files" id="matter-files" hidden>
           <button type="button" id="files-toggle" class="files-toggle" aria-expanded="false"
-                  aria-controls="files-menu" aria-label="Files on this matter"
-                  title="Files on this matter">
+                  aria-controls="files-menu" aria-label="Files and matter details"
+                  title="Files and matter details">
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
               <path d="M11.5 2.5H5.8A1.3 1.3 0 0 0 4.5 3.8v12.4a1.3 1.3 0 0 0 1.3 1.3h8.4
                        a1.3 1.3 0 0 0 1.3-1.3V6.5z M11.5 2.5v4h4 M7.5 10.5h5 M7.5 13.5h5"
@@ -511,6 +485,7 @@
 
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
+    <div id="opening-board-status" class="opening-board-status" role="status" hidden></div>
 
     <!-- The protected draft's own state, beside the brief it describes. NOT a
          child of `main`: that is a two-column grid, and a third child takes a
@@ -562,6 +537,14 @@
     </form>
   </section>
 </main>
+
+<dialog id="dispute-reader" aria-labelledby="dispute-reader-title">
+  <header class="dispute-reader-head">
+    <h2 id="dispute-reader-title"></h2>
+    <button type="button" id="dispute-reader-close" class="ghost">Close</button>
+  </header>
+  <div id="dispute-reader-body" class="dispute-reader-body"></div>
+</dialog>
 
 <dialog id="source-reader" aria-labelledby="source-title" aria-describedby="source-coverage">
   <header class="source-reader-head">

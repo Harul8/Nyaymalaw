@@ -21,8 +21,11 @@ is worse than either alone: the advocate cannot tell which is stale.
 from __future__ import annotations
 
 from nm.advise.turn_receipt_contracts import release_index
-from nm.close import retention as _retention
 from nm.Archives.legal_brain.understand import briefing as _briefing
+from nm.brain.dispute_state import proposed_disputes as _project_proposed_disputes
+from nm.brain.material_state import material_record as _project_material_record
+from nm.brain.requirements_state import requirements_record as _project_requirements_record
+from nm.close import retention as _retention
 from nm.shared.clock_contracts import today as forum_today
 from nm.shared.traceability_contracts import implements
 from nm.work_the_file.matter_contracts import Matter, Role
@@ -325,7 +328,7 @@ def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
 
 @implements("A2")
 def board_projection(matter: Matter, deadlines, today=None, *, source_current=None,
-                     checklist_projections=None) -> dict:
+                     checklist_projections=None, prior_conversation=()) -> dict:
     """`deadlines` HAS NO DEFAULT, deliberately.
 
     It had one -- `()` -- and the served board never passed a register, so
@@ -336,6 +339,8 @@ def board_projection(matter: Matter, deadlines, today=None, *, source_current=No
     """
     # D3 — THE NEAREST WINDOW LEADS, regardless of which thread is legally the
     # most interesting. The interesting one will still be there next week.
+    if not matter.brain_ready:
+        raise ValueError("the matter board is not ready")
     currency = _current_dependencies(matter).as_dict()
     rows = nearest_first([_thread_row(t, deadlines, today,
                                       currency=currency)
@@ -361,18 +366,41 @@ def board_projection(matter: Matter, deadlines, today=None, *, source_current=No
                 need["citation"] = {"matter_id": matter.id, "turn_id": turn_id,
                                     "element_index": index,
                                     "source": {"digest": source.digest, "label": source.label}}
+    proposed = _proposed_disputes(
+        matter, prior_conversation=prior_conversation)
+    material = _project_material_record(
+        matter, disputes=proposed, prior_conversation=prior_conversation)
     return {
         "state": "ok",
         "matter_id": matter.id,
         "title": matter.title,
         "version": matter.version,
+        "opening_summary": _opening_summary(matter),
         "threads": rows,
         "agenda": agenda,
+        # Conversation extraction is a proposal, not a worked thread. Keep it
+        # beside the agenda so it can be read without acquiring thread status,
+        # checklist results, or a selectable thread ID.
+        "proposed_disputes": proposed,
+        "material_record": material,
+        "requirements_record": _project_requirements_record(
+            matter, disputes=proposed, material=material),
         # The regression to watch: this must be a function of thread count
         # alone, never of turns, facts, issues or authorities.
         "row_count": len(rows),
         "bounded_by": "thread_count",
     }
+
+
+def _proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
+    return _project_proposed_disputes(
+        matter, prior_conversation=prior_conversation)
+
+
+def _opening_summary(matter: Matter) -> dict | None:
+    if not matter.brain_opening_summary:
+        return None
+    return {"text": matter.brain_opening_summary, "state": "provisional"}
 
 
 def _party(matter, side: str) -> str:
@@ -420,6 +448,8 @@ def matter_list_projection(matters, registers=None) -> dict:
     # F-B-14. THE LATEST UPDATED FILE FIRST -- ordered on the matters, whose
     # save stamp is not a board field, and never re-sorted by deadline below.
     for m in latest_first(matters):
+        if not m.brain_ready:
+            continue
         unresolved = sum(1 for t in m.threads if not t.posture.resolved)
         # THE ORDERING RULE COULD NOT FIRE. `next_deadline` was hard-coded
         # `None` on every row and the sort below reads it first, so "nearest
@@ -553,6 +583,8 @@ def cover_projection(matter: Matter, deadlines=None, today=None, *, source_curre
     `board_projection` gives directly above: a default here would report an
     uncomputed register as a clean sheet on every call site that forgot one.
     """
+    if not matter.brain_ready:
+        raise ValueError("the matter cover is not ready")
     from nm.open_matter.commission_contracts import Commission
     commission = Commission.from_stored(matter.commission)
     client = _party(matter, "client")
@@ -569,6 +601,7 @@ def cover_projection(matter: Matter, deadlines=None, today=None, *, source_curre
         "matter_id": matter.id,
         "title": matter.title,
         "version": matter.version,
+        "opening_summary": _opening_summary(matter),
         # NOT "" AND NOT THE MATTER ID. An empty client field reads as a file
         # with no client; the id reads as a name nobody chose.
         "client": client or None,

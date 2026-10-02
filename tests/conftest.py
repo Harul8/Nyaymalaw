@@ -325,19 +325,9 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     outbox = FileOutbox(tmp_path, key=KEY)
     application = Application(
         store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
-        directory=directory, mail=outbox,
+        directory=directory, mail=outbox, legal_search=None,
         model=ScriptedModelAdapter(config, responses={
             "__default__": "Issue the statutory notice and diarise the window."}))
-
-    # BK-34. THE FIXTURE'S MATTERS HAVE BEEN THROUGH INTAKE.
-    #
-    # A matter whose conflict, scope and capacity screens are unanswered is
-    # blocked before substance -- the row working -- so without this every API
-    # test becomes a test of the intake block instead of the thing it was
-    # written for. `briefed` fills exactly what the browser's intake form
-    # sends; a test that is ABOUT intake posts its own and this does nothing.
-    from tests.test_turn_contract import briefed
-    application.engine = briefed(application.engine)
 
     def as_a_browser(tc):
         """Send what a browser sends: an Origin, and the CSRF value it can read.

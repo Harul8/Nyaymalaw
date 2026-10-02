@@ -1247,17 +1247,20 @@ def in_my_work_straight_away(client, context):
 def board_left_chat_right(app_page, stylesheet):
     advise = pane_html(app_page, "advise")
     rail = advise.index('<aside class="rail" id="rail">')
-    board = advise.index('id="matter-board"')
+    board = advise.index('id="rail-body"')
     assert rail < board < advise.index("</aside>") < advise.index('<section class="conversation"')
+    assert 'id="matter-board"' not in advise
     assert "grid-template-columns: 19rem minmax(0, 1fr)" in declarations(stylesheet, "main")
 
 
 @then("the board is filled from My work's row for this matter, with the same fields as the "
       "list")
 def board_is_my_works_row(page_script):
-    board = _function(page_script, "renderMatterBoard")
-    assert "await api('/api/matters')" in board
-    assert "row.matter_id === matterId" in board and "matterFields(fields, m);" in board
+    board = _function(page_script, "showThreadBoard")
+    assert "await api(`/api/matters/${matterId}`)" in board
+    assert "renderMatterBoard" not in board
+    assert "await api('/api/matters')" not in board
+    assert "await api('/api/matters')" in _function(page_script, "showMatterList")
     assert "matterFields(dl, m);" in _function(page_script, "showMatterList")
     fields = _function(page_script, "matterFields")
     # `'posture'` WAS RENAMED `'position'` in 602e3f0's plain-language pass;
@@ -1269,30 +1272,31 @@ def board_is_my_works_row(page_script):
 
 @then("the board is read again after every message")
 def board_after_every_message(page_script):
-    assert "renderMatterBoard(matterId, generation);" in _function(page_script, "showThreadBoard")
+    assert "renderDisputeBoard(body, data.agenda, data.proposed_disputes);" in _function(
+        page_script, "showThreadBoard")
     assert "await showThreadBoard(state.matterId, {" in _function(page_script, "deliver")
 
 
 @then("a board that cannot be read says so rather than showing an empty one")
 def unreadable_board_says_so(page_script):
-    assert _function(page_script, "renderMatterBoard").count("stateBlock('unbuildable'") == 2
+    assert "showOpeningBoardFailure(matterId," in _function(page_script, "showThreadBoard")
+    assert _function(page_script, "renderDisputeBoard").count(
+        "stateBlock('unbuildable'") == 3
 
 
 @then("the issues recorded on the matter are listed on the board under its details")
 def issues_on_the_board(app_page, page_script):
     rail = app_page[app_page.index('<aside class="rail" id="rail">'):]
     rail = rail[:rail.index("</aside>")]
-    assert rail.index('id="matter-board"') < rail.index('id="rail-meta"') \
-        < rail.index('id="rail-body"')
+    assert 'id="matter-board"' not in rail
+    assert rail.index('id="rail-meta"') < rail.index('id="rail-body"')
     show = _function(page_script, "showThreadBoard")
     assert "$('rail-title').textContent = 'Matter board';" in show
-    # THE DISPUTE AGENDA, since 602e3f0: one row per dispute on the matter,
-    # read from the board's `agenda`, and an agenda that cannot be read says
-    # so rather than rendering an empty board.
-    assert "renderDisputeAgenda(body, data.agenda);" in show
-    agenda = _function(page_script, "renderDisputeAgenda")
-    assert "const rows = agenda.disputes;" in agenda
-    assert "if (!agenda || !Array.isArray(agenda.disputes))" in agenda
+    assert "renderDisputeBoard(body, data.agenda, data.proposed_disputes);" in show
+    board = _function(page_script, "renderDisputeBoard")
+    assert "Array.isArray(agenda?.disputes)" in board
+    assert "Array.isArray(projection?.rows)" in board
+    assert "No disputes identified yet." in board
 
 
 # ---------------------------------------------------------------- F-B-03 ---
@@ -1353,7 +1357,7 @@ def the_header_holds_only_the_file_icon(app_page, page_script):
     header = _matter_header(app_page)
     controls = re.findall(r"<(button|summary|details|nav|a)\b[^>]*>", header)
     assert controls == ["button"], f"the matter header holds {controls}, not one file icon"
-    assert 'id="files-toggle"' in header and 'aria-label="Files on this matter"' in header
+    assert 'id="files-toggle"' in header and 'aria-label="Files and matter details"' in header
     for gone in ("More", "Case file", "History", "Recorded file", "Recover a draft",
                  'id="save-status"', 'id="work-links"', 'id="workspace-more"'):
         assert gone not in header, f"{gone!r} is still in the matter header"

@@ -25,20 +25,19 @@ def test_one_board_and_reachable_account_without_a_ribbon_over_chat(
     _open_matter(page, journey, client=client, width=width, height=height)
     mid, _ = saved(page)
     _advise(page, BRIEF)
-    page.wait_for_selector('#rail-body .dispute-row', state='attached')
+    page.wait_for_selector('#rail-body .dispute-proposal-item', state='attached')
     data = page.request.get(f"{journey['base']}/api/matters/{mid}").json()
     assert len(data["threads"]) > 0, "removing issue cards must not remove saved issues"
-    assert page.locator('#rail-body .dispute-row').count() == len(data['agenda']['disputes'])
-    assert page.locator("#matter-board").count() == 1
+    assert page.locator('#rail-body .dispute-proposal-item').count() == (
+        len(data['agenda']['disputes']) + len(data['proposed_disputes']['rows']))
+    assert page.locator("#matter-board").count() == 0
     assert page.locator("#rail-body .row").count() == 0
     assert page.locator("#rail-meta").inner_text() == ""
     if width <= 820:
         page.click("#matters-toggle")
-    assert page.get_by_role('button', name='Whole matter', exact=True).count() == 1
-    assert page.locator('#rail-body .dispute-row').first.is_visible()
-    page.locator("#board-fields").filter(has_text=client).wait_for()
-    assert client in page.locator("#matter-board").inner_text()
-    assert "Kiran Steels" in page.locator("#matter-board").inner_text()
+    assert page.get_by_role('button', name='Whole matter', exact=True).count() == 0
+    assert page.locator('#rail-body .dispute-proposal-item').first.is_visible()
+    assert page.locator("#matter-heading").inner_text() == data['title']
     assert "our client" not in page.locator("#rail").inner_text().lower()
     if width <= 820:
         page.click("#matters-toggle")
@@ -84,7 +83,7 @@ def test_resizing_moves_one_board_and_keeps_it_reachable(page, journey):
         assert page.locator("#rail").count() == 1
         if width <= 820:
             page.click("#matters-toggle")
-            assert page.locator("#matter-board").is_visible()
+            assert page.locator("#rail").is_visible()
             page.click("#matters-toggle")
         assert page.locator("#composer").is_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -109,8 +108,8 @@ def test_navigation_is_one_compact_row_with_complete_labels(page, journey, width
         assert page.locator('#tabs').bounding_box()['height'] <= 42
         # Matter creation completes before its checked board read is painted.
         # Wait for the real board, not a fixed delay or an unrelated tab.
-        page.locator('#board-title').wait_for(state='visible')
-        assert page.locator('#board-title').is_visible()
+        page.locator('#matter-heading').wait_for(state='visible')
+        assert page.locator('#matter-heading').is_visible()
     for name, pane in [('Home', 'home'), ('Legal library', 'search'),
                        ('Preparation', 'prepare'), ('My work', 'advise')]:
         tab = page.get_by_role('button', name=name, exact=True)
