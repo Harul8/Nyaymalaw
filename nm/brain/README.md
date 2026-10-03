@@ -158,6 +158,26 @@ the meaning of all blocks, so relabelling a legal assertion cannot bypass
 grounding. Correction feedback names the failed block or subject and its
 allowed reference boundary. These distinctions add no routine model calls.
 
+Current legal uses require `research_support_v2`. The existing independent
+source check names who states the operative proposition and how the source
+treats it, each anchored to exact words in that same saved passage. A reported
+or rejected argument is not an adopted rule. Review also checks the whole
+finding's actor, remedy, predicates and claimed legal force; a correct source
+role does not excuse extending a passage beyond what it says.
+
+Known historical checks remain readable without fabricated upgrades. Corpus
+freshness and verification currency are separate: neither a matching corpus
+nor a source saved in the current turn upgrades an older check. Historical
+gathering items are marked as awaiting source review and excluded from current
+legal composition and cache reuse. Due research uses the ordinary pipeline;
+there is no separate migration or source-role model call.
+
+The interpreter defines authority needed for the user's immediate purpose.
+Automatic gathering on changed material has its own owner, so an attributed
+factual update is not enlarged into a new requested merits enquiry. When the
+current legal catalogue is empty, the writer schema excludes assessment blocks;
+every assessment also requires actual legal passage uses at validation.
+
 Failures are isolated at the smallest independent unit. Valid research and
 response units survive rejected peers, with explicit missing coverage. A failed
 core read cannot be replaced with an empty result and presented as complete.

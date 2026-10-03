@@ -5,7 +5,12 @@ import hashlib
 import json
 from copy import deepcopy
 
-from nm.brain.legal_requirements import RESEARCH_KINDS, RESEARCH_VERIFICATION
+from nm.brain.legal_requirements import (
+    HISTORICAL_RESEARCH_VERIFICATIONS,
+    RESEARCH_KINDS,
+    RESEARCH_VERIFICATION,
+    source_verification_valid,
+)
 from nm.work_the_file.matter_contracts import Matter
 
 _SCOPES = ("current", "proposed", "none", "other", "uncertain")
@@ -87,7 +92,7 @@ def research_fingerprint(subject: dict, material: list[dict], corpus_revision: s
         "corpus_revision": corpus_revision, "verification": verification})
 
 
-def _valid_row(row: object, material_ids: set[str]) -> bool:
+def _valid_row(row: object, material_ids: set[str], verification_contract: str) -> bool:
     if not isinstance(row, dict):
         return False
     if any(not isinstance(row.get(key), str) or not row[key].strip()
@@ -116,22 +121,7 @@ def _valid_row(row: object, material_ids: set[str]) -> bool:
                        or not source[key].strip()
                        for key in ("title", "locator", "text"))):
             return False
-        verification = source.get("verification")
-        if not isinstance(verification, dict):
-            return False
-        support = verification.get("support_excerpt")
-        scope = verification.get("scope_excerpt")
-        scope_status = verification.get("scope_status")
-        reason = verification.get("reason")
-        if (not isinstance(support, str) or not support.strip()
-                or len(support) > 800 or support not in source["text"]
-                or not isinstance(scope, str) or len(scope) > 800
-                or (scope and (not scope.strip() or scope not in source["text"]))
-                or scope_status not in (
-                    "established", "asked_to_establish", "no_special_condition", "conditional")
-                or (scope_status == "no_special_condition") != (not scope)
-                or not isinstance(reason, str) or not reason.strip()
-                or len(reason) > 500):
+        if not source_verification_valid(source, contract=verification_contract):
             return False
     return True
 
@@ -139,6 +129,8 @@ def _valid_row(row: object, material_ids: set[str]) -> bool:
 def _legacy_read(read: object, subjects: dict, contexts: dict) -> dict | None:
     if not isinstance(read, dict):
         raise ValueError("a saved legal read is invalid")
+    if read.get("verification") not in (None, "source_support_v4"):
+        raise ValueError("a saved legacy legal read advertises an unknown verification contract")
     identity = read.get("dispute_id")
     subject = subjects.get(identity)
     if not subject or subject["kind"] != "dispute" or subject["purpose"] != "gathering":
@@ -159,11 +151,15 @@ def _legacy_read(read: object, subjects: dict, contexts: dict) -> dict | None:
     return result
 
 
-def _read_valid(read: dict, *, legacy: bool, owner: str, verification: str) -> bool:
+def _read_valid(read: dict, *, legacy: bool, owner: str) -> bool:
     subject = read.get("subject")
     rows, status = read.get("rows"), read.get("state")
     revision = read.get("corpus_revision")
     coverage = read.get("coverage")
+    contract = read.get("verification")
+    known_contracts = ((None, "source_support_v4") if legacy else
+                       (RESEARCH_VERIFICATION, *HISTORICAL_RESEARCH_VERIFICATIONS))
+    row_contract = "source_support_v4" if legacy and contract is None else contract
     if (not _subject_valid(subject, owner)
             or not isinstance(read.get("fingerprint"), str)
             or len(read["fingerprint"]) != 64
@@ -175,7 +171,8 @@ def _read_valid(read: dict, *, legacy: bool, owner: str, verification: str) -> b
             or not isinstance(read.get("diagnostics", []), list)
             or any(not isinstance(problem, str) for problem in read.get("diagnostics", []))
             or (revision is not None and (not isinstance(revision, str) or not revision.strip()))
-            or any(not _valid_row(row, set(subject["record_ids"])) for row in rows)):
+            or contract not in known_contracts
+            or any(not _valid_row(row, set(subject["record_ids"]), row_contract) for row in rows)):
         return False
     if not legacy and (
             not isinstance(coverage, dict) or coverage.get("state") not in (
@@ -186,8 +183,7 @@ def _read_valid(read: dict, *, legacy: bool, owner: str, verification: str) -> b
         return False
     if len({(row["kind"], row["label"].casefold()) for row in rows}) != len(rows):
         return False
-    return not rows or read.get("verification") in (
-        ("source_support_v4",) if legacy else (RESEARCH_VERIFICATION, verification))
+    return True
 
 
 def research_record(matter: Matter, *, subjects: tuple[dict, ...],
@@ -214,7 +210,8 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
             output["status_by_subject"][identity] = "unassessed"
             output["diagnostics_by_subject"][identity] = []
             output["coverage_by_subject"][identity] = {"state": "unassessed", "purpose":
-                subject["purpose"], "source_freshness": "unknown", "reuse_allowed": False}
+                subject["purpose"], "source_freshness": "unknown", "reuse_allowed": False,
+                "verification_contract": None, "verification_current": False}
             output["reuse_allowed"][identity] = False
     except (ValueError, TypeError, AttributeError) as exc:
         output["state"] = "incomplete"
@@ -230,7 +227,8 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
             output["diagnostics_by_subject"][identity] = [problem]
             output["reuse_allowed"][identity] = False
             output["coverage_by_subject"][identity] = {"state": "unavailable", "purpose":
-                active[identity]["purpose"], "source_freshness": "unknown", "reuse_allowed": False}
+                active[identity]["purpose"], "source_freshness": "unknown", "reuse_allowed": False,
+                "verification_contract": None, "verification_current": False}
             output["read_subject_id_by_subject"].pop(identity, None)
             output["source_turn_id_by_subject"].pop(identity, None)
 
@@ -293,28 +291,37 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                     reject("a saved research dependency is unreadable", matches)
                     continue
             if identity in seen or not _read_valid(
-                    read, legacy=legacy, owner=owner, verification=verification):
-                if legacy and read.get("rows") and read.get("verification") != "source_support_v4":
-                    output["diagnostics"].append(
-                        "saved legal items predate independent source verification")
-                    for key in matches:
-                        output["by_subject"][key] = []
-                        output["status_by_subject"][key] = "unavailable"
-                        output["reuse_allowed"][key] = False
-                else:
-                    reject("a saved legal read lacks valid attributed sources", matches)
+                    read, legacy=legacy, owner=owner):
+                reject("a saved legal read lacks valid attributed sources", matches)
                 continue
             seen.add(identity)
+            if legacy and read.get("rows") and read.get("verification") is None:
+                problem = "saved legal items predate independent source verification"
+                output["diagnostics"].append(problem)
+                for key in matches:
+                    output["by_subject"][key] = []
+                    output["status_by_subject"][key] = "unavailable"
+                    output["diagnostics_by_subject"][key] = [problem]
+                    output["reuse_allowed"][key] = False
+                    output["coverage_by_subject"][key] = dict(
+                        state="unavailable", purpose=subject["purpose"],
+                        source_freshness="unknown", reuse_allowed=False, legacy=True,
+                        verification_contract=None, verification_current=False)
+                continue
             for key in matches:
                 current = (corpus_revision is not None
                            and read.get("corpus_revision") == corpus_revision)
+                verification_current = (not legacy and read.get("verification") == verification
+                                        and verification == RESEARCH_VERIFICATION)
                 reusable = (not legacy and current and read["state"] == "ok"
-                            and read.get("verification") == verification)
+                            and verification_current)
                 freshness = "current" if current else (
                     "unknown" if legacy or corpus_revision is None else "stale")
                 coverage = deepcopy(read.get("coverage") or {})
                 coverage.update(state=read["state"], purpose=subject["purpose"],
-                                source_freshness=freshness, reuse_allowed=reusable, legacy=legacy)
+                                source_freshness=freshness, reuse_allowed=reusable, legacy=legacy,
+                                verification_contract=read["verification"],
+                                verification_current=verification_current)
                 output["by_subject"][key] = deepcopy(read["rows"])
                 output["status_by_subject"][key] = read["state"]
                 output["diagnostics_by_subject"][key] = deepcopy(read.get("diagnostics", []))

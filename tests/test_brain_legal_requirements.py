@@ -5,6 +5,7 @@ import pytest
 
 from nm.brain.conversation import Message
 from nm.brain.legal_requirements import (
+    RESEARCH_VERIFICATION,
     decompose,
     decompose_subjects,
     read_findings,
@@ -68,12 +69,31 @@ class Model:
                     "reason": "The reported material concerns this need.",
                 } for material_id in candidates.get(
                     decision.get("candidate_id"), {}).get("material_ids", [])]),
+                "source_checks": [self._source_check(check, candidates.get(
+                    decision.get("candidate_id"), {}))
+                    for check in decision.get("source_checks", [])],
             } for decision in value.get("decisions", [])]}
         return ModelResult(
             text=None, data=value, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
             completion=Completion.COMPLETE,
         )
+
+    @staticmethod
+    def _source_check(check, candidate):
+        sources = {source["id"]: source for source in candidate.get("sources", [])}
+        source = sources.get(check.get("source_id"), {})
+        supported = check.get("verdict") == "supported"
+        fragment = check.get("support_fragment_id", "") if supported else ""
+        return {
+            "assertion_owner": ("legislative_text" if source.get("kind") == "provision"
+                                else "deciding_court"),
+            "owner_label": "The issuing source",
+            "owner_fragment_id": fragment,
+            "source_treatment": "adopted" if supported else "unclear",
+            "treatment_fragment_id": fragment,
+            **check,
+        }
 
 
 DISPUTES = (
@@ -349,6 +369,12 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
     assert checked.rows["d1"][0]["sources"] == [{
         **hits()["d1"]["candidates"][0],
         "verification": {
+            "contract": RESEARCH_VERIFICATION,
+            "assertion_owner": "legislative_text",
+            "owner_label": "The issuing source",
+            "owner_excerpt": "A person must give written notice.",
+            "source_treatment": "adopted",
+            "treatment_excerpt": "A person must give written notice.",
             "support_excerpt": "A person must give written notice.",
             "scope_excerpt": "",
             "scope_status": "no_special_condition",
@@ -559,6 +585,12 @@ def test_verifier_reconstructs_exact_overlapping_fragments_from_saved_passage():
     assert fragments[1]["id"] == "f2"
     assert fragments[1]["text"] in long_passage
     assert checked.rows["d1"][0]["sources"][0]["verification"] == {
+        "contract": RESEARCH_VERIFICATION,
+        "assertion_owner": "legislative_text",
+        "owner_label": "The issuing source",
+        "owner_excerpt": fragments[1]["text"],
+        "source_treatment": "adopted",
+        "treatment_excerpt": fragments[1]["text"],
         "support_excerpt": fragments[1]["text"],
         "scope_excerpt": fragments[1]["text"],
         "scope_status": "asked_to_establish",
@@ -1063,3 +1095,118 @@ def test_provider_schema_rejection_gets_one_same_contract_correction():
     repair = json.loads(model.calls[1][0].user)
     assert repair["validation_issues"] == {"q1": "queries require text"}
     assert repair["conversation"] == json.loads(model.calls[0][0].user)["conversation"]
+
+
+@pytest.mark.parametrize("treatment", ["reported", "rejected", "unclear"])
+def test_nonadopted_position_cannot_be_checked_law_and_only_its_unit_is_corrected(treatment):
+    source = {"id": "argument", "kind": "judgment", "title": "Supplied judgment",
+              "locator": "paragraph 3", "text": (
+                  "The applicant contends prior consent is always necessary. "
+                  "We reject that contention; the stated exception permits later consent.")}
+    proposed = {"q1": [
+        {**finding(source_ids=["argument"], label="Prior consent is necessary",
+                   need="Prior consent must always precede the act.",
+                   why="The proposed rule treats prior consent as mandatory."),
+         "sources": [source]},
+        {**finding(label="Notice when required by agreement"),
+         "sources": request_hits()["q1"]["candidates"]},
+    ]}
+    wrong = supported_verdict("r1", "argument")
+    wrong["source_checks"][0].update(
+        assertion_owner="party", owner_label="Applicant", owner_fragment_id="f1",
+        source_treatment=treatment, treatment_fragment_id="f1")
+    withheld = {"candidate_id": "r1", "verdict": "unsupported",
+                "label_verdict": "unsupported", "label_reason": "The court rejects the position.",
+                "material_checks": [], "source_checks": [],
+                "reason": "The proposed rule is the rejected contention, not the court's rule."}
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "s1")]},
+                   {"decisions": [withheld]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert [row["source_ids"] for row in checked.rows["q1"]] == [["s1"]]
+    assert checked.coverage["q1"]["checked_items"] == 2
+    assert checked.coverage["q1"]["withheld_items"] == 1
+    assert checked.coverage["q1"]["unread_items"] == 0
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
+    assert "adopted-treatment" in repair["validation_issues"]["r1"]
+    assert source["text"] == _candidate_rows(repair)[0]["sources"][0]["fragments"][0]["text"]
+
+
+@pytest.mark.parametrize("owner,kind", [("party", "principle"),
+                                         ("quoted_authority", "support"),
+                                         ("deciding_court", "adverse")])
+def test_actual_source_adoption_can_support_quoted_or_adverse_reasoning_without_extra_call(
+        owner, kind):
+    passage = ("The earlier position is that consent must precede the act. "
+               "We reject it and adopt the respondent's submission that later consent suffices.")
+    source = {"id": "reasoning", "kind": "judgment", "title": "Supplied judgment",
+              "locator": "paragraph 4", "text": passage}
+    item = {**finding(kind, source_ids=[source["id"]],
+                     label="Later consent may suffice", need="The court permits later consent.",
+                     why="The court rejects mandatory prior consent and adopts the contrary rule."),
+            "sources": [source]}
+    decision = supported_verdict("r1", source["id"])
+    decision["source_checks"][0].update(
+        assertion_owner=owner, owner_label="The identified proposition owner",
+        owner_fragment_id="f1", source_treatment="adopted", treatment_fragment_id="f1")
+    model = Model([{"decisions": [decision]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed={"q1": [item]},
+                              conversation=CONVERSATION)
+
+    verification = checked.rows["q1"][0]["sources"][0]["verification"]
+    assert verification["contract"] == RESEARCH_VERIFICATION
+    assert verification["assertion_owner"] == owner
+    assert verification["owner_excerpt"] == verification["treatment_excerpt"] == passage
+    assert "verification" not in source
+    assert len(model.calls) == 1 and model.calls[0][2] is Tier.JUDGE
+
+
+def test_adopted_role_does_not_override_independent_full_finding_rejection():
+    reading = request_read(Model([{"readings": [{"subject_id": "q1",
+        "findings": [finding(label="Recipient must compensate the sender",
+                             need="The recipient must always compensate the sender.",
+                             why="The proposed remedy is said to follow from notice law.")]}]}]))
+    decision = supported_verdict("r1", "s1")
+    decision.update(verdict="unsupported", reason=(
+        "The source does not support the proposed actor, remedy or full limiting predicate."))
+    model = Model([{"decisions": [decision]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=reading.rows,
+                              conversation=CONVERSATION)
+
+    assert checked.rows["q1"] == []
+    assert checked.coverage["q1"]["withheld_items"] == 1
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("field", ["owner_fragment_id", "treatment_fragment_id"])
+def test_role_and_treatment_fragment_ids_cannot_resolve_against_a_peer_source(field):
+    source = request_hits()["q1"]["candidates"][0]
+    peer = {"id": "peer", "kind": "judgment", "title": "Supplied judgment",
+            "locator": "paragraph 2", "text": source["text"] * 20}
+    proposed = {"q1": [
+        {**finding(), "sources": [source]},
+        {**finding("support", label="Judgment confirms the conditional notice rule",
+                   source_ids=["peer"]), "sources": [peer]},
+    ]}
+    wrong = supported_verdict("r1", "s1")
+    wrong["source_checks"][0][field] = "f2"
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "peer")]},
+                   {"decisions": [supported_verdict("r1", "s1")]}])
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+    assert len(checked.rows["q1"]) == 2
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
+    assert field in repair["validation_issues"]["r1"]
+    assert "f2" in repair["validation_issues"]["r1"]

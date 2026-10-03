@@ -6,6 +6,7 @@ from copy import deepcopy
 
 import pytest
 
+from nm.brain.legal_requirements import RESEARCH_VERIFICATION
 from nm.brain.turn import chat_matter_id
 from nm.shared.model_port import SchemaViolation, Tier
 from tests.brain_research_fixture import (
@@ -81,6 +82,10 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
         "verify_legal_requirements", "continue_conversation", "verify_continuation"]
     assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE,
                            Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
+    writer_schema = next(schema for operation, schema in model.schemas
+                         if operation == "continue_conversation")
+    assert "assessment" in writer_schema["properties"]["units"]["items"][
+        "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
     assert answer["matter_id"] is None
     assert answer["material"] == []
     assert len(corpus.calls) == 1
@@ -98,9 +103,16 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
     assert finding["sources"][0]["text"] == PROVISION
     assert finding["sources"][0]["verification"]["scope_status"] == "conditional"
     assert finding["sources"][0]["verification"]["scope_excerpt"] in PROVISION
+    checked_use = finding["sources"][0]["verification"]
+    assert checked_use["contract"] == RESEARCH_VERIFICATION
+    assert checked_use["assertion_owner"] == "legislative_text"
+    assert checked_use["source_treatment"] == "adopted"
+    assert checked_use["owner_excerpt"] in PROVISION
+    assert checked_use["treatment_excerpt"] in PROVISION
     reference = answer["continuation"]["units"][0]["blocks"][0]["references"][0]
     assert reference["type"] == "legal"
     assert reference["text"] == PROVISION
+    assert reference["verification"] == checked_use
     assert [row["text"] for row in answer["elements"]] == [PROVISION]
     assert saved.brain_ready is False
     assert "research_reads" not in answer
@@ -299,6 +311,10 @@ def test_public_general_legal_question_preserves_unread_search_as_pending_withou
     response = send(client, QUESTION, "research-no-source")
 
     assert response["metrics"]["llm_calls"] == 4
+    writer_schema = next(schema for operation, schema in model.schemas
+                         if operation == "continue_conversation")
+    assert "assessment" not in writer_schema["properties"]["units"]["items"][
+        "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
     assert response["matter_id"] is None
     assert PROVISION not in json.dumps(response["elements"])
     assert "remains pending" in response["elements"][0]["text"]

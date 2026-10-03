@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from nm.brain.continuation_verification import verify_continuation
 from nm.brain.conversation import Conversation, IncompleteConversation, TurnPlan
+from nm.brain.legal_requirements import RESEARCH_VERIFICATION, source_verification_valid
 from nm.brain.material import addressed_sources
 from nm.brain.work_state import PROGRESS_KINDS, PROGRESS_STATUSES
 from nm.shared.model_port import (
@@ -79,7 +80,11 @@ not their reported case. Retrieved gathering requirements alone do not
 establish complete merits, strategy or remedy coverage.
 Checked research findings name their authorised scope, purpose and enquiry.
 Use each finding only for that enquiry, with its exact source-use verification
-and limits. General research supplies no facts about the current matter.
+and limits. Read who makes the assertion and how the issuing source treats it;
+a reported contention or quotation is not, by itself, the source's adopted
+legal position. Preserve the checked owner and treatment of the selected
+proposition without extending that adoption to other words in the passage.
+General research supplies no facts about the current matter.
 Conditional findings preserve their full limiting predicate in the reply;
 an exact passage is not proof of applicability, statutory currency or binding
 weight. Partial or stale coverage cannot become a completed legal assessment.
@@ -381,6 +386,8 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
     unit["properties"]["work"]["properties"]["existing_id"]["enum"] = ["", *task_ids]
     unit["properties"]["request_index"]["enum"] = list(indexes)
     block = unit["properties"]["blocks"]["items"]["properties"]
+    if not sources:
+        block["kind"]["enum"] = [kind for kind in _KINDS if kind != "assessment"]
     for field, catalogue in (("span_ids", spans), ("record_ids", records),
                              ("legal_source_ids", sources)):
         block[field] = _identifier_array(tuple(catalogue))
@@ -425,6 +432,15 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     words[(latest_turn_id, "advocate")] = latest
     records: dict[str, dict] = {}
     sources: dict[str, dict] = {}
+
+    def current_use(coverage: dict, source_turn: str | None) -> bool:
+        if not isinstance(coverage, dict):
+            raise IncompleteConversation("Legal source coverage is unreadable")
+        return (coverage.get("verification_current") is True
+                and (coverage.get("source_freshness") == "current" or (
+                    coverage.get("source_freshness") == "unknown" and
+                    source_turn == latest_turn_id)))
+
     material_coverage = deepcopy((material or {}).get("coverage", {
         "state": "ok", "ambiguous_scope_items": 0,
         "legacy_unverified_items": 0, "diagnostics": []}))
@@ -449,12 +465,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
         records[identifier] = value
 
     def source(row: dict, subject: str, use_id: str) -> str:
-        if (not isinstance(row, dict)
-                or row.get("kind") not in ("provision", "judgment")
-                or any(not isinstance(row.get(key), str) or not row[key].strip()
-                       for key in ("id", "title", "locator", "text"))
-                or not isinstance(row.get("verification"), dict)):
-            raise IncompleteConversation("A checked legal source cannot be attributed")
+        if not source_verification_valid(row):
+            raise IncompleteConversation("A current legal source has no valid checked use")
         identity = {key: row[key] for key in ("kind", "title", "locator", "text")}
         digest = hashlib.sha256(json.dumps(
             identity, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
@@ -488,9 +500,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
             if not isinstance(rows, list) or subject not in records:
                 raise IncompleteConversation("Legal requirements have no source owner")
             freshness = requirements.get("coverage_by_dispute", {}).get(subject, {})
-            if (freshness and freshness.get("source_freshness") != "current"
-                    and requirements.get("source_turn_id_by_dispute", {}).get(subject)
-                    != latest_turn_id):
+            if not current_use(freshness, requirements.get(
+                    "source_turn_id_by_dispute", {}).get(subject)):
                 continue
             for index, row in enumerate(rows, start=1):
                 if not isinstance(row, dict) or not isinstance(row.get("sources"), list):
@@ -502,6 +513,13 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                 value.update(source_ids=legal_ids, dispute_id=subject)
                 record(value, "requirement", use_id)
     for index, row in enumerate(checked_sources, start=1):
+        if not isinstance(row, dict):
+            raise IncompleteConversation("A checked legal source cannot be attributed")
+        verification = row.get("verification")
+        if not isinstance(verification, dict):
+            raise IncompleteConversation("A checked legal source has unreadable verification")
+        if verification.get("contract") != RESEARCH_VERIFICATION:
+            continue
         source(row, str(row.get("subject_id") or "requested_work"),
                str(row.get("source_use_id") or f"checked:{index}"))
     research_coverage = {}
@@ -520,9 +538,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
             research_coverage[identity] = {
                 "subject": deepcopy(subject),
                 "coverage": deepcopy(research["coverage_by_subject"][identity])}
-            fresh = research["coverage_by_subject"][identity].get("source_freshness")
-            if (fresh != "current" and
-                    research["source_turn_id_by_subject"].get(identity) != latest_turn_id):
+            status = research["coverage_by_subject"][identity]
+            if not current_use(status, research["source_turn_id_by_subject"].get(identity)):
                 continue
             for index, row in enumerate(research["by_subject"][identity], start=1):
                 use_id = f"research:{identity}:{index}"
@@ -625,8 +642,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                     raise IncompleteConversation("A checked finding lost its passage owner")
                 if source_id not in block["legal_source_ids"]:
                     block["legal_source_ids"].append(source_id)
-        if (needs_authority and block["kind"] == "assessment"
-                and not block["legal_source_ids"]):
+        if block["kind"] == "assessment" and not block["legal_source_ids"]:
             raise SchemaViolation(
                 f"{block_path}.legal_source_ids: an assessment needs its actual "
                 "supporting checked passage. Select the exact legal_sources ID or "

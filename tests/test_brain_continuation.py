@@ -14,6 +14,7 @@ from nm.brain.conversation import (
     WorkItem,
 )
 from nm.brain.history import IncompleteConversation
+from nm.brain.legal_requirements import RESEARCH_VERIFICATION
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ModelResult,
@@ -32,6 +33,7 @@ class ContinuationModel:
     def __init__(self, replies):
         self.replies = iter(replies)
         self.calls = []
+        self.schemas = []
         self.tiers = []
         self.output_limits = []
 
@@ -44,6 +46,7 @@ class ContinuationModel:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
         self.calls.append((prompt, payload))
+        self.schemas.append(deepcopy(schema))
         self.tiers.append(tier)
         self.output_limits.append(max_tokens)
         reply = next(self.replies)
@@ -95,6 +98,19 @@ def verdict(*indexes, accept=True, reason="The complete unit preserves its suppo
     return {"verdicts": [{"request_index": index,
                           "verdict": "accept" if accept else "reject",
                           "reason": reason} for index in indexes]}
+
+
+def checked_law(source, *, reason="The exact synthetic passage supports this use.", scope=""):
+    """Explicit current-use fixture; historical-source tests construct their own attestations."""
+    return {**source, "verification": {
+        "contract": RESEARCH_VERIFICATION, "reason": reason,
+        "support_excerpt": source["text"], "scope_excerpt": scope,
+        "scope_status": "conditional" if scope else "no_special_condition",
+        "assertion_owner": "legislative_text" if source["kind"] == "provision"
+        else "deciding_court", "owner_label": source["title"],
+        "owner_excerpt": source["text"], "source_treatment": "adopted",
+        "treatment_excerpt": source["text"],
+    }}
 
 
 def mixed_purpose_unit():
@@ -237,11 +253,10 @@ def test_mixed_purpose_block_links_semantic_work_and_requires_independent_review
 
 
 def test_local_legal_source_ids_cannot_alias_another_research_passage():
-    sources = tuple({
+    sources = tuple(checked_law({
         "id": "A1", "subject_id": subject, "kind": "provision",
         "title": "Synthetic Act", "locator": "section 3", "text": passage,
-        "verification": {"reason": "The synthetic passage was checked."},
-    } for subject, passage in (
+    }) for subject, passage in (
         ("request-alpha", "The relevant obligation depends on the applicable instrument."),
         ("request-beta", "The disputed event must be identified from the record."),
     ))
@@ -276,14 +291,15 @@ def test_local_legal_source_ids_cannot_alias_another_research_passage():
 def test_one_passage_preserves_the_distinct_checked_uses_of_two_requirements():
     shared = {"id": "A1", "kind": "provision", "title": "Synthetic Act",
               "locator": "section 3", "text": "The applicable instrument defines the obligation."}
-    rows = [{"label": label, "sources": [{
-        **shared, "verification": {"reason": reason},
-    }]} for label, reason in (
+    rows = [{"label": label, "sources": [checked_law(shared, reason=reason)]}
+            for label, reason in (
         ("Identify the instrument", "It identifies the applicable instrument."),
         ("Identify the obligation", "It identifies the obligation's source."),
     )]
     requirements = {"state": "ok", "by_dispute": {"D1": rows},
-                    "status_by_dispute": {"D1": "ok"}}
+                    "status_by_dispute": {"D1": "ok"}, "coverage_by_dispute": {
+                        "D1": {"source_freshness": "current", "verification_current": True,
+                               "verification_contract": RESEARCH_VERIFICATION}}}
     disputes = {"state": "ok", "rows": [{"id": "D1", "label": "Contested obligation"}]}
     model = ContinuationModel([{"units": [unit()]}, verdict(0)])
 
@@ -299,22 +315,26 @@ def test_one_passage_preserves_the_distinct_checked_uses_of_two_requirements():
         "current-turn-identity")
 
 
-@pytest.mark.parametrize(("freshness", "source_turn", "available"), [
-    ("stale", "older-turn", False), ("unknown", "older-turn", False),
-    ("current", "older-turn", True), ("unknown", "current-turn", True),
+@pytest.mark.parametrize(("freshness", "source_turn", "verification_current", "available"), [
+    ("stale", "older-turn", True, False), ("unknown", "older-turn", True, False),
+    ("stale", "current-turn", True, False),
+    ("current", "older-turn", True, True), ("unknown", "current-turn", True, True),
+    ("current", "older-turn", False, False), ("unknown", "current-turn", False, False),
 ])
 def test_gathering_source_freshness_is_preserved_and_gates_old_passage_uses(
-        freshness, source_turn, available):
+        freshness, source_turn, verification_current, available):
     coverage = {"D1": {"state": "ok", "source_freshness": freshness,
-                       "reuse_allowed": freshness == "current"}}
+                       "reuse_allowed": freshness == "current",
+                       "verification_current": verification_current,
+                       "verification_contract": RESEARCH_VERIFICATION}}
     requirements = {
         "state": "ok", "status_by_dispute": {"D1": "ok"},
         "coverage_by_dispute": coverage, "source_turn_id_by_dispute": {"D1": source_turn},
-        "by_dispute": {"D1": [{"label": "Identify the applicable instrument", "sources": [{
+        "by_dispute": {"D1": [{"label": "Identify the applicable instrument", "sources": [
+            checked_law({
             "id": "A1", "kind": "provision", "title": "Supplied Act", "locator": "section 1",
             "text": "The instrument defines the obligation.",
-            "verification": {"reason": "The selected passage concerns the instrument."},
-        }]}]},
+        })]}]},
     }
     disputes = {"state": "ok", "rows": [{"id": "D1", "label": "Contested obligation"}]}
     model = ContinuationModel([{"units": [unit()]}, verdict(0)])
@@ -334,10 +354,82 @@ def authority_plan():
 
 
 def supplied_law():
-    return ({"id": "A1", "subject_id": "law-question", "kind": "provision",
+    passage = "If the agreement requires notice, give written notice."
+    return (checked_law({"id": "A1", "subject_id": "law-question", "kind": "provision",
              "title": "Supplied Act", "locator": "section 1",
-             "text": "If the agreement requires notice, give written notice.",
-             "verification": {"reason": "This passage identifies a conditional notice duty."}},)
+             "text": passage}, scope=passage),)
+
+
+@pytest.mark.parametrize("contract", [None, "research_support_v1"])
+def test_historical_direct_source_is_not_upgraded_or_used_for_current_law(contract):
+    source = supplied_law()[0]
+    for key in ("assertion_owner", "owner_label", "owner_excerpt", "source_treatment",
+                "treatment_excerpt"):
+        source["verification"].pop(key)
+    if contract is None:
+        source["verification"].pop("contract")
+    else:
+        source["verification"]["contract"] = contract
+    original = deepcopy(source)
+    model = ContinuationModel([{"units": [unit()]}, verdict(0)])
+
+    result = _continue(model, checked_sources=(source,))
+
+    assert model.calls[0][1]["legal_sources"] == {}
+    assert "assessment" not in model.schemas[0]["properties"]["units"]["items"][
+        "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
+    assert source == original
+    assert result.coverage[0]["state"] == "ok"
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("owner_excerpt", "Words absent from the supplied passage"),
+    ("treatment_excerpt", "Words absent from the supplied passage"),
+    ("assertion_owner", "party"), ("source_treatment", "reported"),
+])
+def test_invalid_advertised_current_source_refuses_before_generation(field, value):
+    source = supplied_law()[0]
+    source["verification"][field] = value
+    original = deepcopy(source)
+    model = ContinuationModel([])
+    with pytest.raises(IncompleteConversation, match="current legal source"):
+        _continue(model, checked_sources=(source,))
+    assert model.calls == []
+    assert source == original
+
+
+@pytest.mark.parametrize(("verification_current", "freshness", "source_turn", "available"), [
+    (True, "current", "older-turn", True), (True, "unknown", "current-turn", True),
+    (True, "stale", "current-turn", False), (False, "current", "current-turn", False),
+])
+def test_requested_research_has_the_same_current_use_gate_as_gathering(
+        verification_current, freshness, source_turn, available):
+    subject = {"id": "request-law", "kind": "request", "scope": "none",
+               "owner_id": "synthetic-owner", "purpose": "requested_work",
+               "question": "Explain the relevant legal condition", "record_ids": []}
+    coverage = {"state": "ok", "source_freshness": freshness,
+                "verification_current": verification_current,
+                "verification_contract": RESEARCH_VERIFICATION}
+    research = {"state": "ok", "subjects": {subject["id"]: subject},
+                "by_subject": {subject["id"]: [{"label": "Cited condition",
+                                                "sources": list(supplied_law())}]},
+                "coverage_by_subject": {subject["id"]: coverage},
+                "source_turn_id_by_subject": {subject["id"]: source_turn}}
+    original = deepcopy(research)
+    model = ContinuationModel([{"units": [unit()]}, verdict(0)])
+
+    result = _continue(model, plan=authority_plan(), research=research,
+                       latest_turn_id="current-turn")
+
+    payload = model.calls[0][1]
+    assert bool(payload["legal_sources"]) is available
+    assert payload["research_coverage"][subject["id"]]["coverage"] == coverage
+    assert any(row["type"] == "research"
+               for row in payload["record_catalogue"].values()) is available
+    assert research == original
+    assert result.coverage[0]["state"] == "ok"
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
 
 
 @pytest.mark.parametrize("complete", [False, True])
@@ -373,6 +465,30 @@ def test_authority_needed_question_can_release_attributed_limits_without_asserti
     assert result.coverage[0]["state"] == "ok" and len(result.units) == 1
     assert result.units[0]["sufficiency"]["status"] == "needs_input"
     assert not any(block["legal_source_ids"] for block in result.units[0]["blocks"])
+
+
+@pytest.mark.parametrize("has_passage", [False, True])
+def test_assessment_schema_requires_available_checked_passages_without_extra_calls(has_passage):
+    model = ContinuationModel([{"units": [unit()]}, verdict(0)])
+    result = _continue(model, checked_sources=supplied_law() if has_passage else ())
+    kinds = model.schemas[0]["properties"]["units"]["items"]["properties"][
+        "blocks"]["items"]["properties"]["kind"]["enum"]
+    assert ("assessment" in kinds) is has_passage
+    assert {"account", "limitation", "question"} <= set(kinds)
+    assert result.coverage[0]["state"] == "ok"
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+
+
+def test_assessment_cannot_bypass_actual_passage_guard_with_blank_research_question():
+    proposed = unit()
+    proposed["blocks"][0].update(
+        kind="assessment", text="The legal rule requires a signed instrument.")
+    model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}])
+    result = _continue(model)
+    assert model.calls[0][1]["work_items"][0]["research_question"] == ""
+    assert _operation_names(model) == ["continue_conversation", "continue_conversation"]
+    assert result.units == () and result.coverage[0]["state"] == "unavailable"
+    assert "blocks[0] (id 'account-0').legal_source_ids" in result.coverage[0]["diagnostics"][0]
 
 
 def test_fact_only_assessment_gets_precise_kind_feedback_then_independent_review():
@@ -786,10 +902,9 @@ def test_composition_and_repair_preserve_raw_context_and_omit_accepted_drafts():
                  matter_scope="current", priority="ordinary", next_step="clarify",
                  clarification="CURRENT_ROUTER_QUESTION"),
     )
-    source = {"id": "A1", "subject_id": "current", "kind": "provision",
+    source = checked_law({"id": "A1", "subject_id": "current", "kind": "provision",
               "title": "Synthetic Act", "locator": "section 3",
-              "text": "Where applicable, the instrument defines the disputed obligation.",
-              "verification": {"reason": "The passage supports identifying the instrument."}}
+              "text": "Where applicable, the instrument defines the disputed obligation."})
     originals = {}
 
     def initial(payload):

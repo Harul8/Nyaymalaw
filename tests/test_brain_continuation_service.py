@@ -22,6 +22,7 @@ class PublicContinuationModel:
         self.continuations = iter(continuations)
         self.checks = iter(checks) if checks is not None else None
         self.calls = []
+        self.schemas = []
         self.tiers = []
 
     def context_budget(self, tier):
@@ -33,6 +34,7 @@ class PublicContinuationModel:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
         self.calls.append((prompt.operation, payload))
+        self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
         if prompt.operation == "interpret_conversation":
             planned = next(self.routes)
@@ -113,6 +115,94 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["elements"] == first["elements"]
     assert saved.brain_chat[0]["response"]["continuation"] == first["continuation"]
+
+
+def test_public_contributor_keeps_chronology_and_material_review_without_requested_law(
+        client, wired, monkeypatch):
+    from tests.brain_research_fixture import Corpus
+    from tests.test_brain_material import Model as MaterialModel
+    from tests.test_brain_material import material
+    from tests.test_brain_material import plan as material_plan
+
+    first_words = ("We act for Mira concerning use of her property. The use began in 2019. "
+                   "Please retain that reported account.")
+    latest = "A written permission was given in 2021. I do not know when it ended."
+    opening = material_plan(first_words, opening=True, candidates=[material(
+        "event", "The reported use began in 2019.", "The use began in 2019.",
+        placement="matter")])
+    opening["opening"] = {"ready": True, "party_name": "Mira",
+                          "subject": "Reported property use",
+                          "summary": ("The advocate acts for Mira and reports "
+                                      "use beginning in 2019.")}
+    contribution = material_plan(latest, candidates=[
+        material("event", "Written permission was given in 2021.",
+                 "A written permission was given in 2021.", scope="current", placement="matter"),
+        material("circumstance", "The advocate does not know when the permission ended.",
+                 "I do not know when it ended.", scope="current", placement="matter"),
+    ], items=[{"request": "Add the reported permission and its unknown duration to the account.",
+               "relation": "changes", "matter_scope": "current", "priority": "ordinary",
+               "next_step": "legal_work", "reply": "I will retain the attributed chronology.",
+               "clarification": "", "intent": "contribution", "research_question": ""}])
+    initial = unit(text="You report that the use began in 2019.", span_ids=("L2",))
+    initial["blocks"] = [initial["blocks"][0]]
+    initial.update(questions=[], sufficiency={"status": "complete", "block_id": "account-0"})
+    continued = unit(text=("You now report written permission in 2021, while the earlier account "
+                           "places the start of use in 2019. Its end remains unknown to you."),
+                     span_ids=("L1", "L2", "P1S2"))
+    continued["blocks"] = [continued["blocks"][0]]
+    continued.update(questions=[], work={"existing_id": "", "create": False},
+                     sufficiency={"status": "complete", "block_id": "account-0"})
+
+    class ContributorModel(MaterialModel):
+        def __init__(self):
+            super().__init__([opening, contribution])
+            self.replies = iter([initial, continued])
+            self.seen = []
+
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            self.seen.append((prompt, json.loads(prompt.user), deepcopy(schema)))
+            if prompt.operation != "continue_conversation":
+                return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            return ModelResult(text=None, data={"units": [next(self.replies)]}, tier=tier,
+                               provider="offline", model="offline", usage=Usage(0, 0, 0),
+                               latency_ms=0, completion=Completion.COMPLETE)
+
+    model, corpus = ContributorModel(), Corpus()
+    wired.legal_search = corpus
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    first = send(client, first_words, "contribution-start")
+    second = send(client, latest, "contribution-later", opened=first)
+    replay = send(client, latest, "contribution-later", opened=first)
+
+    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 6
+    assert replay["metrics"]["llm_calls"] == 0
+    assert corpus.calls == []
+    last_calls = model.seen[6:]
+    assert [prompt.operation for prompt, _, _ in last_calls] == [
+        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "verify_material_grounding", "continue_conversation", "verify_continuation"]
+    composition = next(payload for prompt, payload, _ in last_calls
+                       if prompt.operation == "continue_conversation")
+    assert composition["work_items"][0]["intent"] == "contribution"
+    assert composition["work_items"][0]["research_question"] == ""
+    assert ["".join(span["text"] for span in row["source_spans"])
+            for row in composition["earlier_conversation"]] == [
+                first_words, "\n".join(row["text"] for row in first["elements"])]
+    assert "".join(row["text"] for row in composition["latest_message_spans"]) == latest
+    for prompt, _, schema in model.seen:
+        if prompt.operation == "continue_conversation":
+            assert "assessment" not in schema["properties"]["units"]["items"][
+                "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
+    assert second["continuation"]["units"][0]["work"]["progress_id"] == ""
+    assert second["elements"][0]["text"] == continued["blocks"][0]["text"]
+    saved = wired.store.load(first["matter_id"])
+    assert len(saved.brain_chat) == 2
+    details = saved.brain_chat[-1]["response"]["material"]
+    assert len(details) == 2
+    assert {row["quoted"] for row in details} == {
+        "A written permission was given in 2021.", "I do not know when it ended."}
+    assert all(row["source_turn_id"] == "contribution-later" for row in details)
+    assert saved.brain_chat[-1]["response"]["research_reads"] == []
 
 
 def test_public_substantive_return_has_all_history_and_diversion_preserves_work(

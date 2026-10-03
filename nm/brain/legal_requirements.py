@@ -20,7 +20,54 @@ from nm.shared.model_port import (
 )
 
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
-RESEARCH_VERIFICATION = "research_support_v1"
+RESEARCH_VERIFICATION = "research_support_v2"
+HISTORICAL_RESEARCH_VERIFICATIONS = ("research_support_v1",)
+SOURCE_ASSERTION_OWNERS = (
+    "legislative_text", "deciding_court", "quoted_authority", "party", "other", "unclear"
+)
+SOURCE_TREATMENTS = ("adopted", "reported", "rejected", "unclear")
+
+
+def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
+    """Validate saved use attestations without upgrading historical source checks."""
+    if (not isinstance(source, dict)
+            or source.get("kind") not in ("provision", "judgment")
+            or any(not isinstance(source.get(key), str) or not source[key].strip()
+                   for key in ("id", "title", "locator", "text"))):
+        return False
+    verification = source.get("verification")
+    if not isinstance(verification, dict):
+        return False
+    support = verification.get("support_excerpt")
+    scope = verification.get("scope_excerpt")
+    scope_status = verification.get("scope_status")
+    reason = verification.get("reason")
+    if (not isinstance(support, str) or not support.strip()
+            or len(support) > 800 or support not in source["text"]
+            or not isinstance(scope, str) or len(scope) > 800
+            or (scope and (not scope.strip() or scope not in source["text"]))
+            or scope_status not in (
+                "established", "asked_to_establish", "no_special_condition", "conditional")
+            or (scope_status == "no_special_condition") != (not scope)
+            or not isinstance(reason, str) or not reason.strip() or len(reason) > 500):
+        return False
+    if contract in (*HISTORICAL_RESEARCH_VERIFICATIONS, "source_support_v4"):
+        return verification.get("contract") in (None, contract)
+    if contract != RESEARCH_VERIFICATION or verification.get("contract") != contract:
+        return False
+    return (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
+            and verification["assertion_owner"] != "unclear"
+            and (source["kind"] != "provision"
+                 or verification["assertion_owner"] == "legislative_text")
+            and isinstance(verification.get("owner_label"), str)
+            and bool(verification["owner_label"].strip())
+            and len(verification["owner_label"]) <= 160
+            and verification.get("source_treatment") == "adopted"
+            and all(isinstance(verification.get(key), str)
+                    and bool(verification[key].strip())
+                    and len(verification[key]) <= 800
+                    and verification[key] in source["text"]
+                    for key in ("owner_excerpt", "treatment_excerpt")))
 
 _DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation and research subjects with their owner, scope, purpose, question
@@ -94,6 +141,14 @@ merits beyond the passages or repair the proposed wording.
 Look for: Examine every cited source and its limiting predicates. Shared
 terminology is not support; another legal setting cannot be stretched to this
 subject. Distinguish actual judgment reasoning from argument or background.
+Identify whose operative proposition the finding relies on and how this
+source treats it. A source's report of an argument, another case's facts or a
+rejected contention is not an adopted legal rule. A judgment may expressly
+adopt a quoted authority or party's proposition; anchor that adoption in the
+court's actual treatment. A finding about rejection must rely on the court's
+rejecting reason, not present the rejected position as its rule. Direct
+provision text is legislative_text; its own words anchor the assertion and
+treatment. Do not infer adoption from a citation, shared terms or silence.
 Every retained proposition, inference and claimed mandatory step must follow
 from selected passages without filling gaps from legal memory or another
 subject. The label must faithfully express the supported need or proposition
@@ -115,6 +170,14 @@ and material checks. For a supported faithful finding check EVERY cited source
 and selected material exactly once. Select support_fragment_id only from that
 source's exact fragments when its words support the finding; rejected sources
 need an empty support ID. Select scope_fragment_id for a limiting predicate.
+For every source check state assertion_owner and a short owner_label, then
+select owner_fragment_id and treatment_fragment_id from this source only.
+source_treatment describes how the issuing source treats that proposition:
+adopted, reported, rejected or unclear. Supported legal sources require a
+known assertion owner and exact ownership and adopted-treatment fragments;
+the same fragment may serve several roles. Reported, rejected or unclear
+treatment cannot support the finding as law. If its full support, actor,
+remedy, predicate or mandatory force is uncertain, withhold the finding.
 Supported sources require established, asked_to_establish, conditional or
 no_special_condition scope. conditional needs an exact scope fragment and
 faithful preservation of its full predicate without asserting satisfaction.
@@ -613,6 +676,11 @@ def _verification_schema(
         "additionalProperties": False,
         "required": [
             "source_id",
+            "assertion_owner",
+            "owner_label",
+            "owner_fragment_id",
+            "source_treatment",
+            "treatment_fragment_id",
             "support_fragment_id",
             "scope_fragment_id",
             "scope_status",
@@ -621,6 +689,11 @@ def _verification_schema(
         ],
         "properties": {
             "source_id": {"type": "string", "enum": list(source_ids)},
+            "assertion_owner": {"type": "string", "enum": list(SOURCE_ASSERTION_OWNERS)},
+            "owner_label": {"type": "string", "maxLength": 160},
+            "owner_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
+            "source_treatment": {"type": "string", "enum": list(SOURCE_TREATMENTS)},
+            "treatment_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
             "support_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
             "scope_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
             "scope_status": {
@@ -748,17 +821,36 @@ def _finding_verdict(
         }
         support_id = check["support_fragment_id"]
         scope_id = check["scope_fragment_id"]
+        owner_id = check["owner_fragment_id"]
+        treatment_id = check["treatment_fragment_id"]
         if (
-            support_id
-            and support_id not in fragments_by_id
-            or scope_id
-            and scope_id not in fragments_by_id
+            any(identity and identity not in fragments_by_id
+                for identity in (support_id, scope_id, owner_id, treatment_id))
         ):
-            raise SchemaViolation("Choose support and scope fragment IDs from this source only")
+            raise SchemaViolation(
+                "Choose support, scope, ownership and treatment fragment IDs from this source only"
+            )
         support = fragments_by_id.get(support_id, "")
         scope = fragments_by_id.get(scope_id, "")
+        owner = fragments_by_id.get(owner_id, "")
+        treatment = fragments_by_id.get(treatment_id, "")
         scope_status = check["scope_status"]
         verdict = check["verdict"]
+        if verdict == "supported" and (
+            check["assertion_owner"] == "unclear"
+            or (sources[source_id]["kind"] == "provision"
+                and check["assertion_owner"] != "legislative_text")
+            or not check["owner_label"].strip()
+            or not owner.strip()
+            or check["source_treatment"] != "adopted"
+            or not treatment.strip()
+        ):
+            raise SchemaViolation(
+                "Supported law needs a known assertion owner (legislative_text for provisions) "
+                "and exact same-source ownership "
+                "and adopted-treatment fragments; reported, rejected or unclear propositions "
+                "are not adopted legal support"
+            )
         if (
             not check["reason"].strip()
             or len(check["reason"]) > 500
@@ -783,6 +875,12 @@ def _finding_verdict(
             )
         if verdict == "supported":
             selected[source_id] = {
+                "contract": RESEARCH_VERIFICATION,
+                "assertion_owner": check["assertion_owner"],
+                "owner_label": check["owner_label"],
+                "owner_excerpt": owner,
+                "source_treatment": check["source_treatment"],
+                "treatment_excerpt": treatment,
                 "support_excerpt": support,
                 "scope_excerpt": scope,
                 "scope_status": scope_status,
@@ -913,7 +1011,7 @@ def verify_findings(
             12288,
             max(
                 4096,
-                len(ids) * 256 + sum(len(candidate["sources"]) for candidate in candidates) * 384,
+                len(ids) * 256 + sum(len(candidate["sources"]) for candidate in candidates) * 640,
             ),
         )
         payload = _repair_payload(

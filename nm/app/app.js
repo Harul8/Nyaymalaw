@@ -1093,6 +1093,11 @@ function requirementStatusFor(record, row) {
   return record && record.state !== 'ok' ? 'unavailable' : 'unassessed';
 }
 
+function requirementReviewPending(record, row) {
+  return record?.coverage_by_dispute?.[row.id || row.thread_id]?.verification_current === false
+    && requirementsFor(record, row).length > 0;
+}
+
 function renderDisputeBoard(body, agenda, projection, materialRecord = null,
                             requirementsRecord = null) {
   body.replaceChildren();
@@ -1172,10 +1177,12 @@ function renderDisputeBoard(body, agenda, projection, materialRecord = null,
       }
       item.appendChild(requirements);
     }
-    if (requirementStatusFor(requirementsRecord, row) === 'partial') {
+    if (requirementReviewPending(requirementsRecord, row)
+        || requirementStatusFor(requirementsRecord, row) === 'partial') {
       const coverage = document.createElement('p');
       coverage.className = 'hint';
-      coverage.textContent = 'Legal research incomplete; see details.';
+      coverage.textContent = requirementReviewPending(requirementsRecord, row)
+        ? 'Source review pending; see details.' : 'Legal research incomplete; see details.';
       item.appendChild(coverage);
     }
     list.appendChild(item);
@@ -1396,6 +1403,14 @@ function renderLegalRequirements(host, row, record) {
   heading.textContent = 'Legal requirements';
   section.appendChild(heading);
   const status = requirementStatusFor(record, row);
+  const reviewPending = requirementReviewPending(record, row);
+  if (reviewPending) {
+    const review = document.createElement('p');
+    review.className = 'hint';
+    review.textContent = 'These saved items await the current source review. '
+      + 'They remain available as history and are not used as checked law for a new response.';
+    section.appendChild(review);
+  }
   if (status !== 'ok' && status !== 'partial') {
     const unavailable = document.createElement('p');
     unavailable.className = 'hint';
@@ -1411,7 +1426,8 @@ function renderLegalRequirements(host, row, record) {
   if (status === 'partial') {
     const coverage = document.createElement('p');
     coverage.className = 'hint';
-    coverage.textContent = 'Legal research is incomplete. Listed items use checked passages from the available corpus.';
+    coverage.textContent = reviewPending ? 'Legal research is incomplete.'
+      : 'Legal research is incomplete. Listed items use checked passages from the available corpus.';
     section.appendChild(coverage);
     const diagnostics = record?.diagnostics_by_dispute?.[row.id || row.thread_id];
     if (Array.isArray(diagnostics)) {
@@ -1443,7 +1459,8 @@ function renderLegalRequirements(host, row, record) {
     item.appendChild(label);
     for (const [title, value] of [
       ['What is needed', need.need], ['Why it matters', need.why],
-      ['Legal force', need.force === 'required' ? 'Required if cited law applies'
+      ['Legal force', reviewPending ? 'Saved interpretation; source review pending'
+        : need.force === 'required' ? 'Required if cited law applies'
         : need.force === 'strengthening' ? 'Strengthening' : 'Not assessed'],
       ['Conversation record', need.record_status === 'mentioned'
         ? 'Related material was mentioned; it has not been examined.'

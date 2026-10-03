@@ -45,6 +45,10 @@ window.NmBrainSources = (() => {
       ['Support check', source.verification?.reason],
       ['Supporting words', source.verification?.support_excerpt],
       ['Limiting condition', source.verification?.scope_excerpt],
+      ['Who states the proposition', source.verification?.owner_label],
+      ['Attribution words', source.verification?.owner_excerpt],
+      ['Treatment in the source', source.verification?.source_treatment],
+      ['Treatment words', source.verification?.treatment_excerpt],
     ]) {
       if (!text) continue;
       const detail = document.createElement('p');
@@ -212,6 +216,8 @@ window.NmBrainSources = (() => {
     begin(source.title, opener);
     populate({...source, qualification:
       "Saved with this dispute's legal requirements. Support was checked for that item; "
+      + (source.verification?.contract === 'research_support_v2' ? ''
+        : 'this historical check predates the current source review. ')
       + 'this does not establish applicability, binding force, or the complete source.'});
     return true;
   }

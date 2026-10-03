@@ -63,6 +63,12 @@ def supported(candidate, *, verdict="supported"):
                                  "reason": "The reported material concerns the selected point."}
                                 for identifier in candidate["material_ids"]],
             "source_checks": [{"source_id": source["id"], "verdict": "supported",
+                               "assertion_owner": "legislative_text"
+                               if source["kind"] == "provision" else "deciding_court",
+                               "owner_label": source["title"],
+                               "owner_fragment_id": source["fragments"][0]["id"],
+                               "source_treatment": "adopted",
+                               "treatment_fragment_id": source["fragments"][0]["id"],
                                "scope_status": "conditional",
                                "support_fragment_id": source["fragments"][0]["id"],
                                "scope_fragment_id": source["fragments"][0]["id"],

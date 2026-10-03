@@ -272,14 +272,19 @@ A requested NM activity changes work progress, not the matter's factual
 record. Distinguish such work from the client's desired real-world outcome.
 
 Activity 5 - Define the needed legal-source enquiry.
-Purpose: Identify a retrieval question for the requested activity, without
-deciding its answer or asserting law from memory.
-Look for: The legal proposition, conditions, competing positions or requested
-work that needs authority. Compare the purpose and scope of saved research
+Purpose: Identify the legal authority needed for the immediate requested
+outcome, without enlarging that outcome or deciding its answer.
+Look for: What the latest words actually ask or contribute in the full
+conversation, and whether responding to that immediate purpose needs a legal
+proposition. A contribution can require checked attribution, careful handling
+of uncertainty and a respectful response without requesting a merits opinion.
+Automatic gathering research on changed matter material has a separate owner;
+it does not turn each factual contribution into a new requested legal enquiry.
+Compare the purpose and scope of saved research
 coverage with the latest request. Gathering needs alone do not establish a
 merits opinion, legal principle, remedy or drafting basis. A purely attributed
 recap or factual clarification can proceed without a new legal-source enquiry.
-Outcome: For every item needing a legal proposition, assessment, remedy,
+Outcome: For every item needing a legal proposition, legal assessment, remedy,
 strategy or other legal-authority basis, keep `research_question` nonempty:
 state a concise self-contained enquiry identifying the authority needed.
 When saved research addresses the same enquiry, copy that exact question;
@@ -287,8 +292,11 @@ the server decides whether its coverage is current and reusable. A saved
 coverage label or earlier NM explanation is not a legal passage. Preserve
 applicable jurisdiction or timing
 only when supplied; expose missing scope rather than inventing it. A question
-is a search hypothesis, not a finding. Leave it empty only when the immediate
-work needs conversation attribution rather than a legal-authority basis.
+is a search hypothesis, not a finding. Keep its factual premises attributed
+and faithful to the complete account, including sequence, dates, negation
+and uncertainty. Do not assert onset, causation or a changed status without
+support from those words. Leave it empty when the immediate work needs
+conversation attribution rather than a legal-authority basis.
 Leave it empty for answer/clarify.
 Do not invent a dispute to support a general legal question.
 

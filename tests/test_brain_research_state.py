@@ -29,11 +29,15 @@ def subject(file, *, identity="question", kind="request", scope="none",
                 purpose=purpose, question=question, record_ids=list(records))
 
 
-def finding(*, kind="condition", linked=()):
+def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
     source = dict(id="passage-one", kind="provision", title="Test Act", locator="section 2",
                   text=PASSAGE, verification=dict(support_excerpt=PASSAGE,
                       scope_excerpt="Where the agreed condition applies",
                       scope_status="conditional", reason="The finding preserves this condition."))
+    if verification == RESEARCH_VERIFICATION:
+        source["verification"].update(
+            contract=verification, assertion_owner="legislative_text", owner_label="Test Act",
+            owner_excerpt=PASSAGE, source_treatment="adopted", treatment_excerpt=PASSAGE)
     return dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
                 why="The passage identifies the condition governing this obligation.",
                 force="required" if kind == "gathering" else "none",
@@ -46,7 +50,7 @@ def read(selected, context=(), *, rows=None, state="ok", revision=REVISION,
     return dict(subject=deepcopy(selected),
                 fingerprint=research_fingerprint(selected, list(context), revision, verification),
                 corpus_revision=revision, state=state,
-                rows=deepcopy([finding()] if rows is None else rows),
+                rows=deepcopy([finding(verification=verification)] if rows is None else rows),
                 verification=verification, queries=[selected["question"]],
                 diagnostics=[] if state == "ok" else ["Some source coverage is unavailable."],
                 coverage=dict(state=state, checked_items=1 if state != "unavailable" else 0,
@@ -163,7 +167,7 @@ def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_
     corrected = [dispute, {**detail, "statement": "The reported record is corrected."}]
     assert research_fingerprint(selected, corrected, REVISION) != original
     assert research_fingerprint(selected, context, "revision-two") != original
-    assert research_fingerprint(selected, context, REVISION, "research_support_v2") != original
+    assert research_fingerprint(selected, context, REVISION, "research_support_v3") != original
     duplicate = deepcopy(detail)
     assert research_fingerprint(selected, [*context, duplicate], REVISION) == original
     duplicate["quoted"] = "Different attributable words."
@@ -173,11 +177,19 @@ def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_
 
 def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse():
     selected = subject(matter())
-    saved = append(matter(), [read(selected)])
-    result = project(saved, selected, verification="research_support_v2")
+    saved = append(matter(), [read(selected, verification="research_support_v1")])
+    raw = deepcopy(saved.brain_chat)
+    result = project(saved, selected)
     assert result["state"] == "ok"
     assert result["by_subject"][selected["id"]]
     assert result["reuse_allowed"][selected["id"]] is False
+    coverage = result["coverage_by_subject"][selected["id"]]
+    assert coverage["source_freshness"] == "current"
+    assert coverage["verification_contract"] == "research_support_v1"
+    assert coverage["verification_current"] is False
+    assert "assertion_owner" not in result["by_subject"][selected["id"]][0]["sources"][0][
+        "verification"]
+    assert saved.brain_chat == raw
 
 
 def test_equivalent_request_evidence_reuses_without_changing_saved_subject_or_task_identity():
@@ -236,7 +248,8 @@ def test_legacy_checked_gathering_is_exact_readable_unknown_freshness_and_not_as
     disputes, material = board_inputs()
     dispute, detail = records()
     legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
-                  state="ok", rows=[finding(kind="gathering")], verification="source_support_v4",
+                  state="ok", rows=[finding(kind="gathering", verification="source_support_v4")],
+                  verification="source_support_v4",
                   queries=["An earlier search"], diagnostics=[])
     legacy["rows"][0].pop("kind")
     saved = append(file, None, legacy=[legacy], records=[dispute, detail])
@@ -247,7 +260,7 @@ def test_legacy_checked_gathering_is_exact_readable_unknown_freshness_and_not_as
     assert result["by_dispute"][dispute["id"]][0]["kind"] == "gathering"
     assert result["coverage_by_dispute"][dispute["id"]] == dict(
         state="ok", purpose="gathering", source_freshness="unknown", reuse_allowed=False,
-        legacy=True)
+        legacy=True, verification_contract="source_support_v4", verification_current=False)
     assert result["reuse_allowed"][dispute["id"]] is False
     assert saved.brain_chat == raw
 
@@ -257,7 +270,8 @@ def test_canonical_collection_owns_same_turn_and_never_concatenates_legacy_needs
     disputes, material = board_inputs()
     dispute, detail = records()
     legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
-                  state="ok", rows=[finding(kind="gathering")], verification="source_support_v4",
+                  state="ok", rows=[finding(kind="gathering", verification="source_support_v4")],
+                  verification="source_support_v4",
                   queries=[], diagnostics=[])
     saved = append(file, [], legacy=[legacy], records=[dispute, detail])
     result = requirements_record(saved, disputes=disputes, material=material)
@@ -329,3 +343,135 @@ def test_inconsistent_released_turn_identity_is_critical_before_research_can_be_
     assert result["state"] == "incomplete"
     assert result["by_subject"][selected["id"]] == []
     assert result["reuse_allowed"][selected["id"]] is False
+
+
+@pytest.mark.parametrize("damage", ["missing_contract", "unknown_contract", "owner",
+                                   "owner_excerpt", "treatment", "treatment_excerpt"])
+def test_advertised_current_source_contract_cannot_hide_invalid_role_or_treatment(damage):
+    file = matter()
+    first = subject(file)
+    second = subject(file, identity="peer", question="Another scoped question")
+    bad = read(first)
+    verification = bad["rows"][0]["sources"][0]["verification"]
+    if damage == "missing_contract":
+        verification.pop("contract")
+    elif damage == "unknown_contract":
+        verification["contract"] = "unknown-source-contract"
+    elif damage == "owner":
+        verification["assertion_owner"] = "party"
+    elif damage == "owner_excerpt":
+        verification["owner_excerpt"] = "Different words outside this passage."
+    elif damage == "treatment":
+        verification["source_treatment"] = "rejected"
+    else:
+        verification["treatment_excerpt"] = ""
+    saved = append(file, [bad, read(second)])
+    result = research_record(saved, subjects=(first, second),
+                             material_by_subject={first["id"]: [], second["id"]: []},
+                             corpus_revision=REVISION)
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][first["id"]] == []
+    assert result["coverage_by_subject"][first["id"]]["verification_current"] is False
+    assert result["coverage_by_subject"][second["id"]]["verification_current"] is True
+    assert result["reuse_allowed"][second["id"]] is True
+
+
+def test_historical_exact_readback_survives_new_review_without_status_upgrade_or_mutation():
+    from nm.brain.source_snapshots import source_snapshots
+
+    file = matter()
+    selected = subject(file)
+    historical = read(selected, verification="research_support_v1")
+    reference = {**deepcopy(historical["rows"][0]["sources"][0]), "type": "legal"}
+    exact_before = source_snapshots([reference])
+    saved = append(file, [historical])
+    raw = deepcopy(saved.brain_chat)
+    result = project(saved, selected)
+    assert result["state"] == "ok"
+    assert result["reuse_allowed"][selected["id"]] is False
+    assert result["coverage_by_subject"][selected["id"]]["verification_current"] is False
+    assert source_snapshots([reference]) == exact_before
+    assert saved.brain_chat == raw
+    reviewed = append(saved, [read(selected)], identity="turn-two")
+    current = project(reviewed, selected)
+    assert current["reuse_allowed"][selected["id"]] is True
+    assert current["coverage_by_subject"][selected["id"]]["verification_current"] is True
+    assert current["source_turn_id_by_subject"][selected["id"]] == "turn-two"
+    assert reviewed.brain_chat[0] == raw[0]
+
+
+def test_historical_contract_still_rejects_corrupt_exact_source_ownership():
+    selected = subject(matter())
+    historical = read(selected, verification="research_support_v1")
+    historical["rows"][0]["sources"][0]["verification"]["support_excerpt"] = "Invented words."
+    result = project(append(matter(), [historical]), selected)
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
+
+
+def test_unknown_saved_contract_is_not_treated_as_readable_verified_history():
+    selected = subject(matter())
+    result = project(append(matter(), [read(selected, verification="unknown-source-contract")]),
+                     selected)
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
+
+
+def test_absent_legacy_attestation_is_validated_unverified_history_without_upgrading_sources():
+    file = matter()
+    disputes, material = board_inputs()
+    dispute, detail = records()
+    legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
+                  state="ok", rows=[finding(kind="gathering", verification="source_support_v4")],
+                  queries=["An earlier search"], diagnostics=[])
+    legacy["rows"][0].pop("kind")
+    saved = append(file, None, legacy=[legacy], records=[dispute, detail])
+    raw = deepcopy(saved.brain_chat)
+    result = requirements_record(saved, disputes=disputes, material=material,
+                                 corpus_revision=REVISION)
+    assert result["state"] == "ok"
+    assert result["by_dispute"][dispute["id"]] == []
+    assert result["status_by_dispute"][dispute["id"]] == "unavailable"
+    assert result["coverage_by_dispute"][dispute["id"]]["verification_contract"] is None
+    assert result["coverage_by_dispute"][dispute["id"]]["verification_current"] is False
+    assert "predate" in result["diagnostics_by_dispute"][dispute["id"]][0]
+    assert saved.brain_chat == raw
+
+
+@pytest.mark.parametrize("active", [True, False])
+@pytest.mark.parametrize("tag", ["source_support_v5", "foreign-checker", [], ""])
+def test_unknown_advertised_legacy_contract_is_critical_even_when_subject_is_inactive(active, tag):
+    file = matter()
+    disputes, material = board_inputs()
+    dispute, detail = records()
+    legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
+                  state="ok", rows=[finding(kind="gathering", verification="source_support_v4")],
+                  verification=tag, queries=["An earlier search"], diagnostics=[])
+    legacy["rows"][0].pop("kind")
+    saved = append(file, None, legacy=[legacy], records=[dispute, detail])
+    if active:
+        result = requirements_record(saved, disputes=disputes, material=material,
+                                     corpus_revision=REVISION)
+        assert result["by_dispute"][dispute["id"]] == []
+        assert result["reuse_allowed"][dispute["id"]] is False
+    else:
+        result = research_record(saved, subjects=(), material_by_subject={},
+                                 corpus_revision=REVISION)
+    assert result["state"] == "incomplete"
+    assert result["diagnostics"]
+
+
+def test_absent_legacy_attestation_cannot_mask_malformed_exact_source():
+    file = matter()
+    disputes, material = board_inputs()
+    dispute, detail = records()
+    legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
+                  state="ok", rows=[finding(kind="gathering", verification="source_support_v4")],
+                  queries=["An earlier search"], diagnostics=[])
+    legacy["rows"][0].pop("kind")
+    legacy["rows"][0]["sources"][0]["verification"]["support_excerpt"] = "Invented source."
+    result = requirements_record(append(file, None, legacy=[legacy], records=[dispute, detail]),
+                                 disputes=disputes, material=material, corpus_revision=REVISION)
+    assert result["state"] == "incomplete"
+    assert result["by_dispute"][dispute["id"]] == []
+    assert all("predate" not in problem for problem in result["diagnostics"])
