@@ -1,0 +1,348 @@
+{
+  "schema_version": 2,
+  "created_at": "2026-10-03T18:34:46.675817+00:00",
+  "status": "incomplete_accuracy_validation",
+  "scope": "Exactly four named synthetic exported matters; follow-up may cover only one. No store or provider access.",
+  "inputs": [
+    {
+      "path": "outputs/advocate-multimatter-20261003/browser-observations.json",
+      "sha256": "1dfdd33fd0362766cdbebe4f0d68e57d5c4c4e1d1621008bf38808d3686146db"
+    },
+    {
+      "path": "outputs/advocate-multimatter-20261003/legal-evidence.json",
+      "sha256": "4f406fcf2dcc7816cb7bd08d70f1239a4790f1bef666373723fd622d40ec42ab"
+    },
+    {
+      "path": "outputs/advocate-multimatter-20261003/browser-status.json",
+      "sha256": "c8450180f2a45778b92da292e26789b73081a5504c35a9d945253e2a5c1628e7"
+    }
+  ],
+  "totals": {
+    "saved_rows": 25,
+    "saved_logical_model_calls": 254,
+    "saved_rows_without_call_count": 0,
+    "saved_provider_retries": 6,
+    "sum_saved_receipt_latency_ms": 2587707,
+    "calls_by_operation": {
+      "interpret_conversation": 29,
+      "extract_disputes": 20,
+      "verify_disputes": 18,
+      "extract_legal_details": 19,
+      "verify_material_grounding": 18,
+      "decompose_disputes": 28,
+      "read_legal_requirements": 41,
+      "verify_legal_requirements": 32,
+      "continue_conversation": 40,
+      "verify_continuation": 9
+    },
+    "calls_by_receipt_state": {
+      "ok": 248,
+      "OutputTruncated": 3,
+      "RateLimited": 3
+    },
+    "calls_by_tier": {
+      "judge": 146,
+      "routine": 108
+    },
+    "continuation_coverage_by_state": {
+      "unavailable": 14,
+      "ok": 8
+    },
+    "delivery_states": {
+      "substantive_reply_withheld": 13,
+      "checked_continuation_released": 8,
+      "source_free_reply_released": 4
+    },
+    "receipt_counts_complete": true,
+    "planned_script_turns": 48,
+    "saved_script_turns": 24,
+    "saved_recovery_turns": 1,
+    "saved_non_script_turns": 1,
+    "unique_script_turns_attempted": 26,
+    "browser_attempts": 33,
+    "not_saved_attempts": 8,
+    "unconfirmed_attempts": 0,
+    "planned_not_observed_turns": 22,
+    "attempted_not_saved_script_turns": 2
+  },
+  "followup_totals": {
+    "saved_rows": 5,
+    "saved_logical_model_calls": 54,
+    "saved_rows_without_call_count": 0,
+    "saved_provider_retries": 0,
+    "sum_saved_receipt_latency_ms": 558490,
+    "calls_by_operation": {
+      "interpret_conversation": 6,
+      "extract_disputes": 4,
+      "verify_disputes": 3,
+      "extract_legal_details": 3,
+      "verify_material_grounding": 3,
+      "decompose_disputes": 8,
+      "read_legal_requirements": 10,
+      "verify_legal_requirements": 4,
+      "continue_conversation": 10,
+      "verify_continuation": 3
+    },
+    "calls_by_receipt_state": {
+      "ok": 54
+    },
+    "calls_by_tier": {
+      "judge": 29,
+      "routine": 25
+    },
+    "continuation_coverage_by_state": {
+      "ok": 2,
+      "unavailable": 3
+    },
+    "delivery_states": {
+      "checked_continuation_released": 2,
+      "substantive_reply_withheld": 3
+    },
+    "receipt_counts_complete": true
+  },
+  "followup_cases_observed": [
+    "property-access-possession"
+  ],
+  "actual_semantic_review": [
+    {
+      "case": "property-access-possession",
+      "script_turn": 8,
+      "turn_id": "turn_fbad80de-e536-46ea-be3d-5c2f7589d370",
+      "status": "fail",
+      "finding": "Reply resolved an ambiguous actor/object without attribution, reintroduced remedy effects rejected by V4 research, and completed broader saved research work without delivering it.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/legal-evidence.json",
+        "outputs/accuracy-fixes-20261003/final-offline-checks.xml",
+        "tests/test_brain_work_selection.py"
+      ],
+      "observed": "Reply resolved an ambiguous actor/object without attribution, reintroduced remedy effects rejected by V4 research, and completed broader saved research work without delivering it.",
+      "general_remedy": "Interpreter, writer and reviewer preserve consequential ambiguity and check every material claim and the full saved task scope; valid citation presence cannot validate the rest of a block.",
+      "validation": "Independent read-only review of exact saved evidence; historical response is preserved, not rewritten. Live semantic acceptance remains open.",
+      "scope": "saved_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": 9,
+      "turn_id": "turn_e5d2b3d9-b5ba-4fe5-a2e4-ea8fd201309a",
+      "status": "fail",
+      "finding": "Unsupported material changes were rejected locally, but reply was withheld for contradictory task fields. One accepted dispute still overstated actor responsibility and treated a future promise as already unfulfilled.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/legal-evidence.json",
+        "outputs/accuracy-fixes-20261003/final-offline-checks.xml",
+        "tests/test_brain_work_selection.py"
+      ],
+      "observed": "Unsupported material changes were rejected locally, but reply was withheld for contradictory task fields. One accepted dispute still overstated actor responsibility and treated a future promise as already unfulfilled.",
+      "general_remedy": "Single task selector derives the unchanged durable work association; actor-to-act and temporal predicates are checked separately from source attribution and operation support.",
+      "validation": "32 focused selector/retention tests plus 101 direct/service tests passed before T10; operation rejection demonstrated in saved T9; historical wrong formulation remains visible.",
+      "scope": "saved_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": 10,
+      "turn_id": "turn_bcae0adc-6151-4fd9-8965-778034e65708",
+      "status": "fail",
+      "finding": "User message saved once; reply withheld before review because a question referenced a task. Shared schema objects let the task enum overwrite the question enum.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/legal-evidence.json",
+        "outputs/accuracy-fixes-20261003/final-offline-checks.xml",
+        "tests/test_brain_work_selection.py"
+      ],
+      "observed": "User message saved once; reply withheld before review because a question referenced a task. Shared schema objects let the task enum overwrite the question enum.",
+      "general_remedy": "Independently clone role-specific schema objects before assigning their permitted record kinds; retain strict wrong-kind validation.",
+      "validation": "108 focused tests pass after repair, including strict model-port and public API reuse of distinct saved task/question kinds with 3 calls and zero-call replay. Live repair acceptance is still pending.",
+      "scope": "saved_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": 11,
+      "turn_id": "turn_59d9d3d5-1254-4095-9949-4363b8d8190f",
+      "status": "fail",
+      "finding": "Useful document-status handling, but uncited legal dependency, temporal application overreach, and repurposed question identity prevent semantic acceptance.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/legal-evidence.json"
+      ],
+      "observed": "Preserves documents as promised/unreceived, respects the unavailable municipal plan, uses corrected dates, and keeps gathering pending. However, it asserts a categorical document-only prerequisite and invokes earlier NM legal reasoning without linked legal support. One current finding treats use predating permission as initially licensed; a saved actor/control question is reused for document wording.",
+      "general_remedy": "Existing prompts distinguish repair of NM's own interpretation from an advocate's factual correction, preserving exact sources and history. This addresses an overrestrictive record-operation rule only; it does not certify the still-failing source entailment, chronology or question-continuity decisions.",
+      "validation": "Independent read-only evaluation of exact saved user words, selected references, research findings and progress. Current source roles are faithful, but faithful labels and a positive Judge verdict do not prove the downstream interpretation is correct.",
+      "scope": "saved_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": 12,
+      "status": "fail",
+      "finding": "First conference-summary attempt was not saved because two material-reader attempts repeated an identical resolved prior reference.",
+      "evidence_paths": [
+        "tests/test_brain_source_selection.py",
+        "outputs/accuracy-fixes-20261003/source-selection-checks.xml"
+      ],
+      "observed": "No saved input or substantive response from this attempt; retry is safe from duplicate admission.",
+      "general_remedy": "Validate every selected ID first, then stable-deduplicate exact resolved turn/speaker/passage references. Distinct sources and all unknown or malformed IDs remain subject to strict validation. Assignment and revision target IDs are unchanged.",
+      "validation": "30 initial focused checks and 62 expanded owning-stage checks passed. Actual public regression reaches the existing Judge once, preserves exact unique references and zero-call replay. The source normalisation path still needs separate live qualification; a retry may select a different route.",
+      "scope": "script_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": 12,
+      "turn_id": "turn_54f30d86-bf56-41f4-9b2e-787ac5d2dc21",
+      "status": "fail",
+      "finding": "Conference request saved once, but the whole response remained withheld.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/legal-evidence.json",
+        "tests/test_brain_review_consistency.py",
+        "outputs/accuracy-fixes-20261003/closeout-offline-checks.xml"
+      ],
+      "observed": "Support review marked a scope-limitation block as requiring a checked legal passage while its diagnostic described no external legal authority being needed. The raw block verdict is not exported, so contradictory positive acceptance cannot be asserted as the observed cause. No completed summary or case closure was released.",
+      "general_remedy": "A positive block verdict requiring law without actual selected law is an inconsistent contract and now receives the existing pending-only Judge correction. An explicit unsupported-law rejection remains a substantive rejection. No reason parsing, source fallback, relaxed guard or new normal call.",
+      "validation": "42 affected checks and final 700-test suite pass; public regression saves once, repeats no writer/input, makes four calls including one reviewer repair, replay zero. The final live recovery stopped at the budget boundary before continuation, so live success is unproved.",
+      "scope": "saved_turn"
+    },
+    {
+      "case": "property-access-possession",
+      "script_turn": "recovery-after-summary",
+      "attempt": 1,
+      "status": "not_observed",
+      "finding": "One generic recovery attempt was not saved because the shared evaluation cap could not reserve the next bounded model request.",
+      "evidence_paths": [
+        "outputs/advocate-multimatter-20261003/browser-observations.json",
+        "outputs/accuracy-fixes-20261003/budget-status.json"
+      ],
+      "observed": "Two physical requests completed. The dispute verification dispatch was refused before a new provider attempt. Earlier saved messages and pending conference work remain intact. No other matter was resumed.",
+      "general_remedy": "No code bypass: preserve the US$3 maximum, retain unknown-cost reservation, stop live testing, and record incomplete coverage.",
+      "validation": "Final ledger snapshot: measured_usd=2.048234, reserved_or_unknown_usd=0.428861, charged_usd=2.477095, 66 physical attempts. Full-rate token estimates are conservative and are not invoice totals.",
+      "scope": "browser_attempt"
+    }
+  ],
+  "budget_status": {
+    "maximum_usd": 3.0,
+    "charged_usd": 2.477095,
+    "remaining_usd": 0.522905,
+    "attempts": 66,
+    "reserved_or_unknown_usd": 0.428861,
+    "measured_usd": 2.048234,
+    "state": "Stopped: next bounded verify_disputes request could not be reserved; no cap reset or model/context downgrade",
+    "captured_at": "2026-10-03T18:34:46.547234+00:00"
+  },
+  "limitations": [
+    "The provider-blocked baseline is historical, not the current release verdict.",
+    "Unsaved attempts have no durable model receipts and are excluded from saved call totals.",
+    "Repeated research operations can be batching or correction; receipts do not distinguish them.",
+    "Browser elapsed observations and summed model receipts are different measurements.",
+    "Old semantic failures and historical records are preserved, not silently repaired.",
+    "A completed script sequence would not itself prove legal accuracy, corpus currency or matter closure."
+  ],
+  "baseline": {
+    "created_at": "2026-10-03T15:57:17.138281+00:00",
+    "status": "incomplete_provider_blocked",
+    "totals": {
+      "planned_script_turns": 48,
+      "unique_script_turns_attempted": 21,
+      "saved_script_turns": 19,
+      "saved_recovery_turns": 1,
+      "saved_rows": 20,
+      "browser_attempts": 25,
+      "not_saved_attempts": 5,
+      "planned_not_observed_turns": 27,
+      "attempted_not_saved_script_turns": 2,
+      "delivery_states": {
+        "substantive_reply_withheld": 10,
+        "checked_continuation_released": 6,
+        "source_free_reply_released": 4
+      },
+      "saved_logical_model_calls": 200,
+      "calls_by_operation": {
+        "interpret_conversation": 23,
+        "extract_disputes": 16,
+        "verify_disputes": 15,
+        "extract_legal_details": 16,
+        "verify_material_grounding": 15,
+        "decompose_disputes": 20,
+        "read_legal_requirements": 31,
+        "verify_legal_requirements": 28,
+        "continue_conversation": 30,
+        "verify_continuation": 6
+      },
+      "calls_by_receipt_state": {
+        "ok": 194,
+        "OutputTruncated": 3,
+        "RateLimited": 3
+      },
+      "calls_by_tier": {
+        "judge": 117,
+        "routine": 83
+      },
+      "saved_provider_retries": 6,
+      "sum_saved_receipt_latency_ms": 2029217
+    },
+    "semantic_observations": [
+      {
+        "case": "commercial-contract-cheque",
+        "script_turn": 2,
+        "status": "fail",
+        "evidence": "saved ordinal 2; block reference metadata has no legal references",
+        "finding": "Accepted response stated payment liability and suggested civil set-off despite missing checked law, while separately claiming to have avoided doctrine. A schema and whole-unit acceptance did not establish grounding."
+      },
+      {
+        "case": "property-access-possession",
+        "script_turn": "recovery-1",
+        "status": "fail",
+        "evidence": "saved ordinal 2; browser visible response",
+        "finding": "Released opaque span IDs throughout reader-facing prose. Recovery added the separate injury dispute, but neither presentation nor semantic completeness should be marked passed."
+      },
+      {
+        "case": "property-access-possession",
+        "script_turn": 6,
+        "status": "concern",
+        "evidence": "saved ordinal 7; released response and earlier attributed chronology",
+        "finding": "Response used established-fact language for reported/uninspected material and compressed the start of use with a later permission. Source linkage and review acceptance do not resolve attribution or chronology quality."
+      },
+      {
+        "case": "property-access-possession",
+        "script_turn": 2,
+        "status": "fail",
+        "evidence": "saved ordinal 3; unavailable continuation coverage",
+        "finding": "Sensitive adverse disclosure received only a withheld-response notice after two writer calls and no continuation review, leaving the requested supportive interaction unfulfilled."
+      }
+    ]
+  },
+  "report_path": "outputs/advocate-multimatter-20261003/browser-status.json",
+  "tested_code_commits": [
+    "9e32547",
+    "25717f8741719736ef2f63a44b0fa68920b11186"
+  ],
+  "offline_validation": {
+    "tests": 700,
+    "failures": 0,
+    "errors": 0,
+    "suite_path": "outputs/accuracy-fixes-20261003/closeout-offline-checks.xml",
+    "suite_sha256": "d88ace5ee2c18f0f992420f7f0dbdcabdfd6d080c2a181273a5682ed64c453f9",
+    "ruff": "changed brain, shared budget and new regression owners pass; composition's17 existing diagnostics unchanged",
+    "node": "tests/js/brain_sources.mjs passed",
+    "workbook": "two worksheet parts amended; descriptions, styles and other package parts preserved; zero mirror problems",
+    "live_acceptance": false
+  },
+  "model_flow": {
+    "normal_formula": "1 interpretation + conditional dispute/material readers and checks + actual research planning/reading/verifying groups +2 continuation calls when needed",
+    "typical_turns": {
+      "greeting_or_diversion": 1,
+      "supported_followup": 3,
+      "first_legal_question_with_one_research_group": 6,
+      "first_factual_matter_before_research": 7,
+      "first_factual_matter_with_one_fitting_research_group": 10
+    },
+    "inputs": "complete attributed conversation, latest words, canonical authorised work/material and exact saved passages; no silent transcript trimming",
+    "outputs": "validated proposals, owned IDs and source-use checks; interpretation grants no factual, permission or external-action authority",
+    "zero_call_operations": "replay, saved source opening, projections, local hybrid search and reranking; cached valid research adds no research call",
+    "new_normal_calls": 0,
+    "conditional_calls": "Existing one contract correction per reader/check; pending-only research group repair; up to two continuation writers with bounded review. Certified subset adds zero calls; otherwise final structural partial review may add1–2 conditional checks. Continuation mixed-request upper bound8 logical calls. Transport up to3 physical rate-limit attempts; each reserves anew.",
+    "model_identity": "Routine gpt-4.1-mini-2025-04-14; writer and reviewer both Judge gpt-5.1 in separate roles, not different-model verification",
+    "latency": "five saved follow-up turns used54 logical calls; no provider retries. Receipt sums and operator browser observations are not end-to-end latency. Reduce redundant correction/payload work without trimming history or collapsing distinct evidence checks."
+  },
+  "remaining_work": [
+    "Source entailment/application remains semantically unreliable despite faithful roles and positive checks",
+    "Uncited legal dependencies can appear inside prose labelled factual gathering",
+    "Question identity can be repurposed while its pending status survives",
+    "Historical wrong dispute/material interpretations remain on the saved property matter",
+    "Conference summary remains pending; final repairs lack live acceptance after budget stop",
+    "24 original script turns remain across the other three matters; none resumed this follow-up"
+  ]
+}
