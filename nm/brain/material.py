@@ -293,6 +293,11 @@ contents or custody, procedure, timing, risk and uncertainty. A detail matters
 when it could affect an issue, assessment or next useful step. Check every
 latest span, including replies and corrections. A request is not itself a
 matter fact, though it can contain one.
+An objective is a desired real-world outcome for the client or dispute.
+Requests for NM to explain, investigate or produce work belong to task
+progress; do not duplicate them as matter objectives without independent
+matter content. A promise or inability to supply a record can be material
+custody information, but does not establish that record's contents.
 Outcome: Write one concise attributed `statement` per separately checkable
 detail, with `kind` and `why_material`. Do not merge claims that could be
 confirmed, denied or corrected separately, or repeat an unchanged proposition.

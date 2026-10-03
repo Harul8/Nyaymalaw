@@ -13,8 +13,16 @@ from nm.brain.conversation import (
     TurnPlan,
     WorkItem,
 )
+from nm.brain.history import IncompleteConversation
 from nm.shared.budget_contracts import Completion
-from nm.shared.model_port import ModelResult, ProviderUnavailable, SchemaViolation, Tier, Usage
+from nm.shared.model_port import (
+    ModelResult,
+    ProviderUnavailable,
+    SchemaViolation,
+    Tier,
+    TierUnavailable,
+    Usage,
+)
 
 
 class ContinuationModel:
@@ -74,9 +82,10 @@ def unit(index=0, *, text="You report holding a signed receipt.",
             "questions": [{"id": f"objective-{index}",
                            "block_id": f"question-{index}",
                            "purpose": "Understand the user's intended outcome.",
-                           "target_ids": []}],
+                           "target_ids": [], "existing_id": ""}],
             "next_work": [],
-            "sufficiency": {"status": "needs_input", "block_id": f"limit-{index}"}}
+            "sufficiency": {"status": "needs_input", "block_id": f"limit-{index}"},
+            "work": {"existing_id": "", "create": True}, "progress_updates": []}
 
 
 def verdict(*indexes, accept=True, reason="The complete unit preserves its support and limits."):
@@ -92,12 +101,19 @@ def mixed_purpose_unit():
                     "text": ("You report holding a signed receipt. Its contents have not been "
                              "assessed. Could you share what it records for the requested review?"),
                     "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
+                    "uncertainty": "reported"},
+                   {"id": "next-work", "kind": "next_step",
+                    "text": "If helpful, we can compare the reported terms with the record's text.",
+                    "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
                     "uncertainty": "reported"}],
         "questions": [{"id": "record-question", "block_id": "mixed",
-                       "purpose": "Identify the reported record's contents.", "target_ids": []}],
-        "next_work": [{"id": "review", "block_id": "mixed",
-                       "purpose": "Review the available record when supplied.", "target_ids": []}],
+                       "purpose": "Identify the reported record's contents.",
+                       "target_ids": [], "existing_id": ""}],
+        "next_work": [{"id": "review", "block_id": "next-work",
+                       "purpose": "Offer a focused comparison if the user wants it.",
+                       "target_ids": [], "existing_id": ""}],
         "sufficiency": {"status": "needs_input", "block_id": "mixed"},
+        "work": {"existing_id": "", "create": True}, "progress_updates": [],
     }
 
 
@@ -121,7 +137,7 @@ def test_first_turn_checks_the_entire_visible_reply_and_resolves_exact_words():
     result = _continue(model)
 
     assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
-    assert model.tiers == [Tier.ROUTINE, Tier.JUDGE]
+    assert model.tiers == [Tier.JUDGE, Tier.JUDGE]
     assert len(result.units) == 1
     assert result.coverage[0]["state"] == "ok"
     checked = model.calls[1][1]
@@ -153,7 +169,7 @@ def test_mixed_purpose_block_links_semantic_work_and_requires_independent_review
               if prompt.operation == "verify_continuation"]
     assert checks
     assert all(payload["units"] == [proposed] for payload in checks)
-    assert model.tiers == [Tier.ROUTINE, Tier.JUDGE] * (1 if accepted else 2)
+    assert model.tiers == [Tier.JUDGE, Tier.JUDGE] * (1 if accepted else 2)
     if accepted:
         assert result.units[0]["questions"] == proposed["questions"]
         assert result.units[0]["next_work"] == proposed["next_work"]
@@ -253,6 +269,52 @@ def test_complete_history_preserves_correction_diversion_and_return():
             for row in history] == [message.text for message in earlier.messages]
     assert "I cannot obtain that document." in json.dumps(payload)
     assert "Tuesday" in json.dumps(result.units[0]["blocks"][0]["references"])
+
+
+def test_contextual_record_citation_preserves_answer_and_earlier_question():
+    question = "Is the receipt unsigned?"
+    conversation = Conversation((
+        Message("first", "advocate", "We have a receipt."),
+        Message("first", "nm", question),
+        Message("answered", "advocate", "Yes."),
+        Message("answered", "nm", "You have confirmed the reported receipt is unsigned."),
+    ), current_matter_id="current")
+    record = {"id": "answered:material:1", "kind": "circumstance",
+              "source_turn_id": "answered", "quoted": "Yes.",
+              "statement": "The advocate reports an unsigned receipt.",
+              "prior_references": [{"turn_id": "first", "role": "nm", "quoted": question}]}
+    proposed = unit(text=record["statement"], span_ids=())
+    proposed["blocks"][0]["record_ids"] = [record["id"]]
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, conversation=conversation, latest="Summarise the reported account.",
+                       material={"state": "ok", "rows": [record]})
+
+    block = result.units[0]["blocks"][0]
+    cited_record = next(ref for ref in block["references"] if ref["type"] == "material")
+    assert cited_record["record"]["quoted"] == "Yes."
+    context = [ref for ref in block["references"] if ref["type"] == "conversation"]
+    assert [(ref["turn_id"], ref["role"], ref["text"]) for ref in context] == [
+        ("first", "nm", question)]
+    assert context[0]["id"] in block["span_ids"]
+    assert context[0]["id"].startswith("context:first:nm:")
+    assert model.calls[1][1]["units"] == [proposed]
+
+
+def test_corrupt_record_context_refuses_before_composition():
+    conversation = Conversation((
+        Message("first", "advocate", "We have a receipt."),
+        Message("first", "nm", "Is the receipt unsigned?"),
+    ), current_matter_id="current")
+    record = {"id": "first:material:1", "source_turn_id": "first",
+              "quoted": "We have a receipt.", "statement": "A receipt is reported.",
+              "prior_references": [{"turn_id": "first", "role": "advocate",
+                                    "quoted": "Is the receipt unsigned?"}]}
+    model = ContinuationModel([])
+
+    with pytest.raises(IncompleteConversation, match="attributed"):
+        _continue(model, conversation=conversation, material={"state": "ok", "rows": [record]})
+    assert model.calls == []
 
 
 def test_unknown_reference_gets_one_specific_repair_before_verification():
@@ -456,10 +518,11 @@ def test_verifier_outage_never_releases_the_unchecked_draft():
     assert len(model.calls) == 2
 
 
-def test_answer_only_diversion_needs_no_continuation_or_verifier():
+@pytest.mark.parametrize("relation", ["aside", "new", "continues"])
+def test_source_free_answer_route_needs_no_continuation_or_verifier(relation):
     model = ContinuationModel([])
     plan = conversation_plan(items=(WorkItem(
-        request="Hello", relation="aside", matter_scope="none",
+        request="Hello", relation=relation, matter_scope="none",
         priority="ordinary", next_step="answer", reply="Hello."),))
 
     result = _continue(model, latest="Hello", plan=plan)
@@ -467,3 +530,194 @@ def test_answer_only_diversion_needs_no_continuation_or_verifier():
     assert result.units == ()
     assert result.coverage == ()
     assert model.calls == []
+
+
+@pytest.mark.parametrize("damage", ["no_requested_task", "contribution_task", "duplicate_owner"])
+def test_progress_contract_repairs_only_invalid_unit_before_independent_check(damage):
+    good = unit()
+    invalid = deepcopy(good)
+    items = None
+    if damage == "no_requested_task":
+        invalid["work"]["create"] = False
+    elif damage == "contribution_task":
+        good["work"]["create"] = False
+        items = (WorkItem(request="A clarification of the reported account", relation="continues",
+                          matter_scope="current", priority="ordinary", next_step="legal_work",
+                          intent="contribution"),)
+    else:
+        invalid["next_work"] = [deepcopy(invalid["questions"][0])]
+    model = ContinuationModel([{"units": [invalid]}, {"units": [good]}, verdict(0)])
+
+    result = _continue(model, plan=conversation_plan(items=items))
+
+    assert len(result.units) == 1
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    assert model.calls[-1][1]["units"] == [good]
+    assert model.calls[1][1]["correction"]["rejected_units"] == [invalid]
+    assert len(result.units[0]["questions"]) == 1
+    assert result.units[0]["next_work"] == []
+
+
+def test_downgraded_writer_cannot_release_routine_response_or_reach_verifier():
+    from nm.shared.model_traced import TracedModel
+
+    class MissingWriter(ContinuationModel):
+        def __init__(self):
+            super().__init__([{"units": [unit()]}])
+            self.dispatched = []
+
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            self.dispatched.append((prompt.operation, tier))
+            if tier is Tier.JUDGE:
+                raise TierUnavailable("The synthetic writer tier is unavailable.")
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+
+    inner = MissingWriter()
+    traced = TracedModel(inner)
+
+    result = _continue(traced)
+
+    assert result.units == ()
+    assert result.coverage[0]["state"] == "unavailable"
+    assert inner.dispatched == [
+        ("continue_conversation", Tier.JUDGE), ("continue_conversation", Tier.ROUTINE)]
+    assert len(traced.calls) == 1
+    assert traced.calls[0].downgraded_from == Tier.JUDGE.value
+
+
+def progress_unit():
+    proposed = unit(text="You intend to provide the reported record tomorrow.")
+    proposed["progress_updates"] = [{
+        "target_id": "$work", "status": "promised", "block_id": "account-0",
+        "reason": "The advocate expressly promises the record in the selected words.",
+        "span_ids": ["L2"]}]
+    return proposed
+
+
+def test_explicit_progress_sources_reach_display_owner_before_independent_review():
+    proposed = progress_unit()
+    unchanged = deepcopy(proposed)
+    latest = "I have the reported account. I will provide the record tomorrow."
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, latest=latest, latest_turn_id="promise-source")
+
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    checked = model.calls[1][1]["units"][0]
+    assert checked["blocks"][0]["span_ids"] == ["L1", "L2"]
+    assert checked["progress_updates"][0]["span_ids"] == ["L2"]
+    references = result.units[0]["blocks"][0]["references"]
+    assert [(row["id"], row["role"], row["turn_id"], row["text"]) for row in references] == [
+        ("L1", "advocate", "promise-source", "I have the reported account."),
+        ("L2", "advocate", "promise-source", "I will provide the record tomorrow.")]
+    assert proposed == unchanged
+
+
+@pytest.mark.parametrize("field,value,diagnostic", [
+    ("target_id", "foreign-task", ".target_id 'foreign-task'"),
+    ("block_id", "foreign-block", ".block_id 'foreign-block'"),
+    ("span_ids", ["unknown-source"], ".span_ids selects unknown source 'unknown-source'"),
+    ("span_ids", ["P1S1"], ".span_ids source 'P1S1' is not the advocate"),
+    ("span_ids", ["L2", "L2"], ".span_ids contains duplicate source IDs"),
+    ("reason", "", ".reason needs a nonempty explanation"),
+])
+def test_bad_progress_selection_gets_indexed_feedback_and_never_reaches_review(
+        field, value, diagnostic):
+    good = progress_unit()
+    invalid = deepcopy(good)
+    invalid["progress_updates"][0][field] = value
+    model = ContinuationModel([{"units": [invalid]}, {"units": [good]}, verdict(0)])
+    earlier = Conversation((Message("prior", "nm", "Please provide the reported record."),))
+
+    result = _continue(model, latest=(
+        "I have the reported account. I will provide the record tomorrow."), conversation=earlier)
+
+    assert len(result.units) == 1
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    feedback = model.calls[1][1]["correction"]["validation_issues"][0]
+    assert feedback["request_index"] == 0
+    assert "progress_updates[0]" + diagnostic in feedback["issue"]
+    checked = model.calls[-1][1]["units"][0]
+    assert checked["progress_updates"][0] == good["progress_updates"][0]
+    assert checked["blocks"][0]["span_ids"] == ["L1", "L2"]
+
+
+def prior_task(status):
+    return {"state": "ok", "rows": [{
+        "id": "saved-task", "kind": "task", "origin": "requested",
+        "text": "Review the reported account", "purpose": "Give the requested scoped review.",
+        "status": status, "target_ids": [], "task_id": "", "source_turn_id": "prior",
+        "request_index": 0, "block_id": "prior-response", "last_update_turn_id": "prior",
+        "reason": "Earlier checked work status.", "matter_scope": "current",
+    }], "events": [], "coverage": {"older_progress": "tracked"}, "diagnostics": []}
+
+
+def complete_reply_unit(*, existing="saved-task", create=False):
+    proposed = unit()
+    proposed["blocks"] = [proposed["blocks"][0], proposed["blocks"][2]]
+    proposed["questions"] = []
+    proposed["work"] = {"existing_id": existing, "create": create}
+    proposed["sufficiency"] = {"status": "complete", "block_id": "account-0"}
+    return proposed
+
+
+@pytest.mark.parametrize("accepted", [True, False])
+def test_prior_complete_task_does_not_repeat_transition_or_exempt_latest_review(accepted):
+    proposed = complete_reply_unit()
+    reply = {"units": [proposed]}
+    reason = "The latest requested scope still needs its own supported delivery."
+    check = verdict(0, accept=accepted, reason=reason)
+    model = ContinuationModel([reply, check] if accepted else [reply, check, reply, check])
+
+    result = _continue(model, progress=prior_task("complete"))
+
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"] * (
+        1 if accepted else 2)
+    assert all(payload["units"][0]["progress_updates"] == []
+               for prompt, payload in model.calls if prompt.operation == "verify_continuation")
+    assert all(payload["input"]["progress"]["rows"][0]["status"] == "complete"
+               for prompt, payload in model.calls if prompt.operation == "verify_continuation")
+    assert result.coverage[0]["state"] == ("ok" if accepted else "unavailable")
+    assert len(result.units) == (1 if accepted else 0)
+
+
+@pytest.mark.parametrize("status", [
+    "new", "pending", "promised", "unavailable", "deferred", "cancelled",
+])
+def test_complete_immediate_reply_does_not_infer_new_or_existing_task_transition(status):
+    is_new = status == "new"
+    proposed = complete_reply_unit(existing="" if is_new else "saved-task", create=is_new)
+    progress = None if is_new else prior_task(status)
+    before = deepcopy(progress)
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, progress=progress)
+
+    assert len(result.units) == 1
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert result.units[0]["sufficiency"]["status"] == "complete"
+    assert result.units[0]["progress_updates"] == []
+    assert model.calls[-1][1]["units"] == [proposed]
+    assert progress == before
+
+
+@pytest.mark.parametrize("status", ["pending", "cancelled"])
+def test_complete_immediate_reply_can_accompany_an_independently_checked_task_change(status):
+    proposed = complete_reply_unit()
+    proposed["progress_updates"] = [{
+        "target_id": "$work", "status": status, "block_id": "account-0",
+        "reason": "The user's explicit request supports the separate task-state change.",
+        "span_ids": ["L1"]}]
+    latest = ("Please reopen the earlier review; acknowledge this request."
+              if status == "pending" else "Cancel the earlier review; acknowledge this request.")
+    proposed["blocks"][0]["text"] = "You have requested a change to the earlier review."
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, latest=latest, progress=prior_task("complete"))
+
+    assert len(result.units) == 1
+    assert result.units[0]["progress_updates"][0]["status"] == status
+    assert result.units[0]["sufficiency"]["status"] == "complete"
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]

@@ -40,6 +40,9 @@ boundary so the change applies to comparable matters and requests. Use the
 observed case as a regression example, not as a condition, keyword, prompt
 exception, or dispute-specific branch. Remove redundant paths rather than
 layering another special case on top.
+For every error, check the owning logic and whether its prompt is clean and
+easy to follow. Corrections must be logical, strategic and general, with
+graceful handling of comparable failures. Never add a scenario-specific bypass.
 
 For every new or changed model flow, report the number of model calls per user
 turn, including conditional calls, their purpose, and what input and output
@@ -56,3 +59,7 @@ or analysis as complete. Stop the whole turn before saving when conversation
 history, identity, attribution, source ownership, or commit integrity cannot
 be trusted; saving an empty result for an unread stage would silently lose
 material and is not graceful recovery.
+
+At each logical milestone, complete the relevant checks and browser review,
+then commit and push that coherent change to the working branch before moving
+to the next milestone. Report the commit and any remaining limitations.

@@ -2,6 +2,12 @@
 from __future__ import annotations
 
 
+def interpretation(data):
+    return {**{key: value for key, value in data.items() if key != "active_work_after"},
+            "items": [{**item, "intent": item.get("intent", "request")}
+                      for item in data["items"]]}
+
+
 def continuation_reply(operation, payload, *, scripted_items=()):
     if operation == "verify_continuation":
         return {"verdicts": [{"request_index": unit["request_index"],
@@ -27,7 +33,7 @@ def continuation_reply(operation, payload, *, scripted_items=()):
             kind, text, status = "question", scripted["clarification"], "needs_input"
             questions = [{"id": f"question:{index}", "block_id": f"block:{index}",
                           "purpose": "Resolve the distinction needed to proceed.",
-                          "target_ids": []}]
+                          "target_ids": [], "existing_id": ""}]
         elif item["next_step"] == "answer" and not needs_legal_work:
             kind, text, status = "completion", scripted["reply"], "complete"
         else:
@@ -55,5 +61,11 @@ def continuation_reply(operation, payload, *, scripted_items=()):
                         "uncertainty": "conditional" if legal_ids else "reported"}],
             "questions": questions, "next_work": [],
             "sufficiency": {"status": status, "block_id": f"block:{index}"},
+            "work": {"existing_id": "", "create": item["intent"] == "request"},
+            "progress_updates": [{"target_id": "$work", "status": "complete",
+                                  "block_id": f"block:{index}",
+                                  "reason": "The requested scoped answer is delivered.",
+                                  "span_ids": [latest_id]}]
+            if status == "complete" and item["intent"] == "request" else [],
         })
     return {"units": units}

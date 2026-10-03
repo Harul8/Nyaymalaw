@@ -32,6 +32,9 @@ This check concerns grounding, not legal merit, proof, or source applicability.
 Look for: Compare each detail's whole statement, materiality explanation,
 classification, matter scope, and claimed relation or links with its selected
 latest advocate passage, cited earlier advocate passages, and the full context.
+Check materiality separately from work routing: a requested NM activity alone
+is not a client or dispute objective or a new matter fact. A reported promise
+or inability to supply a record does not establish its contents.
 A selected passage must genuinely bear on the detail; a span ID alone proves
 only that the words exist. Preserve reported, uncertain, inferred, and
 hypothetical status. A reference to NM's earlier words can explain a reply but

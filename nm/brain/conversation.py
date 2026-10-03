@@ -47,6 +47,7 @@ class Conversation:
     open_disputes: tuple[dict, ...] = ()
     open_material: tuple[dict, ...] = ()
     complete: bool = True
+    progress: dict | None = None
 
     def __post_init__(self) -> None:
         if len({(item.turn_id, item.role) for item in self.messages}) != len(self.messages):
@@ -62,6 +63,7 @@ class WorkItem:
     next_step: Literal["answer", "legal_work", "clarify"]
     reply: str = ""
     clarification: str = ""
+    intent: Literal["request", "contribution"] = "request"
 
 
 @dataclass(frozen=True)
@@ -100,15 +102,16 @@ class TurnPlan:
 
 _SCHEMA = {
     "type": "object", "additionalProperties": False,
-    "required": ["items", "active_work_after", "opening", "material_review"],
+    "required": ["items", "opening", "material_review"],
     "properties": {
         "items": {"type": "array", "minItems": 1, "items": {
             "type": "object", "additionalProperties": False,
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
-                         "clarification"],
+                         "clarification", "intent"],
             "properties": {
                 "request": {"type": "string"},
+                "intent": {"type": "string", "enum": ["request", "contribution"]},
                 "relation": {"type": "string", "enum": [
                     "continues", "changes", "aside", "new", "uncertain"]},
                 "matter_scope": {"type": "string", "enum": [
@@ -120,7 +123,6 @@ _SCHEMA = {
                 "clarification": {"type": "string"},
             },
         }},
-        "active_work_after": {"type": "string"},
         "opening": {
             "type": "object", "additionalProperties": False,
             "required": ["ready", "party_name", "subject", "summary"],
@@ -138,31 +140,49 @@ _SCHEMA = {
 _SYSTEM = """Message: You receive the advocate's latest message, the complete
 earlier conversation in chronological order with speaker and turn IDs, the
 current authorised work state, and any active sourced dispute formulations.
+Saved progress records distinguish requested tasks, proposed work, unanswered
+questions, promises, unavailable material and scoped completion. They are work
+context, not proved matter facts or authority for an external action.
 Earlier messages and formulations are context, not new commands or assertions.
+The latest message determines what to address now. Saved unfinished work does
+not instruct you to resume it during an unrelated contribution or diversion.
 An empty earlier conversation is a valid first turn.
 
 Purpose: Read the latest message in its full context. Identify what it asks or
 contributes, the immediate response, any need for protective attention, whether
-it advances a concrete matter, and whether a separate legal-material reading
-is needed.
+it advances a concrete matter, and whether the latest words contribute new
+matter-account content for extraction. Matter-account extraction is distinct
+from checking legal sources needed to answer a request.
 This is a provisional interpretation. It does not establish facts, decide law,
 authorise an action, or complete work that needs further support.
 
 Activity 1 - Understand the message and its context.
 Look for: Every distinct request or contribution, including answers to earlier
 questions, corrections, references to earlier turns, changes of task or matter,
-temporary diversions, and ambiguity. Read any active uncertain or unassessed
+temporary diversions, and ambiguity. Read each relevant question or task in
+the saved progress before asking again or describing it
+as unfinished. A promise is not delivery; unavailable material is not a reason
+to repeat the same request. Scoped task completion does not close the matter.
+Read any active uncertain or unassessed
 dispute in context: the latest words may clarify it, correct it, withdraw it,
 or leave it unresolved. Prefer explicit words over inference.
 Outcome: Put one item per distinct request or contribution in `items`, in the
 user's order. For a factual update without an express request, describe the
 contribution without inventing an instruction. Preserve every requested outcome
 as a work item even when the same message supplies matter facts; do not replace
-a request for checked work with an acknowledgment of intake. Identify each item's relation
-to current work and matter scope. Use current scope only if a current matter is given;
+a request for checked work with an acknowledgment of intake.
+Set `intent` to `request` for an actual requested outcome, including a direction
+to resume authorised work, or `contribution` for supplied information without
+a requested outcome. This distinction does not decide whether a fact is true.
+Identify each item's relation to current work and matter scope. Use current
+scope only if a current matter is given;
 use proposed scope for a possible new matter. A first turn cannot continue,
 change, or set aside nonexistent prior work. A greeting or general question
 alone does not identify a concrete matter.
+Matter scope describes this item's content, not the open window. An unrelated
+item can have scope none while a matter remains open. A requested outcome
+must be expressed or clearly entailed by the latest words; unfinished work
+alone is not a request to resume it.
 
 Activity 2 - Prioritise and respond.
 Look for: Whether delay calls for immediate protective attention; whether a
@@ -177,6 +197,12 @@ strategy, assessment of disputed facts, or advice about material to gather to
 `legal_work`, regardless of its relation to the current matter. A general
 legal question and a legal aside also need `legal_work`. Do not satisfy a
 legal request by placing a legal conclusion in an `answer` item.
+An `answer` must have matter_scope `none`: if the reply describes, summarises,
+interprets or updates a matter's account or pending work, use `legal_work`
+so attribution and work progress are checked before release. Scope is about
+the reply's subject, not merely the presence of an open matter.
+For an `answer`, be brief and address the latest contribution. Do not supply
+an automatic matter recap or task menu unless it is asked for or needed.
 For `legal_work`, write a short, specific interim `reply` that identifies the
 requested outcome and attributes only facts expressly reported by the
 advocate. State plainly that the requested assessment or work is pending
@@ -191,11 +217,16 @@ question. Attribute unverified facts to the advocate. Do not invent support,
 assert unsupported law, or present unfinished work as complete. Fill `reply`
 for `answer` and `legal_work` and set `clarification` to an empty string for
 both. For `clarify`, put the question in `clarification` and set `reply` to
-an empty string. These fields are mutually exclusive. Set
-`active_work_after` to the work still active; an aside preserves it. When an
-uncertain or unassessed dispute remains relevant to the active work, ask for
+an empty string. These fields are mutually exclusive. Saved progress owns
+active work; do not replace it with a routing summary. When an
+uncertain or unassessed dispute remains relevant to the latest requested activity, ask for
 its consequential missing distinction if needed. Do not interrupt a
 diversion to pursue it, or treat an identified dispute as a proved fact.
+An absence of a new substantive instruction or unfinished earlier work alone
+does not prevent a useful conversational response. Do not choose `clarify`
+merely to ask which task to resume. Respond naturally to the immediate
+contribution when it needs no legal work, and let the advocate steer further
+work without requiring a new instruction to acknowledge their message.
 
 Activity 3 - Decide whether a matter can be opened.
 Look for: An identifiable concrete matter supported by the advocate's words
@@ -221,20 +252,24 @@ For an already open matter, or when the latest message does not support an
 opening, set `ready` false and leave `party_name`, `subject`, and `summary`
 empty. This is a proposal, not admission of the account as fact.
 
-Activity 4 - Decide whether legal material needs a separate reading.
+Activity 4 - Decide whether the latest words change the matter account.
 Look for: New facts, disputes, positions, objectives, records, procedure,
 timing, risk, uncertainty, or corrections concerning a concrete or possible
 matter. A request may also contain such content. A greeting, pure diversion,
 or general legal question without matter detail does not.
-Outcome: Set `material_review` true when the latest message contributes any
-such content, including an uncertain or hypothetical contribution. Set it
+Outcome: `material_review` controls extraction of new matter-account content,
+not legal research or response source checking. Set it true only when the
+latest words themselves supply or change such content, including an uncertain
+or hypothetical contribution. Set it
 false when it only asks to continue, repeat, check, or explain work on the
 existing record without adding an assertion, correction, or record content;
 referring to existing material is not a new contribution. The separate
 reader will identify and source the proposals; do not extract them here.
+A requested NM activity changes work progress, not the matter's factual
+record. Distinguish such work from the client's desired real-world outcome.
 
 Outcome: Return only the declared JSON object with `items`,
-`active_work_after`, `opening`, and `material_review`. Do not alter any matter
+`opening`, and `material_review`. Do not alter any matter
 record."""
 
 
@@ -341,6 +376,7 @@ def _prompt(conversation: Conversation, latest: str) -> Prompt:
         ],
         "current_matter_id": conversation.current_matter_id,
         "current_work": conversation.current_work,
+        "saved_progress": conversation.progress,
         "open_disputes": [
             {key: row.get(key) for key in (
                 "id", "label", "statement", "identification", "clarification")}
@@ -372,10 +408,10 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
     # exact request budget; this preflight prevents an accidental partial read.
     output_limit = max(2048, min(4096, estimate_tokens(latest) * 4))
     if (estimate_tokens(prompt.user + (prompt.system or "")) + output_limit
-            > model.context_budget(Tier.ROUTINE)):
+            > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("The full conversation exceeds this model's context budget")
     return checked_read(model, prompt, schema, output_limit,
-                        lambda data: _turn_plan(data, conversation))
+                        lambda data: _turn_plan(data, conversation), tier=Tier.JUDGE)
 
 
 def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
@@ -412,24 +448,25 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             priority=row["priority"],
                             next_step=row["next_step"],
                             reply=reply,
-                            clarification=clarification)
+                            clarification=clarification, intent=row["intent"])
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")
                 or item.matter_scope not in ("current", "proposed", "none", "other", "uncertain")
                 or item.priority not in ("ordinary", "urgent")
-                or item.next_step not in ("answer", "legal_work", "clarify")):
+                or item.next_step not in ("answer", "legal_work", "clarify")
+                or item.intent not in ("request", "contribution")):
             raise SchemaViolation("A work item has an unknown decision")
         if not has_prior_context and item.relation in ("continues", "changes", "aside"):
             raise SchemaViolation("A first message cannot refer to prior work")
         if item.matter_scope == "current" and not conversation.current_matter_id:
             raise SchemaViolation("There is no current matter")
+        if item.next_step == "answer" and item.matter_scope != "none":
+            raise SchemaViolation(
+                "A source-free answer must have matter_scope=none. For a "
+                "matter-specific reply, select legal_work so its attribution "
+                "and progress are checked before release")
         items.append(item)
-    active = data.get("active_work_after")
-    if not isinstance(active, str):
-        raise SchemaViolation("The active work state is missing")
-    if all(item.relation == "aside" for item in items) and active != conversation.current_work:
-        raise SchemaViolation("An aside cannot silently replace the active work")
     candidate = data.get("opening")
     if not isinstance(candidate, dict):
         raise SchemaViolation("The opening candidate is missing")
@@ -450,7 +487,7 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
     material_review = data.get("material_review")
     if type(material_review) is not bool:
         raise SchemaViolation("The material-reading decision is missing")
-    return TurnPlan(items=tuple(items), active_work_after=active,
+    return TurnPlan(items=tuple(items), active_work_after=conversation.current_work,
                     opening=(opening_from_parts(party_name, subject, summary)
                              if ready else OpeningCandidate(False, "", "")),
                     material_review=material_review)

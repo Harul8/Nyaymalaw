@@ -16,6 +16,9 @@ is refused explicitly instead of silently trimmed.
 
 1. `conversation.interpret` owns requests, scope, urgency and whether the turn
    contributes legal material. It preserves mixed requests and diversions.
+   A source-free `answer` must have scope `none`; matter-specific accounts and
+   work progress use `legal_work` for checked composition. A validation error
+   returns this contract to the interpreter once rather than bypassing review.
 2. `disputes` identifies independently contestable issues; `material` captures
    other significant propositions and their relationship to saved material.
    Explicit saved-record links carry their original source automatically, plus
@@ -37,6 +40,25 @@ is refused explicitly instead of silently trimmed.
 5. One atomic commit saves the user message, released response, material,
    research and coverage. An exact replay returns the saved result without
    re-admitting input or calling a model. Authentication is checked before save.
+
+`work_state` projects tasks and questions directly from those released
+continuation units. The server assigns durable IDs; the model can select an
+existing ID or propose new scoped work. Explicit checked transitions distinguish
+pending, complete, promised, unavailable, deferred and cancelled. A promise
+does not answer a question or deliver a record. Earlier turns without tracking
+metadata remain visible as untracked history rather than invented completed
+work. A diversion preserves the projection. This adds no model call or store.
+
+The projection supplies the next interpretation and continuation. Its
+`active_work` field is the sole source for the compatibility `current_work`
+text; the interpreter does not generate a second work-state summary. The
+interpreter distinguishes actual requested outcomes from contributions.
+Requested substantive outcomes must select or create a task. Questions and
+proposed work have distinct displayed owners. Task sufficiency describes the
+delivered response; only an explicit
+source-supported transition changes durable progress. Neither changes matter
+closure or authorises external action. Unreadable progress stops the turn
+before model dispatch or saving.
 
 The continuation asks sensitive questions with a supported purpose, acknowledges
 expressed concern proportionately, tests competing explanations without
@@ -69,8 +91,16 @@ pipeline. Context-fitting batches and per-dispute isolation can add calls.
 Readers allow one feedback correction. Verifiers retain valid peer verdicts and
 retry only unresolved units once; provider outages do not trigger item-by-item
 retry cascades. A rejected continuation gets at most one replacement generation
-and another independent check. Independent review uses the configured judge
-model; a downgraded routine result is not an independent verdict.
+and another independent check. Substantive response writing uses the stronger
+configured judge tier because it must jointly preserve meaning, sources and
+cross-turn progress. Its separate review uses an independent prompt and call
+on that tier. A downgraded routine response is not accepted for either stage.
+Interpretation also uses the configured judge tier: deciding the latest request
+against pending work is consequential, and browser testing exposed unnecessary
+material reads when that decision used the smaller routine model. Extraction
+retains its routine tier with independent checks. Interpretation, writing and
+review are separate tasks and calls, currently on the same configured model;
+they do not provide model diversity. No progress or personality call is added.
 
 `metrics.llm_calls` and content-free `model_calls` receipts report actual service
 calls, operations, tiers, timing and token usage. `provider_retries` separately

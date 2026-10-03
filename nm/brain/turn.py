@@ -32,6 +32,7 @@ from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
 from nm.brain.requirements_state import requirements_record
 from nm.brain.source_snapshots import source_snapshots
+from nm.brain.work_state import project_work, seal_progress
 from nm.shared.model_port import (
     ConfigurationError,
     ContextOverflow,
@@ -46,12 +47,13 @@ from nm.work_the_file.matter_contracts import Matter, MatterId
 
 class BrainRefused(Exception):
     def __init__(self, status: int, why: str, *, committed: str = "not_committed",
-                 retryable: bool = True) -> None:
+                 retryable: bool = True, code: str = "brain_refused") -> None:
         super().__init__(why)
         self.status = status
         self.why = why
         self.committed = committed
         self.retryable = retryable
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,9 @@ def _current_records(store: StorePort, matter: Matter) -> tuple[Conversation, di
         current_work=(matter.brain_chat[-1].get("active_work_after", "")
                       if matter.brain_chat else ""))
     older_context = from_turns(older, state="ok").messages
+    progress = project_work(matter, prior_conversation=older_context)
+    if progress["state"] != "ok":
+        raise IncompleteConversation("The saved work progress is incomplete")
     disputes = proposed_disputes(matter, prior_conversation=older_context)
     if disputes["state"] != "ok":
         raise IncompleteConversation("The saved dispute context is incomplete")
@@ -187,7 +192,8 @@ def _current_records(store: StorePort, matter: Matter) -> tuple[Conversation, di
     if details["state"] != "ok":
         raise IncompleteConversation("The saved material context is incomplete")
     return (replace(conversation, open_disputes=tuple(disputes["rows"]),
-                    open_material=tuple(details["rows"])), disputes, details)
+                    open_material=tuple(details["rows"]), progress=progress,
+                    current_work=progress["active_work"]), disputes, details)
 
 
 def _history(store: StorePort, matter: Matter) -> Conversation:
@@ -461,12 +467,14 @@ class BrainService:
                 return BrainOutput(prior)
         if (turn.expected_version is not None and matter.brain_ready
                 and turn.expected_version != matter.version):
-            raise BrainRefused(409, "The matter changed; reload it before sending another message")
+            raise BrainRefused(409, "The matter changed; reload it before sending another message",
+                               code="stale_version")
         if turn.turn_id in matter.turns_applied:
             raise BrainRefused(409, "This turn already belongs to an earlier response")
         counted_model = _CountedModel(self.model)
         try:
-            conversation = _history(self.store, matter) if persisted else Conversation(())
+            conversation = (_history(self.store, matter) if persisted else
+                            Conversation((), progress=project_work(matter)))
             plan = interpret(counted_model, conversation, turn.message)
             candidates = (_read_material(counted_model, conversation,
                                          turn.message, turn.turn_id)
@@ -478,7 +486,11 @@ class BrainService:
             candidates = (tuple(candidate for candidate in candidates
                                 if candidate.kind == "dispute") + grounded.details)
         except IncompleteConversation as exc:
-            raise BrainRefused(409, str(exc)) from exc
+            logging.getLogger(__name__).warning("Saved conversation validation failed: %s", exc)
+            raise BrainRefused(
+                409, "The saved conversation or its sources could not be verified. "
+                "Reload this conversation; if this continues, contact the administrator."
+            ) from exc
         except ContextOverflow as exc:
             raise BrainRefused(
                 413, "This conversation exceeds the configured model's context "
@@ -580,7 +592,7 @@ class BrainService:
                "message": turn.message, "response": response,
                "offer_digest": offer_digest, "at": now,
                "active_work_after": plan.active_work_after,
-               "elements": [element], "committed": True,
+               "elements": response["elements"], "committed": True,
                "release_state": "released", "matter_id": str(matter.id)}
         updated = replace(matter, title=title, brain_ready=ready,
                           brain_opening_summary=summary,
@@ -627,7 +639,11 @@ class BrainService:
                 continuation = continue_conversation(
                     counted_model, conversation=conversation, latest=turn.message,
                     latest_turn_id=turn.turn_id, plan=plan, disputes=disputes,
-                    material=details, requirements=checked).as_dict()
+                    material=details, requirements=checked,
+                    progress=conversation.progress).as_dict()
+                continuation = seal_progress(
+                    continuation, matter_id=str(matter.id), turn_id=turn.turn_id,
+                    plan=plan, prior_progress=conversation.progress)
                 elements = _continuation_elements(plan, continuation)
                 response["continuation"] = continuation
                 response["elements"] = row["elements"] = elements
@@ -643,9 +659,17 @@ class BrainService:
                 response["elements"].append({"kind": "finding", "text": (
                     "Some proposed details could not be confirmed against "
                     "your words, so they were not added to the matter record. "
-                    "Please clarify them if they matter to your request."),
+                    "Your message is saved; the missing coverage remains visible."),
                     "refs": [], "source": None, "section": "answer",
                     "collapsible": False, "disclosure": True})
+            # Release one final reply snapshot. Notices are part of the visible
+            # transcript, so validate after composing them, before committing.
+            row["elements"] = response["elements"]
+            progress = project_work(updated, prior_conversation=conversation.messages)
+            if progress["state"] != "ok":
+                raise IncompleteConversation("The new work progress cannot be verified")
+            # This compatibility field is a projection, never a second owner.
+            row["active_work_after"] = progress["active_work"]
             response["metrics"] = counted_model.metrics()
         except IncompleteConversation as exc:
             raise BrainRefused(

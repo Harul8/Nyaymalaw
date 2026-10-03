@@ -24,14 +24,17 @@ def require_independent_result(result) -> None:
 
 
 def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
-                 output_limit: int, accept: Callable[[dict], _T]) -> _T:
+                 output_limit: int, accept: Callable[[dict], _T], *,
+                 tier: Tier = Tier.ROUTINE) -> _T:
     """Return one validated read; correct one rejected response in context."""
     current = prompt
     for attempt in range(2):
         result = None
         try:
-            result = model.structured(current, schema, Tier.ROUTINE,
+            result = model.structured(current, schema, tier,
                                       max_tokens=output_limit)
+            if tier == Tier.JUDGE:
+                require_independent_result(result)
             if not result.usable or not isinstance(result.data, dict):
                 raise SchemaViolation("The response was incomplete or not a JSON object")
             require_schema(result.data, schema)
@@ -64,12 +67,12 @@ def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
             repair_user = json.dumps(correction, ensure_ascii=False,
                                      separators=(",", ":"))
             if (estimate_tokens(repair_system + repair_user) + output_limit
-                    > model.context_budget(Tier.ROUTINE)):
+                    > model.context_budget(tier)):
                 correction.pop("rejected_output")
                 repair_user = json.dumps(correction, ensure_ascii=False,
                                          separators=(",", ":"))
             if (estimate_tokens(repair_system + repair_user) + output_limit
-                    > model.context_budget(Tier.ROUTINE)):
+                    > model.context_budget(tier)):
                 raise ContextOverflow(
                     "The full conversation exceeds the correction context budget") from exc
             current = Prompt(system=repair_system, user=repair_user,

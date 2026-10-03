@@ -7,6 +7,7 @@ from nm.brain.conversation import Conversation, IncompleteConversation, Message,
 from nm.brain.history import from_turns
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelResult, SchemaViolation, Tier, Usage
+from tests.brain_continuation_fixture import interpretation as route_contract
 
 
 class Model:
@@ -17,7 +18,7 @@ class Model:
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.ROUTINE
+        assert tier is Tier.JUDGE
         return self.budget
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -30,13 +31,14 @@ class Model:
 
 def item(quoted, *, request=None, relation="continues", scope="current",
          priority="ordinary", step="legal_work", reply=None,
-         clarification=""):
+         clarification="", intent="request"):
     if reply is None:
         reply = (f"I will check the material needed to address {quoted}."
                  if step == "legal_work" else "")
     return {"request": request or quoted, "relation": relation,
             "matter_scope": scope, "priority": priority,
-            "next_step": step, "reply": reply, "clarification": clarification}
+            "next_step": step, "reply": reply, "clarification": clarification,
+            "intent": intent}
 
 
 def interpretation(items, *, active_work_after="", opening=None,
@@ -51,9 +53,7 @@ def interpretation(items, *, active_work_after="", opening=None,
                    "party_name": party_name if separator else "",
                    "subject": subject.strip() if separator else title,
                    "summary": opening["summary"]}
-    return {"items": items, "material_review": material_review,
-            "active_work_after": active_work_after,
-            "opening": opening}
+    return route_contract({"items": items, "material_review": material_review, "opening": opening})
 
 
 def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
@@ -95,6 +95,7 @@ def test_adapter_schema_rejection_gets_one_contextual_correction():
 
     assert plan.items[0].reply.startswith("Hello")
     assert len(model.calls) == 2
+    assert [call[2] for call in model.calls] == [Tier.JUDGE, Tier.JUDGE]
     correction = json.loads(model.calls[1][0].user)
     assert correction["original_input"]["latest_message"] == "Hello"
     assert "provider could not parse" in correction["validation_issue"]
@@ -209,7 +210,8 @@ def test_open_matter_requires_an_empty_opening_decision_on_followup():
         current_matter_id="mat_deposit")
     latest = "Correction: the handover was on 2 August."
     model = Model(interpretation([
-        item(latest, relation="continues", scope="current", step="answer",
+        item(latest, relation="continues", scope="current", step="legal_work",
+             intent="contribution",
              reply="I have recorded your corrected handover date.")],
         material_review=True))
 
@@ -353,14 +355,23 @@ def test_unattributed_or_invalid_interpretation_is_refused(invalid):
         interpret(model, conversation, "Latest words")
 
 
-def test_an_aside_cannot_silently_replace_active_work():
+def test_an_aside_preserves_canonical_active_work_without_a_model_decision():
     conversation = Conversation((), current_work="draft reply")
     model = Model(interpretation([
         item("Hello", relation="aside", scope="none",
              step="answer", reply="Hello.")],
         active_work_after="research case law"))
+    interpreted = interpret(model, conversation, "Hello")
+    assert interpreted.active_work_after == "draft reply"
+    assert "active_work_after" not in model.data
+
+
+def test_model_cannot_supply_a_second_owner_for_active_work():
+    proposal = interpretation([item("Hello", relation="aside", scope="none",
+                                    step="answer", reply="Hello.")])
+    proposal["active_work_after"] = "research case law"
     with pytest.raises(SchemaViolation):
-        interpret(model, conversation, "Hello")
+        interpret(Model(proposal), Conversation((), current_work="draft reply"), "Hello")
 
 
 def test_many_distinct_requests_do_not_hit_a_scenario_count_limit():

@@ -7,7 +7,7 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import _proposed_disputes
-from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_continuation_fixture import continuation_reply, interpretation
 from tests.brain_reader_fixture import reader_operations
 
 
@@ -31,7 +31,7 @@ class ScriptedBrain:
         if continuation is not None:
             answer = continuation
         elif prompt.operation == "interpret_conversation":
-            answer = next(self.routes)
+            answer = interpretation(next(self.routes))
             self.current_items = answer["items"]
         elif prompt.operation == "extract_legal_details":
             answer = {"new_items": [], "changes": []}

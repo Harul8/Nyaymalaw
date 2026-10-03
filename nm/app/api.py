@@ -4425,11 +4425,13 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         }) from exc
     except BrainRefused as exc:
         raise HTTPException(status_code=exc.status, detail={
+            "code": getattr(exc, "code", "brain_refused"),
             "why": exc.why, "turn_id": turn_id, "committed": exc.committed,
             "chat_id": req.chat_id, "retryable": exc.retryable,
         }) from exc
     except StaleWrite as exc:
         raise HTTPException(status_code=409, detail={
+            "code": "stale_version",
             "why": str(exc), "turn_id": turn_id,
             "committed": "not_committed",
             "expected_version": getattr(exc, "expected_version", req.expected_version),

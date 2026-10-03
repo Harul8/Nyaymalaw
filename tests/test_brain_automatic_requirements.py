@@ -17,7 +17,7 @@ from nm.shared.model_port import (
     Usage,
 )
 from nm.shared.store_file_store import FileMatterStore
-from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_continuation_fixture import continuation_reply, interpretation
 from tests.brain_reader_fixture import reader_operations
 
 FIRST = ("The supplier retained our tools. "
@@ -71,7 +71,7 @@ class Model:
         if continuation is not None:
             data = continuation
         elif prompt.operation == "interpret_conversation":
-            data = next(self.routes)
+            data = interpretation(next(self.routes))
             self.current_items = data["items"]
         elif prompt.operation == "extract_disputes":
             data = reader_operations(self._disputes(payload), payload,

@@ -17,7 +17,7 @@ from nm.shared.model_port import (
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import matter_list_projection
-from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_continuation_fixture import continuation_reply, interpretation
 from tests.brain_reader_fixture import reader_operations
 
 
@@ -57,6 +57,7 @@ class Model:
             data = next(self.replies)
             self.calls.append(json.loads(prompt.user))
             if prompt.operation == "interpret_conversation":
+                data = interpretation(data)
                 self.current_items = data["items"]
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
@@ -281,10 +282,24 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     draft["items"].insert(0, {
         "request": "Assess the missed delivery", "relation": "new",
         "matter_scope": "proposed", "priority": "ordinary",
-        "next_step": "answer", "reply": "The law guarantees damages today.",
+        "next_step": "legal_work", "reply": "The law guarantees damages today.",
         "clarification": "",
     })
-    brain, _, model = service(tmp_path, [draft])
+    class IndependentCheck(Model):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            if prompt.operation == "verify_continuation":
+                data = {"verdicts": [{
+                    **row, "verdict": "reject" if row["request_index"] == 0 else "accept",
+                    "reason": ("The legal guarantee lacks checked supporting sources."
+                               if row["request_index"] == 0 else row["reason"]),
+                } for row in result.data["verdicts"]]}
+                return replace(result, data=data)
+            return result
+
+    store = FileMatterStore(tmp_path, key="a-test-sealing-key")
+    model = IndependentCheck([draft])
+    brain = BrainService(store, model)
 
     response = brain.run(BrainTurn("adv", latest, "unchecked-answer")).as_dict()
 
@@ -293,7 +308,12 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert "I will check the delivery terms and record before assessing remedies." in visible
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 8
+    assert [row["request_index"] for row in response["continuation"]["units"]] == [1]
+    assert [row["state"] for row in response["continuation"]["coverage"]] == [
+        "unavailable", "ok"]
+    assert model.all_calls.count("continue_conversation") == 2
+    assert model.all_calls.count("verify_continuation") == 2
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
         "extract_disputes", "extract_legal_details", "verify_material_grounding",
@@ -376,10 +396,13 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
         "opening": {"ready": False, "party_name": "", "subject": "",
                     "summary": ""},
     }
+    reported_account = plan(
+        account, scope="proposed", step="legal_work",
+        reply="I can review the deposit dispute once I have the agreement.",
+        title="Deposit dispute", summary="The advocate reports a withheld deposit.")
+    reported_account["items"][0]["intent"] = "contribution"
     brain, _, model = service(tmp_path, [
-        plan(account, scope="proposed", step="legal_work",
-             reply="I can review the deposit dispute once I have the agreement.",
-             title="Deposit dispute", summary="The advocate reports a withheld deposit."),
+        reported_account,
         modelled_mixed,
         plan("Please continue with the deposit review.", relation="continues",
              scope="current", step="legal_work",
@@ -398,7 +421,7 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
                         chat_id=opened["chat_id"]))
     assert [row["text"] for row in model.calls[2]["earlier_conversation"]][-2:] == [
         mixed, "\n".join(row["text"] for row in reply["elements"])]
-    assert model.calls[2]["current_work"] == "assess deposit recovery"
+    assert model.calls[2]["current_work"] == "Assess recovery of the deposit"
 
 
 def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
@@ -450,7 +473,8 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     direct_reply = ("You have corrected the hearing date to Thursday. "
                     "I will use that as provisional while checking the notice.")
     update = plan(correction, relation="continues", scope="current",
-                  step="answer", reply=direct_reply)
+                  step="legal_work", reply=direct_reply)
+    update["items"][0]["intent"] = "contribution"
     update["material_review"] = True
 
     class SourcedModel(Model):

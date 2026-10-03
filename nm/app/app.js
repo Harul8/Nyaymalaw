@@ -2811,7 +2811,7 @@ async function deliver(entry) {
       entry.state = 'unknown';
       entry.error = 'You cancelled this turn’s request; whether it was saved is not confirmed.';
     }
-    if (e.status === 409) entry.state = 'stale';
+    if (e.status === 409 && entry.refusal?.code === 'stale_version') entry.state = 'stale';
     if (!current()) return;
     if (entry.state === 'input_only' && entry.refusal?.matter_id) {
       const openedId = entry.refusal.matter_id;

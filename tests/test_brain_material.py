@@ -7,7 +7,7 @@ import pytest
 from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
-from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_continuation_fixture import continuation_reply, interpretation
 from tests.brain_reader_fixture import reader_operations
 
 
@@ -56,6 +56,7 @@ class Model:
             self.next_material = planned["material"]
             data = {key: value for key, value in planned.items() if key != "material"}
             if prompt.operation == "interpret_conversation":
+                data = interpretation(data)
                 self.current_items = data["items"]
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline",
@@ -261,7 +262,8 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
     second_plan = plan(correction, candidates=[revised], items=[{
         "request": "Correct the handover date", "relation": "continues",
         "matter_scope": "current", "priority": "ordinary",
-        "next_step": "answer", "reply": "I have noted the corrected date.",
+        "next_step": "legal_work", "reply": "I have noted the corrected date.",
+        "intent": "contribution",
         "clarification": ""}])
     second_plan["material_review"] = True
     model = Model([plan(first, candidates=[original], opening=True), second_plan])
