@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-03",
+  "status": "structural regression checks passed; broader browser acceptance remains open",
+  "trigger": "The first synthetic multi-dispute browser brief saved partial board work but withheld the conversational response after its bounded correction.",
+  "initial_browser_turn": {
+    "matter_id": "mat_1fa4c19c189dab75fbc5c9b30d7d84bf",
+    "turn_id": "turn_c754c642-d173-4095-9800-903ba13036e6",
+    "model_calls": 12,
+    "provider_retries": 0,
+    "assessment": "fail",
+    "defects": [
+      "No useful released conversational reply; an assessment lacked selected checked legal sources.",
+      "Six checked details with uncertain matter scope silently disappeared from the active projection.",
+      "A reported physical incident was missing; the saved evidence could not distinguish extraction omission from rejected proposals.",
+      "The access dispute added an unsupported actor relationship."
+    ]
+  },
+  "general_fixes": [
+    "Separate matter ownership from factual uncertainty and proof in the existing extraction instructions.",
+    "Retain source-checked ambiguous observations outside active material/research, with partial coverage and explicit clarification links.",
+    "Prevent ambiguous revisions from retiring current-owned material.",
+    "Distinguish attributed factual account from legal assessment, preserving the actual checked-passage guard and independent review.",
+    "Identify the exact failed block/field and allowed subject-local source boundary in existing bounded correction feedback.",
+    "Reject inline supplied catalogue keys at token boundaries, preserving literal labels only with selected advocate provenance.",
+    "Retain dispute/detail rejection reasons on the source turn without treating rejected proposals as accepted records.",
+    "Keep already-decided dispute peers as context for a retry without repeating their verdicts."
+  ],
+  "call_impact": {
+    "added_routine_calls": 0,
+    "conditional_calls": "Existing one-correction limits remain; malformed/rejected units alone are retried.",
+    "owners": "Interpretation, extraction, independent grounding, retrieval decomposition/reading/checking, and continuation/checking retain their existing separate purposes.",
+    "note": "A first substantive turn is not a fixed call count. Receipt counts include conditional corrections and context-fitting batches; corpus search/rerank adds zero generative calls."
+  },
+  "recovery_browser_check": {
+    "admitted_original_again": false,
+    "model_calls": 13,
+    "serving_fingerprint": "b9aa7183030c2d41",
+    "qualification": "Final scope/opaque-reference changes were not all loaded in that recovery run; it is not acceptance of the final guard.",
+    "outcome": "A useful limited source-linked reply and third dispute were saved.",
+    "assessment": "concern/fail",
+    "remaining_observations": [
+      "Invented gate-attendant role/connection and uncertainty about responsibility confused with identification certainty.",
+      "Internal span keys appeared in prose; final generic reference guard added subsequently.",
+      "Broad multi-dispute gathering advice selected only gate-related legal sources; item-level support needs further review.",
+      "Displayed question and next-work content were broader than their saved purposes.",
+      "Reply was approximately 1492 words; latency and focus remain quality concerns."
+    ]
+  },
+  "limitations": [
+    "Automated source-check acceptance is not proof of semantic quality or complete legal support.",
+    "No scenario-specific rule, keyword branch, canned legal checklist or donor snippet was added.",
+    "Four twelve-turn browser journeys remain to be completed and graded against actual visible and saved evidence."
+  ]
+}

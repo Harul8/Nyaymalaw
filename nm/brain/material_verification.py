@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from nm.brain.checked import require_independent_result
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
@@ -66,6 +66,7 @@ class GroundingResult:
     opening_supported: bool
     rejected_details: int
     opening_reason: str = ""
+    rejected_proposals: tuple[dict, ...] = ()
 
 
 _VERDICT = {
@@ -193,4 +194,8 @@ def verify_material_grounding(
     return GroundingResult(accepted, opening_decision[0] and not title_issue,
                            len(details) - len(accepted),
                            title_issue or (opening_decision[1]
-                                           if not opening_decision[0] else ""))
+                                           if not opening_decision[0] else ""),
+                           tuple({"candidate_id": key, "reason": decisions[key][1],
+                                  "proposal": asdict(candidate)}
+                                 for key, candidate in keyed.items()
+                                 if not decisions[key][0]))

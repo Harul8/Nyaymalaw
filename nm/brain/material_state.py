@@ -98,6 +98,10 @@ def material_record(matter: Matter, *, disputes: dict,
     if disputes.get("state") != "ok":
         return {"state": "incomplete", "rows": [], "by_dispute": {}, "matter": [],
                 "unresolved": [], "history": [],
+                "excluded_scope": [],
+                "coverage": {"state": "unavailable", "ambiguous_scope_items": 0,
+                             "legacy_unverified_items": 0, "diagnostics": [
+                                 "The saved dispute record is incomplete."]},
                 "problems": ["the saved dispute record is incomplete"]}
     dispute_history = disputes["history"]
     known_disputes = {row["id"]: row for row in dispute_history}
@@ -109,6 +113,8 @@ def material_record(matter: Matter, *, disputes: dict,
                 successors.setdefault(prior_id, set()).add(row["id"])
 
     active: dict[str, dict] = {}
+    owned_ids: set[str] = set()
+    held_revision_ids: set[str] = set()
     history: list[dict] = []
     problems: list[str] = []
     seen_ids: set[str] = set()
@@ -139,6 +145,7 @@ def material_record(matter: Matter, *, disputes: dict,
                 active_at_turn.add(dispute["id"])
         previous_active = dict(active)
         additions: list[dict] = []
+        owned_additions: set[str] = set()
         retire: set[str] = set()
         bad_turn = False
         for proposal in proposals:
@@ -156,10 +163,14 @@ def material_record(matter: Matter, *, disputes: dict,
                 problems.append("a material detail has an unknown matter scope")
                 bad_turn = True
                 continue
-            if not belongs_to_current_matter(
+            belongs = belongs_to_current_matter(
                     proposal.get("matter_scope"), route=route,
                     opened_before_turn=opened_before_turn,
-                    first_saved_turn=turn_index == 0):
+                    first_saved_turn=turn_index == 0)
+            # Attributable ambiguous accounts remain available for explicit
+            # source-linked ownership clarification. They are not current
+            # facts or legal-research context merely because they share a chat.
+            if not belongs and proposal["matter_scope"] != "uncertain":
                 continue
             proposal_id = proposal.get("id")
             placement = _identity(proposal)
@@ -190,15 +201,28 @@ def material_record(matter: Matter, *, disputes: dict,
             row = {**proposal, "placement": scope, "dispute_ids": dispute_ids,
                    "related_material_ids": related}
             additions.append(row)
+            if belongs:
+                owned_additions.add(proposal_id)
             if proposal["relation"] in ("corrects", "withdraws"):
-                retire.update(related)
+                if belongs:
+                    retire.update(related)
+                else:
+                    # Ambiguous ownership cannot withdraw an attributed item
+                    # from the current file. Keep the attempted revision held,
+                    # with its source and target context, until scope is clear.
+                    retire.update(item for item in related if item not in owned_ids)
+                    if any(item in owned_ids for item in related):
+                        held_revision_ids.add(proposal_id)
         if not bad_turn:
             for item in retire:
                 active.pop(item)
+                owned_ids.discard(item)
             for row in additions:
                 seen_ids.add(row["id"])
-                history.append(row)
-                if row["relation"] != "withdraws":
+                if row["id"] in owned_additions:
+                    history.append(row)
+                    owned_ids.add(row["id"])
+                if row["relation"] != "withdraws" or row["id"] in held_revision_ids:
                     active[row["id"]] = row
         prior_words[(turn["turn_id"], "advocate")] = message
         prior_words[(turn["turn_id"], "nm")] = "\n".join(
@@ -210,6 +234,7 @@ def material_record(matter: Matter, *, disputes: dict,
     matter_rows: list[dict] = []
     unresolved: list[dict] = []
     projected_rows: list[dict] = []
+    excluded_scope: list[dict] = []
     unverified_count = 0
     for row in active.values():
         safe = sourced_detail_for_display(
@@ -218,13 +243,17 @@ def material_record(matter: Matter, *, disputes: dict,
             problems.append("a material detail lacks its saved advocate passage")
             continue
         if safe.get("grounding") == "legacy_unverified":
+            unverified_count += 1
+        if row["id"] not in owned_ids:
+            excluded_scope.append(safe)
+            continue
+        if safe.get("grounding") == "legacy_unverified":
             # Earlier exact quotes remain visible, but their model-written
             # paraphrases have not passed the independent grounding check.
             # Do not feed those paraphrases or their old dispute links into
             # source-backed research as if they had been verified.
             projected_rows.append(safe)
             unresolved.append(safe)
-            unverified_count += 1
             continue
         projected_rows.append(safe)
         if safe["placement"] == "matter":
@@ -245,8 +274,22 @@ def material_record(matter: Matter, *, disputes: dict,
                 by_dispute[dispute_id].append(safe)
             if ambiguous:
                 unresolved.append(safe)
+    diagnostics = (["Some attributable material has unresolved matter ownership; "
+                    "it is held outside the current record until clarified."]
+                   if excluded_scope else [])
+    if unverified_count:
+        diagnostics.append("Some earlier material has not been independently checked.")
+    if held_revision_ids.intersection(active):
+        diagnostics.append("An ownership-ambiguous revision was held without "
+                           "changing current-owned material.")
     return {"state": "incomplete" if problems else "ok",
             "rows": projected_rows, "unverified_count": unverified_count,
             "by_dispute": by_dispute, "matter": matter_rows,
             "unresolved": unresolved, "history": history,
+            "excluded_scope": excluded_scope,
+            "coverage": {"state": "unavailable" if problems else
+                         "partial" if excluded_scope or unverified_count else "ok",
+                         "ambiguous_scope_items": len(excluded_scope),
+                         "legacy_unverified_items": unverified_count,
+                         "diagnostics": diagnostics},
             "problems": problems}

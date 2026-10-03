@@ -143,6 +143,21 @@ identity, ownership, digest and the released block before returning text. Source
 links are grouped beneath each response block; the reading pane has a fixed
 heading and Close control with a scrolling body.
 
+Matter ownership is separate from factual certainty, actor identity, proof and
+legal applicability. Attributable observations whose matter ownership remains
+unclear are exposed with partial coverage outside the active material and
+research records. They remain available for an explicit source-linked
+clarification; they are never silently promoted or discarded. Dispute and
+detail review decisions retain rejected proposals and reasons on their source
+turn for audit, without making rejected material part of the matter record.
+
+Factual synthesis uses an attributed account block; a legal assessment selects
+its actual checked passages. Missing legal coverage supports a specific
+limitation, not an unsourced conclusion. The same independent check examines
+the meaning of all blocks, so relabelling a legal assertion cannot bypass
+grounding. Correction feedback names the failed block or subject and its
+allowed reference boundary. These distinctions add no routine model calls.
+
 Failures are isolated at the smallest independent unit. Valid research and
 response units survive rejected peers, with explicit missing coverage. A failed
 core read cannot be replaced with an empty result and presented as complete.

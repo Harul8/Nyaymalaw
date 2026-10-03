@@ -44,6 +44,11 @@ Supporting premises, legal theories, evidence gaps, uncertainty about legal
 effect and alternative remedies do not by themselves create another dispute.
 A possible future harm is a risk unless an independently contested right
 already exists. Use earlier words to understand a reply or correction.
+Review the entire latest account before finishing: every independently
+contestable act or position must be considered, including one whose actor,
+cause, connection to another issue or legal effect remains unknown. Missing
+identity or proof does not erase reported conduct. Do not assign an unknown
+actor from an adjacent event merely because the events share a setting.
 Outcome: Give each issue a crisp `label` naming concrete conduct or a
 contested position, a full neutral question in `statement`, and a short
 `why_material` explaining its distinct practical conclusion. Paraphrase
@@ -78,7 +83,11 @@ The server attaches exact saved words and each revision target's original
 advocate source. Contextual citations do not authorise a revision. Set
 `matter_scope`, `basis` and `importance` according to the attributed words;
 use current scope only when a current matter ID is supplied, and proposed
-for a possible new matter. Do not merge another matter's account.
+for the opening matter when no current ID exists. Scope identifies which
+matter owns the account; uncertainty about truth, responsibility or legal
+effect belongs in basis and clarification, not in matter_scope. Use uncertain
+scope only when the account's matter ownership itself is ambiguous. Do not
+merge another matter's account.
 
 Activity 4 - Decide identification certainty.
 Look for: Whether the issue itself is identifiable, separately from whether

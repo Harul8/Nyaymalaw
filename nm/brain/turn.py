@@ -250,7 +250,9 @@ def _current_records(store: StorePort, matter: Matter,
                                                research["by_subject"][identity]})}
                      for identity, subject in research["subjects"].items())
     return (replace(conversation, open_disputes=tuple(disputes["rows"]),
-                    open_material=tuple(details["rows"]), progress=progress,
+                    open_material=tuple([*details["rows"],
+                                         *details.get("excluded_scope", [])]),
+                    progress=progress,
                     research_coverage=coverage,
                     current_work=progress["active_work"]), disputes, details)
 
@@ -308,7 +310,8 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
     return elements
 
 
-def _read_material(model, conversation: Conversation, latest: str, turn_id: str):
+def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
+                   audit: list[dict] | None = None):
     """Read disputes, then details that can link to newly identified issues."""
     arguments = {"earlier": conversation.messages, "latest": latest,
                  "current_matter_id": conversation.current_matter_id}
@@ -317,7 +320,7 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str)
         candidates=extract_disputes(
             model, prior_disputes=conversation.open_disputes, **arguments),
         earlier=conversation.messages, latest=latest,
-        active_disputes=conversation.open_disputes)
+        active_disputes=conversation.open_disputes, audit=audit)
     active = {row["id"]: row for row in conversation.open_disputes}
     for index, candidate in enumerate(disputes, start=1):
         if not (candidate.matter_scope == "current" or
@@ -462,8 +465,9 @@ class BrainService:
             conversation = (_history(self.store, matter, corpus_revision) if persisted else
                             Conversation((), progress=project_work(matter)))
             plan = interpret(counted_model, conversation, turn.message)
+            dispute_audit: list[dict] = []
             candidates = (_read_material(counted_model, conversation,
-                                         turn.message, turn.turn_id)
+                                         turn.message, turn.turn_id, dispute_audit)
                 if plan.material_review or plan.opening.ready
                 else ())
             grounded = verify_material_grounding(
@@ -568,6 +572,8 @@ class BrainService:
                     "material_coverage": {
                         "state": "partial" if grounded.rejected_details else "ok",
                         "withheld_details": grounded.rejected_details,
+                        "rejected_proposals": list(grounded.rejected_proposals),
+                        "dispute_review": dispute_audit,
                         "opening_fallback": not opening_supported},
                     "research_reads": [],
                     "metrics": counted_model.metrics(),

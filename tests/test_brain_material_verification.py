@@ -59,6 +59,10 @@ def test_one_batch_checks_details_and_opening_without_dropping_valid_peer():
 
     assert result.details == (good,)
     assert result.rejected_details == 1
+    assert result.rejected_proposals[0]["candidate_id"] == "D2"
+    assert result.rejected_proposals[0]["reason"] == "Grounded"
+    assert result.rejected_proposals[0]["proposal"]["quoted"] == "I sent a return request."
+    assert "id" not in result.rejected_proposals[0]["proposal"]
     assert result.opening_supported is False
     assert len(model.calls) == 1
     prompt, schema = model.calls[0]

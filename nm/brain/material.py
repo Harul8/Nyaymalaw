@@ -333,6 +333,15 @@ connection is unclear. With no active dispute, leave `dispute_ids` empty.
 Do not guess links from proximity or merge another matter's account. Set
 `matter_scope` to current only with a current matter ID, proposed for a
 possible new matter, other for a different matter, or uncertain if ambiguous.
+Matter scope concerns ownership of the account, not whether its facts are
+proved, its actor is known, its record has been examined, or its legal effect
+is settled. A first account with no current matter ID can clearly belong to
+the proposed matter despite all those uncertainties. Preserve them in the
+attributed statement and `basis`, not by making ownership ambiguous.
+A selected active dispute link assigns the detail to the matter under
+discussion: use current scope when its current matter ID is supplied, and
+proposed otherwise. If ownership genuinely cannot be determined, use uncertain
+scope without dispute links and unresolved placement; do not guess ownership.
 Preserve stated, attributed, described-record, inferred, uncertain or
 hypothetical status in `basis`, and provisional relevance in `importance`.
 
@@ -438,12 +447,13 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
     payload["current_matter_id"] = current_matter_id
     payload["active_disputes"] = [
         {key: row.get(key) for key in (
-            "id", "label", "statement", "source_turn_id", "quoted")}
+            "id", "label", "statement", "source_turn_id", "quoted", "matter_scope")}
         for row in disputes]
     payload["active_material"] = [
         {key: row.get(key) for key in (
             "id", "kind", "statement", "source_turn_id", "quoted",
-            "placement", "dispute_ids")}
+            "placement", "dispute_ids", "matter_scope", "relation",
+            "related_material_ids")}
         | {"source_ids": list(saved_source_ids(row, prior_sources))}
         for row in prior_material]
     prompt = Prompt(
@@ -495,6 +505,15 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                            for item in dispute_ids)
                     or len(dispute_ids) != len(set(dispute_ids))):
                 raise SchemaViolation("A detail has an invalid dispute placement")
+            owned_scope = "current" if current_matter_id else "proposed"
+            if dispute_ids and candidate.matter_scope != owned_scope:
+                raise SchemaViolation(
+                    f"A detail selecting active dispute_ids {dispute_ids!r} "
+                    f"requires matter_scope {owned_scope!r}. Scope identifies "
+                    "the matter that owns the account, not factual certainty "
+                    "or proof. If ownership is genuinely ambiguous, preserve "
+                    "uncertain scope, clear dispute_ids and use unresolved "
+                    "placement rather than assigning the account to this matter.")
             # Placement is a presentation category, while the selected IDs are
             # the substantive link. Canonicalize a contradictory pair instead
             # of rejecting an otherwise attributable detail (or the whole turn).
@@ -512,6 +531,16 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                     "relation new requires an empty related_material_ids array. "
                     "For a linked change, select the supported relationship "
                     "to the earlier proposition, not whether the message is new.")
+            if candidate.matter_scope == "uncertain" and any(
+                    known_material[item].get("matter_scope") in ("current", "proposed")
+                    for item in material_ids):
+                raise SchemaViolation(
+                    "An ownership-ambiguous detail cannot revise current-owned "
+                    "related_material_ids. Preserve uncertain ownership as a "
+                    "separate new proposal without revision targets, or select "
+                    "current/proposed ownership only if the attributed account "
+                    "establishes it. Uncertainty about facts or proof does not "
+                    "make matter ownership uncertain.")
             accepted.append(replace(
                 candidate, placement=placement, dispute_ids=tuple(dispute_ids),
                 related_material_ids=tuple(material_ids)))

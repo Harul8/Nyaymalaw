@@ -124,6 +124,9 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
         "opening:material:2"]
     assert [row["id"] for row in board["material_record"]["history"]] == [
         "opening:material:2"]
+    assert [row["id"] for row in board["material_record"]["excluded_scope"]] == [
+        "diversion:material:3"]
+    assert board["material_record"]["coverage"]["state"] == "partial"
     saved_diversion = wired.store.load(opened["matter_id"]).brain_chat[1]
     assert [row["matter_scope"] for row in saved_diversion["response"]["material"]] == [
         "proposed", "proposed", "uncertain"]
@@ -135,7 +138,8 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
     assert [row["id"] for row in detail_inputs[2]["active_disputes"]] == [
         "opening:material:1"]
     assert [row["id"] for row in detail_inputs[2]["active_material"]] == [
-        "opening:material:2"]
+        "opening:material:2", "diversion:material:3"]
+    assert detail_inputs[2]["active_material"][1]["matter_scope"] == "uncertain"
     after = _board(client, opened["matter_id"])["material_record"]
     assert [row["id"] for row in after["by_dispute"]["opening:material:1"]] == [
         "opening:material:2", "continuation:material:1"]

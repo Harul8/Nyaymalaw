@@ -260,8 +260,14 @@ def test_requirement_cannot_cite_a_different_dispute_or_link_unrelated_material(
 
     assert output["d1"][0]["source_ids"] == ["s1"]
     assert len(model.calls) == 2
-    assert "another subject" in json.loads(model.calls[1][0].user)[
-        "validation_issues"]["d1"]
+    feedback = json.loads(model.calls[1][0].user)["validation_issues"]["d1"]
+    assert "invalid source_ids ['s3']" in feedback
+    assert "allowed_source_ids ['s1', 's2']" in feedback
+    first_payload = json.loads(model.calls[0][0].user)
+    first_subject = next(row for row in first_payload["subjects"]
+                         if row["subject"]["id"] == "d1")
+    assert first_subject["allowed_source_ids"] == ["s1", "s2"]
+    assert first_subject["allowed_material_ids"] == ["d1", "m1"]
 
     persistent = Model([{"requirements": [wrong]}])
     failed = read_findings(persistent, subjects=SUBJECTS,

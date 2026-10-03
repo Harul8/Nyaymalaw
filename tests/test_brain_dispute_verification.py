@@ -108,6 +108,9 @@ def test_bad_candidate_verdict_is_repaired_without_rechecking_valid_peer():
     assert len(model.calls) == 2
     repair_payload = json.loads(model.calls[1][0].user)
     assert [row["candidate_id"] for row in repair_payload["candidates"]] == ["C2"]
+    assert [row["candidate_id"] for row in
+            repair_payload["retained_candidate_context"]] == ["C1"]
+    assert repair_payload["retained_candidate_context"][0]["decision"]["verdict"] == "accept"
     assert "validation_issue" in repair_payload
 
 
@@ -144,14 +147,19 @@ def test_independent_dispute_can_be_rejected_for_factual_overreach_without_retry
     rejected = {"candidate_id": "C1", "candidate_role": "independent_dispute",
                 "verdict": "reject", "reason": reason}
     model = Model([{"verdicts": [rejected, _verdict("C2", accept=True)]}])
+    audit = []
 
     result = verify_disputes(
         model, candidates=candidates, earlier=(), latest=f"{first} {second}",
-        active_disputes=())
+        active_disputes=(), audit=audit)
 
     assert result == candidates[1:]
     assert len(model.calls) == 1
     assert model.calls[0][0].operation == "verify_disputes"
+    assert [row["verdict"] for row in audit] == ["reject", "accept"]
+    assert audit[0]["reason"] == reason
+    assert audit[0]["proposal"]["quoted"] == first
+    assert "id" not in audit[0]["proposal"]
 
 
 def test_changed_dispute_supplies_attributed_earlier_advocate_words():

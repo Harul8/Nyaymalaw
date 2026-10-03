@@ -75,7 +75,11 @@ condition, support or adverse according to its role. Gathering force is
 required only if cited law mandates that proposed step or element under its
 preserved conditions; otherwise strengthening. Other kinds use force none.
 Cite source_ids only from this subject's passages and material_ids only from
-its attributed record. No proposal proves the account, legal force or success."""
+its attributed record. The wire schema lists IDs across the batch, but each
+subject's allowed_source_ids and allowed_material_ids are its exclusive
+selection boundary. A relevant passage supplied only to a different subject
+is not available here; omit that finding rather than borrowing its ID.
+No proposal proves the account, legal force or success."""
 
 _VERIFY_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation, research subjects and their attributed record, and proposed
@@ -483,9 +487,13 @@ def _finding(row, identifier, hits, material_ids):
             "Gathering force is required or strengthening; other findings use none"
         )
     selected, linked = row["source_ids"], row["material_ids"]
-    if len(selected) != len(set(selected)) or not set(selected) <= hits[identifier].keys():
+    if len(selected) != len(set(selected)):
+        raise SchemaViolation(f"Finding for subject {identifier!r} has duplicate source_ids")
+    if not set(selected) <= hits[identifier].keys():
         raise SchemaViolation(
-            f"Finding for subject {identifier!r} cites a passage from another subject"
+            f"Finding for subject {identifier!r} has invalid source_ids "
+            f"{sorted(set(selected) - hits[identifier].keys())!r}; choose only "
+            f"from this subject's allowed_source_ids {list(hits[identifier])!r}"
         )
     if len(linked) != len(set(linked)) or not set(linked) <= material_ids[identifier]:
         raise SchemaViolation(f"Finding for subject {identifier!r} links unrelated material")
@@ -527,7 +535,9 @@ def read_findings(
         for row in coverage.values():
             row["diagnostics"].append("An unowned search result was discarded")
     active = [
-        {**row, "candidates": list(hits[row["subject"]["id"]].values())}
+        {**row, "candidates": list(hits[row["subject"]["id"]].values()),
+         "allowed_source_ids": list(hits[row["subject"]["id"]]),
+         "allowed_material_ids": sorted(material_ids[row["subject"]["id"]])}
         for row in rows
         if hits[row["subject"]["id"]]
     ]

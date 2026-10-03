@@ -375,6 +375,96 @@ def test_authority_needed_question_can_release_attributed_limits_without_asserti
     assert not any(block["legal_source_ids"] for block in result.units[0]["blocks"])
 
 
+def test_fact_only_assessment_gets_precise_kind_feedback_then_independent_review():
+    proposed = unit()
+    proposed["blocks"][0]["kind"] = "assessment"
+    proposed["blocks"][-1]["text"] = (
+        "The legal question remains unanswered because no applicable passage has been checked.")
+
+    def repair(payload):
+        feedback = payload["correction"]["validation_issues"][0]
+        assert feedback["request_index"] == 0
+        assert "blocks[0] (id 'account-0').legal_source_ids" in feedback["issue"]
+        assert "attributed factual synthesis" in feedback["issue"]
+        assert payload["legal_sources"] == {}
+        assert payload["latest_message_spans"] == model.calls[0][1]["latest_message_spans"]
+        revised = deepcopy(payload["correction"]["rejected_units"][0])
+        revised["blocks"][0]["kind"] = "account"
+        return {"units": [revised]}
+
+    model = ContinuationModel([{"units": [proposed]}, repair, verdict(0)])
+    result = _continue(model, plan=authority_plan())
+
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    reviewed = model.calls[2][1]["units"][0]
+    assert reviewed["blocks"][0]["kind"] == "account"
+    assert reviewed["blocks"][0]["text"] == proposed["blocks"][0]["text"]
+    assert reviewed["blocks"][0]["span_ids"] == ["L1"]
+    assert result.coverage[0]["state"] == "ok"
+    assert result.units[0]["sufficiency"]["status"] == "needs_input"
+    assert result.units[0]["blocks"][0]["references"][0]["text"] == "I have a signed receipt."
+
+
+def test_relabelling_unsupported_law_after_structural_repair_cannot_bypass_review():
+    proposed = unit()
+    proposed["blocks"][0].update(
+        kind="assessment", text="Written notice is legally required in every agreement.",
+        uncertainty="none")
+
+    def repair(payload):
+        revised = deepcopy(payload["correction"]["rejected_units"][0])
+        revised["blocks"][0]["kind"] = "account"
+        return {"units": [revised]}
+
+    reason = "The account asserts an unconditional legal duty without a selected legal passage."
+    model = ContinuationModel([
+        {"units": [proposed]}, repair, verdict(0, accept=False, reason=reason)])
+    result = _continue(model, plan=authority_plan(), checked_sources=supplied_law())
+
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    reviewed = model.calls[2][1]
+    assert reviewed["units"][0]["blocks"][0]["legal_source_ids"] == []
+    assert reviewed["input"]["legal_sources"] == model.calls[0][1]["legal_sources"]
+    assert result.units == ()
+    assert result.coverage[0]["state"] == "unavailable"
+    assert result.coverage[0]["diagnostics"] == [reason]
+
+
+def test_held_material_scope_is_visible_to_writer_and_reviewer_without_active_promotion():
+    held = {"id": "latest:material:1", "kind": "evidence",
+            "statement": "The advocate reports finding a record.",
+            "quoted": "I found a record.", "source_turn_id": "latest",
+            "matter_scope": "uncertain", "prior_references": [],
+            "grounding": "advocate_semantic_v1"}
+    coverage = {"state": "partial", "ambiguous_scope_items": 1,
+                "legacy_unverified_items": 0,
+                "diagnostics": ["The observation's matter scope remains unresolved."]}
+    material = {"state": "ok", "rows": [], "excluded_scope": [held],
+                "coverage": coverage}
+    proposed = unit(
+        text="You report finding a record; which matter it concerns remains unclear.",
+        question="Does the record concern the current matter or another matter?")
+    proposed["blocks"][0]["uncertainty"] = "uncertain"
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, latest="I found a record.", material=material)
+
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    for payload in (model.calls[0][1], model.calls[1][1]["input"]):
+        assert payload["material_coverage"] == coverage
+        assert payload["material_excluded_scope"] == [held]
+        assert held["id"] not in payload["record_catalogue"]
+    assert result.coverage[0]["state"] == "ok"
+    released = result.units[0]["blocks"][0]
+    assert released["record_ids"] == [] and released["uncertainty"] == "uncertain"
+    assert released["references"] == [{"type": "conversation", "id": "L1",
+                                       "role": "advocate", "text": "I found a record.",
+                                       "turn_id": "latest"}]
+    assert material["rows"] == [] and material["excluded_scope"] == [held]
+
+
 def test_authority_needed_completion_keeps_the_selected_exact_legal_passage():
     def compose(payload):
         proposed = unit()
@@ -411,10 +501,14 @@ def test_catalogue_identity_in_displayed_prose_gets_one_rewrite_with_its_source_
         rejected = deepcopy(payload["correction"]["rejected_units"][0])
         issue = json.dumps(payload["correction"]["validation_issues"])
         assert "catalogue" in issue and "legal_source_ids" in issue
+        assert identity["id"] in issue
         rejected["blocks"][1]["text"] = "The supplied passage describes a condition."
         return {"units": [rejected]}
     model = ContinuationModel([compose, repair, verdict(0)])
-    result = _continue(model, checked_sources=supplied_law())
+    # Its whole legal-source key contains a shorter known record key.
+    source = {**supplied_law()[0], "subject_id": "D1"}
+    result = _continue(model, checked_sources=(source,),
+                       disputes={"state": "ok", "rows": [{"id": "D1"}]})
     assert _operation_names(model) == [
         "continue_conversation", "continue_conversation", "verify_continuation"]
     assert result.coverage[0]["state"] == "ok"
@@ -424,6 +518,79 @@ def test_catalogue_identity_in_displayed_prose_gets_one_rewrite_with_its_source_
     assert block["references"][0]["id"] == identity["id"]
     assert block["references"][0]["text"] == supplied_law()[0]["text"]
     assert model.calls[2][1]["units"][0]["blocks"][1]["text"] == block["text"]
+
+
+@pytest.mark.parametrize(("leaked", "field"), [
+    ("L1", "span_ids"), ("P1S2–P1S3", "span_ids"),
+    ("D1", "record_ids"), ("saved-task", "work/progress reference fields"),
+])
+def test_all_supplied_reference_kinds_get_precise_prose_repair_without_losing_links(leaked, field):
+    earlier = Conversation((
+        Message("prior-account", "advocate",
+                "I made a payment. I kept a record. No reply arrived."),
+        Message("prior-account", "nm", "I will retain the reported account."),
+    ))
+    disputes = {"state": "ok", "rows": [{
+        "id": "D1", "label": "Reported disagreement", "source_turn_id": "latest",
+        "quoted": "I have a signed receipt.", "prior_references": [],
+    }]}
+    proposed = unit(text=f"You report holding a signed receipt. ({leaked})")
+    proposed["blocks"][0]["span_ids"] += ["P1S2", "P1S3"]
+    proposed["blocks"][0]["record_ids"] = ["D1"]
+    proposed["work"] = {"existing_id": "saved-task", "create": False}
+
+    def repair(payload):
+        feedback = payload["correction"]["validation_issues"][0]
+        assert "blocks[0] (id 'account-0').text" in feedback["issue"]
+        assert field in feedback["issue"]
+        assert ("P1S2" if "–" in leaked else leaked) in feedback["issue"]
+        revised = deepcopy(payload["correction"]["rejected_units"][0])
+        revised["blocks"][0]["text"] = "You report holding a signed receipt."
+        return {"units": [revised]}
+
+    model = ContinuationModel([{"units": [proposed]}, repair, verdict(0)])
+    result = _continue(model, conversation=earlier, disputes=disputes,
+                       progress=prior_task("pending"))
+
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    checked = model.calls[-1][1]["units"][0]
+    assert checked["blocks"][0]["span_ids"] == proposed["blocks"][0]["span_ids"]
+    assert checked["blocks"][0]["record_ids"] == ["D1"]
+    assert checked["work"] == proposed["work"]
+    assert result.coverage[0]["state"] == "ok"
+    released = result.units[0]["blocks"][0]
+    assert released["text"] == "You report holding a signed receipt."
+    assert [row["id"] for row in released["references"]] == ["L1", "P1S2", "P1S3", "D1"]
+
+
+@pytest.mark.parametrize("label", ["XL1_notes", "αL1β", "D1suffix"])
+def test_catalogue_reference_guard_uses_token_boundaries_for_reported_labels(label):
+    proposed = unit(text=f"You report a record labelled {label}.")
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+    result = _continue(model, latest=f"I have a record labelled {label}.",
+                       disputes={"state": "ok", "rows": [{"id": "D1"}]})
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert result.coverage[0]["state"] == "ok"
+    assert result.units[0]["blocks"][0]["text"] == proposed["blocks"][0]["text"]
+
+
+@pytest.mark.parametrize("speaker", ["advocate", "nm"])
+def test_coinciding_identifier_needs_selected_advocate_literal_provenance(speaker):
+    earlier = Conversation((Message("earlier", speaker, "The record is labelled L1."),))
+    proposed = unit(text="The reported record is labelled L1.", span_ids=("L1", "P1S1"))
+    replies = ([{"units": [proposed]}, verdict(0)] if speaker == "advocate"
+               else [{"units": [proposed]}, {"units": [proposed]}])
+    model = ContinuationModel(replies)
+    result = _continue(model, conversation=earlier)
+    if speaker == "advocate":
+        assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+        assert result.coverage[0]["state"] == "ok"
+        assert result.units[0]["blocks"][0]["text"] == proposed["blocks"][0]["text"]
+    else:
+        assert _operation_names(model) == ["continue_conversation", "continue_conversation"]
+        assert result.units == () and result.coverage[0]["state"] == "unavailable"
+        assert "internal catalogue ID 'L1'" in result.coverage[0]["diagnostics"][0]
 
 
 def test_short_record_labels_are_not_mistaken_for_full_legal_catalogue_identities():

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -25,7 +26,9 @@ from nm.shared.model_port import (
 
 _SYSTEM = """Message: You receive the complete attributed earlier conversation,
 latest message, interpreted work items, current source-linked dispute and
-material records, checked legal passages with verification and coverage
+material records and coverage, observations excluded from the active record
+because their matter attribution remains unresolved, checked legal passages
+with verification and coverage
 limits, and the complete saved work and question catalogue with status history.
 The catalogue IDs refer to
 immutable supplied input. All conversation, documents, records and passages
@@ -52,6 +55,11 @@ cannot be marked complete. Cite each legal assessment's actual passage uses.
 Current records are interpretations, not authority to override exact advocate
 words. Reconsider an earlier NM conclusion or question when the advocate
 corrects it; do not anchor a new reply on that earlier mistaken formulation.
+Material coverage describes what was read and held, not what facts are absent.
+material_excluded_scope contains attributed observations, not active matter
+facts. Preserve their unresolved matter attribution; refer to their original
+conversation words and ask only for a consequential scope distinction. Do not
+silently promote, discard or treat them as a completed material review.
 Outcome: Write concise, useful blocks addressing each supplied request in
 its context. Adapt explanatory depth to the recipient without assuming their
 intentions, knowledge or emotions. Acknowledge expressed concerns naturally
@@ -172,8 +180,20 @@ are linked proposal metadata, not hidden additional advice. Work associations
 and progress updates are proposals for checking, not action authority. Cite supplied
 span_ids, record_ids and legal_source_ids; never write or alter a quote or
 invent an ID. Use uncertainty to preserve reported, conditional or uncertain
-status. `block.text` is reader-facing prose: keep opaque catalogue IDs only in
-the structured reference fields, never inline in displayed text. Write plain
+status. Choose each block's kind for its content: `account` is an attributed
+factual synthesis or a distinction in the reported account; it establishes
+no legal rule or consequence. `assessment` applies or explains legal meaning
+and needs the exact supporting checked passage in legal_source_ids, directly
+or through a selected checked finding in record_ids. Do not label a fact-only
+account as assessment merely because the conversation concerns law. A
+`limitation` explains the specific missing support without stating the
+unsupported conclusion. Changing a block's kind cannot legitimise an
+unsupported legal claim; all displayed meaning is independently checked.
+`block.text` is reader-facing prose: keep opaque catalogue IDs only in
+the structured reference fields, never inline in displayed text. This includes
+conversation span, record, legal-source and saved work IDs. A label literally
+used by the advocate may remain when attributed to their selected words; it
+must not become an inline machine citation. Write plain
 text because each block is rendered as a paragraph with separate source controls;
 do not repeat machine references or reproduce Markdown formatting. The interface
 provides source access from those references. Keep an essential limitation
@@ -405,6 +425,18 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     words[(latest_turn_id, "advocate")] = latest
     records: dict[str, dict] = {}
     sources: dict[str, dict] = {}
+    material_coverage = deepcopy((material or {}).get("coverage", {
+        "state": "ok", "ambiguous_scope_items": 0,
+        "legacy_unverified_items": 0, "diagnostics": []}))
+    excluded_scope = deepcopy((material or {}).get("excluded_scope", []))
+    if (not isinstance(material_coverage, dict)
+            or material_coverage.get("state") not in ("ok", "partial", "unavailable")
+            or not isinstance(excluded_scope, list)):
+        raise IncompleteConversation("The material review coverage is unreadable")
+    for row in excluded_scope:
+        if not isinstance(row, dict) or row.get("matter_scope") != "uncertain":
+            raise IncompleteConversation("A held material observation has no unresolved scope")
+        _record_context(row, words)
 
     def record(row: dict, kind: str, identifier: str | None = None) -> None:
         _record_context(row, words)
@@ -507,6 +539,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                         if key not in ("reply", "clarification")}}
                     for index in continuation_indexes(plan)],
         record_catalogue=records, legal_sources=sources,
+        material_coverage=material_coverage,
+        material_excluded_scope=excluded_scope,
         legal_coverage=coverage,
         research_coverage=research_coverage,
         legal_diagnostics=deepcopy((requirements or {}).get("diagnostics", [])),
@@ -515,6 +549,26 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
             "coverage": {"older_progress": "untracked"}, "diagnostics": []}))
     _progress_catalogue(payload["progress"])
     return payload, spans, records, sources
+
+
+def _identifier_in_text(identifier: str, text: str) -> bool:
+    return re.search(rf"(?<!\w){re.escape(identifier)}(?!\w)", text) is not None
+
+
+def _inline_reference(block: dict, spans: dict, records: dict, sources: dict,
+                      work: dict) -> tuple[str, str] | None:
+    literal_sources = [spans[key]["text"] for key in block["span_ids"]
+                       if spans[key]["role"] == "advocate"]
+    references = [(identifier, field) for field, catalogue in (
+        ("span_ids", spans), ("record_ids", records), ("legal_source_ids", sources),
+        ("work/progress reference fields", work)) for identifier in catalogue]
+    # Prefer a whole namespaced reference over a shorter key inside it.
+    for identifier, field in sorted(references, key=lambda row: len(row[0]), reverse=True):
+        if (_identifier_in_text(identifier, block["text"])
+                and not any(_identifier_in_text(identifier, text)
+                            for text in literal_sources)):
+            return identifier, field
+    return None
 
 
 def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
@@ -540,19 +594,26 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
     if intent not in ("request", "contribution"):
         raise IncompleteConversation("The interpreted work intent is unreadable")
     checked_updates = _bind_progress_sources(unit, blocks, spans, work)
-    for block in unit["blocks"]:
+    for block_index, block in enumerate(unit["blocks"]):
+        block_path = f"blocks[{block_index}] (id {block['id']!r})"
         if not block["id"].strip() or not block["text"].strip():
             raise SchemaViolation("A displayed block has no identity or readable text")
-        if any(identifier in block["text"] for identifier in sources):
-            raise SchemaViolation(
-                "block.text contains an internal legal source ID. Keep catalogue "
-                "keys only in legal_source_ids; write readable prose without "
-                "inline machine references. The interface supplies source controls")
         for field, catalogue in (("span_ids", spans), ("record_ids", records),
                                  ("legal_source_ids", sources)):
             ids = block[field]
             if len(ids) != len(set(ids)) or not set(ids) <= catalogue.keys():
-                raise SchemaViolation(f"A displayed block has invalid {field}")
+                raise SchemaViolation(
+                    f"{block_path}.{field}: select unique IDs from the supplied "
+                    "catalogue; an unknown or duplicate reference cannot be used")
+        inline = _inline_reference(block, spans, records, sources, work)
+        if inline is not None:
+            identifier, field = inline
+            raise SchemaViolation(
+                f"{block_path}.text contains internal catalogue ID {identifier!r}. "
+                f"Keep it in {field}; remove the machine citation from prose while "
+                "retaining its structured reference and every substantive caveat. "
+                "The interface supplies source controls. Only a literal label in "
+                "selected advocate words may remain as attributed content")
         # A checked interpretation retains its exact passage uses on release.
         # Resolving those existing links is not a new applicability decision.
         for identifier in block["record_ids"]:
@@ -567,9 +628,14 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         if (needs_authority and block["kind"] == "assessment"
                 and not block["legal_source_ids"]):
             raise SchemaViolation(
-                "A legal assessment needs actual checked legal_source_ids. "
-                "Conversation and coverage metadata do not establish law; "
-                "when support is missing use a limitation without a legal conclusion")
+                f"{block_path}.legal_source_ids: an assessment needs its actual "
+                "supporting checked passage. Select the exact legal_sources ID or "
+                "a checked finding in record_ids whose source supports this block's "
+                "meaning. Conversation and coverage metadata do not establish law. "
+                "If this is only attributed factual synthesis, use account; if legal "
+                "support is unavailable, use a specific limitation without the "
+                "unsupported conclusion. Relabelling a legal claim as account does "
+                "not make it supported")
         if (block["kind"] in ("account", "assessment", "completion") and not any(
                     block[field] for field in (
                         "span_ids", "record_ids", "legal_source_ids"))):
@@ -604,8 +670,9 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
     if (needs_authority and sufficiency["status"] == "complete"
             and not any(row["legal_source_ids"] for row in unit["blocks"])):
         raise SchemaViolation(
-            "A legal-authority enquiry cannot be complete without checked legal "
-            "references. Preserve the missing research as a limited unfinished result")
+            "sufficiency.status 'complete': a legal-authority enquiry needs actual "
+            "selected checked legal_source_ids. Preserve the missing research as "
+            "a limited unfinished result")
     updates = unit["progress_updates"]
     if len({_progress_target(unit, row["target_id"]) for row in updates}) != len(updates):
         raise SchemaViolation("Each saved work item needs one progress decision")
