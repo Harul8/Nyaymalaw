@@ -32,6 +32,7 @@ def route(message, *, intent="request", opening=False, aside=False):
 def block(index, text, *, kind="account", spans=("L1",)):
     return {"id": f"block-{index}", "kind": kind, "text": text,
             "span_ids": list(spans), "record_ids": [], "legal_source_ids": [],
+            "inline_citations": [],
             "uncertainty": "reported"}
 
 

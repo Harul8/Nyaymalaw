@@ -49,7 +49,8 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
     assert [call.operation for call in model.material_calls] == [
         "extract_disputes", "extract_legal_details"]
     detail_input = json.loads(model.material_calls[1].user)
-    assert [row["id"] for row in detail_input["active_disputes"]] == [
+    assert [row["id"] for row in detail_input["assignment_targets"]
+            if row["kind"] == "dispute"] == [
         "first:material:1", "first:material:2"]
     board = _board(client, result["matter_id"])
     record = board["material_record"]
@@ -129,13 +130,14 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
     assert board["material_record"]["coverage"]["state"] == "partial"
     saved_diversion = wired.store.load(opened["matter_id"]).brain_chat[1]
     assert [row["matter_scope"] for row in saved_diversion["response"]["material"]] == [
-        "proposed", "proposed", "uncertain"]
+        "proposed", "other", "uncertain"]
 
     third = send(client, continuation, "continuation", opened=opened)
     assert third.status_code == 200, third.text
     detail_inputs = [json.loads(call.user) for call in model.material_calls
                      if call.operation == "extract_legal_details"]
-    assert [row["id"] for row in detail_inputs[2]["active_disputes"]] == [
+    assert [row["id"] for row in detail_inputs[2]["assignment_targets"]
+            if row["kind"] == "dispute"] == [
         "opening:material:1"]
     assert [row["id"] for row in detail_inputs[2]["active_material"]] == [
         "opening:material:2", "diversion:material:3"]
@@ -354,7 +356,7 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
             if prompt.operation == "extract_legal_details" and not self.rejected:
                 self.rejected = True
                 invalid = {**result.data["new_items"][0],
-                           "dispute_ids": ["missing-dispute"]}
+                           "assignment_ids": ["missing-dispute"]}
                 return replace(result, data={"new_items": [invalid], "changes": []})
             return result
 
@@ -368,7 +370,7 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
     repair_inputs = [json.loads(call.user) for call in model.material_calls
                      if "original_input" in json.loads(call.user)]
     assert len(repair_inputs) == 1
-    assert "dispute" in repair_inputs[0]["validation_issue"].lower()
+    assert "assignment" in repair_inputs[0]["validation_issue"].lower()
     assert _board(client, response.json()["matter_id"])[
         "material_record"]["by_dispute"]["repaired:material:1"][0]["id"] == (
         "repaired:material:2")

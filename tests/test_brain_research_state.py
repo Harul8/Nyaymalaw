@@ -34,10 +34,13 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                   text=PASSAGE, verification=dict(support_excerpt=PASSAGE,
                       scope_excerpt="Where the agreed condition applies",
                       scope_status="conditional", reason="The finding preserves this condition."))
-    if verification == RESEARCH_VERIFICATION:
+    if verification in ("research_support_v2", RESEARCH_VERIFICATION):
         source["verification"].update(
             contract=verification, assertion_owner="legislative_text", owner_label="Test Act",
             owner_excerpt=PASSAGE, source_treatment="adopted", treatment_excerpt=PASSAGE)
+    if verification == RESEARCH_VERIFICATION:
+        source["verification"].update(assertion_role="legislative_text",
+                                      assertion_statement=PASSAGE, context_statements=[])
     return dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
                 why="The passage identifies the condition governing this obligation.",
                 force="required" if kind == "gathering" else "none",
@@ -167,7 +170,7 @@ def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_
     corrected = [dispute, {**detail, "statement": "The reported record is corrected."}]
     assert research_fingerprint(selected, corrected, REVISION) != original
     assert research_fingerprint(selected, context, "revision-two") != original
-    assert research_fingerprint(selected, context, REVISION, "research_support_v3") != original
+    assert research_fingerprint(selected, context, REVISION, "different-check-contract") != original
     duplicate = deepcopy(detail)
     assert research_fingerprint(selected, [*context, duplicate], REVISION) == original
     duplicate["quoted"] = "Different attributable words."
@@ -175,9 +178,10 @@ def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_
         research_fingerprint(selected, [*context, duplicate], REVISION)
 
 
-def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse():
+@pytest.mark.parametrize("contract", ["research_support_v1", "research_support_v2"])
+def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse(contract):
     selected = subject(matter())
-    saved = append(matter(), [read(selected, verification="research_support_v1")])
+    saved = append(matter(), [read(selected, verification=contract)])
     raw = deepcopy(saved.brain_chat)
     result = project(saved, selected)
     assert result["state"] == "ok"
@@ -185,9 +189,9 @@ def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse()
     assert result["reuse_allowed"][selected["id"]] is False
     coverage = result["coverage_by_subject"][selected["id"]]
     assert coverage["source_freshness"] == "current"
-    assert coverage["verification_contract"] == "research_support_v1"
+    assert coverage["verification_contract"] == contract
     assert coverage["verification_current"] is False
-    assert "assertion_owner" not in result["by_subject"][selected["id"]][0]["sources"][0][
+    assert "assertion_role" not in result["by_subject"][selected["id"]][0]["sources"][0][
         "verification"]
     assert saved.brain_chat == raw
 
@@ -346,7 +350,8 @@ def test_inconsistent_released_turn_identity_is_critical_before_research_can_be_
 
 
 @pytest.mark.parametrize("damage", ["missing_contract", "unknown_contract", "owner",
-                                   "owner_excerpt", "treatment", "treatment_excerpt"])
+                                   "owner_excerpt", "treatment", "treatment_excerpt",
+                                   "assertion_role", "assertion_statement"])
 def test_advertised_current_source_contract_cannot_hide_invalid_role_or_treatment(damage):
     file = matter()
     first = subject(file)
@@ -363,6 +368,10 @@ def test_advertised_current_source_contract_cannot_hide_invalid_role_or_treatmen
         verification["owner_excerpt"] = "Different words outside this passage."
     elif damage == "treatment":
         verification["source_treatment"] = "rejected"
+    elif damage == "assertion_role":
+        verification["assertion_role"] = "court_conclusion"
+    elif damage == "assertion_statement":
+        verification["assertion_statement"] = ""
     else:
         verification["treatment_excerpt"] = ""
     saved = append(file, [bad, read(second)])
@@ -374,6 +383,52 @@ def test_advertised_current_source_contract_cannot_hide_invalid_role_or_treatmen
     assert result["coverage_by_subject"][first["id"]]["verification_current"] is False
     assert result["coverage_by_subject"][second["id"]]["verification_current"] is True
     assert result["reuse_allowed"][second["id"]] is True
+
+
+@pytest.mark.parametrize("field,value", [
+    ("owner_excerpt", "Different source words."),
+    ("treatment_excerpt", ""),
+    ("assertion_owner", "party"),
+    ("source_treatment", "reported"),
+])
+def test_historical_v2_keeps_its_full_original_owner_and_treatment_integrity(field, value):
+    selected = subject(matter())
+    old = read(selected, verification="research_support_v2")
+    old["rows"][0]["sources"][0]["verification"][field] = value
+
+    result = project(append(matter(), [old]), selected)
+
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
+    assert result["reuse_allowed"][selected["id"]] is False
+
+
+@pytest.mark.parametrize("damage", ["missing", "foreign_words", "owner_role", "duplicate"])
+def test_current_source_context_is_exact_attributed_and_never_an_independent_authority(damage):
+    selected = subject(matter())
+    saved_read = read(selected)
+    verification = saved_read["rows"][0]["sources"][0]["verification"]
+    context = {key: value for key, value in verification.items() if key in (
+        "assertion_owner", "assertion_role", "assertion_statement", "owner_label",
+        "source_treatment", "support_excerpt", "owner_excerpt", "treatment_excerpt")}
+    context["source_treatment"] = "reported"
+    verification["context_statements"] = [context]
+    sound = project(append(matter(), [saved_read]), selected)
+    assert sound["state"] == "ok"
+    assert sound["by_subject"][selected["id"]][0]["source_ids"] == ["passage-one"]
+    if damage == "missing":
+        verification.pop("context_statements")
+    elif damage == "foreign_words":
+        context["support_excerpt"] = "Different source words."
+    elif damage == "owner_role":
+        context["assertion_role"] = "party_submission"
+    else:
+        verification["context_statements"].append(deepcopy(context))
+
+    result = project(append(matter(), [saved_read]), selected)
+
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
 
 
 def test_historical_exact_readback_survives_new_review_without_status_upgrade_or_mutation():

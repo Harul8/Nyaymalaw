@@ -140,7 +140,7 @@ Each released block keeps authoritative source references. The authenticated
 brain-source reader reopens the exact saved snapshot, with reported/checked
 qualifications, independently of later corpus availability. It verifies source
 identity, ownership, digest and the released block before returning text. Source
-links are grouped beneath each response block; the reading pane has a fixed
+links appear on the referenced words or phrases; the reading pane has a fixed
 heading and Close control with a scrolling body.
 
 Matter ownership is separate from factual certainty, actor identity, proof and
@@ -158,12 +158,21 @@ the meaning of all blocks, so relabelling a legal assertion cannot bypass
 grounding. Correction feedback names the failed block or subject and its
 allowed reference boundary. These distinctions add no routine model calls.
 
-Current legal uses require `research_support_v2`. The existing independent
+Current legal uses require `research_support_v3`. The existing independent
 source check names who states the operative proposition and how the source
 treats it, each anchored to exact words in that same saved passage. A reported
 or rejected argument is not an adopted rule. Review also checks the whole
 finding's actor, remedy, predicates and claimed legal force; a correct source
 role does not excuse extending a passage beyond what it says.
+
+The operative proposition is labeled as legislative text, court conclusion,
+court reasoning, party submission or quoted authority. Adoption does not
+establish binding ratio. Related positions needed to understand that proposition
+retain separate speaker, role and treatment labels, including party submissions
+adopted or rejected by the court. These contextual positions provide no extra
+legal authority. Labels apply to their statements, not to an entire mixed
+paragraph. The authenticated reader returns recorded labels from the canonical
+reference as additional read-only metadata, without changing historical snapshots.
 
 Known historical checks remain readable without fabricated upgrades. Corpus
 freshness and verification currency are separate: neither a matching corpus
@@ -177,6 +186,20 @@ Automatic gathering on changed material has its own owner, so an attributed
 factual update is not enlarged into a new requested merits enquiry. When the
 current legal catalogue is empty, the writer schema excludes assessment blocks;
 every assessment also requires actual legal passage uses at validation.
+
+The detail reader makes one assignment from an owned target catalogue. That
+selection determines proposed scope and placement; it cannot independently
+declare contradictory ownership. The existing grounding Judge receives the
+selected canonical records to check the semantic assignment. Known ownership
+with unresolved dispute linkage remains distinct from uncertain ownership.
+
+The response Judge returns a check for each displayed block and linked proposal,
+as well as its whole-unit verdict. Missing checks remain unread; a failed
+subcheck cannot be overridden by a whole-unit acceptance. Visible citation
+phrases explicitly select checked passages, are unique and do not overlap, and
+make all selected legal support reachable. The same response Judge checks their
+meaning and joint support. Responses show these inline links without source
+lists underneath. None of these contracts adds a routine model call.
 
 Failures are isolated at the smallest independent unit. Valid research and
 response units survive rejected peers, with explicit missing coverage. A failed

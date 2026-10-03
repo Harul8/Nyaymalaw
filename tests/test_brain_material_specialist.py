@@ -275,12 +275,12 @@ def test_first_turn_schema_cannot_name_nonexistent_prior_words():
     assert "related_material_ids" not in detail_schema["properties"]
     wire = on_the_wire(model.calls[0][1])
     fields = wire["properties"]["new_items"]["items"]["properties"]
-    assert fields["dispute_ids"]["maxItems"] == 0
+    assert fields["assignment_ids"]["items"]["enum"] == [
+        "matter:discussion", "matter:unlinked", "matter:other", "matter:none", "matter:uncertain"]
+    assert not {"matter_scope", "placement", "dispute_ids"}.intersection(fields)
     assert wire["properties"]["changes"]["maxItems"] == 0
     assert set(wire["properties"]["new_items"]["items"]["required"]) == set(
         wire["properties"]["new_items"]["items"]["properties"])
-    assert "current" not in wire["properties"]["new_items"]["items"][
-        "properties"]["matter_scope"]["enum"]
     assert result[0].relation == "new"
     assert result[0].prior_references == ()
 
@@ -326,10 +326,10 @@ def test_no_current_matter_excludes_current_scope_even_with_prior_conversation()
     wire = on_the_wire(model.calls[0][1])
     item = wire["properties"]["new_items"]["items"]
     assert "prior_source_ids" in item["properties"]
-    assert "current" not in item["properties"]["matter_scope"]["enum"]
+    assert "matter_scope" not in item["properties"]
     assert result[0].matter_scope == "proposed"
 
-    invalid = {**row, "matter_scope": "current"}
+    invalid = {**row, "assignment_ids": ["matter:current"]}
     with pytest.raises(SchemaViolation):
         extract_details(Model({"details": [invalid]}),
                         earlier=earlier, latest=latest, current_matter_id=None)

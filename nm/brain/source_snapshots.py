@@ -63,3 +63,46 @@ def source_snapshots(references: list[dict]) -> list[dict]:
                           "digest": sha256(text.encode("utf-8")).hexdigest(),
                           "qualification": qualification})
     return snapshots
+
+
+def inline_source_links(block: dict, snapshots: list[dict]) -> list[dict] | None:
+    """Resolve declared visible anchors without rewriting historical response text."""
+    if "inline_citations" not in block:
+        return None
+    citations, text = block["inline_citations"], block.get("text")
+    if not isinstance(citations, list) or not isinstance(text, str):
+        raise ValueError("Saved inline citations are unreadable")
+    legal = {source["id"]: index for index, source in enumerate(snapshots)
+             if source["kind"] in ("provision", "judgment")}
+    links, ranges, used = [], [], set()
+    for index, citation in enumerate(citations):
+        path = f"inline_citations[{index}]"
+        if not isinstance(citation, dict) or set(citation) != {"text", "legal_source_id"}:
+            raise ValueError(f"{path} must contain only text and legal_source_id")
+        phrase, identity = citation.get("text"), citation.get("legal_source_id")
+        if not isinstance(identity, str) or identity not in legal:
+            raise ValueError(
+                f"{path}.legal_source_id must select this block's actual legal passage")
+        if not isinstance(phrase, str) or not phrase.strip():
+            raise ValueError(
+                f"{path}.text must be an exact nonblank contiguous phrase in block.text")
+        start = text.find(phrase)
+        end = start + len(phrase)
+        if start < 0:
+            raise ValueError(
+                f"{path}.text must be an exact nonblank contiguous phrase in block.text")
+        if text.find(phrase, start + 1) >= 0:
+            raise ValueError(f"{path}.text occurs more than once; choose a unique visible phrase")
+        for earlier, (left, right) in enumerate(ranges):
+            if start < right and left < end:
+                raise ValueError(
+                    f"{path}.text overlaps inline_citations[{earlier}]; "
+                    "choose distinct nonoverlapping phrases")
+        ranges.append((start, end))
+        used.add(identity)
+        links.append({"text": phrase, "source_id": identity, "source_index": legal[identity]})
+    if used != set(legal):
+        raise ValueError("inline_citations must link every selected legal passage; "
+                         f"missing {sorted(set(legal) - used)!r}. "
+                         "Use supported unique phrases already in block.text")
+    return links

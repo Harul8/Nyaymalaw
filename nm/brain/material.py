@@ -27,6 +27,47 @@ IMPORTANCE = ("central", "relevant", "uncertain")
 PLACEMENTS = ("disputes", "matter", "unresolved")
 
 
+def assignment_targets(disputes: tuple[dict, ...], current_matter_id: str | None) -> list[dict]:
+    """Present one owned assignment decision; scope and placement follow it."""
+    scope = "current" if current_matter_id else "proposed"
+    targets = [dict(id="matter:discussion", kind="matter", matter_scope=scope,
+                    placement="matter"),
+               dict(id="matter:unlinked", kind="matter", matter_scope=scope,
+                    placement="unresolved"),
+               *[dict(id=f"matter:{value}", kind="matter", matter_scope=value,
+                      placement="unresolved") for value in ("other", "none", "uncertain")]]
+    seen = {target["id"] for target in targets}
+    for record in disputes:
+        if (not isinstance(record, dict) or not isinstance(record.get("id"), str)
+                or not record["id"].strip() or record["id"] in seen):
+            raise SchemaViolation(
+                "The active dispute assignment catalogue has conflicting identities")
+        seen.add(record["id"])
+        targets.append(dict(id=record["id"], kind="dispute", matter_scope=scope,
+                            placement="disputes", record=deepcopy(record)))
+    return targets
+
+
+def resolve_assignment(row: dict, targets: dict[str, dict]) -> dict:
+    """Resolve only the selected assignment; semantic acceptance remains independent."""
+    selected = row.get("assignment_ids")
+    if (not isinstance(selected, list) or not selected
+            or any(not isinstance(identity, str) or identity not in targets
+                   for identity in selected)
+            or len(selected) != len(set(selected))):
+        raise SchemaViolation("A detail must select known unique assignment IDs")
+    values = [targets[identity] for identity in selected]
+    if len(values) > 1 and any(value["kind"] != "dispute" for value in values):
+        raise SchemaViolation(
+            "A detail may select active dispute IDs or one general matter assignment, "
+            "not mixed targets"
+        )
+    target = values[0]
+    return {**{key: value for key, value in row.items() if key != "assignment_ids"},
+            "matter_scope": target["matter_scope"], "placement": target["placement"],
+            "dispute_ids": selected if target["kind"] == "dispute" else []}
+
+
 @dataclass(frozen=True)
 class PriorReference:
     turn_id: str
@@ -252,24 +293,24 @@ def operation_rows(data: dict, *, link_field: str) -> list[dict]:
 def _extraction_schema(*, latest_ids: tuple[str, ...],
                        prior_ids: tuple[str, ...],
                        has_current_matter: bool,
-                       dispute_ids: tuple[str, ...],
+                       assignment_ids: tuple[str, ...],
                        material_ids: tuple[str, ...]) -> dict:
     item = addressed_item_schema(
         kinds=tuple(kind for kind in KINDS if kind != "dispute"),
         latest_ids=latest_ids, prior_ids=prior_ids,
         has_current_matter=has_current_matter)
     properties = dict(item["properties"])
+    properties.pop("matter_scope")
     properties.update({
-        "placement": {"type": "string", "enum": list(PLACEMENTS)},
-        "dispute_ids": {"type": "array", "items": {"type": "string",
-            **({"enum": list(dispute_ids)} if dispute_ids else {})},
-            **({"maxItems": 0} if not dispute_ids else {})},
+        "assignment_ids": {"type": "array", "minItems": 1, "uniqueItems": True,
+                           "items": {"type": "string", "enum": list(assignment_ids)}},
         "related_material_ids": {"type": "array", "items": {"type": "string",
             **({"enum": list(material_ids)} if material_ids else {})},
             **({"maxItems": 0} if not material_ids else {})},
     })
     item = {**item, "properties": properties,
-            "required": [*item["required"], "placement", "dispute_ids",
+            "required": [*[key for key in item["required"] if key != "matter_scope"],
+                         "assignment_ids",
                          "related_material_ids"]}
     return operation_schema(item, link_field="related_material_ids",
                             known_ids=material_ids)
@@ -326,22 +367,26 @@ the disputes it directly bears on, and whether it belongs to this matter.
 Outcome: Select a latest `source_id` and any contextual `prior_source_ids`.
 The server attaches exact saved words and each selected revision target's
 original advocate passage. Contextual citations do not authorise revision.
-List every directly relevant active ID in `dispute_ids`, use `placement`
-`disputes`, and explain the link in `why_material`. Use `matter` for a
-matter-wide detail without a reliable dispute link, or `unresolved` when the
-connection is unclear. With no active dispute, leave `dispute_ids` empty.
-Do not guess links from proximity or merge another matter's account. Set
-`matter_scope` to current only with a current matter ID, proposed for a
-possible new matter, other for a different matter, or uncertain if ambiguous.
+Select `assignment_ids` from the supplied assignment catalogue. Select every
+directly relevant active dispute ID, or exactly one general matter target.
+The discussion target means matter-wide material. The unlinked target means
+known ownership in this matter with the relevant dispute still unresolved;
+other means another matter, none means non-matter content, and uncertain means
+ownership is unresolved. Never mix dispute IDs with general targets or select
+several general targets. Explain the assignment in `why_material`.
+Do not guess links from proximity or merge another matter's account. The
+server derives scope and placement from this single selected assignment;
+do not independently supply either field. This is a proposal, not authority
+to assign the detail: the independent checker must assess the actual link.
 Matter scope concerns ownership of the account, not whether its facts are
 proved, its actor is known, its record has been examined, or its legal effect
 is settled. A first account with no current matter ID can clearly belong to
 the proposed matter despite all those uncertainties. Preserve them in the
 attributed statement and `basis`, not by making ownership ambiguous.
-A selected active dispute link assigns the detail to the matter under
-discussion: use current scope when its current matter ID is supplied, and
-proposed otherwise. If ownership genuinely cannot be determined, use uncertain
-scope without dispute links and unresolved placement; do not guess ownership.
+A selected active dispute identifies the matter under discussion, current
+when its matter ID is supplied and proposed otherwise. If ownership genuinely
+cannot be determined, select the uncertain target, not a dispute or discussion
+target; do not guess ownership.
 Preserve stated, attributed, described-record, inferred, uncertain or
 hypothetical status in `basis`, and provisional relevance in `importance`.
 
@@ -445,10 +490,9 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
         raise ValueError("The latest message is empty")
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     payload["current_matter_id"] = current_matter_id
-    payload["active_disputes"] = [
-        {key: row.get(key) for key in (
-            "id", "label", "statement", "source_turn_id", "quoted", "matter_scope")}
-        for row in disputes]
+    targets = assignment_targets(disputes, current_matter_id)
+    target_by_id = {target["id"]: target for target in targets}
+    payload["assignment_targets"] = targets
     payload["active_material"] = [
         {key: row.get(key) for key in (
             "id", "kind", "statement", "source_turn_id", "quoted",
@@ -471,13 +515,14 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
     schema = _extraction_schema(
         latest_ids=tuple(latest_sources), prior_ids=tuple(prior_sources),
         has_current_matter=bool(current_matter_id),
-        dispute_ids=tuple(row["id"] for row in disputes),
+        assignment_ids=tuple(row["id"] for row in targets),
         material_ids=tuple(row["id"] for row in prior_material))
     def accept(data: dict) -> tuple[MaterialCandidate, ...]:
         known_material = {row["id"]: row for row in prior_material}
         proposals = operation_rows(data, link_field="related_material_ids")
         selected = [fill_empty_link_sources(
-            row, link_field="related_material_ids", known=known_material,
+            resolve_assignment(row, target_by_id),
+            link_field="related_material_ids", known=known_material,
             prior=prior_sources) for row in proposals]
         for row in selected:
             for material_id in row["related_material_ids"]:
@@ -493,34 +538,11 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                                prior=prior_sources)
         candidates = parse_material(rows, latest=latest, earlier=earlier,
                                     current_matter_id=current_matter_id)
-        known_disputes = {row["id"] for row in disputes}
         accepted = []
         for row, candidate in zip(rows, candidates, strict=True):
             placement = row.get("placement")
             dispute_ids = row.get("dispute_ids")
             material_ids = row.get("related_material_ids")
-            if (placement not in PLACEMENTS
-                    or not isinstance(dispute_ids, list)
-                    or any(not isinstance(item, str) or item not in known_disputes
-                           for item in dispute_ids)
-                    or len(dispute_ids) != len(set(dispute_ids))):
-                raise SchemaViolation("A detail has an invalid dispute placement")
-            owned_scope = "current" if current_matter_id else "proposed"
-            if dispute_ids and candidate.matter_scope != owned_scope:
-                raise SchemaViolation(
-                    f"A detail selecting active dispute_ids {dispute_ids!r} "
-                    f"requires matter_scope {owned_scope!r}. Scope identifies "
-                    "the matter that owns the account, not factual certainty "
-                    "or proof. If ownership is genuinely ambiguous, preserve "
-                    "uncertain scope, clear dispute_ids and use unresolved "
-                    "placement rather than assigning the account to this matter.")
-            # Placement is a presentation category, while the selected IDs are
-            # the substantive link. Canonicalize a contradictory pair instead
-            # of rejecting an otherwise attributable detail (or the whole turn).
-            if dispute_ids:
-                placement = "disputes"
-            elif placement == "disputes":
-                placement = "unresolved"
             if (not isinstance(material_ids, list)
                     or any(not isinstance(item, str) or item not in known_material
                            for item in material_ids)

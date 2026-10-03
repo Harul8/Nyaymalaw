@@ -2467,7 +2467,7 @@ function renderTurn(entry) {
       w.textContent = nextStepLine(carried);
       d.appendChild(w);
     }
-    if (linked && linked.refs && linked.refs.length) {
+    if (linked && linked.refs && linked.refs.length && !linked.source?.brain) {
       const r = document.createElement('span');
       r.className = 'refs'; fillReferences(r, linked);
       d.appendChild(r);
@@ -2500,7 +2500,7 @@ function renderTurn(entry) {
       w.textContent = nextStepLine(el);
       d.appendChild(w);
     }
-    if (el.refs && el.refs.length) {
+    if (el.refs && el.refs.length && !el.source?.brain) {
       const r = document.createElement('span');
       r.className = 'refs'; fillReferences(r, el);
       d.appendChild(r);
@@ -2527,10 +2527,7 @@ function renderTurn(entry) {
   }
 
   function fillReferences(row, el) {
-    if (el.source?.brain) {
-      window.NmBrainSources.appendReferences(row, entry.answer, el);
-      return;
-    }
+    if (el.source?.brain) return;
     const bound = el.source && el.refs.includes(el.source.locator)
       && entry.answer.matter_id && entry.answer.turn_id;
     if (bound) {
@@ -2584,7 +2581,7 @@ function renderTurn(entry) {
       if (el.source?.brain) window.NmBrainSources.appendBody(body, entry.answer, el);
       else body.textContent = el.text;
       d.appendChild(body);
-      if (el.refs && el.refs.length) {
+      if (el.refs && el.refs.length && !el.source?.brain) {
         const r = document.createElement('span');
         r.className = 'refs'; fillReferences(r, el);
         d.appendChild(r);

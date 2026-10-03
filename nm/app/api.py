@@ -789,7 +789,10 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
 
 def _brain_source(matter, turn_id: str, element_index: int,
                   source_index: int, *, chat_id: str | None = None) -> dict:
-    from nm.brain.source_snapshots import source_snapshots
+    from copy import deepcopy
+
+    from nm.brain.legal_requirements import source_verification_valid
+    from nm.brain.source_snapshots import inline_source_links, source_snapshots
 
     missing = HTTPException(404, "No accessible saved source.")
     matches = [row for row in matter.brain_chat if row.get("turn_id") == turn_id]
@@ -834,17 +837,33 @@ def _brain_source(matter, turn_id: str, element_index: int,
         raise missing
     try:
         sources = source_snapshots(blocks[0].get("references"))
+        links = inline_source_links(blocks[0], sources)
     except ValueError:
         raise missing from None
     if (not sources or source_index >= len(sources)
             or element.get("sources") != sources
             or element.get("source") != sources[0]
-            or element.get("refs") != [source["locator"] for source in sources]):
+            or element.get("refs") != [source["locator"] for source in sources]
+            or (links is not None and element.get("inline_citations") != links)
+            or (links is None and "inline_citations" in element)):
         raise missing
     source = sources[source_index]
+    provenance = {}
+    if source["kind"] in ("provision", "judgment"):
+        reference = next(item for item in blocks[0]["references"]
+                         if item["id"] == source["id"])
+        verification = reference.get("verification")
+        contract = verification.get("contract") if isinstance(verification, dict) else None
+        if contract in ("research_support_v2", "research_support_v3"):
+            if not source_verification_valid(reference, contract=contract):
+                raise missing
+            provenance = {"verification": deepcopy(verification),
+                          "provenance_status": "recorded"}
+        else:
+            provenance = {"provenance_status": "not_recorded"}
     return {**{key: source[key] for key in (
         "id", "kind", "label", "locator", "text", "digest", "qualification")},
-        "recorded_at": row["at"]}
+        "recorded_at": row["at"], **provenance}
 
 
 def _read_brain_source(matter_id: str, turn_id: str, element_index: int,

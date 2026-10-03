@@ -20,12 +20,53 @@ from nm.shared.model_port import (
 )
 
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
-RESEARCH_VERIFICATION = "research_support_v2"
-HISTORICAL_RESEARCH_VERIFICATIONS = ("research_support_v1",)
+RESEARCH_VERIFICATION = "research_support_v3"
+HISTORICAL_RESEARCH_VERIFICATIONS = ("research_support_v1", "research_support_v2")
 SOURCE_ASSERTION_OWNERS = (
     "legislative_text", "deciding_court", "quoted_authority", "party", "other", "unclear"
 )
 SOURCE_TREATMENTS = ("adopted", "reported", "rejected", "unclear")
+SOURCE_ASSERTION_ROLES = (
+    "court_conclusion", "court_reasoning", "party_submission", "quoted_authority",
+    "case_background", "legislative_text", "unclear",
+)
+_OPERATIVE_ASSERTIONS = {
+    "court_conclusion": ("judgment", "deciding_court"),
+    "court_reasoning": ("judgment", "deciding_court"),
+    "party_submission": ("judgment", "party"),
+    "quoted_authority": ("judgment", "quoted_authority"),
+    "legislative_text": ("provision", "legislative_text"),
+}
+_STATEMENT_FIELDS = (
+    "assertion_owner", "assertion_role", "assertion_statement", "owner_label",
+    "source_treatment", "support_excerpt", "owner_excerpt", "treatment_excerpt",
+)
+
+
+def _operative_assertion(kind: str, role: str, owner: str) -> bool:
+    return isinstance(role, str) and _OPERATIVE_ASSERTIONS.get(role) == (kind, owner)
+
+
+def _statement_valid(statement: object, source: dict, *, operative: bool) -> bool:
+    if not isinstance(statement, dict):
+        return False
+    role, owner = statement.get("assertion_role"), statement.get("assertion_owner")
+    related_role = (source["kind"] == "judgment" and role in ("case_background", "unclear")
+                    and owner in SOURCE_ASSERTION_OWNERS and owner != "legislative_text")
+    return ((_operative_assertion(source["kind"], role, owner)
+             or (not operative and related_role))
+            and isinstance(statement.get("assertion_statement"), str)
+            and bool(statement["assertion_statement"].strip())
+            and len(statement["assertion_statement"]) <= 500
+            and isinstance(statement.get("owner_label"), str)
+            and bool(statement["owner_label"].strip())
+            and len(statement["owner_label"]) <= 160
+            and (statement.get("source_treatment") == "adopted" if operative
+                 else statement.get("source_treatment") in SOURCE_TREATMENTS)
+            and all(isinstance(statement.get(key), str)
+                    and bool(statement[key].strip())
+                    and len(statement[key]) <= 800 and statement[key] in source["text"]
+                    for key in ("support_excerpt", "owner_excerpt", "treatment_excerpt")))
 
 
 def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
@@ -51,11 +92,12 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
             or (scope_status == "no_special_condition") != (not scope)
             or not isinstance(reason, str) or not reason.strip() or len(reason) > 500):
         return False
-    if contract in (*HISTORICAL_RESEARCH_VERIFICATIONS, "source_support_v4"):
+    if contract in ("research_support_v1", "source_support_v4"):
         return verification.get("contract") in (None, contract)
-    if contract != RESEARCH_VERIFICATION or verification.get("contract") != contract:
+    if (contract not in ("research_support_v2", RESEARCH_VERIFICATION)
+            or verification.get("contract") != contract):
         return False
-    return (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
+    checked = (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
             and verification["assertion_owner"] != "unclear"
             and (source["kind"] != "provision"
                  or verification["assertion_owner"] == "legislative_text")
@@ -68,6 +110,14 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
                     and len(verification[key]) <= 800
                     and verification[key] in source["text"]
                     for key in ("owner_excerpt", "treatment_excerpt")))
+    if not checked or contract == "research_support_v2":
+        return checked
+    contexts = verification.get("context_statements")
+    return (_statement_valid(verification, source, operative=True)
+            and isinstance(contexts, list)
+            and all(_statement_valid(row, source, operative=False) for row in contexts)
+            and len({tuple(row[key] for key in _STATEMENT_FIELDS)
+                     for row in contexts}) == len(contexts))
 
 _DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation and research subjects with their owner, scope, purpose, question
@@ -113,6 +163,9 @@ version, jurisdictional reach, precedent treatment or binding weight. Select
 material only when its actual words address the finding; reported document
 possession does not establish contents or prove an element. Do not invent
 facts, document types, duties, holdings or sources.
+Each finding/source use must rely on one operative proposition. Where distinct
+positions in a passage differ in speaker, role or treatment, keep them in
+separate findings rather than assigning one label to the whole passage.
 
 Outcome: Return only readings under the schema, exactly one per subject_id,
 including empty findings when nothing supplied supports a useful finding.
@@ -149,6 +202,16 @@ court's actual treatment. A finding about rejection must rely on the court's
 rejecting reason, not present the rejected position as its rule. Direct
 provision text is legislative_text; its own words anchor the assertion and
 treatment. Do not infer adoption from a citation, shared terms or silence.
+Classify only the operative proposition used, not its entire mixed paragraph.
+Distinguish a deciding court's conclusion from its reasoning, a particular
+party's submission, quoted authority, case background and legislative text.
+Name the speaker or particular party in owner_label only when the selected
+ownership words establish that identity; do not infer their position or name.
+An adopted party submission or quotation keeps its original speaker and role;
+court adoption does not turn it into a court conclusion or binding ratio.
+Preserve any related position needed to understand that operative assertion
+separately: whose submission or quoted position it was and whether the issuing
+court adopted, reported or rejected it. Such context is not legal support.
 Every retained proposition, inference and claimed mandatory step must follow
 from selected passages without filling gaps from legal memory or another
 subject. The label must faithfully express the supported need or proposition
@@ -172,6 +235,20 @@ source's exact fragments when its words support the finding; rejected sources
 need an empty support ID. Select scope_fragment_id for a limiting predicate.
 For every source check state assertion_owner and a short owner_label, then
 select owner_fragment_id and treatment_fragment_id from this source only.
+Also give assertion_role and a concise, faithful assertion_statement of the
+one operative proposition used, grounded in the exact support, ownership and
+treatment words. Court roles require deciding_court ownership, party_submission
+requires party, quoted_authority requires quoted_authority, and legislative_text
+requires direct provision text. Case background and unclear roles cannot be
+operative legal support. Different independently used positions require
+separate findings; do not blanket-label a paragraph or add unstated law.
+Return context_statements only for relevant related positions actually needed
+to understand this source use, otherwise an empty array. Each uses the same
+role, assertion_statement, assertion_owner, owner_label and exact support,
+ownership and treatment fragment fields. Context may have adopted, reported,
+rejected or unclear treatment, without becoming the operative proposition or
+another legal-support citation. A rejecting court conclusion may be operative
+support while the specific party's rejected submission is retained as context.
 source_treatment describes how the issuing source treats that proposition:
 adopted, reported, rejected or unclear. Supported legal sources require a
 known assertion owner and exact ownership and adopted-treatment fragments;
@@ -677,6 +754,8 @@ def _verification_schema(
         "required": [
             "source_id",
             "assertion_owner",
+            "assertion_role",
+            "assertion_statement",
             "owner_label",
             "owner_fragment_id",
             "source_treatment",
@@ -690,6 +769,8 @@ def _verification_schema(
         "properties": {
             "source_id": {"type": "string", "enum": list(source_ids)},
             "assertion_owner": {"type": "string", "enum": list(SOURCE_ASSERTION_OWNERS)},
+            "assertion_role": {"type": "string", "enum": list(SOURCE_ASSERTION_ROLES)},
+            "assertion_statement": {"type": "string", "maxLength": 500},
             "owner_label": {"type": "string", "maxLength": 160},
             "owner_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
             "source_treatment": {"type": "string", "enum": list(SOURCE_TREATMENTS)},
@@ -710,6 +791,17 @@ def _verification_schema(
             },
             "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1},
+        },
+    }
+    context_fields = (
+        "assertion_owner", "assertion_role", "assertion_statement", "owner_label",
+        "source_treatment", "support_fragment_id", "owner_fragment_id", "treatment_fragment_id",
+    )
+    source_check["required"].append("context_statements")
+    source_check["properties"]["context_statements"] = {
+        "type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": list(context_fields),
+            "properties": {key: source_check["properties"][key] for key in context_fields},
         },
     }
     decision = {
@@ -755,6 +847,23 @@ def _verification_schema(
         "required": ["decisions"],
         "properties": {"decisions": {"type": "array", "items": decision}},
     }
+
+
+def _resolve_statement(check: dict, source: dict, fragments: dict[str, str], *,
+                       operative: bool, label: str) -> dict:
+    resolved = {key: check[key] for key in _STATEMENT_FIELDS if not key.endswith("_excerpt")}
+    for field in ("support", "owner", "treatment"):
+        identity = check[f"{field}_fragment_id"]
+        if not identity or identity not in fragments:
+            raise SchemaViolation(
+                f"{label}.{field}_fragment_id must select exact words from this source only")
+        resolved[f"{field}_excerpt"] = fragments[identity]
+    if not _statement_valid(resolved, source, operative=operative):
+        raise SchemaViolation(
+            f"{label} needs a faithful nonempty assertion_statement within 500 characters, "
+            "a source/role/owner relationship, owner_label within 160 characters and exact "
+            "support, ownership and treatment words; contextual positions do not become law")
+    return resolved
 
 
 def _finding_verdict(
@@ -851,6 +960,20 @@ def _finding_verdict(
                 "and adopted-treatment fragments; reported, rejected or unclear propositions "
                 "are not adopted legal support"
             )
+        if verdict == "supported" and not _operative_assertion(
+                sources[source_id]["kind"], check["assertion_role"], check["assertion_owner"]):
+            raise SchemaViolation(
+                f"Source {source_id!r} needs an operative assertion_role matching its kind "
+                f"{sources[source_id]['kind']!r} and assertion_owner "
+                f"{check['assertion_owner']!r}; case_background and unclear are not operative law"
+            )
+        if verdict == "supported" and (not check["assertion_statement"].strip()
+                                       or len(check["assertion_statement"]) > 500):
+            raise SchemaViolation(
+                f"Source {source_id!r} needs a nonempty assertion_statement within 500 characters"
+            )
+        if verdict == "supported" and len(check["owner_label"]) > 160:
+            raise SchemaViolation(f"Source {source_id!r} needs owner_label within 160 characters")
         if (
             not check["reason"].strip()
             or len(check["reason"]) > 500
@@ -874,14 +997,19 @@ def _finding_verdict(
                 "unsupported or uncertain passages need an empty support ID"
             )
         if verdict == "supported":
+            assertion = _resolve_statement(check, sources[source_id], fragments_by_id,
+                                           operative=True, label=f"Source {source_id!r}")
+            contexts = [_resolve_statement(row, sources[source_id], fragments_by_id,
+                                          operative=False,
+                                          label=f"Source {source_id!r}.context_statements[{index}]")
+                        for index, row in enumerate(check["context_statements"])]
+            if len({tuple(row[key] for key in _STATEMENT_FIELDS)
+                    for row in contexts}) != len(contexts):
+                raise SchemaViolation(f"Source {source_id!r} repeats a context statement")
             selected[source_id] = {
                 "contract": RESEARCH_VERIFICATION,
-                "assertion_owner": check["assertion_owner"],
-                "owner_label": check["owner_label"],
-                "owner_excerpt": owner,
-                "source_treatment": check["source_treatment"],
-                "treatment_excerpt": treatment,
-                "support_excerpt": support,
+                **assertion,
+                "context_statements": contexts,
                 "scope_excerpt": scope,
                 "scope_status": scope_status,
                 "reason": check["reason"],

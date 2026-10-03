@@ -85,13 +85,21 @@ class Model:
         source = sources.get(check.get("source_id"), {})
         supported = check.get("verdict") == "supported"
         fragment = check.get("support_fragment_id", "") if supported else ""
+        owner = check.get("assertion_owner", "legislative_text"
+                          if source.get("kind") == "provision" else "deciding_court")
+        statement = next((row["text"] for row in source.get("fragments", [])
+                          if row["id"] == fragment), "")[:500]
         return {
-            "assertion_owner": ("legislative_text" if source.get("kind") == "provision"
-                                else "deciding_court"),
+            "assertion_owner": owner,
+            "assertion_role": {"legislative_text": "legislative_text",
+                               "deciding_court": "court_reasoning", "party": "party_submission",
+                               "quoted_authority": "quoted_authority"}.get(owner, "unclear"),
+            "assertion_statement": statement,
             "owner_label": "The issuing source",
             "owner_fragment_id": fragment,
             "source_treatment": "adopted" if supported else "unclear",
             "treatment_fragment_id": fragment,
+            "context_statements": [],
             **check,
         }
 
@@ -371,6 +379,9 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
         "verification": {
             "contract": RESEARCH_VERIFICATION,
             "assertion_owner": "legislative_text",
+            "assertion_role": "legislative_text",
+            "assertion_statement": "A person must give written notice.",
+            "context_statements": [],
             "owner_label": "The issuing source",
             "owner_excerpt": "A person must give written notice.",
             "source_treatment": "adopted",
@@ -587,6 +598,9 @@ def test_verifier_reconstructs_exact_overlapping_fragments_from_saved_passage():
     assert checked.rows["d1"][0]["sources"][0]["verification"] == {
         "contract": RESEARCH_VERIFICATION,
         "assertion_owner": "legislative_text",
+        "assertion_role": "legislative_text",
+        "assertion_statement": fragments[1]["text"][:500],
+        "context_statements": [],
         "owner_label": "The issuing source",
         "owner_excerpt": fragments[1]["text"],
         "source_treatment": "adopted",
@@ -1210,3 +1224,181 @@ def test_role_and_treatment_fragment_ids_cannot_resolve_against_a_peer_source(fi
     assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
     assert field in repair["validation_issues"]["r1"]
     assert "f2" in repair["validation_issues"]["r1"]
+
+
+@pytest.mark.parametrize("role,owner", [
+    ("court_conclusion", "party"),
+    ("court_reasoning", "quoted_authority"),
+    ("party_submission", "deciding_court"),
+    ("quoted_authority", "deciding_court"),
+    ("legislative_text", "deciding_court"),
+    ("case_background", "deciding_court"),
+    ("unclear", "deciding_court"),
+])
+def test_used_assertion_role_cannot_change_its_speaker_or_promote_background(role, owner):
+    source = dict(id="mixed", kind="judgment", title="Supplied decision", locator="paragraph 4",
+                  text="The respondent submits later consent suffices. We adopt that submission.")
+    proposed = {"q1": [
+        {**finding(source_ids=["mixed"], label="Later consent can suffice"), "sources": [source]},
+        {**finding(label="Notice when required by agreement"),
+         "sources": request_hits()["q1"]["candidates"]},
+    ]}
+    wrong = supported_verdict("r1", "mixed")
+    wrong["source_checks"][0].update(
+        assertion_owner=owner, assertion_role=role,
+        assertion_statement="Later consent suffices.", owner_label="The respondent")
+    corrected = supported_verdict("r1", "mixed")
+    corrected["source_checks"][0].update(
+        assertion_owner="party", assertion_role="party_submission",
+        assertion_statement="Later consent suffices.", owner_label="The respondent")
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "s1")]},
+                   {"decisions": [corrected]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert len(checked.rows["q1"]) == 2
+    verification = checked.rows["q1"][0]["sources"][0]["verification"]
+    assert verification["assertion_role"] == "party_submission"
+    assert verification["assertion_statement"] == "Later consent suffices."
+    assert verification["owner_label"] == "The respondent"
+    assert verification["source_treatment"] == "adopted"
+    assert verification["owner_excerpt"] == verification["treatment_excerpt"] == source["text"]
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [candidate["candidate_id"] for candidate in _candidate_rows(repair)] == ["r1"]
+    assert "assertion_role" in repair["validation_issues"]["r1"]
+
+
+@pytest.mark.parametrize("statement", ["", "  ", "x" * 501])
+def test_used_assertion_requires_a_concise_statement_without_repeating_checked_peers(statement):
+    source = request_hits()["q1"]["candidates"][0]
+    proposed = {"q1": [{**finding(), "sources": [source]}]}
+    wrong = supported_verdict("r1", "s1")
+    wrong["source_checks"][0]["assertion_statement"] = statement
+    model = Model([{"decisions": [wrong]}, {"decisions": [supported_verdict("r1", "s1")]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert checked.rows["q1"][0]["sources"][0]["verification"]["assertion_statement"] == source[
+        "text"]
+    assert len(model.calls) == 2
+    fields = model.calls[0][1]["properties"]["decisions"]["items"]["properties"][
+        "source_checks"]["items"]["properties"]
+    assert "assertion_role" in fields and "assertion_statement" in fields
+    assert "binding_status" not in fields and "speaker_label" not in fields
+
+
+def test_adopted_source_does_not_override_rejection_of_the_used_statement_meaning():
+    source = request_hits()["q1"]["candidates"][0]
+    proposed = {"q1": [{**finding(), "sources": [source]}]}
+    rejected = supported_verdict("r1", "s1")
+    rejected.update(verdict="unsupported", reason="The asserted remedy does not follow.")
+    rejected["source_checks"][0]["assertion_statement"] = "The recipient must pay damages."
+    model = Model([{"decisions": [rejected]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert checked.rows["q1"] == []
+    assert checked.coverage["q1"]["withheld_items"] == 1
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("treatment", ["rejected", "adopted", "reported", "unclear"])
+def test_party_position_and_court_response_remain_separate_from_operative_support(treatment):
+    party_words = "The applicant submits that prior consent is always necessary. "
+    court_words = {
+        "rejected": "We reject the applicant's submission. ",
+        "adopted": "We adopt the applicant's submission. ",
+        "reported": "We merely record the applicant's submission without deciding it. ",
+        "unclear": "",
+    }[treatment] + "The court concludes that the stated exception governs this request."
+    source = dict(id="mixed", kind="judgment", title="Supplied decision", locator="paragraph 5",
+                  text=party_words + "The background remains disputed. " * 23 + court_words)
+    item = {**finding(source_ids=["mixed"], need="The stated exception governs the request.",
+                     label="The governing exception", why="The court applies the exception."),
+            "sources": [source]}
+    verdict = supported_verdict("r1", "mixed")
+    verdict["source_checks"][0].update(
+        assertion_owner="deciding_court", assertion_role="court_conclusion",
+        assertion_statement="The stated exception governs this request.",
+        owner_label="The deciding court", support_fragment_id="f2",
+        owner_fragment_id="f2", treatment_fragment_id="f2",
+        context_statements=[dict(
+            assertion_owner="party", assertion_role="party_submission",
+            assertion_statement="Prior consent is always necessary.", owner_label="The applicant",
+            source_treatment=treatment, support_fragment_id="f1", owner_fragment_id="f1",
+            treatment_fragment_id="f2")])
+    model = Model([{"decisions": [verdict]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed={"q1": [item]},
+                              conversation=CONVERSATION)
+
+    kept = checked.rows["q1"][0]
+    verification = kept["sources"][0]["verification"]
+    assert kept["source_ids"] == ["mixed"]
+    assert verification["assertion_role"] == "court_conclusion"
+    assert verification["assertion_statement"] == "The stated exception governs this request."
+    assert verification["source_treatment"] == "adopted"
+    context = verification["context_statements"][0]
+    assert context["assertion_role"] == "party_submission"
+    assert context["owner_label"] == "The applicant"
+    assert context["source_treatment"] == treatment
+    assert party_words.strip() in context["support_excerpt"]
+    assert court_words in context["treatment_excerpt"]
+    assert not {"source_id", "scope_status", "force"} & context.keys()
+    assert len(model.calls) == 1 and model.calls[0][2] is Tier.JUDGE
+
+
+def test_context_cannot_promote_a_rejected_party_position_to_primary_law():
+    source = dict(id="mixed", kind="judgment", title="Supplied decision", locator="paragraph 5",
+                  text="The applicant submits prior consent is mandatory. We reject that position.")
+    proposed = {"q1": [{**finding(source_ids=["mixed"]), "sources": [source]}]}
+    wrong = supported_verdict("r1", "mixed")
+    wrong["source_checks"][0].update(
+        assertion_role="party_submission", assertion_owner="party", owner_label="The applicant",
+        source_treatment="rejected", assertion_statement="Prior consent is mandatory.",
+        context_statements=[])
+    model = Model([{"decisions": [wrong]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert checked.rows["q1"] == []
+    assert checked.coverage["q1"]["unread_items"] == 1
+    assert len(model.calls) == 2
+
+
+def test_context_fragment_cannot_borrow_another_sources_words_or_repeat_valid_peers():
+    source = request_hits()["q1"]["candidates"][0]
+    peer = dict(id="peer", kind="judgment", title="Supplied decision", locator="paragraph 6",
+                text="The applicant submits that notice is unnecessary. " * 30)
+    proposed = {"q1": [
+        {**finding(), "sources": [source]},
+        {**finding("support", source_ids=["peer"], label="Related reasoning"), "sources": [peer]},
+    ]}
+    wrong = supported_verdict("r1", "s1")
+    wrong["source_checks"][0]["context_statements"] = [dict(
+        assertion_owner="legislative_text", assertion_role="legislative_text",
+        assertion_statement="Notice is required.", owner_label="The issuing source",
+        source_treatment="reported", support_fragment_id="f1", owner_fragment_id="f2",
+        treatment_fragment_id="f1")]
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "peer")]},
+                   {"decisions": [supported_verdict("r1", "s1")]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=proposed,
+                              conversation=CONVERSATION)
+
+    assert len(checked.rows["q1"]) == 2
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [candidate["candidate_id"] for candidate in _candidate_rows(repair)] == ["r1"]
+    assert "context_statements[0].owner_fragment_id" in repair["validation_issues"]["r1"]

@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-03",
+  "status": "Focused structural checks passed; live V3 generation and broader browser acceptance are incomplete",
+  "changes": [
+    "Label the operative source statement separately from related contextual statements, preserving each speaker and court treatment.",
+    "Represent Party submission / Court adopted and Party submission / Court rejected without converting rejected context into legal authority.",
+    "Preserve historical exact snapshots; return recorded attribution labels as validated read-only metadata.",
+    "Declare exact, unique inline response phrases linked to selected legal passages; remove response source lists.",
+    "Use one shared inline-anchor validator for writer output, saved display mapping and authenticated readback.",
+    "Give the detail reader one assignment catalogue and derive scope/placement from it; check the selected canonical target independently.",
+    "Check each response block and linked visible proposal in the existing independent response review."
+  ],
+  "checks": {
+    "source_engine_and_state": "124 focused tests passed",
+    "material_assignment_and_grounding": "64 affected tests passed",
+    "final_affected_public_research_progress_inline_and_source_gate": "96 tests passed",
+    "shared_inline_and_source_readback_recheck": "35 tests passed; overlaps the final affected gate",
+    "javascript_source_reader": "passed, including adopted/rejected context labels and exact inline anchors",
+    "syntax_lint_and_diff": "passed",
+    "note": "Groups overlap and are not an aggregate count or a semantic acceptance grade."
+  },
+  "saved_record_browser_check": {
+    "matter_id": "mat_a897eaff2bba90885b41536d27a47af5",
+    "viewport_width": 1536,
+    "source_pane": {"x": 896, "width": 640, "top": 0},
+    "source_header_top_after_scroll": 0,
+    "close_top_after_scroll": 16,
+    "source_body_scroll_top_observed": 66.4000015258789,
+    "outcome": "Single-click dispute reader and saved legal passage reader open on the right. Exact saved judgment text and historical-review qualification are visible. No source list appears below the response.",
+    "qualification": "This verifies saved-record UI/readback, not new V3 model generation. Older shortened citation names are not guessed into links.",
+    "local_proof": "outputs/advocate-multimatter-20261003/saved-source-right-current.png"
+  },
+  "call_impact": {
+    "added_normal_model_calls": 0,
+    "source_review": "Existing independent Judge receives retrieved passages, proposed findings and attributed conversation; returns support, scope, statement role/speaker/treatment and separate contextual positions.",
+    "material": "Existing detail reader plus grounding Judge; one assignment is proposed, then checked against exact attributed context and selected canonical records.",
+    "response": "Existing writer plus independent Judge; inline anchors and per-block/proposal checks enrich their existing output contracts.",
+    "conditional_calls": "Existing bounded correction and unresolved-unit repair limits remain. Valid peers are preserved.",
+    "latency": "No additional normal calls does not imply unchanged tokens or elapsed time. Live V3 latency remains unmeasured. Full saved conversation is retained."
+  },
+  "live_blocker": {
+    "operation": "interpret_conversation",
+    "provider_status": 429,
+    "provider_code": "credit_balance_exhausted",
+    "cause": "Provider explicitly reported no API credits remaining",
+    "browser_result": "Employment scripted turn 4 attempt 3 refused before saving; the prior saved matter is retained and the UI offers a retry.",
+    "recovery_dependency": "API account credits must be restored before further live model tests. No additional provider requests were attempted after this confirmed refusal."
+  },
+  "browser_coverage": {
+    "planned_script_turns": 48,
+    "recorded_attempts": 25,
+    "unique_script_turns_attempted": 21,
+    "saved_script_turns": 19,
+    "saved_recovery_turns": 1,
+    "explicitly_unsaved_attempts": 5,
+    "unobserved_script_turns": 27,
+    "saved_logical_model_calls": 200,
+    "saved_provider_retries": 6,
+    "saved_call_states": {"ok": 194, "OutputTruncated": 3, "RateLimited": 3},
+    "saved_response_delivery": {"accepted_continuations": 6, "source_free_diversions": 4, "withheld_substantive": 10},
+    "qualification": "Delivery and schema acceptance are not semantic quality grades. Unsaved attempts have no durable call receipts. Browser elapsed values include operator delays and are not latency benchmarks.",
+    "report": "outputs/advocate-multimatter-20261003/browser-status.json"
+  },
+  "remaining_acceptance": [
+    "Complete and grade the remaining four-matter scripted browser journeys after credits are restored.",
+    "Verify live V3 adopted/rejected labels and generated inline phrase links through their exact authenticated reading panes.",
+    "Quoted junior analysis was accepted as a dispute revision in the baseline; the general operation-support remedy is diagnosed but not implemented in this milestone.",
+    "Baseline source checks still accepted chronology, applicability and analogy overreach. Statement-role labels alone do not prove these semantic defects corrected.",
+    "Empathy, respectful challenge, adverse facts, promises, unavailable material, scoped completion and sustained return behaviour have not passed broader acceptance."
+  ],
+  "scenario_specific_rules_added": false,
+  "donor_code_copied": false
+}

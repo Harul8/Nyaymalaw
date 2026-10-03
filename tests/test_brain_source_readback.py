@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.brain.source_snapshots import source_snapshots
+from nm.brain.source_snapshots import inline_source_links, source_snapshots
 from nm.brain.turn import chat_matter_id
 from nm.work_the_file.matter_contracts import Matter
 
@@ -136,3 +136,79 @@ def test_gathering_reference_is_a_record_not_raw_legal_source():
     assert source["kind"] == "record"
     assert source["label"] == "Saved gathering item"
     assert "not the words of an Act or judgment" in source["qualification"]
+
+
+@pytest.mark.parametrize("contract", ["research_support_v2", "research_support_v3"])
+def test_saved_statement_labels_are_read_from_the_owned_reference_without_upgrading_snapshot(
+        client, wired, monkeypatch, contract):
+    matter, original_sources = saved_sources(wired)
+    row = deepcopy(matter.brain_chat[0])
+    reference = row["response"]["continuation"]["units"][0]["blocks"][0]["references"][1]
+    words = "Exact synthetic source."
+    check = {"contract": contract, "assertion_owner": "legislative_text",
+             "owner_label": "The synthetic legislative text", "owner_excerpt": words,
+             "source_treatment": "adopted", "treatment_excerpt": words,
+             "support_excerpt": words, "scope_excerpt": "",
+             "scope_status": "no_special_condition", "reason": "The selected words state this."}
+    if contract == "research_support_v3":
+        check.update(assertion_role="legislative_text",
+                     assertion_statement="The selected synthetic text states the proposition.",
+                     context_statements=[])
+    reference["verification"] = check
+    wired.store.commit(replace(matter, brain_chat=(row,), version=matter.version + 1),
+                       expected_version=matter.version)
+
+    def unnecessary(*args, **kwargs):
+        raise AssertionError("Opening recorded labels cannot call a model or corpus")
+
+    monkeypatch.setattr(wired, "_model_for", unnecessary)
+    monkeypatch.setattr(wired.evidence, "document", unnecessary)
+    response = client.get(source_url(matter, 1))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["verification"] == check
+    assert result["provenance_status"] == "recorded"
+    assert result["text"] == original_sources[1]["text"]
+    assert result["digest"] == original_sources[1]["digest"]
+    assert row["response"]["elements"][0]["sources"] == original_sources
+
+
+def test_malformed_recorded_labels_are_not_exposed_as_a_valid_source_check(client, wired):
+    matter, _ = saved_sources(wired)
+    row = deepcopy(matter.brain_chat[0])
+    reference = row["response"]["continuation"]["units"][0]["blocks"][0]["references"][1]
+    reference["verification"]["contract"] = "research_support_v2"
+    reference["verification"]["owner_excerpt"] = "Words outside this saved source"
+    wired.store.commit(replace(matter, brain_chat=(row,), version=matter.version + 1),
+                       expected_version=matter.version)
+    assert client.get(source_url(matter, 1)).status_code == 404
+
+
+@pytest.mark.parametrize("damage", [None, "wrong_display_index", "unowned_source",
+                                    "ambiguous_phrase", "missing_mapping"])
+def test_inline_citations_remain_bound_to_the_displayed_phrase_and_saved_passage(
+        client, wired, damage):
+    matter, sources = saved_sources(wired)
+    row = deepcopy(matter.brain_chat[0])
+    answer = row["response"]
+    block = answer["continuation"]["units"][0]["blocks"][0]
+    element = answer["elements"][0]
+    block["inline_citations"] = [{"text": "source-supported examination",
+                                  "legal_source_id": sources[1]["id"]}]
+    element["inline_citations"] = inline_source_links(block, sources)
+    if damage == "wrong_display_index":
+        element["inline_citations"][0]["source_index"] = 0
+    elif damage == "unowned_source":
+        block["inline_citations"][0]["legal_source_id"] = "another-answer-source"
+    elif damage == "ambiguous_phrase":
+        block["text"] += " Again source-supported examination."
+        element["text"] = block["text"]
+    elif damage == "missing_mapping":
+        del block["inline_citations"]
+    row["elements"] = deepcopy(answer["elements"])
+    wired.store.commit(replace(matter, brain_chat=(row,), version=matter.version + 1),
+                       expected_version=matter.version)
+    result = client.get(source_url(matter, 1))
+    assert result.status_code == (200 if damage is None else 404), result.text
+    if damage is None:
+        assert result.json()["text"] == sources[1]["text"]

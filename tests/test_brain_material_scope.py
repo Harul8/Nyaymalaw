@@ -21,32 +21,32 @@ def _dispute():
 
 
 @pytest.mark.parametrize("has_current_matter", (False, True))
-def test_linked_ownership_mismatch_is_corrected_without_reclassifying_the_fact(
+def test_linked_assignment_owns_scope_without_an_independent_scope_choice(
         has_current_matter):
     original = {**candidate(source_id="L1", scope="uncertain"),
                 "basis": "uncertain", "placement": "disputes", "dispute_ids": ["issue"]}
     scope = "current" if has_current_matter else "proposed"
-    corrected = {**original, "matter_scope": scope}
-    model = Model({"details": [original]}, repair={"details": [corrected]})
+    model = Model({"details": [original]})
 
     rows = extract_details(model, earlier=(), latest="The amount may be three units.",
                            current_matter_id="mat_scope" if has_current_matter else None,
                            disputes=(_dispute(),))
 
-    assert len(model.calls) == 2
+    assert len(model.calls) == 1
     assert rows[0].matter_scope == scope
     assert rows[0].basis == "uncertain"
     assert rows[0].quoted == "The amount may be three units."
-    feedback = json.loads(model.calls[1][0].user)
-    assert "matter_scope" in feedback["validation_issue"]
-    assert "proof" in feedback["validation_issue"]
-    assert "matter_scope" in feedback["original_input"]["active_disputes"][0]
+    payload = json.loads(model.calls[0][0].user)
+    target = next(row for row in payload["assignment_targets"] if row["id"] == "issue")
+    assert target["matter_scope"] == scope and target["record"] == _dispute()
+    fields = model.calls[0][1]["properties"]["new_items"]["items"]["properties"]
+    assert not {"matter_scope", "dispute_ids", "placement"}.intersection(fields)
 
 
 def test_genuinely_ambiguous_ownership_can_remove_the_link_in_the_same_correction():
     linked = {**candidate(source_id="L1", scope="uncertain"),
-              "placement": "disputes", "dispute_ids": ["issue"]}
-    held = {**linked, "placement": "unresolved", "dispute_ids": []}
+              "assignment_ids": ["issue", "matter:uncertain"]}
+    held = {**linked, "assignment_ids": ["matter:uncertain"]}
     model = Model({"details": [linked]}, repair={"details": [held]})
 
     rows = extract_details(model, earlier=(), latest="This amount may concern another file.",
@@ -268,7 +268,7 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
     assert len(wired.store.load(result["matter_id"]).brain_chat) == 2
 
 
-def test_public_boundary_uses_only_existing_conditional_scope_correction(
+def test_public_boundary_single_assignment_preserves_fact_uncertainty_without_repair(
         client, wired, monkeypatch):
     words = "The charge is disputed. A receipt may be held."
     disputed = material("dispute", "Contested charge", "The charge is disputed.")
@@ -276,19 +276,7 @@ def test_public_boundary_uses_only_existing_conditional_scope_correction(
                          scope="uncertain", basis="uncertain", placement="disputes",
                          dispute_ids=("scope-first:material:1",))
 
-    class Repairing(ServiceModel):
-        reads = 0
-
-        def structured(self, prompt, schema, tier, *, max_tokens=None):
-            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
-            if prompt.operation == "extract_legal_details":
-                self.reads += 1
-                if self.reads > 1:
-                    result = replace(result, data={**result.data, "new_items": [
-                        {**row, "matter_scope": "proposed"} for row in result.data["new_items"]]})
-            return result
-
-    model = Repairing([plan(words, candidates=[disputed, uncertain], opening=True)])
+    model = ServiceModel([plan(words, candidates=[disputed, uncertain], opening=True)])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     response = send(client, words, "scope-first")
@@ -297,7 +285,8 @@ def test_public_boundary_uses_only_existing_conditional_scope_correction(
     result = response.json()
     assert [row["matter_scope"] for row in result["material"]] == ["proposed", "proposed"]
     assert result["material"][1]["basis"] == "uncertain"
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 7
+    assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 1
     assert len(wired.store.load(result["matter_id"]).brain_chat) == 1
     record = client.get(f"/api/matters/{result['matter_id']}").json()["material_record"]
     assert record["coverage"]["state"] == "ok"

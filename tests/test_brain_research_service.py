@@ -113,6 +113,10 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
     assert reference["type"] == "legal"
     assert reference["text"] == PROVISION
     assert reference["verification"] == checked_use
+    anchor = answer["elements"][0]["inline_citations"][0]
+    assert anchor["text"] == PROVISION
+    assert anchor["source_id"] == reference["id"]
+    assert answer["elements"][0]["sources"][anchor["source_index"]]["text"] == PROVISION
     assert [row["text"] for row in answer["elements"]] == [PROVISION]
     assert saved.brain_ready is False
     assert "research_reads" not in answer

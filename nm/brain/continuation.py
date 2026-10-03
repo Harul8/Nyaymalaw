@@ -11,6 +11,7 @@ from nm.brain.continuation_verification import verify_continuation
 from nm.brain.conversation import Conversation, IncompleteConversation, TurnPlan
 from nm.brain.legal_requirements import RESEARCH_VERIFICATION, source_verification_valid
 from nm.brain.material import addressed_sources
+from nm.brain.source_snapshots import inline_source_links
 from nm.brain.work_state import PROGRESS_KINDS, PROGRESS_STATUSES
 from nm.shared.model_port import (
     ContextOverflow,
@@ -84,6 +85,8 @@ and limits. Read who makes the assertion and how the issuing source treats it;
 a reported contention or quotation is not, by itself, the source's adopted
 legal position. Preserve the checked owner and treatment of the selected
 proposition without extending that adoption to other words in the passage.
+Treat labelled contextual positions as context, preserving their speaker and
+the court's separate response; a reported or rejected argument is not adopted law.
 General research supplies no facts about the current matter.
 Conditional findings preserve their full limiting predicate in the reply;
 an exact passage is not proof of applicability, statutory currency or binding
@@ -199,24 +202,39 @@ the structured reference fields, never inline in displayed text. This includes
 conversation span, record, legal-source and saved work IDs. A label literally
 used by the advocate may remain when attributed to their selected words; it
 must not become an inline machine citation. Write plain
-text because each block is rendered as a paragraph with separate source controls;
-do not repeat machine references or reproduce Markdown formatting. The interface
-provides source access from those references. Keep an essential limitation
+text because each block is rendered as a paragraph. Do not reproduce Markdown
+formatting. Provide inline_citations as exact, short phrases already present
+once in this block's text, each linked to its actual selected legal_source_id.
+Select meaningful phrases supported by that passage, not arbitrary words or
+added source labels. Phrases must not overlap. Every selected legal passage
+needs at least one anchor, including passage IDs attached to a selected
+checked finding. Use distinct supported phrases for different passages; when
+support is joint, no anchor may imply its passage alone establishes the whole
+conclusion. Empty inline_citations is required when no legal passage is selected.
+The interface turns those existing words into source links; there is no
+separate source list. Keep an essential limitation
 with the assessment it qualifies."""
 
 _KINDS = ("acknowledgment", "account", "assessment", "question", "next_step",
           "limitation", "completion")
 _ARRAY_IDS = {"type": "array", "items": {"type": "string"}}
+_INLINE_CITATION = {
+    "type": "object", "additionalProperties": False,
+    "required": ["text", "legal_source_id"],
+    "properties": {"text": {"type": "string", "minLength": 1},
+                   "legal_source_id": {"type": "string"}},
+}
 _BLOCK = {
     "type": "object", "additionalProperties": False,
     "required": ["id", "kind", "text", "span_ids", "record_ids",
-                 "legal_source_ids", "uncertainty"],
+                 "legal_source_ids", "inline_citations", "uncertainty"],
     "properties": {
         "id": {"type": "string"},
         "kind": {"type": "string", "enum": list(_KINDS)},
         "text": {"type": "string"},
         "span_ids": _ARRAY_IDS, "record_ids": _ARRAY_IDS,
         "legal_source_ids": _ARRAY_IDS,
+        "inline_citations": {"type": "array", "items": _INLINE_CITATION},
         "uncertainty": {"type": "string", "enum": [
             "none", "reported", "conditional", "uncertain"]},
     },
@@ -391,6 +409,10 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
     for field, catalogue in (("span_ids", spans), ("record_ids", records),
                              ("legal_source_ids", sources)):
         block[field] = _identifier_array(tuple(catalogue))
+    citations = block["inline_citations"]
+    citations["items"]["properties"]["legal_source_id"]["enum"] = list(sources) or [""]
+    if not sources:
+        citations["maxItems"] = 0
     for field in ("questions", "next_work"):
         link = unit["properties"][field]["items"]["properties"]
         link["target_ids"] = (
@@ -572,6 +594,13 @@ def _identifier_in_text(identifier: str, text: str) -> bool:
     return re.search(rf"(?<!\w){re.escape(identifier)}(?!\w)", text) is not None
 
 
+def _check_inline_citations(block: dict, path: str, sources: dict) -> None:
+    try:
+        inline_source_links(block, [sources[key] for key in block["legal_source_ids"]])
+    except ValueError as exc:
+        raise SchemaViolation(f"{path}.{exc}") from exc
+
+
 def _inline_reference(block: dict, spans: dict, records: dict, sources: dict,
                       work: dict) -> tuple[str, str] | None:
     literal_sources = [spans[key]["text"] for key in block["span_ids"]
@@ -642,6 +671,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                     raise IncompleteConversation("A checked finding lost its passage owner")
                 if source_id not in block["legal_source_ids"]:
                     block["legal_source_ids"].append(source_id)
+        _check_inline_citations(block, block_path, sources)
         if block["kind"] == "assessment" and not block["legal_source_ids"]:
             raise SchemaViolation(
                 f"{block_path}.legal_source_ids: an assessment needs its actual "

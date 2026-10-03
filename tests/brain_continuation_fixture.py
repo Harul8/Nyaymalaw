@@ -1,6 +1,62 @@
 """Deterministic continuation proposals for extraction and persistence tests."""
 from __future__ import annotations
 
+from copy import deepcopy
+
+
+def citation_units(payload, data):
+    """Supply declared anchors for old offline drafts, preserving explicit invalid anchors."""
+    result = deepcopy(data)
+    if not isinstance(result, dict) or not isinstance(result.get("units"), list):
+        return result
+    for unit in result["units"]:
+        if not isinstance(unit, dict) or not isinstance(unit.get("blocks"), list):
+            continue
+        for block in unit["blocks"]:
+            if not isinstance(block, dict) or "inline_citations" in block:
+                continue
+            sources = list(block.get("legal_source_ids", []))
+            for identity in block.get("record_ids", []):
+                record = payload["record_catalogue"].get(identity, {})
+                if record.get("type") in ("requirement", "research"):
+                    sources.extend(record["record"]["source_ids"])
+            sources = list(dict.fromkeys(sources))
+            phrases = [block["text"]] if len(sources) == 1 else block["text"].splitlines()
+            if len(phrases) < len(sources):
+                raise AssertionError(
+                    "A multi-passage offline draft needs explicit supported anchors")
+            block["inline_citations"] = [
+                {"text": phrase, "legal_source_id": identity}
+                for identity, phrase in zip(sources, phrases, strict=False)]
+    return result
+
+
+def reviewed_verdicts(payload, data):
+    """Declare successful item coverage for normal offline reviewer fixtures.
+
+    Explicit subchecks, including deliberately malformed or rejected checks,
+    are preserved. This helper supplies no production semantic decisions.
+    """
+    result = deepcopy(data)
+    units = {unit["request_index"]: unit for unit in payload["units"]}
+    if not isinstance(result, dict) or not isinstance(result.get("verdicts"), list):
+        return result
+    for row in result["verdicts"]:
+        if not isinstance(row, dict) or row.get("request_index") not in units:
+            continue
+        unit = units[row["request_index"]]
+        row.setdefault("block_checks", [{
+            "block_id": block["id"],
+            "requires_legal_support": bool(block["legal_source_ids"]),
+            "verdict": "accept", "reason": "The scripted block retains its selected support.",
+        } for block in unit["blocks"]])
+        row.setdefault("proposal_checks", [{
+            "section": section, "proposal_id": link["id"], "block_id": link["block_id"],
+            "purpose_expressed": True, "verdict": "accept",
+            "reason": "The scripted purpose is expressed by its displayed owner.",
+        } for section in ("questions", "next_work") for link in unit[section]])
+    return result
+
 
 def interpretation(data):
     return {**{key: value for key, value in data.items() if key != "active_work_after"},
@@ -11,10 +67,10 @@ def interpretation(data):
 
 def continuation_reply(operation, payload, *, scripted_items=()):
     if operation == "verify_continuation":
-        return {"verdicts": [{"request_index": unit["request_index"],
+        return reviewed_verdicts(payload, {"verdicts": [{"request_index": unit["request_index"],
                               "verdict": "accept",
                               "reason": "The scripted unit retains its attributed limits."}
-                             for unit in payload["units"]]}
+                             for unit in payload["units"]]})
     if operation != "continue_conversation":
         return None
     latest_id = payload["latest_message_spans"][0]["id"]
@@ -70,4 +126,4 @@ def continuation_reply(operation, payload, *, scripted_items=()):
                                   "span_ids": [latest_id]}]
             if status == "complete" and item["intent"] == "request" else [],
         })
-    return {"units": units}
+    return citation_units(payload, {"units": units})

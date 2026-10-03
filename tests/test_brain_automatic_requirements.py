@@ -118,6 +118,10 @@ class Model:
                     "assertion_owner": "legislative_text"
                     if source["kind"] == "provision" else "deciding_court",
                     "owner_label": source["title"],
+                    "assertion_role": "legislative_text"
+                    if source["kind"] == "provision" else "court_conclusion",
+                    "assertion_statement": source["fragments"][0]["text"],
+                    "context_statements": [],
                     "owner_fragment_id": source["fragments"][0]["id"],
                     "source_treatment": "adopted",
                     "treatment_fragment_id": source["fragments"][0]["id"],
@@ -161,8 +165,9 @@ class Model:
         words = "".join(span["text"] for span in payload["latest_message_spans"])
         if words != DETAIL:
             return []
-        dispute_id = next(row["id"] for row in payload["active_disputes"]
-                          if row["label"] == "Supplier retained tools")
+        dispute_id = next(row["id"] for row in payload["assignment_targets"]
+                          if row["kind"] == "dispute"
+                          and row["record"]["label"] == "Supplier retained tools")
         return [{
             "kind": "evidence",
             "statement": "The advocate reports holding a signed delivery receipt.",

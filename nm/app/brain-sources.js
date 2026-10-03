@@ -41,19 +41,48 @@ window.NmBrainSources = (() => {
     const qualification = document.createElement('p');
     qualification.className = 'hint'; qualification.textContent = source.qualification;
     const details = [locator, qualification];
+    const roles = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
+      court_reasoning:'Court reasoning', party_submission:'Party submission',
+      quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear'};
+    const treatmentLabel = (statement) => source.kind === 'judgment'
+      && statement?.assertion_role === 'party_submission'
+      && ['adopted', 'rejected'].includes(statement.source_treatment)
+      ? `Court ${statement.source_treatment}` : statement?.source_treatment;
+    if (source.provenance_status === 'not_recorded') {
+      const missing = document.createElement('p');
+      missing.className = 'hint';
+      missing.textContent = 'Statement-role labels were not recorded for this saved response.';
+      details.push(missing);
+    }
     for (const [label, text] of [
+      ['Statement used', source.verification?.assertion_statement],
+      ['Statement role', roles[source.verification?.assertion_role]],
       ['Support check', source.verification?.reason],
       ['Supporting words', source.verification?.support_excerpt],
       ['Limiting condition', source.verification?.scope_excerpt],
       ['Who states the proposition', source.verification?.owner_label],
       ['Attribution words', source.verification?.owner_excerpt],
-      ['Treatment in the source', source.verification?.source_treatment],
+      ['Treatment in the source', treatmentLabel(source.verification)],
       ['Treatment words', source.verification?.treatment_excerpt],
     ]) {
       if (!text) continue;
       const detail = document.createElement('p');
       detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
       details.push(detail);
+    }
+    for (const statement of source.verification?.context_statements || []) {
+      const role = roles[statement.assertion_role] || 'Related statement';
+      const treatment = treatmentLabel(statement);
+      for (const [label, text] of [
+        ['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`],
+        ['Speaker', statement.owner_label], ['Statement words', statement.support_excerpt],
+        ['Attribution words', statement.owner_excerpt], ['Treatment words', statement.treatment_excerpt],
+      ]) {
+        if (!text) continue;
+        const detail = document.createElement('p');
+        detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
+        details.push(detail);
+      }
     }
     const passage = document.createElement('div');
     passage.className = 'brain-source-text'; passage.textContent = source.text;
@@ -131,6 +160,30 @@ window.NmBrainSources = (() => {
 
   function appendBody(host, answer, element) {
     const text = typeof element.text === 'string' ? element.text : '';
+    if (Array.isArray(element.inline_citations)) {
+      const sources = Array.isArray(element.sources) ? element.sources : [element.source];
+      const anchors = [];
+      for (const citation of element.inline_citations) {
+        const phrase = citation?.text;
+        const index = citation?.source_index;
+        const source = Number.isInteger(index) ? sources[index] : null;
+        const start = words(phrase) ? text.indexOf(phrase) : -1;
+        if (start < 0 || text.indexOf(phrase, start + 1) >= 0 || !legal(source)
+            || source.id !== citation.source_id || !bound(answer, element, source)) continue;
+        anchors.push({start, end:start + phrase.length, phrase, source, index});
+      }
+      anchors.sort((left, right) => left.start - right.start);
+      let offset = 0;
+      let linked = 0;
+      for (const anchor of anchors) {
+        if (anchor.start < offset) continue;
+        host.appendChild(document.createTextNode(text.slice(offset, anchor.start)));
+        host.appendChild(responseLink(answer, element, anchor, anchor.phrase));
+        offset = anchor.end; linked += 1;
+      }
+      host.appendChild(document.createTextNode(text.slice(offset)));
+      return linked;
+    }
     const tokens = new Map();
     for (const entry of entries(element).filter(({source}) => legal(source))) {
       const {source} = entry;
@@ -170,33 +223,6 @@ window.NmBrainSources = (() => {
     return links;
   }
 
-  function appendReferences(host, answer, element) {
-    const sources = entries(element);
-    for (const isLegal of [true, false]) {
-      const selected = sources.filter(({source}) => legal(source) === isLegal);
-      if (!selected.length) continue;
-      const group = document.createElement(isLegal ? 'div' : 'details');
-      group.className = `brain-source-links ${isLegal
-        ? 'brain-legal-source-links' : 'brain-attributed-source-links'}`;
-      const heading = document.createElement(isLegal ? 'span' : 'summary');
-      heading.textContent = isLegal ? 'Legal sources: ' : `Attributed record (${selected.length})`;
-      group.appendChild(heading);
-      const list = document.createElement(isLegal ? 'span' : 'ul');
-      selected.forEach((entry, position) => {
-        const {source} = entry;
-        const item = document.createElement(isLegal ? 'span' : 'li');
-        const label = isLegal ? labelFor(source) : source.label;
-        if (bound(answer, element, source)) {
-          item.appendChild(responseLink(answer, element, entry, label));
-        } else item.textContent = `${label || 'Saved reference'} — inspection unavailable`;
-        if (isLegal && position) list.appendChild(document.createTextNode(' · '));
-        list.appendChild(item);
-      });
-      group.appendChild(list); host.appendChild(group);
-    }
-    return sources.length;
-  }
-
   function isReadableRecordSource(source) {
     if (!source || !legal(source)
         || !['id', 'title', 'locator', 'text'].every(key => words(source[key]))) return false;
@@ -216,7 +242,7 @@ window.NmBrainSources = (() => {
     begin(source.title, opener);
     populate({...source, qualification:
       "Saved with this dispute's legal requirements. Support was checked for that item; "
-      + (source.verification?.contract === 'research_support_v2' ? ''
+      + (source.verification?.contract === 'research_support_v3' ? ''
         : 'this historical check predates the current source review. ')
       + 'this does not establish applicability, binding force, or the complete source.'});
     return true;
@@ -230,6 +256,6 @@ window.NmBrainSources = (() => {
     if (active && !node('brain-source-reader').open) close();
   });
   window.addEventListener('nm:matter-changed', () => close(false));
-  return Object.freeze({configure, open, close, appendBody, appendReferences,
+  return Object.freeze({configure, open, close, appendBody,
     openRecordSource, isReadableRecordSource, labelFor});
 })();

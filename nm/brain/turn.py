@@ -37,7 +37,7 @@ from nm.brain.requirements_state import (
     research_owner_id,
     research_record,
 )
-from nm.brain.source_snapshots import source_snapshots
+from nm.brain.source_snapshots import inline_source_links, source_snapshots
 from nm.brain.work_state import project_work, seal_progress
 from nm.shared.model_port import (
     ConfigurationError,
@@ -289,7 +289,7 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
             question_blocks = {row["block_id"] for row in unit["questions"]}
             for block in unit["blocks"]:
                 sources = source_snapshots(block["references"])
-                elements.append({
+                element = {
                     "kind": "question" if block["id"] in question_blocks else "finding",
                     "text": block["text"], "thread": None, "by_when": None,
                     "no_deadline_reason": None, "signal": "none",
@@ -298,7 +298,11 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
                     "source": sources[0] if sources else None, "sources": sources,
                     "section": "needed" if block["id"] in question_blocks else "answer",
                     "continuation_request_index": index,
-                    "continuation_block_id": block["id"]})
+                    "continuation_block_id": block["id"]}
+                links = inline_source_links(block, sources)
+                if links is not None:
+                    element["inline_citations"] = links
+                elements.append(element)
         else:
             text = ("I could not finish a checked response to this part of your "
                     "request. Your message is saved; ask me to continue this "
@@ -335,7 +339,7 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
     details = extract_details(
         model, disputes=tuple(active.values()),
         prior_material=conversation.open_material, **arguments)
-    return (*disputes, *details)
+    return (*disputes, *details), tuple(active.values())
 
 
 def _legal_reads(model, search, *, conversation: Conversation,
@@ -466,13 +470,17 @@ class BrainService:
                             Conversation((), progress=project_work(matter)))
             plan = interpret(counted_model, conversation, turn.message)
             dispute_audit: list[dict] = []
-            candidates = (_read_material(counted_model, conversation,
-                                         turn.message, turn.turn_id, dispute_audit)
-                if plan.material_review or plan.opening.ready
-                else ())
+            if plan.material_review or plan.opening.ready:
+                candidates, active_disputes = _read_material(
+                    counted_model, conversation, turn.message, turn.turn_id, dispute_audit)
+            else:
+                candidates, active_disputes = (), conversation.open_disputes
             grounded = verify_material_grounding(
                 counted_model, candidates=candidates, opening=plan.opening,
-                earlier=conversation.messages, latest=turn.message)
+                earlier=conversation.messages, latest=turn.message,
+                active_disputes=active_disputes,
+                prior_material=conversation.open_material,
+                current_matter_id=conversation.current_matter_id)
             candidates = (tuple(candidate for candidate in candidates
                                 if candidate.kind == "dispute") + grounded.details)
         except IncompleteConversation as exc:

@@ -66,6 +66,10 @@ def supported(candidate, *, verdict="supported"):
                                "assertion_owner": "legislative_text"
                                if source["kind"] == "provision" else "deciding_court",
                                "owner_label": source["title"],
+                               "assertion_role": "legislative_text"
+                               if source["kind"] == "provision" else "court_conclusion",
+                               "assertion_statement": source["fragments"][0]["text"],
+                               "context_statements": [],
                                "owner_fragment_id": source["fragments"][0]["id"],
                                "source_treatment": "adopted",
                                "treatment_fragment_id": source["fragments"][0]["id"],

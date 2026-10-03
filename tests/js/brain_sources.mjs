@@ -96,15 +96,6 @@ assert.equal(reader.appendBody(body, bodyAnswer, bodyElement), 2);
 assert.equal(body.textContent, bodyElement.text);
 assert.deepEqual(descendants(body, 'button').map(button => button.textContent),
   ['Example Act, 2025 · Section 7', 'Example Act, 2025']);
-const references = new Node();
-assert.equal(reader.appendReferences(references, bodyAnswer, bodyElement), 3);
-assert.equal(references.children[0].tagName, 'DIV');
-assert.match(references.children[0].className, /brain-legal-source-links/);
-assert.equal(descendants(references.children[0], 'button').length, 1);
-assert.equal(references.children[1].tagName, 'DETAILS');
-assert.equal(references.children[1].open, false);
-assert.equal(descendants(references.children[1], 'button').length, 2);
-assert.match(references.children[1].textContent, /Attributed record \(2\)/);
 const bodyLink = descendants(body, 'button')[0];
 const inlineRead = bodyLink.handlers.get('click')();
 assert.equal(reads[6].url, '/api/chats/pending-chat/turns/source-turn/brain-sources/1/2');
@@ -125,15 +116,6 @@ assert.equal(reader.labelFor({title:'Example Decision', locator:'example Decisio
 assert.equal(reader.labelFor({title:'Example Decision'}), 'Example Decision');
 assert.equal(reader.labelFor({locator:'Paragraph 9'}), 'Paragraph 9');
 const fullLocatorSource = {...legalSource, locator:'Example Act, 2025, section 7'};
-const fullLocatorElement = {sources:[fullLocatorSource], refs:[fullLocatorSource.locator]};
-const fullLocatorReferences = new Node();
-reader.appendReferences(fullLocatorReferences,
-  {...answer, elements:[fullLocatorElement]}, fullLocatorElement);
-assert.equal(descendants(fullLocatorReferences, 'button')[0].textContent,
-  fullLocatorSource.locator);
-assert.equal(fullLocatorElement.sources[0].label, legalSource.label);
-assert.equal(fullLocatorElement.sources[0].locator, fullLocatorSource.locator);
-
 const secondParagraph = {...legalSource, id:'legal-8', kind:'judgment', label:'Example Decision',
   locator:'Paragraph 8', text:'A different exact court passage.', digest:'legal-digest-8'};
 const firstParagraph = {...secondParagraph, id:'legal-3', locator:'Paragraph 3',
@@ -145,10 +127,7 @@ const multiBody = new Node('p');
 assert.equal(reader.appendBody(multiBody, multiAnswer, multiPassage), 1);
 assert.equal(multiBody.textContent, multiPassage.text);
 assert.equal(descendants(multiBody, 'button')[0].textContent, 'Example Decision · Paragraph 8');
-const multiReferences = new Node();
-reader.appendReferences(multiReferences, multiAnswer, multiPassage);
-assert.equal(descendants(multiReferences, 'button').length, 2);
-const paragraphRead = descendants(multiReferences, 'button')[1].handlers.get('click')();
+const paragraphRead = descendants(multiBody, 'button')[0].handlers.get('click')();
 assert.match(reads[7].url, /brain-sources\/0\/1$/);
 reads[7].resolve(secondParagraph); await paragraphRead;
 assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, secondParagraph.text);
@@ -163,9 +142,6 @@ for (const other of [
   const ambiguousBody = new Node('p');
   assert.equal(reader.appendBody(ambiguousBody, ambiguousAnswer, ambiguous), 0);
   assert.equal(ambiguousBody.textContent, ambiguous.text);
-  const ambiguousReferences = new Node();
-  assert.equal(reader.appendReferences(ambiguousReferences, ambiguousAnswer, ambiguous), 2);
-  assert.equal(descendants(ambiguousReferences, 'button').length, 2);
 }
 
 for (const [unownedAnswer, unownedElement] of [
@@ -176,10 +152,6 @@ for (const [unownedAnswer, unownedElement] of [
   const unownedBody = new Node('p');
   assert.equal(reader.appendBody(unownedBody, unownedAnswer, unownedElement), 0);
   assert.equal(unownedBody.textContent, unownedElement.text);
-  const unownedReferences = new Node();
-  reader.appendReferences(unownedReferences, unownedAnswer, unownedElement);
-  assert.equal(descendants(unownedReferences, 'button').length, 0);
-  assert.match(unownedReferences.textContent, /inspection unavailable/);
 }
 
 const nonlegal = {text:'Your saved words contain <b>text</b>.',
@@ -188,6 +160,26 @@ const nonlegalBody = new Node('p');
 assert.equal(reader.appendBody(nonlegalBody, {...answer, elements:[nonlegal]}, nonlegal), 0);
 assert.equal(nonlegalBody.textContent, nonlegal.text);
 assert.equal(descendants(nonlegalBody, 'b').length, 0);
+
+const phraseElement = {text:'The condition must be established before proceeding.',
+  sources:[conversationSource, legalSource], refs:[conversationSource.locator, legalSource.locator],
+  inline_citations:[{text:'The condition', source_id:legalSource.id, source_index:1}]};
+const phraseAnswer = {...answer, elements:[phraseElement]};
+const phraseBody = new Node('p');
+assert.equal(reader.appendBody(phraseBody, phraseAnswer, phraseElement), 1);
+assert.equal(phraseBody.textContent, phraseElement.text);
+assert.equal(descendants(phraseBody, 'button')[0].textContent, 'The condition');
+assert.equal(reader.appendReferences, undefined);
+for (const invalid of [
+  {...phraseElement, inline_citations:[{text:'absent words', source_id:legalSource.id, source_index:1}]},
+  {...phraseElement, inline_citations:[{text:'The condition', source_id:'unowned', source_index:1}]},
+  {...phraseElement, inline_citations:[{text:'The condition', source_id:legalSource.id, source_index:0}]},
+  {...phraseElement, text:'The condition repeats The condition.'},
+]) {
+  const invalidBody = new Node('p');
+  assert.equal(reader.appendBody(invalidBody, {...answer, elements:[invalid]}, invalid), 0);
+  assert.equal(invalidBody.textContent, invalid.text);
+}
 
 const checkedBoard = {id:'A1', kind:'provision', title:'Example Act, 2025', locator:'Section 7',
   text:legalSource.text, verification:{support_excerpt:'the stated requirement applies',
@@ -238,4 +230,24 @@ reader.openRecordSource(checkedBoard, boardOpener);
 events.get('nm:matter-changed')();
 assert.equal(nodes.get('brain-source-reader').open, false);
 assert.equal(nodes.get('brain-source-body').children.length, 0);
-console.log('PASS exact inline legal links, compact references and checked dispute-source reading');
+for (const treatment of ['adopted', 'rejected']) {
+  const excerpt = `The applicant submitted a proposition. The court ${treatment} it.`;
+  const labeled = {id:'labeled-decision', kind:'judgment', title:'Synthetic decision',
+    locator:'Paragraph 2', text:excerpt, verification:{contract:'research_support_v3',
+      assertion_role:'court_conclusion', assertion_statement:`The court ${treatment} the submission.`,
+      owner_label:'The deciding court', support_excerpt:`The court ${treatment} it.`,
+      owner_excerpt:`The court ${treatment} it.`, treatment_excerpt:`The court ${treatment} it.`,
+      source_treatment:'adopted', scope_excerpt:'', scope_status:'no_special_condition',
+      reason:'The court states its conclusion.', context_statements:[{
+        assertion_role:'party_submission', assertion_statement:'The applicant advanced the proposition.',
+        owner_label:'The applicant', source_treatment:treatment,
+        support_excerpt:'The applicant submitted a proposition.',
+        owner_excerpt:'The applicant submitted a proposition.',
+        treatment_excerpt:`The court ${treatment} it.`,
+      }]}};
+  assert.equal(reader.openRecordSource(labeled, boardOpener), true);
+  assert.match(nodes.get('brain-source-body').textContent,
+    new RegExp(`Party submission · Court ${treatment}`));
+  assert.match(nodes.get('brain-source-body').textContent, /Speaker: The applicant/);
+}
+console.log('PASS exact inline legal links and checked dispute-source reading');

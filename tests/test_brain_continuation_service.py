@@ -7,9 +7,10 @@ from dataclasses import replace
 
 import pytest
 
+from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, TierUnavailable, Usage
-from tests.brain_continuation_fixture import interpretation
+from tests.brain_continuation_fixture import citation_units, interpretation, reviewed_verdicts
 from tests.test_brain_continuation import mixed_purpose_unit, unit, verdict
 from tests.test_brain_turn import plan
 
@@ -51,12 +52,14 @@ class PublicContinuationModel:
         elif prompt.operation == "continue_conversation":
             reply = next(self.continuations)
             data = reply(payload) if callable(reply) else deepcopy(reply)
+            data = citation_units(payload, data)
         elif prompt.operation == "verify_continuation":
             if self.checks is None:
                 data = verdict(*(row["request_index"] for row in payload["units"]))
             else:
                 check = next(self.checks)
                 data = check(payload) if callable(check) else deepcopy(check)
+            data = reviewed_verdicts(payload, data)
         else:
             raise AssertionError(f"Unexpected public model operation: {prompt.operation}")
         return ModelResult(
@@ -81,6 +84,85 @@ def send(client, message, turn_id, *, opened=None):
     response = client.post("/api/turn", json=body)
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_valid_peer(
+        client, wired, monkeypatch):
+    message = "Review the reported account and clarify what information you need."
+    routing = plan(message, scope="none", step="legal_work", reply="I will examine the account.")
+    routing["items"].append({**routing["items"][0], "request": "Clarify the missing information",
+                             "next_step": "clarify", "reply": "",
+                             "clarification": "What should be examined?"})
+    bad = unit(text="The reported agreement creates an enforceable payment obligation.")
+    bad["blocks"] = [bad["blocks"][0]]
+    bad.update(questions=[], sufficiency={"status": "needs_input", "block_id": "account-0"})
+    good = unit(1, text="You ask what information is needed to examine the reported account.",
+                question="Which part of the account should we examine?")
+
+    def review_with_legal_requirement(payload):
+        result = reviewed_verdicts(payload, verdict(*(row["request_index"]
+                                                      for row in payload["units"])))
+        selected = next(row for row in result["verdicts"] if row["request_index"] == 0)
+        selected["block_checks"][0].update(
+            requires_legal_support=True,
+            reason="An enforceable obligation states law; the selected user words supply none.")
+        return result
+
+    def repeated_bad(payload):
+        assert [row["request_index"] for row in payload["work_items"]] == [0]
+        assert payload["correction"]["rejected_units"] == [bad]
+        return {"units": [bad]}
+
+    model = PublicContinuationModel(
+        [routing], [{"units": [bad, good]}, repeated_bad],
+        checks=[review_with_legal_requirement, review_with_legal_requirement])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+
+    answer = send(client, message, "structured-legal-account")
+    replay = send(client, message, "structured-legal-account")
+
+    assert answer["metrics"]["llm_calls"] == 5
+    assert [row["request_index"] for row in answer["continuation"]["units"]] == [1]
+    assert [row["state"] for row in answer["continuation"]["coverage"]] == ["unavailable", "ok"]
+    visible = "\n".join(row["text"] for row in answer["elements"])
+    assert "enforceable payment obligation" not in visible
+    assert "Which part of the account should we examine?" in visible
+    saved = wired.store.load(answer["matter_id"] or chat_matter_id("adv_demo", answer["chat_id"]))
+    assert len(saved.brain_chat) == 1 and saved.brain_chat[0]["message"] == message
+    assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
+
+
+def test_public_hidden_question_purpose_is_rewritten_into_an_actual_visible_question(
+        client, wired, monkeypatch):
+    message = "I am unsure which date matters. Help me clarify the account."
+    routing = plan(message, scope="none", step="clarify")
+    routing["items"][0]["clarification"] = "Which date matters?"
+    hidden = unit(text="You are unsure which date matters.")
+    hidden["blocks"] = [hidden["blocks"][0], hidden["blocks"][-1]]
+    hidden["questions"][0].update(block_id="account-0", purpose="Identify the event date.")
+    repaired = unit(text="You are unsure which date matters.",
+                    question="Which event's date are you unsure about?")
+    repaired["questions"][0]["purpose"] = "Identify the event whose date needs clarification."
+
+    def unexpressed(payload):
+        result = reviewed_verdicts(payload, verdict(0))
+        result["verdicts"][0]["proposal_checks"][0].update(
+            purpose_expressed=False, reason="The recap does not ask for the event date.")
+        return result
+
+    model = PublicContinuationModel([routing], [{"units": [hidden]}, {"units": [repaired]}],
+                                    checks=[unexpressed, verdict(0)])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+
+    answer = send(client, message, "structured-visible-question")
+
+    assert answer["metrics"]["llm_calls"] == 5
+    visible = "\n".join(row["text"] for row in answer["elements"])
+    assert "Which event's date are you unsure about?" in visible
+    metadata = answer["continuation"]["units"][0]["questions"][0]
+    assert metadata["block_id"] == "question-0"
+    correction = model.calls[3][1]["correction"]["validation_issues"][0]["issue"]
+    assert "objective-0" in correction and "account-0" in correction
 
 
 def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
@@ -504,6 +586,7 @@ def test_public_matter_specific_answer_is_repaired_to_checked_composition_before
 def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
         client, wired, monkeypatch):
     from nm.brain.turn import chat_matter_id
+    from tests.brain_reader_fixture import reader_operations
 
     first_words = "I may have a note about the transaction."
     greeting = "Hello again."
@@ -515,12 +598,13 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
             if prompt.operation == "extract_legal_details":
-                data = {"new_items": [{
+                data = reader_operations([{
                     "kind": "evidence", "statement": "The note proves the transaction was valid.",
                     "matter_scope": "proposed", "basis": "stated", "importance": "relevant",
                     "why_material": "The proposed conclusion would affect the account.",
                     "placement": "unresolved", "dispute_ids": [], "source_id": "L1",
-                }], "changes": []}
+                    "relation": "new", "related_material_ids": [],
+                }], json.loads(prompt.user), link_field="related_material_ids")
             elif prompt.operation == "verify_material_grounding":
                 data = {"verdicts": [{
                     "candidate_id": row["candidate_id"], "verdict": "reject",

@@ -25,6 +25,7 @@ from nm.shared.model_port import (
     TierUnavailable,
     Usage,
 )
+from tests.brain_continuation_fixture import citation_units, reviewed_verdicts
 
 
 class ContinuationModel:
@@ -53,6 +54,10 @@ class ContinuationModel:
         if isinstance(reply, Exception):
             raise reply
         data = reply(payload) if callable(reply) else deepcopy(reply)
+        if prompt.operation == "continue_conversation":
+            data = citation_units(payload, data)
+        if prompt.operation == "verify_continuation":
+            data = reviewed_verdicts(payload, data)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
@@ -75,13 +80,14 @@ def unit(index=0, *, text="You report holding a signed receipt.",
     blocks = [
         {"id": f"account-{index}", "kind": "account", "text": text,
          "span_ids": list(span_ids), "record_ids": [], "legal_source_ids": [],
+         "inline_citations": [],
          "uncertainty": "reported"},
         {"id": f"question-{index}", "kind": "question", "text": question,
-         "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
+         "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [], "inline_citations": [],
          "uncertainty": "none"},
         {"id": f"limit-{index}", "kind": "limitation",
          "text": "The record and applicable legal sources have not been checked.",
-         "span_ids": [], "record_ids": [], "legal_source_ids": [],
+         "span_ids": [], "record_ids": [], "legal_source_ids": [], "inline_citations": [],
          "uncertainty": "none"},
     ]
     return {"request_index": index, "blocks": blocks,
@@ -108,6 +114,9 @@ def checked_law(source, *, reason="The exact synthetic passage supports this use
         "scope_status": "conditional" if scope else "no_special_condition",
         "assertion_owner": "legislative_text" if source["kind"] == "provision"
         else "deciding_court", "owner_label": source["title"],
+        "assertion_role": "legislative_text" if source["kind"] == "provision"
+        else "court_conclusion", "assertion_statement": source["text"],
+        "context_statements": [],
         "owner_excerpt": source["text"], "source_treatment": "adopted",
         "treatment_excerpt": source["text"],
     }}
@@ -120,10 +129,12 @@ def mixed_purpose_unit():
                     "text": ("You report holding a signed receipt. Its contents have not been "
                              "assessed. Could you share what it records for the requested review?"),
                     "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
+                    "inline_citations": [],
                     "uncertainty": "reported"},
                    {"id": "next-work", "kind": "next_step",
                     "text": "If helpful, we can compare the reported terms with the record's text.",
                     "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
+                    "inline_citations": [],
                     "uncertainty": "reported"}],
         "questions": [{"id": "record-question", "block_id": "mixed",
                        "purpose": "Identify the reported record's contents.",
@@ -360,11 +371,12 @@ def supplied_law():
              "text": passage}, scope=passage),)
 
 
-@pytest.mark.parametrize("contract", [None, "research_support_v1"])
+@pytest.mark.parametrize("contract", [None, "research_support_v1", "research_support_v2"])
 def test_historical_direct_source_is_not_upgraded_or_used_for_current_law(contract):
     source = supplied_law()[0]
-    for key in ("assertion_owner", "owner_label", "owner_excerpt", "source_treatment",
-                "treatment_excerpt"):
+    old_fields = ("assertion_owner", "owner_label", "owner_excerpt", "source_treatment",
+                  "treatment_excerpt") if contract != "research_support_v2" else ()
+    for key in (*old_fields, "assertion_role", "assertion_statement", "context_statements"):
         source["verification"].pop(key)
     if contract is None:
         source["verification"].pop("contract")
@@ -387,6 +399,7 @@ def test_historical_direct_source_is_not_upgraded_or_used_for_current_law(contra
     ("owner_excerpt", "Words absent from the supplied passage"),
     ("treatment_excerpt", "Words absent from the supplied passage"),
     ("assertion_owner", "party"), ("source_treatment", "reported"),
+    ("assertion_role", "case_background"), ("assertion_statement", " "),
 ])
 def test_invalid_advertised_current_source_refuses_before_generation(field, value):
     source = supplied_law()[0]
@@ -611,6 +624,8 @@ def test_catalogue_identity_in_displayed_prose_gets_one_rewrite_with_its_source_
             "id": "checked-passage", "kind": "assessment",
             "text": f"The supplied passage describes a condition ({identity['id']}).",
             "span_ids": [], "record_ids": [], "legal_source_ids": [identity["id"]],
+            "inline_citations": [{"text": "describes a condition",
+                                  "legal_source_id": identity["id"]}],
             "uncertainty": "conditional"})
         return {"units": [proposed]}
     def repair(payload):
@@ -916,6 +931,7 @@ def test_composition_and_repair_preserve_raw_context_and_omit_accepted_drafts():
             "id": "accepted-source-assessment", "kind": "assessment",
             "text": "The checked passage makes the instrument relevant to this assessment.",
             "span_ids": [], "record_ids": [], "legal_source_ids": [legal_id],
+            "inline_citations": [{"text": "the instrument relevant", "legal_source_id": legal_id}],
             "uncertainty": "conditional"})
         bad = unit(1, text="The unseen receipt proves deliberate concealment.")
         originals.update(good=deepcopy(good), bad=deepcopy(bad), legal_id=legal_id)
