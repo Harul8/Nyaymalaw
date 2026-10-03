@@ -229,7 +229,8 @@ def resolve_sources(rows: list[dict], *, latest: dict[str, str],
         resolved.append({**{key: value for key, value in row.items()
                             if key not in {"source_id", "prior_source_ids"}},
                          "quoted": latest[source_id],
-                         "prior_references": [vars(prior[key]) for key in prior_ids]})
+                         "prior_references": [vars(ref) for ref in
+                                              dict.fromkeys(prior[key] for key in prior_ids)]})
     return resolved
 
 
@@ -353,6 +354,12 @@ Activity 2 - Choose creation or explicit revision.
 Look for: Whether a proposition adds a distinct material item or changes an
 identifiable saved one. Newly received words do not necessarily create a new
 record. Shared words or people alone are not a revision link.
+Distinguish a change to the advocate's account from repair of NM's own
+interpretation. During relevant current authorised work, an unsupported NM
+proposal may be corrected against exact saved advocate words without a new
+factual assertion. Preserve the account, uncertainty, source status and known
+record identity; do not describe that repair as a new advocate correction.
+A diversion or different legal theory does not authorise a record change.
 Outcome: Put a distinct new item in `new_items`, without `relation` or
 `related_material_ids` fields. It cannot retire a saved record. Put a revision
 in `changes`, with at least one exact active ID in `related_material_ids`.

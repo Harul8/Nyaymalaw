@@ -75,6 +75,12 @@ quoted does not mean being adopted or becoming a record change. Critical
 review, a legal theory or proposed analytical grouping does not itself
 replace the underlying conduct. A review request can also contribute an
 actual correction, opposing position or new conduct; assess each separately.
+Distinguish changing the advocate's account from repairing NM's own formulation.
+During current authorised work on that issue, an earlier NM proposal may be
+corrected against exact saved advocate words without a new factual assertion.
+Restore the sourced conduct or position, not a critique of NM's reasoning.
+Preserve the underlying account, unknowns and issue lineage; a diversion or
+new legal theory does not authorise changing them. Explain which layer changed.
 Outcome: Put a distinct new formulation in `new_items`, without `relation`
 or `related_dispute_ids` fields. It cannot retire a saved dispute. Put a
 revision in `changes`, with at least one exact active ID in

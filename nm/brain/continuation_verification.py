@@ -77,6 +77,8 @@ block_id, whether its meaning requires legal support, accept or reject, and
 a concise, specific reason about the selected evidence or missing support.
 Name the unsupported claim or unresolved reference in a rejection reason.
 An attributed account, question or limitation can still require legal support.
+Keep each support requirement and verdict consistent: a law-dependent block
+without its actual selected checked passage must be rejected, not accepted.
 Reject a block that invents facts, stretches a passage, overstates
 applicability, relies on another matter without authorised attribution, or
 conceals missing coverage. An appropriately limited response may be useful.
@@ -266,6 +268,12 @@ def _decision(row: dict, unit: dict, legal_sources: dict
         block_id = check["block_id"]
         if (check["requires_legal_support"]
                 and not any(key in legal_sources for key in blocks[block_id]["legal_source_ids"])):
+            if check["verdict"] == "accept":
+                raise SchemaViolation(
+                    f"block_checks for {block_id!r} cannot accept a block marked as requiring "
+                    "legal support without an actual selected checked legal passage. "
+                    "Return a consistent support requirement and verdict based on the block's "
+                    "whole meaning; missing law cannot be supplied from memory")
             rejected.append(f"Block {block_id!r} requires an actual selected checked legal "
                             f"passage: {check['reason'].strip()}")
         elif check["verdict"] == "reject":

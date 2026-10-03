@@ -105,7 +105,7 @@ def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_va
                                                       for row in payload["units"])))
         selected = next(row for row in result["verdicts"] if row["request_index"] == 0)
         selected["block_checks"][0].update(
-            requires_legal_support=True,
+            requires_legal_support=True, verdict="reject",
             reason="An enforceable obligation states law; the selected user words supply none.")
         return result
 

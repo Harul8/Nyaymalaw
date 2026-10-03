@@ -26,7 +26,7 @@ def test_a_legal_premise_in_an_account_overrides_whole_unit_acceptance():
     def mistaken_accept(payload):
         data = review(payload, 0)
         data["verdicts"][0]["block_checks"][0].update(
-            requires_legal_support=True,
+            requires_legal_support=True, verdict="reject",
             reason="Enforceability is a legal consequence, not an attributed reported fact.")
         return data
 

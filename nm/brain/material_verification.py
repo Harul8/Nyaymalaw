@@ -70,10 +70,16 @@ creating, changing or linking the record. A genuine mixed contribution can
 support one operation while another remains unsupported. A reported opposing
 position may be recorded as such without adopting it or retiring a different
 speaker's proposition.
-Outcome: Set `operation_supported` true only if the latest advocate message
-in full context supports this exact new proposition or change, with its
+Check the changed layer. Changing the advocate's account needs their
+attributable change or withdrawal. Relevant current authorised work may repair
+NM's own unsupported interpretation against exact saved advocate words;
+preserve the account, uncertainty, source status and selected record's identity.
+Do not present that repair as a new assertion or correction by the advocate.
+A diversion, new legal theory or plausible alternative is not enough.
+Outcome: Set `operation_supported` true only if current authorised work and
+the attributed account support this exact new proposition or change, with its
 speaker, scope, relation and every selected assignment or revision target.
-Otherwise set it false. Explain attribution and operation separately in the
+Otherwise set it false. Explain changed layer, source basis and operation in the
 short reason.
 
 Activity 3 - Check the opening description, when supplied.

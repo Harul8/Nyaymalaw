@@ -75,10 +75,16 @@ Check `new` against the latest contribution and every other operation against
 each linked active issue. The replacement must retain the underlying issue
 except where the latest account supports changing or withdrawing it. A new
 interpretation of existing facts does not itself contradict those facts.
-Outcome: Set `operation_supported` true only when the latest message in full
-context supports this exact creation or revision, with its attributed speaker,
+Check the changed layer. Changing the advocate's account needs their
+attributable change or withdrawal. Relevant current authorised work may also
+repair NM's own unsupported formulation using exact earlier advocate words.
+Such repair restores sourced conduct or a position, preserves the account,
+unknowns and issue lineage, and does not attribute a new correction to the
+advocate. A diversion, new legal theory or plausible alternative is not enough.
+Outcome: Set `operation_supported` true only when current authorised work and
+the attributed account support this exact creation or revision, with its speaker,
 scope and relation to every selected target. Otherwise set it false. Explain
-the speaker/treatment and operation distinction in the decision reason.
+the changed layer, speaker/treatment and source basis in the decision reason.
 A rejected proposal does not decide the merits of another proposal.
 
 Outcome: Return only the declared JSON object with one verdict for every
