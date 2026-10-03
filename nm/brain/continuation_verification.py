@@ -33,6 +33,11 @@ Look for: Whether every consequential factual statement, inference, legal
 premise, assessment, recommendation and claimed completion follows from the
 selected references and whole context. Check each block's meaning independently
 of its style label, including embedded legal premises and proposed options.
+Check whether a referenced actor, object, event or request has a uniquely
+attributable meaning. An interpreted request, recency or earlier NM wording
+does not settle several plausible meanings. Reject dependent advice, questions
+or progress changes that silently choose one; independently supported work
+may proceed while the necessary distinction is asked.
 References prove only that supplied
 words exist. A legal proposition needs an actual supporting supplied legal
 passage; do not use your own legal knowledge to fill missing support. Check
@@ -50,6 +55,12 @@ Check the subject of uncertainty, negation and timing: a missing mention does
 not establish an absent event,
 term or record. A checked gathering item is not a complete
 merits analysis. Preserve reported versus inspected versus established status.
+An exact quote or an accepted material observation does not prove its contents.
+Check every consequential claim in the block, including words outside citation
+anchors, against the selected checked assertion, conditions and authorised
+enquiry. A faithful quotation or one supported clause does not validate the
+uncited remainder. Reject a block with an unsupported remainder, an expanded
+remedy or work sequence, or a source absence converted into an established fact.
 Check each research finding's authorised scope, purpose, enquiry and coverage.
 Reject reuse for a materially different question or legal purpose, conversion
 of general research into matter facts, omitted conditional predicates, or
@@ -64,6 +75,7 @@ material distinction, never invented as the opponent's actual account.
 Outcome: Return one block_check for every displayed block, with its exact
 block_id, whether its meaning requires legal support, accept or reject, and
 a concise, specific reason about the selected evidence or missing support.
+Name the unsupported claim or unresolved reference in a rejection reason.
 An attributed account, question or limitation can still require legal support.
 Reject a block that invents facts, stretches a passage, overstates
 applicability, relies on another matter without authorised attribution, or
@@ -151,7 +163,16 @@ including complete block_checks and proposal_checks. Accept requires every
 check to pass and the whole unit to preserve context, omissions, progress and
 sufficiency within its expressed limits. A failed check cannot be overridden
 by a general acceptance. Judge units independently so one rejected request
-does not suppress unrelated supported work. Return only the declared JSON
+does not suppress unrelated supported work. If a rejected unit contains a
+coherent independently useful factual response, return retained_block_ids and
+a specific retained_reason certifying its meaning AFTER the other blocks,
+all proposals and all progress changes are removed. Retention may contain only
+accepted, source-supported account or acknowledgment blocks plus a displayed
+specific limitation; it must preserve essential caveats, attribution and the
+actual request without implying completion. Do not retain a proposal owner,
+legal advice, an unexpressed limitation or a mislinked work association.
+When no such subset is safe, return an empty list and empty reason. A full
+acceptance needs no retained subset. Return only the declared JSON
 object containing verdicts."""
 
 _CHECK = {
@@ -178,11 +199,14 @@ _PROPOSAL_CHECK = {
 
 _VERDICT = {
     "type": "object", "additionalProperties": False,
-    "required": ["request_index", "block_checks", "proposal_checks", "verdict", "reason"],
+    "required": ["request_index", "block_checks", "proposal_checks", "verdict", "reason",
+                 "retained_block_ids", "retained_reason"],
     "properties": {
         "request_index": {"type": "integer"},
         "block_checks": {"type": "array", "items": _BLOCK_CHECK},
         "proposal_checks": {"type": "array", "items": _PROPOSAL_CHECK}, **_CHECK,
+        "retained_block_ids": {"type": "array", "items": {"type": "string"}},
+        "retained_reason": {"type": "string", "maxLength": 500},
     },
 }
 
@@ -191,6 +215,7 @@ _VERDICT = {
 class ContinuationVerification:
     decisions: dict[int, tuple[bool, str]]
     unavailable: tuple[int, ...]
+    retained: dict[int, tuple[str, ...]]
 
 
 def _schema(indexes: tuple[int, ...], proposed: dict[int, dict]) -> dict:
@@ -209,13 +234,16 @@ def _schema(indexes: tuple[int, ...], proposed: dict[int, dict]) -> dict:
         "block_checks": {"type": "array", "items": block_check, "minItems": 1},
         "proposal_checks": {"type": "array", "items": proposal_check,
                             **({"maxItems": 0} if not proposals else {})},
+        "retained_block_ids": {"type": "array", "items": {
+            "type": "string", "enum": blocks}},
     }}
     return {"type": "object", "additionalProperties": False,
             "required": ["verdicts"], "properties": {
                 "verdicts": {"type": "array", "items": row}}}
 
 
-def _decision(row: dict, unit: dict, legal_sources: dict) -> tuple[bool, str]:
+def _decision(row: dict, unit: dict, legal_sources: dict
+              ) -> tuple[tuple[bool, str], tuple[str, ...]]:
     require_schema(row, _VERDICT)
     blocks = {block["id"]: block for block in unit["blocks"]}
     checks = row["block_checks"]
@@ -253,7 +281,27 @@ def _decision(row: dict, unit: dict, legal_sources: dict) -> tuple[bool, str]:
                             f"{check['block_id']!r}: {check['reason'].strip()}")
     if row["verdict"] == "reject":
         rejected.append(row["reason"].strip())
-    return (False, "; ".join(rejected)) if rejected else (True, row["reason"].strip())
+    retained = tuple(row["retained_block_ids"])
+    if retained:
+        selected = set(retained)
+        checked = {check["block_id"]: check for check in checks}
+        owners = {link["block_id"] for link in proposals.values()}
+        if (not rejected or not row["retained_reason"].strip()
+                or len(selected) != len(retained) or not selected <= blocks.keys()
+                or selected & owners
+                or any(blocks[key]["kind"] not in ("acknowledgment", "account", "limitation")
+                       or checked[key]["verdict"] != "accept"
+                       or checked[key]["requires_legal_support"] for key in retained)
+                or not any(blocks[key]["kind"] == "limitation" for key in retained)
+                or not any(blocks[key]["kind"] in ("acknowledgment", "account")
+                           for key in retained)):
+            raise SchemaViolation(
+                "retained_block_ids must certify a coherent supported factual subset "
+                "with its displayed limitation, no proposal owners or legal claims")
+    elif row["retained_reason"].strip():
+        raise SchemaViolation("An empty retained subset needs an empty retained_reason")
+    decision = (False, "; ".join(rejected)) if rejected else (True, row["reason"].strip())
+    return decision, retained
 
 
 def verify_continuation(model: ModelPort, *, input_payload: dict,
@@ -263,6 +311,7 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
     proposed = {unit["request_index"]: unit for unit in units}
     pending = tuple(proposed)
     decisions: dict[int, tuple[bool, str]] = {}
+    retained: dict[int, tuple[str, ...]] = {}
     issues = {}
     for attempt in range(2):
         if not pending:
@@ -308,10 +357,13 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
                 issues[index] = "Return exactly one whole-unit verdict with all checks"
                 continue
             try:
-                decisions[index] = _decision(
+                decision, selected = _decision(
                     group[0], proposed[index], input_payload["legal_sources"])
+                decisions[index] = decision
+                if selected:
+                    retained[index] = selected
             except SchemaViolation as exc:
                 issues[index] = str(exc)
                 continue
         pending = tuple(index for index in pending if index not in decisions)
-    return ContinuationVerification(decisions, pending)
+    return ContinuationVerification(decisions, pending, retained)

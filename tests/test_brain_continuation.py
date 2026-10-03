@@ -122,6 +122,15 @@ def checked_law(source, *, reason="The exact synthetic passage supports this use
     }}
 
 
+def checked_finding(row):
+    sources = [source["id"] for source in row["sources"]]
+    return {**row, "source_ids": sources, "material_ids": [], "use_verification": {
+        "contract": RESEARCH_VERIFICATION, "checks": {name: {
+            "verdict": "supported", "reason": "The exact passage supports this limited use.",
+            "source_ids": sources, "material_ids": [],
+        } for name in ("entailment", "application", "force")}}}
+
+
 def mixed_purpose_unit():
     return {
         "request_index": 0,
@@ -229,7 +238,9 @@ def test_truncated_peer_correction_does_not_repeat_or_discard_the_checked_peer()
     assert [row["request_index"] for row in result.units] == [0]
     assert [row["state"] for row in result.coverage] == ["ok", "unavailable"]
     assert [row["request_index"] for row in model.calls[2][1]["work_items"]] == [1]
-    assert model.calls[2][1]["correction"]["rejected_units"] == [rejected]
+    repair = model.calls[2][1]
+    assert repair["correction"]["rejected_units"] == citation_units(
+        repair, {"units": [rejected]})["units"]
 
 
 @pytest.mark.parametrize("accepted", (True, False))
@@ -302,7 +313,7 @@ def test_local_legal_source_ids_cannot_alias_another_research_passage():
 def test_one_passage_preserves_the_distinct_checked_uses_of_two_requirements():
     shared = {"id": "A1", "kind": "provision", "title": "Synthetic Act",
               "locator": "section 3", "text": "The applicable instrument defines the obligation."}
-    rows = [{"label": label, "sources": [checked_law(shared, reason=reason)]}
+    rows = [checked_finding({"label": label, "sources": [checked_law(shared, reason=reason)]})
             for label, reason in (
         ("Identify the instrument", "It identifies the applicable instrument."),
         ("Identify the obligation", "It identifies the obligation's source."),
@@ -341,11 +352,12 @@ def test_gathering_source_freshness_is_preserved_and_gates_old_passage_uses(
     requirements = {
         "state": "ok", "status_by_dispute": {"D1": "ok"},
         "coverage_by_dispute": coverage, "source_turn_id_by_dispute": {"D1": source_turn},
-        "by_dispute": {"D1": [{"label": "Identify the applicable instrument", "sources": [
+        "by_dispute": {"D1": [checked_finding({
+            "label": "Identify the applicable instrument", "sources": [
             checked_law({
             "id": "A1", "kind": "provision", "title": "Supplied Act", "locator": "section 1",
             "text": "The instrument defines the obligation.",
-        })]}]},
+        })]})]},
     }
     disputes = {"state": "ok", "rows": [{"id": "D1", "label": "Contested obligation"}]}
     model = ContinuationModel([{"units": [unit()]}, verdict(0)])
@@ -425,8 +437,8 @@ def test_requested_research_has_the_same_current_use_gate_as_gathering(
                 "verification_current": verification_current,
                 "verification_contract": RESEARCH_VERIFICATION}
     research = {"state": "ok", "subjects": {subject["id"]: subject},
-                "by_subject": {subject["id"]: [{"label": "Cited condition",
-                                                "sources": list(supplied_law())}]},
+                "by_subject": {subject["id"]: [checked_finding({"label": "Cited condition",
+                                                "sources": list(supplied_law())})]},
                 "coverage_by_subject": {subject["id"]: coverage},
                 "source_turn_id_by_subject": {subject["id"]: source_turn}}
     original = deepcopy(research)
@@ -461,8 +473,15 @@ def test_authority_needed_units_cannot_release_using_only_user_words(complete):
             "record_ids": [], "legal_source_ids": [], "uncertainty": "none"})
     model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}, verdict(0)])
     result = _continue(model, plan=authority_plan(), checked_sources=supplied_law())
-    assert _operation_names(model) == ["continue_conversation", "continue_conversation"]
-    assert result.units == () and result.coverage[0]["state"] == "unavailable"
+    assert _operation_names(model) == ["continue_conversation", "continue_conversation"] + (
+        [] if complete else ["verify_continuation"])
+    assert result.coverage[0]["state"] == ("unavailable" if complete else "partial")
+    if complete:
+        assert result.units == ()
+    else:
+        assert [row["id"] for row in result.units[0]["blocks"]] == ["account-0", "limit-0"]
+        assert result.units[0]["sufficiency"]["status"] == "partial"
+        assert "The legal rule requires" not in json.dumps(result.units)
     assert "legal" in json.dumps(model.calls[1][1]["correction"]["validation_issues"]).lower()
     # Available metadata never substitutes for selected use.
     assert model.calls[0][1]["legal_sources"]
@@ -894,7 +913,8 @@ def test_rejected_request_withholds_all_its_prose_but_preserves_independent_peer
     assert "limit-1" not in json.dumps(result.units)
     assert [row["request_index"] for row in model.calls[-1][1]["units"]] == [1]
     repair = model.calls[2][1]
-    assert repair["correction"]["rejected_units"] == [bad]
+    assert repair["correction"]["rejected_units"] == citation_units(
+        repair, {"units": [bad]})["units"]
     assert [row["request_index"] for row in repair["work_items"]] == [1]
 
 
@@ -939,7 +959,8 @@ def test_composition_and_repair_preserve_raw_context_and_omit_accepted_drafts():
 
     def correction(payload):
         assert [row["request_index"] for row in payload["work_items"]] == [1]
-        assert payload["correction"]["rejected_units"] == [originals["bad"]]
+        assert payload["correction"]["rejected_units"] == citation_units(
+            payload, {"units": [originals["bad"]]})["units"]
         assert "accepted-source-assessment" not in json.dumps(payload)
         for field in ("earlier_conversation", "latest_message_spans", "record_catalogue",
                       "legal_sources", "legal_coverage", "progress"):
@@ -1045,7 +1066,9 @@ def test_progress_contract_repairs_only_invalid_unit_before_independent_check(da
     assert _operation_names(model) == [
         "continue_conversation", "continue_conversation", "verify_continuation"]
     assert model.calls[-1][1]["units"] == [good]
-    assert model.calls[1][1]["correction"]["rejected_units"] == [invalid]
+    repair = model.calls[1][1]
+    assert repair["correction"]["rejected_units"] == citation_units(
+        repair, {"units": [invalid]})["units"]
     assert len(result.units[0]["questions"]) == 1
     assert result.units[0]["next_work"] == []
 

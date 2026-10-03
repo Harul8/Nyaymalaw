@@ -9,6 +9,7 @@ import pytest
 
 from nm.brain.work_state import project_work
 from nm.shared.model_port import Tier
+from tests.brain_continuation_fixture import citation_units
 from tests.test_brain_continuation import verdict
 from tests.test_brain_continuation_service import PublicContinuationModel, send
 from tests.test_brain_turn import plan
@@ -252,7 +253,8 @@ def test_public_mixed_completion_keeps_checked_task_and_withholds_rejected_peer(
 
     def repair(payload):
         assert [item["request_index"] for item in payload["work_items"]] == [1]
-        assert payload["correction"]["rejected_units"] == [deliveries["bad"]]
+        assert payload["correction"]["rejected_units"] == citation_units(
+            payload, {"units": [deliveries["bad"]]})["units"]
         return {"units": [deepcopy(deliveries["bad"])]}
 
     reason = ("The immediate factual summary does not deliver the saved task's legal assessment "

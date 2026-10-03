@@ -185,6 +185,10 @@ def embed(model: str = DEFAULT_MODEL) -> int:
     """Bring the vectors up to the graph. INCREMENTAL: the embedder keys on a
     text hash, so an unchanged node is skipped and only new or edited ones cost
     an API call."""
+    if os.environ.get("CRG_OFFLINE") == "1":
+        print("SEMANTIC INDEX: CRG_OFFLINE=1; offline mode, vectors were not refreshed.",
+              file=sys.stderr)
+        return 1
     env = _credentials()
     if not env.get("CRG_OPENAI_API_KEY", "").strip():
         print("SEMANTIC INDEX: no NM_MODEL_API_KEY in .env, so the vectors "

@@ -275,6 +275,7 @@ def test_first_turn_schema_cannot_name_nonexistent_prior_words():
     assert "related_material_ids" not in detail_schema["properties"]
     wire = on_the_wire(model.calls[0][1])
     fields = wire["properties"]["new_items"]["items"]["properties"]
+    assert "uniqueItems" not in fields["assignment_ids"]
     assert fields["assignment_ids"]["items"]["enum"] == [
         "matter:discussion", "matter:unlinked", "matter:other", "matter:none", "matter:uncertain"]
     assert not {"matter_scope", "placement", "dispute_ids"}.intersection(fields)
@@ -332,4 +333,9 @@ def test_no_current_matter_excludes_current_scope_even_with_prior_conversation()
     invalid = {**row, "assignment_ids": ["matter:current"]}
     with pytest.raises(SchemaViolation):
         extract_details(Model({"details": [invalid]}),
+                        earlier=earlier, latest=latest, current_matter_id=None)
+
+    repeated = {**row, "assignment_ids": ["matter:discussion", "matter:discussion"]}
+    with pytest.raises(SchemaViolation, match="unique assignment IDs"):
+        extract_details(Model({"details": [repeated]}),
                         earlier=earlier, latest=latest, current_matter_id=None)

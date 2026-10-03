@@ -20,8 +20,11 @@ from nm.shared.model_port import (
 )
 
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
-RESEARCH_VERIFICATION = "research_support_v3"
-HISTORICAL_RESEARCH_VERIFICATIONS = ("research_support_v1", "research_support_v2")
+RESEARCH_VERIFICATION = "research_support_v4"
+HISTORICAL_RESEARCH_VERIFICATIONS = (
+    "research_support_v1", "research_support_v2", "research_support_v3"
+)
+FINDING_USE_CHECKS = ("entailment", "application", "force")
 SOURCE_ASSERTION_OWNERS = (
     "legislative_text", "deciding_court", "quoted_authority", "party", "other", "unclear"
 )
@@ -94,7 +97,7 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
         return False
     if contract in ("research_support_v1", "source_support_v4"):
         return verification.get("contract") in (None, contract)
-    if (contract not in ("research_support_v2", RESEARCH_VERIFICATION)
+    if (contract not in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION)
             or verification.get("contract") != contract):
         return False
     checked = (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
@@ -118,6 +121,47 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
             and all(_statement_valid(row, source, operative=False) for row in contexts)
             and len({tuple(row[key] for key in _STATEMENT_FIELDS)
                      for row in contexts}) == len(contexts))
+
+
+def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
+    """Keep source attribution separate from the checked use of the whole finding."""
+    if contract in HISTORICAL_RESEARCH_VERIFICATIONS or contract == "source_support_v4":
+        return True
+    if contract != RESEARCH_VERIFICATION or not isinstance(finding, dict):
+        return False
+    verification = finding.get("use_verification")
+    if (not isinstance(verification, dict) or set(verification) != {"contract", "checks"}
+            or verification.get("contract") != contract
+            or not isinstance(verification.get("checks"), dict)
+            or set(verification["checks"]) != set(FINDING_USE_CHECKS)):
+        return False
+    sources, material = finding.get("source_ids"), finding.get("material_ids")
+    source_rows = finding.get("sources")
+    if (not isinstance(sources, list) or not isinstance(material, list)
+            or any(not isinstance(key, str) or not key for key in (*sources, *material))
+            or not isinstance(source_rows, list)
+            or any(not isinstance(source, dict)
+                   or not isinstance(source.get("verification"), dict) for source in source_rows)):
+        return False
+    for aspect, check in verification["checks"].items():
+        if (not isinstance(check, dict)
+                or set(check) != {"verdict", "reason", "source_ids", "material_ids"}
+                or check.get("verdict") != "supported"
+                or not isinstance(check.get("reason"), str) or not check["reason"].strip()
+                or len(check["reason"]) > 500):
+            return False
+        for field, allowed in (("source_ids", sources), ("material_ids", material)):
+            identities = check.get(field)
+            if (not isinstance(identities, list)
+                    or any(not isinstance(key, str) or not key for key in identities)
+                    or len(identities) != len(set(identities))
+                    or not set(identities) <= set(allowed)):
+                return False
+        if aspect in ("entailment", "force") and not check["source_ids"]:
+            return False
+    established = any(source["verification"].get("scope_status") == "established"
+                      for source in source_rows)
+    return not established or bool(verification["checks"]["application"]["material_ids"])
 
 _DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation and research subjects with their owner, scope, purpose, question
@@ -158,7 +202,12 @@ procedure limiting them; what judgments actually decide or explain, including
 contrary reasoning. Distinguish holdings from arguments, background and
 hypothetical discussion. Compare legal predicates with attributed words
 without assuming missing facts. Preserve unresolved applicability conditions
-expressly in the finding. Retrieval alone does not establish an in-force
+expressly in the finding, including who must do what, when and under which
+legal relationship. A later event or permission does not establish the status
+of earlier conduct. A judgment's procedural history or outcome does not itself
+mandate a step for this subject. An analogy may suggest a question to examine;
+it cannot substitute for applicable support or create a rule or requirement.
+Retrieval alone does not establish an in-force
 version, jurisdictional reach, precedent treatment or binding weight. Select
 material only when its actual words address the finding; reported document
 possession does not establish contents or prove an element. Do not invent
@@ -187,10 +236,13 @@ findings with exact cited passages shown as overlapping numbered fragments.
 Proposals are untrusted; retrieval rank and citation IDs are not support.
 
 Purpose: Independently check each finding's full label, need, why, kind and
-force against its own passages, subject and attributed record. Only supported
+force against its own passages, subject and attributed record. Separately
+decide entailment, factual application and the claimed force of its proposed
+work or action. Attribution alone does not decide any of these. Only supported
 findings may enter the research record. Do not supply law or facts, decide
 merits beyond the passages or repair the proposed wording.
 
+Activity 1 - Identify the proposition and its provenance.
 Look for: Examine every cited source and its limiting predicates. Shared
 terminology is not support; another legal setting cannot be stretched to this
 subject. Distinguish actual judgment reasoning from argument or background.
@@ -212,14 +264,49 @@ court adoption does not turn it into a court conclusion or binding ratio.
 Preserve any related position needed to understand that operative assertion
 separately: whose submission or quoted position it was and whether the issuing
 court adopted, reported or rejected it. Such context is not legal support.
+
+Activity 2 - Check entailment of the complete finding.
+Look for: Whether the retained passages together support every consequential
+part of label, need and why, including the actor, relationship, action, remedy
+and time range. A correct source role, matching terms or an exact fragment
+does not establish that connection. Distinguish an express rule or supported
+inference from analogy. An analogy can support an expressly limited comparison
+or research question, but cannot supply an operative rule, mandatory step or
+factual application that the passages do not establish. A case's procedural
+history, facts or disposition do not by themselves prescribe what to obtain
+or do in another matter. Do not convert a condition necessary for one cited
+route into a universal prerequisite or exclude other routes without support.
 Every retained proposition, inference and claimed mandatory step must follow
 from selected passages without filling gaps from legal memory or another
 subject. The label must faithfully express the supported need or proposition
-and its caveats. Unknown applicability supports a conditional finding only if
+and its caveats.
+
+Activity 3 - Check application and chronology.
+Look for: Each express or implicit source predicate, exception, actor,
+relationship and relevant period against the attributed record. Preserve
+uncertainty and reported versus inspected status. General legal words cannot
+establish that a person or event satisfies a predicate. Later permission,
+conduct, records or legal treatment do not establish an earlier status without
+an attributed basis for that temporal reach; do not backdate or extend them
+by assumption. Absence of mention is not proof that an event did not occur.
+Earlier NM analysis and a quoted draft remain context, not evidence that their
+interpretation is correct. Unknown applicability supports a conditional finding only if
 the entire limiting predicate is expressly preserved without claiming the
 record meets it. Use established only with attributed supporting words, or
 asked_to_establish when gathering work expressly seeks that predicate.
-no_special_condition describes the passage, not silence in the record. Check
+no_special_condition is valid only when the operative proposition has no
+limiting predicate; it cannot discard an expressed condition or a
+case-specific premise. Source support shows what the law says, not that it
+applies here. A general or conditional finding may lack material links only
+when it makes no assertion that the record satisfies its legal predicates.
+
+Activity 4 - Check force and proposed work.
+Look for: Whether the actual supported rule mandates the exact proposed step
+or element, by the stated actor and within its preserved conditions and time.
+Required is not a synonym for prudent, helpful, customary or previously done
+in another case. A recommendation must have a supported connection to this
+enquiry and remain strengthening; an irrelevant analogy cannot manufacture
+even a useful requirement. Non-gathering findings have force none. Check
 every material ID against its words independently; an incorrect material link
 can be removed without losing a supported finding. Reported documents remain
 uninspected. Fragmentary or indeterminate support is uncertain; verification
@@ -227,7 +314,17 @@ does not establish binding status or proof.
 
 Outcome: Return exactly one independent decision per candidate_id. Use
 supported, unsupported or uncertain overall; faithful, unsupported or uncertain
-for the label. Reasons are nonempty and at most 500 characters. Rejected
+for the label. Also return use_checks with exactly entailment, application and
+force. Each independently states supported, unsupported or uncertain, a
+specific reason and the candidate's source_ids and material_ids supporting
+that decision. Entailment and force need actual supporting source IDs.
+Application material IDs identify attributed support, not proof of the account;
+they may be empty for a genuinely general or expressly conditional use.
+An established predicate needs attributed material support, never legal words
+alone. All three checks must support a retained finding. A failed use check
+cannot be overridden by overall acceptance. References must be this candidate's
+cited sources and linked material; unused or rejected references are not support.
+Reasons are nonempty and at most 500 characters. Rejected
 findings or unfaithful labels are withheld and may have empty unused source
 and material checks. For a supported faithful finding check EVERY cited source
 and selected material exactly once. Select support_fragment_id only from that
@@ -748,6 +845,19 @@ def _verification_schema(
     fragment_ids: tuple[str, ...],
     material_ids: tuple[str, ...],
 ) -> dict:
+    use_check = {
+        "type": "object", "additionalProperties": False,
+        "required": ["verdict", "reason", "source_ids", "material_ids"],
+        "properties": {
+            "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+            "source_ids": {"type": "array", "items": {
+                "type": "string", "enum": list(source_ids)}},
+            "material_ids": {"type": "array", "items": {
+                "type": "string", "enum": list(material_ids) or [""]},
+                **({"maxItems": 0} if not material_ids else {})},
+        },
+    }
     source_check = {
         "type": "object",
         "additionalProperties": False,
@@ -813,6 +923,7 @@ def _verification_schema(
             "label_reason",
             "material_checks",
             "source_checks",
+            "use_checks",
             "verdict",
             "reason",
         ],
@@ -837,6 +948,11 @@ def _verification_schema(
                 },
             },
             "source_checks": {"type": "array", "items": source_check},
+            "use_checks": {
+                "type": "object", "additionalProperties": False,
+                "required": list(FINDING_USE_CHECKS),
+                "properties": {aspect: deepcopy(use_check) for aspect in FINDING_USE_CHECKS},
+            },
             "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1},
         },
@@ -890,6 +1006,8 @@ def _finding_verdict(
     ):
         raise SchemaViolation("Keep nonempty verdict reasons within 500 characters")
     if decision["verdict"] != "supported" or decision["label_verdict"] != "faithful":
+        return None
+    if any(check["verdict"] != "supported" for check in decision["use_checks"].values()):
         return None
     if len(checks) != len(sources):
         raise SchemaViolation("Check every cited passage exactly once for a supported item")
@@ -1019,7 +1137,7 @@ def _finding_verdict(
     if decision["verdict"] == "supported" and not selected:
         raise SchemaViolation("A supported item needs at least one supported passage")
     kept = [source_id for source_id in item["source_ids"] if source_id in selected]
-    return {
+    finding = {
         **item,
         "source_ids": kept,
         "material_ids": linked,
@@ -1027,7 +1145,24 @@ def _finding_verdict(
         "sources": [
             {**sources[source_id], "verification": selected[source_id]} for source_id in kept
         ],
+        "use_verification": {"contract": RESEARCH_VERIFICATION,
+                             "checks": deepcopy(decision["use_checks"])},
     }
+    for aspect, check in decision["use_checks"].items():
+        for field, allowed in (("source_ids", kept), ("material_ids", linked)):
+            identities = check[field]
+            if len(identities) != len(set(identities)) or not set(identities) <= set(allowed):
+                raise SchemaViolation(
+                    f"use_checks.{aspect}.{field} must select unique retained references "
+                    "from this candidate only; rejected or unrelated references cannot support use")
+        if aspect in ("entailment", "force") and not check["source_ids"]:
+            raise SchemaViolation(
+                f"use_checks.{aspect}.source_ids needs actual supporting passages")
+    if not finding_verification_valid(finding):
+        raise SchemaViolation(
+            "use_checks.application.material_ids needs attributed material for an established "
+            "predicate; legal source words cannot establish factual application")
+    return finding
 
 
 def verify_findings(
@@ -1227,6 +1362,18 @@ def verify_findings(
                     coverage[identifier]["checked_items"] += 1
                     if value is None:
                         coverage[identifier]["withheld_items"] += 1
+                        decision = group[0]
+                        failed = [check["reason"] for check in decision["use_checks"].values()
+                                  if check["verdict"] != "supported"]
+                        reason = (decision["label_reason"]
+                                  if decision["label_verdict"] != "faithful"
+                                  else failed[0] if failed else decision["reason"])
+                        coverage[identifier].setdefault("rejected_findings", []).append({
+                            "candidate_id": candidate_id,
+                            "label": originals[candidate_id][1]["label"],
+                            "reason": reason,
+                            "use_checks": deepcopy(decision["use_checks"]),
+                        })
                     else:
                         retained[candidate_id] = value
             pending = tuple(unresolved)

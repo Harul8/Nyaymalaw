@@ -65,6 +65,24 @@ PRICES: dict[str, tuple[float, float]] = {
 MAX_OUTPUT: dict[str, int] = {
     "gpt-4o-mini-2024-07-18": 16_384,
     "gpt-4.1-mini-2025-04-14": 32_768,
+    "gpt-5.1": 128_000,
+    "gpt-5.1-2025-11-13": 128_000,
+}
+
+# Official model pages checked 3 October 2026. Billing reservations use the
+# provider's full context ceiling, including schema/framing, rather than the
+# port's approximate prompt guard. No transcript estimate proves a dollar cap.
+BILLING_CONTEXT: dict[str, int] = {
+    "gpt-4o-mini-2024-07-18": 128_000,
+    "gpt-4.1-mini-2025-04-14": 1_047_576,
+    "gpt-5.1": 400_000,
+    "gpt-5.1-2025-11-13": 400_000,
+}
+
+# A known alias may return only this checked snapshot. It does not permit
+# changing the selected/billed model or trusting arbitrary provider aliases.
+RETURNED_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "gpt-5.1": ("gpt-5.1-2025-11-13",),
 }
 
 

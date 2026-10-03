@@ -1484,7 +1484,8 @@ function renderLegalRequirements(host, row, record) {
           link.type = 'button'; link.className = 'citation-link';
           link.textContent = label;
           link.setAttribute('aria-label', `Open saved passage: ${label}`);
-          link.addEventListener('click', () => window.NmBrainSources.openRecordSource(source, link));
+          link.addEventListener('click', () => window.NmBrainSources.openRecordSource(
+            source, link, {reviewPending}));
           citation.appendChild(link);
         } else {
           citation.textContent = label;

@@ -9,7 +9,11 @@ from dataclasses import dataclass
 
 from nm.brain.continuation_verification import verify_continuation
 from nm.brain.conversation import Conversation, IncompleteConversation, TurnPlan
-from nm.brain.legal_requirements import RESEARCH_VERIFICATION, source_verification_valid
+from nm.brain.legal_requirements import (
+    RESEARCH_VERIFICATION,
+    finding_verification_valid,
+    source_verification_valid,
+)
 from nm.brain.material import addressed_sources
 from nm.brain.source_snapshots import inline_source_links
 from nm.brain.work_state import PROGRESS_KINDS, PROGRESS_STATUSES
@@ -57,6 +61,11 @@ cannot be marked complete. Cite each legal assessment's actual passage uses.
 Current records are interpretations, not authority to override exact advocate
 words. Reconsider an earlier NM conclusion or question when the advocate
 corrects it; do not anchor a new reply on that earlier mistaken formulation.
+Resolve a referenced actor, object, event or request from attributable words.
+Recency, an earlier NM statement or the interpreted request does not select
+among several plausible meanings. Preserve the unresolved reference and ask
+only for the distinction needed before dependent advice or progress changes;
+continue independently supported work.
 Material coverage describes what was read and held, not what facts are absent.
 material_excluded_scope contains attributed observations, not active matter
 facts. Preserve their unresolved matter attribution; refer to their original
@@ -71,6 +80,9 @@ missing mention into an absent event, term or record. Each block must add
 distinct progress: combine compatible content instead of repeating the same
 account or need across several blocks. Never
 invent a material fact, source, legal rule, privacy assurance or future work.
+Keep independently useful attribution and acknowledgment separate from legal
+analysis. Missing law limits the legal answer, not the ability to address a
+disclosure respectfully or explain what the reported account changes.
 
 Activity 2 - Assess and challenge respectfully.
 Look for: What supports a working view, material adverse information,
@@ -96,6 +108,12 @@ practical relevance and essential caveats in the same request unit. Use the
 model's analysis and language to connect supplied evidence, not to fill legal
 or factual gaps from memory. Express applicability conditionally where its
 conditions or legal force remain unchecked. Missing research must stay visible.
+Check every consequential claim against its selected support and conditions.
+A supported quotation or inline anchor supports its own proposition, not the
+rest of its block. Separate distinct claims and omit or limit any unsupported
+remainder; a thin passage cannot support a broader remedy or work sequence.
+Reported material stays reported until its actual contents and source status
+support a stronger description. A quotation or accepted record is not proof.
 
 Activity 3 - Select a useful next question or work proposal.
 Look for: An unresolved distinction that could materially change a supported
@@ -146,11 +164,14 @@ requires a justified, actually delivered scoped result; it is never matter
 closure, proof, authority for an external action or satisfaction of all duties.
 Avoid stock board-status replies when a useful supported answer is possible.
 For an interpreted `intent` of `request`, select a saved task through
-`work.existing_id` or set `work.create` for a distinct requested task; exactly
-one is required. A scoped step may belong to a broader saved task without
-replacing that task's scope. For `contribution`, do not create a requested task;
-select an existing task only when the contribution concerns it, otherwise leave both
-inactive. Propose any genuinely useful new work separately in `next_work`.
+`work_selector` or select `$new_task` for a distinct requested task. Choose
+exactly one value from this request's `work_choices`; saved task IDs refer to
+the full scoped rows in `progress`. A scoped step may belong to a broader saved
+task without replacing that task's scope. For `contribution`, select a saved
+task only when the contribution concerns it, otherwise select `$no_task`;
+creating a requested task is unavailable. Propose useful new work separately
+in `next_work`. The server derives the durable work association from this one
+choice; do not return separate creation or existing-ID decisions.
 The server supplies durable IDs and the
 request's validated scope. Do not invent a work identity or broaden its scope.
 Use `progress_updates` only for supported changes to known catalogue IDs,
@@ -213,7 +234,9 @@ support is joint, no anchor may imply its passage alone establishes the whole
 conclusion. Empty inline_citations is required when no legal passage is selected.
 The interface turns those existing words into source links; there is no
 separate source list. Keep an essential limitation
-with the assessment it qualifies."""
+with the assessment it qualifies. Include a specific displayed limitation when
+part of a request cannot be supported, so independently useful factual content
+can remain intelligible without the unsupported conclusion."""
 
 _KINDS = ("acknowledgment", "account", "assessment", "question", "next_step",
           "limitation", "completion")
@@ -285,6 +308,14 @@ _UNIT = {
         },
     },
 }
+_NEW_TASK = "$new_task"
+_NO_TASK = "$no_task"
+_MODEL_UNIT = {
+    **_UNIT,
+    "required": [field if field != "work" else "work_selector" for field in _UNIT["required"]],
+    "properties": {**{key: value for key, value in _UNIT["properties"].items() if key != "work"},
+                   "work_selector": {"type": "string"}},
+}
 
 
 @dataclass(frozen=True)
@@ -295,6 +326,14 @@ class ContinuationResult:
     def as_dict(self) -> dict:
         return {"units": deepcopy(list(self.units)),
                 "coverage": deepcopy(list(self.coverage))}
+
+
+class _ContentFailure(SchemaViolation):
+    """Local content failures after the complete graph and sources are checked."""
+
+    def __init__(self, issues: dict[str, str]):
+        self.issues = issues
+        super().__init__("; ".join(issues.values()))
 
 
 def continuation_indexes(plan: TurnPlan) -> tuple[int, ...]:
@@ -320,12 +359,35 @@ def _progress_catalogue(progress: dict | None) -> dict[str, dict]:
     for row in progress["rows"]:
         if (not isinstance(row, dict) or not isinstance(row.get("id"), str)
                 or not row["id"].strip() or row["id"] in rows
+                or row["id"] in (_NEW_TASK, _NO_TASK)
                 or row.get("kind") not in PROGRESS_KINDS
                 or row.get("status") not in PROGRESS_STATUSES
                 or not isinstance(row.get("text"), str) or not row["text"].strip()):
             raise IncompleteConversation("A saved work item has no reliable identity")
         rows[row["id"]] = row
     return rows
+
+
+def _work_choices(intent: str, work: dict) -> tuple[str, ...]:
+    if intent not in ("request", "contribution"):
+        raise IncompleteConversation("The interpreted work intent is unreadable")
+    return (*(key for key, row in work.items() if row["kind"] == "task"),
+            _NEW_TASK if intent == "request" else _NO_TASK)
+
+
+def _selected_work(unit: dict, intent: str, work: dict) -> dict:
+    """One model choice derives the existing server-owned work contract."""
+    require_schema(unit, _MODEL_UNIT)
+    selected = unit["work_selector"]
+    if selected not in _work_choices(intent, work):
+        raise SchemaViolation(
+            f"work_selector {selected!r} is not a supplied choice for this request; "
+            "select exactly one value from this request's work_choices")
+    result = deepcopy(unit)
+    result.pop("work_selector")
+    result["work"] = {"existing_id": selected if selected in work else "",
+                      "create": selected == _NEW_TASK}
+    return result
 
 
 def _progress_target(unit: dict, target: str) -> str:
@@ -397,11 +459,13 @@ def _record_context(row: dict, words: dict[tuple[str, str], str]) -> list[dict]:
 
 
 def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
-            sources: dict, progress: dict | None = None) -> dict:
-    unit = deepcopy(_UNIT)
+            sources: dict, progress: dict | None = None,
+            intents: dict[int, str] | None = None) -> dict:
+    unit = deepcopy(_MODEL_UNIT)
     work = _progress_catalogue(progress)
-    task_ids = [key for key, row in work.items() if row["kind"] == "task"]
-    unit["properties"]["work"]["properties"]["existing_id"]["enum"] = ["", *task_ids]
+    unit["properties"]["work_selector"]["enum"] = list(dict.fromkeys(
+        choice for index in indexes
+        for choice in _work_choices((intents or {}).get(index, "request"), work)))
     unit["properties"]["request_index"]["enum"] = list(indexes)
     block = unit["properties"]["blocks"]["items"]["properties"]
     if not sources:
@@ -414,6 +478,7 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
     if not sources:
         citations["maxItems"] = 0
     for field in ("questions", "next_work"):
+        unit["properties"][field]["items"] = deepcopy(_LINK)
         link = unit["properties"][field]["items"]["properties"]
         link["target_ids"] = (
             _identifier_array(tuple(records)))
@@ -502,6 +567,23 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
         sources[identifier] = value
         return identifier
 
+    def finding(row: dict, subject: str, use_id: str) -> dict:
+        if not finding_verification_valid(row):
+            raise IncompleteConversation("A current finding has no checked legal use")
+        source_map = {}
+        for item in row["sources"]:
+            if item["id"] in source_map:
+                raise IncompleteConversation("A checked finding has ambiguous passage identities")
+            source_map[item["id"]] = source(item, subject, use_id)
+        if set(row["source_ids"]) != source_map.keys():
+            raise IncompleteConversation("A checked finding lost its passage owner")
+        value = {key: deepcopy(value) for key, value in row.items()
+                 if key not in ("sources", "source_ids")}
+        value["source_ids"] = list(source_map.values())
+        for check in value["use_verification"]["checks"].values():
+            check["source_ids"] = [source_map[key] for key in check["source_ids"]]
+        return value
+
     for state, kind in ((disputes, "dispute"), (material, "material")):
         if state is None:
             continue
@@ -529,10 +611,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                 if not isinstance(row, dict) or not isinstance(row.get("sources"), list):
                     raise IncompleteConversation("A legal requirement is unreadable")
                 use_id = f"requirement:{subject}:{index}"
-                legal_ids = [source(item, subject, use_id) for item in row["sources"]]
-                value = {key: deepcopy(value) for key, value in row.items()
-                         if key not in ("sources", "source_ids")}
-                value.update(source_ids=legal_ids, dispute_id=subject)
+                value = finding(row, subject, use_id)
+                value.update(dispute_id=subject)
                 record(value, "requirement", use_id)
     for index, row in enumerate(checked_sources, start=1):
         if not isinstance(row, dict):
@@ -565,10 +645,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                 continue
             for index, row in enumerate(research["by_subject"][identity], start=1):
                 use_id = f"research:{identity}:{index}"
-                legal_ids = [source(item, identity, use_id) for item in row["sources"]]
-                value = {key: deepcopy(value) for key, value in row.items()
-                         if key not in ("sources", "source_ids")}
-                value.update(source_ids=legal_ids, subject=deepcopy(subject))
+                value = finding(row, identity, use_id)
+                value.update(subject=deepcopy(subject))
                 record(value, "research", use_id)
     payload.update(
         current_matter_id=conversation.current_matter_id,
@@ -586,7 +664,9 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
         progress=deepcopy(progress if progress is not None else {
             "state": "ok", "rows": [], "events": [],
             "coverage": {"older_progress": "untracked"}, "diagnostics": []}))
-    _progress_catalogue(payload["progress"])
+    work = _progress_catalogue(payload["progress"])
+    for item in payload["work_items"]:
+        item["work_choices"] = list(_work_choices(item["intent"], work))
     return payload, spans, records, sources
 
 
@@ -640,6 +720,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
     if intent not in ("request", "contribution"):
         raise IncompleteConversation("The interpreted work intent is unreadable")
     checked_updates = _bind_progress_sources(unit, blocks, spans, work)
+    content_issues = {}
     for block_index, block in enumerate(unit["blocks"]):
         block_path = f"blocks[{block_index}] (id {block['id']!r})"
         if not block["id"].strip() or not block["text"].strip():
@@ -654,7 +735,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         inline = _inline_reference(block, spans, records, sources, work)
         if inline is not None:
             identifier, field = inline
-            raise SchemaViolation(
+            content_issues[block["id"]] = (
                 f"{block_path}.text contains internal catalogue ID {identifier!r}. "
                 f"Keep it in {field}; remove the machine citation from prose while "
                 "retaining its structured reference and every substantive caveat. "
@@ -673,7 +754,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                     block["legal_source_ids"].append(source_id)
         _check_inline_citations(block, block_path, sources)
         if block["kind"] == "assessment" and not block["legal_source_ids"]:
-            raise SchemaViolation(
+            content_issues[block["id"]] = (
                 f"{block_path}.legal_source_ids: an assessment needs its actual "
                 "supporting checked passage. Select the exact legal_sources ID or "
                 "a checked finding in record_ids whose source supports this block's "
@@ -685,7 +766,8 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         if (block["kind"] in ("account", "assessment", "completion") and not any(
                     block[field] for field in (
                         "span_ids", "record_ids", "legal_source_ids"))):
-            raise SchemaViolation("A consequential block has no attributable reference")
+            content_issues[block["id"]] = (
+                f"{block_path}: a consequential block has no attributable reference")
     for field, kind in (("questions", "question"), ("next_work", "next_step")):
         links = unit[field]
         if len({row["id"] for row in links}) != len(links):
@@ -715,7 +797,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         raise SchemaViolation("Immediate reply sufficiency needs its displayed explanation")
     if (needs_authority and sufficiency["status"] == "complete"
             and not any(row["legal_source_ids"] for row in unit["blocks"])):
-        raise SchemaViolation(
+        content_issues["$sufficiency"] = (
             "sufficiency.status 'complete': a legal-authority enquiry needs actual "
             "selected checked legal_source_ids. Preserve the missing research as "
             "a limited unfinished result")
@@ -743,13 +825,16 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
             raise SchemaViolation(
                 f"progress_updates[{index}].block_id {update['block_id']!r} "
                 "needs a displayed source supporting the progress decision")
+    if content_issues:
+        raise _ContentFailure(content_issues)
 
 
 def _read_units(data: object, pending: tuple[int, ...], spans: dict,
                 records: dict, sources: dict, progress: dict | None = None,
                 reserved_updates: frozenset[str] = frozenset(),
                 intents: dict[int, str] | None = None,
-                needs_authority: dict[int, bool] | None = None
+                needs_authority: dict[int, bool] | None = None,
+                local_failures: dict[int, tuple[dict, dict[str, str]]] | None = None
                 ) -> tuple[dict[int, dict], dict[int, str]]:
     rows = data.get("units") if isinstance(data, dict) else None
     grouped: dict[int, list[dict]] = {index: [] for index in pending}
@@ -763,17 +848,23 @@ def _read_units(data: object, pending: tuple[int, ...], spans: dict,
         if len(grouped[index]) != 1:
             issues[index] = "Return exactly one complete unit for this request_index"
             continue
-        unit = grouped[index][0]
         try:
+            unit = _selected_work(grouped[index][0], (intents or {}).get(index, "request"),
+                                  _progress_catalogue(progress))
             _validate_unit(unit, pending, spans, records, sources, progress,
                            (intents or {}).get(index, "request"),
                            (needs_authority or {}).get(index, False))
+        except _ContentFailure as exc:
+            issues[index] = str(exc)
+            if local_failures is not None:
+                local_failures[index] = (unit, exc.issues)
         except SchemaViolation as exc:
             issues[index] = str(exc)
         else:
             valid[index] = unit
     owners: dict[str, list[int]] = {}
-    for index, unit in valid.items():
+    owned = {**valid, **{index: row[0] for index, row in (local_failures or {}).items()}}
+    for index, unit in owned.items():
         for update in unit["progress_updates"]:
             target = _progress_target(unit, update["target_id"])
             owners.setdefault(target, []).append(index)
@@ -781,8 +872,27 @@ def _read_units(data: object, pending: tuple[int, ...], spans: dict,
         if len(indexes) > 1 or target in reserved_updates:
             for index in indexes:
                 valid.pop(index, None)
+                if local_failures is not None:
+                    local_failures.pop(index, None)
                 issues[index] = f"Progress target {target!r} must have one request-unit owner"
     return valid, issues
+
+
+def _limited_unit(unit: dict, *, selected: tuple[str, ...] | None = None,
+                  excluded: frozenset[str] = frozenset()) -> dict | None:
+    """Keep generated factual blocks and their limitation, never lifecycle metadata."""
+    owners = {row["block_id"] for field in ("questions", "next_work") for row in unit[field]}
+    blocks = [block for block in unit["blocks"]
+              if block["id"] not in excluded | owners
+              and (selected is None or block["id"] in selected)
+              and block["kind"] in ("acknowledgment", "account", "limitation")]
+    limits = [block for block in blocks if block["kind"] == "limitation"]
+    if not limits or not any(block["kind"] != "limitation" for block in blocks):
+        return None
+    result = deepcopy(unit)
+    result.update(blocks=deepcopy(blocks), questions=[], next_work=[], progress_updates=[],
+                  sufficiency={"status": "partial", "block_id": limits[-1]["id"]})
+    return result
 
 
 def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
@@ -832,6 +942,11 @@ def continue_conversation(
              for message in conversation.messages}
     words[(latest_turn_id, "advocate")] = latest
     accepted: dict[int, dict] = {}
+    retained: dict[int, dict] = {}
+    local_failures = {}
+    intents = {row["request_index"]: row["intent"] for row in payload["work_items"]}
+    needs_authority = {row["request_index"]: bool(row["research_question"])
+                       for row in payload["work_items"]}
     pending = expected
     issues: dict[int, str] = {}
     rejected = None
@@ -884,18 +999,20 @@ def continue_conversation(
         try:
             result = model.structured(
                 Prompt(system=system, user=user, operation="continue_conversation"),
-                _schema(pending, spans, records, sources, payload["progress"]), Tier.JUDGE,
+                _schema(pending, spans, records, sources, payload["progress"], intents), Tier.JUDGE,
                 max_tokens=output_limit)
             if result.was_downgraded:
                 raise TierUnavailable("The configured continuation writer was unavailable")
         except ContextOverflow:
             raise
         except (SchemaViolation, OutputTruncated) as exc:
+            local_failures = {}
             issues = {index: str(exc) for index in pending}
             truncated = isinstance(exc, OutputTruncated)
             rejected = None
             continue
         except ModelError:
+            local_failures = {}
             issues.update((index, "The conversational response could not be completed")
                           for index in pending)
             break
@@ -903,12 +1020,10 @@ def continue_conversation(
         reserved = frozenset(_progress_target(unit, update["target_id"])
                              for unit in accepted.values()
                              for update in unit["progress_updates"])
+        local_failures = {}
         valid, issues = _read_units(rejected, pending, spans, records, sources,
                                    payload["progress"], reserved,
-                                   {row["request_index"]: row["intent"]
-                                    for row in payload["work_items"]},
-                                   {row["request_index"]: bool(row["research_question"])
-                                    for row in payload["work_items"]})
+                                   intents, needs_authority, local_failures)
         unread: set[int] = set()
         if valid:
             verdicts = verify_continuation(
@@ -922,17 +1037,55 @@ def continue_conversation(
                 supported, reason = verdicts.decisions[index]
                 if supported:
                     accepted[index] = unit
+                    retained.pop(index, None)
                 else:
                     issues[index] = reason
+                    if index in verdicts.retained:
+                        limited = _limited_unit(unit, selected=verdicts.retained[index])
+                        if limited is not None:
+                            _validate_unit(limited, expected, spans, records, sources,
+                                           payload["progress"], intents[index],
+                                           needs_authority[index])
+                            retained[index] = limited
         pending = tuple(index for index in pending
                         if index not in accepted and index not in unread)
         if not pending:
             break
+    narrowed = {}
+    for index, (unit, failed_blocks) in local_failures.items():
+        if index in accepted or index in retained:
+            continue
+        limited = _limited_unit(unit, excluded=frozenset(failed_blocks))
+        if limited is not None:
+            _validate_unit(limited, expected, spans, records, sources,
+                           payload["progress"], intents[index], needs_authority[index])
+            narrowed[index] = limited
+    if narrowed:
+        review_input = {**payload, "partial_response_review": [
+            {"request_index": index, "unreleased_unit": local_failures[index][0],
+             "content_issues": local_failures[index][1]}
+            for index in narrowed]}
+        checked = verify_continuation(
+            model, input_payload=review_input, units=tuple(narrowed.values()))
+        for index, unit in narrowed.items():
+            if index in checked.unavailable:
+                continue
+            supported, reason = checked.decisions[index]
+            if supported:
+                retained[index] = unit
+            elif index in checked.retained:
+                limited = _limited_unit(unit, selected=checked.retained[index])
+                if limited is not None:
+                    retained[index] = limited
+            else:
+                issues[index] = reason
+    released = {**retained, **accepted}
     return ContinuationResult(
-        tuple(_resolve(accepted[index], spans, records, sources, words)
-              for index in expected if index in accepted),
+        tuple(_resolve(released[index], spans, records, sources, words)
+              for index in expected if index in released),
         tuple({"request_index": index,
-               "state": "ok" if index in accepted else "unavailable",
+               "state": ("ok" if index in accepted else
+                         "partial" if index in retained else "unavailable"),
                "diagnostics": [] if index in accepted else [issues.get(
                    index, "A source-supported response could not be completed")]}
               for index in expected))

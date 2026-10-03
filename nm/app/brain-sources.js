@@ -110,7 +110,9 @@ window.NmBrainSources = (() => {
           || saved.label !== source.label || saved.kind !== source.kind) {
         throw new Error('The saved passage could not be matched to this response.');
       }
-      populate(saved);
+      populate({...saved, qualification: saved.qualification
+        + (saved.verification_current === false
+          ? ' This historical check predates the current source review.' : '')});
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;
@@ -237,13 +239,12 @@ window.NmBrainSources = (() => {
       && (checked.scope_status === 'no_special_condition') === !checked.scope_excerpt);
   }
 
-  function openRecordSource(source, opener) {
+  function openRecordSource(source, opener, {reviewPending = true} = {}) {
     if (!isReadableRecordSource(source)) return false;
     begin(source.title, opener);
     populate({...source, qualification:
       "Saved with this dispute's legal requirements. Support was checked for that item; "
-      + (source.verification?.contract === 'research_support_v3' ? ''
-        : 'this historical check predates the current source review. ')
+      + (reviewPending ? 'this historical check predates the current source review. ' : '')
       + 'this does not establish applicability, binding force, or the complete source.'});
     return true;
   }

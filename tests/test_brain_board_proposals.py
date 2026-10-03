@@ -38,6 +38,7 @@ class ScriptedBrain:
         elif prompt.operation in ("verify_disputes", "verify_material_grounding"):
             answer = {"verdicts": [{
                 "candidate_id": row["candidate_id"], "verdict": "accept",
+                "operation_supported": True,
                 "reason": "The scripted proposal is attributable.",
                 **({"candidate_role": "independent_dispute"}
                    if prompt.operation == "verify_disputes" else {}),

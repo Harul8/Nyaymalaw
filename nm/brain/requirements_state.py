@@ -9,6 +9,7 @@ from nm.brain.legal_requirements import (
     HISTORICAL_RESEARCH_VERIFICATIONS,
     RESEARCH_KINDS,
     RESEARCH_VERIFICATION,
+    finding_verification_valid,
     source_verification_valid,
 )
 from nm.work_the_file.matter_contracts import Matter
@@ -123,7 +124,7 @@ def _valid_row(row: object, material_ids: set[str], verification_contract: str) 
             return False
         if not source_verification_valid(source, contract=verification_contract):
             return False
-    return True
+    return finding_verification_valid(row, contract=verification_contract)
 
 
 def _legacy_read(read: object, subjects: dict, contexts: dict) -> dict | None:

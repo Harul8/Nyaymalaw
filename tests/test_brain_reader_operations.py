@@ -52,7 +52,8 @@ def _reader_schema(kind):
     if kind == "dispute":
         row.update(label="Reported event", identification="identified", clarification="")
     else:
-        row.update(kind="event", placement="matter", dispute_ids=[])
+        row.pop("matter_scope")
+        row.update(kind="event", assignment_ids=["matter:discussion"])
     return schema, row, link_field
 
 

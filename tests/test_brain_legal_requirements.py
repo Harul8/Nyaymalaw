@@ -5,6 +5,7 @@ import pytest
 
 from nm.brain.conversation import Message
 from nm.brain.legal_requirements import (
+    FINDING_USE_CHECKS,
     RESEARCH_VERIFICATION,
     decompose,
     decompose_subjects,
@@ -69,6 +70,19 @@ class Model:
                     "reason": "The reported material concerns this need.",
                 } for material_id in candidates.get(
                     decision.get("candidate_id"), {}).get("material_ids", [])]),
+                "use_checks": decision.get("use_checks", {
+                    aspect: {
+                        "verdict": decision["verdict"],
+                        "reason": "This scripted use is supported by its own evidence.",
+                        "source_ids": [row["source_id"] for row in decision.get("source_checks", [])
+                                       if row["verdict"] == "supported"],
+                        "material_ids": [row["material_id"] for row in decision.get(
+                            "material_checks", [{"material_id": key, "verdict": "addresses"}
+                                                for key in candidates.get(
+                                                    decision.get("candidate_id"), {}).get(
+                                                        "material_ids", [])])
+                                         if row["verdict"] == "addresses"],
+                    } for aspect in FINDING_USE_CHECKS}),
                 "source_checks": [self._source_check(check, candidates.get(
                     decision.get("candidate_id"), {}))
                     for check in decision.get("source_checks", [])],
@@ -1307,6 +1321,117 @@ def test_adopted_source_does_not_override_rejection_of_the_used_statement_meanin
     assert checked.rows["q1"] == []
     assert checked.coverage["q1"]["withheld_items"] == 1
     assert len(model.calls) == 1
+
+
+def use_checks(source_ids, material_ids=(), **failures):
+    return {aspect: {
+        "verdict": "unsupported" if aspect in failures else "supported",
+        "reason": failures.get(aspect, "The selected evidence supports this use decision."),
+        "source_ids": list(source_ids), "material_ids": list(material_ids),
+    } for aspect in FINDING_USE_CHECKS}
+
+
+@pytest.mark.parametrize(("aspect", "passage", "need", "reason"), [
+    ("application", "Authorized use starts when permission is granted.",
+     "Use from the earlier date was authorized by the later permission.",
+     "The later permission does not establish authorization for the earlier period."),
+    ("application", "Where the specified relationship exists, the actor owes the stated duty.",
+     "The actor owes this duty even though the relationship has not been established.",
+     "The finding discards the expressed relationship predicate."),
+    ("entailment", "Recovery of one remedy and the consequential account were distinct claims.",
+     "Two other reported acts cannot be considered together in this matter.",
+     "An analogy to different claims does not establish this proposed treatment."),
+    ("force", "The claimant in that case supplied a formal record during the hearing.",
+     "This party must obtain that formal record before any assessment can proceed.",
+     "A case's procedural history does not mandate a prerequisite in another matter."),
+    ("force", "A contemporaneous record can help assess the stated event.",
+     "A contemporaneous record is a mandatory prerequisite for this claim.",
+     "Helpful evidence is not a mandatory legal condition."),
+    ("entailment", "The recipient must account for funds received under the stated relationship.",
+     "The person asking for an account must establish that they received the funds.",
+     "The finding shifts the stated duty from the recipient to another actor."),
+])
+def test_source_adoption_cannot_override_a_failed_whole_finding_use_check(
+        aspect, passage, need, reason):
+    source = dict(id="assertion", kind="judgment", title="Synthetic decision",
+                  locator="paragraph 3", text=passage)
+    earlier = Message("earlier", "advocate", "Use was reported from 2017.")
+    later = Message("later", "advocate",
+                    "Permission was given in 2022. The relationship is unknown.")
+    proposed = {"q1": [
+        {**finding("gathering", label="Proposed application", need=need, why=need,
+                   source_ids=["assertion"], force="required"), "sources": [source]},
+        {**finding(label="Notice remains conditional"),
+         "sources": request_hits()["q1"]["candidates"]},
+    ]}
+    rejected = supported_verdict("r1", "assertion")
+    rejected["use_checks"] = use_checks(["assertion"], **{aspect: reason})
+    model = Model([{"decisions": [rejected, supported_verdict("r2", "s1")]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                              proposed=proposed, conversation=(earlier, later))
+
+    assert [row["label"] for row in checked.rows["q1"]] == ["Notice remains conditional"]
+    assert checked.coverage["q1"]["checked_items"] == 2
+    assert checked.coverage["q1"]["withheld_items"] == 1
+    assert checked.coverage["q1"]["unread_items"] == 0
+    audit = checked.coverage["q1"]["rejected_findings"][0]
+    assert audit["candidate_id"] == "r1" and audit["reason"] == reason
+    assert audit["use_checks"][aspect]["verdict"] == "unsupported"
+    assert "sources" not in audit and "use_verification" not in audit
+    assert len(model.calls) == 1
+    assert json.loads(model.calls[0][0].user)["conversation"] == [
+        {"turn_id": row.turn_id, "role": row.role, "text": row.text} for row in (earlier, later)]
+    assert checked.rows["q1"][0]["use_verification"]["contract"] == RESEARCH_VERIFICATION
+
+
+@pytest.mark.parametrize(("aspect", "field", "ids"), [
+    ("entailment", "source_ids", ["peer"]),
+    ("application", "material_ids", ["foreign-material"]),
+    ("force", "source_ids", ["s1", "s1"]),
+    ("entailment", "source_ids", []),
+])
+def test_use_check_reference_drift_repairs_only_its_candidate(aspect, field, ids):
+    source = request_hits()["q1"]["candidates"][0]
+    peer = dict(id="peer", kind="provision", title="Synthetic peer rule",
+                locator="section 2", text="The identified condition limits the stated obligation.")
+    proposed = {"q1": [
+        {**finding(), "sources": [source]},
+        {**finding(label="A separate conditional proposition", source_ids=["peer"]),
+         "sources": [peer]},
+    ]}
+    wrong = supported_verdict("r1", "s1")
+    wrong["use_checks"] = use_checks(["s1"])
+    wrong["use_checks"][aspect][field] = ids
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "peer")]},
+                   {"decisions": [supported_verdict("r1", "s1")]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                              proposed=proposed, conversation=CONVERSATION)
+
+    assert len(checked.rows["q1"]) == 2 and len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
+    assert "use_checks" in repair["validation_issues"]["r1"]
+
+
+def test_established_application_needs_attributed_material_not_only_a_legal_passage():
+    source = request_hits()["q1"]["candidates"][0]
+    proposed = {"q1": [{**finding(), "sources": [source]}]}
+    wrong = supported_verdict("r1", "s1")
+    wrong["source_checks"][0].update(scope_status="established", scope_fragment_id="f1")
+    corrected = supported_verdict("r1", "s1")
+    corrected["source_checks"][0].update(scope_status="conditional", scope_fragment_id="f1")
+    model = Model([{"decisions": [wrong]}, {"decisions": [corrected]}])
+
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                              proposed=proposed, conversation=CONVERSATION)
+
+    assert len(model.calls) == 2
+    assert checked.rows["q1"][0]["sources"][0]["verification"]["scope_status"] == "conditional"
+    assert checked.rows["q1"][0]["use_verification"]["checks"]["application"]["material_ids"] == []
+    feedback = json.loads(model.calls[1][0].user)["validation_issues"]["r1"]
+    assert "application.material_ids" in feedback and "legal source words" in feedback
 
 
 @pytest.mark.parametrize("treatment", ["rejected", "adopted", "reported", "unclear"])

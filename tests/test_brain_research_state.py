@@ -34,18 +34,24 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                   text=PASSAGE, verification=dict(support_excerpt=PASSAGE,
                       scope_excerpt="Where the agreed condition applies",
                       scope_status="conditional", reason="The finding preserves this condition."))
-    if verification in ("research_support_v2", RESEARCH_VERIFICATION):
+    if verification in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION):
         source["verification"].update(
             contract=verification, assertion_owner="legislative_text", owner_label="Test Act",
             owner_excerpt=PASSAGE, source_treatment="adopted", treatment_excerpt=PASSAGE)
-    if verification == RESEARCH_VERIFICATION:
+    if verification in ("research_support_v3", RESEARCH_VERIFICATION):
         source["verification"].update(assertion_role="legislative_text",
                                       assertion_statement=PASSAGE, context_statements=[])
-    return dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
+    row = dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
                 why="The passage identifies the condition governing this obligation.",
                 force="required" if kind == "gathering" else "none",
                 material_ids=list(linked), source_ids=[source["id"]], sources=[source],
                 record_status="mentioned" if linked else "not_mentioned")
+    if verification == RESEARCH_VERIFICATION:
+        row["use_verification"] = dict(contract=verification, checks={
+            aspect: dict(verdict="supported", reason="The conditional finding preserves its limit.",
+                         source_ids=[source["id"]], material_ids=list(linked))
+            for aspect in ("entailment", "application", "force")})
+    return row
 
 
 def read(selected, context=(), *, rows=None, state="ok", revision=REVISION,
@@ -178,7 +184,8 @@ def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_
         research_fingerprint(selected, [*context, duplicate], REVISION)
 
 
-@pytest.mark.parametrize("contract", ["research_support_v1", "research_support_v2"])
+@pytest.mark.parametrize("contract", ["research_support_v1", "research_support_v2",
+                                      "research_support_v3"])
 def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse(contract):
     selected = subject(matter())
     saved = append(matter(), [read(selected, verification=contract)])
@@ -191,8 +198,8 @@ def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse(c
     assert coverage["source_freshness"] == "current"
     assert coverage["verification_contract"] == contract
     assert coverage["verification_current"] is False
-    assert "assertion_role" not in result["by_subject"][selected["id"]][0]["sources"][0][
-        "verification"]
+    assert ("assertion_role" in result["by_subject"][selected["id"]][0]["sources"][0][
+        "verification"]) == (contract == "research_support_v3")
     assert saved.brain_chat == raw
 
 
@@ -462,6 +469,65 @@ def test_historical_contract_still_rejects_corrupt_exact_source_ownership():
     result = project(append(matter(), [historical]), selected)
     assert result["state"] == "incomplete"
     assert result["by_subject"][selected["id"]] == []
+
+
+@pytest.mark.parametrize("damage", [
+    "missing", "old_contract", "rejected_check", "foreign_source", "foreign_material",
+    "duplicate_source", "missing_force_source", "established_without_material",
+])
+def test_current_finding_use_attestation_is_owned_complete_and_cannot_be_source_labels_only(damage):
+    file = matter()
+    first = subject(file)
+    peer = subject(file, identity="peer", question="An independent conditional enquiry")
+    damaged = read(first)
+    row = damaged["rows"][0]
+    checks = row["use_verification"]["checks"]
+    if damage == "missing":
+        row.pop("use_verification")
+    elif damage == "old_contract":
+        row["use_verification"]["contract"] = "research_support_v3"
+    elif damage == "rejected_check":
+        checks["application"]["verdict"] = "unsupported"
+    elif damage == "foreign_source":
+        checks["entailment"]["source_ids"] = ["another-subject-source"]
+    elif damage == "foreign_material":
+        checks["application"]["material_ids"] = ["another-subject-record"]
+    elif damage == "duplicate_source":
+        checks["force"]["source_ids"] *= 2
+    elif damage == "missing_force_source":
+        checks["force"]["source_ids"] = []
+    else:
+        row["sources"][0]["verification"]["scope_status"] = "established"
+    saved = append(file, [damaged, read(peer)])
+    untouched = deepcopy(saved.brain_chat)
+
+    result = research_record(saved, subjects=(first, peer),
+                             material_by_subject={first["id"]: [], peer["id"]: []},
+                             corpus_revision=REVISION)
+
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][first["id"]] == []
+    assert result["reuse_allowed"][first["id"]] is False
+    assert result["reuse_allowed"][peer["id"]] is True
+    assert saved.brain_chat == untouched
+
+
+def test_historical_v3_keeps_role_and_context_integrity_without_inventing_new_use_checks():
+    file = matter()
+    selected = subject(file)
+    historical = read(selected, verification="research_support_v3")
+    assert "use_verification" not in historical["rows"][0]
+    saved = append(file, [historical])
+    untouched = deepcopy(saved.brain_chat)
+    readable = project(saved, selected)
+    assert readable["state"] == "ok" and readable["by_subject"][selected["id"]]
+    assert readable["coverage_by_subject"][selected["id"]]["verification_current"] is False
+    assert readable["reuse_allowed"][selected["id"]] is False
+    assert saved.brain_chat == untouched
+    historical["rows"][0]["sources"][0]["verification"].pop("context_statements")
+    corrupted = project(append(file, [historical]), selected)
+    assert corrupted["state"] == "incomplete"
+    assert corrupted["by_subject"][selected["id"]] == []
 
 
 def test_unknown_saved_contract_is_not_treated_as_readable_verified_history():

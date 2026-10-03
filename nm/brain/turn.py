@@ -103,11 +103,14 @@ class _CountedModel:
         logger.info("Model call %s started: %s", ordinal, prompt.operation)
         result = None
         failure = None
+        measured_usage = None
         try:
             result = self.inner.structured(prompt, schema, tier,
                                            max_tokens=max_tokens)
+            measured_usage = result.usage
         except ModelError as exc:
             failure = type(exc).__name__
+            measured_usage = exc.usage
             with self.lock:
                 self.provider_retries += exc.retries
             raise
@@ -117,8 +120,10 @@ class _CountedModel:
                        "tier": tier.value,
                        "model": result.model if result else "",
                        "state": failure or "ok",
-                       "tokens_in": result.usage.tokens_in if result else 0,
-                       "tokens_out": result.usage.tokens_out if result else 0}
+                       "tokens_in": measured_usage.tokens_in if measured_usage else 0,
+                       "tokens_out": measured_usage.tokens_out if measured_usage else 0,
+                       "usage_recorded": measured_usage is not None,
+                       "cost_usd": measured_usage.cost_usd if measured_usage else None}
             with self.lock:
                 self.receipts.append(receipt)
                 if result is not None:

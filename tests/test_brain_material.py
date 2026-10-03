@@ -46,6 +46,7 @@ class Model:
             payload = json.loads(prompt.user)
             data = {"verdicts": [
                 {"candidate_id": row["candidate_id"],
+                 "operation_supported": True,
                  **({"candidate_role": "independent_dispute"}
                     if prompt.operation == "verify_disputes" else {}),
                  "verdict": "accept", "reason": "Attributable proposal"}

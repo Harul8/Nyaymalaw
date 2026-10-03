@@ -22,7 +22,7 @@ from typing import Any
 from nm.shared.budget_contracts import Completion
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_budget import guard_budget, guard_tool_budget
-from nm.shared.model_call_budget import CallBudget
+from nm.shared.model_call_budget import CallBudget, SessionCallBudget
 from nm.shared.model_config import (
     CONTEXT_BUDGET,
     ModelConfig,
@@ -79,7 +79,7 @@ def _completion_of(reason) -> Completion:
 
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None,
-                 call_budget: CallBudget | None = None) -> None:
+                 call_budget: CallBudget | SessionCallBudget | None = None) -> None:
         self._config = config
         self._call_budget = call_budget
         self._before_dispatch: Callable[[], None] | None = None
@@ -126,7 +126,7 @@ class OpenAIModelAdapter:
         bound._before_dispatch = before_dispatch
         return bound
 
-    def with_call_budget(self, budget: CallBudget) -> OpenAIModelAdapter:
+    def with_call_budget(self, budget: CallBudget | SessionCallBudget) -> OpenAIModelAdapter:
         bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=budget)
         bound._before_dispatch = self._before_dispatch
         return bound
@@ -161,6 +161,7 @@ class OpenAIModelAdapter:
                   max_tokens: int | None = None) -> ToolCallResult:
         guard_tool_budget(prompt, tools, tier, messages, max_tokens)
         cfg = self._cfg(tier)
+        request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
         started = time.perf_counter()
         wire = []
         if prompt.system:
@@ -188,7 +189,8 @@ class OpenAIModelAdapter:
         if max_tokens is not None:
             kwargs["max_completion_tokens"] = max_tokens
         response, retries = self._retrying_counted(
-            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model)
+            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
+            call_budget=request_budget)
         usage = self._usage(response, cfg)
         elapsed = int((time.perf_counter() - started) * 1000)
         try:
@@ -282,6 +284,7 @@ class OpenAIModelAdapter:
         # the budget a provider concept and let a prompt that does not port
         # pass locally.
         guard_budget(prompt, tier)
+        request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
         started = time.perf_counter()
 
         messages = []
@@ -316,7 +319,8 @@ class OpenAIModelAdapter:
             }
 
         resp, retries = self._retrying_counted(
-            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model)
+            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
+            call_budget=request_budget)
 
         receipt = self._usage(resp, cfg)
 
@@ -383,8 +387,14 @@ class OpenAIModelAdapter:
     def _retrying(self, fn):
         return self._retrying_counted(fn)[0]
 
-    def _retrying_counted(self, fn, *, model: str = "") -> tuple[Any, int]:
+    def _budget_for(self, model: str, max_tokens: int | None):
+        if isinstance(self._call_budget, SessionCallBudget):
+            return self._call_budget.for_request(model, max_tokens)
+        return self._call_budget, max_tokens
+
+    def _retrying_counted(self, fn, *, model: str = "", call_budget=None) -> tuple[Any, int]:
         """Bounded retry with backoff. Retries are COUNTED and returned --
         an invisible retry is an invisible cost."""
         return request_with_retries(fn, model=model, before_dispatch=self._before_dispatch,
-                                    call_budget=self._call_budget)
+                                    call_budget=call_budget if call_budget is not None
+                                    else self._call_budget)

@@ -133,7 +133,7 @@ def test_explicit_configuration_is_copied_once_and_not_writable(spec_root, monke
 def test_evaluation_ledger_reserves_for_the_served_model(spec_root, tmp_path):
     from decimal import Decimal
 
-    from nm.shared.model_config import PRICES, load, reservation_micro_usd
+    from nm.shared.model_config import BILLING_CONTEXT, MAX_OUTPUT, PRICES, load
     from nm.shared.model_openai_adapter import OpenAIModelAdapter
 
     settings = _environment(spec_root)
@@ -142,12 +142,36 @@ def test_evaluation_ledger_reserves_for_the_served_model(spec_root, tmp_path):
                     NM_EVAL_BUDGET_FILE=str(tmp_path / "budget.db"))
     model = OpenAIModelAdapter(load(settings), client=object())
     app = composition.Application(root=spec_root, environment=settings, model=model)
-    ledger = app._model_adapter._call_budget
+    session = app._model_adapter._call_budget
+    ledger, output_limit = session.for_request(settings["NM_MODEL_ROUTINE"], None)
 
+    assert session.models == (settings["NM_MODEL_ROUTINE"],)
     assert ledger.model == settings["NM_MODEL_ROUTINE"]
     assert (ledger.price_in, ledger.price_out) == tuple(
         Decimal(str(price)) for price in PRICES[settings["NM_MODEL_ROUTINE"]])
-    assert ledger.reservation == reservation_micro_usd(settings["NM_MODEL_ROUTINE"])
+    expected = (Decimal(BILLING_CONTEXT[ledger.model]) * ledger.price_in
+                + Decimal(MAX_OUTPUT[ledger.model]) * ledger.price_out)
+    assert ledger.reservation >= expected
+    assert output_limit == MAX_OUTPUT[ledger.model]
+
+
+def test_evaluation_composition_keeps_routine_and_judge_under_one_cap(spec_root, tmp_path):
+    from nm.shared.model_config import load
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+
+    settings = _environment(spec_root)
+    settings.update(NM_MODEL_PROVIDER="openai",
+                    NM_MODEL_ROUTINE="gpt-4.1-mini-2025-04-14",
+                    NM_MODEL_JUDGE="gpt-5.1",
+                    NM_EVAL_BUDGET_FILE=str(tmp_path / "budget.db"), NM_EVAL_MAX_USD="3")
+    model = OpenAIModelAdapter(load(settings), client=object())
+    app = composition.Application(root=spec_root, environment=settings, model=model)
+    session = app._model_adapter._call_budget
+    routine, _ = session.for_request(settings["NM_MODEL_ROUTINE"], 1024)
+    judge, _ = session.for_request(settings["NM_MODEL_JUDGE"], 2048)
+    assert routine.path == judge.path
+    assert routine.maximum == judge.maximum == 3_000_000
+    assert judge.returned_models == ("gpt-5.1", "gpt-5.1-2025-11-13")
 
 
 def test_an_incomplete_explicit_mapping_never_borrows_ambient_tiers(tmp_path, monkeypatch):

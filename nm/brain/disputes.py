@@ -49,6 +49,11 @@ contestable act or position must be considered, including one whose actor,
 cause, connection to another issue or legal effect remains unknown. Missing
 identity or proof does not erase reported conduct. Do not assign an unknown
 actor from an adjacent event merely because the events share a setting.
+Preserve the relationship between reported conduct, commitments, conditions
+and time. An undertaking does not establish responsibility for an earlier act;
+continued conditions do not establish breach before the undertaking is due.
+Earlier NM formulations are interpretations to recheck against the attributed
+account, not evidence supplying missing actors or temporal predicates.
 Outcome: Give each issue a crisp `label` naming concrete conduct or a
 contested position, a full neutral question in `statement`, and a short
 `why_material` explaining its distinct practical conclusion. Paraphrase
@@ -63,6 +68,13 @@ identifiable active formulation. Shared words or people alone are not a
 revision link. A supporting detail may change while the contested conduct
 and dispute identity remain the same. Newly received words do not
 necessarily create a new record.
+Read the whole latest message, including framing before and after quoted
+words. Distinguish a reported matter account or actual opposing position
+from a draft, hypothetical or proposition supplied for examination. Being
+quoted does not mean being adopted or becoming a record change. Critical
+review, a legal theory or proposed analytical grouping does not itself
+replace the underlying conduct. A review request can also contribute an
+actual correction, opposing position or new conduct; assess each separately.
 Outcome: Put a distinct new formulation in `new_items`, without `relation`
 or `related_dispute_ids` fields. It cannot retire a saved dispute. Put a
 revision in `changes`, with at least one exact active ID in
@@ -80,7 +92,9 @@ to understand it. Distinguish the matter under discussion from other or
 ambiguous matters, and a reported account from proof or legal inference.
 Outcome: Select a latest `source_id` and any contextual `prior_source_ids`.
 The server attaches exact saved words and each revision target's original
-advocate source. Contextual citations do not authorise a revision. Set
+advocate source. Preserve whose position is reported and how the advocate
+treats it; do not present examination material as an adopted matter account.
+Contextual citations do not authorise a revision. Set
 `matter_scope`, `basis` and `importance` according to the attributed words;
 use current scope only when a current matter ID is supplied, and proposed
 for the opening matter when no current ID exists. Scope identifies which

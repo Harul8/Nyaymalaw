@@ -205,6 +205,7 @@ assert.equal(reads.length, requestsBeforeBoard);
 assert.equal(nodes.get('brain-source-title').textContent, checkedBoard.title);
 assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, checkedBoard.text);
 assert.match(nodes.get('brain-source-body').textContent, /Saved with this dispute's legal requirements/);
+assert.match(nodes.get('brain-source-body').textContent, /historical check predates/);
 assert.ok(nodes.get('brain-source-body').textContent.includes(checkedBoard.verification.support_excerpt));
 assert.ok(nodes.get('brain-source-body').textContent.includes(checkedBoard.verification.scope_excerpt));
 reads.at(-1).resolve(saved); await pendingResponseRead;
@@ -214,6 +215,9 @@ assert.equal(reader.openRecordSource({...checkedBoard, text:'Wrong source text'}
 assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, checkedBoard.text);
 reader.close();
 assert.equal(boardOpener.focused, true);
+
+reader.openRecordSource(checkedBoard, boardOpener, {reviewPending:false});
+assert.doesNotMatch(nodes.get('brain-source-body').textContent, /historical check predates/);
 
 reader.openRecordSource(checkedBoard, boardOpener);
 const afterBoardRead = reader.open(answer, element, 0, 0, opener);

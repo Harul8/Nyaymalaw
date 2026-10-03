@@ -12,6 +12,15 @@ def citation_units(payload, data):
     for unit in result["units"]:
         if not isinstance(unit, dict) or not isinstance(unit.get("blocks"), list):
             continue
+        association = unit.get("work")
+        if ("work_selector" not in unit and isinstance(association, dict)
+                and set(association) == {"existing_id", "create"}
+                and isinstance(association["existing_id"], str)
+                and type(association["create"]) is bool
+                and not (association["existing_id"] and association["create"])):
+            unit["work_selector"] = (association["existing_id"] or
+                                     ("$new_task" if association["create"] else "$no_task"))
+            unit.pop("work")
         for block in unit["blocks"]:
             if not isinstance(block, dict) or "inline_citations" in block:
                 continue
@@ -45,6 +54,8 @@ def reviewed_verdicts(payload, data):
         if not isinstance(row, dict) or row.get("request_index") not in units:
             continue
         unit = units[row["request_index"]]
+        row.setdefault("retained_block_ids", [])
+        row.setdefault("retained_reason", "")
         row.setdefault("block_checks", [{
             "block_id": block["id"],
             "requires_legal_support": bool(block["legal_source_ids"]),

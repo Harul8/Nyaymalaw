@@ -47,6 +47,7 @@ class PublicContinuationModel:
         elif prompt.operation == "verify_material_grounding":
             data = {"verdicts": [
                 {"candidate_id": row["candidate_id"], "verdict": "accept",
+                 "operation_supported": True,
                  "reason": "The opening accurately describes the attributed account."}
                 for row in payload["candidates"]]}
         elif prompt.operation == "continue_conversation":
@@ -110,7 +111,8 @@ def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_va
 
     def repeated_bad(payload):
         assert [row["request_index"] for row in payload["work_items"]] == [0]
-        assert payload["correction"]["rejected_units"] == [bad]
+        assert payload["correction"]["rejected_units"] == citation_units(
+            payload, {"units": [bad]})["units"]
         return {"units": [bad]}
 
     model = PublicContinuationModel(
@@ -245,7 +247,8 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
             self.seen.append((prompt, json.loads(prompt.user), deepcopy(schema)))
             if prompt.operation != "continue_conversation":
                 return super().structured(prompt, schema, tier, max_tokens=max_tokens)
-            return ModelResult(text=None, data={"units": [next(self.replies)]}, tier=tier,
+            data = citation_units(json.loads(prompt.user), {"units": [next(self.replies)]})
+            return ModelResult(text=None, data=data, tier=tier,
                                provider="offline", model="offline", usage=Usage(0, 0, 0),
                                latency_ms=0, completion=Completion.COMPLETE)
 
@@ -608,6 +611,7 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
             elif prompt.operation == "verify_material_grounding":
                 data = {"verdicts": [{
                     "candidate_id": row["candidate_id"], "verdict": "reject",
+                    "operation_supported": False,
                     "reason": "A possibly held, unexamined note does not prove its contents.",
                 } for row in json.loads(prompt.user)["candidates"]]}
             else:

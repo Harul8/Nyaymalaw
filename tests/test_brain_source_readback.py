@@ -138,7 +138,8 @@ def test_gathering_reference_is_a_record_not_raw_legal_source():
     assert "not the words of an Act or judgment" in source["qualification"]
 
 
-@pytest.mark.parametrize("contract", ["research_support_v2", "research_support_v3"])
+@pytest.mark.parametrize("contract", ["research_support_v2", "research_support_v3",
+                                      "research_support_v4"])
 def test_saved_statement_labels_are_read_from_the_owned_reference_without_upgrading_snapshot(
         client, wired, monkeypatch, contract):
     matter, original_sources = saved_sources(wired)
@@ -150,7 +151,7 @@ def test_saved_statement_labels_are_read_from_the_owned_reference_without_upgrad
              "source_treatment": "adopted", "treatment_excerpt": words,
              "support_excerpt": words, "scope_excerpt": "",
              "scope_status": "no_special_condition", "reason": "The selected words state this."}
-    if contract == "research_support_v3":
+    if contract in ("research_support_v3", "research_support_v4"):
         check.update(assertion_role="legislative_text",
                      assertion_statement="The selected synthetic text states the proposition.",
                      context_statements=[])
@@ -168,6 +169,7 @@ def test_saved_statement_labels_are_read_from_the_owned_reference_without_upgrad
     result = response.json()
     assert result["verification"] == check
     assert result["provenance_status"] == "recorded"
+    assert result["verification_current"] is (contract == "research_support_v4")
     assert result["text"] == original_sources[1]["text"]
     assert result["digest"] == original_sources[1]["digest"]
     assert row["response"]["elements"][0]["sources"] == original_sources

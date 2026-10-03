@@ -293,6 +293,58 @@ def test_public_mixed_research_withholds_unsupported_claim_and_retains_adverse_c
     assert len(model.calls) == calls
 
 
+@pytest.mark.parametrize("aspect", ["entailment", "application", "force"])
+def test_public_supported_source_cannot_override_a_rejected_use_and_checked_peer_survives(
+        client, wired, monkeypatch, aspect):
+    overreach = "The quoted condition resolves the requested issue without further limits."
+
+    def readings(payload):
+        row = payload["subjects"][0]
+        bad = finding(row, kind="principle")
+        bad.update(label="Overbroad use of the passage", need=overreach)
+        return {"readings": [{"subject_id": row["subject"]["id"],
+                              "findings": [bad, finding(row, kind="adverse", source_index=1)]}]}
+
+    def checks(payload):
+        decisions = []
+        for row in payload["subjects"]:
+            for candidate in row["candidates"]:
+                decision = supported(candidate)
+                if candidate["need"] == overreach:
+                    decision["use_checks"][aspect].update(
+                        verdict="unsupported",
+                        reason=f"The checked passage does not establish the requested {aspect}.")
+                    assert decision["verdict"] == "supported"
+                    assert all(check["verdict"] == "supported"
+                               for check in decision["source_checks"])
+                decisions.append(decision)
+        return {"decisions": decisions}
+
+    corpus = Corpus()
+    model = ResearchModel([route(QUESTION, research_question=QUESTION)], [research_record_reply],
+                          readings=readings, checks=checks)
+    wire(wired, monkeypatch, model, corpus)
+
+    answer = send(client, QUESTION, f"research-use-owner-{aspect}")
+
+    assert answer["metrics"]["llm_calls"] == 6
+    assert sum(op == "verify_legal_requirements" for op, _ in model.calls) == 1
+    saved = wired.store.load(chat_matter_id("adv_demo", answer["chat_id"]))
+    checked = saved.brain_chat[0]["response"]["research_reads"][0]
+    assert [row["kind"] for row in checked["rows"]] == ["adverse"]
+    assert checked["coverage"]["withheld_items"] == 1
+    assert checked["coverage"]["unread_items"] == 0
+    rejection = checked["coverage"]["rejected_findings"][0]
+    assert rejection["use_checks"][aspect]["verdict"] == "unsupported"
+    proof = checked["rows"][0]["use_verification"]
+    assert proof["contract"] == RESEARCH_VERIFICATION
+    assert all(check["verdict"] == "supported" for check in proof["checks"].values())
+    assert overreach not in json.dumps(answer["elements"])
+    assert JUDGMENT in json.dumps(answer["elements"])
+    assert answer["matter_id"] is None and answer["material"] == []
+    assert answer["continuation"]["coverage"][0]["state"] == "ok"
+
+
 def test_public_general_legal_question_preserves_unread_search_as_pending_without_invented_law(
         client, wired, monkeypatch):
     def limitation(payload):

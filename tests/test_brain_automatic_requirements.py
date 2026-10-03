@@ -78,6 +78,7 @@ class Model:
             data = {"verdicts": [{
                 "candidate_id": row["candidate_id"],
                 "candidate_role": "independent_dispute",
+                "operation_supported": True,
                 "verdict": "accept",
                 "reason": "The reported conduct identifies a distinct dispute.",
             } for row in payload["candidates"]]}
@@ -87,6 +88,7 @@ class Model:
         elif prompt.operation == "verify_material_grounding":
             data = {"verdicts": [{
                 "candidate_id": row["candidate_id"],
+                "operation_supported": True,
                 "verdict": "accept",
                 "reason": "The proposal follows the advocate's attributed words.",
             } for row in payload["candidates"]]}
@@ -107,6 +109,11 @@ class Model:
                 "candidate_id": candidate["candidate_id"],
                 "label_verdict": "faithful",
                 "label_reason": "The short heading restates the supported need.",
+                "use_checks": {name: {
+                    "verdict": "supported", "reason": "The cited passage supports this use.",
+                    "source_ids": [source["id"] for source in candidate["sources"]],
+                    "material_ids": candidate["material_ids"] if name == "application" else [],
+                } for name in ("entailment", "application", "force")},
                 "material_checks": [{
                     "material_id": material_id,
                     "verdict": "addresses",
@@ -394,6 +401,7 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
                         "candidate_id": row["candidate_id"],
                         "candidate_role": "evidence_gap_or_question" if index == 0
                         else "independent_dispute",
+                        "operation_supported": index != 0,
                         "verdict": "reject" if index == 0 else "accept",
                         "reason": "Independent attributed decision.",
                     } for index, row in enumerate(payload["candidates"])]},

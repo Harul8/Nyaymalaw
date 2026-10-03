@@ -302,7 +302,9 @@ def _extraction_schema(*, latest_ids: tuple[str, ...],
     properties = dict(item["properties"])
     properties.pop("matter_scope")
     properties.update({
-        "assignment_ids": {"type": "array", "minItems": 1, "uniqueItems": True,
+        # Uniqueness is checked by the owning assignment validator. It is not
+        # part of the portable structured-output schema accepted by providers.
+        "assignment_ids": {"type": "array", "minItems": 1,
                            "items": {"type": "string", "enum": list(assignment_ids)}},
         "related_material_ids": {"type": "array", "items": {"type": "string",
             **({"enum": list(material_ids)} if material_ids else {})},

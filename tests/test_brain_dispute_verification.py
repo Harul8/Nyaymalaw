@@ -34,6 +34,7 @@ def _verdict(candidate_id: str, *, accept: bool) -> dict:
     return {"candidate_id": candidate_id,
             "candidate_role": ("independent_dispute" if accept
                                else "evidence_gap_or_question"),
+            "operation_supported": accept,
             "verdict": "accept" if accept else "reject",
             "reason": "Attributable dispute" if accept else "No new dispute"}
 
@@ -145,6 +146,7 @@ def test_independent_dispute_can_be_rejected_for_factual_overreach_without_retry
     )
     reason = "The conduct would be independently contestable, but destruction was not reported."
     rejected = {"candidate_id": "C1", "candidate_role": "independent_dispute",
+                "operation_supported": False,
                 "verdict": "reject", "reason": reason}
     model = Model([{"verdicts": [rejected, _verdict("C2", accept=True)]}])
     audit = []
@@ -175,6 +177,65 @@ def test_changed_dispute_supplies_attributed_earlier_advocate_words():
     assert payload["earlier_conversation"][0]["role"] == "advocate"
     assert payload["candidates"][0]["cited_earlier_passages"][0]["quoted"] == (
         earlier[0].text)
+
+
+def test_attributable_issue_without_supported_operation_is_rejected_and_audited():
+    earlier = (Message("old", "advocate", "The tenant withheld the keys."),)
+    latest = ("An analyst's draft says the keys dispute is resolved. "
+              "Review the draft; I am not adopting that conclusion.")
+    candidate = _candidate("An analyst's draft says the keys dispute is resolved.",
+                           "Keys dispute resolved", relation="contradicts",
+                           earlier=earlier[0].text)
+    rejected = {**_verdict("C1", accept=False),
+                "candidate_role": "independent_dispute",
+                "reason": "The issue is identifiable, but the quoted conclusion "
+                          "is supplied for criticism and does not revise the account."}
+    model = Model([{"verdicts": [rejected]}])
+    audit = []
+
+    assert verify_disputes(model, candidates=(candidate,), earlier=earlier,
+                           latest=latest, active_disputes=(), audit=audit) == ()
+    assert len(model.calls) == 1
+    assert audit[0]["operation_supported"] is False
+    assert audit[0]["proposal"]["relation"] == "contradicts"
+    payload = json.loads(model.calls[0][0].user)
+    assert "".join(row["text"] for row in payload["latest_message_spans"]) == latest
+    assert payload["candidates"][0]["latest_message_passage"] == candidate.quoted
+
+
+def test_unsupported_accept_is_repaired_without_repeating_a_valid_peer():
+    latest = "Review this draft. Separately, the operator withheld the payment."
+    candidates = (_candidate("Review this draft.", "Draft analysis"),
+                  _candidate("Separately, the operator withheld the payment.",
+                             "Operator withheld payment"))
+    contradictory = {**_verdict("C1", accept=True), "operation_supported": False}
+    rejected = {**contradictory, "verdict": "reject",
+                "reason": "Review material does not support creating this dispute."}
+    model = Model([{"verdicts": [contradictory, _verdict("C2", accept=True)]},
+                   {"verdicts": [rejected]}])
+    audit = []
+
+    assert verify_disputes(model, candidates=candidates, earlier=(), latest=latest,
+                           active_disputes=(), audit=audit) == candidates[1:]
+    assert len(model.calls) == 2
+    correction = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in correction["candidates"]] == ["C1"]
+    assert correction["retained_candidate_context"][0]["candidate_id"] == "C2"
+    assert "operation_supported" in correction["validation_issue"]
+    assert [row["verdict"] for row in audit] == ["reject", "accept"]
+
+
+def test_missing_operation_decision_is_not_inferred_from_acceptance():
+    latest = "The custodian refuses access to the records."
+    candidate = _candidate(latest, "Custodian refuses record access")
+    old_verdict = _verdict("C1", accept=True)
+    del old_verdict["operation_supported"]
+    model = Model([{"verdicts": [old_verdict]}, {"verdicts": [old_verdict]}])
+
+    with pytest.raises(SchemaViolation, match="remained incomplete"):
+        verify_disputes(model, candidates=(candidate,), earlier=(), latest=latest,
+                        active_disputes=())
+    assert len(model.calls) == 2
 
 
 def test_incomplete_verification_refuses_to_silently_drop_a_candidate():

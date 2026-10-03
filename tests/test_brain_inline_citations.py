@@ -13,6 +13,7 @@ from tests.test_brain_continuation import (
     _continue,
     _operation_names,
     authority_plan,
+    checked_finding,
     checked_law,
     supplied_law,
     unit,
@@ -89,9 +90,9 @@ def test_an_anchor_can_select_the_exact_passage_bound_through_a_checked_finding(
                "owner_id": "synthetic-owner", "purpose": "requested_work",
                "question": "Explain the supplied condition", "record_ids": []}
     research = {"state": "ok", "subjects": {subject["id"]: subject},
-                "by_subject": {subject["id"]: [{"label": "Cited condition",
+                "by_subject": {subject["id"]: [checked_finding({"label": "Cited condition",
                     "need": "Notice depends on the agreement's condition.",
-                    "sources": list(supplied_law())}]},
+                    "sources": list(supplied_law())})]},
                 "coverage_by_subject": {subject["id"]: {
                     "source_freshness": "current", "verification_current": True,
                     "verification_contract": RESEARCH_VERIFICATION}},

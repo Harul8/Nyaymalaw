@@ -6,12 +6,14 @@ attempt keeps its whole reservation, including after a process restart.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from pathlib import Path
+from types import MappingProxyType
 
 from nm.shared.model_port import ConfigurationError, ProviderUnavailable, Usage
 
@@ -25,7 +27,9 @@ RESERVATION_MICRO_USD = 30_000
 class CallBudget:
     def __init__(self, path: Path, maximum_usd: str, *, model: str = MODEL,
                  price_per_million: tuple[str, str] = ("0.15", "0.60"),
-                 reservation_micro_usd: int = RESERVATION_MICRO_USD):
+                 reservation_micro_usd: int = RESERVATION_MICRO_USD,
+                 returned_model_aliases: tuple[str, ...] = (),
+                 require_returned_model: bool = False):
         """A bounded evaluation, pinned to ONE owner-approved model.
 
         THE DEFAULT IS THE PIN, and every server path relies on it: nothing
@@ -44,6 +48,17 @@ class CallBudget:
         if not isinstance(model, str) or not model.strip():
             raise ConfigurationError("An evaluation needs an explicit model identity.")
         self.model = model
+        if (not isinstance(returned_model_aliases, tuple)
+                or any(not isinstance(alias, str) or not alias.strip() or alias == model
+                       for alias in returned_model_aliases)
+                or len(set(returned_model_aliases)) != len(returned_model_aliases)
+                or type(require_returned_model) is not bool):
+            raise ConfigurationError("Returned model identities need an explicit immutable policy.")
+        self.returned_models = (model, *returned_model_aliases)
+        self.require_returned_model = require_returned_model
+        self.identity_policy = json.dumps(
+            {"models": self.returned_models, "required": require_returned_model},
+            sort_keys=True, separators=(",", ":"))
         try:
             self.price_in, self.price_out = (Decimal(x) for x in price_per_million)
             amount = Decimal(maximum_usd)
@@ -80,7 +95,7 @@ class CallBudget:
             # cannot be retrospectively treated as authority to release money.
             columns = {row[1] for row in db.execute("PRAGMA table_info(attempts)")}
             for name, kind in (("price_in", "TEXT"), ("price_out", "TEXT"),
-                               ("reservation", "INTEGER")):
+                               ("reservation", "INTEGER"), ("identity_policy", "TEXT")):
                 if name not in columns:
                     db.execute(f"ALTER TABLE attempts ADD COLUMN {name} {kind}")
 
@@ -106,8 +121,9 @@ class CallBudget:
                     "The approved evaluation budget cannot fund another bounded request."
                 )
             db.execute(
-                "INSERT INTO attempts (id,at,charge,state,model,price_in,price_out,reservation) "
-                "VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO attempts "
+                "(id,at,charge,state,model,price_in,price_out,reservation,identity_policy) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     token,
                     datetime.now(timezone.utc).isoformat(),
@@ -117,6 +133,7 @@ class CallBudget:
                     str(self.price_in),
                     str(self.price_out),
                     self.reservation,
+                    self.identity_policy,
                 ),
             )
         return token
@@ -144,15 +161,19 @@ class CallBudget:
     def settle(self, token: str, response) -> None:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            held = db.execute("SELECT model,price_in,price_out,reservation,state FROM attempts "
+            held = db.execute("SELECT model,price_in,price_out,reservation,state,identity_policy "
+                              "FROM attempts "
                               "WHERE id=?", (token,)).fetchone()
             if held is None or held[4] != "reserved_or_unknown":
                 raise ProviderUnavailable("Evaluation reservation was absent or already settled.")
-            if held[:4] != (self.model, str(self.price_in), str(self.price_out), self.reservation):
+            if (held[:4] != (self.model, str(self.price_in), str(self.price_out), self.reservation)
+                    or held[5] != self.identity_policy):
                 raise ConfigurationError(
                     "A reservation can be settled only under its captured model/prices.")
             returned_model = getattr(response, "model", None)
-            if returned_model is not None and returned_model != held[0]:
+            if returned_model is None and self.require_returned_model:
+                return  # An unestablished billing identity keeps its whole reservation.
+            if returned_model is not None and returned_model not in self.returned_models:
                 raise ConfigurationError("Provider response changed the reserved model identity.")
             usage = getattr(response, "usage", None)
             incoming = getattr(usage, "prompt_tokens", None)
@@ -176,3 +197,61 @@ class CallBudget:
             raise ProviderUnavailable(
                 "Provider usage exceeded the evaluation model's reserved bound.",
                 usage=Usage(incoming, outgoing, cost / 1_000_000))
+
+
+class SessionCallBudget:
+    """Request-bound model terms sharing one existing durable session ledger."""
+
+    def __init__(self, path: Path, maximum_usd: str, *, models: tuple[str, ...]):
+        from nm.shared.model_config import (
+            BILLING_CONTEXT,
+            MAX_OUTPUT,
+            PRICES,
+            RETURNED_MODEL_ALIASES,
+        )
+
+        if (not isinstance(models, tuple) or not models
+                or any(not isinstance(model, str) or not model.strip() for model in models)
+                or len(set(models)) != len(models)):
+            raise ConfigurationError("A bounded session needs distinct configured models.")
+        terms = {}
+        for model in models:
+            if model not in PRICES or model not in BILLING_CONTEXT or model not in MAX_OUTPUT:
+                raise ConfigurationError("Every bounded model needs verified prices and ceilings.")
+            incoming, outgoing = BILLING_CONTEXT[model], MAX_OUTPUT[model]
+            prices = tuple(str(price) for price in PRICES[model])
+            try:
+                decimal_prices = tuple(Decimal(price) for price in prices)
+            except InvalidOperation as exc:
+                raise ConfigurationError(
+                    "Every bounded model needs verified prices and ceilings.") from exc
+            if (any(type(value) is not int or value <= 0 for value in (incoming, outgoing))
+                    or len(decimal_prices) != 2
+                    or any(not price.is_finite() or price < 0 for price in decimal_prices)
+                    or not any(decimal_prices)):
+                raise ConfigurationError("Every bounded model needs verified prices and ceilings.")
+            terms[model] = (prices, incoming, outgoing, RETURNED_MODEL_ALIASES.get(model, ()))
+        self.models = models
+        self._terms = MappingProxyType(terms)
+        self.path = Path(path)
+        self.maximum_usd = maximum_usd
+        # Establish the shared maximum at startup without reserving or dispatching.
+        self._ledger, _ = self.for_request(models[0], None)
+
+    def for_request(self, model: str, output_tokens: int | None) -> tuple[CallBudget, int]:
+        if model not in self._terms:
+            raise ConfigurationError("This bounded session does not authorise the selected model.")
+        prices, context_ceiling, output_ceiling, aliases = self._terms[model]
+        limit = output_ceiling if output_tokens is None else output_tokens
+        if type(limit) is not int or not 0 < limit <= output_ceiling:
+            raise ConfigurationError(
+                "The request output ceiling is not within the verified model bound.")
+        reserve = int((Decimal(context_ceiling) * Decimal(prices[0])
+                       + Decimal(limit) * Decimal(prices[1]))
+                      .to_integral_value(rounding=ROUND_CEILING))
+        return CallBudget(self.path, self.maximum_usd, model=model,
+                          price_per_million=prices, reservation_micro_usd=reserve,
+                          returned_model_aliases=aliases, require_returned_model=True), limit
+
+    def status(self) -> dict:
+        return self._ledger.status()

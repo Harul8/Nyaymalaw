@@ -38,6 +38,7 @@ def detail(quoted, statement, *, earlier=""):
 
 def verdict(candidate_id, *, accept=True, reason="Grounded"):
     return {"candidate_id": candidate_id,
+            "operation_supported": accept,
             "verdict": "accept" if accept else "reject", "reason": reason}
 
 

@@ -51,6 +51,7 @@ class Model:
             payload = json.loads(prompt.user)
             data = {"verdicts": [
                 {"candidate_id": row["candidate_id"], "verdict": "accept",
+                 "operation_supported": True,
                  "reason": "The proposal is attributable."}
                 for row in payload["candidates"]]}
         else:
@@ -192,6 +193,7 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
                 if self.grounding_checks == 1:
                     rejected = {"verdicts": [
                         {"candidate_id": "O1", "verdict": "reject",
+                         "operation_supported": False,
                          "reason": "A clearly named client was omitted."}]}
                     return replace(result, data=rejected)
             return result
@@ -231,6 +233,25 @@ def test_turn_metrics_separate_logical_calls_from_provider_retries(tmp_path):
     assert response["metrics"]["provider_retries"] == 2
     assert [row["operation"] for row in response["metrics"]["model_calls"]] == [
         "interpret_conversation"]
+
+
+@pytest.mark.parametrize("usage", [None, Usage(21, 8, 0.002)])
+def test_rejected_model_output_preserves_measured_usage_without_inventing_zero_cost(usage):
+    from nm.brain.turn import _CountedModel
+    from nm.shared.model_port import Prompt
+
+    class FailingModel:
+        def structured(self, *args, **kwargs):
+            raise SchemaViolation("Rejected result", usage=usage, retries=1)
+
+    counted = _CountedModel(FailingModel())
+    with pytest.raises(SchemaViolation):
+        counted.structured(Prompt(user="Synthetic test", operation="review"), {}, Tier.JUDGE)
+    receipt = counted.metrics()["model_calls"][0]
+    assert receipt["usage_recorded"] is (usage is not None)
+    assert receipt["cost_usd"] == (usage.cost_usd if usage else None)
+    assert receipt["tokens_in"] == (usage.tokens_in if usage else 0)
+    assert counted.metrics()["provider_retries"] == 1
 
 
 def test_context_overflow_has_a_nonretryable_plain_recovery_path(tmp_path):
@@ -484,17 +505,18 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
             if prompt.operation != "extract_legal_details":
                 return result
             payload = json.loads(prompt.user)
+            payload = payload.get("original_input", payload)
             if not any("Correction:" in span["text"]
                        for span in payload["latest_message_spans"]):
                 source_id = next(span["id"] for span in payload["latest_message_spans"]
                                  if "hearing is on Tuesday" in span["text"])
-                return replace(result, data={"new_items": [{
+                return replace(result, data=reader_operations([{
                     "kind": "event", "statement": "The advocate reports a Tuesday hearing.",
                     "matter_scope": "proposed", "basis": "stated",
                     "importance": "central",
                     "why_material": "The hearing date affects the next step.",
                     "placement": "unresolved", "dispute_ids": [], "source_id": source_id,
-                }], "changes": []})
+                }], payload, link_field="related_material_ids"))
             earlier_id = next(
                 span["id"] for message in payload["earlier_conversation"]
                 if message["role"] == "advocate"
@@ -603,10 +625,13 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
             if prompt.operation == "verify_material_grounding":
                 return replace(result, data={"verdicts": [
                     {"candidate_id": "D1", "verdict": "accept",
+                     "operation_supported": True,
                      "reason": "The notice is reported."},
                     {"candidate_id": "D2", "verdict": "reject",
+                     "operation_supported": False,
                      "reason": "No admission was reported."},
                     {"candidate_id": "O1", "verdict": "reject",
+                     "operation_supported": False,
                      "reason": "The opening adds an admission."},
                 ]})
             return result
@@ -619,8 +644,10 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     assert response["metrics"]["llm_calls"] == 8
     assert [row["statement"] for row in response["material"]] == [
         "We sent a notice."]
-    assert response["material_coverage"] == {
+    assert {key: response["material_coverage"][key] for key in (
+        "state", "withheld_details", "opening_fallback")} == {
         "state": "partial", "withheld_details": 1, "opening_fallback": True}
+    assert len(response["material_coverage"]["rejected_proposals"]) == 1
     saved = store.load(response["matter_id"])
     assert saved.title == "Matter"
     assert "admitted" not in saved.brain_opening_summary

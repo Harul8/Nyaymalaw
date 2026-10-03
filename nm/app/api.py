@@ -791,7 +791,7 @@ def _brain_source(matter, turn_id: str, element_index: int,
                   source_index: int, *, chat_id: str | None = None) -> dict:
     from copy import deepcopy
 
-    from nm.brain.legal_requirements import source_verification_valid
+    from nm.brain.legal_requirements import RESEARCH_VERIFICATION, source_verification_valid
     from nm.brain.source_snapshots import inline_source_links, source_snapshots
 
     missing = HTTPException(404, "No accessible saved source.")
@@ -854,11 +854,12 @@ def _brain_source(matter, turn_id: str, element_index: int,
                          if item["id"] == source["id"])
         verification = reference.get("verification")
         contract = verification.get("contract") if isinstance(verification, dict) else None
-        if contract in ("research_support_v2", "research_support_v3"):
+        if contract in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION):
             if not source_verification_valid(reference, contract=contract):
                 raise missing
             provenance = {"verification": deepcopy(verification),
-                          "provenance_status": "recorded"}
+                          "provenance_status": "recorded",
+                          "verification_current": contract == RESEARCH_VERIFICATION}
         else:
             provenance = {"provenance_status": "not_recorded"}
     return {**{key: source[key] for key in (
