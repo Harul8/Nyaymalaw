@@ -23,14 +23,20 @@ from nm.brain.dispute_verification import verify_disputes
 from nm.brain.disputes import extract_disputes
 from nm.brain.history import from_turns, released_older_turns
 from nm.brain.legal_requirements import (
-    decompose,
-    read_requirements,
-    verify_requirements,
+    decompose_subjects,
+    read_findings,
+    verify_findings,
 )
 from nm.brain.material import extract_details
 from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
-from nm.brain.requirements_state import requirements_record
+from nm.brain.requirements_state import (
+    RESEARCH_VERIFICATION,
+    dispute_research_subjects,
+    requirements_record,
+    research_owner_id,
+    research_record,
+)
 from nm.brain.source_snapshots import source_snapshots
 from nm.brain.work_state import project_work, seal_progress
 from nm.shared.model_port import (
@@ -173,7 +179,53 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None
             "matter_version": matter.version if matter.brain_ready else None}
 
 
-def _current_records(store: StorePort, matter: Matter) -> tuple[Conversation, dict, dict]:
+def _research_subjects(matter: Matter, disputes: dict, material: dict,
+                       plan=None) -> tuple[tuple[dict, ...], dict]:
+    subjects, contexts = dispute_research_subjects(
+        matter, disputes=disputes, material=material)
+    active = {subject["id"]: subject for subject in subjects}
+    # Validate the saved owner before inspecting even inactive request metadata.
+    checked = research_record(matter, subjects=(), material_by_subject={})
+    if checked["state"] != "ok":
+        raise IncompleteConversation("The saved research ownership is incomplete")
+    requested = {}
+    for turn in matter.brain_chat:
+        for read in turn["response"].get("research_reads", []):
+            subject = read["subject"]
+            if subject["kind"] == "request":
+                requested[subject["id"]] = dict(subject)
+    if plan is not None:
+        for item in plan.items:
+            if item.next_step != "legal_work" or not item.research_question:
+                continue
+            scope = ("current" if item.matter_scope == "proposed" and matter.brain_ready
+                     else item.matter_scope)
+            subject = dict(kind="request", owner_id=research_owner_id(matter),
+                           scope=scope, purpose="requested_work",
+                           question=item.research_question, record_ids=[])
+            subject["id"] = "rq_" + _digest(subject)[:32]
+            requested[subject["id"]] = subject
+    record_context = [*disputes["rows"], *material["rows"]]
+    for identity, subject in requested.items():
+        context = record_context if subject["scope"] in ("current", "proposed") else []
+        subject["record_ids"] = [row["id"] for row in context]
+        contexts[identity] = context
+        active[identity] = subject
+    return tuple(active.values()), contexts
+
+
+def _project_research(matter, disputes, material, corpus_revision, plan=None):
+    subjects, contexts = _research_subjects(matter, disputes, material, plan)
+    current = research_record(matter, subjects=subjects,
+                              material_by_subject=contexts,
+                              corpus_revision=corpus_revision)
+    if current["state"] != "ok":
+        raise IncompleteConversation("The saved research record is incomplete")
+    return current, contexts
+
+
+def _current_records(store: StorePort, matter: Matter,
+                     corpus_revision: str | None = None) -> tuple[Conversation, dict, dict]:
     older = released_older_turns(store, matter)
     rows = [*older, *matter.brain_chat]
     conversation = from_turns(
@@ -191,13 +243,20 @@ def _current_records(store: StorePort, matter: Matter) -> tuple[Conversation, di
                               prior_conversation=older_context)
     if details["state"] != "ok":
         raise IncompleteConversation("The saved material context is incomplete")
+    research, _ = _project_research(matter, disputes, details, corpus_revision)
+    coverage = tuple({**subject,
+                      "coverage": research["coverage_by_subject"][identity],
+                      "finding_kinds": sorted({row["kind"] for row in
+                                               research["by_subject"][identity]})}
+                     for identity, subject in research["subjects"].items())
     return (replace(conversation, open_disputes=tuple(disputes["rows"]),
                     open_material=tuple(details["rows"]), progress=progress,
+                    research_coverage=coverage,
                     current_work=progress["active_work"]), disputes, details)
 
 
-def _history(store: StorePort, matter: Matter) -> Conversation:
-    return _current_records(store, matter)[0]
+def _history(store: StorePort, matter: Matter, corpus_revision=None) -> Conversation:
+    return _current_records(store, matter, corpus_revision)[0]
 
 
 def _reply(plan) -> tuple[str, bool, bool]:
@@ -277,156 +336,78 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str)
 
 
 def _legal_reads(model, search, *, conversation: Conversation,
-                 disputes: dict, material: dict, current: dict) -> list[dict]:
-    """Research changed identified disputes, keeping model and corpus failures visible."""
-    due = tuple(row for row in disputes["rows"]
-                if current["status_by_dispute"].get(row["id"]) != "ok"
-                and row.get("identification") == "identified")
+                 subjects: tuple[dict, ...], material_by_subject: dict,
+                 current: dict, corpus_revision: str | None) -> list[dict]:
+    """Research due independent subjects; bounded correction belongs to each reader."""
+    due = tuple(subject for subject in subjects
+                if not current["reuse_allowed"].get(subject["id"], False))
     if not due:
         return []
-    material_by_dispute = {
-        row["id"]: [*material["by_dispute"].get(row["id"], []),
-                    *material["matter"]]
-        for row in due
-    }
-    fingerprints = current["fingerprints"]
-
-    def unavailable(row: dict, reason: str,
-                    queries: tuple[str, ...] = ()) -> dict:
-        return {"dispute_id": row["id"],
-                "fingerprint": fingerprints[row["id"]],
-                "state": "unavailable", "rows": [],
-                "queries": list(queries), "diagnostics": [reason]}
-
-    local_errors = (SchemaViolation, ContextOverflow, OutputTruncated)
-    planning_errors: dict[str, str] = {}
-    try:
-        queries = decompose(
-            model, disputes=due, material_by_dispute=material_by_dispute,
-            conversation=conversation.messages)
-    except ModelError as exc:
-        reason = f"Legal search planning did not finish ({type(exc).__name__})"
-        if not isinstance(exc, local_errors) or len(due) == 1:
-            return [unavailable(row, reason) for row in due]
-        queries = {}
-        for index, row in enumerate(due):
-            dispute_id = row["id"]
-            try:
-                queries.update(decompose(
-                    model, disputes=(row,),
-                    material_by_dispute={dispute_id: material_by_dispute[dispute_id]},
-                    conversation=conversation.messages))
-            except ModelError as isolated:
-                reason = ("Legal search planning did not finish "
-                          f"({type(isolated).__name__})")
-                planning_errors[dispute_id] = reason
-                if not isinstance(isolated, local_errors):
-                    planning_errors.update(
-                        (remaining["id"], reason) for remaining in due[index + 1:])
-                    break
-
+    contexts = {subject["id"]: material_by_subject[subject["id"]] for subject in due}
+    planned = decompose_subjects(model, subjects=due, material_by_subject=contexts,
+                                 conversation=conversation.messages)
     results = {}
-    for row in due:
-        dispute_id = row["id"]
-        if dispute_id not in queries:
+    for subject in due:
+        identity = subject["id"]
+        if identity not in planned.rows:
             continue
         try:
             started = perf_counter()
-            result = search.search_dispute(row, queries[dispute_id])
+            result = search.search_subject(subject, planned.rows[identity])
             logging.getLogger(__name__).info("Legal corpus search finished: %sms",
                                             int((perf_counter() - started) * 1000))
             if (not isinstance(result, dict)
                     or result.get("state") not in ("ok", "partial", "unavailable")
                     or not isinstance(result.get("candidates"), list)):
                 raise ValueError("search returned no reliable state")
-            results[dispute_id] = result
-        except Exception:  # noqa: BLE001 -- search is a fallible local adapter
-            results[dispute_id] = {
-                "state": "unavailable", "candidates": [],
-                "diagnostics": ["Legal corpus search did not finish"]}
-    planned = tuple(row for row in due if row["id"] in queries)
-    reading_errors: dict[str, str] = {}
-    found = {}
-    if planned:
-        try:
-            found = read_requirements(
-                model, disputes=planned,
-                material_by_dispute={row["id"]: material_by_dispute[row["id"]]
-                                     for row in planned},
-                search_results=results, conversation=conversation.messages)
-        except ModelError as exc:
-            reason = f"Legal passage reading did not finish ({type(exc).__name__})"
-            if not isinstance(exc, local_errors) or len(planned) == 1:
-                reading_errors.update((row["id"], reason) for row in planned)
-            else:
-                for index, row in enumerate(planned):
-                    dispute_id = row["id"]
-                    try:
-                        found.update(read_requirements(
-                            model, disputes=(row,),
-                            material_by_dispute={
-                                dispute_id: material_by_dispute[dispute_id]},
-                            search_results={dispute_id: results[dispute_id]},
-                            conversation=conversation.messages))
-                    except ModelError as isolated:
-                        reason = ("Legal passage reading did not finish "
-                                  f"({type(isolated).__name__})")
-                        reading_errors[dispute_id] = reason
-                        if not isinstance(isolated, local_errors):
-                            reading_errors.update(
-                                (remaining["id"], reason)
-                                for remaining in planned[index + 1:])
-                            break
+            results[identity] = result
+        except Exception:  # noqa: BLE001 -- local adapter failure has a subject owner
+            results[identity] = dict(state="unavailable", candidates=[],
+                                     diagnostics=["Legal corpus search did not finish"])
+    readable = tuple(subject for subject in due if subject["id"] in results
+                     and results[subject["id"]]["state"] != "unavailable")
+    found = read_findings(model, subjects=readable,
+                         material_by_subject={row["id"]: contexts[row["id"]]
+                                              for row in readable},
+                         search_results={row["id"]: results[row["id"]]
+                                         for row in readable},
+                         conversation=conversation.messages)
+    verifiable = tuple(subject for subject in readable if subject["id"] in found.rows)
+    checked = verify_findings(model, subjects=verifiable,
+                              material_by_subject={row["id"]: contexts[row["id"]]
+                                                   for row in verifiable},
+                              proposed={row["id"]: found.rows[row["id"]]
+                                        for row in verifiable},
+                              conversation=conversation.messages)
     reads = []
-    verification_outage = None
-    for row in due:
-        dispute_id = row["id"]
-        if dispute_id not in queries:
-            reads.append(unavailable(
-                row, planning_errors.get(dispute_id, "Legal search planning did not finish")))
-            continue
-        if dispute_id not in found:
-            reads.append(unavailable(
-                row, reading_errors.get(dispute_id, "Legal passage reading did not finish"),
-                queries[dispute_id]))
-            continue
-        if verification_outage is not None:
-            reads.append(unavailable(row, verification_outage, queries[dispute_id]))
-            continue
-        try:
-            verification = verify_requirements(
-                model, disputes=(row,),
-                material_by_dispute={dispute_id: material_by_dispute[dispute_id]},
-                proposed={dispute_id: found[dispute_id]},
-                conversation=conversation.messages)
-        except ModelError as exc:
-            logging.getLogger(__name__).warning(
-                "Legal source verification rejected dispute %s: %s",
-                dispute_id, exc)
-            reason = ("Legal source verification did not finish "
-                      f"({type(exc).__name__})")
-            reads.append(unavailable(row, reason, queries[dispute_id]))
-            if isinstance(exc, (ProviderUnavailable, ConfigurationError)):
-                verification_outage = reason
-            continue
-        verified = verification.rows[dispute_id]
-        coverage = verification.coverage[dispute_id]
-        if verification.outage:
-            verification_outage = "Legal source verification could not be completed"
-        reads.append({"dispute_id": dispute_id,
-                      "fingerprint": fingerprints[dispute_id],
-                      "state": ("partial" if coverage["state"] != "ok"
-                                and results[dispute_id]["state"] == "ok"
-                                else results[dispute_id]["state"]),
-                      "rows": verified,
-                      "verification": "source_support_v4",
-                      "coverage": coverage,
-                      "queries": list(queries[dispute_id]),
-                      "diagnostics": [
-                          *results[dispute_id].get("diagnostics", []),
-                          *coverage["diagnostics"],
-                          *(["Unsupported legal items or citations were withheld"]
-                            if verified != found[dispute_id] else [])]})
+    for subject in due:
+        identity = subject["id"]
+        diagnostics, stages = [], []
+        for stage in (planned, found, checked):
+            coverage = stage.coverage.get(identity)
+            if coverage is not None:
+                stages.append(coverage)
+                diagnostics.extend(coverage.get("diagnostics", []))
+        result = results.get(identity, {})
+        diagnostics.extend(result.get("diagnostics", []))
+        verified = checked.rows.get(identity, [])
+        completed = identity in checked.rows
+        stage_ok = all(stage.get("state") == "ok" for stage in stages)
+        state = ("ok" if completed and stage_ok and result.get("state") == "ok"
+                 else "partial" if completed or verified else "unavailable")
+        coverage = dict(checked.coverage.get(identity) or {
+            "checked_items": 0, "unread_items": 1, "withheld_items": 0})
+        coverage["unread_items"] = max(
+            (stage.get("unread_items", 0) for stage in stages), default=1)
+        if not completed:
+            coverage["unread_items"] = max(1, coverage["unread_items"])
+        coverage["withheld_items"] = sum(stage.get("withheld_items", 0) for stage in stages)
+        coverage.update(state=state, diagnostics=list(dict.fromkeys(diagnostics)))
+        reads.append(dict(subject=subject, fingerprint=current["fingerprints"][identity],
+                          corpus_revision=corpus_revision, state=state, rows=verified,
+                          verification=RESEARCH_VERIFICATION, coverage=coverage,
+                          queries=list(planned.rows.get(identity, ())),
+                          diagnostics=coverage["diagnostics"]))
     return reads
 
 
@@ -472,8 +453,13 @@ class BrainService:
         if turn.turn_id in matter.turns_applied:
             raise BrainRefused(409, "This turn already belongs to an earlier response")
         counted_model = _CountedModel(self.model)
+        revision_reader = getattr(self.legal_search, "revision", None)
         try:
-            conversation = (_history(self.store, matter) if persisted else
+            corpus_revision = revision_reader() if callable(revision_reader) else None
+        except Exception:  # noqa: BLE001 -- unknown freshness disables research reuse
+            corpus_revision = None
+        try:
+            conversation = (_history(self.store, matter, corpus_revision) if persisted else
                             Conversation((), progress=project_work(matter)))
             plan = interpret(counted_model, conversation, turn.message)
             candidates = (_read_material(counted_model, conversation,
@@ -583,7 +569,7 @@ class BrainService:
                         "state": "partial" if grounded.rejected_details else "ok",
                         "withheld_details": grounded.rejected_details,
                         "opening_fallback": not opening_supported},
-                    "requirements_read": [],
+                    "research_reads": [],
                     "metrics": counted_model.metrics(),
                     "replayed": False, "committed": "committed", "input_admitted": False,
                     "matter_version": matter.version + 1 if ready else None,
@@ -603,43 +589,43 @@ class BrainService:
         try:
             if candidates or ready or continuation_indexes(plan):
                 current_conversation, disputes, details = _current_records(
-                    self.store, updated)
-                if self.legal_search is not None and ready and (
-                        candidates or plan.material_review or needs_work):
-                    current = requirements_record(
-                        updated, disputes=disputes, material=details)
+                    self.store, updated, corpus_revision)
+                current, contexts = _project_research(
+                    updated, disputes, details, corpus_revision, plan)
+                questions = {item.research_question for item in plan.items
+                             if item.next_step == "legal_work" and item.research_question}
+                current_enquiry = any(item.next_step == "legal_work" and
+                                      item.matter_scope in ("current", "proposed") and
+                                      item.research_question for item in plan.items)
+                subjects = tuple(subject for subject in current["subjects"].values()
+                    if (subject["kind"] == "request" and subject["question"] in questions)
+                    or (subject["kind"] == "dispute" and
+                        (candidates or plan.material_review or current_enquiry)))
+                if self.legal_search is not None and subjects:
                     reads = _legal_reads(
                         counted_model, self.legal_search,
                         conversation=replace(
                             current_conversation,
                             messages=(*conversation.messages,
                                       Message(turn.turn_id, "advocate", turn.message))),
-                        disputes=disputes, material=details, current=current)
-                    accepted = []
-                    isolated_turn = replace(updated, brain_chat=(row,))
-                    for read in reads:
-                        response["requirements_read"] = [read]
-                        checked = requirements_record(
-                            isolated_turn, disputes=disputes, material=details)
-                        dispute_id = read["dispute_id"]
-                        if (checked["state"] == "ok"
-                                and checked["status_by_dispute"].get(dispute_id)
-                                == read["state"]
-                                and checked["by_dispute"].get(dispute_id)
-                                == read["rows"]):
-                            accepted.append(read)
-                        else:
-                            logging.getLogger(__name__).warning(
-                                "Legal read projection rejected dispute %s", dispute_id)
-                    response["requirements_read"] = accepted
+                        subjects=subjects, material_by_subject=contexts,
+                        current=current, corpus_revision=corpus_revision)
+                    response["research_reads"] = reads
+                    # Persist only a fully attributable canonical projection;
+                    # ordinary rejected proposals already have local coverage.
+                    current, _ = _project_research(
+                        updated, disputes, details, corpus_revision, plan)
                     response["metrics"] = counted_model.metrics()
             if continuation_indexes(plan):
                 checked = requirements_record(
-                    updated, disputes=disputes, material=details)
+                    updated, disputes=disputes, material=details,
+                    corpus_revision=corpus_revision)
+                current, _ = _project_research(
+                    updated, disputes, details, corpus_revision, plan)
                 continuation = continue_conversation(
                     counted_model, conversation=conversation, latest=turn.message,
                     latest_turn_id=turn.turn_id, plan=plan, disputes=disputes,
-                    material=details, requirements=checked,
+                    material=details, requirements=checked, research=current,
                     progress=conversation.progress).as_dict()
                 continuation = seal_progress(
                     continuation, matter_id=str(matter.id), turn_id=turn.turn_id,
@@ -671,7 +657,7 @@ class BrainService:
             # This compatibility field is a projection, never a second owner.
             row["active_work_after"] = progress["active_work"]
             response["metrics"] = counted_model.metrics()
-        except IncompleteConversation as exc:
+        except (IncompleteConversation, SchemaViolation) as exc:
             raise BrainRefused(
                 409, "The saved context or its sources could not be verified. "
                 "Reload this conversation before continuing."

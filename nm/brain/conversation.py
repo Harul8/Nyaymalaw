@@ -48,6 +48,7 @@ class Conversation:
     open_material: tuple[dict, ...] = ()
     complete: bool = True
     progress: dict | None = None
+    research_coverage: tuple[dict, ...] = ()
 
     def __post_init__(self) -> None:
         if len({(item.turn_id, item.role) for item in self.messages}) != len(self.messages):
@@ -64,6 +65,7 @@ class WorkItem:
     reply: str = ""
     clarification: str = ""
     intent: Literal["request", "contribution"] = "request"
+    research_question: str = ""
 
 
 @dataclass(frozen=True)
@@ -108,7 +110,7 @@ _SCHEMA = {
             "type": "object", "additionalProperties": False,
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
-                         "clarification", "intent"],
+                         "clarification", "intent", "research_question"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -121,6 +123,7 @@ _SCHEMA = {
                     "answer", "legal_work", "clarify"]},
                 "reply": {"type": "string"},
                 "clarification": {"type": "string"},
+                "research_question": {"type": "string"},
             },
         }},
         "opening": {
@@ -268,6 +271,27 @@ reader will identify and source the proposals; do not extract them here.
 A requested NM activity changes work progress, not the matter's factual
 record. Distinguish such work from the client's desired real-world outcome.
 
+Activity 5 - Define the needed legal-source enquiry.
+Purpose: Identify a retrieval question for the requested activity, without
+deciding its answer or asserting law from memory.
+Look for: The legal proposition, conditions, competing positions or requested
+work that needs authority. Compare the purpose and scope of saved research
+coverage with the latest request. Gathering needs alone do not establish a
+merits opinion, legal principle, remedy or drafting basis. A purely attributed
+recap or factual clarification can proceed without a new legal-source enquiry.
+Outcome: For every item needing a legal proposition, assessment, remedy,
+strategy or other legal-authority basis, keep `research_question` nonempty:
+state a concise self-contained enquiry identifying the authority needed.
+When saved research addresses the same enquiry, copy that exact question;
+the server decides whether its coverage is current and reusable. A saved
+coverage label or earlier NM explanation is not a legal passage. Preserve
+applicable jurisdiction or timing
+only when supplied; expose missing scope rather than inventing it. A question
+is a search hypothesis, not a finding. Leave it empty only when the immediate
+work needs conversation attribution rather than a legal-authority basis.
+Leave it empty for answer/clarify.
+Do not invent a dispute to support a general legal question.
+
 Outcome: Return only the declared JSON object with `items`,
 `opening`, and `material_review`. Do not alter any matter
 record."""
@@ -377,6 +401,7 @@ def _prompt(conversation: Conversation, latest: str) -> Prompt:
         "current_matter_id": conversation.current_matter_id,
         "current_work": conversation.current_work,
         "saved_progress": conversation.progress,
+        "saved_research_coverage": list(conversation.research_coverage),
         "open_disputes": [
             {key: row.get(key) for key in (
                 "id", "label", "statement", "identification", "clarification")}
@@ -427,8 +452,10 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
         request = row.get("request")
         reply = row.get("reply")
         clarification = row.get("clarification")
+        research_question = row.get("research_question")
         if (not isinstance(request, str) or not request.strip()
-                or not isinstance(reply, str) or not isinstance(clarification, str)):
+                or not isinstance(reply, str) or not isinstance(clarification, str)
+                or not isinstance(research_question, str)):
             raise SchemaViolation("A work item lacks a usable request")
         if row.get("next_step") in ("answer", "legal_work") and not reply.strip():
             raise SchemaViolation("A response needs reply text for its chosen step")
@@ -448,7 +475,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             priority=row["priority"],
                             next_step=row["next_step"],
                             reply=reply,
-                            clarification=clarification, intent=row["intent"])
+                            clarification=clarification, intent=row["intent"],
+                            research_question=research_question.strip())
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")
@@ -466,6 +494,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                 "A source-free answer must have matter_scope=none. For a "
                 "matter-specific reply, select legal_work so its attribution "
                 "and progress are checked before release")
+        if item.next_step != "legal_work" and item.research_question:
+            raise SchemaViolation("Only legal_work may propose a research question")
         items.append(item)
     candidate = data.get("opening")
     if not isinstance(candidate, dict):

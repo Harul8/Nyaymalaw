@@ -17,6 +17,7 @@ from nm.brain.history import IncompleteConversation
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ModelResult,
+    OutputTruncated,
     ProviderUnavailable,
     SchemaViolation,
     Tier,
@@ -32,6 +33,7 @@ class ContinuationModel:
         self.replies = iter(replies)
         self.calls = []
         self.tiers = []
+        self.output_limits = []
 
     def context_budget(self, tier):
         return 100_000
@@ -43,6 +45,7 @@ class ContinuationModel:
         payload = json.loads(prompt.user)
         self.calls.append((prompt, payload))
         self.tiers.append(tier)
+        self.output_limits.append(max_tokens)
         reply = next(self.replies)
         if isinstance(reply, Exception):
             raise reply
@@ -149,6 +152,59 @@ def test_first_turn_checks_the_entire_visible_reply_and_resolves_exact_words():
             assert heading in prompt.system
 
 
+def test_truncated_writer_gets_one_bounded_correction_then_independent_review():
+    model = ContinuationModel([
+        OutputTruncated("The writer reached its output limit."),
+        {"units": [unit()]}, verdict(0),
+    ])
+    result = _continue(model)
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    assert model.tiers == [Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
+    assert model.output_limits[1] == min(16384, model.output_limits[0] * 2)
+    correction = model.calls[1][1]
+    assert "output" in json.dumps(correction["correction"]["validation_issues"]).lower()
+    assert correction["correction"]["rejected_units"] is None
+    assert correction["latest_message_spans"] == model.calls[0][1]["latest_message_spans"]
+    assert correction["earlier_conversation"] == model.calls[0][1]["earlier_conversation"]
+    assert result.coverage[0]["state"] == "ok" and len(result.units) == 1
+    assert model.calls[2][1]["units"] == [unit()]
+    assert result.units[0]["blocks"][0]["references"][0]["text"] == "I have a signed receipt."
+
+
+def test_repeated_writer_truncation_withholds_the_unit_without_a_third_attempt():
+    model = ContinuationModel([
+        OutputTruncated("The writer reached its output limit."),
+        OutputTruncated("The corrected writer also reached its output limit."),
+    ])
+    result = _continue(model)
+    assert _operation_names(model) == ["continue_conversation", "continue_conversation"]
+    assert model.output_limits[1] == min(16384, model.output_limits[0] * 2)
+    assert result.units == () and result.coverage[0]["state"] == "unavailable"
+
+
+def test_truncated_peer_correction_does_not_repeat_or_discard_the_checked_peer():
+    items = (WorkItem("Recap the reported account", "new", "proposed", "ordinary",
+                      "legal_work", "I will recap the account."),
+             WorkItem("Assess the reported record", "new", "proposed", "ordinary",
+                      "legal_work", "I will assess the record."))
+    good, rejected = unit(0), unit(1)
+    mixed = {"verdicts": [*verdict(0)["verdicts"],
+                          *verdict(1, accept=False,
+                                   reason="The assessment needs support.")["verdicts"]]}
+    model = ContinuationModel([
+        {"units": [good, rejected]}, mixed,
+        OutputTruncated("The replacement unit reached its output limit."),
+    ])
+    result = _continue(model, plan=conversation_plan(items=items))
+    assert _operation_names(model) == [
+        "continue_conversation", "verify_continuation", "continue_conversation"]
+    assert [row["request_index"] for row in result.units] == [0]
+    assert [row["state"] for row in result.coverage] == ["ok", "unavailable"]
+    assert [row["request_index"] for row in model.calls[2][1]["work_items"]] == [1]
+    assert model.calls[2][1]["correction"]["rejected_units"] == [rejected]
+
+
 @pytest.mark.parametrize("accepted", (True, False))
 def test_mixed_purpose_block_links_semantic_work_and_requires_independent_review(accepted):
     proposed = mixed_purpose_unit()
@@ -241,6 +297,143 @@ def test_one_passage_preserves_the_distinct_checked_uses_of_two_requirements():
     assert len({row["source_use_id"] for row in catalogue.values()}) == 2
     assert result.units[0]["blocks"][0]["references"][0]["turn_id"] == (
         "current-turn-identity")
+
+
+@pytest.mark.parametrize(("freshness", "source_turn", "available"), [
+    ("stale", "older-turn", False), ("unknown", "older-turn", False),
+    ("current", "older-turn", True), ("unknown", "current-turn", True),
+])
+def test_gathering_source_freshness_is_preserved_and_gates_old_passage_uses(
+        freshness, source_turn, available):
+    coverage = {"D1": {"state": "ok", "source_freshness": freshness,
+                       "reuse_allowed": freshness == "current"}}
+    requirements = {
+        "state": "ok", "status_by_dispute": {"D1": "ok"},
+        "coverage_by_dispute": coverage, "source_turn_id_by_dispute": {"D1": source_turn},
+        "by_dispute": {"D1": [{"label": "Identify the applicable instrument", "sources": [{
+            "id": "A1", "kind": "provision", "title": "Supplied Act", "locator": "section 1",
+            "text": "The instrument defines the obligation.",
+            "verification": {"reason": "The selected passage concerns the instrument."},
+        }]}]},
+    }
+    disputes = {"state": "ok", "rows": [{"id": "D1", "label": "Contested obligation"}]}
+    model = ContinuationModel([{"units": [unit()]}, verdict(0)])
+    _continue(model, requirements=requirements, disputes=disputes, latest_turn_id="current-turn")
+    payload = model.calls[0][1]
+    assert payload["legal_coverage"] == coverage
+    assert bool(payload["legal_sources"]) is available
+    assert any(row["type"] == "requirement"
+               for row in payload["record_catalogue"].values()) is available
+
+
+def authority_plan():
+    return conversation_plan(items=(WorkItem(
+        request="Explain the relevant legal condition", relation="new", matter_scope="none",
+        priority="ordinary", next_step="legal_work", reply="I will check the relevant passages.",
+        research_question="Which legal condition does the supplied passage establish?"),))
+
+
+def supplied_law():
+    return ({"id": "A1", "subject_id": "law-question", "kind": "provision",
+             "title": "Supplied Act", "locator": "section 1",
+             "text": "If the agreement requires notice, give written notice.",
+             "verification": {"reason": "This passage identifies a conditional notice duty."}},)
+
+
+@pytest.mark.parametrize("complete", [False, True])
+def test_authority_needed_units_cannot_release_using_only_user_words(complete):
+    proposed = unit()
+    if complete:
+        proposed["blocks"] = [{"id": "account", "kind": "account",
+                               "text": "Written notice is legally required.",
+                               "span_ids": ["L1"], "record_ids": [], "legal_source_ids": [],
+                               "uncertainty": "none"}]
+        proposed.update(questions=[], sufficiency={"status": "complete", "block_id": "account"})
+    else:
+        proposed["blocks"].insert(1, {
+            "id": "assessment", "kind": "assessment",
+            "text": "The legal rule requires written notice.", "span_ids": ["L1"],
+            "record_ids": [], "legal_source_ids": [], "uncertainty": "none"})
+    model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}, verdict(0)])
+    result = _continue(model, plan=authority_plan(), checked_sources=supplied_law())
+    assert _operation_names(model) == ["continue_conversation", "continue_conversation"]
+    assert result.units == () and result.coverage[0]["state"] == "unavailable"
+    assert "legal" in json.dumps(model.calls[1][1]["correction"]["validation_issues"]).lower()
+    # Available metadata never substitutes for selected use.
+    assert model.calls[0][1]["legal_sources"]
+
+
+def test_authority_needed_question_can_release_attributed_limits_without_asserting_law():
+    proposed = unit(question="Could you provide the text you want examined?")
+    proposed["blocks"][-1]["text"] = (
+        "The legal question remains unanswered because no applicable passage has been checked.")
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+    result = _continue(model, plan=authority_plan())
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert result.coverage[0]["state"] == "ok" and len(result.units) == 1
+    assert result.units[0]["sufficiency"]["status"] == "needs_input"
+    assert not any(block["legal_source_ids"] for block in result.units[0]["blocks"])
+
+
+def test_authority_needed_completion_keeps_the_selected_exact_legal_passage():
+    def compose(payload):
+        proposed = unit()
+        proposed["blocks"] = [{
+            "id": "law", "kind": "assessment",
+            "text": "If the agreement requires notice, the supplied rule calls for written notice.",
+            "span_ids": [], "record_ids": [],
+            "legal_source_ids": [next(iter(payload["legal_sources"]))],
+            "uncertainty": "conditional",
+        }]
+        proposed.update(questions=[], sufficiency={"status": "complete", "block_id": "law"})
+        return {"units": [proposed]}
+    model = ContinuationModel([compose, verdict(0)])
+    result = _continue(model, plan=authority_plan(), checked_sources=supplied_law())
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert result.coverage[0]["state"] == "ok"
+    sources = result.units[0]["blocks"][0]["references"]
+    assert len(sources) == 1 and sources[0]["text"] == supplied_law()[0]["text"]
+    assert sources[0]["kind"] == "provision"
+
+
+def test_catalogue_identity_in_displayed_prose_gets_one_rewrite_with_its_source_use_preserved():
+    identity = {}
+    def compose(payload):
+        identity["id"] = next(iter(payload["legal_sources"]))
+        proposed = unit()
+        proposed["blocks"].insert(1, {
+            "id": "checked-passage", "kind": "assessment",
+            "text": f"The supplied passage describes a condition ({identity['id']}).",
+            "span_ids": [], "record_ids": [], "legal_source_ids": [identity["id"]],
+            "uncertainty": "conditional"})
+        return {"units": [proposed]}
+    def repair(payload):
+        rejected = deepcopy(payload["correction"]["rejected_units"][0])
+        issue = json.dumps(payload["correction"]["validation_issues"])
+        assert "catalogue" in issue and "legal_source_ids" in issue
+        rejected["blocks"][1]["text"] = "The supplied passage describes a condition."
+        return {"units": [rejected]}
+    model = ContinuationModel([compose, repair, verdict(0)])
+    result = _continue(model, checked_sources=supplied_law())
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    assert result.coverage[0]["state"] == "ok"
+    block = result.units[0]["blocks"][1]
+    assert identity["id"] not in block["text"]
+    assert block["legal_source_ids"] == [identity["id"]]
+    assert block["references"][0]["id"] == identity["id"]
+    assert block["references"][0]["text"] == supplied_law()[0]["text"]
+    assert model.calls[2][1]["units"][0]["blocks"][1]["text"] == block["text"]
+
+
+def test_short_record_labels_are_not_mistaken_for_full_legal_catalogue_identities():
+    proposed = unit(text="You report a note labelled A1.",
+                    question="What would you like to do with the note?")
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+    result = _continue(model, latest="I have a note labelled A1.", checked_sources=supplied_law())
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert result.units[0]["blocks"][0]["text"] == proposed["blocks"][0]["text"]
+    assert result.coverage[0]["state"] == "ok"
 
 
 def test_complete_history_preserves_correction_diversion_and_return():

@@ -6,12 +6,14 @@ import pytest
 from nm.brain.conversation import Message
 from nm.brain.legal_requirements import (
     decompose,
+    decompose_subjects,
+    read_findings,
     read_requirements,
+    verify_findings,
     verify_requirements,
 )
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
-    ContextOverflow,
     ModelResult,
     ProviderUnavailable,
     SchemaViolation,
@@ -36,11 +38,25 @@ class Model:
         value = self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
         if isinstance(value, Exception):
             raise value
+        original = json.loads(prompt.user)
+        subjects = original["subjects"]
+        if prompt.operation == "decompose_disputes":
+            value = {"plans": [{"subject_id": row.get("subject_id", row.get("dispute_id")),
+                                "queries": row["queries"]}
+                               for row in value.get("plans", [])]}
+        if prompt.operation == "read_legal_requirements" and "requirements" in value:
+            value = {"readings": [{"subject_id": row["subject"]["id"],
+                                  "findings": [
+                                      {"kind": "gathering", **{
+                                          key: item for key, item in finding.items()
+                                          if key != "dispute_id"}}
+                                      for finding in value["requirements"]
+                                      if finding["dispute_id"] == row["subject"]["id"]]}
+                                 for row in subjects]}
         if prompt.operation == "verify_legal_requirements":
-            original = json.loads(prompt.user)
-            original = original.get("original_input", original)
             candidates = {row["candidate_id"]: row for row in
-                          original["candidates"]}
+                          [candidate for subject in subjects
+                           for candidate in subject["candidates"]]}
             value = {**value, "decisions": [{
                 **decision,
                 "label_verdict": decision.get("label_verdict", "faithful"),
@@ -98,6 +114,18 @@ THREE_MATERIAL = {**MATERIAL, "d3": [
 ]}
 THREE_CONVERSATION = (*CONVERSATION,
                       Message("third", "advocate", "The carrier delayed delivery."))
+
+
+SUBJECTS = tuple({
+    "id": row["id"], "kind": "dispute", "owner_id": row["id"], "scope": "current",
+    "purpose": "gathering", "question": row["statement"],
+    "record_ids": [row["id"], *[item["id"] for item in MATERIAL[row["id"]]]],
+} for row in DISPUTES)
+SUBJECT_MATERIAL = {row["id"]: [row, *MATERIAL[row["id"]]] for row in DISPUTES}
+
+
+def _candidate_rows(payload):
+    return [candidate for subject in payload["subjects"] for candidate in subject["candidates"]]
 
 
 def plan(dispute_id, *phrases):
@@ -171,7 +199,7 @@ def test_decomposition_batches_disputes_with_complete_attributed_conversation():
     assert data["conversation"] == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text}
         for row in CONVERSATION]
-    assert [row["dispute"]["id"] for row in data["disputes"]] == ["d1", "d2"]
+    assert [row["subject"]["id"] for row in data["subjects"]] == ["d1", "d2"]
     assert schema["properties"]["plans"]["items"]["properties"][
         "queries"]["maxItems"] == 4
 
@@ -189,8 +217,9 @@ def test_duplicate_query_gets_one_feedback_guided_correction():
     assert output["d1"] == ("supplier tools", "return of property")
     assert len(model.calls) == 2
     feedback = json.loads(model.calls[1][0].user)
-    assert "duplicate" in feedback["validation_issue"]
-    assert feedback["original_input"] == json.loads(model.calls[0][0].user)
+    assert "duplicate" in feedback["validation_issues"]["d1"]
+    assert [row["subject"]["id"] for row in feedback["subjects"]] == ["d1"]
+    assert feedback["conversation"] == json.loads(model.calls[0][0].user)["conversation"]
 
 
 def test_requirements_attach_exact_passages_and_do_not_mark_reported_record_verified():
@@ -231,14 +260,16 @@ def test_requirement_cannot_cite_a_different_dispute_or_link_unrelated_material(
 
     assert output["d1"][0]["source_ids"] == ["s1"]
     assert len(model.calls) == 2
-    assert "another dispute" in json.loads(model.calls[1][0].user)[
-        "validation_issue"]
+    assert "another subject" in json.loads(model.calls[1][0].user)[
+        "validation_issues"]["d1"]
 
     persistent = Model([{"requirements": [wrong]}])
-    with pytest.raises(SchemaViolation, match="another dispute"):
-        read_requirements(persistent, disputes=DISPUTES,
-                          material_by_dispute=MATERIAL,
-                          search_results=hits(), conversation=CONVERSATION)
+    failed = read_findings(persistent, subjects=SUBJECTS,
+                           material_by_subject=SUBJECT_MATERIAL,
+                           search_results=hits(), conversation=CONVERSATION)
+    assert failed.rows == {"d2": []}
+    assert failed.coverage["d1"]["unread_items"] == 1
+    assert failed.coverage["d2"]["checked_items"] == 1
     assert len(persistent.calls) == 2
 
 
@@ -252,7 +283,7 @@ def test_no_retrieved_passages_means_no_analysis_call_or_invented_requirement():
                                search_results=unavailable,
                                conversation=CONVERSATION)
 
-    assert result == {"d1": [], "d2": []}
+    assert result == {}
     assert model.calls == []
 
 
@@ -270,7 +301,7 @@ def test_partial_search_keeps_passages_from_available_corpus():
 
     assert len(model.calls) == 1
     assert checked["d1"][0]["sources"] == partial["d1"]["candidates"]
-    assert checked["d2"] == []
+    assert "d2" not in checked
 
 
 def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
@@ -292,8 +323,7 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
                  "scope_status": "different_legal_setting",
                  "support_fragment_id": "", "scope_fragment_id": "",
                  "reason": "The receipt passage does not establish notice."},
-            ], "reason": "The provision supports the complete item."}]},
-        {"decisions": [{
+            ], "reason": "The provision supports the complete item."}, {
             "candidate_id": "r2", "verdict": "unsupported",
             "source_checks": [{
                 "source_id": "s3", "verdict": "unsupported",
@@ -307,7 +337,7 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
         verifier, disputes=DISPUTES, material_by_dispute=MATERIAL,
         proposed=proposed, conversation=CONVERSATION)
 
-    assert len(verifier.calls) == 2
+    assert len(verifier.calls) == 1
     assert all(call[2] is Tier.JUDGE and call[3] >= 4096 for call in verifier.calls)
     assert checked.rows["d1"][0]["source_ids"] == ["s1"]
     assert checked.rows["d1"][0]["sources"] == [{
@@ -331,10 +361,10 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
     assert payload["conversation"] == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text}
         for row in CONVERSATION]
-    assert payload["candidates"][0]["sources"][0]["fragments"] == [{
+    assert _candidate_rows(payload)[0]["sources"][0]["fragments"] == [{
         "id": "f1", "text": "A person must give written notice."}]
-    assert [json.loads(call[0].user)["dispute"]["id"]
-            for call in verifier.calls] == ["d1", "d2"]
+    assert [[row["subject"]["id"] for row in json.loads(call[0].user)["subjects"]]
+            for call in verifier.calls] == [["d1", "d2"]]
 
 
 def test_display_label_and_reported_material_are_checked_independently():
@@ -415,7 +445,7 @@ def test_verifier_refuses_cross_item_support_after_one_correction():
     assert checked.coverage["d1"]["unread_items"] == 1
     assert len(model.calls) == 2
     repair = json.loads(model.calls[1][0].user)
-    assert [row["candidate_id"] for row in repair["candidates"]] == ["r1"]
+    assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
     assert "source" in json.dumps(repair["validation_issues"])
 
 
@@ -449,7 +479,7 @@ def test_one_repair_salvages_readable_items_without_individual_fanout():
     assert checked.coverage["d1"]["state"] == "partial"
     assert checked.coverage["d1"]["checked_items"] == 1
     assert checked.coverage["d1"]["unread_items"] == 1
-    assert [len(json.loads(call[0].user)["candidates"]) for call in model.calls] == [2, 2]
+    assert [len(_candidate_rows(json.loads(call[0].user))) for call in model.calls] == [2, 2]
 
 
 def test_verification_skips_model_when_no_items_were_proposed():
@@ -518,7 +548,7 @@ def test_verifier_reconstructs_exact_overlapping_fragments_from_saved_passage():
                                   proposed=proposed,
                                   conversation=CONVERSATION)
 
-    fragments = json.loads(model.calls[0][0].user)["candidates"][0][
+    fragments = _candidate_rows(json.loads(model.calls[0][0].user))[0][
         "sources"][0]["fragments"]
     assert fragments[1]["id"] == "f2"
     assert fragments[1]["text"] in long_passage
@@ -574,7 +604,7 @@ def test_verifier_rejects_fragment_id_from_another_cited_source():
     assert checked.rows["d1"][0]["source_ids"] == ["s1"]
     assert checked.coverage["d1"]["state"] == "ok"
     assert len(model.calls) == 2
-    assert [len(json.loads(call[0].user)["candidates"][0]["sources"])
+    assert [len(_candidate_rows(json.loads(call[0].user))[0]["sources"])
             for call in model.calls] == [2, 2]
 
 
@@ -618,7 +648,7 @@ def test_missing_one_source_verdict_gets_one_complete_candidate_correction():
     assert len(model.calls) == 2
     assert "every cited passage" in json.dumps(json.loads(model.calls[1][0].user)[
         "validation_issues"])
-    assert [len(json.loads(call[0].user)["candidates"][0]["sources"])
+    assert [len(_candidate_rows(json.loads(call[0].user))[0]["sources"])
             for call in model.calls] == [2, 2]
 
 
@@ -672,7 +702,7 @@ def test_twice_unread_source_coverage_does_not_fan_out_into_item_or_source_calls
     assert checked.coverage["d1"]["unread_items"] == 1
     assert len(model.calls) == 2
     for prompt, _, _, _ in model.calls:
-        candidates = json.loads(prompt.user)["candidates"]
+        candidates = _candidate_rows(json.loads(prompt.user))
         assert len(candidates) == 1
         assert [source["id"] for source in candidates[0]["sources"]] == ["s1", "s2"]
 
@@ -694,7 +724,7 @@ def test_supported_item_cannot_promote_a_material_link_without_its_check():
     assert len(model.calls) == 2
     correction = json.loads(model.calls[1][0].user)
     assert "every linked material" in json.dumps(correction["validation_issues"])
-    assert correction["candidates"][0]["material_ids"] == ["m1"]
+    assert _candidate_rows(correction)[0]["material_ids"] == ["m1"]
 
 
 @pytest.mark.parametrize("outage_after", [0, 1])
@@ -715,7 +745,7 @@ def test_verifier_outage_stops_dispatch_and_preserves_already_checked_disputes(o
     assert len(model.calls) == outage_after + 1
     assert checked.outage == "ProviderUnavailable"
     assert checked.rows["d2"] == []
-    assert checked.coverage["d2"]["state"] == "partial"
+    assert checked.coverage["d2"]["state"] == "unavailable"
     assert checked.coverage["d2"]["unread_items"] == 1
     if outage_after:
         assert checked.rows["d1"][0]["label"] == "Obtain written notice"
@@ -723,15 +753,16 @@ def test_verifier_outage_stops_dispatch_and_preserves_already_checked_disputes(o
         assert checked.coverage["d1"]["checked_items"] == 1
     else:
         assert checked.rows["d1"] == []
-        assert checked.coverage["d1"]["state"] == "partial"
+        assert checked.coverage["d1"]["state"] == "unavailable"
         assert checked.coverage["d1"]["unread_items"] == 1
 
 
-def test_full_conversation_must_fit_before_model_call():
+def test_research_does_not_trim_full_conversation_when_no_unit_fits():
     model = Model([{"plans": []}], budget=100)
-    with pytest.raises(ContextOverflow):
-        decompose(model, disputes=DISPUTES,
-                  material_by_dispute=MATERIAL, conversation=CONVERSATION)
+    result = decompose_subjects(model, subjects=SUBJECTS,
+                                material_by_subject=SUBJECT_MATERIAL, conversation=CONVERSATION)
+    assert result.rows == {}
+    assert all(row["unread_items"] == 1 for row in result.coverage.values())
     assert model.calls == []
 
 
@@ -755,27 +786,27 @@ def test_decomposition_splits_into_fewest_complete_groups_when_needed():
                       "d2": ("invoice payment",),
                       "d3": ("late delivery",)}
     assert len(model.calls) == 2
-    assert [[row["dispute"]["id"] for row in json.loads(call[0].user)[
-        "disputes"]] for call in model.calls] == [["d1", "d2"], ["d3"]]
+    assert [[row["subject"]["id"] for row in json.loads(call[0].user)[
+        "subjects"]] for call in model.calls] == [["d1", "d2"], ["d3"]]
     for call in model.calls:
         assert json.loads(call[0].user)["conversation"] == [
             {"turn_id": row.turn_id, "role": row.role, "text": row.text}
             for row in THREE_CONVERSATION]
 
 
-def test_oversized_single_dispute_refuses_before_any_partial_model_call():
+def test_oversized_subject_remains_unread_without_hiding_a_complete_peer():
     calibration = Model([{"plans": [plan("d1", "return tools")]}])
     decompose(calibration, disputes=DISPUTES[:1],
               material_by_dispute={"d1": MATERIAL["d1"]},
               conversation=CONVERSATION)
-    model = Model([], budget=call_budget(calibration.calls[0]))
-    oversized = {**DISPUTES[1], "statement": "x" * 30000}
-
-    with pytest.raises(ContextOverflow):
-        decompose(model, disputes=(DISPUTES[0], oversized),
-                  material_by_dispute=MATERIAL, conversation=CONVERSATION)
-
-    assert model.calls == []
+    model = Model([{"plans": [plan("d1", "return tools")]}],
+                  budget=call_budget(calibration.calls[0]))
+    oversized = {**SUBJECTS[1], "question": "x" * 30000}
+    result = decompose_subjects(model, subjects=(SUBJECTS[0], oversized),
+                                material_by_subject=SUBJECT_MATERIAL, conversation=CONVERSATION)
+    assert result.rows == {"d1": ("return tools",)}
+    assert result.coverage["d2"]["unread_items"] == 1
+    assert len(model.calls) == 1
 
 
 def test_requirement_batches_keep_exact_passages_with_their_disputes():
@@ -802,8 +833,8 @@ def test_requirement_batches_keep_exact_passages_with_their_disputes():
         search_results=third_hits, conversation=THREE_CONVERSATION)
 
     assert len(model.calls) == 2
-    assert [[row["dispute"]["id"] for row in json.loads(call[0].user)[
-        "disputes"]] for call in model.calls] == [["d1", "d2"], ["d3"]]
+    assert [[row["subject"]["id"] for row in json.loads(call[0].user)[
+        "subjects"]] for call in model.calls] == [["d1", "d2"], ["d3"]]
     assert output["d1"][0]["sources"] == third_hits["d1"]["candidates"][:1]
     assert output["d3"][0]["sources"] == third_hits["d3"]["candidates"]
     assert output["d2"] == []
@@ -814,7 +845,215 @@ def test_requirement_batches_keep_exact_passages_with_their_disputes():
     first_schema = model.calls[0][1]
     second_schema = model.calls[1][1]
     def source_enum(schema):
-        return schema["properties"]["requirements"]["items"][
-            "properties"]["source_ids"]["items"]["enum"]
+        return schema["properties"]["readings"]["items"]["properties"][
+            "findings"]["items"]["properties"]["source_ids"]["items"]["enum"]
     assert set(source_enum(first_schema)) == {"s1", "s2", "s3"}
     assert source_enum(second_schema) == ["s4"]
+
+
+REQUEST_SUBJECT = {
+    "id": "q1", "kind": "request", "owner_id": "requested-1", "scope": "none",
+    "purpose": "requested_work", "question": "Explain the supplied rule and its limits",
+    "record_ids": [],
+}
+
+
+def finding(kind="principle", **changes):
+    return {"kind": kind, "label": "Notice under the stated condition",
+            "need": "If an agreement requires notice, written notice must be given.",
+            "why": "The supplied provision makes notice conditional on the agreement.",
+            "force": "none", "source_ids": ["s1"], "material_ids": [], **changes}
+
+
+def request_hits():
+    return {"q1": {"state": "ok", "candidates": [{
+        "id": "s1", "kind": "provision", "title": "Supplied provision",
+        "locator": "section 1", "text": "If the agreement requires notice, give written notice.",
+    }]}}
+
+
+def request_read(model):
+    return read_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                         search_results=request_hits(), conversation=CONVERSATION)
+
+
+@pytest.mark.parametrize("kind", ["principle", "condition", "support", "adverse"])
+def test_request_findings_use_passages_without_creating_a_dispute_or_gathering_item(kind):
+    model = Model([{"readings": [{"subject_id": "q1", "findings": [finding(kind)]}]}])
+    read = request_read(model)
+    assert read.rows["q1"][0]["kind"] == kind
+    assert read.rows["q1"][0]["force"] == "none"
+    assert read.rows["q1"][0]["sources"] == request_hits()["q1"]["candidates"]
+    assert read.coverage["q1"]["state"] == "ok"
+    payload = json.loads(model.calls[0][0].user)
+    assert payload["subjects"][0]["subject"] == REQUEST_SUBJECT
+    assert payload["subjects"][0]["material"] == []
+    assert payload["conversation"][-1]["text"] == CONVERSATION[-1].text
+
+
+def test_conditional_scope_needs_exact_predicate_and_an_independent_faithfulness_check():
+    read = request_read(Model([{"readings": [{"subject_id": "q1", "findings": [finding()]}]}]))
+    decision = supported_verdict("r1", "s1")
+    decision["source_checks"][0].update(scope_status="conditional", scope_fragment_id="f1")
+    verifier = Model([{"decisions": [decision]}])
+    checked = verify_findings(verifier, subjects=(REQUEST_SUBJECT,),
+                              material_by_subject={"q1": []}, proposed=read.rows,
+                              conversation=CONVERSATION)
+    source = checked.rows["q1"][0]["sources"][0]
+    assert source["verification"]["scope_status"] == "conditional"
+    assert source["verification"]["scope_excerpt"] == source["text"]
+    assert source["verification"]["support_excerpt"] == source["text"]
+    assert len(verifier.calls) == 1 and verifier.calls[0][2] is Tier.JUDGE
+    rejected = {**decision, "label_verdict": "unsupported",
+                "label_reason": "The unconditional label removes the limiting predicate.",
+                "source_checks": []}
+    rejection = verify_findings(Model([{"decisions": [rejected]}]),
+                                 subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                                 proposed=read.rows, conversation=CONVERSATION)
+    assert rejection.rows["q1"] == []
+    assert rejection.coverage["q1"]["withheld_items"] == 1
+
+
+def test_conditional_scope_without_its_exact_limiting_fragment_stays_unread_after_one_repair():
+    read = request_read(Model([{"readings": [{"subject_id": "q1", "findings": [finding()]}]}]))
+    decision = supported_verdict("r1", "s1")
+    decision["source_checks"][0].update(scope_status="conditional")
+    model = Model([{"decisions": [decision]}])
+    checked = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                              proposed=read.rows, conversation=CONVERSATION)
+    assert checked.rows["q1"] == [] and checked.coverage["q1"]["unread_items"] == 1
+    assert len(model.calls) == 2
+
+
+def test_planning_and_reading_repair_only_unresolved_subjects_and_keep_empty_coverage_explicit():
+    model = Model([{"plans": [plan("d1", "same", "same"), plan("d2", "payment rule")]},
+                   {"plans": [plan("d1", "property return rule")]}])
+    planning = decompose_subjects(model, subjects=SUBJECTS,
+                                  material_by_subject=SUBJECT_MATERIAL, conversation=CONVERSATION)
+    assert planning.rows == {"d2": ("payment rule",), "d1": ("property return rule",)}
+    assert [row["subject"]["id"] for row in json.loads(
+        model.calls[1][0].user)["subjects"]] == ["d1"]
+    reader = Model([{"readings": [
+        {"subject_id": "d1", "findings": [
+            finding("gathering", force="required", source_ids=["s3"])]},
+        {"subject_id": "d2", "findings": []},
+    ]}, {"readings": [{"subject_id": "d1", "findings": [
+        finding("gathering", force="required")]}]}])
+    read = read_findings(reader, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                         search_results=hits(), conversation=CONVERSATION)
+    assert len(read.rows["d1"]) == 1 and read.rows["d2"] == []
+    assert read.coverage["d2"]["checked_items"] == 1
+    assert [row["subject"]["id"] for row in json.loads(
+        reader.calls[1][0].user)["subjects"]] == ["d1"]
+
+
+@pytest.mark.parametrize("stage", ["plan", "read"])
+def test_research_provider_outage_preserves_valid_peer_work(stage):
+    if stage == "plan":
+        model = Model([{"plans": [plan("d1", "property return")]}, ProviderUnavailable("offline")])
+        result = decompose_subjects(model, subjects=SUBJECTS,
+                                    material_by_subject=SUBJECT_MATERIAL, conversation=CONVERSATION)
+    else:
+        model = Model([{"readings": [{"subject_id": "d1", "findings": [
+            finding("gathering", force="required")]}]}, ProviderUnavailable("offline")])
+        result = read_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                               search_results=hits(), conversation=CONVERSATION)
+    assert result.rows["d1"]
+    assert result.coverage["d1"]["checked_items"] == 1
+    assert result.coverage["d2"]["unread_items"] == 1
+    assert result.outage == "ProviderUnavailable" and len(model.calls) == 2
+
+
+def test_unknown_or_general_subject_record_ownership_fails_before_dispatch():
+    model = Model([])
+    with pytest.raises(SchemaViolation, match="cannot import"):
+        decompose_subjects(model, subjects=(REQUEST_SUBJECT,),
+                           material_by_subject={"q1": MATERIAL["d1"]}, conversation=CONVERSATION)
+    with pytest.raises(SchemaViolation, match="unavailable attributed material"):
+        decompose_subjects(model, subjects=({**REQUEST_SUBJECT, "record_ids": ["missing"]},),
+                           material_by_subject={"q1": []}, conversation=CONVERSATION)
+    assert model.calls == []
+
+
+def test_malformed_passage_is_local_to_its_subject_and_cannot_hide_readable_peers():
+    search = hits()
+    search["d1"]["candidates"][0]["text"] = None
+    model = Model([{"readings": [{"subject_id": "d2", "findings": [
+        finding("gathering", force="required", source_ids=["s3"], material_ids=["m2"])]}]}])
+    read = read_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                         search_results=search, conversation=CONVERSATION)
+    assert "d1" not in read.rows and read.coverage["d1"]["unread_items"] == 1
+    assert read.rows["d2"][0]["source_ids"] == ["s3"]
+    assert read.coverage["d2"]["state"] == "ok"
+    assert len(model.calls) == 1
+
+
+def test_context_fitting_research_group_uses_three_calls_with_an_independent_check():
+    model = Model([
+        {"plans": [plan("d1", "return tools"), plan("d2", "payment obligation")]},
+        {"readings": [
+            {"subject_id": "d1", "findings": [finding("gathering", force="required")]},
+            {"subject_id": "d2", "findings": [finding("support", source_ids=["s3"])]},
+        ]},
+        {"decisions": [supported_verdict("r1", "s1"), supported_verdict("r2", "s3")]},
+    ])
+    planning = decompose_subjects(model, subjects=SUBJECTS,
+                                  material_by_subject=SUBJECT_MATERIAL, conversation=CONVERSATION)
+    reading = read_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                            search_results=hits(), conversation=CONVERSATION)
+    checked = verify_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                              proposed=reading.rows, conversation=CONVERSATION)
+    assert set(planning.rows) == set(checked.rows) == {"d1", "d2"}
+    assert all(checked.rows.values())
+    assert [call[2] for call in model.calls] == [Tier.ROUTINE, Tier.ROUTINE, Tier.JUDGE]
+    assert len(model.calls) == 3
+
+
+def test_oversized_reading_subject_does_not_hide_another_subjects_passages():
+    calibration = Model([{"readings": [{"subject_id": "d2", "findings": []}]}])
+    read_findings(calibration, subjects=SUBJECTS[1:],
+                   material_by_subject={"d2": SUBJECT_MATERIAL["d2"]},
+                   search_results={"d2": hits()["d2"]}, conversation=CONVERSATION)
+    model = Model([{"readings": [{"subject_id": "d2", "findings": [
+        finding("support", source_ids=["s3"])]}]}], budget=call_budget(calibration.calls[0]))
+    oversized = hits()
+    oversized["d1"]["candidates"][0]["text"] = "Complete supplied passage. " * 3000
+    reading = read_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                            search_results=oversized, conversation=CONVERSATION)
+    assert "d1" not in reading.rows and reading.coverage["d1"]["unread_items"] == 1
+    assert reading.rows["d2"][0]["sources"] == hits()["d2"]["candidates"]
+    assert len(model.calls) == 1
+    assert json.loads(model.calls[0][0].user)["conversation"] == [
+        {"turn_id": row.turn_id, "role": row.role, "text": row.text} for row in CONVERSATION]
+
+
+def test_oversized_source_check_stays_unread_while_another_candidate_is_checked():
+    reading = read_findings(Model([{"readings": [
+        {"subject_id": "d1", "findings": [finding("gathering", force="required")]},
+        {"subject_id": "d2", "findings": [finding("support", source_ids=["s3"])]},
+    ]}]), subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+        search_results=hits(), conversation=CONVERSATION)
+    calibration = Model([{"decisions": [supported_verdict("r1", "s3")]}])
+    verify_findings(calibration, subjects=SUBJECTS[1:],
+                     material_by_subject={"d2": SUBJECT_MATERIAL["d2"]},
+                     proposed={"d2": reading.rows["d2"]}, conversation=CONVERSATION)
+    reading.rows["d1"][0]["sources"][0]["text"] = "Complete source passage. " * 3000
+    model = Model([{"decisions": [supported_verdict("r2", "s3")]}],
+                  budget=call_budget(calibration.calls[0]) + 100)
+    checked = verify_findings(model, subjects=SUBJECTS, material_by_subject=SUBJECT_MATERIAL,
+                              proposed=reading.rows, conversation=CONVERSATION)
+    assert checked.rows["d1"] == [] and checked.coverage["d1"]["unread_items"] == 1
+    assert checked.rows["d2"][0]["source_ids"] == ["s3"]
+    assert checked.coverage["d2"]["checked_items"] == 1 and len(model.calls) == 1
+
+
+def test_provider_schema_rejection_gets_one_same_contract_correction():
+    model = Model([SchemaViolation("queries require text"),
+                   {"plans": [plan("q1", "notice condition")]}])
+    planning = decompose_subjects(model, subjects=(REQUEST_SUBJECT,),
+                                  material_by_subject={"q1": []}, conversation=CONVERSATION)
+    assert planning.rows == {"q1": ("notice condition",)}
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert repair["validation_issues"] == {"q1": "queries require text"}
+    assert repair["conversation"] == json.loads(model.calls[0][0].user)["conversation"]

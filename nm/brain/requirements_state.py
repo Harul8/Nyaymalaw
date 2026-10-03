@@ -1,10 +1,14 @@
-"""Project source-linked legal work items for the current dispute record."""
+"""Project owned research once, with a gathering-only view for the matter board."""
 from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 
+from nm.brain.legal_requirements import RESEARCH_KINDS, RESEARCH_VERIFICATION
 from nm.work_the_file.matter_contracts import Matter
+
+_SCOPES = ("current", "proposed", "none", "other", "uncertain")
 
 
 def _digest(value: object) -> str:
@@ -14,7 +18,7 @@ def _digest(value: object) -> str:
 
 
 def subject_fingerprint(dispute: dict, material: list[dict]) -> str:
-    """Change only when the attributed subject of legal research changes."""
+    """Retain the historical dispute-only fingerprint for legacy readback."""
     subject = {key: dispute.get(key) for key in (
         "id", "label", "statement", "quoted", "identification")}
     linked = [
@@ -27,22 +31,78 @@ def subject_fingerprint(dispute: dict, material: list[dict]) -> str:
                     "material": sorted(linked, key=lambda item: str(item["id"]))})
 
 
+def research_owner_id(matter: Matter) -> str:
+    return "research:" + _digest({"advocate_id": matter.advocate_id,
+                                  "conversation_id": str(matter.id)})[:32]
+
+
+def _identities(value: object) -> bool:
+    return (isinstance(value, list)
+            and all(isinstance(item, str) and item.strip() for item in value)
+            and len(value) == len(set(value)))
+
+
+def _subject_valid(subject: object, owner: str) -> bool:
+    return (isinstance(subject, dict)
+            and all(isinstance(subject.get(key), str) and subject[key].strip()
+                    for key in ("id", "owner_id", "question"))
+            and subject["owner_id"] == owner
+            and subject.get("kind") in ("dispute", "request")
+            and subject.get("scope") in _SCOPES
+            and subject.get("purpose") in ("gathering", "requested_work")
+            and _identities(subject.get("record_ids"))
+            and (subject["scope"] in ("current", "proposed") or not subject["record_ids"]))
+
+
+def _context(material: object) -> list[dict]:
+    if not isinstance(material, (list, tuple)):
+        raise ValueError("research context is unreadable")
+    records = {}
+    for row in material:
+        if (not isinstance(row, dict) or not isinstance(row.get("id"), str)
+                or not row["id"].strip()):
+            raise ValueError("research context has no attributable identity")
+        if row["id"] in records and records[row["id"]] != row:
+            raise ValueError("research context identities conflict")
+        records[row["id"]] = row
+    return [records[identity] for identity in sorted(records)]
+
+
+def research_fingerprint(subject: dict, material: list[dict], corpus_revision: str | None = None,
+                         verification: str = RESEARCH_VERIFICATION) -> str:
+    """Reuse evidence only for the same owned question, scope, record and corpus."""
+    if not isinstance(subject, dict) or not _subject_valid(subject, subject.get("owner_id", "")):
+        raise ValueError("research subject is unreadable")
+    context = _context(material)
+    if not set(subject["record_ids"]) <= {row["id"] for row in context}:
+        raise ValueError("research subject selects unknown context")
+    if (corpus_revision is not None
+            and (not isinstance(corpus_revision, str) or not corpus_revision.strip())):
+        raise ValueError("corpus revision is unreadable")
+    if not isinstance(verification, str) or not verification.strip():
+        raise ValueError("research verification contract is unreadable")
+    return _digest({"subject": {key: subject[key] for key in (
+        "kind", "owner_id", "scope", "purpose", "question")},
+        "record_ids": sorted(subject["record_ids"]), "material": context,
+        "corpus_revision": corpus_revision, "verification": verification})
+
+
 def _valid_row(row: object, material_ids: set[str]) -> bool:
     if not isinstance(row, dict):
         return False
     if any(not isinstance(row.get(key), str) or not row[key].strip()
            for key in ("label", "need", "why")):
         return False
-    if len(row["label"]) > 120 or row.get("force") not in (
-            "required", "strengthening"):
+    kind = row.get("kind")
+    if (len(row["label"]) > 120 or kind not in RESEARCH_KINDS
+            or (row.get("force") not in ("required", "strengthening")
+                if kind == "gathering" else row.get("force") != "none")):
         return False
     sources, source_ids = row.get("sources"), row.get("source_ids")
     linked = row.get("material_ids")
-    if (not isinstance(sources, list) or not isinstance(source_ids, list)
+    if (not isinstance(sources, list) or not _identities(source_ids)
             or not sources or len(sources) != len(source_ids)
-            or len(source_ids) != len(set(source_ids))
-            or not isinstance(linked, list) or len(linked) != len(set(linked))
-            or any(not isinstance(item, str) for item in linked)
+            or not _identities(linked)
             or not set(linked) <= material_ids
             or row.get("record_status") != (
                 "mentioned" if linked else "not_mentioned")):
@@ -68,7 +128,7 @@ def _valid_row(row: object, material_ids: set[str]) -> bool:
                 or not isinstance(scope, str) or len(scope) > 800
                 or (scope and (not scope.strip() or scope not in source["text"]))
                 or scope_status not in (
-                    "established", "asked_to_establish", "no_special_condition")
+                    "established", "asked_to_establish", "no_special_condition", "conditional")
                 or (scope_status == "no_special_condition") != (not scope)
                 or not isinstance(reason, str) or not reason.strip()
                 or len(reason) > 500):
@@ -76,99 +136,232 @@ def _valid_row(row: object, material_ids: set[str]) -> bool:
     return True
 
 
-def requirements_record(matter: Matter, *, disputes: dict,
-                        material: dict) -> dict:
-    """Keep a read only while its dispute and attributed material remain current."""
-    if disputes.get("state") != "ok" or material.get("state") != "ok":
-        return {"state": "incomplete", "by_dispute": {},
-                "status_by_dispute": {}, "diagnostics_by_dispute": {},
-                "diagnostics": [
-                    "the dispute or material record is incomplete"]}
-    active = {row["id"]: row for row in disputes["rows"]
-              if row.get("identification") == "identified"}
-    by_dispute = {dispute_id: [] for dispute_id in active}
-    statuses = {dispute_id: "unassessed" for dispute_id in active}
-    diagnostics_by_dispute = {dispute_id: [] for dispute_id in active}
-    fingerprints = {
-        dispute_id: subject_fingerprint(
-            row, [*material.get("by_dispute", {}).get(dispute_id, []),
-                  *material.get("matter", [])])
-        for dispute_id, row in active.items()
-    }
-    material_ids = {
-        dispute_id: {item["id"] for item in [
-            *material.get("by_dispute", {}).get(dispute_id, []),
-            *material.get("matter", [])]}
-        for dispute_id in active
-    }
-    diagnostics: list[str] = []
-    state = "ok"
+def _legacy_read(read: object, subjects: dict, contexts: dict) -> dict | None:
+    if not isinstance(read, dict):
+        raise ValueError("a saved legal read is invalid")
+    identity = read.get("dispute_id")
+    subject = subjects.get(identity)
+    if not subject or subject["kind"] != "dispute" or subject["purpose"] != "gathering":
+        return None
+    dispute = next((row for row in contexts[identity] if row["id"] == identity), None)
+    material = [row for row in contexts[identity] if row["id"] != identity]
+    if not dispute or read.get("fingerprint") != subject_fingerprint(dispute, material):
+        return None
+    result = deepcopy(read)
+    rows = result.get("rows")
+    if not isinstance(rows, list):
+        raise ValueError("a saved legal read is invalid")
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("a saved legal item is unreadable")
+        row["kind"] = "gathering"
+    result.update(subject=deepcopy(subject), corpus_revision=None, legacy=True)
+    return result
 
-    def invalidate(dispute_id: str) -> None:
-        statuses[dispute_id] = "unavailable"
-        by_dispute[dispute_id] = []
-        diagnostics_by_dispute[dispute_id] = []
 
+def _read_valid(read: dict, *, legacy: bool, owner: str, verification: str) -> bool:
+    subject = read.get("subject")
+    rows, status = read.get("rows"), read.get("state")
+    revision = read.get("corpus_revision")
+    coverage = read.get("coverage")
+    if (not _subject_valid(subject, owner)
+            or not isinstance(read.get("fingerprint"), str)
+            or len(read["fingerprint"]) != 64
+            or any(char not in "0123456789abcdef" for char in read["fingerprint"])
+            or status not in ("ok", "partial", "unavailable")
+            or not isinstance(rows, list) or (status == "unavailable" and rows)
+            or not isinstance(read.get("queries"), list)
+            or any(not isinstance(query, str) or not query.strip() for query in read["queries"])
+            or not isinstance(read.get("diagnostics", []), list)
+            or any(not isinstance(problem, str) for problem in read.get("diagnostics", []))
+            or (revision is not None and (not isinstance(revision, str) or not revision.strip()))
+            or any(not _valid_row(row, set(subject["record_ids"])) for row in rows)):
+        return False
+    if not legacy and (
+            not isinstance(coverage, dict) or coverage.get("state") not in (
+                "ok", "partial", "unavailable")
+            or coverage["state"] != status
+            or any(key in coverage and (type(coverage[key]) is not int or coverage[key] < 0)
+                   for key in ("checked_items", "unread_items", "withheld_items"))):
+        return False
+    if len({(row["kind"], row["label"].casefold()) for row in rows}) != len(rows):
+        return False
+    return not rows or read.get("verification") in (
+        ("source_support_v4",) if legacy else (RESEARCH_VERIFICATION, verification))
+
+
+def research_record(matter: Matter, *, subjects: tuple[dict, ...],
+                    material_by_subject: dict[str, list[dict]],
+                    corpus_revision: str | None = None,
+                    verification: str = RESEARCH_VERIFICATION) -> dict:
+    """Retain exact checked work while distinguishing readable history from reusable research."""
+    owner = research_owner_id(matter)
+    active, contexts, fingerprints = {}, {}, {}
+    output = dict(state="ok", by_subject={}, status_by_subject={}, diagnostics_by_subject={},
+                  coverage_by_subject={}, reuse_allowed={}, fingerprints=fingerprints,
+                  read_subject_id_by_subject={}, source_turn_id_by_subject={},
+                  subjects=active, diagnostics=[])
+    try:
+        for subject in subjects:
+            if not _subject_valid(subject, owner) or subject["id"] in active:
+                raise ValueError("the active research subjects are unreadable or conflict")
+            identity = subject["id"]
+            active[identity] = deepcopy(subject)
+            contexts[identity] = _context(material_by_subject.get(identity))
+            fingerprints[identity] = research_fingerprint(
+                subject, contexts[identity], corpus_revision, verification)
+            output["by_subject"][identity] = []
+            output["status_by_subject"][identity] = "unassessed"
+            output["diagnostics_by_subject"][identity] = []
+            output["coverage_by_subject"][identity] = {"state": "unassessed", "purpose":
+                subject["purpose"], "source_freshness": "unknown", "reuse_allowed": False}
+            output["reuse_allowed"][identity] = False
+    except (ValueError, TypeError, AttributeError) as exc:
+        output["state"] = "incomplete"
+        output["diagnostics"].append(str(exc))
+        return output
+
+    def reject(problem: str, identities=()) -> None:
+        output["state"] = "incomplete"
+        output["diagnostics"].append(problem)
+        for identity in identities:
+            output["by_subject"][identity] = []
+            output["status_by_subject"][identity] = "unavailable"
+            output["diagnostics_by_subject"][identity] = [problem]
+            output["reuse_allowed"][identity] = False
+            output["coverage_by_subject"][identity] = {"state": "unavailable", "purpose":
+                active[identity]["purpose"], "source_freshness": "unknown", "reuse_allowed": False}
+            output["read_subject_id_by_subject"].pop(identity, None)
+            output["source_turn_id_by_subject"].pop(identity, None)
+
+    seen_turns = set()
+    owned_records = {row["id"] for context in contexts.values() for row in context}
     for turn in matter.brain_chat:
         response = turn.get("response")
-        if not isinstance(response, dict):
-            state = "incomplete"
-            diagnostics.append("a saved legal read could not be inspected")
-            for dispute_id in active:
-                invalidate(dispute_id)
+        turn_id = turn.get("turn_id")
+        if (not isinstance(turn_id, str) or not turn_id.strip()
+                or not isinstance(response, dict) or turn_id in seen_turns
+                or turn.get("advocate_id") != matter.advocate_id
+                or turn.get("matter_id") != str(matter.id)
+                or turn.get("committed") is not True or turn.get("release_state") != "released"
+                or response.get("turn_id") != turn.get("turn_id")
+                or turn.get("elements") != response.get("elements")):
+            reject("a saved research turn has no consistent released owner", active)
             continue
-        reads = response.get("requirements_read", [])
-        if (not isinstance(reads, list)
-                or (reads and (turn.get("committed") is not True
-                               or turn.get("release_state") != "released"
-                               or response.get("turn_id") != turn.get("turn_id")))):
-            state = "incomplete"
-            diagnostics.append("a saved legal read has no released turn")
-            for dispute_id in active:
-                invalidate(dispute_id)
+        seen_turns.add(turn["turn_id"])
+        proposals = response.get("material", [])
+        if (not isinstance(proposals, list)
+                or any(not isinstance(row, dict) or not isinstance(row.get("id"), str)
+                       or not row["id"].strip() for row in proposals)):
+            reject("a saved research context has no attributable record", active)
             continue
-        seen: set[str] = set()
-        for read in reads:
-            if not isinstance(read, dict):
-                state = "incomplete"
-                diagnostics.append("a saved legal read is invalid")
+        owned_records.update(row["id"] for row in proposals)
+        legacy = "research_reads" not in response
+        reads = response.get("requirements_read", []) if legacy else response["research_reads"]
+        if not isinstance(reads, list):
+            reject("a saved research collection is unreadable", active)
+            continue
+        seen = set()
+        for raw in reads:
+            try:
+                read = _legacy_read(raw, active, contexts) if legacy else raw
+            except (ValueError, TypeError):
+                reject("a saved legal read is invalid")
                 continue
-            dispute_id = read.get("dispute_id")
-            if dispute_id not in active or read.get("fingerprint") != fingerprints.get(dispute_id):
+            if read is None:
                 continue
-            rows = read.get("rows")
-            status = read.get("state")
-            queries = read.get("queries")
-            read_diagnostics = read.get("diagnostics", [])
-            if (dispute_id in seen or status not in ("ok", "partial", "unavailable")
-                    or not isinstance(rows, list)
-                    or (status == "unavailable" and rows)
-                    or not isinstance(queries, list)
-                    or any(not isinstance(query, str) or not query.strip()
-                           for query in queries)
-                    or not isinstance(read_diagnostics, list)
-                    or any(not isinstance(problem, str)
-                           for problem in read_diagnostics)
-                    or any(not _valid_row(row, material_ids[dispute_id])
-                           for row in rows)):
-                state = "incomplete"
-                diagnostics.append("a saved legal read lacks valid attributed sources")
-                invalidate(dispute_id)
+            if not isinstance(read, dict) or not _subject_valid(read.get("subject"), owner):
+                reject("a saved research subject has no authorised owner")
                 continue
-            if status in ("ok", "partial") and rows and read.get(
-                    "verification") != "source_support_v4":
-                diagnostics.append(
-                    "saved legal items predate independent source verification")
-                invalidate(dispute_id)
+            subject = read["subject"]
+            identity = subject["id"]
+            matches = [key for key, current in active.items() if (
+                current["kind"] == subject["kind"] and current["scope"] == subject["scope"]
+                and current["purpose"] == subject["purpose"]
+                and current["question"] == subject["question"]
+                and set(current["record_ids"]) == set(subject["record_ids"]))]
+            if not legacy and not set(subject["record_ids"]) <= owned_records:
+                reject("a saved research subject selects an unowned record", matches)
                 continue
-            seen.add(dispute_id)
-            statuses[dispute_id] = status
-            by_dispute[dispute_id] = rows
-            diagnostics_by_dispute[dispute_id] = read_diagnostics
-            for problem in read_diagnostics:
-                if isinstance(problem, str) and problem.strip():
-                    diagnostics.append(problem)
-    return {"state": state, "by_dispute": by_dispute,
-            "status_by_dispute": statuses, "diagnostics": diagnostics,
-            "diagnostics_by_dispute": diagnostics_by_dispute,
-            "fingerprints": fingerprints}
+            if not legacy:
+                try:
+                    matches = [key for key in matches if read.get("fingerprint") ==
+                               research_fingerprint(active[key], contexts[key],
+                                                    read.get("corpus_revision"),
+                                                    read.get("verification", verification))]
+                except ValueError:
+                    reject("a saved research dependency is unreadable", matches)
+                    continue
+            if identity in seen or not _read_valid(
+                    read, legacy=legacy, owner=owner, verification=verification):
+                if legacy and read.get("rows") and read.get("verification") != "source_support_v4":
+                    output["diagnostics"].append(
+                        "saved legal items predate independent source verification")
+                    for key in matches:
+                        output["by_subject"][key] = []
+                        output["status_by_subject"][key] = "unavailable"
+                        output["reuse_allowed"][key] = False
+                else:
+                    reject("a saved legal read lacks valid attributed sources", matches)
+                continue
+            seen.add(identity)
+            for key in matches:
+                current = (corpus_revision is not None
+                           and read.get("corpus_revision") == corpus_revision)
+                reusable = (not legacy and current and read["state"] == "ok"
+                            and read.get("verification") == verification)
+                freshness = "current" if current else (
+                    "unknown" if legacy or corpus_revision is None else "stale")
+                coverage = deepcopy(read.get("coverage") or {})
+                coverage.update(state=read["state"], purpose=subject["purpose"],
+                                source_freshness=freshness, reuse_allowed=reusable, legacy=legacy)
+                output["by_subject"][key] = deepcopy(read["rows"])
+                output["status_by_subject"][key] = read["state"]
+                output["diagnostics_by_subject"][key] = deepcopy(read.get("diagnostics", []))
+                output["coverage_by_subject"][key] = coverage
+                output["reuse_allowed"][key] = reusable
+                output["read_subject_id_by_subject"][key] = identity
+                output["source_turn_id_by_subject"][key] = turn["turn_id"]
+                output["diagnostics"].extend(read.get("diagnostics", []))
+    return output
+
+
+def dispute_research_subjects(matter: Matter, *, disputes: dict,
+                              material: dict) -> tuple[tuple[dict, ...], dict]:
+    if disputes.get("state") != "ok" or material.get("state") != "ok":
+        raise ValueError("the dispute or material record is incomplete")
+    subjects, contexts = [], {}
+    for row in disputes["rows"]:
+        if row.get("identification") != "identified":
+            continue
+        identity = row["id"]
+        context = _context([row, *material.get("by_dispute", {}).get(identity, []),
+                            *material.get("matter", [])])
+        contexts[identity] = context
+        subjects.append(dict(id=identity, kind="dispute", owner_id=research_owner_id(matter),
+                             scope=row.get("matter_scope") or "current", purpose="gathering",
+                             question=row.get("statement") or row.get("label"),
+                             record_ids=[item["id"] for item in context]))
+    return tuple(subjects), contexts
+
+
+def requirements_record(matter: Matter, *, disputes: dict, material: dict,
+                        corpus_revision: str | None = None) -> dict:
+    """Expose only gathering items owned by identified current disputes."""
+    try:
+        subjects, contexts = dispute_research_subjects(matter, disputes=disputes, material=material)
+    except (ValueError, KeyError, TypeError):
+        return dict(state="incomplete", by_dispute={}, status_by_dispute={},
+                    diagnostics_by_dispute={}, fingerprints={}, diagnostics=[
+                        "the dispute or material record is incomplete"])
+    research = research_record(matter, subjects=subjects, material_by_subject=contexts,
+                               corpus_revision=corpus_revision)
+    gathering = {identity: [row for row in rows if row["kind"] == "gathering"]
+                 for identity, rows in research["by_subject"].items()}
+    return dict(state=research["state"], by_dispute=gathering,
+                status_by_dispute=research["status_by_subject"],
+                diagnostics=research["diagnostics"],
+                diagnostics_by_dispute=research["diagnostics_by_subject"],
+                fingerprints=research["fingerprints"], reuse_allowed=research["reuse_allowed"],
+                coverage_by_dispute=research["coverage_by_subject"],
+                source_turn_id_by_dispute=research["source_turn_id_by_subject"])

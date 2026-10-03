@@ -1,10 +1,12 @@
-"""Source-linked search plans and legal-material requirements for disputes."""
+"""Plan, read and independently check passage-grounded research subjects."""
+
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 
-from nm.brain.checked import checked_read, require_independent_result
+from nm.brain.checked import require_independent_result
 from nm.shared.model_port import (
     ContextOverflow,
     ModelError,
@@ -17,417 +19,564 @@ from nm.shared.model_port import (
     require_schema,
 )
 
-_DECOMPOSE_SYSTEM = """Message: The input contains the complete ordered,
-attributed conversation, active dispute formulations, and material already
-linked to each dispute. The advocate's account and described records are not
-verified. A search phrase is a retrieval hypothesis, not a finding.
+RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
+RESEARCH_VERIFICATION = "research_support_v1"
 
-Purpose: Produce complementary queries for finding candidate bare-Act sections
-and judgment passages for each supplied dispute. This call does not decide
-which law applies or what the advocate must prove or gather.
+_DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
+conversation and research subjects with their owner, scope, purpose, question
+and attributed record. A subject is a research instruction, not a finding that
+a dispute, event, rule or permission exists. Reported material is unverified.
 
-Look for: The conduct and contested relationship, relevant timing and place
-when stated, the practical outcome, and material that changes the legal
-question. Use several genuinely different entry points, including the
-advocate's concrete words and plausible legal terminology. A legal term can
-be explored in a query without being asserted as a fact or applicable rule.
-Do not import another dispute's facts, assume a jurisdiction or statute, or
-expand a hypothetical into an event. Avoid near-duplicate formulations.
+Purpose: Form complementary retrieval queries for candidate bare-Act sections
+and judgment passages addressing each subject's question. This call gathers
+evidence; it does not decide applicable law or the answer.
 
-Outcome: Return only the declared JSON object. Return exactly one plan per
-supplied dispute ID and preferably three or four distinct, concise queries
-per plan, never more than four. When the record cannot ground that many
-different useful queries, return fewer. Keep each plan's queries grounded in
-that dispute and its linked material. Do not cite an unsupplied source, invent
-an incident, or present a query as legal advice."""
+Look for: The question and requested outcome, contested relationships and
+conduct when stated, factual and temporal limits, and potentially relevant
+legal concepts. Use genuinely different entry points, including concrete
+language and plausible legal terminology. Exploring a term does not assert
+it as a fact or applicable rule. Preserve scope and purpose; do not import
+another subject's facts, assume missing jurisdiction, expand hypothetical
+events or make near-duplicate formulations.
 
+Outcome: Return only plans under the schema, exactly one per subject_id.
+Prefer three or four distinct concise queries, never more than four; return
+fewer when further useful entry points cannot be grounded. Queries are
+search hypotheses, not legal advice, facts or citations."""
 
-_REQUIREMENTS_SYSTEM = """Message: The input contains the complete ordered,
-attributed conversation, each active dispute and its linked material, and
-candidate bare-Act sections and judgment passages retrieved for that dispute.
-Each candidate has an ID, exact passage, and locator. Retrieval ranks are
-search signals, not findings of applicability or legal support. The
-advocate's account and any described records remain unverified.
+_REQUIREMENTS_SYSTEM = """Message: You receive the complete ordered, attributed
+conversation, research subjects and their attributed record, and candidate
+bare-Act sections and judgment passages retrieved for each subject. Each has
+a local ID, exact text and locator. Rank and IDs do not establish legal support
+or applicability. Reported documents are uninspected.
 
-Purpose: Identify source-supported things to establish, obtain, or check for
-each dispute so the advocate can test and strengthen the case. This is a
-proposed work record, not a conclusion that a claim succeeds.
+Purpose: Propose passage-supported findings addressing each subject's purpose
+and question. For gathering work, identify things to establish, obtain or
+check. For requested legal work, capture supported principles, conditions,
+helpful reasoning and adverse limits needed for a useful answer. Do not
+replace legal research with model legal memory.
 
-Look for: What a potentially applicable provision actually mandates, its
-conditions, exceptions, timing and procedural requirements; what a judgment
-actually decides or explains, including limits or adverse reasoning; and
-which facts or records would address those points in this dispute. Distinguish
-a legally required step or element from material that would strengthen proof
-or answer a possible objection. Do not promote a judgment's passing statement
-or a search score into a binding rule. Do not apply a provision or judgment
-when the supplied passage does not support the proposed need in this factual
-and temporal context. A retrieved passage alone may not establish an in-force
-statutory version, jurisdictional reach, precedent treatment, or binding
-weight; express legal force conditionally when applicability is unverified.
-Treat mentioned documents as reported, not inspected.
+Look for: What provisions mandate and the conditions, exceptions, timing and
+procedure limiting them; what judgments actually decide or explain, including
+contrary reasoning. Distinguish holdings from arguments, background and
+hypothetical discussion. Compare legal predicates with attributed words
+without assuming missing facts. Preserve unresolved applicability conditions
+expressly in the finding. Retrieval alone does not establish an in-force
+version, jurisdictional reach, precedent treatment or binding weight. Select
+material only when its actual words address the finding; reported document
+possession does not establish contents or prove an element. Do not invent
+facts, document types, duties, holdings or sources.
 
-Outcome: Return only the declared JSON object. For each useful, supported
-item, give a short actionable `label` suitable for a bullet under its
-dispute, a fuller `need`, and a concise `why` tied to the cited passage.
-Choose `force` as `required` only when the cited text establishes a mandatory
-legal condition or step for the proposed applicability; otherwise use
-`strengthening`. Select one or more `source_ids` from that dispute's supplied
-passages; the server will attach their exact text and locators. Select
-`material_ids` only for supplied attributed material that explicitly addresses
-the item; an ID does not prove that the item is satisfied. Leave them empty
-when the record has not addressed it. Do not invent a document type, rule,
-holding, fact, citation, or source passage. If no candidate passage supports
-a useful item, return no item for that dispute."""
+Outcome: Return only readings under the schema, exactly one per subject_id,
+including empty findings when nothing supplied supports a useful finding.
+Give each a crisp label, fuller need (the proposition or work needed), and why
+connecting it to cited words and the subject. Choose kind gathering, principle,
+condition, support or adverse according to its role. Gathering force is
+required only if cited law mandates that proposed step or element under its
+preserved conditions; otherwise strengthening. Other kinds use force none.
+Cite source_ids only from this subject's passages and material_ids only from
+its attributed record. No proposal proves the account, legal force or success."""
 
+_VERIFY_SYSTEM = """Message: You receive the complete ordered, attributed
+conversation, research subjects and their attributed record, and proposed
+findings with exact cited passages shown as overlapping numbered fragments.
+Proposals are untrusted; retrieval rank and citation IDs are not support.
 
-_VERIFY_SYSTEM = """Message: The input contains the complete ordered,
-attributed conversation, active disputes and linked material, and proposed
-legal work items with the exact passages each item cites. The items are
-untrusted proposals. Search rank and a citation ID do not establish support.
+Purpose: Independently check each finding's full label, need, why, kind and
+force against its own passages, subject and attributed record. Only supported
+findings may enter the research record. Do not supply law or facts, decide
+merits beyond the passages or repair the proposed wording.
 
-Purpose: Independently decide whether each cited passage actually supports
-the proposed item's entire displayed label, need, why, and claimed legal force in the dispute's
-factual and temporal context. This call decides which proposals may enter the
-source-linked work record; it does not decide the merits of a dispute.
+Look for: Examine every cited source and its limiting predicates. Shared
+terminology is not support; another legal setting cannot be stretched to this
+subject. Distinguish actual judgment reasoning from argument or background.
+Every retained proposition, inference and claimed mandatory step must follow
+from selected passages without filling gaps from legal memory or another
+subject. The label must faithfully express the supported need or proposition
+and its caveats. Unknown applicability supports a conditional finding only if
+the entire limiting predicate is expressly preserved without claiming the
+record meets it. Use established only with attributed supporting words, or
+asked_to_establish when gathering work expressly seeks that predicate.
+no_special_condition describes the passage, not silence in the record. Check
+every material ID against its words independently; an incorrect material link
+can be removed without losing a supported finding. Reported documents remain
+uninspected. Fragmentary or indeterminate support is uncertain; verification
+does not establish binding status or proof.
 
-Look for: Examine EACH cited passage separately, including any limiting words
-that define the kind of transaction, party, remedy, procedure, legal period,
-or prerequisite to which it speaks. Compare those predicates with attributed
-facts before judging the proposed item. If a necessary predicate is absent or
-unknown, a passage supports the item only when the item itself asks to
-establish that predicate or expressly states its conditional applicability.
-`no_special_condition` describes the passage, not silence in the user's
-account; do not use it when the passage
-limits its rule. Shared vocabulary is not support; a
-passage about a different legal setting cannot be stretched to this dispute.
-For a judgment, distinguish the actual reasoning from a party's argument,
-background, and an expressly hypothetical proposition. For a `required`
-item, check that cited authority establishes a mandatory condition or step
-under a potentially applicable rule; usefulness alone supports at most a
-`strengthening` item. Treat reported documents as uninspected. Do not fill
-gaps from legal memory, uncited sources, or another dispute. Check that the
-short board label faithfully states the same source-supported need without
-adding a new legal or factual proposition. Separately check every selected
-material ID against its attributed words: it addresses the item only if the
-reported detail explicitly concerns that need. A document merely said to be
-held is not proof of its contents or satisfaction of a legal element. An
-incorrect material link does not invalidate an otherwise supported need. If a
-passage is fragmentary or its scope cannot be established, mark it uncertain.
+Outcome: Return exactly one independent decision per candidate_id. Use
+supported, unsupported or uncertain overall; faithful, unsupported or uncertain
+for the label. Reasons are nonempty and at most 500 characters. Rejected
+findings or unfaithful labels are withheld and may have empty unused source
+and material checks. For a supported faithful finding check EVERY cited source
+and selected material exactly once. Select support_fragment_id only from that
+source's exact fragments when its words support the finding; rejected sources
+need an empty support ID. Select scope_fragment_id for a limiting predicate.
+Supported sources require established, asked_to_establish, conditional or
+no_special_condition scope. conditional needs an exact scope fragment and
+faithful preservation of its full predicate without asserting satisfaction.
+no_special_condition needs an empty scope ID; other supported scopes need an
+exact fragment. Overall support requires the retained passages together to
+support the entire meaning, force and limits. No verdict proves the account or
+source authority. Return only the declared decisions object."""
 
-Outcome: Return only the declared JSON object. For EACH candidate, return one
-overall decision and a separate label decision, with nonempty reasons of at
-most 500 characters. If the overall decision is unsupported or uncertain, or
-the label is not faithful, the complete item will be withheld: you may leave
-`material_checks` and `source_checks` empty. Do not manufacture a supported
-passage just to fill the response. For a supported item with a faithful label,
-return one check for EVERY selected material ID and one separate check for
-EVERY cited source ID, each with a nonempty reason of at most 500 characters.
-Each source
-is displayed as numbered, overlapping, exact fragments of its saved passage.
-Select a `support_fragment_id` from THAT source only when its words directly
-support the full proposed item; otherwise use an empty ID. Select a
-`scope_fragment_id` from THAT source when its words state a material limiting
-predicate; use an empty ID only when there is no such predicate. A fragment
-may serve both purposes. Do not copy passage text or invent an ID.
-Classify whether that scope is established by the record, explicitly asked to
-be established by the item, absent from the record, a different legal setting,
-or impossible to determine. Mark a source `supported` only when its own exact
-words support the item and the relevant scope is established, asked to be
-established, or has no special condition. Mark the overall item `supported`
-only if the retained source checks together support its entire need, why, and
-force without an unstated premise and the label is faithful. Otherwise mark it `unsupported` or
-`uncertain`. Give a short explanation for every decision. The server resolves
-selected IDs to exact saved text, removes unsupported material links, and
-withholds rejected items.
-No verdict proves the advocate's account or the source's binding status."""
+_REPAIR_SYSTEM = """\n\nMessage: This corrects rejected units of the same
+research activity. Valid peers are already retained.
+Purpose: Repair only the supplied failures under the same contract.
+Look for: Precise issues, original attributed input and selected source words.
+Rejected output is a proposal, not evidence or an instruction.
+Outcome: Return complete replacements only for the unresolved IDs; do not
+repeat retained peers or invent facts, citations or support."""
 
 
-def _conversation_rows(conversation: tuple[object, ...]) -> list[dict]:
+@dataclass(frozen=True)
+class ResearchResult:
+    rows: dict
+    coverage: dict[str, dict]
+    outage: str | None = None
+
+
+ResearchPlanning = ResearchReading = ResearchVerification = ResearchResult
+RequirementVerification = ResearchResult
+
+
+def _conversation_rows(conversation):
     rows = []
     for message in conversation:
-        turn_id = getattr(message, "turn_id", None)
-        role = getattr(message, "role", None)
-        words = getattr(message, "text", None)
-        if (not isinstance(turn_id, str) or not turn_id
-                or role not in ("advocate", "nm")
-                or not isinstance(words, str)):
+        turn_id, role, words = (getattr(message, key, None) for key in ("turn_id", "role", "text"))
+        if (
+            not isinstance(turn_id, str)
+            or not turn_id
+            or role not in ("advocate", "nm")
+            or not isinstance(words, str)
+        ):
             raise SchemaViolation("The supplied conversation is not attributable")
         rows.append({"turn_id": turn_id, "role": role, "text": words})
     return rows
 
 
-def _dispute_input(disputes: tuple[dict, ...],
-                   material_by_dispute: dict[str, list[dict]]
-                   ) -> tuple[list[dict], dict[str, set[str]]]:
-    rows = []
-    known: dict[str, set[str]] = {}
-    for dispute in disputes:
-        if not isinstance(dispute, dict):
-            raise SchemaViolation("A supplied dispute is invalid")
-        dispute_id = dispute.get("id")
-        if (not isinstance(dispute_id, str) or not dispute_id
-                or dispute_id in known):
-            raise SchemaViolation("A dispute needs a unique saved ID")
-        material = material_by_dispute.get(dispute_id, [])
+def _subject_input(subjects, material_by_subject):
+    rows, known, canonical = [], {}, {}
+    for subject in subjects:
+        if (
+            not isinstance(subject, dict)
+            or any(
+                not isinstance(subject.get(key), str) or not subject[key].strip()
+                for key in ("id", "owner_id", "question")
+            )
+            or subject.get("scope") not in ("current", "proposed", "none", "other", "uncertain")
+            or subject.get("kind") not in ("dispute", "request")
+            or subject.get("purpose") not in ("gathering", "requested_work")
+            or not isinstance(subject.get("record_ids"), list)
+            or any(not isinstance(key, str) or not key for key in subject["record_ids"])
+            or len(subject["record_ids"]) != len(set(subject["record_ids"]))
+            or subject["id"] in known
+        ):
+            raise SchemaViolation("A research subject needs a unique owner, scope and question")
+        identifier = subject["id"]
+        material = material_by_subject.get(identifier, [])
         if not isinstance(material, (list, tuple)):
-            raise SchemaViolation("A dispute's attributed material is invalid")
-        known[dispute_id] = set()
-        linked = []
+            raise SchemaViolation("A research subject's attributed record is invalid")
+        known[identifier] = set()
         for item in material:
-            if not isinstance(item, dict):
-                raise SchemaViolation("A linked material item is invalid")
-            item_id = item.get("id")
-            if (not isinstance(item_id, str) or not item_id
-                    or item_id in known[dispute_id]):
-                raise SchemaViolation("Linked material needs unique saved IDs")
-            known[dispute_id].add(item_id)
-            linked.append({key: item.get(key) for key in (
-                "id", "kind", "statement", "quoted", "basis", "source_turn_id")})
-        rows.append({"dispute": {key: dispute.get(key) for key in (
-            "id", "label", "statement", "quoted", "identification",
-            "source_turn_id")}, "material": linked})
-    if set(material_by_dispute) - set(known):
-        raise SchemaViolation("Material is linked to an unknown dispute")
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("id"), str)
+                or not item["id"]
+                or item["id"] in known[identifier]
+            ):
+                raise SchemaViolation("Attributed research records need unique saved IDs")
+            if item["id"] in canonical and canonical[item["id"]] != item:
+                raise SchemaViolation("An attributed research record has conflicting ownership")
+            canonical[item["id"]] = item
+            known[identifier].add(item["id"])
+        if not set(subject["record_ids"]) <= known[identifier]:
+            raise SchemaViolation("A research subject references unavailable attributed material")
+        if subject["scope"] == "none" and material:
+            raise SchemaViolation("A general research subject cannot import matter material")
+        rows.append({"subject": deepcopy(subject), "material": deepcopy(list(material))})
+    if set(material_by_subject) - set(known):
+        raise SchemaViolation("Attributed material names an unknown research subject")
     return rows, known
 
 
-def _prompt(system: str, operation: str, payload: dict,
-            model: ModelPort, output_limit: int, schema: dict,
-            tier: Tier = Tier.ROUTINE) -> Prompt:
-    prompt = Prompt(system=system,
-                    user=json.dumps(payload, ensure_ascii=False,
-                                    separators=(",", ":")),
-                    operation=operation)
-    # Structured-output instructions consume the same context as the input.
-    schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
-    if (estimate_tokens(prompt.user + (prompt.system or "") + schema_text)
-            + output_limit
-            > model.context_budget(tier)):
+def _coverage(ids):
+    return {
+        key: {
+            "state": "ok",
+            "checked_items": 0,
+            "unread_items": 0,
+            "withheld_items": 0,
+            "diagnostics": [],
+        }
+        for key in ids
+    }
+
+
+def _prompt(system, operation, payload, model, output_limit, schema, tier=Tier.ROUTINE):
+    prompt = Prompt(
+        system=system,
+        user=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        operation=operation,
+    )
+    encoded = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+    if estimate_tokens(
+        prompt.user + (prompt.system or "") + encoded
+    ) + output_limit > model.context_budget(tier):
         raise ContextOverflow(
-            "The complete conversation and dispute group exceed the model context budget")
+            "The complete conversation and research group exceed the model budget"
+        )
     return prompt
 
 
-def _ordered_batches(rows: list[dict], prepare):
-    """Make the fewest consecutive complete groups that fit the model budget.
-
-    Every group repeats the full conversation. Preflight single disputes first
-    so no model call occurs if any one complete dispute cannot fit.
-    """
+def _ordered_batches(rows, prepare):
+    """Preflight complete atomic units, then use the fewest consecutive groups."""
     try:
-        return [prepare(rows)]
+        return [prepare(rows)], []
     except ContextOverflow:
         pass
-    singles = [prepare([row]) for row in rows]
-    batches = []
-    start = 0
+    fitting, singles, oversized = [], [], []
+    for row in rows:
+        try:
+            single = prepare([row])
+        except ContextOverflow:
+            oversized.append(row)
+        else:
+            fitting.append(row)
+            singles.append(single)
+    rows = fitting
+    batches, start = [], 0
     while start < len(rows):
-        largest = singles[start]
-        end = start + 1
+        largest, end = singles[start], start + 1
         while end < len(rows):
             try:
-                candidate = prepare(rows[start:end + 1])
+                candidate = prepare(rows[start : end + 1])
             except ContextOverflow:
                 break
-            largest = candidate
-            end += 1
+            largest, end = candidate, end + 1
         batches.append(largest)
         start = end
-    return batches
+    return batches, oversized
 
 
-def _decomposition_schema(dispute_ids: tuple[str, ...]) -> dict:
-    query = {
-        "type": "object", "additionalProperties": False,
-        "required": ["text"],
-        "properties": {
-            "text": {"type": "string", "minLength": 1},
-        },
-    }
+def _repair_payload(payload, issues, rejected):
+    return (
+        {**payload, "validation_issues": issues, "rejected_units": rejected} if issues else payload
+    )
+
+
+def _read_subject_groups(model, rows, prepare, *, field, accept):
+    """Retain subject peers and correct only unread units once per batch."""
+    by_id = {row["subject"]["id"]: row for row in rows}
+    result, coverage, outage = {}, _coverage(by_id), None
+    batches, oversized = _ordered_batches(rows, prepare)
+    for row in oversized:
+        identifier = row["subject"]["id"]
+        coverage[identifier].update(state="partial", unread_items=1)
+        coverage[identifier]["diagnostics"].append(
+            "This research unit exceeds its model context budget; no context was omitted"
+        )
+    for ids, prompt, schema, limit in batches:
+        pending, issues, rejected = ids, {}, {}
+        for attempt in range(2):
+            if outage or not pending:
+                break
+            if attempt:
+                try:
+                    _, prompt, schema, limit = prepare(
+                        [by_id[key] for key in pending], issues, rejected
+                    )
+                except ContextOverflow:
+                    break
+            try:
+                read = model.structured(prompt, schema, Tier.ROUTINE, max_tokens=limit)
+            except (SchemaViolation, OutputTruncated) as exc:
+                issues = {key: str(exc) for key in pending}
+                continue
+            except ContextOverflow:
+                issues = {key: "This complete research unit exceeds the model context budget"
+                          for key in pending}
+                break
+            except ModelError as exc:
+                outage = type(exc).__name__
+                issues = {key: "This research activity was unavailable" for key in pending}
+                break
+            data = read.data if read.usable and isinstance(read.data, dict) else None
+            values = data.get(field) if data is not None and set(data) == {field} else None
+            groups = {key: [] for key in pending}
+            if isinstance(values, list):
+                for value in values:
+                    if (
+                        isinstance(value, dict)
+                        and isinstance(value.get("subject_id"), str)
+                        and value["subject_id"] in groups
+                    ):
+                        groups[value["subject_id"]].append(value)
+            unresolved, issues = [], {}
+            for identifier in pending:
+                group = groups[identifier]
+                if len(group) != 1:
+                    issues[identifier] = "Return exactly one complete unit for this subject_id"
+                    rejected[identifier] = group
+                    unresolved.append(identifier)
+                    continue
+                try:
+                    require_schema(group[0], schema["properties"][field]["items"])
+                    value = accept(identifier, group[0])
+                except SchemaViolation as exc:
+                    issues[identifier], rejected[identifier] = str(exc), group[0]
+                    unresolved.append(identifier)
+                else:
+                    result[identifier] = value
+                    coverage[identifier]["checked_items"] = 1
+            pending = tuple(unresolved)
+        for identifier in pending:
+            coverage[identifier].update(
+                state="unavailable" if outage else "partial", unread_items=1
+            )
+            coverage[identifier]["diagnostics"].append(
+                issues.get(identifier, "This research unit could not be read")
+            )
+    return ResearchResult(result, coverage, outage)
+
+
+def _decomposition_schema(ids):
     plan = {
-        "type": "object", "additionalProperties": False,
-        "required": ["dispute_id", "queries"],
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["subject_id", "queries"],
         "properties": {
-            "dispute_id": {"type": "string", "enum": list(dispute_ids)},
-            "queries": {"type": "array", "minItems": 1, "maxItems": 4,
-                        "items": query},
+            "subject_id": {"type": "string", "enum": list(ids)},
+            "queries": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["text"],
+                    "properties": {"text": {"type": "string", "minLength": 1}},
+                },
+            },
         },
     }
-    return {"type": "object", "additionalProperties": False,
-            "required": ["plans"],
-            "properties": {"plans": {"type": "array", "items": plan}}}
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["plans"],
+        "properties": {"plans": {"type": "array", "items": plan}},
+    }
 
 
-def decompose(model: ModelPort, *, disputes: tuple[dict, ...],
-              material_by_dispute: dict[str, list[dict]],
-              conversation: tuple[object, ...]) -> dict[str, tuple[str, ...]]:
-    """Plan grounded searches in as few complete-context calls as fit."""
-    dispute_rows, _ = _dispute_input(disputes, material_by_dispute)
-    if not dispute_rows:
-        return {}
-    conversation_rows = _conversation_rows(conversation)
+def decompose_subjects(
+    model: ModelPort,
+    *,
+    subjects: tuple[dict, ...],
+    material_by_subject: dict[str, list[dict]],
+    conversation: tuple[object, ...],
+) -> ResearchPlanning:
+    rows, _ = _subject_input(subjects, material_by_subject)
+    words = _conversation_rows(conversation)
+    if not rows:
+        return ResearchResult({}, {})
 
-    def prepare(group: list[dict]):
-        ids = tuple(row["dispute"]["id"] for row in group)
-        payload = {"conversation": conversation_rows, "disputes": group}
-        output_limit = min(12288, max(3072, len(ids) * 1024))
+    def prepare(group, issues=None, rejected=None):
+        ids = tuple(row["subject"]["id"] for row in group)
         schema = _decomposition_schema(ids)
-        prompt = _prompt(_DECOMPOSE_SYSTEM, "decompose_disputes", payload,
-                         model, output_limit, schema)
-        return ids, prompt, schema, output_limit
+        limit = min(12288, max(3072, len(ids) * 1024))
+        payload = _repair_payload({"conversation": words, "subjects": group}, issues, rejected)
+        prompt = _prompt(
+            _DECOMPOSE_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
+            "decompose_disputes",
+            payload,
+            model,
+            limit,
+            schema,
+        )
+        return ids, prompt, schema, limit
 
-    combined: dict[str, tuple[str, ...]] = {}
-    for ids, prompt, schema, output_limit in _ordered_batches(
-            dispute_rows, prepare):
-        def accept(data: dict, ids=ids) -> dict[str, tuple[str, ...]]:
-            plans = data["plans"]
-            if len(plans) != len(ids):
-                raise SchemaViolation(
-                    "Search plans must cover every supplied dispute once")
-            result = {}
-            for plan in plans:
-                dispute_id = plan["dispute_id"]
-                if dispute_id in result:
-                    raise SchemaViolation("A dispute has duplicate search plans")
-                texts = []
-                for query in plan["queries"]:
-                    phrase = query["text"].strip()
-                    if not phrase or len(phrase) > 300:
-                        raise SchemaViolation("A search query must be concise and nonempty")
-                    if phrase.casefold() in {item.casefold() for item in texts}:
-                        raise SchemaViolation("A dispute has duplicate search queries")
-                    texts.append(phrase)
-                result[dispute_id] = tuple(texts)
-            return result
+    def accept(identifier, row):
+        phrases = [item["text"].strip() for item in row["queries"]]
+        if any(not phrase or len(phrase) > 300 for phrase in phrases):
+            raise SchemaViolation("Each search query must be concise and nonempty")
+        if len({phrase.casefold() for phrase in phrases}) != len(phrases):
+            raise SchemaViolation("A subject has duplicate search queries")
+        return tuple(phrases)
 
-        combined.update(checked_read(model, prompt, schema, output_limit, accept))
-    return combined
+    return _read_subject_groups(model, rows, prepare, field="plans", accept=accept)
 
 
-def _requirements_schema(dispute_ids: tuple[str, ...],
-                         source_ids: tuple[str, ...],
-                         material_ids: tuple[str, ...]) -> dict:
-    row = {
-        "type": "object", "additionalProperties": False,
-        "required": ["dispute_id", "label", "need", "why", "force",
-                     "source_ids", "material_ids"],
+def _findings_schema(ids, source_ids, material_ids):
+    finding = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["kind", "label", "need", "why", "force", "source_ids", "material_ids"],
         "properties": {
-            "dispute_id": {"type": "string", "enum": list(dispute_ids)},
-            "label": {"type": "string", "minLength": 1},
-            "need": {"type": "string", "minLength": 1},
-            "why": {"type": "string", "minLength": 1},
-            "force": {"type": "string", "enum": ["required", "strengthening"]},
-            "source_ids": {"type": "array", "minItems": 1,
-                           "items": {"type": "string", "enum": list(source_ids)}},
-            "material_ids": {"type": "array",
-                             "items": {"type": "string", "enum": list(material_ids)}},
+            "kind": {"type": "string", "enum": list(RESEARCH_KINDS)},
+            **{key: {"type": "string", "minLength": 1} for key in ("label", "need", "why")},
+            "force": {"type": "string", "enum": ["required", "strengthening", "none"]},
+            "source_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "enum": list(source_ids)},
+            },
+            "material_ids": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(material_ids)},
+            },
         },
     }
-    return {"type": "object", "additionalProperties": False,
-            "required": ["requirements"],
-            "properties": {"requirements": {"type": "array", "items": row}}}
+    reading = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["subject_id", "findings"],
+        "properties": {
+            "subject_id": {"type": "string", "enum": list(ids)},
+            "findings": {"type": "array", "items": finding},
+        },
+    }
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["readings"],
+        "properties": {"readings": {"type": "array", "items": reading}},
+    }
 
 
-def read_requirements(model: ModelPort, *, disputes: tuple[dict, ...],
-                      material_by_dispute: dict[str, list[dict]],
-                      search_results: dict[str, dict],
-                      conversation: tuple[object, ...]) -> dict[str, list[dict]]:
-    """Read candidate passages once; attach only exact retrieved sources."""
-    dispute_rows, material_ids = _dispute_input(disputes, material_by_dispute)
-    ids = tuple(material_ids)
-    if set(search_results) - set(ids):
-        raise SchemaViolation("Search results name an unknown dispute")
-    result: dict[str, list[dict]] = {dispute_id: [] for dispute_id in ids}
-    if not ids:
-        return result
-    hits: dict[str, dict[str, dict]] = {}
-    for dispute_id in ids:
-        search = search_results.get(dispute_id)
-        if not isinstance(search, dict) or search.get("state") not in (
-                "ok", "partial", "unavailable"):
-            raise SchemaViolation("Dispute search has no reliable state")
-        candidates = search.get("candidates")
-        if not isinstance(candidates, list):
-            raise SchemaViolation("Dispute search candidates are invalid")
-        hits[dispute_id] = {}
-        if search["state"] == "unavailable":
-            if candidates:
-                raise SchemaViolation("Unavailable search cannot provide candidate passages")
-            continue
-        for hit in candidates:
-            if not isinstance(hit, dict):
-                raise SchemaViolation("A retrieved passage is invalid")
-            hit_id = hit.get("id")
-            if (not isinstance(hit_id, str) or not hit_id
-                    or hit_id in hits[dispute_id]
-                    or hit.get("kind") not in ("provision", "judgment")
-                    or any(not isinstance(hit.get(key), str) or not hit[key].strip()
-                           for key in ("title", "locator", "text"))):
+def _search_hits(ids, searches):
+    if set(searches) - set(ids):
+        raise SchemaViolation("Search results name an unknown research subject")
+    hits = {}
+    for identifier in ids:
+        search = searches.get(identifier)
+        if (
+            not isinstance(search, dict)
+            or search.get("state") not in ("ok", "partial", "unavailable")
+            or not isinstance(search.get("candidates"), list)
+        ):
+            raise SchemaViolation("Research search has no reliable state or candidate list")
+        hits[identifier] = {}
+        if search["state"] == "unavailable" and search["candidates"]:
+            raise SchemaViolation("Unavailable search cannot provide candidate passages")
+        for hit in search["candidates"]:
+            if (
+                not isinstance(hit, dict)
+                or not isinstance(hit.get("id"), str)
+                or not hit["id"]
+                or hit["id"] in hits[identifier]
+                or hit.get("kind") not in ("provision", "judgment")
+                or any(
+                    not isinstance(hit.get(key), str) or not hit[key].strip()
+                    for key in ("title", "locator", "text")
+                )
+            ):
                 raise SchemaViolation("A retrieved passage needs a unique exact locator")
-            hits[dispute_id][hit_id] = hit
-    active_rows = [row for row in dispute_rows
-                   if hits[row["dispute"]["id"]]]
-    if not active_rows:
-        return result
-    for row in active_rows:
-        dispute_id = row["dispute"]["id"]
-        row["candidates"] = list(hits[dispute_id].values())
-    conversation_rows = _conversation_rows(conversation)
+            hits[identifier][hit["id"]] = deepcopy(hit)
+    return hits
 
-    def prepare(group: list[dict]):
-        group_ids = tuple(row["dispute"]["id"] for row in group)
-        source_ids = tuple(dict.fromkeys(
-            hit_id for dispute_id in group_ids for hit_id in hits[dispute_id]))
-        group_material_ids = tuple(dict.fromkeys(
-            item["id"] for row in group for item in row["material"]))
-        payload = {"conversation": conversation_rows, "disputes": group}
-        output_limit = min(16384, max(4096, len(source_ids) * 384))
-        schema = _requirements_schema(
-            group_ids, source_ids, group_material_ids)
-        prompt = _prompt(_REQUIREMENTS_SYSTEM, "read_legal_requirements",
-                         payload, model, output_limit, schema)
-        return group_ids, prompt, schema, output_limit
 
-    for group_ids, prompt, schema, output_limit in _ordered_batches(
-            active_rows, prepare):
-        def accept(data: dict, group_ids=group_ids) -> dict[str, list[dict]]:
-            read = {dispute_id: [] for dispute_id in group_ids}
-            seen: set[tuple[str, str]] = set()
-            for row in data["requirements"]:
-                dispute_id = row["dispute_id"]
-                sources = row["source_ids"]
-                linked = row["material_ids"]
-                label, need, why = (
-                    row[key].strip() for key in ("label", "need", "why"))
-                if not label or len(label) > 120 or not need or not why:
-                    raise SchemaViolation(
-                        "A requirement needs a short label and explanation")
-                if (len(sources) != len(set(sources))
-                        or not set(sources) <= set(hits[dispute_id])):
-                    raise SchemaViolation(
-                        f"A requirement for dispute {dispute_id!r} cites "
-                        "a passage from another dispute")
-                if (len(linked) != len(set(linked))
-                        or not set(linked) <= material_ids[dispute_id]):
-                    raise SchemaViolation(
-                        f"A requirement for dispute {dispute_id!r} links unrelated material")
-                key = (dispute_id, label.casefold())
-                if key in seen:
-                    raise SchemaViolation(
-                        "A dispute has duplicate requirement labels")
-                seen.add(key)
-                read[dispute_id].append({
-                    "label": label, "need": need, "why": why,
-                    "force": row["force"],
-                    "source_ids": list(sources), "material_ids": list(linked),
-                    "sources": [dict(hits[dispute_id][source_id])
-                                for source_id in sources],
-                    "record_status": "mentioned" if linked else "not_mentioned",
-                })
-            return read
+def _finding(row, identifier, hits, material_ids):
+    label, need, why = (row[key].strip() for key in ("label", "need", "why"))
+    if not label or len(label) > 120 or not need or not why:
+        raise SchemaViolation("A finding needs a short label and explanation")
+    if (row["kind"] == "gathering") != (row["force"] in ("required", "strengthening")):
+        raise SchemaViolation(
+            "Gathering force is required or strengthening; other findings use none"
+        )
+    selected, linked = row["source_ids"], row["material_ids"]
+    if len(selected) != len(set(selected)) or not set(selected) <= hits[identifier].keys():
+        raise SchemaViolation(
+            f"Finding for subject {identifier!r} cites a passage from another subject"
+        )
+    if len(linked) != len(set(linked)) or not set(linked) <= material_ids[identifier]:
+        raise SchemaViolation(f"Finding for subject {identifier!r} links unrelated material")
+    return {
+        **row,
+        "label": label,
+        "need": need,
+        "why": why,
+        "sources": [deepcopy(hits[identifier][key]) for key in selected],
+        "record_status": "mentioned" if linked else "not_mentioned",
+    }
 
-        result.update(checked_read(model, prompt, schema, output_limit, accept))
-    return result
+
+def read_findings(
+    model: ModelPort,
+    *,
+    subjects: tuple[dict, ...],
+    material_by_subject: dict[str, list[dict]],
+    search_results: dict[str, dict],
+    conversation: tuple[object, ...],
+) -> ResearchReading:
+    rows, material_ids = _subject_input(subjects, material_by_subject)
+    words = _conversation_rows(conversation)
+    result, coverage = {}, _coverage(material_ids)
+    hits = {}
+    for identifier in material_ids:
+        try:
+            hits.update(_search_hits((identifier,), {identifier: search_results.get(identifier)}))
+        except SchemaViolation as exc:
+            hits[identifier] = {}
+            coverage[identifier].update(state="partial", unread_items=1)
+            coverage[identifier]["diagnostics"].append(str(exc))
+        else:
+            if search_results[identifier]["state"] == "unavailable":
+                coverage[identifier].update(state="unavailable", unread_items=1)
+            elif not hits[identifier]:
+                result[identifier] = []
+    if set(search_results) - set(material_ids):
+        for row in coverage.values():
+            row["diagnostics"].append("An unowned search result was discarded")
+    active = [
+        {**row, "candidates": list(hits[row["subject"]["id"]].values())}
+        for row in rows
+        if hits[row["subject"]["id"]]
+    ]
+
+    def prepare(group, issues=None, rejected=None):
+        ids = tuple(row["subject"]["id"] for row in group)
+        source_ids = tuple(dict.fromkeys(key for identifier in ids for key in hits[identifier]))
+        linked_ids = tuple(
+            dict.fromkeys(key for identifier in ids for key in material_ids[identifier])
+        )
+        schema = _findings_schema(ids, source_ids, linked_ids)
+        limit = min(16384, max(4096, len(source_ids) * 384))
+        payload = _repair_payload({"conversation": words, "subjects": group}, issues, rejected)
+        prompt = _prompt(
+            _REQUIREMENTS_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
+            "read_legal_requirements",
+            payload,
+            model,
+            limit,
+            schema,
+        )
+        return ids, prompt, schema, limit
+
+    def accept(identifier, row):
+        values = [_finding(item, identifier, hits, material_ids) for item in row["findings"]]
+        if len({item["label"].casefold() for item in values}) != len(values):
+            raise SchemaViolation("A subject has duplicate finding labels")
+        return values
+
+    read = (
+        _read_subject_groups(model, active, prepare, field="readings", accept=accept)
+        if active
+        else ResearchResult({}, {})
+    )
+    result.update(read.rows)
+    coverage.update(read.coverage)
+    for identifier, row in coverage.items():
+        search = search_results.get(identifier)
+        search_state = search.get("state") if isinstance(search, dict) else None
+        row["search_state"] = (
+            search_state if search_state in ("ok", "partial", "unavailable") else "unavailable"
+        )
+        if row["search_state"] != "ok":
+            if row["state"] != "unavailable":
+                row["state"] = "partial"
+            row["diagnostics"].append(
+                "Search coverage is incomplete; only supplied passages were considered"
+            )
+    return ResearchResult(result, coverage, read.outage)
 
 
 def _passage_fragments(passage: str) -> list[dict[str, str]]:
@@ -436,85 +585,117 @@ def _passage_fragments(passage: str) -> list[dict[str, str]]:
     fragments = []
     start = 0
     while start < len(passage):
-        fragments.append({"id": f"f{len(fragments) + 1}",
-                          "text": passage[start:start + width]})
+        fragments.append({"id": f"f{len(fragments) + 1}", "text": passage[start : start + width]})
         if start + width >= len(passage):
             break
         start += width - overlap
     return fragments
 
 
-def _verification_schema(candidate_ids: tuple[str, ...],
-                         source_ids: tuple[str, ...],
-                         fragment_ids: tuple[str, ...],
-                         material_ids: tuple[str, ...]) -> dict:
+def _verification_schema(
+    candidate_ids: tuple[str, ...],
+    source_ids: tuple[str, ...],
+    fragment_ids: tuple[str, ...],
+    material_ids: tuple[str, ...],
+) -> dict:
     source_check = {
-        "type": "object", "additionalProperties": False,
-        "required": ["source_id", "support_fragment_id", "scope_fragment_id",
-                     "scope_status", "verdict", "reason"],
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "source_id",
+            "support_fragment_id",
+            "scope_fragment_id",
+            "scope_status",
+            "verdict",
+            "reason",
+        ],
         "properties": {
             "source_id": {"type": "string", "enum": list(source_ids)},
-            "support_fragment_id": {"type": "string",
-                                    "enum": ["", *fragment_ids]},
-            "scope_fragment_id": {"type": "string",
-                                  "enum": ["", *fragment_ids]},
-            "scope_status": {"type": "string", "enum": [
-                "established", "asked_to_establish", "not_established",
-                "different_legal_setting", "cannot_determine",
-                "no_special_condition"]},
-            "verdict": {"type": "string", "enum": [
-                "supported", "unsupported", "uncertain"]},
+            "support_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
+            "scope_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
+            "scope_status": {
+                "type": "string",
+                "enum": [
+                    "established",
+                    "asked_to_establish",
+                    "conditional",
+                    "not_established",
+                    "different_legal_setting",
+                    "cannot_determine",
+                    "no_special_condition",
+                ],
+            },
+            "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1},
         },
     }
     decision = {
-        "type": "object", "additionalProperties": False,
-        "required": ["candidate_id", "label_verdict", "label_reason",
-                     "material_checks", "source_checks", "verdict", "reason"],
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "candidate_id",
+            "label_verdict",
+            "label_reason",
+            "material_checks",
+            "source_checks",
+            "verdict",
+            "reason",
+        ],
         "properties": {
             "candidate_id": {"type": "string", "enum": list(candidate_ids)},
-            "label_verdict": {"type": "string", "enum": [
-                "faithful", "unsupported", "uncertain"]},
+            "label_verdict": {"type": "string", "enum": ["faithful", "unsupported", "uncertain"]},
             "label_reason": {"type": "string", "minLength": 1},
-            "material_checks": {"type": "array", "items": {
-                "type": "object", "additionalProperties": False,
-                "required": ["material_id", "verdict", "reason"],
-                "properties": {
-                    "material_id": {"type": "string", "enum": list(material_ids)},
-                    "verdict": {"type": "string", "enum": [
-                        "addresses", "does_not_address", "uncertain"]},
-                    "reason": {"type": "string", "minLength": 1},
-                }}},
+            "material_checks": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["material_id", "verdict", "reason"],
+                    "properties": {
+                        "material_id": {"type": "string", "enum": list(material_ids)},
+                        "verdict": {
+                            "type": "string",
+                            "enum": ["addresses", "does_not_address", "uncertain"],
+                        },
+                        "reason": {"type": "string", "minLength": 1},
+                    },
+                },
+            },
             "source_checks": {"type": "array", "items": source_check},
-            "verdict": {"type": "string", "enum": [
-                "supported", "unsupported", "uncertain"]},
+            "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1},
         },
     }
-    return {"type": "object", "additionalProperties": False,
-            "required": ["decisions"],
-            "properties": {"decisions": {"type": "array", "items": decision}}}
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["decisions"],
+        "properties": {"decisions": {"type": "array", "items": decision}},
+    }
 
 
-@dataclass(frozen=True)
-class RequirementVerification:
-    rows: dict[str, list[dict]]
-    coverage: dict[str, dict]
-    outage: str | None = None
-
-
-def _requirement_verdict(decision: dict, *, candidate_id: str,
-                         original: tuple[str, dict, dict[str, dict]]) -> dict | None:
+def _finding_verdict(
+    decision: dict, *, candidate_id: str, original: tuple[str, dict, dict[str, dict]]
+) -> dict | None:
     _, item, sources = original
-    fragments = tuple(dict.fromkeys(
-        fragment["id"] for source in sources.values()
-        for fragment in _passage_fragments(source["text"])))
+    fragments = tuple(
+        dict.fromkeys(
+            fragment["id"]
+            for source in sources.values()
+            for fragment in _passage_fragments(source["text"])
+        )
+    )
     schema = _verification_schema(
-        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"]))
+        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"])
+    )
     require_schema(decision, schema["properties"]["decisions"]["items"])
     checks = decision["source_checks"]
-    if (not decision["reason"].strip() or len(decision["reason"]) > 500
-            or not decision["label_reason"].strip() or len(decision["label_reason"]) > 500):
+    if (
+        not decision["reason"].strip()
+        or len(decision["reason"]) > 500
+        or not decision["label_reason"].strip()
+        or len(decision["label_reason"]) > 500
+    ):
         raise SchemaViolation("Keep nonempty verdict reasons within 500 characters")
     if decision["verdict"] != "supported" or decision["label_verdict"] != "faithful":
         return None
@@ -527,17 +708,23 @@ def _requirement_verdict(decision: dict, *, candidate_id: str,
     supported_material: set[str] = set()
     for check in material_checks:
         material_id = check["material_id"]
-        if (material_id in seen_material or material_id not in item["material_ids"]
-                or not check["reason"].strip() or len(check["reason"]) > 500):
+        if (
+            material_id in seen_material
+            or material_id not in item["material_ids"]
+            or not check["reason"].strip()
+            or len(check["reason"]) > 500
+        ):
             raise SchemaViolation(
-                "A material link verdict is duplicated, foreign or lacks a concise reason")
+                "A material link verdict is duplicated, foreign or lacks a concise reason"
+            )
         seen_material.add(material_id)
         if check["verdict"] == "addresses":
             supported_material.add(material_id)
     if seen_material != set(item["material_ids"]):
         raise SchemaViolation("Check every linked material ID exactly once")
-    linked = [material_id for material_id in item["material_ids"]
-              if material_id in supported_material]
+    linked = [
+        material_id for material_id in item["material_ids"] if material_id in supported_material
+    ]
     seen: set[str] = set()
     selected: dict[str, dict] = {}
     for check in checks:
@@ -547,34 +734,49 @@ def _requirement_verdict(decision: dict, *, candidate_id: str,
         seen.add(source_id)
         fragments_by_id = {
             fragment["id"]: fragment["text"]
-            for fragment in _passage_fragments(sources[source_id]["text"])}
+            for fragment in _passage_fragments(sources[source_id]["text"])
+        }
         support_id = check["support_fragment_id"]
         scope_id = check["scope_fragment_id"]
-        if (support_id and support_id not in fragments_by_id
-                or scope_id and scope_id not in fragments_by_id):
+        if (
+            support_id
+            and support_id not in fragments_by_id
+            or scope_id
+            and scope_id not in fragments_by_id
+        ):
             raise SchemaViolation("Choose support and scope fragment IDs from this source only")
         support = fragments_by_id.get(support_id, "")
         scope = fragments_by_id.get(scope_id, "")
         scope_status = check["scope_status"]
         verdict = check["verdict"]
-        if (not check["reason"].strip() or len(check["reason"]) > 500
-                or (verdict == "supported") != bool(support_id)
-                or (verdict == "supported" and scope_status != "no_special_condition"
-                    and not scope_id)
-                or (verdict == "supported" and scope_status == "no_special_condition"
-                    and bool(scope_id))
-                or (verdict == "supported" and scope_status not in (
-                    "established", "asked_to_establish", "no_special_condition"))
-                or (verdict == "supported"
-                    and (not support.strip() or (scope_id and not scope.strip())))):
+        if (
+            not check["reason"].strip()
+            or len(check["reason"]) > 500
+            or (verdict == "supported") != bool(support_id)
+            or (verdict == "supported" and scope_status != "no_special_condition" and not scope_id)
+            or (
+                verdict == "supported" and scope_status == "no_special_condition" and bool(scope_id)
+            )
+            or (
+                verdict == "supported"
+                and scope_status
+                not in ("established", "asked_to_establish", "conditional", "no_special_condition")
+            )
+            or (
+                verdict == "supported" and (not support.strip() or (scope_id and not scope.strip()))
+            )
+        ):
             raise SchemaViolation(
                 "A supported passage needs its exact support fragment and either "
                 "a checked scope fragment or no_special_condition with an empty scope ID; "
-                "unsupported or uncertain passages need an empty support ID")
+                "unsupported or uncertain passages need an empty support ID"
+            )
         if verdict == "supported":
             selected[source_id] = {
-                "support_excerpt": support, "scope_excerpt": scope,
-                "scope_status": scope_status, "reason": check["reason"],
+                "support_excerpt": support,
+                "scope_excerpt": scope,
+                "scope_status": scope_status,
+                "reason": check["reason"],
             }
     if seen != set(sources):
         raise SchemaViolation("Check every cited source ID exactly once")
@@ -582,204 +784,283 @@ def _requirement_verdict(decision: dict, *, candidate_id: str,
         raise SchemaViolation("A supported item needs at least one supported passage")
     kept = [source_id for source_id in item["source_ids"] if source_id in selected]
     return {
-        **item, "source_ids": kept, "material_ids": linked,
+        **item,
+        "source_ids": kept,
+        "material_ids": linked,
         "record_status": "mentioned" if linked else "not_mentioned",
-        "sources": [{**sources[source_id], "verification": selected[source_id]}
-                    for source_id in kept],
+        "sources": [
+            {**sources[source_id], "verification": selected[source_id]} for source_id in kept
+        ],
     }
 
 
-def verify_requirements(model: ModelPort, *, disputes: tuple[dict, ...],
-                        material_by_dispute: dict[str, list[dict]],
-                        proposed: dict[str, list[dict]],
-                        conversation: tuple[object, ...]) -> RequirementVerification:
-    """Independently retain only proposals supported by their exact citations.
-
-    Each dispute is checked separately so unrelated citations cannot supply
-    one another's context. Oversized disputes split into complete item groups.
-    Keep each valid verdict immediately. Correct unread verdicts once without
-    repeating valid peers or isolating every item and citation into new calls.
-    """
-    dispute_rows, material_ids = _dispute_input(disputes, material_by_dispute)
+def verify_findings(
+    model: ModelPort,
+    *,
+    subjects: tuple[dict, ...],
+    material_by_subject: dict[str, list[dict]],
+    proposed: dict[str, list[dict]],
+    conversation: tuple[object, ...],
+) -> ResearchVerification:
+    rows, material_ids = _subject_input(subjects, material_by_subject)
     if set(proposed) != set(material_ids):
-        raise SchemaViolation("Verification needs every supplied dispute")
-    result: dict[str, list[dict]] = {dispute_id: [] for dispute_id in material_ids}
-    retained: dict[str, dict] = {}
-    coverage = {dispute_id: {"state": "ok", "checked_items": 0,
-                             "unread_items": 0, "withheld_items": 0,
-                             "diagnostics": []} for dispute_id in material_ids}
-    grouped = []
-    originals: dict[str, tuple[str, dict, dict[str, dict]]] = {}
-    for dispute_row in dispute_rows:
-        dispute_id = dispute_row["dispute"]["id"]
-        candidates = proposed[dispute_id]
-        if not isinstance(candidates, list):
-            raise SchemaViolation("Proposed legal items must be a list")
-        presented = []
-        for item in candidates:
-            if not isinstance(item, dict):
-                raise SchemaViolation("A proposed legal item is invalid")
-            source_ids = item.get("source_ids")
-            sources = item.get("sources")
-            linked = item.get("material_ids")
-            if (not isinstance(source_ids, list) or not source_ids
-                    or not isinstance(sources, list)
-                    or len(source_ids) != len(sources)
-                    or len(source_ids) != len(set(source_ids))
-                    or not isinstance(linked, list)
-                    or not set(linked) <= material_ids[dispute_id]
-                    or item.get("force") not in ("required", "strengthening")
-                    or any(not isinstance(item.get(key), str) or not item[key].strip()
-                           for key in ("label", "need", "why"))):
-                raise SchemaViolation("A proposed legal item lacks checked sources")
-            source_by_id = {}
-            for source_id, source in zip(source_ids, sources, strict=True):
-                if (not isinstance(source_id, str) or not source_id
-                        or not isinstance(source, dict)
-                        or source.get("id") != source_id
-                        or source.get("kind") not in ("provision", "judgment")
-                        or any(not isinstance(source.get(key), str)
-                               or not source[key].strip()
-                               for key in ("title", "locator", "text"))):
+        raise SchemaViolation("Verification needs every supplied research subject")
+    words = _conversation_rows(conversation)
+    result = {key: [] for key in material_ids}
+    coverage, originals, atoms = _coverage(material_ids), {}, []
+    for row in rows:
+        identifier = row["subject"]["id"]
+        if not isinstance(proposed[identifier], list):
+            raise SchemaViolation("Proposed research findings must be a list")
+        for item in proposed[identifier]:
+            if (
+                not isinstance(item, dict)
+                or item.get("kind") not in RESEARCH_KINDS
+                or not isinstance(item.get("source_ids"), list)
+                or not item["source_ids"]
+                or len(item["source_ids"]) != len(set(item["source_ids"]))
+                or not isinstance(item.get("sources"), list)
+                or len(item["sources"]) != len(item["source_ids"])
+                or not isinstance(item.get("material_ids"), list)
+                or len(item["material_ids"]) != len(set(item["material_ids"]))
+                or not set(item["material_ids"]) <= material_ids[identifier]
+                or (
+                    (item["kind"] == "gathering")
+                    != (item.get("force") in ("required", "strengthening"))
+                )
+                or (item["kind"] != "gathering" and item.get("force") != "none")
+                or any(
+                    not isinstance(item.get(key), str) or not item[key].strip()
+                    for key in ("label", "need", "why")
+                )
+            ):
+                raise SchemaViolation(
+                    "A proposed finding lacks checked source ownership or meaning"
+                )
+            sources = {}
+            for source_id, source in zip(item["source_ids"], item["sources"], strict=True):
+                if (
+                    not isinstance(source_id, str)
+                    or not source_id
+                    or not isinstance(source, dict)
+                    or source.get("id") != source_id
+                    or source.get("kind") not in ("provision", "judgment")
+                    or any(
+                        not isinstance(source.get(key), str) or not source[key].strip()
+                        for key in ("title", "locator", "text")
+                    )
+                ):
                     raise SchemaViolation("A proposed source has no exact passage")
-                source_by_id[source_id] = source
+                sources[source_id] = source
             candidate_id = f"r{len(originals) + 1}"
-            originals[candidate_id] = dispute_id, item, source_by_id
-            presented.append({
+            originals[candidate_id] = identifier, item, sources
+            candidate = {
                 "candidate_id": candidate_id,
-                "sources": [{
-                    **{key: source[key] for key in (
-                        "id", "kind", "title", "locator")},
-                    "fragments": _passage_fragments(source["text"]),
-                } for source in sources],
-                "material_ids": linked,
-                "label": item["label"], "need": item["need"],
-                "why": item["why"], "force": item["force"],
-            })
-        if presented:
-            grouped.append({**dispute_row, "candidates": presented})
-    if not grouped:
-        return RequirementVerification(result, coverage)
-    conversation_rows = _conversation_rows(conversation)
+                **{
+                    key: item[key]
+                    for key in ("kind", "label", "need", "why", "force", "material_ids")
+                },
+                "sources": [
+                    {
+                        **{key: source[key] for key in ("id", "kind", "title", "locator")},
+                        "fragments": _passage_fragments(source["text"]),
+                    }
+                    for source in item["sources"]
+                ],
+            }
+            atoms.append({"context": row, "candidate": candidate})
+    if not atoms:
+        return ResearchResult(result, coverage)
 
-    def prepare(dispute_row: dict, candidates: list[dict], issues: dict | None = None,
-                rejected: dict | None = None):
-        candidate_ids = tuple(candidate["candidate_id"]
-                              for candidate in candidates)
-        source_ids = tuple(dict.fromkeys(
-            source["id"] for candidate in candidates
-            for source in candidate["sources"]))
-        fragment_ids = tuple(dict.fromkeys(
-            fragment["id"] for candidate in candidates
-            for source in candidate["sources"]
-            for fragment in source["fragments"]))
-        group_material_ids = tuple(dict.fromkeys(
-            material_id for candidate in candidates
-            for material_id in candidate["material_ids"]))
-        schema = _verification_schema(
-            candidate_ids, source_ids, fragment_ids, group_material_ids)
-        output_limit = min(12288, max(
-            4096, len(candidate_ids) * 256 +
-            sum(len(candidate["sources"]) for candidate in candidates) * 384))
-        payload = {"conversation": conversation_rows,
-                   "dispute": dispute_row["dispute"],
-                   "material": dispute_row["material"], "candidates": candidates}
-        if issues:
-            payload["validation_issues"] = [
-                {"candidate_id": candidate_id, "issue": issues[candidate_id]}
-                for candidate_id in candidate_ids]
-            payload["rejected_decisions"] = {
-                candidate_id: (rejected or {}).get(candidate_id)
-                for candidate_id in candidate_ids}
-            payload["intended_outcome"] = (
-                "Return one corrected, complete verdict per listed candidate ID. "
-                "Keep the full required source and material checks. Already "
-                "valid peer verdicts are retained and must not be repeated.")
-        prompt = _prompt(_VERIFY_SYSTEM, "verify_legal_requirements", payload,
-                         model, output_limit, schema, Tier.JUDGE)
-        return candidate_ids, prompt, schema, output_limit
+    def prepare(group, issues=None, rejected=None):
+        grouped = {}
+        for atom in group:
+            context = atom["context"]
+            identifier = context["subject"]["id"]
+            grouped.setdefault(identifier, {**context, "candidates": []})["candidates"].append(
+                atom["candidate"]
+            )
+        candidates = [atom["candidate"] for atom in group]
+        ids = tuple(candidate["candidate_id"] for candidate in candidates)
+        source_ids = tuple(
+            dict.fromkeys(
+                source["id"] for candidate in candidates for source in candidate["sources"]
+            )
+        )
+        fragment_ids = tuple(
+            dict.fromkeys(
+                fragment["id"]
+                for candidate in candidates
+                for source in candidate["sources"]
+                for fragment in source["fragments"]
+            )
+        )
+        linked = tuple(
+            dict.fromkeys(key for candidate in candidates for key in candidate["material_ids"])
+        )
+        schema = _verification_schema(ids, source_ids, fragment_ids, linked)
+        limit = min(
+            12288,
+            max(
+                4096,
+                len(ids) * 256 + sum(len(candidate["sources"]) for candidate in candidates) * 384,
+            ),
+        )
+        payload = _repair_payload(
+            {"conversation": words, "subjects": list(grouped.values())}, issues, rejected
+        )
+        prompt = _prompt(
+            _VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
+            "verify_legal_requirements",
+            payload,
+            model,
+            limit,
+            schema,
+            Tier.JUDGE,
+        )
+        return ids, prompt, schema, limit
 
-    outage = None
-    for dispute_row in grouped:
-        dispute_id = dispute_row["dispute"]["id"]
-        batches = _ordered_batches(
-                dispute_row["candidates"],
-                lambda batch, dispute_row=dispute_row: prepare(dispute_row, batch))
-        presented = {candidate["candidate_id"]: candidate
-                     for candidate in dispute_row["candidates"]}
-        for candidate_ids, prompt, schema, output_limit in batches:
-            pending = candidate_ids
-            issues = {candidate_id: "Independent source checking did not finish"
-                      for candidate_id in pending}
-            rejected: dict[str, object] = {}
-            for attempt in range(2):
-                if outage or not pending:
-                    break
-                if attempt:
-                    remaining = [presented[key] for key in pending]
-                    try:
-                        _, prompt, schema, output_limit = prepare(
-                            dispute_row, remaining, issues, rejected)
-                    except ContextOverflow:
-                        try:
-                            _, prompt, schema, output_limit = prepare(
-                                dispute_row, remaining, issues)
-                        except ContextOverflow:
-                            break
+    by_id = {atom["candidate"]["candidate_id"]: atom for atom in atoms}
+    retained, outage = {}, None
+    batches, oversized = _ordered_batches(atoms, prepare)
+    for atom in oversized:
+        identifier = atom["context"]["subject"]["id"]
+        coverage[identifier]["state"] = "partial"
+        coverage[identifier]["unread_items"] += 1
+        coverage[identifier]["diagnostics"].append(
+            "A source-checking candidate exceeds its model context budget; no context was omitted"
+        )
+    for ids, prompt, schema, limit in batches:
+        pending, issues, rejected = ids, {}, {}
+        for attempt in range(2):
+            if outage or not pending:
+                break
+            if attempt:
                 try:
-                    read = model.structured(prompt, schema, Tier.JUDGE,
-                                            max_tokens=output_limit)
-                    require_independent_result(read)
-                except (SchemaViolation, OutputTruncated) as exc:
-                    issues = {key: str(exc) for key in pending}
-                    continue
+                    _, prompt, schema, limit = prepare(
+                        [by_id[key] for key in pending], issues, rejected
+                    )
                 except ContextOverflow:
-                    raise
-                except ModelError as exc:
-                    outage = type(exc).__name__
-                    issues = {key: "Independent source checking was unavailable"
-                              for key in pending}
                     break
-                decisions = (read.data.get("decisions")
-                             if read.usable and isinstance(read.data, dict) else None)
-                groups: dict[str, list[dict]] = {key: [] for key in pending}
-                if isinstance(decisions, list):
-                    for decision in decisions:
-                        if (isinstance(decision, dict)
-                                and isinstance(decision.get("candidate_id"), str)
-                                and decision["candidate_id"] in groups):
-                            groups[decision["candidate_id"]].append(decision)
-                unresolved = []
-                issues = {}
-                for candidate_id in pending:
-                    group = groups[candidate_id]
-                    if len(group) != 1:
-                        issues[candidate_id] = (
-                            "Return exactly one complete verdict for this candidate ID")
-                        rejected[candidate_id] = group
-                        unresolved.append(candidate_id)
-                        continue
-                    try:
-                        row = _requirement_verdict(
-                            group[0], candidate_id=candidate_id,
-                            original=originals[candidate_id])
-                    except SchemaViolation as exc:
-                        issues[candidate_id] = str(exc)
-                        rejected[candidate_id] = group[0]
-                        unresolved.append(candidate_id)
+            try:
+                read = model.structured(prompt, schema, Tier.JUDGE, max_tokens=limit)
+                require_independent_result(read)
+            except (SchemaViolation, OutputTruncated) as exc:
+                issues = {key: str(exc) for key in pending}
+                continue
+            except ContextOverflow:
+                issues = {key: "This complete source-checking unit exceeds the model context budget"
+                          for key in pending}
+                break
+            except ModelError as exc:
+                outage = type(exc).__name__
+                issues = {key: "Independent source checking was unavailable" for key in pending}
+                break
+            data = read.data if read.usable and isinstance(read.data, dict) else None
+            values = (
+                data.get("decisions") if data is not None and set(data) == {"decisions"} else None
+            )
+            groups = {key: [] for key in pending}
+            if isinstance(values, list):
+                for decision in values:
+                    if (
+                        isinstance(decision, dict)
+                        and isinstance(decision.get("candidate_id"), str)
+                        and decision["candidate_id"] in groups
+                    ):
+                        groups[decision["candidate_id"]].append(decision)
+            unresolved, issues = [], {}
+            for candidate_id in pending:
+                group = groups[candidate_id]
+                if len(group) != 1:
+                    issues[candidate_id] = (
+                        "Return exactly one complete verdict for this candidate_id"
+                    )
+                    rejected[candidate_id] = group
+                    unresolved.append(candidate_id)
+                    continue
+                try:
+                    value = _finding_verdict(
+                        group[0], candidate_id=candidate_id, original=originals[candidate_id]
+                    )
+                except SchemaViolation as exc:
+                    issues[candidate_id], rejected[candidate_id] = str(exc), group[0]
+                    unresolved.append(candidate_id)
+                else:
+                    identifier = originals[candidate_id][0]
+                    coverage[identifier]["checked_items"] += 1
+                    if value is None:
+                        coverage[identifier]["withheld_items"] += 1
                     else:
-                        coverage[dispute_id]["checked_items"] += 1
-                        if row is None:
-                            coverage[dispute_id]["withheld_items"] += 1
-                        else:
-                            retained[candidate_id] = row
-                pending = tuple(unresolved)
-            if pending:
-                coverage[dispute_id]["state"] = "partial"
-                coverage[dispute_id]["unread_items"] += len(pending)
-                coverage[dispute_id]["diagnostics"].append(
-                    "Some legal items could not be checked; valid peer items were retained")
-    for candidate_id, (dispute_id, _, _) in originals.items():
+                        retained[candidate_id] = value
+            pending = tuple(unresolved)
+        for candidate_id in pending:
+            identifier = originals[candidate_id][0]
+            coverage[identifier]["state"] = (
+                "unavailable" if outage and not coverage[identifier]["checked_items"] else "partial"
+            )
+            coverage[identifier]["unread_items"] += 1
+            coverage[identifier]["diagnostics"].append(
+                issues.get(candidate_id, "Source checking did not finish")
+            )
+    for candidate_id, (identifier, _, _) in originals.items():
         if candidate_id in retained:
-            result[dispute_id].append(retained[candidate_id])
-    return RequirementVerification(result, coverage, outage)
+            result[identifier].append(retained[candidate_id])
+    return ResearchResult(result, coverage, outage)
+
+
+def _dispute_subjects(disputes, material_by_dispute):
+    subjects, material = [], {}
+    for dispute in disputes:
+        if (
+            not isinstance(dispute, dict)
+            or not isinstance(dispute.get("id"), str)
+            or not dispute["id"]
+        ):
+            raise SchemaViolation("A dispute needs a saved identity")
+        identifier = dispute["id"]
+        records = [dispute, *material_by_dispute.get(identifier, [])]
+        subjects.append(
+            {
+                "id": identifier,
+                "kind": "dispute",
+                "owner_id": identifier,
+                "scope": "current",
+                "purpose": "gathering",
+                "question": dispute.get("statement") or dispute.get("label") or "",
+                "record_ids": [row["id"] for row in records],
+            }
+        )
+        material[identifier] = records
+    if set(material_by_dispute) - set(material):
+        raise SchemaViolation("Attributed material names an unknown dispute")
+    return tuple(subjects), material
+
+
+def decompose(model, *, disputes, material_by_dispute, conversation):
+    subjects, material = _dispute_subjects(disputes, material_by_dispute)
+    return decompose_subjects(
+        model, subjects=subjects, material_by_subject=material, conversation=conversation
+    ).rows
+
+
+def read_requirements(model, *, disputes, material_by_dispute, search_results, conversation):
+    subjects, material = _dispute_subjects(disputes, material_by_dispute)
+    return read_findings(
+        model,
+        subjects=subjects,
+        material_by_subject=material,
+        search_results=search_results,
+        conversation=conversation,
+    ).rows
+
+
+def verify_requirements(model, *, disputes, material_by_dispute, proposed, conversation):
+    subjects, material = _dispute_subjects(disputes, material_by_dispute)
+    return verify_findings(
+        model,
+        subjects=subjects,
+        material_by_subject=material,
+        proposed=proposed,
+        conversation=conversation,
+    )

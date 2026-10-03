@@ -1,0 +1,331 @@
+"""Saved legal work has one owner and explicit scope, coverage and freshness."""
+from copy import deepcopy
+from dataclasses import replace
+
+import pytest
+
+from nm.brain.requirements_state import (
+    RESEARCH_VERIFICATION,
+    dispute_research_subjects,
+    requirements_record,
+    research_fingerprint,
+    research_owner_id,
+    research_record,
+    subject_fingerprint,
+)
+from nm.work_the_file.matter_contracts import Matter
+
+REVISION = "owned-test-corpus:1"
+PASSAGE = "Where the agreed condition applies, the stated obligation must be established."
+
+
+def matter():
+    return Matter(id="owned-chat", advocate_id="advocate", title="Pending chat", brain_ready=False)
+
+
+def subject(file, *, identity="question", kind="request", scope="none",
+            purpose="requested_work", records=(), question="Explain the stated condition"):
+    return dict(id=identity, kind=kind, owner_id=research_owner_id(file), scope=scope,
+                purpose=purpose, question=question, record_ids=list(records))
+
+
+def finding(*, kind="condition", linked=()):
+    source = dict(id="passage-one", kind="provision", title="Test Act", locator="section 2",
+                  text=PASSAGE, verification=dict(support_excerpt=PASSAGE,
+                      scope_excerpt="Where the agreed condition applies",
+                      scope_status="conditional", reason="The finding preserves this condition."))
+    return dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
+                why="The passage identifies the condition governing this obligation.",
+                force="required" if kind == "gathering" else "none",
+                material_ids=list(linked), source_ids=[source["id"]], sources=[source],
+                record_status="mentioned" if linked else "not_mentioned")
+
+
+def read(selected, context=(), *, rows=None, state="ok", revision=REVISION,
+         verification=RESEARCH_VERIFICATION):
+    return dict(subject=deepcopy(selected),
+                fingerprint=research_fingerprint(selected, list(context), revision, verification),
+                corpus_revision=revision, state=state,
+                rows=deepcopy([finding()] if rows is None else rows),
+                verification=verification, queries=[selected["question"]],
+                diagnostics=[] if state == "ok" else ["Some source coverage is unavailable."],
+                coverage=dict(state=state, checked_items=1 if state != "unavailable" else 0,
+                              unread_items=0 if state == "ok" else 1, withheld_items=0))
+
+
+def append(file, reads, *, identity="turn-one", records=(), legacy=None):
+    response = dict(turn_id=identity, elements=[], material=deepcopy(list(records)))
+    if reads is not None:
+        response["research_reads"] = deepcopy(reads)
+    if legacy is not None:
+        response["requirements_read"] = deepcopy(legacy)
+    turn = dict(turn_id=identity, matter_id=str(file.id), advocate_id=file.advocate_id,
+                message="An attributed request.", committed=True, release_state="released",
+                elements=[], response=response)
+    return replace(file, brain_chat=(*file.brain_chat, turn))
+
+
+def project(file, selected, context=(), *, revision=REVISION,
+            verification=RESEARCH_VERIFICATION):
+    return research_record(file, subjects=(selected,),
+                           material_by_subject={selected["id"]: list(context)},
+                           corpus_revision=revision, verification=verification)
+
+
+def records():
+    dispute = dict(id="dispute-one", kind="dispute", label="Contested obligation",
+                   statement="A party contests an obligation.",
+                   quoted="They contest the obligation.",
+                   identification="identified", matter_scope="proposed")
+    detail = dict(id="detail-one", kind="evidence", statement="A record is reported.",
+                  quoted="I have a record.", basis="stated", importance="relevant",
+                  source_turn_id="turn-one", prior_references=[])
+    return dispute, detail
+
+
+def board_inputs():
+    dispute, detail = records()
+    return (dict(state="ok", rows=[dispute]),
+            dict(state="ok", rows=[detail], by_dispute={dispute["id"]: [detail]}, matter=[]))
+
+
+def test_pending_chat_general_question_is_readable_without_creating_board_or_duplicate_store():
+    file = matter()
+    selected = subject(file)
+    saved = append(file, [read(selected)])
+    raw = deepcopy(saved.brain_chat)
+
+    result = project(saved, selected)
+
+    assert result["state"] == "ok"
+    assert result["by_subject"][selected["id"]][0]["sources"][0]["text"] == PASSAGE
+    assert result["reuse_allowed"][selected["id"]] is True
+    assert result["coverage_by_subject"][selected["id"]]["source_freshness"] == "current"
+    assert saved.brain_chat == raw
+    assert saved.brain_ready is False
+    board = requirements_record(saved, disputes=dict(state="ok", rows=[]),
+                                material=dict(state="ok", rows=[], matter=[], by_dispute={}))
+    assert board["by_dispute"] == {}
+
+
+@pytest.mark.parametrize("revision,freshness", [
+    (None, "unknown"), ("owned-test-corpus:2", "stale")])
+def test_old_exact_sources_remain_readable_but_unknown_or_changed_corpus_cannot_reuse(revision,
+                                                                                 freshness):
+    selected = subject(matter())
+    saved = append(matter(), [read(selected)])
+    result = project(saved, selected, revision=revision)
+    assert result["status_by_subject"][selected["id"]] == "ok"
+    assert result["by_subject"][selected["id"]][0]["sources"][0]["text"] == PASSAGE
+    assert result["reuse_allowed"][selected["id"]] is False
+    assert result["coverage_by_subject"][selected["id"]]["source_freshness"] == freshness
+
+
+def test_unknown_revision_when_saved_never_counts_as_reusable():
+    selected = subject(matter())
+    saved = append(matter(), [read(selected, revision=None)])
+    result = project(saved, selected, revision=None)
+    assert result["by_subject"][selected["id"]]
+    assert result["reuse_allowed"][selected["id"]] is False
+
+
+@pytest.mark.parametrize("state", ["partial", "unavailable"])
+def test_local_coverage_failure_retains_sound_peer_without_complete_search_claim(state):
+    file = matter()
+    first = subject(file)
+    second = subject(file, identity="other-question", question="Explain another condition")
+    bad_rows = [finding()] if state == "partial" else []
+    saved = append(file, [read(first, state=state, rows=bad_rows), read(second)])
+    result = research_record(saved, subjects=(first, second),
+                             material_by_subject={first["id"]: [], second["id"]: []},
+                             corpus_revision=REVISION)
+    assert result["state"] == "ok"
+    assert result["status_by_subject"][first["id"]] == state
+    assert bool(result["by_subject"][first["id"]]) == (state == "partial")
+    assert result["reuse_allowed"][first["id"]] is False
+    assert result["coverage_by_subject"][first["id"]]["unread_items"] == 1
+    assert result["diagnostics_by_subject"][first["id"]]
+    assert result["reuse_allowed"][second["id"]] is True
+
+
+def test_exact_fingerprint_includes_scope_purpose_record_corrections_corpus_and_check_contract():
+    file = matter()
+    dispute, detail = records()
+    selected = subject(file, scope="current", records=(dispute["id"], detail["id"]))
+    context = [dispute, detail]
+    original = research_fingerprint(selected, context, REVISION)
+    assert research_fingerprint({**selected, "id": "later-request"},
+                                list(reversed(context)), REVISION) == original
+    for changed in ({**selected, "scope": "proposed"}, {**selected, "purpose": "gathering"},
+                    {**selected, "question": "Assess a different condition"},
+                    {**selected, "owner_id": "another-owned-chat"}):
+        assert research_fingerprint(changed, context, REVISION) != original
+    corrected = [dispute, {**detail, "statement": "The reported record is corrected."}]
+    assert research_fingerprint(selected, corrected, REVISION) != original
+    assert research_fingerprint(selected, context, "revision-two") != original
+    assert research_fingerprint(selected, context, REVISION, "research_support_v2") != original
+    duplicate = deepcopy(detail)
+    assert research_fingerprint(selected, [*context, duplicate], REVISION) == original
+    duplicate["quoted"] = "Different attributable words."
+    with pytest.raises(ValueError, match="conflict"):
+        research_fingerprint(selected, [*context, duplicate], REVISION)
+
+
+def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse():
+    selected = subject(matter())
+    saved = append(matter(), [read(selected)])
+    result = project(saved, selected, verification="research_support_v2")
+    assert result["state"] == "ok"
+    assert result["by_subject"][selected["id"]]
+    assert result["reuse_allowed"][selected["id"]] is False
+
+
+def test_equivalent_request_evidence_reuses_without_changing_saved_subject_or_task_identity():
+    selected = subject(matter())
+    saved = append(matter(), [read(selected)])
+    latest = {**selected, "id": "later-request-identity"}
+    result = project(saved, latest)
+    assert result["reuse_allowed"][latest["id"]] is True
+    assert result["read_subject_id_by_subject"][latest["id"]] == selected["id"]
+    assert result["source_turn_id_by_subject"][latest["id"]] == "turn-one"
+    assert result["subjects"][latest["id"]] == latest
+    assert "progress" not in result
+
+
+def test_record_correction_invalidates_current_research_without_rewriting_old_sources():
+    file = matter()
+    dispute, detail = records()
+    selected = subject(file, scope="current", records=(dispute["id"], detail["id"]))
+    saved = append(file, [read(selected, [dispute, detail])], records=[dispute, detail])
+    raw = deepcopy(saved.brain_chat)
+    corrected = [dispute, {**detail, "statement": "The earlier account has been corrected."}]
+    result = project(saved, selected, corrected)
+    assert result["state"] == "ok"
+    assert result["status_by_subject"][selected["id"]] == "unassessed"
+    assert result["by_subject"][selected["id"]] == []
+    assert result["reuse_allowed"][selected["id"]] is False
+    assert saved.brain_chat == raw
+
+
+def test_only_dispute_gathering_findings_project_as_board_bullets():
+    file = matter()
+    disputes, material = board_inputs()
+    subjects, contexts = dispute_research_subjects(file, disputes=disputes, material=material)
+    selected = subjects[0]
+    request = subject(file, identity="request", scope="current",
+                      records=selected["record_ids"], question="Assess the reported obligation")
+    context = contexts[selected["id"]]
+    saved = append(file, [read(selected, context, rows=[finding(kind="gathering",
+                                                             linked=("detail-one",)),
+                                                     finding(kind="adverse")]),
+                          read(request, context)], records=context)
+    result = requirements_record(saved, disputes=disputes, material=material,
+                                 corpus_revision=REVISION)
+    assert result["state"] == "ok"
+    assert list(result["by_dispute"]) == [selected["id"]]
+    rows = result["by_dispute"][selected["id"]]
+    assert [row["kind"] for row in rows] == ["gathering"]
+    assert rows[0]["record_status"] == "mentioned"
+    assert "verified" not in rows[0]
+    assert selected["scope"] == "proposed"
+    assert result["source_turn_id_by_dispute"] == {selected["id"]: "turn-one"}
+
+
+def test_legacy_checked_gathering_is_exact_readable_unknown_freshness_and_not_assessment():
+    file = matter()
+    disputes, material = board_inputs()
+    dispute, detail = records()
+    legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
+                  state="ok", rows=[finding(kind="gathering")], verification="source_support_v4",
+                  queries=["An earlier search"], diagnostics=[])
+    legacy["rows"][0].pop("kind")
+    saved = append(file, None, legacy=[legacy], records=[dispute, detail])
+    raw = deepcopy(saved.brain_chat)
+    result = requirements_record(saved, disputes=disputes, material=material,
+                                 corpus_revision=REVISION)
+    assert result["state"] == "ok"
+    assert result["by_dispute"][dispute["id"]][0]["kind"] == "gathering"
+    assert result["coverage_by_dispute"][dispute["id"]] == dict(
+        state="ok", purpose="gathering", source_freshness="unknown", reuse_allowed=False,
+        legacy=True)
+    assert result["reuse_allowed"][dispute["id"]] is False
+    assert saved.brain_chat == raw
+
+
+def test_canonical_collection_owns_same_turn_and_never_concatenates_legacy_needs():
+    file = matter()
+    disputes, material = board_inputs()
+    dispute, detail = records()
+    legacy = dict(dispute_id=dispute["id"], fingerprint=subject_fingerprint(dispute, [detail]),
+                  state="ok", rows=[finding(kind="gathering")], verification="source_support_v4",
+                  queries=[], diagnostics=[])
+    saved = append(file, [], legacy=[legacy], records=[dispute, detail])
+    result = requirements_record(saved, disputes=disputes, material=material)
+    assert result["by_dispute"][dispute["id"]] == []
+    assert result["status_by_dispute"][dispute["id"]] == "unassessed"
+
+
+@pytest.mark.parametrize("damage", ["source_text", "support", "conditional_scope", "source_id",
+                                   "unknown_material", "non_gathering_force", "fingerprint"])
+def test_corrupt_saved_use_rejects_its_unit_and_preserves_sound_peer(damage):
+    file = matter()
+    first = subject(file)
+    second = subject(file, identity="second", question="Another legal question")
+    bad = read(first)
+    row = bad["rows"][0]
+    if damage == "source_text":
+        row["sources"][0]["text"] = ""
+    elif damage == "support":
+        row["sources"][0]["verification"]["support_excerpt"] = "Not present in the source"
+    elif damage == "conditional_scope":
+        row["sources"][0]["verification"]["scope_excerpt"] = ""
+    elif damage == "source_id":
+        row["source_ids"] = [["unhashable"]]
+    elif damage == "unknown_material":
+        row["material_ids"] = ["another-file-record"]
+        row["record_status"] = "mentioned"
+    elif damage == "non_gathering_force":
+        row["force"] = "required"
+    else:
+        bad["fingerprint"] = "invalid"
+    saved = append(file, [bad, read(second)])
+    result = research_record(saved, subjects=(first, second),
+                             material_by_subject={first["id"]: [], second["id"]: []},
+                             corpus_revision=REVISION)
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][first["id"]] == []
+    assert result["reuse_allowed"][first["id"]] is False
+    assert result["status_by_subject"][second["id"]] == "ok"
+    assert result["reuse_allowed"][second["id"]] is True
+
+
+def test_inactive_saved_subject_cannot_introduce_unowned_record_or_other_account_owner():
+    file = matter()
+    selected = subject(file, scope="current", records=("foreign-record",))
+    raw = read(selected, [dict(id="foreign-record", statement="Unowned content")])
+    saved = append(file, [raw])
+    result = research_record(saved, subjects=(), material_by_subject={})
+    assert result["state"] == "incomplete"
+    assert "unowned record" in result["diagnostics"][0]
+    raw["subject"]["owner_id"] = "another-account"
+    saved = append(file, [raw])
+    result = research_record(saved, subjects=(), material_by_subject={})
+    assert result["state"] == "incomplete"
+    assert "authorised owner" in result["diagnostics"][0]
+
+
+@pytest.mark.parametrize("scope", ["none", "other", "uncertain"])
+def test_unresolved_or_other_scope_never_selects_current_matter_records(scope):
+    selected = subject(matter(), scope=scope, records=("current-record",))
+    with pytest.raises(ValueError, match="subject is unreadable"):
+        research_fingerprint(selected, [dict(id="current-record")], REVISION)
+
+
+def test_inconsistent_released_turn_identity_is_critical_before_research_can_be_used():
+    selected = subject(matter())
+    saved = append(matter(), [read(selected)])
+    saved.brain_chat[0]["response"]["turn_id"] = "another-turn"
+    result = project(saved, selected)
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
+    assert result["reuse_allowed"][selected["id"]] is False

@@ -4,7 +4,34 @@ from __future__ import annotations
 import json
 from datetime import date
 
+import pytest
+
 from nm.brain.retrieval import HybridSearcher, LocalCollection, SearchUnavailable
+
+
+def test_corpus_revision_tracks_real_artifacts_and_refuses_a_stale_loaded_snapshot(tmp_path):
+    (tmp_path / "words").mkdir()
+    for name in ("vectors", "passages", "words/params.index.json", "words/data.npy"):
+        (tmp_path / name).write_bytes(b"original")
+    lineage = tmp_path / "lineage.json"
+    lineage.write_text(json.dumps({
+        "vector_index": {"path": "vectors"}, "passage_store": {"path": "passages"},
+        "bm25": {"path": "words"}}))
+    collection = LocalCollection(corpus_dir=tmp_path, lineage=lineage,
+                                 doc_type="bare_act", models=None)
+    first = collection.revision()
+    assert first is not None
+    collection._revision = first
+    collection._loaded = (object(), object(), tmp_path / "passages", 1)
+    collection._open()
+    (tmp_path / "words/data.npy").write_bytes(b"changed-array-content")
+    assert collection.revision() != first
+    with pytest.raises(SearchUnavailable, match="loaded corpus changed"):
+        collection._open()
+
+
+def test_unknown_collection_revision_never_claims_a_reusable_snapshot():
+    assert HybridSearcher({}).revision() is None
 
 
 class FakeCollection:
@@ -96,6 +123,25 @@ def test_repeated_chunk_ids_cannot_merge_distinct_source_passages():
     assert result["state"] == "ok"
     assert len(result["candidates"]) == 2
     assert len({item["id"] for item in result["candidates"]}) == 2
+
+
+def test_distinct_passages_from_one_authority_are_not_lost_at_document_deduplication():
+    sections = FakeCollection({
+        1: _row("a1", "The rule.", act_id="a", act_name="Act A", section_number="1"),
+        2: _row("a2", "The rule's exception.", act_id="a", act_name="Act A",
+                section_number="1"),
+    }, {"question": [1, 2]}, {"question": [1, 2]},
+        {"The rule.": 0.9, "The rule's exception.": 0.8})
+    judgments = FakeCollection({
+        1: _row("j1", "Supported holding.", case_id="c", case_name="A v B",
+                paragraph_num="10", paragraph_type="ratio"),
+        2: _row("j2", "Material limit.", case_id="c", case_name="A v B",
+                paragraph_num="11", paragraph_type="reasoning"),
+    }, {"question": [1, 2]}, {"question": [1, 2]},
+        {"Supported holding.": 0.9, "Material limit.": 0.8})
+    found = HybridSearcher({"provision": sections, "judgment": judgments}).search_subject(
+        {}, ("question",))
+    assert [row["source_chunk_id"] for row in found["candidates"]] == ["a1", "a2", "j1", "j2"]
 
 
 def test_reranking_scores_only_queries_that_surfaced_each_candidate():

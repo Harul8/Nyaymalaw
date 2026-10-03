@@ -37,19 +37,21 @@ def source_snapshots(references: list[dict]) -> list[dict]:
             qualification = (
                 "Exact saved conversation passage. A reported account is not proof; "
                 "an earlier NM response is not an independent legal source.")
-        elif kind in ("dispute", "material", "requirement"):
+        elif kind in ("dispute", "material", "requirement", "research"):
             record = reference.get("record")
             if not isinstance(record, dict):
                 raise ValueError("A record reference needs its saved record")
             label = {"dispute": "Saved dispute account",
                      "material": "Saved material account",
-                     "requirement": "Saved gathering item"}[kind]
+                     "requirement": "Saved gathering item",
+                     "research": "Saved research finding"}[kind]
             locator, source_kind = identity, "record"
-            text = record.get("need") if kind == "requirement" else record.get("quoted")
+            text = (record.get("need") if kind in ("requirement", "research")
+                    else record.get("quoted"))
             qualification = (
-                "Saved gathering item, not the words of an Act or judgment. "
+                "Saved source-supported interpretation, not the words of an Act or judgment. "
                 "Read its cited legal passage separately."
-                if kind == "requirement" else
+                if kind in ("requirement", "research") else
                 "Exact attributed account saved with this record. It is reported, not proved.")
         else:
             raise ValueError("The saved reference kind is unsupported")

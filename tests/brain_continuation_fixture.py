@@ -4,7 +4,8 @@ from __future__ import annotations
 
 def interpretation(data):
     return {**{key: value for key, value in data.items() if key != "active_work_after"},
-            "items": [{**item, "intent": item.get("intent", "request")}
+            "items": [{**item, "intent": item.get("intent", "request"),
+                       "research_question": item.get("research_question", "")}
                       for item in data["items"]]}
 
 
@@ -49,7 +50,8 @@ def continuation_reply(operation, payload, *, scripted_items=()):
                 legal_ids = list(dict.fromkeys(
                     source_id for row in requirements.values()
                     for source_id in row["record"]["source_ids"]))
-            missing = sum(state != "ok" for state in payload["legal_coverage"].values())
+            missing = sum((state.get("state") if isinstance(state, dict) else state) != "ok"
+                          for state in payload["legal_coverage"].values())
             if missing:
                 text += (f"\nLegal source checking is incomplete for {missing} "
                          f"dispute{'s' if missing != 1 else ''}.")

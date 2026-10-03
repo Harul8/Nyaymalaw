@@ -88,7 +88,8 @@ def _blocks(unit: dict) -> dict[str, dict]:
             if references[identity].get("type") != "conversation":
                 _fail("an attributed span has the wrong source kind")
         for identity in block["record_ids"]:
-            if references[identity].get("type") not in ("dispute", "material", "requirement"):
+            if references[identity].get("type") not in (
+                    "dispute", "material", "requirement", "research"):
                 _fail("a record has the wrong source kind")
         for identity in block["legal_source_ids"]:
             if references[identity].get("type") != "legal":

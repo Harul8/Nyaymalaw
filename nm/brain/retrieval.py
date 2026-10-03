@@ -100,21 +100,50 @@ class LocalCollection:
         self.doc_type = doc_type
         self.models = models
         self._loaded: tuple[object, object, Path, int] | None = None
+        self._revision: str | None = None
         self._lock = threading.Lock()
+
+    def revision(self) -> str | None:
+        """Identify the actual corpus artifacts, without hashing large indices."""
+        try:
+            lineage = self.lineage.read_bytes()
+            record = json.loads(lineage)
+            paths = [self.lineage,
+                     self.corpus_dir / record["vector_index"]["path"],
+                     self.corpus_dir / record["passage_store"]["path"]]
+            bm_path = self.corpus_dir / record["bm25"]["path"]
+            paths.extend(sorted(path for path in bm_path.rglob("*") if path.is_file()))
+            if not paths or not (bm_path / "params.index.json").is_file():
+                return None
+            identity = [(str(path.resolve()), path.stat().st_size,
+                         path.stat().st_mtime_ns) for path in paths]
+            raw = json.dumps(identity, separators=(",", ":")).encode() + lineage
+            return hashlib.sha256(raw).hexdigest()
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+
+    def _check_snapshot(self) -> None:
+        if self._revision is None or self.revision() != self._revision:
+            raise SearchUnavailable("The loaded corpus changed; reload its search indices")
 
     def warm(self) -> None:
         self._open()
 
     def _open(self) -> tuple[object, object, Path, int]:
         if self._loaded is not None:
+            self._check_snapshot()
             return self._loaded
         with self._lock:
             if self._loaded is not None:
+                self._check_snapshot()
                 return self._loaded
             try:
                 record = json.loads(self.lineage.read_text(encoding="utf-8"))
             except (OSError, ValueError) as exc:
                 raise SearchUnavailable(f"{self.doc_type} lineage is unavailable") from exc
+            revision = self.revision()
+            if revision is None:
+                raise SearchUnavailable(f"{self.doc_type} corpus revision cannot be checked")
             if (record.get("schema") != 1 or record.get("doc_type") != self.doc_type
                     or record.get("model") != EMBED_MODEL
                     or record.get("dimensions") != DIMENSIONS):
@@ -175,6 +204,8 @@ class LocalCollection:
                 self.models.load()
             except (ImportError, OSError, RuntimeError, ValueError) as exc:
                 raise SearchUnavailable(f"{self.doc_type} local index cannot load: {exc}") from exc
+            self._revision = revision
+            self._check_snapshot()
             self._loaded = index, bm25, db_path, count
             return self._loaded
 
@@ -296,6 +327,22 @@ class HybridSearcher:
         self.collections = collections
         self.source_paths = source_paths or {}
 
+    def revision(self) -> str | None:
+        """Unknown collection identity prevents reuse of a saved research result."""
+        revisions = {}
+        for kind in ("provision", "judgment"):
+            revision = getattr(self.collections.get(kind), "revision", None)
+            value = revision() if callable(revision) else None
+            if not isinstance(value, str) or not value.strip():
+                return None
+            revisions[kind] = value
+        identity = {"collections": revisions, "contract": "hybrid_passage_v2",
+                    "embedding": EMBED_MODEL, "reranking": RERANK_MODEL,
+                    "depth": LEG_DEPTH, "pool": PER_QUERY_POOL,
+                    "per_kind": RESULTS_PER_KIND,
+                    "judgment_roles": sorted(ATTRIBUTABLE_PARAGRAPHS)}
+        return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+
     def warm(self) -> None:
         for kind, collection in self.collections.items():
             warm = getattr(collection, "warm", None)
@@ -328,19 +375,24 @@ class HybridSearcher:
 
     def search_dispute(self, dispute: dict, queries: tuple[str, ...], *,
                        as_of: date | None = None, jurisdiction: str = "") -> dict:
+        return self.search_subject(dispute, queries, as_of=as_of,
+                                   jurisdiction=jurisdiction)
+
+    def search_subject(self, subject: dict, queries: tuple[str, ...], *,
+                       as_of: date | None = None, jurisdiction: str = "") -> dict:
         """Return ranked, exact source candidates, never a legal-support verdict.
 
-        ``dispute`` names the owner of this search but does not itself add a
+        ``subject`` names the owner of this search but does not itself add a
         query: the caller must supply independently formulated search routes.
         ``jurisdiction`` is retained for downstream applicability analysis;
         keyword-based geographic exclusion here would erase possible law.
         """
-        del dispute, jurisdiction
+        del subject, jurisdiction
         clean = tuple(dict.fromkeys(" ".join(query.split()) for query in queries
                                         if isinstance(query, str) and query.strip()))[:4]
         if not clean:
             return {"state": "unavailable", "candidates": [],
-                    "diagnostics": ["No dispute-specific search formulations were supplied."]}
+                    "diagnostics": ["No legal search formulations were supplied."]}
         all_candidates: list[dict] = []
         diagnostics: list[str] = []
         searched = 0
@@ -401,15 +453,14 @@ class HybridSearcher:
                     judged.append(((position, row), max(scores[offset:offset + width])))
                     offset += width
                 ranked = sorted(judged, key=lambda item: -item[1])
-                seen: set[tuple[str, str]] = set()
+                seen: set[str] = set()
                 for (position, row), score in ranked:
                     del position
-                    key = ((str(row.get("act_id") or ""), str(row.get("section_number") or ""))
-                           if kind == "provision" else (str(row.get("case_id") or ""), ""))
-                    if key in seen:
-                        continue
                     candidate = _candidate(
                         kind, row, score, self.source_paths.get(kind, ""))
+                    key = candidate["id"]
+                    if key in seen:
+                        continue
                     if not candidate["title"].strip() or not candidate["locator"].strip():
                         continue
                     seen.add(key)

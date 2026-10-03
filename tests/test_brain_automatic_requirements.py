@@ -8,11 +8,9 @@ import pytest
 from nm.brain.turn import BrainRefused, BrainService, BrainTurn
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
-    ContextOverflow,
     ModelResult,
     OutputTruncated,
     ProviderUnavailable,
-    SchemaViolation,
     Tier,
     Usage,
 )
@@ -94,15 +92,16 @@ class Model:
             } for row in payload["candidates"]]}
         elif prompt.operation == "decompose_disputes":
             data = {"plans": [{
-                "dispute_id": row["dispute"]["id"],
+                "subject_id": row["subject"]["id"],
                 "queries": [{"text": phrase}
                             for phrase in ("contested conduct and obligation",
                                            "applicable statutory condition",
                                            "judicial treatment and proof")],
-            } for row in payload["disputes"]]}
+            } for row in payload["subjects"]]}
         elif prompt.operation == "read_legal_requirements":
-            data = {"requirements": [self._requirement(row)
-                                     for row in payload["disputes"]]}
+            data = {"readings": [{"subject_id": row["subject"]["id"],
+                                  "findings": [self._requirement(row)]}
+                                 for row in payload["subjects"]]}
         elif prompt.operation == "verify_legal_requirements":
             data = {"decisions": [{
                 "candidate_id": candidate["candidate_id"],
@@ -122,7 +121,7 @@ class Model:
                     "reason": "The passage directly supports this item.",
                 } for source in candidate["sources"]],
                 "reason": "The cited passage directly supports this item.",
-            } for candidate in payload["candidates"]]}
+            } for row in payload["subjects"] for candidate in row["candidates"]]}
         else:
             raise AssertionError(f"unexpected model call: {prompt.operation}")
         return ModelResult(
@@ -172,11 +171,10 @@ class Model:
 
     @staticmethod
     def _requirement(row: dict) -> dict:
-        dispute_id = row["dispute"]["id"]
-        linked = row["material"]
+        linked = [material for material in row["material"] if material["kind"] != "dispute"]
         candidate = row["candidates"][1 if linked else 0]
         return {
-            "dispute_id": dispute_id,
+            "kind": "gathering",
             "label": "Keep signed receipt" if linked else "Establish the obligation",
             "need": "Preserve the reported receipt." if linked
             else "Establish the disputed obligation from the record.",
@@ -193,7 +191,10 @@ class Search:
         self.available = available
         self.calls: list[tuple[dict, tuple[str, ...]]] = []
 
-    def search_dispute(self, dispute: dict, queries: tuple[str, ...]) -> dict:
+    def revision(self):
+        return "test-corpus-v1"
+
+    def search_subject(self, dispute: dict, queries: tuple[str, ...]) -> dict:
         self.calls.append((dispute, queries))
         if not self.available:
             return {"state": "unavailable", "candidates": [],
@@ -207,6 +208,8 @@ class Search:
              "title": "Synthetic Judgment", "locator": "paragraph 12",
              "text": "A signed receipt assisted proof in that case."},
         ]}
+
+    search_dispute = search_subject
 
 
 def _service(tmp_path, model: Model, search: Search):
@@ -229,16 +232,16 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     brain, store = _service(tmp_path, model, search)
 
     first = _send(brain, FIRST, "first")
-    assert first["metrics"]["llm_calls"] == 11
+    assert first["metrics"]["llm_calls"] == 10
     assert [operation for operation, _ in model.calls] == [
         "interpret_conversation", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "decompose_disputes", "read_legal_requirements",
-        "verify_legal_requirements", "verify_legal_requirements",
+        "verify_legal_requirements",
         "continue_conversation", "verify_continuation"]
     assert len(search.calls) == 2
     assert all(len(queries) == 3 for _, queries in search.calls)
-    first_read = first["requirements_read"]
+    first_read = first["research_reads"]
     assert len(first_read) == 2
     assert all(item["state"] == "ok" and len(item["rows"]) == 1
                for item in first_read)
@@ -253,21 +256,21 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
                  if operation == "decompose_disputes")
     assert [row["text"] for row in plans["conversation"] if
             row["role"] == "advocate"] == [FIRST]
-    assert len(plans["disputes"]) == 2
+    assert len(plans["subjects"]) == 2
 
     second = _send(brain, DETAIL, "second", first)
     assert second["metrics"]["llm_calls"] == 9
     assert len(search.calls) == 3
-    assert search.calls[-1][0]["label"] == "Supplier retained tools"
-    assert len(second["requirements_read"]) == 1
-    assert second["requirements_read"][0]["rows"][0]["record_status"] == "mentioned"
-    assert second["requirements_read"][0]["rows"][0]["sources"][0]["text"] == \
+    assert search.calls[-1][0]["id"] == first_read[0]["subject"]["id"]
+    assert len(second["research_reads"]) == 1
+    assert second["research_reads"][0]["rows"][0]["record_status"] == "mentioned"
+    assert second["research_reads"][0]["rows"][0]["sources"][0]["text"] == \
         "A signed receipt assisted proof in that case."
     second_plan = [payload for operation, payload in model.calls
                    if operation == "decompose_disputes"][1]
     assert [row["text"] for row in second_plan["conversation"] if
             row["role"] == "advocate"] == [FIRST, DETAIL]
-    assert len(second_plan["disputes"]) == 1
+    assert len(second_plan["subjects"]) == 1
 
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -304,9 +307,9 @@ def test_unavailable_corpus_never_yields_a_requirement(tmp_path):
     assert [operation for operation, _ in model.calls][-3:] == [
         "decompose_disputes", "continue_conversation", "verify_continuation"]
     assert len(search.calls) == 2
-    assert len(opened["requirements_read"]) == 2
+    assert len(opened["research_reads"]) == 2
     assert all(row["state"] == "unavailable" and row["rows"] == []
-               for row in opened["requirements_read"])
+               for row in opened["research_reads"])
 
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -321,6 +324,51 @@ def test_unavailable_corpus_never_yields_a_requirement(tmp_path):
                projected["status_by_dispute"].values())
     assert all(rows == [] for rows in projected["by_dispute"].values())
     assert "Synthetic corpus is unavailable" in projected["diagnostics"]
+
+
+def test_gathering_coverage_does_not_stand_in_for_requested_legal_analysis(tmp_path):
+    class RequestedResearch(Model):
+        @staticmethod
+        def _requirement(row):
+            if row["subject"]["purpose"] == "requested_work":
+                source = row["candidates"][0]
+                return {"kind": "principle", "label": "Requested legal principle",
+                        "need": source["text"], "why": "The passage states this requirement.",
+                        "force": "none", "source_ids": [source["id"]], "material_ids": []}
+            return Model._requirement(row)
+
+    model = RequestedResearch([_route(FIRST, first=True)])
+    search = Search()
+    brain, store = _service(tmp_path, model, search)
+    first = _send(brain, FIRST, "gathering-first")
+    enquiry = first["research_reads"][0]["subject"]["question"]
+    requested = _route("Please analyse the relevant legal principle.")
+    requested["material_review"] = False
+    requested["items"][0]["research_question"] = enquiry
+    model.routes = iter([requested])
+
+    second = _send(brain, "Please analyse the relevant legal principle.", "analysis-second", first)
+
+    assert second["metrics"]["llm_calls"] == 6
+    assert len(search.calls) == 3
+    assert len(second["research_reads"]) == 1
+    read = second["research_reads"][0]
+    assert read["subject"]["kind"] == "request"
+    assert read["subject"]["purpose"] == "requested_work"
+    assert read["subject"]["question"] == enquiry
+    assert read["rows"][0]["kind"] == "principle"
+    assert read["rows"][0]["force"] == "none"
+
+    from nm.brain.dispute_state import proposed_disputes
+    from nm.brain.material_state import material_record
+    from nm.brain.requirements_state import requirements_record
+
+    saved = store.load(first["matter_id"])
+    disputes = proposed_disputes(saved)
+    material = material_record(saved, disputes=disputes)
+    board = requirements_record(saved, disputes=disputes, material=material)
+    assert all(row["kind"] == "gathering" for rows in board["by_dispute"].values() for row in rows)
+    assert len(board["by_dispute"]) == 2
 
 
 def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
@@ -353,8 +401,8 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
     saved = store.load(opened["matter_id"])
     rows = proposed_disputes(saved)["rows"]
     assert [row["label"] for row in rows] == ["Customer withheld payment"]
-    assert len(opened["requirements_read"]) == 1
-    assert opened["requirements_read"][0]["state"] == "ok"
+    assert len(opened["research_reads"]) == 1
+    assert opened["research_reads"][0]["state"] == "ok"
     assert opened["metrics"]["llm_calls"] == 10
 
 
@@ -377,27 +425,38 @@ def test_dispute_verifier_outage_refuses_before_turn_is_saved(tmp_path):
 
 def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     class OneVerificationFailure(Model):
+        failed_subject = None
+
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             if prompt.operation == "verify_legal_requirements":
                 payload = json.loads(prompt.user)
-                if payload["dispute"]["label"] == "Supplier retained tools":
-                    self.calls.append((prompt.operation, payload))
-                    raise OutputTruncated("synthetic verifier response incomplete")
-            return super().structured(prompt, schema, tier,
-                                      max_tokens=max_tokens)
+                if self.failed_subject is None:
+                    self.failed_subject = payload["subjects"][0]["subject"]["id"]
+                result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+                rejected = {candidate["candidate_id"] for row in payload["subjects"]
+                            if row["subject"]["id"] == self.failed_subject
+                            for candidate in row["candidates"]}
+                result.data["decisions"] = [decision for decision in result.data["decisions"]
+                                            if decision["candidate_id"] not in rejected]
+                return result
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
 
     model = OneVerificationFailure([_route(FIRST, first=True)])
     brain, store = _service(tmp_path, model, Search())
 
     opened = _send(brain, FIRST, "first")
-    assert opened["metrics"]["llm_calls"] == 12
-    reads = opened["requirements_read"]
+    assert opened["metrics"]["llm_calls"] == 11
+    reads = opened["research_reads"]
     failed, checked = reads
     assert failed["state"] == "partial" and failed["rows"] == []
     assert failed["diagnostics"]
-    assert sum(row["operation"] == "verify_legal_requirements"
-               and row["state"] == "OutputTruncated"
-               for row in opened["metrics"]["model_calls"]) == 2
+    attempts = [payload for operation, payload in model.calls
+                if operation == "verify_legal_requirements"]
+    assert len(attempts) == 2
+    assert len(attempts[0]["subjects"]) == 2
+    assert [row["subject"]["id"] for row in attempts[1]["subjects"]] == [
+        failed["subject"]["id"]]
+    assert attempts[1]["validation_issues"]
     assert checked["state"] == "ok" and len(checked["rows"]) == 1
     assert checked["rows"][0]["sources"][0]["text"] == \
         "The disputed obligation must be established."
@@ -414,43 +473,55 @@ def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     disputes = proposed_disputes(saved)
     material = material_record(saved, disputes=disputes)
     projected = requirements_record(saved, disputes=disputes, material=material)
-    assert projected["status_by_dispute"][failed["dispute_id"]] == "partial"
-    assert projected["by_dispute"][failed["dispute_id"]] == []
-    assert projected["status_by_dispute"][checked["dispute_id"]] == "ok"
-    assert len(projected["by_dispute"][checked["dispute_id"]]) == 1
+    assert projected["status_by_dispute"][failed["subject"]["id"]] == "partial"
+    assert projected["by_dispute"][failed["subject"]["id"]] == []
+    assert projected["status_by_dispute"][checked["subject"]["id"]] == "ok"
+    assert len(projected["by_dispute"][checked["subject"]["id"]]) == 1
 
 
 @pytest.mark.parametrize("operation", [
     "decompose_disputes", "read_legal_requirements"])
-@pytest.mark.parametrize("failure", [
-    SchemaViolation, ContextOverflow, OutputTruncated])
-def test_content_local_batch_failure_keeps_other_disputes_research(
-        tmp_path, operation, failure):
+@pytest.mark.parametrize("invalid", ["missing", "malformed"])
+def test_invalid_subject_unit_keeps_checked_peer_and_repairs_only_unread_subject(
+        tmp_path, operation, invalid):
     class OneDisputeFails(Model):
+        failed_subject = None
+
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             if prompt.operation == operation:
                 payload = json.loads(prompt.user)
-                original = payload.get("original_input", payload)
-                if any(row["dispute"]["label"] == "Supplier retained tools"
-                       for row in original["disputes"]):
-                    self.calls.append((prompt.operation, original))
-                    raise failure("synthetic content-local failure")
-            return super().structured(prompt, schema, tier,
-                                      max_tokens=max_tokens)
+                if self.failed_subject is None:
+                    self.failed_subject = payload["subjects"][0]["subject"]["id"]
+                result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+                field = "plans" if operation == "decompose_disputes" else "readings"
+                result.data[field] = [row for row in result.data[field]
+                                      if row["subject_id"] != self.failed_subject]
+                if invalid == "malformed":
+                    result.data[field].append({"subject_id": self.failed_subject})
+                return result
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
 
     model = OneDisputeFails([_route(FIRST, first=True)])
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
 
-    failed, checked = opened["requirements_read"]
-    assert failed["state"] == "unavailable" and failed["rows"] == []
-    assert failure.__name__ in failed["diagnostics"][0]
+    failed, checked = opened["research_reads"]
+    expected_state = "unavailable"
+    assert failed["state"] == expected_state and failed["rows"] == []
+    assert failed["coverage"]["state"] != "ok"
+    assert failed["coverage"]["unread_items"] >= 1
+    assert failed["diagnostics"]
     assert checked["state"] == "ok" and len(checked["rows"]) == 1
     assert "Establish the obligation (Customer withheld payment)" in \
         opened["elements"][0]["text"]
     assert "incomplete for 1 dispute" in opened["elements"][0]["text"]
-    assert opened["metrics"]["llm_calls"] == (
-        14 if failure is SchemaViolation else 12)
+    assert opened["metrics"]["llm_calls"] == 11
+    attempts = [payload for name, payload in model.calls if name == operation]
+    assert len(attempts) == 2
+    assert len(attempts[0]["subjects"]) == 2
+    assert [row["subject"]["id"] for row in attempts[1]["subjects"]] == [
+        failed["subject"]["id"]]
+    assert attempts[1]["validation_issues"]
 
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -460,9 +531,9 @@ def test_content_local_batch_failure_keeps_other_disputes_research(
     disputes = proposed_disputes(saved)
     material = material_record(saved, disputes=disputes)
     projected = requirements_record(saved, disputes=disputes, material=material)
-    assert projected["status_by_dispute"][failed["dispute_id"]] == "unavailable"
-    assert projected["status_by_dispute"][checked["dispute_id"]] == "ok"
-    assert len(projected["by_dispute"][checked["dispute_id"]]) == 1
+    assert projected["status_by_dispute"][failed["subject"]["id"]] == expected_state
+    assert projected["status_by_dispute"][checked["subject"]["id"]] == "ok"
+    assert len(projected["by_dispute"][checked["subject"]["id"]]) == 1
 
 
 @pytest.mark.parametrize("operation", [
@@ -484,12 +555,36 @@ def test_provider_outage_does_not_fan_out_into_dispute_retries(
     assert opened["metrics"]["llm_calls"] == (
         8 if operation == "decompose_disputes" else 9)
     assert sum(name == operation for name, _ in model.calls) == 1
-    assert len(opened["requirements_read"]) == 2
-    assert all(read["state"] == "unavailable" and not read["rows"]
-               for read in opened["requirements_read"])
+    assert len(opened["research_reads"]) == 2
+    expected_state = "unavailable"
+    assert all(read["state"] == expected_state and not read["rows"]
+               for read in opened["research_reads"])
+    assert all(read["coverage"]["state"] != "ok"
+               for read in opened["research_reads"])
 
 
-def test_invalid_one_dispute_projection_preserves_other_checked_read(
+@pytest.mark.parametrize("operation", ["decompose_disputes", "read_legal_requirements"])
+def test_wholly_unread_provider_output_cannot_invent_a_valid_peer(tmp_path, operation):
+    class UnreadOutput(Model):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            if prompt.operation == operation:
+                self.calls.append((prompt.operation, json.loads(prompt.user)))
+                raise OutputTruncated("Synthetic output is wholly unread")
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+
+    model = UnreadOutput([_route(FIRST, first=True)])
+    brain, _ = _service(tmp_path, model, Search())
+    opened = _send(brain, FIRST, "unread-output")
+
+    assert opened["metrics"]["llm_calls"] == (9 if operation == "decompose_disputes" else 10)
+    assert sum(name == operation for name, _ in model.calls) == 2
+    assert all(read["state"] == "unavailable" and read["rows"] == []
+               for read in opened["research_reads"])
+    assert all(read["coverage"]["unread_items"] >= 1 for read in opened["research_reads"])
+    assert "Establish the obligation" not in json.dumps(opened["elements"])
+
+
+def test_invalid_research_source_integrity_refuses_before_saving_the_turn(
         tmp_path, monkeypatch):
     from nm.brain import turn as brain_turn
 
@@ -504,25 +599,10 @@ def test_invalid_one_dispute_projection_preserves_other_checked_read(
     monkeypatch.setattr(brain_turn, "_legal_reads", one_damaged_read)
     model = Model([_route(FIRST, first=True)])
     brain, store = _service(tmp_path, model, Search())
-    opened = _send(brain, FIRST, "first")
-
-    assert opened["metrics"]["llm_calls"] == 11
-    assert len(opened["requirements_read"]) == 1
-    surviving = opened["requirements_read"][0]
-    assert surviving["rows"][0]["label"] == "Establish the obligation"
-    assert "Establish the obligation (Customer withheld payment)" in \
-        opened["elements"][0]["text"]
-
-    from nm.brain.dispute_state import proposed_disputes
-    from nm.brain.material_state import material_record
-    from nm.brain.requirements_state import requirements_record
-
-    saved = store.load(opened["matter_id"])
-    disputes = proposed_disputes(saved)
-    material = material_record(saved, disputes=disputes)
-    projected = requirements_record(saved, disputes=disputes, material=material)
-    assert projected["status_by_dispute"][surviving["dispute_id"]] == "ok"
-    assert len(projected["by_dispute"][surviving["dispute_id"]]) == 1
+    with pytest.raises(BrainRefused) as refused:
+        _send(brain, FIRST, "first")
+    assert refused.value.committed == "not_committed"
+    assert store.list_for("adv").matters == ()
 
 
 def test_corrupt_saved_source_hides_only_its_disputes_requirements(tmp_path):
@@ -530,9 +610,9 @@ def test_corrupt_saved_source_hides_only_its_disputes_requirements(tmp_path):
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
     saved = store.load(opened["matter_id"])
-    reads = saved.brain_chat[0]["response"]["requirements_read"]
-    damaged_id = reads[0]["dispute_id"]
-    sound_id = reads[1]["dispute_id"]
+    reads = saved.brain_chat[0]["response"]["research_reads"]
+    damaged_id = reads[0]["subject"]["id"]
+    sound_id = reads[1]["subject"]["id"]
     reads[0]["rows"][0]["sources"][0]["text"] = ""
 
     from nm.brain.dispute_state import proposed_disputes
@@ -554,9 +634,9 @@ def test_saved_verifier_excerpts_are_rechecked_against_source_text(tmp_path):
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
     saved = store.load(opened["matter_id"])
-    reads = saved.brain_chat[0]["response"]["requirements_read"]
-    damaged_id = reads[0]["dispute_id"]
-    sound_id = reads[1]["dispute_id"]
+    reads = saved.brain_chat[0]["response"]["research_reads"]
+    damaged_id = reads[0]["subject"]["id"]
+    sound_id = reads[1]["subject"]["id"]
     source = reads[0]["rows"][0]["sources"][0]
     source["verification"]["support_excerpt"] = "Words absent from the passage"
 
@@ -577,8 +657,9 @@ def test_partial_search_retains_verified_rows_and_diagnostics(tmp_path):
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
     saved = store.load(opened["matter_id"])
-    read = saved.brain_chat[0]["response"]["requirements_read"][0]
+    read = saved.brain_chat[0]["response"]["research_reads"][0]
     read["state"] = "partial"
+    read["coverage"]["state"] = "partial"
     read["diagnostics"] = ["judgment search unavailable"]
 
     from nm.brain.dispute_state import proposed_disputes
@@ -588,7 +669,7 @@ def test_partial_search_retains_verified_rows_and_diagnostics(tmp_path):
     disputes = proposed_disputes(saved)
     material = material_record(saved, disputes=disputes)
     projected = requirements_record(saved, disputes=disputes, material=material)
-    dispute_id = read["dispute_id"]
+    dispute_id = read["subject"]["id"]
     assert projected["status_by_dispute"][dispute_id] == "partial"
     assert len(projected["by_dispute"][dispute_id]) == 1
     assert projected["diagnostics_by_dispute"][dispute_id] == [
@@ -600,9 +681,9 @@ def test_pre_verification_legal_items_are_not_displayed_as_checked(tmp_path):
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
     saved = store.load(opened["matter_id"])
-    reads = saved.brain_chat[0]["response"]["requirements_read"]
-    old_id = reads[0]["dispute_id"]
-    current_id = reads[1]["dispute_id"]
+    reads = saved.brain_chat[0]["response"]["research_reads"]
+    old_id = reads[0]["subject"]["id"]
+    current_id = reads[1]["subject"]["id"]
     reads[0].pop("verification")
 
     from nm.brain.dispute_state import proposed_disputes
@@ -617,8 +698,8 @@ def test_pre_verification_legal_items_are_not_displayed_as_checked(tmp_path):
     assert projected["by_dispute"][old_id] == []
     assert projected["status_by_dispute"][current_id] == "ok"
     assert projected["by_dispute"][current_id]
-    assert "saved legal items predate independent source verification" in \
-        projected["diagnostics"]
+    assert projected["state"] == "incomplete"
+    assert projected["diagnostics"]
 
 
 def test_served_matter_board_exposes_short_requirements_beneath_disputes(
@@ -631,7 +712,7 @@ def test_served_matter_board_exposes_short_requirements_beneath_disputes(
                                             "turn_id": "requirements-first"})
     assert served.status_code == 200, served.text
     opened = served.json()
-    assert opened["metrics"]["llm_calls"] == 11
+    assert opened["metrics"]["llm_calls"] == 10
 
     board_response = client.get(f"/api/matters/{opened['matter_id']}")
     assert board_response.status_code == 200, board_response.text

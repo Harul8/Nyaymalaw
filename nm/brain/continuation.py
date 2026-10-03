@@ -14,6 +14,7 @@ from nm.shared.model_port import (
     ContextOverflow,
     ModelError,
     ModelPort,
+    OutputTruncated,
     Prompt,
     SchemaViolation,
     Tier,
@@ -43,6 +44,11 @@ Look for: The requested outcome, authorised scope, expressed concern,
 urgency, corrections and the whole conversation. A diversion preserves
 pending work. Ground factual accounts in attributed spans or current records;
 ground legal propositions in the actual supplied checked legal passages.
+Conversation words, source-coverage metadata and a prior NM explanation never
+substitute for a legal passage. If the supplied references cannot support a
+requested legal proposition, give a limitation or supported next step instead
+of stating law from memory. A legal-authority enquiry with no usable passages
+cannot be marked complete. Cite each legal assessment's actual passage uses.
 Current records are interpretations, not authority to override exact advocate
 words. Reconsider an earlier NM conclusion or question when the advocate
 corrects it; do not anchor a new reply on that earlier mistaken formulation.
@@ -63,6 +69,12 @@ Check your own initial interpretation. A genuine tension must be supported
 by cited words or records; another party's possible position is a hypothesis,
 not their reported case. Retrieved gathering requirements alone do not
 establish complete merits, strategy or remedy coverage.
+Checked research findings name their authorised scope, purpose and enquiry.
+Use each finding only for that enquiry, with its exact source-use verification
+and limits. General research supplies no facts about the current matter.
+Conditional findings preserve their full limiting predicate in the reply;
+an exact passage is not proof of applicability, statutory currency or binding
+weight. Partial or stale coverage cannot become a completed legal assessment.
 Outcome: Explain supported assessments and weaknesses candidly, with their
 practical relevance and essential caveats in the same request unit. Use the
 model's analysis and language to connect supplied evidence, not to fill legal
@@ -161,7 +173,9 @@ and progress updates are proposals for checking, not action authority. Cite supp
 span_ids, record_ids and legal_source_ids; never write or alter a quote or
 invent an ID. Use uncertainty to preserve reported, conditional or uncertain
 status. `block.text` is reader-facing prose: keep opaque catalogue IDs only in
-the structured reference fields, never inline in displayed text. The interface
+the structured reference fields, never inline in displayed text. Write plain
+text because each block is rendered as a paragraph with separate source controls;
+do not repeat machine references or reproduce Markdown formatting. The interface
 provides source access from those references. Keep an essential limitation
 with the assessment it qualifies."""
 
@@ -369,7 +383,8 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
 def _input(conversation: Conversation, latest: str, plan: TurnPlan,
            disputes: dict | None, material: dict | None,
            requirements: dict | None, progress: dict | None,
-           checked_sources: tuple[dict, ...], latest_turn_id: str
+           checked_sources: tuple[dict, ...], latest_turn_id: str,
+           research: dict | None = None
            ) -> tuple[dict, dict, dict, dict]:
     if not conversation.complete:
         raise IncompleteConversation("The earlier conversation is incomplete")
@@ -435,10 +450,16 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
         if (requirements.get("state") != "ok"
                 or not isinstance(requirements.get("by_dispute"), dict)):
             raise IncompleteConversation("The checked legal record is incomplete")
-        coverage = deepcopy(requirements.get("status_by_dispute", {}))
+        coverage = deepcopy(requirements.get("coverage_by_dispute") or
+                            requirements.get("status_by_dispute", {}))
         for subject, rows in requirements["by_dispute"].items():
             if not isinstance(rows, list) or subject not in records:
                 raise IncompleteConversation("Legal requirements have no source owner")
+            freshness = requirements.get("coverage_by_dispute", {}).get(subject, {})
+            if (freshness and freshness.get("source_freshness") != "current"
+                    and requirements.get("source_turn_id_by_dispute", {}).get(subject)
+                    != latest_turn_id):
+                continue
             for index, row in enumerate(rows, start=1):
                 if not isinstance(row, dict) or not isinstance(row.get("sources"), list):
                     raise IncompleteConversation("A legal requirement is unreadable")
@@ -451,6 +472,33 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     for index, row in enumerate(checked_sources, start=1):
         source(row, str(row.get("subject_id") or "requested_work"),
                str(row.get("source_use_id") or f"checked:{index}"))
+    research_coverage = {}
+    if research is not None:
+        if (research.get("state") != "ok"
+                or not isinstance(research.get("subjects"), dict)
+                or not isinstance(research.get("by_subject"), dict)):
+            raise IncompleteConversation("The checked research record is incomplete")
+        scopes = {item.matter_scope for item in plan.items
+                  if item.next_step in ("legal_work", "clarify")}
+        if "proposed" in scopes:
+            scopes.add("current")
+        for identity, subject in research["subjects"].items():
+            if subject["kind"] != "request" or subject["scope"] not in scopes:
+                continue
+            research_coverage[identity] = {
+                "subject": deepcopy(subject),
+                "coverage": deepcopy(research["coverage_by_subject"][identity])}
+            fresh = research["coverage_by_subject"][identity].get("source_freshness")
+            if (fresh != "current" and
+                    research["source_turn_id_by_subject"].get(identity) != latest_turn_id):
+                continue
+            for index, row in enumerate(research["by_subject"][identity], start=1):
+                use_id = f"research:{identity}:{index}"
+                legal_ids = [source(item, identity, use_id) for item in row["sources"]]
+                value = {key: deepcopy(value) for key, value in row.items()
+                         if key not in ("sources", "source_ids")}
+                value.update(source_ids=legal_ids, subject=deepcopy(subject))
+                record(value, "research", use_id)
     payload.update(
         current_matter_id=conversation.current_matter_id,
         current_work=conversation.current_work,
@@ -460,6 +508,7 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                     for index in continuation_indexes(plan)],
         record_catalogue=records, legal_sources=sources,
         legal_coverage=coverage,
+        research_coverage=research_coverage,
         legal_diagnostics=deepcopy((requirements or {}).get("diagnostics", [])),
         progress=deepcopy(progress if progress is not None else {
             "state": "ok", "rows": [], "events": [],
@@ -470,7 +519,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
 
 def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                    records: dict, sources: dict,
-                   progress: dict | None = None, intent: str = "request") -> None:
+                   progress: dict | None = None, intent: str = "request",
+                   needs_authority: bool = False) -> None:
     require_schema(unit, _UNIT)
     work = _progress_catalogue(progress)
     if type(unit["request_index"]) is not int or unit["request_index"] not in expected:
@@ -493,11 +543,33 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
     for block in unit["blocks"]:
         if not block["id"].strip() or not block["text"].strip():
             raise SchemaViolation("A displayed block has no identity or readable text")
+        if any(identifier in block["text"] for identifier in sources):
+            raise SchemaViolation(
+                "block.text contains an internal legal source ID. Keep catalogue "
+                "keys only in legal_source_ids; write readable prose without "
+                "inline machine references. The interface supplies source controls")
         for field, catalogue in (("span_ids", spans), ("record_ids", records),
                                  ("legal_source_ids", sources)):
             ids = block[field]
             if len(ids) != len(set(ids)) or not set(ids) <= catalogue.keys():
                 raise SchemaViolation(f"A displayed block has invalid {field}")
+        # A checked interpretation retains its exact passage uses on release.
+        # Resolving those existing links is not a new applicability decision.
+        for identifier in block["record_ids"]:
+            row = records[identifier]
+            if row["type"] not in ("requirement", "research"):
+                continue
+            for source_id in row["record"]["source_ids"]:
+                if source_id not in sources:
+                    raise IncompleteConversation("A checked finding lost its passage owner")
+                if source_id not in block["legal_source_ids"]:
+                    block["legal_source_ids"].append(source_id)
+        if (needs_authority and block["kind"] == "assessment"
+                and not block["legal_source_ids"]):
+            raise SchemaViolation(
+                "A legal assessment needs actual checked legal_source_ids. "
+                "Conversation and coverage metadata do not establish law; "
+                "when support is missing use a limitation without a legal conclusion")
         if (block["kind"] in ("account", "assessment", "completion") and not any(
                     block[field] for field in (
                         "span_ids", "record_ids", "legal_source_ids"))):
@@ -529,6 +601,11 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
     block = blocks.get(sufficiency["block_id"])
     if block is None:
         raise SchemaViolation("Immediate reply sufficiency needs its displayed explanation")
+    if (needs_authority and sufficiency["status"] == "complete"
+            and not any(row["legal_source_ids"] for row in unit["blocks"])):
+        raise SchemaViolation(
+            "A legal-authority enquiry cannot be complete without checked legal "
+            "references. Preserve the missing research as a limited unfinished result")
     updates = unit["progress_updates"]
     if len({_progress_target(unit, row["target_id"]) for row in updates}) != len(updates):
         raise SchemaViolation("Each saved work item needs one progress decision")
@@ -558,7 +635,8 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
 def _read_units(data: object, pending: tuple[int, ...], spans: dict,
                 records: dict, sources: dict, progress: dict | None = None,
                 reserved_updates: frozenset[str] = frozenset(),
-                intents: dict[int, str] | None = None
+                intents: dict[int, str] | None = None,
+                needs_authority: dict[int, bool] | None = None
                 ) -> tuple[dict[int, dict], dict[int, str]]:
     rows = data.get("units") if isinstance(data, dict) else None
     grouped: dict[int, list[dict]] = {index: [] for index in pending}
@@ -575,7 +653,8 @@ def _read_units(data: object, pending: tuple[int, ...], spans: dict,
         unit = grouped[index][0]
         try:
             _validate_unit(unit, pending, spans, records, sources, progress,
-                           (intents or {}).get(index, "request"))
+                           (intents or {}).get(index, "request"),
+                           (needs_authority or {}).get(index, False))
         except SchemaViolation as exc:
             issues[index] = str(exc)
         else:
@@ -627,7 +706,7 @@ def continue_conversation(
         plan: TurnPlan, disputes: dict | None = None,
         material: dict | None = None, requirements: dict | None = None,
         progress: dict | None = None, checked_sources: tuple[dict, ...] = (),
-        latest_turn_id: str = "latest"
+        latest_turn_id: str = "latest", research: dict | None = None
         ) -> ContinuationResult:
     """Compose and verify once, with one local feedback-guided replacement."""
     expected = continuation_indexes(plan)
@@ -635,7 +714,7 @@ def continue_conversation(
         return ContinuationResult((), ())
     payload, spans, records, sources = _input(
         conversation, latest, plan, disputes, material, requirements, progress,
-        checked_sources, latest_turn_id)
+        checked_sources, latest_turn_id, research)
     words = {(message.turn_id, message.role): message.text
              for message in conversation.messages}
     words[(latest_turn_id, "advocate")] = latest
@@ -643,6 +722,7 @@ def continue_conversation(
     pending = expected
     issues: dict[int, str] = {}
     rejected = None
+    truncated = False
     for attempt in range(2):
         system = _SYSTEM
         current = {**payload, "work_items": [row for row in payload["work_items"]
@@ -678,6 +758,13 @@ def continue_conversation(
                     "Already checked peer requests are retained.")}
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 1536 * len(pending)))
+        if truncated:
+            output_limit = min(16384, output_limit * 2)
+            current["output_budget_guidance"] = (
+                "The previous output exhausted its budget before completing the contract. "
+                "Return concise complete units. Combine compatible claims, avoid repeating "
+                "the same account or limitations, and retain all essential source references.")
+            user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow("The full conversation exceeds the continuation budget")
@@ -690,8 +777,9 @@ def continue_conversation(
                 raise TierUnavailable("The configured continuation writer was unavailable")
         except ContextOverflow:
             raise
-        except SchemaViolation as exc:
+        except (SchemaViolation, OutputTruncated) as exc:
             issues = {index: str(exc) for index in pending}
+            truncated = isinstance(exc, OutputTruncated)
             rejected = None
             continue
         except ModelError:
@@ -705,6 +793,8 @@ def continue_conversation(
         valid, issues = _read_units(rejected, pending, spans, records, sources,
                                    payload["progress"], reserved,
                                    {row["request_index"]: row["intent"]
+                                    for row in payload["work_items"]},
+                                   {row["request_index"]: bool(row["research_question"])
                                     for row in payload["work_items"]})
         unread: set[int] = set()
         if valid:

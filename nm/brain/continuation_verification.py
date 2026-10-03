@@ -34,11 +34,21 @@ premise, assessment, recommendation and claimed completion follows from the
 selected references and whole context. References prove only that supplied
 words exist. A legal proposition needs an actual supporting supplied legal
 passage; do not use your own legal knowledge to fill missing support. Check
+the selected block references first: if a block states or presupposes law,
+its references must include a legal passage whose actual words support that
+meaning. Conversation citations, earlier NM explanations, enquiry labels and
+coverage metadata supply no law. Reject legal propositions cited only to those
+items, even when you know the proposition independently. A limitation must not
+smuggle an unsupported legal answer into an unfinished unit. Then check
 the exact passage, conditions, jurisdictional and temporal limits, source
 status and recorded verification. Check the subject of an uncertainty,
 negation and timing: a missing mention does not establish an absent event,
 term or record. A checked gathering item is not a complete
 merits analysis. Preserve reported versus inspected versus established status.
+Check each research finding's authorised scope, purpose, enquiry and coverage.
+Reject reuse for a materially different question or legal purpose, conversion
+of general research into matter facts, omitted conditional predicates, or
+presentation of partial or stale research as a completed assessment.
 An opposing explanation must be labelled as a hypothesis supported by a
 material distinction, never invented as the opponent's actual account.
 Outcome: Reject a unit that invents facts, stretches a passage, overstates

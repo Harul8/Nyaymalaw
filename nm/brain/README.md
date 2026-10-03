@@ -25,12 +25,24 @@ is refused explicitly instead of silently trimmed.
    selected context. Independent checks decide whether proposals are faithful.
    A dispute title is concise, not necessarily verbatim; identification does
    not establish merits.
-3. `legal_requirements` decomposes due disputes into complementary queries.
+3. `legal_requirements` decomposes due research subjects into complementary queries.
    The corpus adapter searches Act and judgment passages using hybrid retrieval
-   and reranking. A reader proposes requirements; an independent check examines
+   and reranking. A subject names its owner, scope, purpose, question and attributed
+   record. General legal questions do not require an invented matter or dispute.
+   A reader proposes gathering items or principles, conditions, supporting and
+   adverse reasoning; an independent check examines
    each complete item, short label, citations and material links. Only checked
    items appear under disputes. Applicability and incomplete search remain
    explicit; reported documents are not verified documents.
+   `response.research_reads` is the canonical research record. The board is a
+   gathering-only projection. Research is reusable only when its purpose, scope,
+   question, relevant record, corpus revision and verification contract match.
+   Unknown or stale corpus identity prevents cache reuse; historical coverage
+   remains visible. A loaded index whose artifacts changed refuses search until
+   reloaded, so vector, word and exact-passage reads cannot silently diverge.
+   A legal-authority enquiry remains explicit when reusing checked research.
+   A legal assessment needs actual selected passage uses, and completion needs
+   legal references; conversation citations and coverage labels supply no law.
 4. `continuation` uses those records, passages and the whole conversation to
    answer the immediate request, explain supported uncertainty, select useful
    unanswered questions and assess scoped-task sufficiency. It does not repeat
@@ -72,26 +84,35 @@ Normal calls vary with the work actually due:
 
 | Activity | Calls | Input and output |
 | --- | ---: | --- |
-| Interpret | 1 | Full transcript and latest words → requests, scope and reading need |
+| Interpret | 1 | Full transcript, latest words and scoped coverage → requests, scope and any research question |
 | Dispute extraction | 1 when material is read | Full context and active disputes → attributed proposals |
 | Dispute check | 1 when proposals exist | Proposals and sources → independent verdicts |
 | Detail extraction | 1 when material is read | Full context and disputes → attributed material |
 | Detail/opening check | 1 when either exists | Proposals and sources → independent verdicts |
-| Search decomposition | 1 per context-fitting due batch | Disputes/material → up to four distinct queries per dispute |
+| Search decomposition | 1 per context-fitting due batch | Scoped subjects and records → up to four distinct queries per subject |
 | Corpus search/rerank | 0 generative calls | Queries → candidates and coverage |
-| Passage reading | 1 per context-fitting batch | Candidates and context → gathering proposals |
+| Passage reading | 1 per context-fitting batch | Candidates and context → source-supported findings for the stated purpose |
 | Source support check | 1 per context-fitting nonempty batch | Complete proposals and passages → retain/withhold/unread |
 | Continuation | 1 when substantive work remains | Full context, records and checked sources → response units |
 | Continuation check | 1 when units exist | Complete units and sources → independent release verdicts |
 
 A plain greeting or nonlegal diversion normally costs one call; a checked
 substantive continuation with unchanged material/research normally costs three.
+The first general legal question normally costs six when useful findings exist:
+interpretation, query planning, passage reading, independent source checking,
+response writing and independent response checking. Local hybrid search adds no
+generative call. Empty search results or no findings omit the unnecessary model
+stage; incomplete coverage stays explicit rather than becoming a completed
+assessment.
 Material and research calls are conditional, not a fixed per-message intake
-pipeline. Context-fitting batches and per-dispute isolation can add calls.
+pipeline. Context-fitting batches and conditional correction can add calls.
 Readers allow one feedback correction. Verifiers retain valid peer verdicts and
 retry only unresolved units once; provider outages do not trigger item-by-item
 retry cascades. A rejected continuation gets at most one replacement generation
-and another independent check. Substantive response writing uses the stronger
+and another independent check. A truncation correction may increase the writer's
+output budget, bounded at 16,384 tokens; it must return concise complete units
+instead of releasing partial JSON.
+Substantive response writing uses the stronger
 configured judge tier because it must jointly preserve meaning, sources and
 cross-turn progress. Its separate review uses an independent prompt and call
 on that tier. A downgraded routine response is not accepted for either stage.
@@ -106,6 +127,12 @@ they do not provide model diversity. No progress or personality call is added.
 calls, operations, tiers, timing and token usage. `provider_retries` separately
 counts transport attempts. Replays report zero. There is no additional tone,
 empathy or personality classifier.
+
+The browser gates are scoped synthetic checks, not a claim of comprehensive
+professional quality. Task completion, closure review, a delivered document,
+matter closure and external execution remain distinct outcomes. The current
+conversation flow tracks and checks scoped replies and work; it does not execute
+filings, send communications, export a final deliverable or close a matter.
 
 ## Source readback and failure boundaries
 
