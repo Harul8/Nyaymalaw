@@ -1460,8 +1460,18 @@ function renderLegalRequirements(host, row, record) {
       for (const source of need.sources) {
         const citation = document.createElement('p');
         citation.className = 'dispute-requirement-source';
-        citation.textContent = [source.title, source.kind, source.locator]
-          .filter(value => typeof value === 'string' && value.trim()).join(' · ');
+        const label = window.NmBrainSources.labelFor(source);
+        const readable = window.NmBrainSources?.isReadableRecordSource(source);
+        if (readable) {
+          const link = document.createElement('button');
+          link.type = 'button'; link.className = 'citation-link';
+          link.textContent = label;
+          link.setAttribute('aria-label', `Open saved passage: ${label}`);
+          link.addEventListener('click', () => window.NmBrainSources.openRecordSource(source, link));
+          citation.appendChild(link);
+        } else {
+          citation.textContent = label;
+        }
         item.appendChild(citation);
         const verification = source.verification;
         if (verification && verification.support_excerpt) {
@@ -1474,9 +1484,11 @@ function renderLegalRequirements(host, row, record) {
           scope.textContent = `Limiting condition: “${verification.scope_excerpt}”`;
           item.appendChild(scope);
         }
-        const passage = document.createElement('blockquote');
-        passage.textContent = source.text || '';
-        item.appendChild(passage);
+        if (!readable) {
+          const passage = document.createElement('blockquote');
+          passage.textContent = source.text || '';
+          item.appendChild(passage);
+        }
       }
     } else {
       const missing = document.createElement('p');
@@ -2455,7 +2467,9 @@ function renderTurn(entry) {
     // identically is how a gap becomes a finding in the reader's memory.
     d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
     const body = document.createElement('p');
-    body.className = 'body'; body.textContent = el.text;
+    body.className = 'body';
+    if (el.source?.brain) window.NmBrainSources.appendBody(body, entry.answer, el);
+    else body.textContent = el.text;
     d.appendChild(body);
 
     if (nextStepLine(el)) {
@@ -2497,31 +2511,7 @@ function renderTurn(entry) {
 
   function fillReferences(row, el) {
     if (el.source?.brain) {
-      const sources = Array.isArray(el.sources) ? el.sources : [el.source];
-      const owned = entry.answer.turn_id && (entry.answer.matter_id || entry.answer.chat_id);
-      const group = document.createElement('details');
-      group.className = 'brain-source-links';
-      const summary = document.createElement('summary');
-      summary.textContent = `Sources (${sources.length})`;
-      const list = document.createElement('ul');
-      sources.forEach((source, index) => {
-        const item = document.createElement('li');
-        if (!owned || source.brain !== true || !el.refs.includes(source.locator)) {
-          item.textContent = `${source.label} — saved source inspection unavailable`;
-          list.appendChild(item);
-          return;
-        }
-        const link = document.createElement('button');
-        link.type = 'button'; link.className = 'citation-link';
-        link.textContent = source.label;
-        link.setAttribute('aria-label', `Open saved passage: ${source.label}`);
-        link.addEventListener('click', () => window.NmBrainSources.open(
-          entry.answer, el, entry.answer.elements.indexOf(el), index, link));
-        item.appendChild(link);
-        list.appendChild(item);
-      });
-      group.append(summary, list);
-      row.appendChild(group);
+      window.NmBrainSources.appendReferences(row, entry.answer, el);
       return;
     }
     const bound = el.source && el.refs.includes(el.source.locator)
@@ -2573,7 +2563,9 @@ function renderTurn(entry) {
       // being stripped at exactly the moment it mattered.
       d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
       const body = document.createElement('p');
-      body.className = 'body'; body.textContent = el.text;
+      body.className = 'body';
+      if (el.source?.brain) window.NmBrainSources.appendBody(body, entry.answer, el);
+      else body.textContent = el.text;
       d.appendChild(body);
       if (el.refs && el.refs.length) {
         const r = document.createElement('span');

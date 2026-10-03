@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-03",
+  "scope": "Response citations and dispute reading panes before multi-matter browser testing",
+  "reference_pattern": {
+    "application": "Agentified NM",
+    "files_reviewed": ["frontend/src/App.jsx", "frontend/src/App.css"],
+    "reuse_disclosed_before_implementation": true,
+    "reuse": "Human-readable source links opening a right-side drawer with fixed header and scrolling text",
+    "donor_code_copied": false
+  },
+  "source_contract": "Existing authenticated exact response-source readback and checked dispute-requirement projection",
+  "link_rules": [
+    "Inline text links require exact unique selected-source identity",
+    "Ambiguous source names remain plain text",
+    "Distinct passages from one authority remain separately readable",
+    "Display deduplication preserves original saved source indices",
+    "Source and interpretation qualifications remain visible"
+  ],
+  "model_calls_added": 0,
+  "browser_observation": {
+    "viewport_width": 1536,
+    "pane_right": 1536,
+    "pane_top": 0,
+    "header_top_before_and_after_scroll": 0,
+    "close_top_after_scroll": 16,
+    "source_body_scroll_top_observed": 176.8
+  },
+  "checks": {
+    "source_readback_and_ui_suite": "passed",
+    "final_shared_label_ui_wrapper": "4 passed",
+    "exact_source_helper_and_syntax": "passed"
+  },
+  "multi_matter_acceptance": "Not claimed by this UI milestone; four separate synthetic browser journeys follow."
+}

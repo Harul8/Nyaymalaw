@@ -8,6 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const app = readFileSync(join(here, '..', '..', 'nm', 'app', 'app.js'), 'utf8');
 const html = readFileSync(join(here, '..', '..', 'nm', 'app', 'index.html'), 'utf8');
 const css = readFileSync(join(here, '..', '..', 'nm', 'app', 'app.css'), 'utf8');
+const sourceController = readFileSync(join(here, '..', '..', 'nm', 'app', 'brain-sources.js'), 'utf8');
 assert.equal((html.match(/id="matter-board"/g) || []).length, 1);
 assert.equal((html.match(/id="matter-board-body"/g) || []).length, 1);
 const readerMarkup = html.match(/<dialog id="dispute-reader"[\s\S]*?<\/dialog>/)?.[0];
@@ -17,6 +18,21 @@ const readerStyle = css.match(/#dispute-reader(?:\s*,\s*#[\w-]+)*\s*\{([^}]+)\}/
 const readerBodyStyle = css.match(/\.dispute-reader-body\s*\{([^}]+)\}/)?.[1];
 assert.match(readerStyle, /overflow:\s*hidden/);
 assert.match(readerBodyStyle, /overflow-y:\s*auto/);
+const sourceMarkup = html.match(/<dialog id="brain-source-reader"[\s\S]*?<\/dialog>/)?.[0];
+assert.match(sourceMarkup, /<header[^>]*>[\s\S]*?id="brain-source-title"[\s\S]*?id="brain-source-close"[\s\S]*?<\/header>[\s\S]*?<div id="brain-source-body"/);
+const sourceStyle = css.match(/#source-reader\s*\{([^}]+)\}/)?.[1];
+for (const style of [readerStyle, sourceStyle]) {
+  assert.match(style, /position:\s*fixed/);
+  assert.match(style, /inset:\s*0\s+0\s+0\s+auto/);
+  assert.match(style, /margin:\s*0/);
+  assert.match(style, /height:\s*100dvh/);
+  assert.match(style, /max-height:\s*100dvh/);
+}
+assert.match(css, /#dispute-reader\[open\],\s*#brain-source-reader\[open\]\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column/);
+assert.match(css, /\.dispute-reader-head\s*\{[^}]*flex:\s*0\s+0\s+auto/);
+assert.match(readerBodyStyle, /min-height:\s*0/);
+assert.match(css, /\.source-reader-head\s*\{[^}]*flex:\s*none/);
+assert.match(css, /\.source-reader-body\s*\{[^}]*overflow-y:\s*auto/);
 assert.ok(!app.includes('function renderMatterBoard('));
 const start = app.indexOf('function requirementsFor(');
 const end = app.indexOf('// F-B-17.', start);
@@ -70,8 +86,11 @@ const document = {
   },
 };
 const state = { matterId: 'matter-a', disputeFocus: null };
+const events = new Map();
+const sourceCalls = [];
+const window = { addEventListener: (name, callback) => events.set(name, callback) };
 const context = {
-  document, state,
+  document, state, window,
   $: id => document.getElementById(id),
   stateBlock: (_kind, message) => {
     const block = new Element('p'); block.textContent = message; return block;
@@ -83,6 +102,15 @@ const context = {
   },
 };
 vm.createContext(context);
+vm.runInContext(sourceController, context, { filename: 'nm/app/brain-sources.js' });
+const sourceReader = window.NmBrainSources;
+sourceReader.configure({scope: () => ({matter_id: state.matterId}), request: () => {
+  throw new Error('Opening a checked board source cannot start another search or source fetch');
+}});
+window.NmBrainSources = {...sourceReader, openRecordSource: (source, opener) => {
+  sourceCalls.push({source, opener});
+  return sourceReader.openRecordSource(source, opener);
+}};
 vm.runInContext(app.slice(start, end), context, { filename: 'nm/app/app.js' });
 
 const body = new Element('div');
@@ -166,14 +194,14 @@ const requirementsRecord = {
     'dispute-1': [
       { label: 'Refund obligation', need: 'Establish the condition for repayment.',
         why: 'The requested remedy depends on that condition.', force: 'required',
-        record_status: 'mentioned', sources: [{ kind: 'statute', title: 'Source A',
-          locator: 'A:12', text: 'Exact passage governing repayment.',
+        record_status: 'mentioned', sources: [{ id: 'source-a', kind: 'provision', title: 'Source A',
+          locator: 'A:12', text: 'Exact passage governing repayment. Its full recorded context remains here.',
           verification: { support_excerpt: 'Exact passage governing repayment.',
             scope_excerpt: '', scope_status: 'no_special_condition',
             reason: 'The passage supports the item.' } }] },
       { label: 'Notice evidence', need: 'Check whether notice was sent.',
         why: 'It may strengthen the account.', force: 'strengthening',
-        record_status: 'not_mentioned', sources: [{ kind: 'judgment', title: 'Source B',
+        record_status: 'not_mentioned', sources: [{ id: 'source-b', kind: 'judgment', title: 'Source B',
           locator: 'B:8', text: 'Exact passage about notice when a request was sent.',
           verification: { support_excerpt: 'Exact passage about notice',
             scope_excerpt: 'when a request was sent',
@@ -254,7 +282,7 @@ assert.ok(document.getElementById('dispute-reader-body').textContent
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Legal force: Strengthening'));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Related material was mentioned; it has not been examined.'));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('No related material is linked in the current conversation record.'));
-assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Source A · statute · A:12'));
+assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Source A · A:12'));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Exact passage governing repayment.'));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Supporting words: “Exact passage governing repayment.”'));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Limiting condition: “when a request was sent”'));
@@ -280,6 +308,36 @@ assert.ok(!materialSections[0].textContent.includes('I have the documents.'));
 assert.ok(materialSections[1].textContent.includes('I have the documents.'));
 assert.ok(!materialSections[1].textContent.includes('The supplier declined the requested refund.'));
 assert.ok(!document.getElementById('dispute-reader-body').textContent.includes('Provisional'));
+const requirementSection = document.getElementById('dispute-reader-body').children
+  .find(child => child.className === 'dispute-reader-requirements');
+const requirementList = requirementSection.children.find(child => child.tagName === 'UL');
+const sourceDialog = document.getElementById('brain-source-reader');
+for (let index = 0; index < requirementList.children.length; index += 1) {
+  const source = requirementsRecord.by_dispute['dispute-1'][index].sources[0];
+  const item = requirementList.children[index];
+  const citation = item.children.find(child => child.className === 'dispute-requirement-source');
+  const link = citation.children[0];
+  assert.equal(link.tagName, 'BUTTON');
+  assert.equal(link.textContent, ['Source A · A:12', 'Source B · B:8'][index]);
+  assert.equal(link['aria-label'], `Open saved passage: ${link.textContent}`);
+  assert.ok(!item.children.some(child => child.tagName === 'BLOCKQUOTE'));
+  link.fire('click', {detail: 1});
+  assert.equal(sourceCalls.length, index + 1);
+  assert.equal(sourceCalls.at(-1).source, source);
+  assert.equal(sourceCalls.at(-1).opener, link);
+  assert.equal(sourceDialog.open, true);
+  assert.equal(dialog.open, true);
+  assert.equal(document.getElementById('brain-source-title').textContent, source.title);
+  assert.equal(document.getElementById('brain-source-body').children.at(-1).textContent, source.text);
+  assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.support_excerpt));
+  if (source.verification.scope_excerpt) {
+    assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.scope_excerpt));
+  }
+  document.getElementById('brain-source-close').fire('click');
+  assert.equal(sourceDialog.open, false);
+  assert.equal(document.activeElement, link);
+}
+assert.ok(!document.getElementById('dispute-reader-body').textContent.includes('Its full recorded context remains here.'));
 document.getElementById('dispute-reader-close').fire('click');
 assert.equal(dialog.open, false);
 assert.equal(document.activeElement, identified);
@@ -341,3 +399,29 @@ assert.ok(document.getElementById('dispute-reader-body').textContent
 assert.ok(document.getElementById('dispute-reader-body').textContent
   .includes('This does not establish that no law applies.'));
 assert.ok(!document.getElementById('dispute-reader-body').textContent.includes('retrieval failed'));
+context.closeDisputeReader(false);
+
+const historicalSource = {kind: 'judgment', title: 'Historical source', locator: 'H:4',
+  text: 'Historical excerpt remains readable without inventing a checked source identity.'};
+const historicalRequirements = {...requirementsRecord, state: 'ok',
+  status_by_dispute: {'dispute-1': 'ok'}, by_dispute: {'dispute-1': [{
+    label: 'Historical record', need: 'Consider the retained historical account.',
+    why: 'It records earlier work.', force: 'strengthening', record_status: 'not_mentioned',
+    sources: [historicalSource],
+  }]}};
+context.renderDisputeBoard(body, {disputes: []}, {state: 'ok', rows: [rows[0]]},
+  materialRecord, historicalRequirements);
+assert.ok(!body.textContent.includes(historicalSource.text));
+body.children.find(child => child.tagName === 'UL').children[0].children[0].fire('click', {detail: 1});
+const historicalSection = document.getElementById('dispute-reader-body').children
+  .find(child => child.className === 'dispute-reader-requirements');
+const historicalItem = historicalSection.children.find(child => child.tagName === 'UL').children[0];
+const historicalCitation = historicalItem.children
+  .find(child => child.className === 'dispute-requirement-source');
+assert.equal(historicalCitation.children.length, 0);
+assert.ok(historicalCitation.textContent.includes(historicalSource.title));
+assert.equal(historicalItem.children.find(child => child.tagName === 'BLOCKQUOTE').textContent,
+  historicalSource.text);
+assert.equal(sourceCalls.length, 2);
+assert.equal(sourceDialog.open, false);
+context.closeDisputeReader(false);
