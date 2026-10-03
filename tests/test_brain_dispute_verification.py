@@ -12,6 +12,7 @@ from nm.shared.model_port import (
     ProviderUnavailable,
     SchemaViolation,
     Tier,
+    TierUnavailable,
     Usage,
 )
 
@@ -43,7 +44,7 @@ class Model:
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.ROUTINE
+        assert tier is Tier.JUDGE
         return 100_000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -75,7 +76,7 @@ def test_batch_checks_independent_disputes_and_withholds_unrelated_request():
     assert result == candidates[:1]
     assert len(model.calls) == 1
     prompt, schema, tier, _ = model.calls[0]
-    assert prompt.operation == "verify_disputes" and tier is Tier.ROUTINE
+    assert prompt.operation == "verify_disputes" and tier is Tier.JUDGE
     assert all(heading in prompt.system for heading in
                ("Message:", "Purpose:", "Look for:", "Outcome:"))
     payload = json.loads(prompt.user)
@@ -132,6 +133,27 @@ def test_premise_cannot_be_accepted_as_an_independent_dispute():
             json.loads(model.calls[1][0].user)["candidates"]] == ["C1"]
 
 
+def test_independent_dispute_can_be_rejected_for_factual_overreach_without_retry():
+    first = "The counterparty kept the original record after being asked to return it."
+    second = "The counterparty also withheld the paid balance."
+    candidates = (
+        _candidate(first, "Counterparty destroyed the original record"),
+        _candidate(second, "Counterparty withheld the paid balance"),
+    )
+    reason = "The conduct would be independently contestable, but destruction was not reported."
+    rejected = {"candidate_id": "C1", "candidate_role": "independent_dispute",
+                "verdict": "reject", "reason": reason}
+    model = Model([{"verdicts": [rejected, _verdict("C2", accept=True)]}])
+
+    result = verify_disputes(
+        model, candidates=candidates, earlier=(), latest=f"{first} {second}",
+        active_disputes=())
+
+    assert result == candidates[1:]
+    assert len(model.calls) == 1
+    assert model.calls[0][0].operation == "verify_disputes"
+
+
 def test_changed_dispute_supplies_attributed_earlier_advocate_words():
     earlier = (Message("old", "advocate", "The charge was withheld in July."),)
     latest = "Correction: the charge was withheld in August."
@@ -167,3 +189,33 @@ def test_provider_outage_remains_visible_to_turn_boundary():
         verify_disputes(model, candidates=(candidate,), earlier=(),
                         latest=latest, active_disputes=())
     assert len(model.calls) == 1
+
+
+def test_traced_model_downgrade_cannot_supply_the_independent_verdict():
+    from nm.shared.model_traced import TracedModel
+
+    class MissingJudge(Model):
+        provider = "offline"
+
+        def __init__(self, replies):
+            super().__init__(replies)
+            self.dispatched_tiers = []
+
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            self.dispatched_tiers.append(tier)
+            if tier is Tier.JUDGE:
+                raise TierUnavailable("The synthetic judge tier is unavailable.")
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+
+    latest = "The obligation is contested."
+    candidate = _candidate(latest, "Contested obligation")
+    inner = MissingJudge([{"verdicts": [_verdict("C1", accept=True)]}])
+    traced = TracedModel(inner)
+
+    with pytest.raises(TierUnavailable, match="configured independent review"):
+        verify_disputes(traced, candidates=(candidate,), earlier=(),
+                        latest=latest, active_disputes=())
+
+    assert inner.dispatched_tiers == [Tier.JUDGE, Tier.ROUTINE]
+    assert len(traced.calls) == 1
+    assert traced.calls[0].downgraded_from == Tier.JUDGE.value

@@ -7,6 +7,8 @@ import pytest
 from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
+from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_reader_fixture import reader_operations
 
 
 class Model:
@@ -15,24 +17,31 @@ class Model:
         self.calls = []
         self.material_calls = []
         self.next_material = []
+        self.current_items = []
 
     def context_budget(self, tier):
-        assert tier is Tier.ROUTINE
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 20000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
-        if prompt.operation in ("extract_disputes", "extract_legal_details"):
+        continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
+                                          scripted_items=self.current_items)
+        if continuation is not None:
+            data = continuation
+        elif prompt.operation in ("extract_disputes", "extract_legal_details"):
             self.material_calls.append(prompt)
             payload = json.loads(prompt.user)
             sources = payload.get("original_input", payload)
             rows = [_with_source_ids(row, sources) for row in self.next_material]
             if prompt.operation == "extract_disputes":
-                data = {"disputes": [
+                data = reader_operations([
                     {key: value for key, value in row.items() if key != "kind"}
-                    for row in rows if row["kind"] == "dispute"]}
+                    for row in rows if row["kind"] == "dispute"], sources,
+                    link_field="related_dispute_ids")
             else:
-                data = {"details": [row for row in rows
-                                    if row["kind"] != "dispute"]}
+                data = reader_operations([row for row in rows
+                                          if row["kind"] != "dispute"], sources,
+                                         link_field="related_material_ids")
         elif prompt.operation in ("verify_disputes", "verify_material_grounding"):
             payload = json.loads(prompt.user)
             data = {"verdicts": [
@@ -46,6 +55,8 @@ class Model:
             planned = next(self.plans)
             self.next_material = planned["material"]
             data = {key: value for key, value in planned.items() if key != "material"}
+            if prompt.operation == "interpret_conversation":
+                self.current_items = data["items"]
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
@@ -104,7 +115,8 @@ def plan(message, *, candidates=(), items=None, opening=False,
             "material_review": bool(candidates) or opening,
             "active_work_after": active_work,
             "opening": {"ready": opening,
-                        "title": "Contractor dispute" if opening else "",
+                        "party_name": "",
+                        "subject": "Contractor dispute" if opening else "",
                         "summary": "The advocate describes a dispute over stopped work."
                         if opening else "",
                         }}
@@ -180,7 +192,7 @@ def test_first_account_retains_distinct_sourced_material_without_admission(
     assert saved.facts == ()
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert response["metrics"]["llm_calls"] == 4
+    assert response["metrics"]["llm_calls"] == 6
     payload = json.loads(model.calls[0].user)
     assert payload["earlier_conversation"] == []
     assert payload["latest_message"] == message
@@ -235,7 +247,7 @@ def test_correction_and_diversion_keep_prior_words_and_proposals(
             if row["role"] == "advocate"] == [first, correction]
 
 
-def test_matter_scoped_correction_is_read_even_if_router_flag_is_false(
+def test_reported_correction_is_read_when_interpretation_marks_material_content(
         client, wired, monkeypatch):
     first = "The keys were handed over on Monday."
     correction = "Correction: the keys were handed over on Tuesday."
@@ -251,7 +263,7 @@ def test_matter_scoped_correction_is_read_even_if_router_flag_is_false(
         "matter_scope": "current", "priority": "ordinary",
         "next_step": "answer", "reply": "I have noted the corrected date.",
         "clarification": ""}])
-    second_plan["material_review"] = False
+    second_plan["material_review"] = True
     model = Model([plan(first, candidates=[original], opening=True), second_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -260,13 +272,56 @@ def test_matter_scoped_correction_is_read_even_if_router_flag_is_false(
     changed = send(client, correction, "second", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 4
+    assert changed.json()["metrics"]["llm_calls"] == 6
     matter = wired.store.load(opened.json()["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
     record = material_record(matter, disputes=proposed_disputes(matter))
     assert [row["id"] for row in record["rows"]] == ["second:material:1"]
     assert len(record["history"]) == 2
+
+
+@pytest.mark.parametrize("relation", ("new", "changes"))
+def test_work_request_without_new_material_preserves_record_with_three_calls(
+        client, wired, monkeypatch, relation):
+    first = "The reported delivery date is disputed. We have an unsigned note."
+    request = "Please assess the account already on this file."
+    original = [
+        material("dispute", "Disputed delivery date",
+                 "The reported delivery date is disputed."),
+        material("evidence", "The advocate reports an unsigned note.",
+                 "We have an unsigned note.", placement="disputes",
+                 dispute_ids=("recorded:material:1",)),
+    ]
+    work_plan = plan(request, items=[{
+        "request": request, "relation": relation, "matter_scope": "current",
+        "priority": "ordinary", "next_step": "legal_work",
+        "reply": "I will assess the existing account and identify any limit in its support.",
+        "clarification": ""}])
+    assert work_plan["material_review"] is False
+    model = Model([plan(first, candidates=original, opening=True), work_plan])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    opened = send(client, first, "recorded")
+    assert opened.status_code == 200, opened.text
+    matter_id = opened.json()["matter_id"]
+    before = client.get(f"/api/matters/{matter_id}").json()
+    reader_count = len(model.material_calls)
+
+    response = send(client, request, "work-request", opened=opened.json())
+
+    assert response.status_code == 200, response.text
+    released = response.json()
+    assert released["metrics"]["llm_calls"] == 3
+    assert [row["operation"] for row in released["metrics"]["model_calls"]] == [
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert released["material"] == []
+    assert len(model.material_calls) == reader_count
+    after = client.get(f"/api/matters/{matter_id}").json()
+    assert after["proposed_disputes"] == before["proposed_disputes"]
+    assert after["material_record"] == before["material_record"]
+    saved = wired.store.load(matter_id)
+    assert [row["message"] for row in saved.brain_chat] == [first, request]
+    assert saved.facts == ()
 
 
 def test_answer_to_prior_nm_question_can_support_material(
@@ -280,7 +335,7 @@ def test_answer_to_prior_nm_question_can_support_material(
                   "reply": "", "clarification": question}
     confirmed = material(
         "event", "The advocate confirms the stoppage occurred on 12 June.",
-        "Yes", relation="adds", scope="current", importance="relevant",
+        "Yes", scope="current", importance="relevant",
         references=({"turn_id": "question-turn", "role": "nm",
                      "quoted": question},))
     model = Model([
@@ -294,6 +349,8 @@ def test_answer_to_prior_nm_question_can_support_material(
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == "Yes."
+    assert served.json()["material"][0]["relation"] == "new"
+    assert served.json()["material"][0]["related_material_ids"] == []
     assert served.json()["material"][0]["prior_references"] == [
         {"turn_id": "question-turn", "role": "nm", "quoted": question}]
     assert wired.store.load(opened["matter_id"]).facts == ()
@@ -333,7 +390,7 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
         f"{first};", f"separately, {second}."]
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert served.json()["metrics"]["llm_calls"] == 5
+    assert served.json()["metrics"]["llm_calls"] == 7
 
 
 @pytest.mark.parametrize("invalid_candidate", [
@@ -392,9 +449,9 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
                                         max_tokens=max_tokens)
             if prompt.operation == "extract_legal_details" and not self.rejected:
                 self.rejected = True
-                row = {**result.data["details"][0],
+                row = {**result.data["new_items"][0],
                        "source_id": "unsupported_source"}
-                return replace(result, data={"details": [row]})
+                return replace(result, data={"new_items": [row], "changes": []})
             return result
 
     model = RepairingModel()
@@ -404,7 +461,7 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == message
-    assert served.json()["metrics"]["llm_calls"] == 5
+    assert served.json()["metrics"]["llm_calls"] == 7
     repair = [json.loads(prompt.user) for prompt in model.material_calls
               if "original_input" in json.loads(prompt.user)]
     assert len(repair) == 1

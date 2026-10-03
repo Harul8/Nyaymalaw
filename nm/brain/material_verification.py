@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
+from nm.brain.checked import require_independent_result
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.shared.model_port import (
@@ -162,14 +163,15 @@ def verify_material_grounding(
                 "duplicated, malformed, or lacked a reason. Return one valid "
                 "verdict per listed ID.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
-        output_limit = max(2048, min(6144, 512 * len(pending)))
+        output_limit = max(4096, min(8192, 512 * len(pending)))
         if (estimate_tokens(_SYSTEM + user) + output_limit
-                > model.context_budget(Tier.ROUTINE)):
+                > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow(
                 "The full conversation exceeds the material verification budget")
         result = model.structured(
             Prompt(system=_SYSTEM, user=user, operation="verify_material_grounding"),
-            _schema(pending), Tier.ROUTINE, max_tokens=output_limit)
+            _schema(pending), Tier.JUDGE, max_tokens=output_limit)
+        require_independent_result(result)
         if not result.usable:
             raise SchemaViolation("Material grounding verification did not finish")
         checked, unresolved = _read_verdicts(result.data, pending)

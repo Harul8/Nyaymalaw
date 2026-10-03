@@ -44,6 +44,7 @@ const state = {
   // advocate navigates again while its request is in flight, the old render
   // loses the right to paint or close anything.
   railGeneration: 0,
+  matterListGeneration: 0,
   sessionGeneration: 0,
   searchGeneration: 0,
   historyGeneration: 0,
@@ -84,6 +85,10 @@ const INTAKE_INPUTS = [
   'in-urgency', 'in-urgency-note', 'in-date', 'in-date-source',
 ];
 let activeIntent = null;
+window.NmBrainSources?.configure({request:api, scope:() => ({
+  advocate:state.advocate, session:state.sessionGeneration,
+  matter:state.matterId, chat:activeIntent?.chatId || null,
+})});
 // F-B-02. The board's edit of the opening details, while its dialog is open.
 let openingEdit = null;
 let draftVault = null;
@@ -404,6 +409,7 @@ function clearPrivileged() {
   advocatePreferences?.clear();
   closeSourceReader(false);
   closeDisputeReader(false);
+  window.NmBrainSources?.close(false);
   if (draftVault) draftVault.lock();
   closeDraftRecovery();
   clearDraftNotices();
@@ -437,11 +443,13 @@ function clearPrivileged() {
   activeDelivery = null;
   activeIntent = null;
   state.railGeneration += 1;
+  state.matterListGeneration += 1;
   state.advocate = null;
   state.workspace = null;
   state.matterId = null;
   state.turns = [];
-  ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
+  ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
+   'search-results', 'history-body',
    'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   $('matter-heading').textContent = 'My work';
@@ -791,95 +799,16 @@ function field(dl, label, value) {
   dl.append(dt, dd);
 }
 
-// BK-33. FOUR DEADLINE STATES, RENDERED AS FOUR THINGS.
-//
-// The API sends `next_deadline_status` as `not_assessed`, `none_on_this_
-// matter`, `upcoming` or `passed`, and this rendered `m.next_deadline ||
-// 'none recorded'` -- which turns the first two into the same sentence.
-//
-// "Nobody has worked out the deadlines on this file" and "this file has no
-// deadlines" are opposite facts, and an advocate acting on the second when
-// the first is true has been told the file is clear by a product that never
-// looked. That is defect shape S1 at the top of the list an advocate scans
-// first thing in the morning.
-function deadlineField(m) {
-  const status = m.next_deadline_status;
-  const gone = Array.isArray(m.passed_deadlines) ? m.passed_deadlines : [];
-  const uncomputed = Array.isArray(m.uncomputed_deadlines) ? m.uncomputed_deadlines : [];
-  const unreadable = Array.isArray(m.deadline_unreadable) ? m.deadline_unreadable.length : 0;
-  const unassessed = Array.isArray(m.deadline_unassessed) ? m.deadline_unassessed.length : 0;
-  const incomplete = m.deadline_assessment === 'incomplete' || unreadable > 0
-    || (unassessed > 0 && m.deadline_assessment !== 'not_assessed');
-  const parts = [];
-  if (m.next_deadline) parts.push(`${m.next_deadline}${status === 'near' ? ' — soon' : ''}`);
-  if (gone.length) {
-    parts.push(`${gone[0].on} — PASSED${gone.length > 1 ? ` (+${gone.length - 1} more)` : ''}`);
-  } else if (status === 'passed') {
-    parts.push('passed deadline — recorded date unavailable');
-  }
-  if (uncomputed.length) parts.push(`${uncomputed.length} deadline(s) with no date established`);
-  else if (status === 'not_computed') parts.push('a deadline with no date established');
-  if (!parts.length) {
-    if (status === 'not_assessed' || m.deadline_assessment === 'not_assessed') {
-      parts.push('deadline register not assessed');
-    } else if (!incomplete && ['none_on_this_matter', 'none_on_this_thread'].includes(status)) {
-      parts.push(status === 'none_on_this_thread' ? 'none on this thread' : 'none on this matter');
-    } else parts.push('deadline position not established');
-  }
-  if (incomplete) parts.push('register incomplete');
-  if (unreadable) parts.push(`${unreadable} unreadable record(s)`);
-  if (unassessed) parts.push(`${unassessed} thread(s) not assessed`);
-  const text = parts.join(' · ');
-  if (gone.length || status === 'passed' || status === 'near') return { pill: 'blocked', text };
-  if (incomplete || status === 'not_assessed' || status === 'not_computed') {
-    return { pill: 'unknown', text };
-  }
-  // P18. STALE IS NOT A DATE. The window the file holds rested on something
-  // the advocate has since corrected, and it must not lead the row however
-  // near it is; the figure it used to be is shown under `stale` below.
-  if (status === 'stale') {
-    return { pill: 'blocked', text: 'STALE — awaiting recomputation' };
-  }
-  if (status === 'not_established') {
-    return { pill: 'unknown', text: `${m.next_deadline} — currency not established` };
-  }
-  if (m.next_deadline && m.next_deadline_currency === 'not_established') {
-    return { pill: 'unknown', text: `${m.next_deadline} — currency not established` };
-  }
-  if (['none_on_this_matter', 'none_on_this_thread'].includes(status)) {
-    return { pill: 'ok', text };
-  }
-  return text;
-}
-
-// P18. THE WINDOW THAT STOPPED COUNTING, shown as the date it was. Hiding it
-// would tell the advocate the file has no deadline; leading with it would
-// tell them to work to a date they corrected. WHY it stopped is reasoning,
-// and A2 keeps reasoning off the board -- the case file carries it.
-function staleDeadlineFields(dl, t) {
-  if (!t.stale_deadline) return;
-  field(dl, 'stale', {
-    pill: 'blocked',
-    text: `${t.stale_deadline} — was the deadline; see the case file for why`,
-  });
-}
-
-// F-B. THE THREE VIEWS OF THE MATTER WORKSPACE, and the stylesheet draws each:
-//   list     My work's matters, and nothing else
-//   opening  the chat before its first saved board is available
-//   matter   the matter board on the left, the chat on the right
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
   syncBoardHost();
   updateWorkspace();
 }
 
-// Move, never clone, the board: the list still belongs to My work and the
-// narrow-screen toggle still owns the drawer. Resize must preserve both.
 function syncBoardHost() {
   const pane = $('pane-advise');
   const rail = $('rail');
-  if (window.innerWidth > 820 && pane.dataset.view === 'matter') {
+  if (window.innerWidth > 820 && pane.dataset.view !== 'opening') {
     $('sidebar-board').appendChild(rail);
   } else {
     pane.insertBefore(rail, pane.querySelector('.conversation'));
@@ -898,6 +827,10 @@ function closeOpenMatter() {
   state.matterReady = false;
   state.turns = [];
   $('thread').textContent = '';
+  $('matter-board-body').replaceChildren();
+  $('matter-board-meta').textContent = '';
+  toggleMatterBoard(false);
+  selectMatterRow();
   $('pane-advise').dataset.matterId = '';
   $('back').hidden = true;
   $('opening-board-status').hidden = true;
@@ -907,37 +840,11 @@ function closeOpenMatter() {
   closeFilesMenu();
 }
 
-// WHO THE FILE IS FOR AND WHO IT IS AGAINST. BK-33's acceptance is that ten
-// similar matters stay distinguishable, and `threads: 1` on every row
-// distinguishes nothing. ONE OWNER for My work's rows and the matter board
-// (F-B-02), so a field added to one is on the other.
-// F-B-14. WHEN THE FILE WAS LAST SAVED, in the advocate's own time -- the
-// time My work is ordered by, so a row's place and its date agree. A file not
-// saved since the stamp existed shows the day it was last worked.
-function lastWorked(m) {
-  const at = m.last_updated ? new Date(m.last_updated) : null;
-  if (at && !Number.isNaN(at.getTime())) {
-    return at.toLocaleString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
-  return m.last_touched || 'never worked';
-}
-
-function matterFields(dl, m) {
-  field(dl, 'client', m.client || 'not recorded');
-  field(dl, 'against', m.opponent || 'not recorded');
-  field(dl, 'deadline', deadlineField(m));
-  staleDeadlineFields(dl, m);
-  field(dl, 'last worked', lastWorked(m));
-  field(dl, 'position', m.blocked
-    ? { pill: 'blocked', text: m.blocked }
-    : { pill: 'unknown', text: 'no unresolved posture recorded' });
-}
-
 async function restorePendingChat(chatId) {
   const session = state.sessionGeneration;
+  const generation = ++state.railGeneration;
   const restored = await api(`/api/chats/${encodeURIComponent(chatId)}`);
-  if (session !== state.sessionGeneration) return;
+  if (session !== state.sessionGeneration || generation !== state.railGeneration) return;
   if (restored.state !== 'ok' || restored.chat_id !== chatId) {
     throw new Error('The saved conversation is incomplete.');
   }
@@ -951,21 +858,38 @@ async function restorePendingChat(chatId) {
 async function showMatterList({ preserveIntent = false } = {}) {
   if (!preserveIntent) selectIntent(null);
   closeOpenMatter();
-  const generation = state.railGeneration;
+  toggleMatters(false);
   setWorkView('list');
   $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'My work';
   $('matter-heading').removeAttribute('title');
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
+  await loadMatterList();
+}
+
+function selectMatterRow() {
+  let current = null;
+  for (const row of $('rail-body').querySelectorAll('[data-matter-id]')) {
+    const selected = row.dataset.matterId === state.matterId;
+    row.classList.toggle('selected', selected);
+    row.setAttribute('aria-pressed', String(selected));
+    if (selected) current = row;
+  }
+  return current;
+}
+
+async function loadMatterList() {
+  const generation = ++state.matterListGeneration;
+  const session = state.sessionGeneration;
   const body = $('rail-body');
   body.replaceChildren(stateBlock('building', 'Loading matters…'));
 
-  let data, chatData;
+  let data;
   try {
-    [data, chatData] = await Promise.all([api('/api/matters'), api('/api/chats')]);
+    data = await api('/api/work');
   } catch (e) {
-    if (generation !== state.railGeneration) return;
+    if (generation !== state.matterListGeneration || session !== state.sessionGeneration) return;
     // NEVER render an unreadable board as an empty one.
     body.replaceChildren(stateBlock(
       'unbuildable',
@@ -974,20 +898,20 @@ async function showMatterList({ preserveIntent = false } = {}) {
     $('rail-meta').textContent = 'Matter list unavailable';
     return;
   }
-  if (generation !== state.railGeneration) return;
+  if (generation !== state.matterListGeneration || session !== state.sessionGeneration) return;
 
   $('rail-meta').textContent = `${data.row_count} matter${data.row_count === 1 ? '' : 's'}`
-    + (chatData.chat_count ? ` · ${chatData.chat_count} chat${chatData.chat_count === 1 ? '' : 's'}` : '');
-  const incomplete = data.state !== 'ok' || chatData.state !== 'ok';
+    + (data.chat_count ? ` · ${data.chat_count} chat${data.chat_count === 1 ? '' : 's'}` : '');
+  const incomplete = data.state !== 'ok';
   const notice = incomplete ? stateBlock('unbuildable',
     'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
-  if (!data.matters.length && !chatData.chats.length) {
+  if (!data.matters.length && !data.chats.length) {
     body.replaceChildren(notice || stateBlock('empty', 'No matters yet. Start with a new brief.'));
     return;
   }
 
-  const pendingRows = chatData.chats.map((chat) => {
+  const pendingRows = data.chats.map((chat) => {
     const row = document.createElement('div');
     row.className = 'row';
     row.setAttribute('role', 'button');
@@ -1000,9 +924,16 @@ async function showMatterList({ preserveIntent = false } = {}) {
     details.className = 'hint';
     details.textContent = `Chat · ${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`;
     row.append(title, details);
-    const open = () => restorePendingChat(chat.chat_id).catch((error) => {
-      body.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
-    });
+    const open = () => {
+      const selection = restorePendingChat(chat.chat_id);
+      const selectedGeneration = state.railGeneration;
+      return selection.catch((error) => {
+        if (selectedGeneration !== state.railGeneration
+            || session !== state.sessionGeneration
+            || generation !== state.matterListGeneration) return;
+        body.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
+      });
+    };
     row.onclick = open;
     row.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -1014,16 +945,14 @@ async function showMatterList({ preserveIntent = false } = {}) {
   });
   body.replaceChildren(...pendingRows, ...data.matters.map((m) => {
     const row = document.createElement('div');
-    row.className = 'row' + (m.blocked ? ' loud' : '');
+    row.className = 'row matter-list-row';
     row.dataset.matterId = m.matter_id;
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
     row.setAttribute('aria-label', `Open ${m.matter}`);
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
-    const dl = document.createElement('dl'); dl.className = 'r-fields';
-    matterFields(dl, m);
-    row.append(t, dl);
+    row.append(t);
     row.onclick = () => showThreadBoard(m.matter_id);
     row.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -1034,6 +963,7 @@ async function showMatterList({ preserveIntent = false } = {}) {
     return row;
   }));
   if (notice) body.prepend(notice);
+  selectMatterRow();
 }
 
 async function showThreadBoard(
@@ -1060,11 +990,13 @@ async function showThreadBoard(
   // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
   // put the advocate on the answer they asked for with the index still over
   // it, which is the same unreachability wearing the other face.
-  if (closeNavigator) toggleMatters(false);
-  // F-B-02. AN OPEN MATTER IS ITS BOARD ON THE LEFT AND ITS CHAT ON THE RIGHT,
-  // whether it was started from Home or opened from My work.
+  if (closeNavigator) {
+    toggleMatters(false);
+    toggleMatterBoard(false);
+  }
   setWorkView(deferBoard ? 'opening' : 'matter');
   state.matterId = matterId;
+  selectMatterRow();
   state.matterVersion = null;
   state.matterReady = false;
   updateWorkspace();
@@ -1077,13 +1009,12 @@ async function showThreadBoard(
   }
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('pane-advise').dataset.matterId = matterId;
-  $('rail-title').textContent = 'Matter board';
-  $('rail-meta').textContent = '';
   $('back').hidden = false;
   $('opening-board-status').hidden = true;
   $('opening-board-status').replaceChildren();
   if (deferBoard) showMatterStatus('building', 'Reading the matter board…');
-  const body = $('rail-body');
+  const body = $('matter-board-body');
+  $('matter-board-meta').textContent = '';
   body.replaceChildren();
 
   let data;
@@ -1102,7 +1033,7 @@ async function showThreadBoard(
     if (generation !== state.railGeneration) return;
     body.replaceChildren(stateBlock(
       'unbuildable', `The matter could not be loaded: ${e.message}`));
-    $('rail-meta').textContent = 'Matter could not be loaded';
+    $('matter-board-meta').textContent = 'Matter could not be loaded';
     if (deferBoard) showOpeningBoardFailure(matterId,
       `The saved matter could not be read: ${e.message}`);
     return;
@@ -1114,7 +1045,7 @@ async function showThreadBoard(
     setWorkView('matter');
   }
 
-  $('rail-meta').textContent = '';
+  $('matter-board-meta').textContent = '';
   $('matter-heading').textContent = data.title || 'Untitled matter';
   $('matter-heading').title = data.title || 'Untitled matter';
   updateWorkspace();
@@ -1144,6 +1075,11 @@ async function showThreadBoard(
 
   renderDisputeBoard(body, data.agenda, data.proposed_disputes,
     data.material_record, data.requirements_record);
+  const selected = selectMatterRow();
+  if (selected) {
+    selected.querySelector('.r-title').textContent = data.title || 'Untitled matter';
+    selected.setAttribute('aria-label', `Open ${data.title || 'Untitled matter'}`);
+  } else loadMatterList();
 }
 
 function requirementsFor(record, row) {
@@ -1184,7 +1120,7 @@ function renderDisputeBoard(body, agenda, projection, materialRecord = null,
   heading.textContent = 'Disputes';
   body.appendChild(heading);
   const instruction = document.createElement('p'); instruction.className = 'hint';
-  instruction.textContent = 'Double-click for details. Press Enter or tap to open.';
+  instruction.textContent = 'Click or press Enter for details.';
   body.appendChild(instruction);
   const list = document.createElement('ul'); list.className = 'dispute-proposal-list';
   const focusButtons = [];
@@ -1205,7 +1141,7 @@ function renderDisputeBoard(body, agenda, projection, materialRecord = null,
     button.dataset.matterId = state.matterId || '';
     button.setAttribute('aria-haspopup', 'dialog');
     button.setAttribute('aria-controls', 'dispute-reader');
-    button.title = 'Double-click to read details';
+    button.title = 'Read dispute details';
     if (isWorked) {
       button.setAttribute('aria-pressed', String(state.disputeFocus === row.thread_id));
       focusButtons.push([button, row.thread_id]);
@@ -1221,14 +1157,7 @@ function renderDisputeBoard(body, agenda, projection, materialRecord = null,
     }
     const open = () => openDisputeReader(
       row, button, isWorked ? setFocus : null, materialRecord, requirementsRecord);
-    let pointerType = null;
-    button.addEventListener('pointerdown', (event) => { pointerType = event.pointerType; });
-    button.addEventListener('click', (event) => {
-      const isTouch = pointerType === 'touch';
-      pointerType = null;
-      if (isTouch || event.detail === 0) open();
-    });
-    button.addEventListener('dblclick', open);
+    button.addEventListener('click', open);
     item.appendChild(button);
     const labels = requirementsFor(requirementsRecord, row)
       .map(need => typeof need?.label === 'string' ? need.label.trim() : '')
@@ -1457,6 +1386,7 @@ function openDisputeReader(row, trigger, setFocus = null, materialRecord = null,
   }
   if (!dialog.open) dialog.showModal();
   $('dispute-reader-close').focus();
+  body.scrollTop = 0;
 }
 
 function renderLegalRequirements(host, row, record) {
@@ -1780,7 +1710,7 @@ function restoredTurn(turn) {
         not_established: turn.not_established || [] } };
   }
   return { brief: turn.message || turn.asked || '', briefMissing, answer: {
-    matter_id: turn.matter_id, turn_id: turn.turn_id,
+    matter_id: turn.matter_id, chat_id: turn.chat_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
     at: turn.at || '',
@@ -2552,18 +2482,48 @@ function renderTurn(entry) {
   // manufactured for a source the answer does not hold.
   function inlineCitation(el, label) {
     const bound = el && el.source && el.refs.includes(el.source.locator)
-      && entry.answer.matter_id && entry.answer.turn_id;
+      && (entry.answer.matter_id || (el.source.brain && entry.answer.chat_id))
+      && entry.answer.turn_id;
     if (!bound) return document.createTextNode(label);
     const link = document.createElement('button');
     link.type = 'button'; link.className = 'citation-link';
     link.textContent = label;
     link.setAttribute('aria-label', `Open saved passage: ${label}`);
-    link.addEventListener('click', () => openSourceReader(entry.answer, el,
-      entry.answer.elements.indexOf(el), link));
+    link.addEventListener('click', () => el.source.brain
+      ? window.NmBrainSources.open(entry.answer, el, entry.answer.elements.indexOf(el), 0, link)
+      : openSourceReader(entry.answer, el, entry.answer.elements.indexOf(el), link));
     return link;
   }
 
   function fillReferences(row, el) {
+    if (el.source?.brain) {
+      const sources = Array.isArray(el.sources) ? el.sources : [el.source];
+      const owned = entry.answer.turn_id && (entry.answer.matter_id || entry.answer.chat_id);
+      const group = document.createElement('details');
+      group.className = 'brain-source-links';
+      const summary = document.createElement('summary');
+      summary.textContent = `Sources (${sources.length})`;
+      const list = document.createElement('ul');
+      sources.forEach((source, index) => {
+        const item = document.createElement('li');
+        if (!owned || source.brain !== true || !el.refs.includes(source.locator)) {
+          item.textContent = `${source.label} — saved source inspection unavailable`;
+          list.appendChild(item);
+          return;
+        }
+        const link = document.createElement('button');
+        link.type = 'button'; link.className = 'citation-link';
+        link.textContent = source.label;
+        link.setAttribute('aria-label', `Open saved passage: ${source.label}`);
+        link.addEventListener('click', () => window.NmBrainSources.open(
+          entry.answer, el, entry.answer.elements.indexOf(el), index, link));
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      group.append(summary, list);
+      row.appendChild(group);
+      return;
+    }
     const bound = el.source && el.refs.includes(el.source.locator)
       && entry.answer.matter_id && entry.answer.turn_id;
     if (bound) {
@@ -3192,11 +3152,21 @@ function toggleMatters(force) {
   const open = force === undefined ? !pane.classList.contains('show-rail') : force;
   pane.classList.toggle('show-rail', open);
   $('matters-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) toggleMatterBoard(false);
+}
+
+function toggleMatterBoard(force) {
+  const pane = $('pane-advise');
+  const open = force === undefined ? !pane.classList.contains('show-board') : force;
+  pane.classList.toggle('show-board', open);
+  $('board-toggle').setAttribute('aria-expanded', String(open));
+  if (open) toggleMatters(false);
 }
 
 // INSIDE MY WORK, NOT THE RIBBON (F-A-17). From any other page the way back to
 // the matter list is the My work tab, which is on every page.
 $('matters-toggle').addEventListener('click', () => toggleMatters());
+$('board-toggle').addEventListener('click', () => toggleMatterBoard());
 
 // B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
 // FIRST BRIEF.

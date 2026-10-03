@@ -7,7 +7,9 @@ import logging
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from threading import Lock
+from time import perf_counter
 
+from nm.brain.continuation import continuation_indexes, continue_conversation
 from nm.brain.conversation import (
     Conversation,
     IncompleteConversation,
@@ -29,6 +31,7 @@ from nm.brain.material import extract_details
 from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
 from nm.brain.requirements_state import requirements_record
+from nm.brain.source_snapshots import source_snapshots
 from nm.shared.model_port import (
     ConfigurationError,
     ContextOverflow,
@@ -77,24 +80,48 @@ class _CountedModel:
         self.inner = inner
         self.calls = 0
         self.provider_retries = 0
+        self.receipts = []
         self.lock = Lock()
 
     def __getattr__(self, name):
         return getattr(self.inner, name)
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
+        started = perf_counter()
+        logger = logging.getLogger(__name__)
         with self.lock:
             self.calls += 1
+            ordinal = self.calls
+        logger.info("Model call %s started: %s", ordinal, prompt.operation)
+        result = None
+        failure = None
         try:
             result = self.inner.structured(prompt, schema, tier,
                                            max_tokens=max_tokens)
         except ModelError as exc:
+            failure = type(exc).__name__
             with self.lock:
                 self.provider_retries += exc.retries
             raise
-        with self.lock:
-            self.provider_retries += result.retries
+        finally:
+            elapsed = int((perf_counter() - started) * 1000)
+            receipt = {"operation": prompt.operation, "latency_ms": elapsed,
+                       "tier": tier.value,
+                       "model": result.model if result else "",
+                       "state": failure or "ok",
+                       "tokens_in": result.usage.tokens_in if result else 0,
+                       "tokens_out": result.usage.tokens_out if result else 0}
+            with self.lock:
+                self.receipts.append(receipt)
+                if result is not None:
+                    self.provider_retries += result.retries
+            logger.info("Model call %s finished: %s, %sms, %s", ordinal,
+                        prompt.operation, elapsed, failure or "ok")
         return result
+
+    def metrics(self) -> dict:
+        return {"llm_calls": self.calls, "provider_retries": self.provider_retries,
+                "model_calls": list(self.receipts)}
 
 
 def _digest(value: dict) -> str:
@@ -119,6 +146,7 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None
     metrics = dict(response.get("metrics") or {})
     metrics["llm_calls"] = 0
     metrics["provider_retries"] = 0
+    metrics["model_calls"] = []
     message = matches[0].get("message")
     if not isinstance(message, str):
         raise BrainRefused(409, "The saved message could not be verified")
@@ -183,51 +211,36 @@ def _reply(plan) -> tuple[str, bool, bool]:
     return "\n\n".join(parts), needs_work, asked
 
 
-def _source_bound_reply(disputes: dict | None, requirements: dict | None) -> str:
-    """Describe only attributed disputes and source-checked board items.
-
-    The router speaks before legal retrieval. Its interim prose must not become
-    the final answer to a legal-work request or introduce unsourced case theory
-    and gathering advice into the saved conversation.
-    """
-    if not disputes or disputes.get("state") != "ok":
-        return ("I have read your request, but a source-backed legal response "
-                "was not completed in this turn.")
-    identified = [row for row in disputes["rows"]
-                  if row.get("identification") == "identified"]
-    if not identified:
-        return ("I have read your account, but no dispute is identified clearly "
-                "enough yet to list source-backed gathering items.")
-    count = len(identified)
-    parts = [f"The matter board lists {count} identified "
-             f"dispute{'s' if count != 1 else ''} from what you reported."]
-    by_dispute = (requirements or {}).get("by_dispute", {})
-    statuses = (requirements or {}).get("status_by_dispute", {})
-    listed = [(dispute["label"], item["label"])
-              for dispute in identified
-              if statuses.get(dispute["id"]) in ("ok", "partial")
-              for item in by_dispute.get(dispute["id"], [])]
-    if listed:
-        shown = listed[:6]
-        parts.append("Source-checked items to gather or establish: " + "; ".join(
-            f"{need} ({dispute})" for dispute, need in shown) + ".")
-        if len(listed) > len(shown):
-            parts.append(f"The board lists {len(listed) - len(shown)} more item"
-                         f"{'s' if len(listed) - len(shown) != 1 else ''}.")
-    incomplete = sum(statuses.get(row["id"]) != "ok" for row in identified)
-    if incomplete:
-        parts.append(f"Legal source checking is incomplete for {incomplete} "
-                     f"dispute{'s' if incomplete != 1 else ''}.")
-    elif not listed:
-        parts.append("The retrieved passages did not support a specific "
-                     "gathering item in this turn.")
-    if listed:
-        parts.append("Open a dispute to read each cited passage and what the "
-                     "conversation mentions; reported documents remain unexamined.")
-    else:
-        parts.append("Open a dispute to review the attributed account; no "
-                     "source-backed gathering item is available yet.")
-    return "\n\n".join(parts)
+def _continuation_elements(plan, continuation: dict) -> list[dict]:
+    units = {unit["request_index"]: unit for unit in continuation["units"]}
+    expected = set(continuation_indexes(plan))
+    elements = []
+    for index, item in sorted(enumerate(plan.items),
+                              key=lambda pair: pair[1].priority != "urgent"):
+        unit = units.get(index)
+        if unit is not None:
+            question_blocks = {row["block_id"] for row in unit["questions"]}
+            for block in unit["blocks"]:
+                sources = source_snapshots(block["references"])
+                elements.append({
+                    "kind": "question" if block["id"] in question_blocks else "finding",
+                    "text": block["text"], "thread": None, "by_when": None,
+                    "no_deadline_reason": None, "signal": "none",
+                    "collapsible": False, "disclosure": False,
+                    "refs": [source["locator"] for source in sources],
+                    "source": sources[0] if sources else None, "sources": sources,
+                    "section": "needed" if block["id"] in question_blocks else "answer",
+                    "continuation_request_index": index,
+                    "continuation_block_id": block["id"]})
+        else:
+            text = ("I could not finish a checked response to this part of your "
+                    "request. Your message is saved; ask me to continue this "
+                    "work without resending the account."
+                    if index in expected else item.reply.strip())
+            elements.append({"kind": "finding", "text": text, "refs": [],
+                             "source": None, "section": "answer",
+                             "collapsible": False, "disclosure": index in expected})
+    return elements
 
 
 def _read_material(model, conversation: Conversation, latest: str, turn_id: str):
@@ -312,7 +325,10 @@ def _legal_reads(model, search, *, conversation: Conversation,
         if dispute_id not in queries:
             continue
         try:
+            started = perf_counter()
             result = search.search_dispute(row, queries[dispute_id])
+            logging.getLogger(__name__).info("Legal corpus search finished: %sms",
+                                            int((perf_counter() - started) * 1000))
             if (not isinstance(result, dict)
                     or result.get("state") not in ("ok", "partial", "unavailable")
                     or not isinstance(result.get("candidates"), list)):
@@ -372,11 +388,11 @@ def _legal_reads(model, search, *, conversation: Conversation,
             reads.append(unavailable(row, verification_outage, queries[dispute_id]))
             continue
         try:
-            verified = verify_requirements(
+            verification = verify_requirements(
                 model, disputes=(row,),
                 material_by_dispute={dispute_id: material_by_dispute[dispute_id]},
                 proposed={dispute_id: found[dispute_id]},
-                conversation=conversation.messages)[dispute_id]
+                conversation=conversation.messages)
         except ModelError as exc:
             logging.getLogger(__name__).warning(
                 "Legal source verification rejected dispute %s: %s",
@@ -387,24 +403,34 @@ def _legal_reads(model, search, *, conversation: Conversation,
             if isinstance(exc, (ProviderUnavailable, ConfigurationError)):
                 verification_outage = reason
             continue
+        verified = verification.rows[dispute_id]
+        coverage = verification.coverage[dispute_id]
+        if verification.outage:
+            verification_outage = "Legal source verification could not be completed"
         reads.append({"dispute_id": dispute_id,
                       "fingerprint": fingerprints[dispute_id],
-                      "state": results[dispute_id]["state"],
+                      "state": ("partial" if coverage["state"] != "ok"
+                                and results[dispute_id]["state"] == "ok"
+                                else results[dispute_id]["state"]),
                       "rows": verified,
                       "verification": "source_support_v4",
+                      "coverage": coverage,
                       "queries": list(queries[dispute_id]),
                       "diagnostics": [
                           *results[dispute_id].get("diagnostics", []),
+                          *coverage["diagnostics"],
                           *(["Unsupported legal items or citations were withheld"]
                             if verified != found[dispute_id] else [])]})
     return reads
 
 
 class BrainService:
-    def __init__(self, store: StorePort, model, legal_search=None) -> None:
+    def __init__(self, store: StorePort, model, legal_search=None, *,
+                 session_current=None) -> None:
         self.store = store
         self.model = model
         self.legal_search = legal_search
+        self.session_current = session_current
 
     def run(self, turn: BrainTurn) -> BrainOutput:
         if not turn.advocate_id.strip() or not turn.message.strip() or not turn.turn_id.strip():
@@ -442,15 +468,9 @@ class BrainService:
         try:
             conversation = _history(self.store, matter) if persisted else Conversation(())
             plan = interpret(counted_model, conversation, turn.message)
-            matter_contribution = any(
-                item.matter_scope in ("current", "proposed", "uncertain")
-                and item.relation != "aside"
-                and (item.next_step == "answer"
-                     or item.relation in ("new", "changes"))
-                for item in plan.items)
             candidates = (_read_material(counted_model, conversation,
                                          turn.message, turn.turn_id)
-                if plan.material_review or plan.opening.ready or matter_contribution
+                if plan.material_review or plan.opening.ready
                 else ())
             grounded = verify_material_grounding(
                 counted_model, candidates=candidates, opening=plan.opening,
@@ -552,8 +572,7 @@ class BrainService:
                         "withheld_details": grounded.rejected_details,
                         "opening_fallback": not opening_supported},
                     "requirements_read": [],
-                    "metrics": {"llm_calls": counted_model.calls,
-                                "provider_retries": counted_model.provider_retries},
+                    "metrics": counted_model.metrics(),
                     "replayed": False, "committed": "committed", "input_admitted": False,
                     "matter_version": matter.version + 1 if ready else None,
                     "briefing": {}, "board_changes": [], "at": now, "composed": []}
@@ -570,7 +589,7 @@ class BrainService:
         disputes = None
         details = None
         try:
-            if candidates or (self.legal_search is not None and ready):
+            if candidates or ready or continuation_indexes(plan):
                 current_conversation, disputes, details = _current_records(
                     self.store, updated)
                 if self.legal_search is not None and ready and (
@@ -601,49 +620,47 @@ class BrainService:
                             logging.getLogger(__name__).warning(
                                 "Legal read projection rejected dispute %s", dispute_id)
                     response["requirements_read"] = accepted
-                    response["metrics"] = {
-                        "llm_calls": counted_model.calls,
-                        "provider_retries": counted_model.provider_retries}
-            if needs_work and self.legal_search is not None:
-                parts = []
-                if any(item.priority == "urgent" for item in plan.items):
-                    parts.append("You flagged an urgent issue. I have not "
-                                 "verified its deadline or protective step; "
-                                 "please obtain prompt human review.")
-                if ready:
-                    checked = (requirements_record(
-                        updated, disputes=disputes, material=details)
-                        if disputes is not None and details is not None else None)
-                    parts.append(_source_bound_reply(disputes, checked))
-                else:
-                    parts.append("I have your request, but have not checked "
-                                 "legal sources for it in this turn.")
-                parts.extend(
-                    item.clarification.strip() if item.next_step == "clarify"
-                    else item.reply.strip()
-                    for item in sorted(
-                        plan.items, key=lambda row: row.priority != "urgent")
-                    if item.next_step == "clarify"
-                    or (item.relation == "aside"
-                        and item.matter_scope == "none"
-                        and item.next_step == "answer"))
-                element["text"] = "\n\n".join(parts)
-            elif self.legal_search is not None and any(
-                    item.next_step == "answer"
-                    and item.matter_scope in ("current", "proposed", "other",
-                                              "uncertain") for item in plan.items):
-                element["text"] = (
-                    "I have your message, but have not checked sources for "
-                    "a matter-specific answer in this turn.")
+                    response["metrics"] = counted_model.metrics()
+            if continuation_indexes(plan):
+                checked = requirements_record(
+                    updated, disputes=disputes, material=details)
+                continuation = continue_conversation(
+                    counted_model, conversation=conversation, latest=turn.message,
+                    latest_turn_id=turn.turn_id, plan=plan, disputes=disputes,
+                    material=details, requirements=checked).as_dict()
+                elements = _continuation_elements(plan, continuation)
+                response["continuation"] = continuation
+                response["elements"] = row["elements"] = elements
+                response["blocked"] = any(
+                    item["state"] != "ok" for item in continuation["coverage"])
+                response["blocked_reason"] = (
+                    "Part of the requested response could not be checked"
+                    if response["blocked"] else None)
+                response["mode"] = ("short_question" if any(
+                    unit["questions"] for unit in continuation["units"])
+                    else "explanation")
             if grounded.rejected_details:
-                element["text"] += (
-                    "\n\nSome proposed details could not be confirmed against "
+                response["elements"].append({"kind": "finding", "text": (
+                    "Some proposed details could not be confirmed against "
                     "your words, so they were not added to the matter record. "
-                    "Please clarify them if they matter to your request.")
+                    "Please clarify them if they matter to your request."),
+                    "refs": [], "source": None, "section": "answer",
+                    "collapsible": False, "disclosure": True})
+            response["metrics"] = counted_model.metrics()
         except IncompleteConversation as exc:
             raise BrainRefused(
-                503, "Analysis did not finish. Please use the retry button below."
+                409, "The saved context or its sources could not be verified. "
+                "Reload this conversation before continuing."
             ) from exc
+        except ContextOverflow as exc:
+            raise BrainRefused(
+                413, "The complete conversation does not fit the configured "
+                "model. Please contact the administrator to increase its "
+                "context capacity.", retryable=False) from exc
+        if self.session_current is not None and not self.session_current():
+            raise BrainRefused(401, "Your session ended before the response "
+                               "was saved. Sign in again to continue.",
+                               retryable=False)
         try:
             self.store.commit(updated, expected_version=matter.version)
         except StaleWrite:

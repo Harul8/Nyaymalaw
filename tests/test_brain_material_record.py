@@ -2,6 +2,8 @@
 import json
 from dataclasses import replace
 
+import pytest
+
 from nm.brain.dispute_state import proposed_disputes
 from nm.brain.material_state import material_record
 from nm.work_the_file.matter_contracts import Matter
@@ -43,7 +45,7 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
 
     assert answer.status_code == 200, answer.text
     result = answer.json()
-    assert result["metrics"]["llm_calls"] == 5
+    assert result["metrics"]["llm_calls"] == 7
     assert [call.operation for call in model.material_calls] == [
         "extract_disputes", "extract_legal_details"]
     detail_input = json.loads(model.material_calls[1].user)
@@ -234,7 +236,7 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     changed = send(client, next_message, "change", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 4
+    assert changed.json()["metrics"]["llm_calls"] == 6
     record = _board(client, opened.json()["matter_id"])["material_record"]
     assert record["state"] == "ok"
     assert [row["id"] for row in record["rows"]] == ["change:material:1"]
@@ -250,6 +252,80 @@ def test_correction_and_withdrawal_retire_only_cited_details(
                      if call.operation == "extract_legal_details"]
     assert [row["id"] for row in detail_inputs[1]["active_material"]] == [
         "original:material:2", "original:material:3"]
+    assert wired.store.load(opened.json()["matter_id"]).facts == ()
+
+
+@pytest.mark.parametrize("supported", (True, False))
+def test_linked_original_sources_and_selected_context_reach_independent_check(
+        client, wired, monkeypatch, supported):
+    first = ("The work stopped. It stopped on 4 May. "
+             "We want to understand the sequence.")
+    latest = "Correction: it stopped on 6 May."
+    context = "We want to understand the sequence."
+    original = [
+        material("dispute", "Stopped work", "The work stopped."),
+        material("event", "The advocate reports work stopped on 4 May.",
+                 "It stopped on 4 May.", placement="disputes",
+                 dispute_ids=("original:material:1",)),
+    ]
+    revised = material(
+        "event", "The advocate corrects the reported date to 6 May."
+        if supported else "The corrected event date is proved by a record.",
+        latest, relation="corrects", scope="current", placement="disputes",
+        dispute_ids=("original:material:1",),
+        related_material_ids=("original:material:2",),
+        references=({"turn_id": "original", "role": "advocate",
+                     "quoted": context},))
+
+    class CheckingModel(Model):
+        def __init__(self):
+            super().__init__([plan(first, candidates=original, opening=True),
+                              plan(latest, candidates=[revised])])
+            self.check_inputs = []
+
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier,
+                                        max_tokens=max_tokens)
+            if prompt.operation != "verify_material_grounding":
+                return result
+            payload = json.loads(prompt.user)
+            self.check_inputs.append(payload)
+            if supported:
+                return result
+            candidates = {row["candidate_id"]: row
+                          for row in payload["candidates"]}
+            rejected = [{**row, "verdict": "reject",
+                         "reason": "A reported correction does not prove the event."}
+                        if candidates[row["candidate_id"]].get("relation") == "corrects"
+                        else row for row in result.data["verdicts"]]
+            return replace(result, data={"verdicts": rejected})
+
+    model = CheckingModel()
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    opened = send(client, first, "original")
+    assert opened.status_code == 200, opened.text
+    corrected = send(client, latest, "correction", opened=opened.json())
+
+    assert corrected.status_code == 200, corrected.text
+    assert corrected.json()["metrics"]["llm_calls"] == 6
+    checked = [row for payload in model.check_inputs
+               for row in payload["candidates"] if row.get("relation") == "corrects"]
+    assert checked
+    expected_sources = {("original", "advocate", words) for words in
+                        (context, "It stopped on 4 May.")}
+    for row in checked:
+        assert {(ref["turn_id"], ref["role"], ref["quoted"])
+                for ref in row["cited_earlier_passages"]} == expected_sources
+    board = _board(client, opened.json()["matter_id"])["material_record"]
+    assert [row["id"] for row in board["by_dispute"]["original:material:1"]] == (
+        ["correction:material:1"] if supported else ["original:material:2"])
+    if supported:
+        saved = corrected.json()["material"][0]
+        assert {(ref["turn_id"], ref["role"], ref["quoted"])
+                for ref in saved["prior_references"]} == expected_sources
+    else:
+        assert corrected.json()["material"] == []
+        assert [row["id"] for row in board["history"]] == ["original:material:2"]
     assert wired.store.load(opened.json()["matter_id"]).facts == ()
 
 
@@ -273,9 +349,9 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
                                         max_tokens=max_tokens)
             if prompt.operation == "extract_legal_details" and not self.rejected:
                 self.rejected = True
-                invalid = {**result.data["details"][0],
+                invalid = {**result.data["new_items"][0],
                            "dispute_ids": ["missing-dispute"]}
-                return replace(result, data={"details": [invalid]})
+                return replace(result, data={"new_items": [invalid], "changes": []})
             return result
 
     model = RepairingModel()
@@ -284,7 +360,7 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
     response = send(client, message, "repaired")
 
     assert response.status_code == 200, response.text
-    assert response.json()["metrics"]["llm_calls"] == 6
+    assert response.json()["metrics"]["llm_calls"] == 8
     repair_inputs = [json.loads(call.user) for call in model.material_calls
                      if "original_input" in json.loads(call.user)]
     assert len(repair_inputs) == 1

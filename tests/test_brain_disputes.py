@@ -7,6 +7,7 @@ from nm.brain.conversation import Message
 from nm.brain.disputes import extract_disputes
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelResult, SchemaViolation, Tier, Usage
+from tests.brain_reader_fixture import reader_operations
 
 
 class Model:
@@ -27,7 +28,9 @@ class Model:
         disputes = self.repair if len(self.calls) > 1 and self.repair is not None \
             else self.disputes
         return ModelResult(
-            text=None, data={"disputes": disputes}, tier=tier,
+            text=None, data=reader_operations(disputes, json.loads(prompt.user),
+                                             link_field="related_dispute_ids",
+                                             infer_targets=False), tier=tier,
             provider="offline", model="offline", usage=Usage(0, 0, 0),
             latency_ms=0, completion=self.completion,
         )
@@ -83,11 +86,12 @@ def test_first_message_uses_one_focused_call_and_rehydrates_selected_words():
     assert [span["id"] for span in payload["latest_message_spans"]] == ["L1", "L2"]
     assert all(label in prompt.system for label in
                ("Message:", "Purpose:", "Look for:", "Outcome:"))
-    item = schema["properties"]["disputes"]["items"]
+    item = schema["properties"]["new_items"]["items"]
     assert item["properties"]["source_id"]["enum"] == ["L1", "L2"]
     assert "quoted" not in item["properties"]
     assert "prior_source_ids" not in item["properties"]
-    assert item["properties"]["relation"]["enum"] == ["new"]
+    assert "relation" not in item["properties"]
+    assert "related_dispute_ids" not in item["properties"]
     assert "current" not in item["properties"]["matter_scope"]["enum"]
     assert "kind" not in item["properties"]
 
@@ -128,7 +132,7 @@ def test_contextual_correction_uses_full_attributed_history_and_exact_reference(
     assert [{key: value for key, value in row.items() if key != "source_ids"}
             for row in payload["prior_disputes"]] == list(prior_disputes)
     assert payload["prior_disputes"][0]["source_ids"] == ["P1S1"]
-    item = schema["properties"]["disputes"]["items"]
+    item = schema["properties"]["changes"]["items"]
     assert item["properties"]["prior_source_ids"]["items"]["enum"] == [
         "P1S1", "P2S1"]
     assert "prior_source_ids" in item["required"]
@@ -151,7 +155,7 @@ def test_uncertain_issue_carries_one_question_without_treating_merits_as_uncerta
     assert rows[0].recorded("turn", 1)["label"] == "Whether the payment was due."
 
 
-def test_link_must_cite_the_prior_disputes_source_not_just_its_turn():
+def test_linked_canonical_source_is_added_without_replacing_selected_context():
     earlier = (Message("first", "advocate", "Delivery is disputed. Fee is disputed."),)
     model = Model([dispute(
         "Whether delivery occurred.", "L1", relation="corrects",
@@ -160,15 +164,17 @@ def test_link_must_cite_the_prior_disputes_source_not_just_its_turn():
                        "identification": "identified", "clarification": "",
                        "source_turn_id": "first", "quoted": "Fee is disputed."},)
 
-    with pytest.raises(SchemaViolation, match="prior_source_ids"):
-        extract_disputes(model, earlier=earlier,
-                         latest="Correction: delivery occurred.",
-                         current_matter_id="matter-1",
-                         prior_disputes=prior_disputes)
-    assert len(model.calls) == 2
+    rows = extract_disputes(model, earlier=earlier,
+                            latest="Correction: delivery occurred.",
+                            current_matter_id="matter-1",
+                            prior_disputes=prior_disputes)
+    assert len(model.calls) == 1
+    assert rows[0].related_dispute_ids == ("fee",)
+    assert {ref.quoted for ref in rows[0].prior_references} == {
+        "Delivery is disputed.", "Fee is disputed."}
 
 
-def test_repair_identifies_the_exact_prior_span_for_a_revised_dispute():
+def test_original_source_and_selected_context_do_not_require_a_copying_retry():
     earlier = (Message("first", "advocate",
                        "Return was promised within seven days. Keys were handed over on Monday."),)
     prior = ({"id": "return", "label": "Return", "statement": "When must it be returned?",
@@ -185,9 +191,7 @@ def test_repair_identifies_the_exact_prior_span_for_a_revised_dispute():
                             latest="Correction: keys were handed over on Tuesday.",
                             current_matter_id="matter-1", prior_disputes=prior)
 
-    assert len(model.calls) == 2
-    feedback = json.loads(model.calls[1][0].user)
-    assert "P1S1" in feedback["validation_issue"]
+    assert len(model.calls) == 1
     assert rows[0].related_dispute_ids == ("return",)
     assert {ref.quoted for ref in rows[0].prior_references} == {
         "Return was promised within seven days.",
@@ -229,12 +233,11 @@ def test_withdrawal_needs_an_exact_active_link_and_gets_one_correction():
     assert result[0].relation == "withdraws"
     assert result[0].related_dispute_ids == ("payment",)
     feedback = json.loads(model.calls[1][0].user)
-    assert "withdrawal" in feedback["validation_issue"].lower()
-    assert "active" in feedback["validation_issue"].lower()
-    assert "no safe link" in model.calls[0][0].system
+    assert "related_dispute_ids" in feedback["validation_issue"]
+    assert "changes" in feedback["validation_issue"]
 
     persistent = Model([unlinked])
-    with pytest.raises(SchemaViolation, match="withdrawal"):
+    with pytest.raises(SchemaViolation, match="related_dispute_ids"):
         extract_disputes(
             persistent, earlier=earlier,
             latest="I withdraw the payment dispute.",
@@ -256,7 +259,9 @@ def test_invalid_source_id_gets_one_feedback_guided_correction():
     repair_prompt, repair_schema, _, _ = model.calls[1]
     feedback = json.loads(repair_prompt.user)
     assert feedback["original_input"] == json.loads(model.calls[0][0].user)
-    assert feedback["rejected_output"] == {"disputes": [rejected]}
+    assert feedback["rejected_output"] == reader_operations(
+        [rejected], feedback["original_input"], link_field="related_dispute_ids",
+        infer_targets=False)
     assert "source_id" in feedback["validation_issue"] or "source" in feedback[
         "validation_issue"].lower()
     assert "source" in feedback["how_to_correct"].lower()

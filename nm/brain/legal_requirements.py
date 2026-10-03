@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 
-from nm.brain.checked import checked_read
+from nm.brain.checked import checked_read, require_independent_result
 from nm.shared.model_port import (
     ContextOverflow,
+    ModelError,
     ModelPort,
     OutputTruncated,
     Prompt,
     SchemaViolation,
     Tier,
     estimate_tokens,
+    require_schema,
 )
 
 _DECOMPOSE_SYSTEM = """Message: The input contains the complete ordered,
@@ -112,8 +115,14 @@ incorrect material link does not invalidate an otherwise supported need. If a
 passage is fragmentary or its scope cannot be established, mark it uncertain.
 
 Outcome: Return only the declared JSON object. For EACH candidate, return one
-overall decision, a separate label decision, one check for EVERY selected
-material ID, and one separate check for EVERY cited source ID. Each source
+overall decision and a separate label decision, with nonempty reasons of at
+most 500 characters. If the overall decision is unsupported or uncertain, or
+the label is not faithful, the complete item will be withheld: you may leave
+`material_checks` and `source_checks` empty. Do not manufacture a supported
+passage just to fill the response. For a supported item with a faithful label,
+return one check for EVERY selected material ID and one separate check for
+EVERY cited source ID, each with a nonempty reason of at most 500 characters.
+Each source
 is displayed as numbered, overlapping, exact fragments of its saved passage.
 Select a `support_fragment_id` from THAT source only when its words directly
 support the full proposed item; otherwise use an empty ID. Select a
@@ -183,7 +192,8 @@ def _dispute_input(disputes: tuple[dict, ...],
 
 
 def _prompt(system: str, operation: str, payload: dict,
-            model: ModelPort, output_limit: int, schema: dict) -> Prompt:
+            model: ModelPort, output_limit: int, schema: dict,
+            tier: Tier = Tier.ROUTINE) -> Prompt:
     prompt = Prompt(system=system,
                     user=json.dumps(payload, ensure_ascii=False,
                                     separators=(",", ":")),
@@ -192,7 +202,7 @@ def _prompt(system: str, operation: str, payload: dict,
     schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
     if (estimate_tokens(prompt.user + (prompt.system or "") + schema_text)
             + output_limit
-            > model.context_budget(Tier.ROUTINE)):
+            > model.context_budget(tier)):
         raise ContextOverflow(
             "The complete conversation and dispute group exceed the model context budget")
     return prompt
@@ -486,20 +496,118 @@ def _verification_schema(candidate_ids: tuple[str, ...],
             "properties": {"decisions": {"type": "array", "items": decision}}}
 
 
+@dataclass(frozen=True)
+class RequirementVerification:
+    rows: dict[str, list[dict]]
+    coverage: dict[str, dict]
+    outage: str | None = None
+
+
+def _requirement_verdict(decision: dict, *, candidate_id: str,
+                         original: tuple[str, dict, dict[str, dict]]) -> dict | None:
+    _, item, sources = original
+    fragments = tuple(dict.fromkeys(
+        fragment["id"] for source in sources.values()
+        for fragment in _passage_fragments(source["text"])))
+    schema = _verification_schema(
+        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"]))
+    require_schema(decision, schema["properties"]["decisions"]["items"])
+    checks = decision["source_checks"]
+    if (not decision["reason"].strip() or len(decision["reason"]) > 500
+            or not decision["label_reason"].strip() or len(decision["label_reason"]) > 500):
+        raise SchemaViolation("Keep nonempty verdict reasons within 500 characters")
+    if decision["verdict"] != "supported" or decision["label_verdict"] != "faithful":
+        return None
+    if len(checks) != len(sources):
+        raise SchemaViolation("Check every cited passage exactly once for a supported item")
+    material_checks = decision["material_checks"]
+    if len(material_checks) != len(item["material_ids"]):
+        raise SchemaViolation("Check every linked material ID exactly once")
+    seen_material: set[str] = set()
+    supported_material: set[str] = set()
+    for check in material_checks:
+        material_id = check["material_id"]
+        if (material_id in seen_material or material_id not in item["material_ids"]
+                or not check["reason"].strip() or len(check["reason"]) > 500):
+            raise SchemaViolation(
+                "A material link verdict is duplicated, foreign or lacks a concise reason")
+        seen_material.add(material_id)
+        if check["verdict"] == "addresses":
+            supported_material.add(material_id)
+    if seen_material != set(item["material_ids"]):
+        raise SchemaViolation("Check every linked material ID exactly once")
+    linked = [material_id for material_id in item["material_ids"]
+              if material_id in supported_material]
+    seen: set[str] = set()
+    selected: dict[str, dict] = {}
+    for check in checks:
+        source_id = check["source_id"]
+        if source_id in seen or source_id not in sources:
+            raise SchemaViolation("A passage verdict names another or duplicate source")
+        seen.add(source_id)
+        fragments_by_id = {
+            fragment["id"]: fragment["text"]
+            for fragment in _passage_fragments(sources[source_id]["text"])}
+        support_id = check["support_fragment_id"]
+        scope_id = check["scope_fragment_id"]
+        if (support_id and support_id not in fragments_by_id
+                or scope_id and scope_id not in fragments_by_id):
+            raise SchemaViolation("Choose support and scope fragment IDs from this source only")
+        support = fragments_by_id.get(support_id, "")
+        scope = fragments_by_id.get(scope_id, "")
+        scope_status = check["scope_status"]
+        verdict = check["verdict"]
+        if (not check["reason"].strip() or len(check["reason"]) > 500
+                or (verdict == "supported") != bool(support_id)
+                or (verdict == "supported" and scope_status != "no_special_condition"
+                    and not scope_id)
+                or (verdict == "supported" and scope_status == "no_special_condition"
+                    and bool(scope_id))
+                or (verdict == "supported" and scope_status not in (
+                    "established", "asked_to_establish", "no_special_condition"))
+                or (verdict == "supported"
+                    and (not support.strip() or (scope_id and not scope.strip())))):
+            raise SchemaViolation(
+                "A supported passage needs its exact support fragment and either "
+                "a checked scope fragment or no_special_condition with an empty scope ID; "
+                "unsupported or uncertain passages need an empty support ID")
+        if verdict == "supported":
+            selected[source_id] = {
+                "support_excerpt": support, "scope_excerpt": scope,
+                "scope_status": scope_status, "reason": check["reason"],
+            }
+    if seen != set(sources):
+        raise SchemaViolation("Check every cited source ID exactly once")
+    if decision["verdict"] == "supported" and not selected:
+        raise SchemaViolation("A supported item needs at least one supported passage")
+    kept = [source_id for source_id in item["source_ids"] if source_id in selected]
+    return {
+        **item, "source_ids": kept, "material_ids": linked,
+        "record_status": "mentioned" if linked else "not_mentioned",
+        "sources": [{**sources[source_id], "verification": selected[source_id]}
+                    for source_id in kept],
+    }
+
+
 def verify_requirements(model: ModelPort, *, disputes: tuple[dict, ...],
                         material_by_dispute: dict[str, list[dict]],
                         proposed: dict[str, list[dict]],
-                        conversation: tuple[object, ...]) -> dict[str, list[dict]]:
+                        conversation: tuple[object, ...]) -> RequirementVerification:
     """Independently retain only proposals supported by their exact citations.
 
     Each dispute is checked separately so unrelated citations cannot supply
     one another's context. Oversized disputes split into complete item groups.
-    An invalid or incomplete verdict fails closed rather than saving a guess.
+    Keep each valid verdict immediately. Correct unread verdicts once without
+    repeating valid peers or isolating every item and citation into new calls.
     """
     dispute_rows, material_ids = _dispute_input(disputes, material_by_dispute)
     if set(proposed) != set(material_ids):
         raise SchemaViolation("Verification needs every supplied dispute")
     result: dict[str, list[dict]] = {dispute_id: [] for dispute_id in material_ids}
+    retained: dict[str, dict] = {}
+    coverage = {dispute_id: {"state": "ok", "checked_items": 0,
+                             "unread_items": 0, "withheld_items": 0,
+                             "diagnostics": []} for dispute_id in material_ids}
     grouped = []
     originals: dict[str, tuple[str, dict, dict[str, dict]]] = {}
     for dispute_row in dispute_rows:
@@ -551,10 +659,11 @@ def verify_requirements(model: ModelPort, *, disputes: tuple[dict, ...],
         if presented:
             grouped.append({**dispute_row, "candidates": presented})
     if not grouped:
-        return result
+        return RequirementVerification(result, coverage)
     conversation_rows = _conversation_rows(conversation)
 
-    def prepare(dispute_row: dict, candidates: list[dict]):
+    def prepare(dispute_row: dict, candidates: list[dict], issues: dict | None = None,
+                rejected: dict | None = None):
         candidate_ids = tuple(candidate["candidate_id"]
                               for candidate in candidates)
         source_ids = tuple(dict.fromkeys(
@@ -570,201 +679,107 @@ def verify_requirements(model: ModelPort, *, disputes: tuple[dict, ...],
         schema = _verification_schema(
             candidate_ids, source_ids, fragment_ids, group_material_ids)
         output_limit = min(12288, max(
-            3072, len(candidate_ids) * 256 +
+            4096, len(candidate_ids) * 256 +
             sum(len(candidate["sources"]) for candidate in candidates) * 384))
-        prompt = _prompt(_VERIFY_SYSTEM, "verify_legal_requirements",
-                         {"conversation": conversation_rows,
-                          "dispute": dispute_row["dispute"],
-                          "material": dispute_row["material"],
-                          "candidates": candidates},
-                         model, output_limit, schema)
+        payload = {"conversation": conversation_rows,
+                   "dispute": dispute_row["dispute"],
+                   "material": dispute_row["material"], "candidates": candidates}
+        if issues:
+            payload["validation_issues"] = [
+                {"candidate_id": candidate_id, "issue": issues[candidate_id]}
+                for candidate_id in candidate_ids]
+            payload["rejected_decisions"] = {
+                candidate_id: (rejected or {}).get(candidate_id)
+                for candidate_id in candidate_ids}
+            payload["intended_outcome"] = (
+                "Return one corrected, complete verdict per listed candidate ID. "
+                "Keep the full required source and material checks. Already "
+                "valid peer verdicts are retained and must not be repeated.")
+        prompt = _prompt(_VERIFY_SYSTEM, "verify_legal_requirements", payload,
+                         model, output_limit, schema, Tier.JUDGE)
         return candidate_ids, prompt, schema, output_limit
 
+    outage = None
     for dispute_row in grouped:
-        for candidate_ids, prompt, schema, output_limit in _ordered_batches(
+        dispute_id = dispute_row["dispute"]["id"]
+        batches = _ordered_batches(
                 dispute_row["candidates"],
-                lambda batch, dispute_row=dispute_row: prepare(dispute_row, batch)):
-            def accept(data: dict, candidate_ids=candidate_ids,
-                       source_subset: dict[str, set[str]] | None = None):
-                decisions = data["decisions"]
-                if len(decisions) != len(candidate_ids):
-                    raise SchemaViolation(
-                        "Verification must decide every supplied item once")
-                accepted = {candidate_id: None for candidate_id in candidate_ids}
-                for decision in decisions:
-                    candidate_id = decision["candidate_id"]
-                    if accepted[candidate_id] is not None:
-                        raise SchemaViolation("A legal item has duplicate verdicts")
-                    dispute_id, item, sources = originals[candidate_id]
-                    if source_subset is not None:
-                        sources = {source_id: source
-                                   for source_id, source in sources.items()
-                                   if source_id in source_subset[candidate_id]}
-                    checks = decision["source_checks"]
-                    if (len(checks) != len(sources)
-                            or not decision["reason"].strip()
-                            or len(decision["reason"]) > 500
-                            or not decision["label_reason"].strip()
-                            or len(decision["label_reason"]) > 500):
-                        raise SchemaViolation(
-                            "Verification must examine every cited passage")
-                    material_checks = decision["material_checks"]
-                    if len(material_checks) != len(item["material_ids"]):
-                        raise SchemaViolation(
-                            "Verification must examine every linked material item")
-                    seen_material: set[str] = set()
-                    supported_material: set[str] = set()
-                    for check in material_checks:
-                        material_id = check["material_id"]
-                        if (material_id in seen_material
-                                or material_id not in item["material_ids"]
-                                or not check["reason"].strip()
-                                or len(check["reason"]) > 500):
-                            raise SchemaViolation(
-                                "A material link verdict is invalid")
-                        seen_material.add(material_id)
-                        if check["verdict"] == "addresses":
-                            supported_material.add(material_id)
-                    if seen_material != set(item["material_ids"]):
-                        raise SchemaViolation(
-                            "Verification omitted a linked material item")
-                    linked = [material_id for material_id in item["material_ids"]
-                              if material_id in supported_material]
-                    seen: set[str] = set()
-                    selected: dict[str, dict] = {}
-                    for check in checks:
-                        source_id = check["source_id"]
-                        if source_id in seen or source_id not in sources:
-                            raise SchemaViolation(
-                                "A passage verdict names another or duplicate source")
-                        seen.add(source_id)
-                        fragments = {
-                            fragment["id"]: fragment["text"]
-                            for fragment in _passage_fragments(
-                                sources[source_id]["text"])}
-                        support_id = check["support_fragment_id"]
-                        scope_id = check["scope_fragment_id"]
-                        if (support_id and support_id not in fragments
-                                or scope_id and scope_id not in fragments):
-                            raise SchemaViolation(
-                                "A passage verdict selects an invalid fragment ID")
-                        support = fragments.get(support_id, "")
-                        scope = fragments.get(scope_id, "")
-                        scope_status = check["scope_status"]
-                        verdict = check["verdict"]
-                        if (not check["reason"].strip()
-                                or len(check["reason"]) > 500
-                                or (verdict == "supported") != bool(support_id)
-                                or (verdict == "supported"
-                                    and scope_status != "no_special_condition"
-                                    and not scope_id)
-                                or (verdict == "supported"
-                                    and scope_status == "no_special_condition"
-                                    and bool(scope_id))
-                                or (verdict == "supported" and scope_status not in (
-                                    "established", "asked_to_establish",
-                                    "no_special_condition"))
-                                or (verdict == "supported"
-                                    and (not support.strip()
-                                         or (scope_id and not scope.strip())))):
-                            raise SchemaViolation(
-                                "A passage verdict lacks exact, applicable support")
-                        if verdict == "supported":
-                            selected[source_id] = {
-                                "support_excerpt": support,
-                                "scope_excerpt": scope,
-                                "scope_status": scope_status,
-                                "reason": check["reason"],
-                            }
-                    if seen != set(sources):
-                        raise SchemaViolation(
-                            "Verification omitted a cited passage")
-                    if decision["verdict"] == "supported" and not selected:
-                        raise SchemaViolation(
-                            "A legal item lacks a supported passage")
-                    accepted[candidate_id] = (
-                        dispute_id, item, sources,
-                        selected if (decision["verdict"] == "supported"
-                                     and decision["label_verdict"] == "faithful")
-                        else {}, linked)
-                return accepted
-
-            presented = {candidate["candidate_id"]: candidate
-                         for candidate in dispute_row["candidates"]}
-
-            def isolated_item(candidate_id: str, *,
-                              try_combined: bool = True,
-                              presented=presented,
-                              dispute_row=dispute_row) -> tuple:
-                candidate = presented[candidate_id]
-                dispute_id, item, sources = originals[candidate_id]
-                if try_combined:
+                lambda batch, dispute_row=dispute_row: prepare(dispute_row, batch))
+        presented = {candidate["candidate_id"]: candidate
+                     for candidate in dispute_row["candidates"]}
+        for candidate_ids, prompt, schema, output_limit in batches:
+            pending = candidate_ids
+            issues = {candidate_id: "Independent source checking did not finish"
+                      for candidate_id in pending}
+            rejected: dict[str, object] = {}
+            for attempt in range(2):
+                if outage or not pending:
+                    break
+                if attempt:
+                    remaining = [presented[key] for key in pending]
                     try:
-                        ids, one_prompt, one_schema, one_limit = prepare(
-                            dispute_row, [candidate])
-                        return checked_read(
-                            model, one_prompt, one_schema, one_limit,
-                            lambda data, ids=ids: accept(data, ids))[candidate_id]
-                    except (SchemaViolation, ContextOverflow, OutputTruncated):
-                        pass
-                if len(sources) == 1:
-                    return dispute_id, item, sources, {}, []
-                # A single malformed citation must not suppress support from
-                # another cited passage. Recheck the full item against each
-                # passage independently, only after the grouped check fails.
-                selected = {}
-                linked_support = None
-                for source_id in item["source_ids"]:
-                    one_source = [source for source in candidate["sources"]
-                                  if source["id"] == source_id]
-                    ids, one_prompt, one_schema, one_limit = prepare(
-                        dispute_row, [{**candidate, "sources": one_source}])
-                    try:
-                        checked = checked_read(
-                            model, one_prompt, one_schema, one_limit,
-                            lambda data, ids=ids, source_id=source_id: accept(
-                                data, ids, {candidate_id: {source_id}}))
-                    except (SchemaViolation, ContextOverflow, OutputTruncated):
-                        continue
-                    source_support = checked[candidate_id][3]
-                    selected.update(source_support)
-                    if source_support:
-                        material_support = set(checked[candidate_id][4])
-                        linked_support = (material_support if linked_support is None
-                                          else linked_support & material_support)
-                linked = [material_id for material_id in item["material_ids"]
-                          if linked_support is not None
-                          and material_id in linked_support]
-                return dispute_id, item, sources, selected, linked
-
-            try:
-                accepted = checked_read(model, prompt, schema, output_limit,
-                                        accept)
-            except (SchemaViolation, ContextOverflow, OutputTruncated):
-                if len(candidate_ids) == 1:
-                    candidate_id = candidate_ids[0]
-                    if len(originals[candidate_id][2]) == 1:
-                        raise
-                    accepted = {candidate_id: isolated_item(
-                        candidate_id, try_combined=False)}
-                else:
-                    # A malformed answer for one item must not discard
-                    # independently checkable items in the same dispute.
-                    accepted = {candidate_id: isolated_item(candidate_id)
-                                for candidate_id in candidate_ids}
-            for candidate_id in candidate_ids:
-                dispute_id, item, sources, selected, linked = accepted[candidate_id]
-                if not selected:
+                        _, prompt, schema, output_limit = prepare(
+                            dispute_row, remaining, issues, rejected)
+                    except ContextOverflow:
+                        try:
+                            _, prompt, schema, output_limit = prepare(
+                                dispute_row, remaining, issues)
+                        except ContextOverflow:
+                            break
+                try:
+                    read = model.structured(prompt, schema, Tier.JUDGE,
+                                            max_tokens=output_limit)
+                    require_independent_result(read)
+                except (SchemaViolation, OutputTruncated) as exc:
+                    issues = {key: str(exc) for key in pending}
                     continue
-                kept = [source_id for source_id in item["source_ids"]
-                        if source_id in selected]
-                result[dispute_id].append({
-                    **item, "source_ids": kept,
-                    "material_ids": linked,
-                    "record_status": "mentioned" if linked else "not_mentioned",
-                    "sources": [
-                        {**sources[source_id],
-                         "verification": selected[source_id]}
-                        for source_id in kept],
-                })
-    return result
+                except ContextOverflow:
+                    raise
+                except ModelError as exc:
+                    outage = type(exc).__name__
+                    issues = {key: "Independent source checking was unavailable"
+                              for key in pending}
+                    break
+                decisions = (read.data.get("decisions")
+                             if read.usable and isinstance(read.data, dict) else None)
+                groups: dict[str, list[dict]] = {key: [] for key in pending}
+                if isinstance(decisions, list):
+                    for decision in decisions:
+                        if (isinstance(decision, dict)
+                                and isinstance(decision.get("candidate_id"), str)
+                                and decision["candidate_id"] in groups):
+                            groups[decision["candidate_id"]].append(decision)
+                unresolved = []
+                issues = {}
+                for candidate_id in pending:
+                    group = groups[candidate_id]
+                    if len(group) != 1:
+                        issues[candidate_id] = (
+                            "Return exactly one complete verdict for this candidate ID")
+                        rejected[candidate_id] = group
+                        unresolved.append(candidate_id)
+                        continue
+                    try:
+                        row = _requirement_verdict(
+                            group[0], candidate_id=candidate_id,
+                            original=originals[candidate_id])
+                    except SchemaViolation as exc:
+                        issues[candidate_id] = str(exc)
+                        rejected[candidate_id] = group[0]
+                        unresolved.append(candidate_id)
+                    else:
+                        coverage[dispute_id]["checked_items"] += 1
+                        if row is None:
+                            coverage[dispute_id]["withheld_items"] += 1
+                        else:
+                            retained[candidate_id] = row
+                pending = tuple(unresolved)
+            if pending:
+                coverage[dispute_id]["state"] = "partial"
+                coverage[dispute_id]["unread_items"] += len(pending)
+                coverage[dispute_id]["diagnostics"].append(
+                    "Some legal items could not be checked; valid peer items were retained")
+    for candidate_id, (dispute_id, _, _) in originals.items():
+        if candidate_id in retained:
+            result[dispute_id].append(retained[candidate_id])
+    return RequirementVerification(result, coverage, outage)

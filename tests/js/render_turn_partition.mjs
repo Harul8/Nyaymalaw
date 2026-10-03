@@ -367,6 +367,26 @@ if (damagedBody?.textContent !== prose.replaceAll('**', '')
   fails.push('bad saved citation metadata changed or hid the reply words');
 }
 
+const brainSources = [
+  {brain:true, id:'record-one', label:'Your saved words', locator:'turn_a'},
+  {brain:true, id:'legal-one', label:'Retrieved authority', locator:'synthetic::authority'},
+];
+const brainElement = mk('finding', 'The account remains reported.', {
+  source:brainSources[0], sources:brainSources, refs:brainSources.map(item => item.locator),
+});
+const brainSaved = {...saved, matter_id:null, chat_id:'pending_chat',
+  elements:[brainElement], composed:[]};
+for (const entry of [{brief:saved.message, answer:brainSaved}, context.restoredTurn(brainSaved)]) {
+  const rendered = context.renderTurn(entry);
+  const groups = flat(rendered).filter(node => node.className === 'brain-source-links');
+  const links = flat(rendered).filter(node => node.className === 'citation-link');
+  if (groups.length !== 1 || groups[0].open
+      || groups[0].children[0]?.textContent !== 'Sources (2)'
+      || links.length !== 2 || flat(groups[0]).filter(node => node.className === 'citation-link').length !== 2) {
+    fails.push('saved brain references were lost or displayed outside their closed source group');
+  }
+}
+
 // Reopening a saved matter restores the whole transcript in record order and
 // starts at the first turn, even when the conversation is taller than its pane.
 const thread = document.getElementById('thread');

@@ -13,6 +13,7 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContextOverflow,
     ModelResult,
+    ProviderUnavailable,
     SchemaViolation,
     Tier,
     Usage,
@@ -27,12 +28,14 @@ class Model:
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.ROUTINE
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return self.budget
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema, tier, max_tokens))
         value = self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
+        if isinstance(value, Exception):
+            raise value
         if prompt.operation == "verify_legal_requirements":
             original = json.loads(prompt.user)
             original = original.get("original_input", original)
@@ -126,6 +129,20 @@ def requirement(dispute_id, source_ids, material_ids, *, force="required",
             "material_ids": material_ids}
 
 
+def supported_verdict(candidate_id, source_id, *, material_checks=None):
+    decision = {
+        "candidate_id": candidate_id, "verdict": "supported",
+        "source_checks": [{
+            "source_id": source_id, "verdict": "supported",
+            "scope_status": "no_special_condition", "support_fragment_id": "f1",
+            "scope_fragment_id": "", "reason": "This exact passage supports the item.",
+        }], "reason": "The complete item follows from its cited passage.",
+    }
+    if material_checks is not None:
+        decision["material_checks"] = material_checks
+    return decision
+
+
 def call_budget(call):
     prompt, schema, _, output_limit = call
     return (estimate_tokens(prompt.user + (prompt.system or "") +
@@ -196,6 +213,7 @@ def test_requirements_attach_exact_passages_and_do_not_mark_reported_record_veri
     assert output["d2"] == []
     prompt = model.calls[0][0]
     assert prompt.operation == "read_legal_requirements"
+    assert model.calls[0][2] is Tier.ROUTINE
     assert all(marker in prompt.system for marker in (
         "Message:", "Purpose:", "Look for:", "Outcome:"))
     assert json.loads(prompt.user)["conversation"][-1]["text"] == \
@@ -290,8 +308,9 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
         proposed=proposed, conversation=CONVERSATION)
 
     assert len(verifier.calls) == 2
-    assert checked["d1"][0]["source_ids"] == ["s1"]
-    assert checked["d1"][0]["sources"] == [{
+    assert all(call[2] is Tier.JUDGE and call[3] >= 4096 for call in verifier.calls)
+    assert checked.rows["d1"][0]["source_ids"] == ["s1"]
+    assert checked.rows["d1"][0]["sources"] == [{
         **hits()["d1"]["candidates"][0],
         "verification": {
             "support_excerpt": "A person must give written notice.",
@@ -300,7 +319,10 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
             "reason": "The provision states the notice condition.",
         },
     }]
-    assert checked["d2"] == []
+    assert checked.rows["d2"] == []
+    assert checked.coverage["d1"]["checked_items"] == 1
+    assert checked.coverage["d2"]["withheld_items"] == 1
+    assert all(row["state"] == "ok" for row in checked.coverage.values())
     prompt = verifier.calls[0][0]
     assert prompt.operation == "verify_legal_requirements"
     assert all(marker in prompt.system for marker in (
@@ -348,9 +370,11 @@ def test_display_label_and_reported_material_are_checked_independently():
         model, disputes=DISPUTES, material_by_dispute=MATERIAL,
         proposed=proposed, conversation=CONVERSATION)
 
-    assert [item["label"] for item in checked["d1"]] == ["Check signed receipt"]
-    assert checked["d1"][0]["material_ids"] == []
-    assert checked["d1"][0]["record_status"] == "not_mentioned"
+    assert [item["label"] for item in checked.rows["d1"]] == ["Check signed receipt"]
+    assert checked.rows["d1"][0]["material_ids"] == []
+    assert checked.rows["d1"][0]["record_status"] == "not_mentioned"
+    assert checked.coverage["d1"]["checked_items"] == 2
+    assert checked.coverage["d1"]["withheld_items"] == 1
     assert len(model.calls) == 1
 
 
@@ -384,13 +408,18 @@ def test_verifier_refuses_cross_item_support_after_one_correction():
                                   proposed=proposed,
                                   conversation=CONVERSATION)
 
-    assert checked == {"d1": [], "d2": []}
-    assert len(model.calls) == 6
-    assert "another or duplicate source" in json.loads(
-        model.calls[1][0].user)["validation_issue"]
+    assert [row["label"] for row in checked.rows["d1"]] == ["Keep signed receipt"]
+    assert checked.rows["d2"] == []
+    assert checked.coverage["d1"]["state"] == "partial"
+    assert checked.coverage["d1"]["checked_items"] == 1
+    assert checked.coverage["d1"]["unread_items"] == 1
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in repair["candidates"]] == ["r1"]
+    assert "source" in json.dumps(repair["validation_issues"])
 
 
-def test_failed_verification_batch_recovers_only_valid_individual_items():
+def test_one_repair_salvages_readable_items_without_individual_fanout():
     proposed = read_requirements(Model([{"requirements": [
         requirement("d1", ["s1"], []),
         requirement("d1", ["s2"], ["m1"], force="strengthening",
@@ -407,19 +436,20 @@ def test_failed_verification_batch_recovers_only_valid_individual_items():
         }], "reason": "The first item is supported.",
     }]}
     invalid = {"decisions": []}
-    model = Model([invalid, invalid, valid_first, invalid, invalid])
+    model = Model([invalid, valid_first])
 
     checked = verify_requirements(
         model, disputes=DISPUTES, material_by_dispute=MATERIAL,
         proposed=proposed, conversation=CONVERSATION)
 
-    assert len(model.calls) == 5
-    assert checked["d1"][0]["label"] == "Obtain written notice"
-    assert len(checked["d1"]) == 1
-    assert checked["d2"] == []
-    assert [len(json.loads(call[0].user).get("candidates", []))
-            for call in (model.calls[0], model.calls[2], model.calls[3])] == [
-                2, 1, 1]
+    assert len(model.calls) == 2
+    assert checked.rows["d1"][0]["label"] == "Obtain written notice"
+    assert len(checked.rows["d1"]) == 1
+    assert checked.rows["d2"] == []
+    assert checked.coverage["d1"]["state"] == "partial"
+    assert checked.coverage["d1"]["checked_items"] == 1
+    assert checked.coverage["d1"]["unread_items"] == 1
+    assert [len(json.loads(call[0].user)["candidates"]) for call in model.calls] == [2, 2]
 
 
 def test_verification_skips_model_when_no_items_were_proposed():
@@ -427,13 +457,14 @@ def test_verification_skips_model_when_no_items_were_proposed():
     checked = verify_requirements(
         model, disputes=DISPUTES, material_by_dispute=MATERIAL,
         proposed={"d1": [], "d2": []}, conversation=CONVERSATION)
-    assert checked == {"d1": [], "d2": []}
+    assert checked.rows == {"d1": [], "d2": []}
+    assert all(row["state"] == "ok" for row in checked.coverage.values())
     assert model.calls == []
 
 
 @pytest.mark.parametrize(("fragment_id", "scope_status", "issue"), [
     ("f999", "no_special_condition", "outside the permitted vocabulary"),
-    ("f1", "not_established", "exact, applicable support"),
+    ("f1", "not_established", "supported passage needs"),
 ])
 def test_verification_requires_valid_fragment_and_applicable_scope(
         fragment_id, scope_status, issue):
@@ -452,10 +483,14 @@ def test_verification_requires_valid_fragment_and_applicable_scope(
     }]}
     model = Model([verdict])
 
-    with pytest.raises(SchemaViolation, match=issue):
-        verify_requirements(model, disputes=DISPUTES,
-                            material_by_dispute=MATERIAL, proposed=proposed,
-                            conversation=CONVERSATION)
+    checked = verify_requirements(model, disputes=DISPUTES,
+                                  material_by_dispute=MATERIAL, proposed=proposed,
+                                  conversation=CONVERSATION)
+    assert checked.rows == {"d1": [], "d2": []}
+    assert checked.coverage["d1"]["state"] == "partial"
+    assert checked.coverage["d1"]["unread_items"] == 1
+    feedback = json.loads(model.calls[1][0].user)
+    assert issue in json.dumps(feedback["validation_issues"]).lower()
     assert len(model.calls) == 2
 
 
@@ -487,7 +522,7 @@ def test_verifier_reconstructs_exact_overlapping_fragments_from_saved_passage():
         "sources"][0]["fragments"]
     assert fragments[1]["id"] == "f2"
     assert fragments[1]["text"] in long_passage
-    assert checked["d1"][0]["sources"][0]["verification"] == {
+    assert checked.rows["d1"][0]["sources"][0]["verification"] == {
         "support_excerpt": fragments[1]["text"],
         "scope_excerpt": fragments[1]["text"],
         "scope_status": "asked_to_establish",
@@ -518,28 +553,32 @@ def test_verifier_rejects_fragment_id_from_another_cited_source():
     }]}
     good = {"decisions": [{
         "candidate_id": "r1", "verdict": "supported",
-        "source_checks": [{
-            "source_id": "s1", "verdict": "supported",
-            "scope_status": "no_special_condition",
-            "support_fragment_id": "f1", "scope_fragment_id": "",
-            "reason": "This exact passage supports the full item."}],
+        "source_checks": [
+            {"source_id": "s1", "verdict": "supported",
+             "scope_status": "no_special_condition",
+             "support_fragment_id": "f1", "scope_fragment_id": "",
+             "reason": "This exact passage supports the full item."},
+            {"source_id": "s2", "verdict": "unsupported",
+             "scope_status": "cannot_determine",
+             "support_fragment_id": "", "scope_fragment_id": "",
+             "reason": "This source does not support the item."}],
         "reason": "Source s1 alone supports the item.",
     }]}
-    model = Model([wrong, wrong, good, wrong, wrong])
+    model = Model([wrong, good])
 
     checked = verify_requirements(model, disputes=DISPUTES,
                                   material_by_dispute=MATERIAL,
                                   proposed=proposed,
                                   conversation=CONVERSATION)
 
-    assert checked["d1"][0]["source_ids"] == ["s1"]
-    assert len(model.calls) == 5
+    assert checked.rows["d1"][0]["source_ids"] == ["s1"]
+    assert checked.coverage["d1"]["state"] == "ok"
+    assert len(model.calls) == 2
     assert [len(json.loads(call[0].user)["candidates"][0]["sources"])
-            for call in (model.calls[0], model.calls[2], model.calls[3])
-            ] == [2, 1, 1]
+            for call in model.calls] == [2, 2]
 
 
-def test_missing_one_source_verdict_rechecks_sources_independently():
+def test_missing_one_source_verdict_gets_one_complete_candidate_correction():
     proposed = read_requirements(Model([{"requirements": [
         requirement("d1", ["s1", "s2"], []),
     ]}]), disputes=DISPUTES, material_by_dispute=MATERIAL,
@@ -562,19 +601,130 @@ def test_missing_one_source_verdict_rechecks_sources_independently():
             "reason": "This passage concerns another issue."}],
         "reason": "The passage does not support the item.",
     }]}
-    model = Model([incomplete, incomplete, incomplete, no_support])
+    corrected = {"decisions": [{
+        **incomplete["decisions"][0],
+        "source_checks": [*incomplete["decisions"][0]["source_checks"],
+                          *no_support["decisions"][0]["source_checks"]],
+    }]}
+    model = Model([incomplete, corrected])
 
     checked = verify_requirements(model, disputes=DISPUTES,
                                   material_by_dispute=MATERIAL,
                                   proposed=proposed,
                                   conversation=CONVERSATION)
 
-    assert checked["d1"][0]["source_ids"] == ["s1"]
-    assert len(model.calls) == 4
-    assert "every cited passage" in json.loads(model.calls[1][0].user)[
-        "validation_issue"]
+    assert checked.rows["d1"][0]["source_ids"] == ["s1"]
+    assert checked.coverage["d1"]["state"] == "ok"
+    assert len(model.calls) == 2
+    assert "every cited passage" in json.dumps(json.loads(model.calls[1][0].user)[
+        "validation_issues"])
     assert [len(json.loads(call[0].user)["candidates"][0]["sources"])
-            for call in (model.calls[2], model.calls[3])] == [1, 1]
+            for call in model.calls] == [2, 2]
+
+
+@pytest.mark.parametrize(("verdict", "label_verdict"), [
+    ("unsupported", "faithful"),
+    ("uncertain", "faithful"),
+    ("supported", "unsupported"),
+    ("supported", "uncertain"),
+])
+def test_explicit_withholding_is_a_checked_decision_without_unnecessary_source_checks(
+        verdict, label_verdict):
+    proposed = read_requirements(Model([{"requirements": [
+        requirement("d1", ["s1"], ["m1"]),
+    ]}]), disputes=DISPUTES, material_by_dispute=MATERIAL,
+        search_results=hits(), conversation=CONVERSATION)
+    decision = {
+        "candidate_id": "r1", "verdict": verdict,
+        "label_verdict": label_verdict,
+        "label_reason": "The display heading must preserve the item's support limits.",
+        "source_checks": [], "material_checks": [],
+        "reason": "The complete proposal should be withheld in its current formulation.",
+    }
+    model = Model([{"decisions": [decision]}])
+
+    checked = verify_requirements(
+        model, disputes=DISPUTES, material_by_dispute=MATERIAL,
+        proposed=proposed, conversation=CONVERSATION)
+
+    assert checked.rows == {"d1": [], "d2": []}
+    assert checked.coverage["d1"]["state"] == "ok"
+    assert checked.coverage["d1"]["checked_items"] == 1
+    assert checked.coverage["d1"]["withheld_items"] == 1
+    assert checked.coverage["d1"]["unread_items"] == 0
+    assert len(model.calls) == 1
+
+
+def test_twice_unread_source_coverage_does_not_fan_out_into_item_or_source_calls():
+    proposed = read_requirements(Model([{"requirements": [
+        requirement("d1", ["s1", "s2"], []),
+    ]}]), disputes=DISPUTES, material_by_dispute=MATERIAL,
+        search_results=hits(), conversation=CONVERSATION)
+    model = Model([{"decisions": [supported_verdict("r1", "s1")]}])
+
+    checked = verify_requirements(
+        model, disputes=DISPUTES, material_by_dispute=MATERIAL,
+        proposed=proposed, conversation=CONVERSATION)
+
+    assert checked.rows == {"d1": [], "d2": []}
+    assert checked.coverage["d1"]["state"] == "partial"
+    assert checked.coverage["d1"]["checked_items"] == 0
+    assert checked.coverage["d1"]["unread_items"] == 1
+    assert len(model.calls) == 2
+    for prompt, _, _, _ in model.calls:
+        candidates = json.loads(prompt.user)["candidates"]
+        assert len(candidates) == 1
+        assert [source["id"] for source in candidates[0]["sources"]] == ["s1", "s2"]
+
+
+def test_supported_item_cannot_promote_a_material_link_without_its_check():
+    proposed = read_requirements(Model([{"requirements": [
+        requirement("d1", ["s1"], ["m1"]),
+    ]}]), disputes=DISPUTES, material_by_dispute=MATERIAL,
+        search_results=hits(), conversation=CONVERSATION)
+    model = Model([{"decisions": [supported_verdict("r1", "s1", material_checks=[])]}])
+
+    checked = verify_requirements(
+        model, disputes=DISPUTES, material_by_dispute=MATERIAL,
+        proposed=proposed, conversation=CONVERSATION)
+
+    assert checked.rows == {"d1": [], "d2": []}
+    assert checked.coverage["d1"]["state"] == "partial"
+    assert checked.coverage["d1"]["unread_items"] == 1
+    assert len(model.calls) == 2
+    correction = json.loads(model.calls[1][0].user)
+    assert "every linked material" in json.dumps(correction["validation_issues"])
+    assert correction["candidates"][0]["material_ids"] == ["m1"]
+
+
+@pytest.mark.parametrize("outage_after", [0, 1])
+def test_verifier_outage_stops_dispatch_and_preserves_already_checked_disputes(outage_after):
+    proposed = read_requirements(Model([{"requirements": [
+        requirement("d1", ["s1"], []),
+        requirement("d2", ["s3"], ["m2"], label="Check payment demand"),
+    ]}]), disputes=DISPUTES, material_by_dispute=MATERIAL,
+        search_results=hits(), conversation=CONVERSATION)
+    replies = ([{"decisions": [supported_verdict("r1", "s1")]}]
+               if outage_after else [])
+    model = Model([*replies, ProviderUnavailable("Synthetic provider outage")])
+
+    checked = verify_requirements(
+        model, disputes=DISPUTES, material_by_dispute=MATERIAL,
+        proposed=proposed, conversation=CONVERSATION)
+
+    assert len(model.calls) == outage_after + 1
+    assert checked.outage == "ProviderUnavailable"
+    assert checked.rows["d2"] == []
+    assert checked.coverage["d2"]["state"] == "partial"
+    assert checked.coverage["d2"]["unread_items"] == 1
+    if outage_after:
+        assert checked.rows["d1"][0]["label"] == "Obtain written notice"
+        assert checked.coverage["d1"]["state"] == "ok"
+        assert checked.coverage["d1"]["checked_items"] == 1
+    else:
+        assert checked.rows["d1"] == []
+        assert checked.coverage["d1"]["state"] == "partial"
+        assert checked.coverage["d1"]["unread_items"] == 1
 
 
 def test_full_conversation_must_fit_before_model_call():

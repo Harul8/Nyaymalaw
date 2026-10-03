@@ -7,6 +7,8 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import _proposed_disputes
+from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_reader_fixture import reader_operations
 
 
 class ScriptedBrain:
@@ -15,25 +17,40 @@ class ScriptedBrain:
         self.disputes = {route["items"][0]["request"]: material["disputes"]
                          for route, material in zip(answers[::2], answers[1::2], strict=True)}
         self.calls = []
+        self.current_items = []
 
     def context_budget(self, tier):
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 20000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
         self.calls.append(payload)
-        if prompt.operation == "interpret_conversation":
+        continuation = continuation_reply(prompt.operation, payload,
+                                          scripted_items=self.current_items)
+        if continuation is not None:
+            answer = continuation
+        elif prompt.operation == "interpret_conversation":
             answer = next(self.routes)
+            self.current_items = answer["items"]
         elif prompt.operation == "extract_legal_details":
-            answer = {"details": []}
+            answer = {"new_items": [], "changes": []}
+        elif prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            answer = {"verdicts": [{
+                "candidate_id": row["candidate_id"], "verdict": "accept",
+                "reason": "The scripted proposal is attributable.",
+                **({"candidate_role": "independent_dispute"}
+                   if prompt.operation == "verify_disputes" else {}),
+            } for row in payload["candidates"]]}
         else:
             sources = payload.get("original_input", payload)
             latest = "".join(span["text"] for span in
                              sources["latest_message_spans"])
             rows = [_with_source_ids(row, sources)
                     for row in self.disputes[latest]]
-            answer = {"disputes": rows}
-        return ModelResult(text=None, data=answer, tier=Tier.ROUTINE,
+            answer = reader_operations(rows, sources,
+                                       link_field="related_dispute_ids")
+        return ModelResult(text=None, data=answer, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 
@@ -66,7 +83,8 @@ def route(request, *, relation, scope, opening=False):
                    "clarification": ""}],
         "active_work_after": request,
         "opening": {"ready": opening,
-                    "title": "Supply dispute" if opening else "",
+                    "party_name": "",
+                    "subject": "Supply dispute" if opening else "",
                     "summary": "The client reports disputes concerning the supply relationship."
                     if opening else ""},
         "material_review": True,
@@ -212,7 +230,7 @@ def test_board_exposes_sourced_proposals_separately_from_worked_threads(
     assert all(row["state"] == "proposed" for row in proposals["rows"])
     assert all(row["source_turn_id"] in ("turn-opening", "turn-correction")
                for row in proposals["rows"])
-    assert len(model.calls) == 6
+    assert len(model.calls) == 13
 
     # If the saved words no longer support a proposal, the board reports an
     # incomplete read rather than presenting a shorter list as complete.
@@ -379,7 +397,7 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
     opening = route(first, relation="new", scope="proposed", opening=True)
     opening["items"][0].update(next_step="clarify", reply="",
                                clarification=clarification)
-    opening["opening"].update(title="Invoice dispute",
+    opening["opening"].update(subject="Invoice dispute",
                               summary="The client disputes an invoice for an order.")
     model = ScriptedBrain([
         opening,
@@ -397,7 +415,7 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
     opened = client.post("/api/turn", json={"message": first,
                                             "turn_id": "turn-uncertain"})
     assert opened.status_code == 200, opened.text
-    assert opened.json()["metrics"]["llm_calls"] == 3
+    assert opened.json()["metrics"]["llm_calls"] == 7
     assert clarification in opened.json()["elements"][0]["text"]
     matter_id = opened.json()["matter_id"]
     initial_board = client.get(f"/api/matters/{matter_id}").json()
@@ -409,7 +427,7 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
                                                "matter_id": matter_id,
                                                "chat_id": opened.json()["chat_id"]})
     assert continued.status_code == 200, continued.text
-    assert continued.json()["metrics"]["llm_calls"] == 3
+    assert continued.json()["metrics"]["llm_calls"] == 6
     routing = [payload for payload in model.calls if "latest_message" in payload]
     assert len(routing) == 2
     assert routing[1]["open_disputes"] == [{

@@ -50,7 +50,7 @@ def test_chat_opens_first_and_board_waits_for_a_successful_read(page, journey):
 
     assert page.get_attribute("#pane-advise", "data-view") == "opening"
     assert page.is_hidden("#intake")
-    assert page.locator("#rail-body .dispute-proposal-item").count() == 0
+    assert page.locator("#matter-board-body .dispute-proposal-item").count() == 0
     assert page.is_visible("#composer")
     assert page.locator("#thread .turn").count() == 0
     assert not page.get_attribute("#pane-advise", "data-matter-id")
@@ -76,7 +76,7 @@ def test_chat_opens_first_and_board_waits_for_a_successful_read(page, journey):
 
     matter_id = page.get_attribute("#pane-advise", "data-matter-id")
     assert matter_id
-    assert page.locator("#rail-body .dispute-proposal-item").count() == 0
+    assert page.locator("#matter-board-body .dispute-proposal-item").count() == 0
     assert page.get_attribute("#pane-advise", "data-view") == "opening"
     assert page.get_by_text(message, exact=True).count() == 1
 
@@ -117,7 +117,7 @@ def test_pending_chat_reopens_from_my_work_with_its_history(page, journey):
     page.locator("#thread .brief").get_by_text(greeting, exact=True).wait_for()
     assert page.get_attribute("#pane-advise", "data-view") == "opening"
     assert not page.get_attribute("#pane-advise", "data-matter-id")
-    assert page.locator("#rail-body .dispute-proposal-item").count() == 0
+    assert page.locator("#matter-board-body .dispute-proposal-item").count() == 0
     assert page.is_visible("#composer")
 
     page.fill("#message", OPENING_MESSAGE)

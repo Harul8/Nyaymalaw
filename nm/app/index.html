@@ -340,8 +340,6 @@
          shipped, and the four steps are a sequence an advocate walks. -->
     <button class="tab" data-tab="prepare">Preparation</button>
   </nav>
-  <!-- The one existing matter board moves here at desktop widths. On a
-       phone it remains in My work's reachable drawer. No duplicate state. -->
   <div id="sidebar-board" class="sidebar-board"></div>
 </header>
 
@@ -363,23 +361,15 @@
 </main>
 
 <main id="pane-advise" hidden>
-  <!-- BK-32. THE WAY TO THE MATTER LIST BELOW 820px. The rail is a drawer at
-       narrow widths and `#back` returns to the list only from inside a matter,
-       so an advocate on a phone could work the matter they were in and reach
-       no other one. In My work, above the drawer and the conversation both,
-       so it is on screen whichever of the two is showing. -->
-  <button id="matters-toggle" type="button" class="ghost matters-toggle" aria-expanded="false"
-          aria-controls="rail">Matter board</button>
-  <!-- ================= MY WORK'S LIST / THE MATTER BOARD =================
-       One pane, two surfaces, deliberately distinct. In My work it is the list
-       of matters, bounded by MATTER count. In an open matter it is the MATTER
-       BOARD (F-B-02): this matter's details only. Issue-level records remain
-       in the Case file; repeating them here confused identity with role.
-       There is no way to start a matter here; that is Home's. -->
+  <div class="workspace-navigation">
+    <button id="matters-toggle" type="button" class="ghost" aria-expanded="false"
+            aria-controls="rail">Matters</button>
+    <button id="board-toggle" type="button" class="ghost" aria-expanded="false"
+            aria-controls="matter-board">Matter board</button>
+  </div>
   <aside class="rail" id="rail">
     <div class="rail-head">
       <h2 id="rail-title">Matters</h2>
-      <button id="back" class="ghost" hidden>&larr; My matters</button>
     </div>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
@@ -536,6 +526,14 @@
       <p id="dictation-state" class="dictation-state" role="status" aria-live="polite"></p>
     </form>
   </section>
+  <aside class="matter-board" id="matter-board" aria-labelledby="matter-board-title">
+    <div class="rail-head">
+      <h2 id="matter-board-title">Matter board</h2>
+      <button id="back" class="ghost" hidden>&larr; My matters</button>
+    </div>
+    <div class="rail-meta" id="matter-board-meta"></div>
+    <div id="matter-board-body"></div>
+  </aside>
 </main>
 
 <dialog id="dispute-reader" aria-labelledby="dispute-reader-title">
@@ -543,7 +541,17 @@
     <h2 id="dispute-reader-title"></h2>
     <button type="button" id="dispute-reader-close" class="ghost">Close</button>
   </header>
-  <div id="dispute-reader-body" class="dispute-reader-body"></div>
+  <div id="dispute-reader-body" class="dispute-reader-body" tabindex="0" aria-label="Dispute details"></div>
+</dialog>
+
+<dialog id="brain-source-reader" aria-labelledby="brain-source-title">
+  <header class="dispute-reader-head">
+    <h2 id="brain-source-title"></h2>
+    <button type="button" id="brain-source-close" class="ghost">Close</button>
+  </header>
+  <p id="brain-source-status" role="status" aria-live="polite"></p>
+  <div id="brain-source-body" class="dispute-reader-body" tabindex="0"
+       aria-label="Saved source passage"></div>
 </dialog>
 
 <dialog id="source-reader" aria-labelledby="source-title" aria-describedby="source-coverage">
@@ -1009,6 +1017,7 @@
 <script src="/static/advocate-preferences.js"></script>
 <script src="/static/draft-vault.js"></script>
 <script src="/static/source-reader.js"></script>
+<script src="/static/brain-sources.js"></script>
 <script src="/static/loop-progress.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/matter-workspace.js"></script>

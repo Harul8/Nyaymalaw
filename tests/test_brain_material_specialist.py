@@ -14,6 +14,7 @@ from nm.shared.model_port import (
     Usage,
     on_the_wire,
 )
+from tests.brain_reader_fixture import reader_operations
 
 
 class Model:
@@ -33,7 +34,9 @@ class Model:
         self.calls.append((prompt, schema, tier, max_tokens))
         data = self.repair if len(self.calls) > 1 and self.repair is not None \
             else self.data
-        return ModelResult(text=None, data=data, tier=tier,
+        result = reader_operations(data["details"], json.loads(prompt.user),
+                                   link_field="related_material_ids", infer_targets=False)
+        return ModelResult(text=None, data=result, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
                            completion=self.completion)
@@ -72,10 +75,15 @@ def test_complete_attributed_conversation_and_sourced_change_use_one_call():
     latest = "Correction: the deposit was three units, not four."
     row = candidate(source_id="L1", relation="corrects",
                     prior_source_ids=["P1S1"])
+    row["related_material_ids"] = ["t1:material:1"]
     model = Model({"details": [row]})
 
     material = extract_details(model, earlier=earlier, latest=latest,
-                               current_matter_id="matter-1")
+                               current_matter_id="matter-1", prior_material=({
+                                   "id": "t1:material:1", "kind": "circumstance",
+                                   "statement": earlier[0].text, "source_turn_id": "t1",
+                                   "quoted": earlier[0].text,
+                                   "placement": "unresolved", "dispute_ids": []},))
 
     assert len(model.calls) == 1
     prompt, schema, tier, ceiling = model.calls[0]
@@ -84,7 +92,7 @@ def test_complete_attributed_conversation_and_sourced_change_use_one_call():
     assert prompt.operation == "extract_legal_details"
     assert all(label in prompt.system for label in
                ("Message:", "Purpose:", "Look for:", "Outcome:"))
-    assert "even when the dispute" in prompt.system
+    assert "independently material details" in prompt.system
     payload = json.loads(prompt.user)
     assert payload["current_matter_id"] == "matter-1"
     assert [(entry["turn_id"], entry["role"],
@@ -92,8 +100,8 @@ def test_complete_attributed_conversation_and_sourced_change_use_one_call():
             for entry in payload["earlier_conversation"]] == [
                 (msg.turn_id, msg.role, msg.text) for msg in earlier]
     assert _source_text(payload["latest_message_spans"]) == latest
-    assert set(schema["properties"]) == {"details"}
-    item = schema["properties"]["details"]["items"]
+    assert set(schema["properties"]) == {"new_items", "changes"}
+    item = schema["properties"]["changes"]["items"]
     assert "dispute" not in item["properties"]["kind"]["enum"]
     assert item["properties"]["source_id"]["enum"] == ["L1"]
     assert item["properties"]["prior_source_ids"]["items"]["enum"] == [
@@ -118,7 +126,9 @@ def test_invalid_source_selection_gets_one_feedback_guided_correction():
     repair_prompt = model.calls[1][0]
     feedback = json.loads(repair_prompt.user)
     assert feedback["original_input"] == json.loads(model.calls[0][0].user)
-    assert feedback["rejected_output"] == {"details": [rejected]}
+    assert feedback["rejected_output"] == reader_operations(
+        [rejected], feedback["original_input"], link_field="related_material_ids",
+        infer_targets=False)
     assert feedback["validation_issue"]
     assert "source" in feedback["how_to_correct"].lower()
     assert "input" in feedback["how_to_correct"].lower()
@@ -126,7 +136,7 @@ def test_invalid_source_selection_gets_one_feedback_guided_correction():
     assert model.calls[0][1] == model.calls[1][1]
 
 
-def test_changed_detail_requires_its_own_saved_source_id():
+def test_changed_detail_adds_its_saved_source_without_replacing_selected_context():
     earlier = (Message("first", "advocate",
                        "The delivery was late. It arrived on Monday."),)
     prior_material = ({"id": "arrival", "kind": "event",
@@ -143,11 +153,12 @@ def test_changed_detail_requires_its_own_saved_source_id():
         model, earlier=earlier, latest="Correction: it arrived on Tuesday.",
         current_matter_id="matter-1", prior_material=prior_material)
 
-    assert len(model.calls) == 2
+    assert len(model.calls) == 1
     assert json.loads(model.calls[0][0].user)["active_material"][0][
         "source_ids"] == ["P1S2"]
-    assert "P1S2" in json.loads(model.calls[1][0].user)["validation_issue"]
     assert rows[0].related_material_ids == ("arrival",)
+    assert {ref.quoted for ref in rows[0].prior_references} == {
+        "The delivery was late.", "It arrived on Monday."}
 
 
 def test_selected_prior_detail_resolves_an_empty_source_list():
@@ -189,12 +200,11 @@ def test_withdrawal_needs_an_exact_active_detail_link_and_gets_one_correction():
     assert result[0].relation == "withdraws"
     assert result[0].related_material_ids == ("receipt",)
     feedback = json.loads(model.calls[1][0].user)
-    assert "withdrawal" in feedback["validation_issue"].lower()
-    assert "active" in feedback["validation_issue"].lower()
-    assert "no safe link" in model.calls[0][0].system
+    assert "related_material_ids" in feedback["validation_issue"]
+    assert "changes" in feedback["validation_issue"]
 
     persistent = Model({"details": [unlinked]})
-    with pytest.raises(SchemaViolation, match="withdrawal"):
+    with pytest.raises(SchemaViolation, match="related_material_ids"):
         extract_details(
             persistent, earlier=earlier,
             latest="I withdraw what I said about a receipt.",
@@ -258,17 +268,18 @@ def test_first_turn_schema_cannot_name_nonexistent_prior_words():
     result = extract_details(model, earlier=(), latest=latest,
                              current_matter_id=None)
 
-    detail_schema = model.calls[0][1]["properties"]["details"]["items"]
+    detail_schema = model.calls[0][1]["properties"]["new_items"]["items"]
     assert "prior_source_ids" not in detail_schema["properties"]
     assert "prior_source_ids" not in detail_schema["required"]
-    assert detail_schema["properties"]["relation"]["enum"] == ["new"]
+    assert "relation" not in detail_schema["properties"]
+    assert "related_material_ids" not in detail_schema["properties"]
     wire = on_the_wire(model.calls[0][1])
-    fields = wire["properties"]["details"]["items"]["properties"]
+    fields = wire["properties"]["new_items"]["items"]["properties"]
     assert fields["dispute_ids"]["maxItems"] == 0
-    assert fields["related_material_ids"]["maxItems"] == 0
-    assert set(wire["properties"]["details"]["items"]["required"]) == set(
-        wire["properties"]["details"]["items"]["properties"])
-    assert "current" not in wire["properties"]["details"]["items"][
+    assert wire["properties"]["changes"]["maxItems"] == 0
+    assert set(wire["properties"]["new_items"]["items"]["required"]) == set(
+        wire["properties"]["new_items"]["items"]["properties"])
+    assert "current" not in wire["properties"]["new_items"]["items"][
         "properties"]["matter_scope"]["enum"]
     assert result[0].relation == "new"
     assert result[0].prior_references == ()
@@ -313,7 +324,7 @@ def test_no_current_matter_excludes_current_scope_even_with_prior_conversation()
                              current_matter_id=None)
 
     wire = on_the_wire(model.calls[0][1])
-    item = wire["properties"]["details"]["items"]
+    item = wire["properties"]["new_items"]["items"]
     assert "prior_source_ids" in item["properties"]
     assert "current" not in item["properties"]["matter_scope"]["enum"]
     assert result[0].matter_scope == "proposed"

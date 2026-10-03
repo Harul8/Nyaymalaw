@@ -16,7 +16,7 @@ class Model:
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.ROUTINE
+        assert tier is Tier.JUDGE
         return 100_000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):

@@ -17,6 +17,8 @@ from nm.shared.model_port import (
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import matter_list_projection
+from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_reader_fixture import reader_operations
 
 
 class Model:
@@ -26,8 +28,10 @@ class Model:
         self.replies = iter(replies)
         self.calls = []
         self.all_calls = []
+        self.current_items = []
 
     def context_budget(self, tier):
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 20000
 
     def resolved_model(self, tier):
@@ -35,10 +39,14 @@ class Model:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.all_calls.append(prompt.operation)
-        if prompt.operation == "extract_disputes":
-            data = {"disputes": []}
+        continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
+                                          scripted_items=self.current_items)
+        if continuation is not None:
+            data = continuation
+        elif prompt.operation == "extract_disputes":
+            data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
-            data = {"details": []}
+            data = {"new_items": [], "changes": []}
         elif prompt.operation == "verify_material_grounding":
             payload = json.loads(prompt.user)
             data = {"verdicts": [
@@ -48,7 +56,9 @@ class Model:
         else:
             data = next(self.replies)
             self.calls.append(json.loads(prompt.user))
-        return ModelResult(text=None, data=data, tier=Tier.ROUTINE,
+            if prompt.operation == "interpret_conversation":
+                self.current_items = data["items"]
+        return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 
@@ -101,8 +111,9 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     assert len(model.calls) == 2
     assert model.all_calls[:2] == ["interpret_conversation", "interpret_conversation"]
     assert set(model.all_calls[2:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding"}
-    assert opened["metrics"]["llm_calls"] == 4
+        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"}
+    assert opened["metrics"]["llm_calls"] == 6
     assert [row["text"] for row in model.calls[1]["earlier_conversation"]] == [
         "Hello", "Hello."]
     matter = store.load(opened["matter_id"])
@@ -112,10 +123,11 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     assert opened["elements"][0]["text"] == (
         "I understand the supply agreement is in dispute. I will "
         "check the agreement and the relevant terms before giving a legal view.")
-    assert opened["blocked"] is True
+    assert opened["blocked"] is False
+    assert opened["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
 
 
-def test_first_substantive_message_uses_four_calls_and_exact_replay_uses_none(tmp_path):
+def test_first_substantive_message_uses_six_calls_and_exact_replay_uses_none(tmp_path):
     text = "Our client disputes the invoice issued on 3 March."
     brain, store, model = service(tmp_path, [
         plan(text, scope="proposed", step="legal_work",
@@ -131,8 +143,9 @@ def test_first_substantive_message_uses_four_calls_and_exact_replay_uses_none(tm
     assert len(model.calls) == 1
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding"}
-    assert first["metrics"]["llm_calls"] == 4
+        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"}
+    assert first["metrics"]["llm_calls"] == 6
     assert first["elements"][0]["text"] == (
         "I will check the invoice and the underlying agreement "
         "before giving a legal view.")
@@ -156,7 +169,7 @@ def test_multi_party_opening_repairs_only_heading_then_checks_it(tmp_path):
 
     assert store.load(result["matter_id"]).title == "Mira Patel: Return of records"
     assert result["material_coverage"]["opening_fallback"] is False
-    assert result["metrics"]["llm_calls"] == 6
+    assert result["metrics"]["llm_calls"] == 8
     assert model.all_calls.count("verify_material_grounding") == 2
     assert model.all_calls.count("repair_opening") == 1
     repair = model.calls[1]
@@ -213,7 +226,10 @@ def test_turn_metrics_separate_logical_calls_from_provider_retries(tmp_path):
 
     model.structured = with_provider_retries
     response = brain.run(BrainTurn("adv", "Hello", "retry-metrics")).as_dict()
-    assert response["metrics"] == {"llm_calls": 1, "provider_retries": 2}
+    assert response["metrics"]["llm_calls"] == 1
+    assert response["metrics"]["provider_retries"] == 2
+    assert [row["operation"] for row in response["metrics"]["model_calls"]] == [
+        "interpret_conversation"]
 
 
 def test_context_overflow_has_a_nonretryable_plain_recovery_path(tmp_path):
@@ -272,14 +288,16 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
 
     response = brain.run(BrainTurn("adv", latest, "unchecked-answer")).as_dict()
 
-    assert response["blocked"] is True
-    assert "guarantees damages" not in response["elements"][0]["text"]
-    assert response["elements"][0]["text"] == (
-        "I will check the delivery terms and record before assessing remedies.")
-    assert response["metrics"]["llm_calls"] == 4
+    visible = "\n\n".join(row["text"] for row in response["elements"])
+    assert "guarantees damages" not in visible
+    assert "I will check the delivery terms and record before assessing remedies." in visible
+    assert all(unit["sufficiency"]["status"] == "not_completed"
+               for unit in response["continuation"]["units"])
+    assert response["metrics"]["llm_calls"] == 6
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding"}
+        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"}
 
 
 def test_chat_identity_and_changed_retry_cannot_cross_records(tmp_path):
@@ -371,15 +389,15 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
     reply = brain.run(BrainTurn("adv", mixed, "deposit-mixed",
                                 matter_id=opened["matter_id"],
                                 chat_id=opened["chat_id"])).as_dict()
-    assert reply["elements"][0]["text"] == f"{legal_reply}\n\nParis."
-    assert reply["blocked"] is True
-    assert reply["metrics"]["llm_calls"] == 1
+    assert [row["text"] for row in reply["elements"]] == [legal_reply, "Paris."]
+    assert reply["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
+    assert reply["metrics"]["llm_calls"] == 3
 
     brain.run(BrainTurn("adv", "Please continue with the deposit review.",
                         "deposit-continue", matter_id=opened["matter_id"],
                         chat_id=opened["chat_id"]))
     assert [row["text"] for row in model.calls[2]["earlier_conversation"]][-2:] == [
-        mixed, f"{legal_reply}\n\nParis."]
+        mixed, "\n".join(row["text"] for row in reply["elements"])]
     assert model.calls[2]["current_work"] == "assess deposit recovery"
 
 
@@ -419,9 +437,10 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
 
     assert served.status_code == 200, served.text
     response = served.json()
-    assert response["elements"][0]["text"] == f"{urgent_reply}\n\n{ordinary_reply}"
-    assert response["blocked"] is True
-    assert response["metrics"]["llm_calls"] == 3
+    assert [row["text"] for row in response["elements"]] == [urgent_reply, ordinary_reply]
+    assert all(unit["sufficiency"]["status"] == "not_completed"
+               for unit in response["continuation"]["units"])
+    assert response["metrics"]["llm_calls"] == 5
 
 
 def test_served_factual_correction_keeps_its_direct_reply_and_source(
@@ -443,13 +462,21 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
             payload = json.loads(prompt.user)
             if not any("Correction:" in span["text"]
                        for span in payload["latest_message_spans"]):
-                return result
+                source_id = next(span["id"] for span in payload["latest_message_spans"]
+                                 if "hearing is on Tuesday" in span["text"])
+                return replace(result, data={"new_items": [{
+                    "kind": "event", "statement": "The advocate reports a Tuesday hearing.",
+                    "matter_scope": "proposed", "basis": "stated",
+                    "importance": "central",
+                    "why_material": "The hearing date affects the next step.",
+                    "placement": "unresolved", "dispute_ids": [], "source_id": source_id,
+                }], "changes": []})
             earlier_id = next(
                 span["id"] for message in payload["earlier_conversation"]
                 if message["role"] == "advocate"
                 for span in message["source_spans"]
                 if "hearing is on Tuesday" in span["text"])
-            return replace(result, data={"details": [{
+            return replace(result, data=reader_operations([{
                 "kind": "event", "statement": "The advocate corrects the hearing date to Thursday.",
                 "relation": "corrects", "matter_scope": "current",
                 "basis": "stated", "importance": "central",
@@ -458,7 +485,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
                 "related_material_ids": [],
                 "source_id": payload["latest_message_spans"][0]["id"],
                 "prior_source_ids": [earlier_id],
-            }]})
+            }], payload, link_field="related_material_ids"))
 
     model = SourcedModel([
         plan(account, scope="proposed", step="legal_work",
@@ -480,7 +507,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     assert response["material"][0]["quoted"] == correction
     assert response["material"][0]["prior_references"][0]["quoted"] == (
         "the hearing is on Tuesday.")
-    assert response["metrics"]["llm_calls"] == 4
+    assert response["metrics"]["llm_calls"] == 6
 
 
 def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired, monkeypatch):
@@ -535,7 +562,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                                         max_tokens=max_tokens)
             if prompt.operation == "extract_legal_details":
                 spans = json.loads(prompt.user)["latest_message_spans"]
-                return replace(result, data={"details": [
+                return replace(result, data=reader_operations([
                     {"kind": "event", "statement": "We sent a notice.",
                      "relation": "new", "matter_scope": "proposed",
                      "basis": "stated", "importance": "relevant",
@@ -548,7 +575,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                      "why_material": "The admission would matter to the request.",
                      "placement": "unresolved", "dispute_ids": [],
                      "related_material_ids": [], "source_id": spans[1]["id"]},
-                ]})
+                ], json.loads(prompt.user), link_field="related_material_ids"))
             if prompt.operation == "verify_material_grounding":
                 return replace(result, data={"verdicts": [
                     {"candidate_id": "D1", "verdict": "accept",
@@ -565,7 +592,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     response = BrainService(store, model).run(
         BrainTurn("adv", latest, "grounding-turn")).as_dict()
 
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 8
     assert [row["statement"] for row in response["material"]] == [
         "We sent a notice."]
     assert response["material_coverage"] == {
@@ -573,7 +600,8 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     saved = store.load(response["matter_id"])
     assert saved.title == "Matter"
     assert "admitted" not in saved.brain_opening_summary
-    assert "could not be confirmed" in response["elements"][0]["text"]
+    assert "could not be confirmed" in "\n".join(
+        row["text"] for row in response["elements"])
 
 
 def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
@@ -599,6 +627,7 @@ def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
         BrainTurn("adv", "Please check the law for that order.", "mixed-turn",
                   matter_id=matter.id)).as_dict()
 
-    assert "Which order do you mean?" in response["elements"][0]["text"]
-    assert "I will check the law." not in response["elements"][0]["text"]
-    assert response["metrics"]["llm_calls"] == 1
+    assert "Which order do you mean?" in "\n".join(
+        row["text"] for row in response["elements"])
+    assert any(unit["questions"] for unit in response["continuation"]["units"])
+    assert response["metrics"]["llm_calls"] == 3

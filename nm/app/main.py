@@ -48,19 +48,11 @@ def main(argv: list[str] | None = None) -> int:
     create_app(application)
     import uvicorn
 
-    # LB-106. THE BARE-ACT AND JUDGMENT SEARCHES LOAD WHILE THE SERVER STARTS, so the
-    # first message does not wait for their indexes and models. Not in `--check`: a
-    # self-check loads nothing. One after the other, on one thread: they share the models.
-    searches = [s for s in (getattr(application, "sections", None),
-                            getattr(application, "judgments", None)) if s is not None]
-    if searches:
+    warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
+    if callable(warm_search):
         import threading
 
-        def warm() -> None:
-            for search in searches:
-                search.warm()
-
-        threading.Thread(target=warm, name="search-warm", daemon=True).start()
+        threading.Thread(target=warm_search, name="search-warm", daemon=True).start()
     print(json.dumps(health, indent=2))
     uvicorn.run(api.app, host=args.host, port=args.port, log_level="warning")
     return 0

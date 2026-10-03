@@ -7,13 +7,23 @@ import vm from 'node:vm';
 const here = dirname(fileURLToPath(import.meta.url));
 const app = readFileSync(join(here, '..', '..', 'nm', 'app', 'app.js'), 'utf8');
 const html = readFileSync(join(here, '..', '..', 'nm', 'app', 'index.html'), 'utf8');
-assert.ok(!html.includes('id="matter-board"'));
+const css = readFileSync(join(here, '..', '..', 'nm', 'app', 'app.css'), 'utf8');
+assert.equal((html.match(/id="matter-board"/g) || []).length, 1);
+assert.equal((html.match(/id="matter-board-body"/g) || []).length, 1);
+const readerMarkup = html.match(/<dialog id="dispute-reader"[\s\S]*?<\/dialog>/)?.[0];
+assert.ok(readerMarkup);
+assert.match(readerMarkup, /<header[^>]*>[\s\S]*?id="dispute-reader-title"[\s\S]*?id="dispute-reader-close"[\s\S]*?<\/header>\s*<div id="dispute-reader-body"/);
+const readerStyle = css.match(/#dispute-reader(?:\s*,\s*#[\w-]+)*\s*\{([^}]+)\}/)?.[1];
+const readerBodyStyle = css.match(/\.dispute-reader-body\s*\{([^}]+)\}/)?.[1];
+assert.match(readerStyle, /overflow:\s*hidden/);
+assert.match(readerBodyStyle, /overflow-y:\s*auto/);
 assert.ok(!app.includes('function renderMatterBoard('));
 const start = app.indexOf('function requirementsFor(');
 const end = app.indexOf('// F-B-17.', start);
 assert.ok(start >= 0 && end > start);
 const boardLoad = app.slice(app.indexOf('async function showThreadBoard('), start);
 assert.ok(boardLoad.includes('await api(`/api/matters/${matterId}`)'));
+assert.ok(boardLoad.includes("const body = $('matter-board-body')"));
 assert.ok(!boardLoad.includes("api('/api/matters')"));
 assert.ok(boardLoad.includes("if (deferBoard) showMatterStatus('building'"));
 assert.ok(boardLoad.includes("setWorkView('matter');"));
@@ -212,9 +222,8 @@ workedButton.fire('pointerdown', { pointerType: 'mouse' });
 workedButton.fire('click', { detail: 1 });
 assert.equal(state.disputeFocus, null);
 assert.equal(workedButton['aria-pressed'], 'false');
-workedButton.fire('click', { detail: 2 });
-workedButton.fire('dblclick');
 assert.equal(dialog.open, true);
+assert.ok(!workedButton.listeners.has('dblclick'));
 assert.equal(state.disputeFocus, null);
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes('Current work'));
 assert.ok(document.getElementById('dispute-reader-body').textContent
@@ -233,8 +242,6 @@ assert.equal(dialog.open, false);
 assert.equal(document.activeElement, workedButton);
 
 identified.fire('click', { detail: 1 });
-assert.equal(dialog.open, false);
-identified.fire('dblclick');
 assert.equal(dialog.open, true);
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes(rows[0].quoted));
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes(rows[0].why_material));
@@ -277,8 +284,10 @@ document.getElementById('dispute-reader-close').fire('click');
 assert.equal(dialog.open, false);
 assert.equal(document.activeElement, identified);
 
+document.getElementById('dispute-reader-body').scrollTop = 75;
 uncertain.fire('click', { detail: 0 });
 assert.equal(dialog.open, true);
+assert.equal(document.getElementById('dispute-reader-body').scrollTop, 0);
 assert.ok(document.getElementById('dispute-reader-body').textContent.includes(rows[1].clarification));
 assert.ok(document.getElementById('dispute-reader-body').textContent
   .includes('Legal requirements could not be read for this dispute right now.'));
@@ -314,7 +323,7 @@ context.renderDisputeBoard(body, { disputes: [] }, { state: 'ok', rows: [rows[0]
 assert.ok(body.textContent.includes('Refund obligation'));
 assert.ok(body.textContent.includes('Legal research incomplete; see details.'));
 assert.ok(!body.textContent.includes('judgment search unavailable'));
-body.children.find(child => child.tagName === 'UL').children[0].children[0].fire('dblclick');
+body.children.find(child => child.tagName === 'UL').children[0].children[0].fire('click', { detail: 1 });
 assert.ok(document.getElementById('dispute-reader-body').textContent
   .includes('Legal research is incomplete.'));
 assert.ok(document.getElementById('dispute-reader-body').textContent
@@ -326,7 +335,7 @@ context.closeDisputeReader(false);
 context.renderDisputeBoard(body, { disputes: [] }, { state: 'ok', rows: [rows[0]] },
   materialRecord, { state: 'unavailable', by_dispute: {}, diagnostics: ['retrieval failed'] });
 assert.ok(!body.textContent.includes('No legal requirements'));
-body.children.find(child => child.tagName === 'UL').children[0].children[0].fire('dblclick');
+body.children.find(child => child.tagName === 'UL').children[0].children[0].fire('click', { detail: 1 });
 assert.ok(document.getElementById('dispute-reader-body').textContent
   .includes('Legal requirements could not be read for this dispute right now.'));
 assert.ok(document.getElementById('dispute-reader-body').textContent

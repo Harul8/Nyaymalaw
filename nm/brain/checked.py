@@ -10,11 +10,17 @@ from nm.shared.model_port import (
     Prompt,
     SchemaViolation,
     Tier,
+    TierUnavailable,
     estimate_tokens,
     require_schema,
 )
 
 _T = TypeVar("_T")
+
+
+def require_independent_result(result) -> None:
+    if result.was_downgraded:
+        raise TierUnavailable("The configured independent review was unavailable")
 
 
 def checked_read(model: ModelPort, prompt: Prompt, schema: dict,

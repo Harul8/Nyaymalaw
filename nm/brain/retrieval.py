@@ -102,6 +102,9 @@ class LocalCollection:
         self._loaded: tuple[object, object, Path, int] | None = None
         self._lock = threading.Lock()
 
+    def warm(self) -> None:
+        self._open()
+
     def _open(self) -> tuple[object, object, Path, int]:
         if self._loaded is not None:
             return self._loaded
@@ -292,6 +295,15 @@ class HybridSearcher:
                  source_paths: Mapping[str, str] | None = None) -> None:
         self.collections = collections
         self.source_paths = source_paths or {}
+
+    def warm(self) -> None:
+        for kind, collection in self.collections.items():
+            warm = getattr(collection, "warm", None)
+            if callable(warm):
+                try:
+                    warm()
+                except SearchUnavailable:
+                    log.warning("The %s collection could not be warmed", kind)
 
     @classmethod
     def local(cls, *, root: Path | None = None,

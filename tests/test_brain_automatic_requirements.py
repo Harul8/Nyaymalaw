@@ -17,6 +17,8 @@ from nm.shared.model_port import (
     Usage,
 )
 from nm.shared.store_file_store import FileMatterStore
+from tests.brain_continuation_fixture import continuation_reply
+from tests.brain_reader_fixture import reader_operations
 
 FIRST = ("The supplier retained our tools. "
          "The customer withheld payment for the tools.")
@@ -52,8 +54,10 @@ class Model:
     def __init__(self, routes: list[dict]):
         self.routes = iter(routes)
         self.calls: list[tuple[str, dict]] = []
+        self.current_items = []
 
     def context_budget(self, tier):
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 100_000
 
     def resolved_model(self, tier):
@@ -62,10 +66,16 @@ class Model:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
         self.calls.append((prompt.operation, payload))
-        if prompt.operation == "interpret_conversation":
+        continuation = continuation_reply(prompt.operation, payload,
+                                          scripted_items=self.current_items)
+        if continuation is not None:
+            data = continuation
+        elif prompt.operation == "interpret_conversation":
             data = next(self.routes)
+            self.current_items = data["items"]
         elif prompt.operation == "extract_disputes":
-            data = {"disputes": self._disputes(payload)}
+            data = reader_operations(self._disputes(payload), payload,
+                                     link_field="related_dispute_ids")
         elif prompt.operation == "verify_disputes":
             data = {"verdicts": [{
                 "candidate_id": row["candidate_id"],
@@ -74,7 +84,8 @@ class Model:
                 "reason": "The reported conduct identifies a distinct dispute.",
             } for row in payload["candidates"]]}
         elif prompt.operation == "extract_legal_details":
-            data = {"details": self._details(payload)}
+            data = reader_operations(self._details(payload), payload,
+                                     link_field="related_material_ids")
         elif prompt.operation == "verify_material_grounding":
             data = {"verdicts": [{
                 "candidate_id": row["candidate_id"],
@@ -115,7 +126,7 @@ class Model:
         else:
             raise AssertionError(f"unexpected model call: {prompt.operation}")
         return ModelResult(
-            text=None, data=data, tier=Tier.ROUTINE, provider="offline",
+            text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
             completion=Completion.COMPLETE,
         )
@@ -218,12 +229,13 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     brain, store = _service(tmp_path, model, search)
 
     first = _send(brain, FIRST, "first")
-    assert first["metrics"]["llm_calls"] == 9
+    assert first["metrics"]["llm_calls"] == 11
     assert [operation for operation, _ in model.calls] == [
         "interpret_conversation", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "decompose_disputes", "read_legal_requirements",
-        "verify_legal_requirements", "verify_legal_requirements"]
+        "verify_legal_requirements", "verify_legal_requirements",
+        "continue_conversation", "verify_continuation"]
     assert len(search.calls) == 2
     assert all(len(queries) == 3 for _, queries in search.calls)
     first_read = first["requirements_read"]
@@ -244,7 +256,7 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     assert len(plans["disputes"]) == 2
 
     second = _send(brain, DETAIL, "second", first)
-    assert second["metrics"]["llm_calls"] == 7
+    assert second["metrics"]["llm_calls"] == 9
     assert len(search.calls) == 3
     assert search.calls[-1][0]["label"] == "Supplier retained tools"
     assert len(second["requirements_read"]) == 1
@@ -288,8 +300,9 @@ def test_unavailable_corpus_never_yields_a_requirement(tmp_path):
     brain, store = _service(tmp_path, model, search)
 
     opened = _send(brain, FIRST, "first")
-    assert opened["metrics"]["llm_calls"] == 6
-    assert [operation for operation, _ in model.calls][-1] == "decompose_disputes"
+    assert opened["metrics"]["llm_calls"] == 8
+    assert [operation for operation, _ in model.calls][-3:] == [
+        "decompose_disputes", "continue_conversation", "verify_continuation"]
     assert len(search.calls) == 2
     assert len(opened["requirements_read"]) == 2
     assert all(row["state"] == "unavailable" and row["rows"] == []
@@ -342,7 +355,7 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
     assert [row["label"] for row in rows] == ["Customer withheld payment"]
     assert len(opened["requirements_read"]) == 1
     assert opened["requirements_read"][0]["state"] == "ok"
-    assert opened["metrics"]["llm_calls"] == 8
+    assert opened["metrics"]["llm_calls"] == 10
 
 
 def test_dispute_verifier_outage_refuses_before_turn_is_saved(tmp_path):
@@ -377,11 +390,14 @@ def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     brain, store = _service(tmp_path, model, Search())
 
     opened = _send(brain, FIRST, "first")
-    assert opened["metrics"]["llm_calls"] == 9
+    assert opened["metrics"]["llm_calls"] == 12
     reads = opened["requirements_read"]
     failed, checked = reads
-    assert failed["state"] == "unavailable" and failed["rows"] == []
-    assert "OutputTruncated" in failed["diagnostics"][0]
+    assert failed["state"] == "partial" and failed["rows"] == []
+    assert failed["diagnostics"]
+    assert sum(row["operation"] == "verify_legal_requirements"
+               and row["state"] == "OutputTruncated"
+               for row in opened["metrics"]["model_calls"]) == 2
     assert checked["state"] == "ok" and len(checked["rows"]) == 1
     assert checked["rows"][0]["sources"][0]["text"] == \
         "The disputed obligation must be established."
@@ -398,7 +414,7 @@ def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     disputes = proposed_disputes(saved)
     material = material_record(saved, disputes=disputes)
     projected = requirements_record(saved, disputes=disputes, material=material)
-    assert projected["status_by_dispute"][failed["dispute_id"]] == "unavailable"
+    assert projected["status_by_dispute"][failed["dispute_id"]] == "partial"
     assert projected["by_dispute"][failed["dispute_id"]] == []
     assert projected["status_by_dispute"][checked["dispute_id"]] == "ok"
     assert len(projected["by_dispute"][checked["dispute_id"]]) == 1
@@ -434,7 +450,7 @@ def test_content_local_batch_failure_keeps_other_disputes_research(
         opened["elements"][0]["text"]
     assert "incomplete for 1 dispute" in opened["elements"][0]["text"]
     assert opened["metrics"]["llm_calls"] == (
-        12 if failure is SchemaViolation else 10)
+        14 if failure is SchemaViolation else 12)
 
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -466,7 +482,7 @@ def test_provider_outage_does_not_fan_out_into_dispute_retries(
     opened = _send(brain, FIRST, "first")
 
     assert opened["metrics"]["llm_calls"] == (
-        6 if operation == "decompose_disputes" else 7)
+        8 if operation == "decompose_disputes" else 9)
     assert sum(name == operation for name, _ in model.calls) == 1
     assert len(opened["requirements_read"]) == 2
     assert all(read["state"] == "unavailable" and not read["rows"]
@@ -490,7 +506,7 @@ def test_invalid_one_dispute_projection_preserves_other_checked_read(
     brain, store = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "first")
 
-    assert opened["metrics"]["llm_calls"] == 9
+    assert opened["metrics"]["llm_calls"] == 11
     assert len(opened["requirements_read"]) == 1
     surviving = opened["requirements_read"][0]
     assert surviving["rows"][0]["label"] == "Establish the obligation"
@@ -615,7 +631,7 @@ def test_served_matter_board_exposes_short_requirements_beneath_disputes(
                                             "turn_id": "requirements-first"})
     assert served.status_code == 200, served.text
     opened = served.json()
-    assert opened["metrics"]["llm_calls"] == 9
+    assert opened["metrics"]["llm_calls"] == 11
 
     board_response = client.get(f"/api/matters/{opened['matter_id']}")
     assert board_response.status_code == 200, board_response.text

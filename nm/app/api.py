@@ -75,6 +75,7 @@ from nm.work_the_file import summary as matter_memory
 from nm.work_the_file.projections_api import (
     board_projection,
     cover_projection,
+    latest_first,
     matter_list_projection,
 )
 
@@ -163,6 +164,7 @@ class _Released(BaseModel):
     blocked_reason: str | None
     elements: list[dict]
     material: list[dict] = []
+    material_coverage: dict = {}
     metrics: dict
     replayed: bool
     # A receipt establishes a saved released response. `input_admitted`
@@ -184,6 +186,7 @@ class _Released(BaseModel):
     # LB-76. The reply as the advocate reads it, told from `elements` and
     # checked on its own words. Empty: the checked findings are shown as they are.
     composed: list[dict] = []
+    continuation: dict = {}
 
 
 def _release(output) -> _Released:
@@ -784,6 +787,98 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
     return _source_view(source, element, receipt.recorded_at, offset, view, document_identity)
 
 
+def _brain_source(matter, turn_id: str, element_index: int,
+                  source_index: int, *, chat_id: str | None = None) -> dict:
+    from nm.brain.source_snapshots import source_snapshots
+
+    missing = HTTPException(404, "No accessible saved source.")
+    matches = [row for row in matter.brain_chat if row.get("turn_id") == turn_id]
+    if len(matches) != 1 or element_index < 0 or source_index < 0:
+        raise missing
+    row = matches[0]
+    answer = row.get("response")
+    if (not isinstance(answer, dict)
+            or row.get("advocate_id") != matter.advocate_id
+            or row.get("matter_id") != str(matter.id)
+            or row.get("committed") is not True
+            or row.get("release_state") != "released"
+            or answer.get("turn_id") != turn_id
+            or answer.get("matter_id") not in (None, str(matter.id))
+            or row.get("elements") != answer.get("elements")
+            or row.get("at") != answer.get("at")
+            or not isinstance(row.get("at"), str)
+            or (chat_id is not None and answer.get("chat_id") != chat_id)):
+        raise missing
+    elements = answer.get("elements")
+    continuation = answer.get("continuation")
+    if (not isinstance(elements, list) or element_index >= len(elements)
+            or not isinstance(continuation, dict)
+            or not isinstance(continuation.get("units"), list)):
+        raise missing
+    element = elements[element_index]
+    if not isinstance(element, dict):
+        raise missing
+    request_index = element.get("continuation_request_index")
+    block_id = element.get("continuation_block_id")
+    if type(request_index) is not int or not isinstance(block_id, str) or not block_id:
+        raise missing
+    units = [unit for unit in continuation["units"]
+             if isinstance(unit, dict) and unit.get("request_index") == request_index]
+    if (len(units) != 1
+            or units[0].get("verification") != "source_aware_continuation_v1"
+            or not isinstance(units[0].get("blocks"), list)):
+        raise missing
+    blocks = [block for block in units[0]["blocks"]
+              if isinstance(block, dict) and block.get("id") == block_id]
+    if len(blocks) != 1 or blocks[0].get("text") != element.get("text"):
+        raise missing
+    try:
+        sources = source_snapshots(blocks[0].get("references"))
+    except ValueError:
+        raise missing from None
+    if (not sources or source_index >= len(sources)
+            or element.get("sources") != sources
+            or element.get("source") != sources[0]
+            or element.get("refs") != [source["locator"] for source in sources]):
+        raise missing
+    source = sources[source_index]
+    return {**{key: source[key] for key in (
+        "id", "kind", "label", "locator", "text", "digest", "qualification")},
+        "recorded_at": row["at"]}
+
+
+def _read_brain_source(matter_id: str, turn_id: str, element_index: int,
+                       source_index: int, advocate_id: str, request: Request,
+                       response: Response, *, chat_id: str | None = None) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    matter = application().store.load(matter_id)
+    if (matter is None or matter.advocate_id != advocate_id
+            or (chat_id is None and not matter.brain_ready)):
+        raise HTTPException(404, "No accessible saved source.")
+    source = _brain_source(matter, turn_id, element_index, source_index, chat_id=chat_id)
+    if not _loop_session_current(request, advocate_id):
+        raise HTTPException(401, "Your session ended. Sign in to read the saved source.")
+    return {**source, "turn_id": turn_id,
+        "coverage": "saved_passage", "representation": "saved_text"}
+
+
+@app.get("/api/matters/{matter_id}/turns/{turn_id}/brain-sources/{element_index}/{source_index}")
+def brain_matter_source(matter_id: str, turn_id: str, element_index: int,
+                        source_index: int, advocate_id: Advocate, request: Request,
+                        response: Response) -> dict:
+    return _read_brain_source(matter_id, turn_id, element_index, source_index,
+                              advocate_id, request, response)
+
+
+@app.get("/api/chats/{chat_id}/turns/{turn_id}/brain-sources/{element_index}/{source_index}")
+def brain_chat_source(chat_id: str, turn_id: str, element_index: int,
+                      source_index: int, advocate_id: Advocate, request: Request,
+                      response: Response) -> dict:
+    return _read_brain_source(str(chat_matter_id(advocate_id, chat_id)), turn_id,
+                              element_index, source_index, advocate_id,
+                              request, response, chat_id=chat_id)
+
+
 def _source_view(source, element, recorded_at, offset=0, view="passage", document_identity=""):
     """Shared representation for a bound released or checked-private source.
 
@@ -931,6 +1026,10 @@ def chats(advocate_id: Advocate, response: Response) -> dict:
     """List owned conversations that have not yet established a matter board."""
     response.headers["Cache-Control"] = "no-store"
     held = application().store.list_for(advocate_id)
+    return _pending_chat_list(held, advocate_id)
+
+
+def _pending_chat_list(held, advocate_id: str) -> dict:
     listed = []
     incomplete = bool(held.unreadable)
     for matter in held:
@@ -965,6 +1064,21 @@ def chats(advocate_id: Advocate, response: Response) -> dict:
     listed.sort(key=lambda row: (row["last_at"] or "", row["chat_id"]), reverse=True)
     return {"state": "incomplete" if incomplete else "ok", "chats": listed,
             "chat_count": len(listed), "unavailable": incomplete}
+
+
+@app.get("/api/work")
+def work(advocate_id: Advocate, request: Request, response: Response) -> dict:
+    """Read saved navigation labels without assessing the files' legal contents."""
+    response.headers["Cache-Control"] = "no-store"
+    held = application().store.list_for(advocate_id)
+    pending = _pending_chat_list(held, advocate_id)
+    rows = [{"matter_id": matter.id, "matter": matter.title,
+             "last_updated": held.saved(matter.id) or None}
+            for matter in latest_first(held) if matter.brain_ready]
+    if not _loop_session_current(request, advocate_id):
+        raise HTTPException(401, "Your session ended. Sign in to see the saved work.")
+    return {**pending, "matters": rows, "row_count": len(rows),
+            "unreadable": list(held.unreadable)}
 
 
 @app.get("/api/chats/{chat_id}")
@@ -4302,7 +4416,8 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
     try:
         model = wired._model_for(advocate_id, session_current=session_current)
         output = BrainService(store=wired.store, model=model,
-                              legal_search=wired.legal_search).run(payload)
+                              legal_search=wired.legal_search,
+                              session_current=session_current).run(payload)
     except ModelPermissionRefused as exc:
         raise HTTPException(403, detail={
             "code": "model_permission_required", "why": str(exc),
@@ -4320,6 +4435,12 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
             "expected_version": getattr(exc, "expected_version", req.expected_version),
             "matter_version": getattr(exc, "matter_version", None),
         }) from exc
+    if not session_current():
+        raise HTTPException(401, detail={
+            "why": "Your session ended before the saved response could be read.",
+            "turn_id": turn_id, "committed": output.as_dict().get("committed"),
+            "chat_id": req.chat_id, "retryable": True,
+        })
     return _release(output)
 
 

@@ -189,7 +189,9 @@ promise later autonomous work. Choose `clarify` only when one
 missing distinction prevents a useful response, and ask that consequential
 question. Attribute unverified facts to the advocate. Do not invent support,
 assert unsupported law, or present unfinished work as complete. Fill `reply`
-for `answer` and `legal_work`; fill `clarification` only for `clarify`. Set
+for `answer` and `legal_work` and set `clarification` to an empty string for
+both. For `clarify`, put the question in `clarification` and set `reply` to
+an empty string. These fields are mutually exclusive. Set
 `active_work_after` to the work still active; an aside preserves it. When an
 uncertain or unassessed dispute remains relevant to the active work, ask for
 its consequential missing distinction if needed. Do not interrupt a
@@ -395,11 +397,15 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
         if row.get("next_step") in ("answer", "legal_work") and not reply.strip():
             raise SchemaViolation("A response needs reply text for its chosen step")
         if row.get("next_step") == "clarify" and reply.strip():
-            raise SchemaViolation("A clarification must use its question field")
+            raise SchemaViolation(
+                "For next_step=clarify, set reply to an empty string and put "
+                "the question only in clarification")
         if row.get("next_step") == "clarify" and not clarification.strip():
             raise SchemaViolation("A clarification needs a question")
         if row.get("next_step") != "clarify" and clarification.strip():
-            raise SchemaViolation("A question must be an explicit clarification step")
+            raise SchemaViolation(
+                "For next_step=answer or legal_work, set clarification to an "
+                "empty string; use reply for the response")
         try:
             item = WorkItem(request=request,
                             relation=row["relation"], matter_scope=row["matter_scope"],

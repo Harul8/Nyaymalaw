@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 
+from nm.brain.checked import require_independent_result
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.shared.model_port import (
     ContextOverflow,
@@ -106,8 +107,8 @@ def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate]
             continue
         if not row["reason"].strip():
             unresolved.append(candidate_id)
-        elif ((row["verdict"] == "accept") !=
-              (row["candidate_role"] == "independent_dispute")):
+        elif (row["verdict"] == "accept"
+              and row["candidate_role"] != "independent_dispute"):
             unresolved.append(candidate_id)
         else:
             decisions[candidate_id] = row["verdict"] == "accept"
@@ -152,14 +153,15 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 "duplicated, malformed, or lacked a decision reason. "
                 "Return one complete valid verdict per listed ID.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
-        output_limit = max(2048, min(6144, 512 * len(pending)))
+        output_limit = max(4096, min(8192, 512 * len(pending)))
         if (estimate_tokens(_SYSTEM + user) + output_limit
-                > model.context_budget(Tier.ROUTINE)):
+                > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow(
                 "The full conversation exceeds the dispute verification budget")
         result = model.structured(
             Prompt(system=_SYSTEM, user=user, operation="verify_disputes"),
-            _schema(pending), Tier.ROUTINE, max_tokens=output_limit)
+            _schema(pending), Tier.JUDGE, max_tokens=output_limit)
+        require_independent_result(result)
         if not result.usable:
             raise SchemaViolation("Dispute verification did not finish")
         checked, unresolved = _read_verdicts(

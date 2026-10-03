@@ -1,49 +1,94 @@
-# New legal brain: served conversation boundary
+# Served legal brain
 
-`/api/turn` uses `BrainService`. It does not construct or dispatch the archived
-turn engine. New matter opens an empty chat without creating a file. The first
-successful message saves an attributed conversation under a stable chat ID.
-The matter board remains hidden until the interpretation proposes concrete
-opening details grounded in the attributed conversation. Those details are marked
-provisional. A later message can supply the missing context.
+`/api/turn` runs `BrainService`. New matter opens an empty central chat with
+no form, matter code or board. A successful first message is stored under a
+stable chat identity. A concrete, source-checked opening reveals the board;
+greetings and general questions can remain recoverable pending chats.
 
-`conversation.interpret` makes **one model call per new message** for requests,
-their relation to existing work, an immediate reply or consequential
-clarification, a proposed opening, and whether the latest message contributes
-legal material. When it does, or when an opening is proposed, two focused
-readers run **in parallel**: `disputes.extract_disputes` identifies independently
-contestable disputes, while `material.extract_details` identifies other
-materially significant events, circumstances, positions, objectives, evidence,
-procedure, and risks. Thus a substantive turn uses three model calls in two
-sequential stages. All readers receive the full attributed conversation and use
-stable Message, Purpose, Look for, and Outcome prompts; matter-specific content
-stays in the variable input. Pure greetings and diversions need only the first
-call. An exact saved replay makes no call. Each reader receives the complete
-conversation as ordered, addressed source spans. The model selects span IDs;
-the service inserts exact saved words for latest and earlier citations. A
-rejected structured response gets one feedback-guided correction and is
-validated again before any write. This adds calls only on a failed read, up to
-six in the worst substantive turn if all three reads need correction. Each
-material proposal keeps exact user words, any earlier words needed for context,
-matter scope, basis, importance, and relation to prior content. The service
-saves proposals with their source turn and returns them as `material`. It does
-not admit them as matter facts. A first message has an empty earlier
-conversation, so it cannot
-be classified as a continuation or aside. `history.from_turns` refuses
-gaps, unreadable replies, and unestablished releases rather than silently
-omitting them. Conversation words are context, not admitted matter facts.
-If correction still fails, the turn is withheld without a server write, and
-the browser keeps the brief for a same-turn retry with a plain status message.
-`metrics.llm_calls` counts logical model invocations on this request;
-`metrics.provider_retries` reports additional transport attempts separately.
-An exact replay reports zero for both. A full-context overflow is identified
-as nonretryable because resending unchanged words cannot make them fit.
+The complete attributed transcript is retained and supplied to each reader.
+Every stable prompt separates Message, Purpose, Look for and Outcome. Matter
+data and retrieved documents are input, never instructions. Source IDs resolve
+to exact saved words; interpretations remain proposals, not proved facts or
+permission for an external action. Missing context or an oversized transcript
+is refused explicitly instead of silently trimmed.
 
-Substantive legal research and document review are not yet executed by this
-new brain. A request for them receives a specific interim response from the
-conversation read and is marked blocked; an unchecked model-written legal
-answer is not released as completed work. This does not add a model call. A
-source-aware work path and chat-first document attachment
-path are still needed before those requests can be fulfilled. Pending chats
-appear in the authenticated chat list, can be recovered by chat ID, and cannot
-enter matter-only upload or board paths.
+## Turn ownership
+
+1. `conversation.interpret` owns requests, scope, urgency and whether the turn
+   contributes legal material. It preserves mixed requests and diversions.
+2. `disputes` identifies independently contestable issues; `material` captures
+   other significant propositions and their relationship to saved material.
+   Explicit saved-record links carry their original source automatically, plus
+   selected context. Independent checks decide whether proposals are faithful.
+   A dispute title is concise, not necessarily verbatim; identification does
+   not establish merits.
+3. `legal_requirements` decomposes due disputes into complementary queries.
+   The corpus adapter searches Act and judgment passages using hybrid retrieval
+   and reranking. A reader proposes requirements; an independent check examines
+   each complete item, short label, citations and material links. Only checked
+   items appear under disputes. Applicability and incomplete search remain
+   explicit; reported documents are not verified documents.
+4. `continuation` uses those records, passages and the whole conversation to
+   answer the immediate request, explain supported uncertainty, select useful
+   unanswered questions and assess scoped-task sufficiency. It does not repeat
+   classification or extraction. A separate review checks each complete request
+   unit, including question premises, recommendations and completion claims.
+   Unsupported units are withheld while valid peers survive.
+5. One atomic commit saves the user message, released response, material,
+   research and coverage. An exact replay returns the saved result without
+   re-admitting input or calling a model. Authentication is checked before save.
+
+The continuation asks sensitive questions with a supported purpose, acknowledges
+expressed concern proportionately, tests competing explanations without
+accusing anyone, and challenges its own interpretation. Earlier answers and
+unavailable material must be considered before asking again. Scoped completion
+does not close a matter or authorise action.
+
+## Model calls
+
+Normal calls vary with the work actually due:
+
+| Activity | Calls | Input and output |
+| --- | ---: | --- |
+| Interpret | 1 | Full transcript and latest words → requests, scope and reading need |
+| Dispute extraction | 1 when material is read | Full context and active disputes → attributed proposals |
+| Dispute check | 1 when proposals exist | Proposals and sources → independent verdicts |
+| Detail extraction | 1 when material is read | Full context and disputes → attributed material |
+| Detail/opening check | 1 when either exists | Proposals and sources → independent verdicts |
+| Search decomposition | 1 per context-fitting due batch | Disputes/material → up to four distinct queries per dispute |
+| Corpus search/rerank | 0 generative calls | Queries → candidates and coverage |
+| Passage reading | 1 per context-fitting batch | Candidates and context → gathering proposals |
+| Source support check | 1 per context-fitting nonempty batch | Complete proposals and passages → retain/withhold/unread |
+| Continuation | 1 when substantive work remains | Full context, records and checked sources → response units |
+| Continuation check | 1 when units exist | Complete units and sources → independent release verdicts |
+
+A plain greeting or nonlegal diversion normally costs one call; a checked
+substantive continuation with unchanged material/research normally costs three.
+Material and research calls are conditional, not a fixed per-message intake
+pipeline. Context-fitting batches and per-dispute isolation can add calls.
+Readers allow one feedback correction. Verifiers retain valid peer verdicts and
+retry only unresolved units once; provider outages do not trigger item-by-item
+retry cascades. A rejected continuation gets at most one replacement generation
+and another independent check. Independent review uses the configured judge
+model; a downgraded routine result is not an independent verdict.
+
+`metrics.llm_calls` and content-free `model_calls` receipts report actual service
+calls, operations, tiers, timing and token usage. `provider_retries` separately
+counts transport attempts. Replays report zero. There is no additional tone,
+empathy or personality classifier.
+
+## Source readback and failure boundaries
+
+Each released block keeps authoritative source references. The authenticated
+brain-source reader reopens the exact saved snapshot, with reported/checked
+qualifications, independently of later corpus availability. It verifies source
+identity, ownership, digest and the released block before returning text. Source
+links are grouped beneath each response block; the reading pane has a fixed
+heading and Close control with a scrolling body.
+
+Failures are isolated at the smallest independent unit. Valid research and
+response units survive rejected peers, with explicit missing coverage. A failed
+core read cannot be replaced with an empty result and presented as complete.
+Untrustworthy history, identity, attribution, source ownership or commit
+integrity stops the whole save. User-facing recovery explains whether the brief
+was saved; internal validation diagnostics are not shown as user instructions.
