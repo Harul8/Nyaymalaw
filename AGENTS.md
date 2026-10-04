@@ -99,8 +99,37 @@ or analysis as complete. Stop the whole turn before saving when conversation
 history, identity, attribution, source ownership, or commit integrity cannot
 be trusted; saving an empty result for an unread stage would silently lose
 material and is not graceful recovery.
+Keep model checking and retry mechanics out of advocate-facing replies. Do
+not ask the advocate to send another instruction merely to recover work NM
+has already accepted. Recover failed independent units internally within an
+explicit bound, preserve useful supported results, and describe any remaining
+gap in terms of the requested work. Never hide failure, imply completion, or
+release unchecked content merely to avoid an error message. Genuine service
+interruptions belong in a concise service status, not a fabricated answer.
+Do not replace an internal failure message with an echo of pending work or
+another account of checking, proposal admission or coverage bookkeeping. A
+supported reply explains task-relevant limits; a delivery failure is a separate
+service status. Internal rejection is not evidence missing from the advocate.
+Ask a follow-up only for a consequential ambiguity or missing matter detail,
+never to conceal or work around an internal processing failure. When the saved
+account is sufficient, carry out the authorised work. Repair malformed internal
+steps within their recovery bound, preserving independently valid decisions and
+results; do not make the advocate restart accepted work.
 
 Use Before Build as the work queue and take one feature or slice at a time.
+Keep each repair atomic: change at most one model prompt and one production
+code file in a piece, with only the focused tests and documentation needed to
+prove it. Name the observable pass condition before editing. Do not move to
+another prompt, production file or slice until that behaviour is concretely
+verified and its coherent change committed and pushed. A larger unfinished
+candidate must be preserved and split; it is not a completed milestone. Surface
+any inseparable cross-file dependency before expanding the agreed scope.
+After the small set of individually verified prompts/files needed for one
+behaviour is ready, test them together through the shipped application boundary,
+including their handoffs, saved state, response and recovery. Isolated checks
+do not complete a feature: require a concrete integrated result before moving
+to the next feature. Keep these checks focused on the affected flow; broaden
+testing only for a justified dependency or risk.
 Establish its observed baseline and failed general invariant, then fix the
 owning prompt and code together where needed. Test through the shipped public
 boundary, inspect saved records and actual browser replies, and repair general

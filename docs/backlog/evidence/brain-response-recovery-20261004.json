@@ -1,0 +1,351 @@
+{
+  "date": "2026-10-04",
+  "status": "first_atomic_piece_offline_verified_full_chain_and_live_completion_unaccepted",
+  "scope": "Priority: attributed account -> substantive/procedural law -> attributed precedent -> both positions and counterreasoning -> justified conclusion. First atomic subpiece: source-catalogue completeness feedback. General rules only.",
+  "queue_owners": [
+    "LB-175",
+    "LB-176",
+    "LB-178",
+    "LB-179",
+    "LB-182",
+    "LB-183",
+    "LB-185",
+    "LB-193"
+  ],
+  "standing_rules_commit": "81f1285",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "review_policy": "Same-model independent calls; no model diversity claimed",
+  "validation_budget": {
+    "maximum_usd": 2,
+    "ledger": "outputs/astra-brain-reliability-20261004/validation-usd2.sqlite",
+    "physical_attempts": 56,
+    "charged_usd": 0.717067,
+    "unknown_attempts": 0,
+    "input_tokens": 1521579,
+    "output_tokens": 67759,
+    "basis": "Conservative token charges rounded per physical attempt; not an invoice",
+    "paid_astra_experiments": 0
+  },
+  "current_repair": "First atomic source-catalogue piece verified against unchanged HEAD. Remaining wider implementation is preserved uncommitted and must be split. Full account-to-conclusion chain has priority. Broader V24 recovery still fails displayed-premise ownership; code-owned displayed-portion references remain a proposal, not a completed repair.",
+  "tests": {
+    "full_run": {
+      "cases": 936,
+      "passed": 936,
+      "failed": 0,
+      "seconds": 145.95
+    },
+    "prior_full_run": {
+      "files": 42,
+      "cases": 865,
+      "passed": 863,
+      "failed": 2,
+      "seconds": 508.73
+    },
+    "prior_full_run_failures": "Two obsolete expectations requiring the removed internal material-check notice",
+    "compatibility_recheck": {
+      "passed": 2,
+      "seconds": 3.48
+    },
+    "mixed_presentation_file": {
+      "passed": 13,
+      "seconds": 9.31,
+      "new_cases_beyond_full_run": 1
+    },
+    "retention_contract_targeted": {
+      "passed": 77,
+      "seconds": 40.86
+    },
+    "missing_proposal_targeted": {
+      "passed": 147,
+      "seconds": 24.99
+    },
+    "missing_proposal_final_file": {
+      "passed": 21,
+      "seconds": 13.39
+    },
+    "source_premise_targeted": {
+      "passed": 79,
+      "seconds": 12.07
+    },
+    "source_premise_fixture_migration": {
+      "passed": 102,
+      "seconds": 17.03
+    },
+    "record_review_receipt": {
+      "passed": 7,
+      "seconds": 6.31
+    },
+    "scoped_source_repair_affected": {
+      "passed": 258,
+      "seconds": 31.745
+    },
+    "scoped_source_repair_final": {
+      "passed": 30,
+      "seconds": 5.374
+    },
+    "prior_passing_case_coverage_across_runs": 866,
+    "single_clean_full_rerun_claimed": true,
+    "receipts": [
+      "outputs/astra-brain-reliability-20261004/final-brain-regression.xml",
+      "outputs/astra-brain-reliability-20261004/final-compatibility.xml",
+      "outputs/astra-brain-reliability-20261004/mixed-presentation.xml",
+      "outputs/astra-brain-reliability-20261004/retention-contract-pytest.xml",
+      "outputs/astra-brain-reliability-20261004/missing-proposal-recovery-pytest.xml",
+      "outputs/astra-brain-reliability-20261004/missing-proposal-recovery-final-pytest.xml",
+      "outputs/astra-brain-reliability-20261004/continuation-source-checks-pytest.xml",
+      "outputs/astra-brain-reliability-20261004/record-review-receipt.xml",
+      "outputs/astra-brain-reliability-20261004/source-boundary-full-regression.xml",
+      "outputs/astra-brain-reliability-20261004/record-review-receipt-final.xml",
+      "outputs/astra-brain-reliability-20261004/source-repair-targeted.xml",
+      "outputs/astra-brain-reliability-20261004/source-repair-final.xml",
+      "outputs/astra-brain-reliability-20261004/source-repair-full-regression.xml",
+      "outputs/astra-brain-reliability-20261004/keyed-review-targeted.xml",
+      "outputs/astra-brain-reliability-20261004/keyed-review-full-regression.xml"
+    ],
+    "other_checks": [
+      "Ruff",
+      "JavaScript syntax",
+      "git diff --check"
+    ],
+    "existing_warning": "Starlette/AnyIO BlockingPortal deprecation",
+    "pre_repair_full_run": {
+      "cases": 908,
+      "passed": 898,
+      "failed": 10,
+      "seconds": 139.76
+    },
+    "pre_repair_full_run_failures": "One contextual-record fixture and nine automatic-requirements fixtures failed after premise checks; corrected source-check declarations now pass targeted checks without changing expected call counts/reference assertions; final aggregate rerun pending",
+    "source_repair_full_run": {
+      "cases": 924,
+      "passed": 924,
+      "failed": 0,
+      "seconds": 140.18
+    },
+    "keyed_review_targeted": {
+      "passed": 291,
+      "seconds": 48.103,
+      "direct_keyed_wire_cases": 12
+    },
+    "scope": "Historical tests of the broader uncommitted working-tree candidate; not validation of the isolated atomic commit. See atomic_piece.tests for that proof."
+  },
+  "live_probes": [
+    {
+      "probe": "baseline",
+      "source_fingerprint": "025c530e831eb0f5",
+      "saved_version": 18,
+      "model_calls": 4,
+      "charged_usd": 0.049264,
+      "result": "No response units released; exact verifier cause was not retained by the old flow; explicit record review was skipped"
+    },
+    {
+      "probe": "source_catalogue_diagnostic",
+      "source_fingerprint": "36beed5d1452f865",
+      "saved_version": null,
+      "model_calls": 3,
+      "charged_usd": 0.028783,
+      "result": "Stopped before save: source treatments did not cover every owned source ID exactly once"
+    },
+    {
+      "probe": "precise_catalogue_correction",
+      "source_fingerprint": "b2cb6b5a4db97724",
+      "saved_version": null,
+      "model_calls": 8,
+      "charged_usd": 0.078497,
+      "result": "Source classification passed; stopped before save because duplicated model-owned source_ids and source_checks disagreed"
+    },
+    {
+      "probe": "single_source_selection",
+      "source_fingerprint": "e8518869b4d7747f",
+      "saved_version": 19,
+      "model_calls": 14,
+      "charged_usd": 0.155632,
+      "result": "Saved once with prior 18 turns unchanged; no useful response; optional factual-retention contract failed",
+      "presentation": "Pending-request echo and material-checking appendix were explicitly rejected by the user",
+      "semantic_grade": "Board, material and work projections unchanged; inherited source-purpose errors, omissions and false prior completion remain"
+    },
+    {
+      "probe": "retention_recovery_contract",
+      "source_fingerprint": "fdbf6661c0fb6f36",
+      "saved_version": 20,
+      "model_calls": 11,
+      "charged_usd": 0.137448,
+      "request": "New continuation request using the saved account, not a replay or resubmission of facts",
+      "result": "No useful response; both writer attempts omitted question proposals for displayed question blocks; response review was never reached",
+      "presentation": "Separate service status is cleaner but is not successful recovery"
+    },
+    {
+      "probe": "missing_association_recovery",
+      "source_fingerprint": "c472a579f3b26093",
+      "saved_version": 21,
+      "model_calls": 4,
+      "charged_usd": 0.061652,
+      "input_tokens": 138491,
+      "output_tokens": 3909,
+      "model_latency_ms": 29529,
+      "result": "Substantive reply delivered but semantic acceptance FAILED: repeated an NM premise expressly corrected by the advocate, created a dependent invalid question, stated unsupported law and certified unchanged board work complete",
+      "integrity": "Prior saved transcript preserved and latest input saved once",
+      "evidence": "outputs/astra-brain-reliability-20261004/property-v21-association.json",
+      "screenshot": "outputs/astra-brain-reliability-20261004/association-v21.jpg"
+    },
+    {
+      "probe": "source_linked_premise_review",
+      "source_fingerprint": "d1aad217697a44b7",
+      "saved_version": 22,
+      "model_calls": 4,
+      "charged_usd": 0.068008,
+      "input_tokens": 144889,
+      "output_tokens": 6282,
+      "model_latency_ms": 51314,
+      "result": "No response released. Reviewer correction still omitted selected source checks; semantic accuracy and useful completion are not accepted",
+      "evidence": "outputs/astra-brain-reliability-20261004/property-v22-source-premise.json",
+      "screenshot": "outputs/astra-brain-reliability-20261004/source-premise-v22.jpg"
+    },
+    {
+      "probe": "scoped_source_check_repair",
+      "source_fingerprint": "faa4ba9c8505be04",
+      "saved_version": 23,
+      "model_calls": 4,
+      "charged_usd": 0.0689,
+      "input_tokens": 146965,
+      "output_tokens": 6320,
+      "model_latency_ms": 49942,
+      "result": "No response released: both whole-review attempts omitted displayed-block checks; useful live completion remains unaccepted",
+      "evidence": "outputs/astra-brain-reliability-20261004/property-v23-source-repair.json",
+      "screenshot": "outputs/astra-brain-reliability-20261004/source-repair-v23.jpg",
+      "integrity": "All 22 prior saved turns preserved exactly; latest instruction saved once; disputes, material and work unchanged"
+    },
+    {
+      "probe": "server_owned_request_and_block_review",
+      "source_fingerprint": "d45ed0bd52b25109",
+      "saved_version": 24,
+      "model_calls": 4,
+      "charged_usd": 0.068883,
+      "input_tokens": 147179,
+      "output_tokens": 6256,
+      "model_latency_ms": 49551,
+      "result": "No response released: keyed block coverage passed but a source-check premise was not exact displayed words after the existing correction. No validated review audit or useful factual summary; live recovery remains unaccepted",
+      "integrity": {
+        "prior_transcript_preserved": true,
+        "new_input_saved_once": true,
+        "disputes_unchanged": true,
+        "material_unchanged": true,
+        "work_unchanged": true
+      },
+      "evidence": "outputs/astra-brain-reliability-20261004/property-v24-keyed-review.json",
+      "screenshot": "outputs/astra-brain-reliability-20261004/keyed-review-v24.jpg",
+      "qualification": "Independent review confirms all 23 prior turns, disputes, material, requirements and work unchanged. No released answer or validated audit; the actual malformed premise text was not retained, so the precise textual mismatch and draft semantic accuracy cannot be inferred. Inherited false progress states remain uncorrected."
+    }
+  ],
+  "call_contract": {
+    "normal_unchanged_substantive_turn": 3,
+    "normal_material_review_with_proposals_and_response": 8,
+    "source_treatment": "Full attributed transcript and owned spans to purpose catalogue: one call, at most one existing correction",
+    "record_reviews": "Proposals, original source catalogue and targets to semantic/source/transition checks: one each when needed, at most one existing unresolved-unit correction",
+    "response_writer": "Full attributed context, scoped work, records and checked uses to response units: one call, at most one existing replacement",
+    "response_review": "Original evidence, actual record-review receipt and proposed units to source-linked premise checks, progress basis, semantic verdicts and optional retained subset: one per writer result, at most one correction. Output allowance scales with selected references from 4096 to a maximum 12288 tokens",
+    "missing_source_check_repair": "Existing second review call fills only absent selected-source checks using server-owned request/block/source keys. Normal unchanged substantive turn with this correction is four calls including interpretation; a new contradiction reaching existing writer correction and recheck is six in the public regression",
+    "recovered_core_rejection": "Can reach six calls including interpretation, or seven if replacement review needs correction; no raised retry bound",
+    "narrowed_response_review": "Existing conditional review of independently valid factual remainder: one call, at most one correction",
+    "mixed_continuation_path": "Nine calls in the three-unit regression: interpretation one, writers two, judges six. Additional material, research and transport work is separate; this is not a global ceiling",
+    "other_stages": "Extraction, opening repair, research batches and transport retries remain separately conditional and measured",
+    "replay": "Zero model calls for an exact admitted request replay",
+    "latency": "Per-model latency is summed separately from browser wall time",
+    "keyed_review": "Required request/block keys replace repeated model-owned IDs. No new call or retry; canonical audit shape unchanged. Schema input grows with owned blocks, so cost reduction is not assumed.",
+    "scope": "Broader uncommitted candidate accounting. See atomic_piece.call_contract for the first isolated change."
+  },
+  "end_to_end_review": {
+    "status": "architecture_findings_and_future_acceptance_requirements",
+    "chain": "Attributed account, issue and evidence coverage, governing substantive and procedural law, properly attributed precedent propositions, application to both positions, supported counterarguments, qualified overall conclusion",
+    "existing_strength": "Single served owner chain, exact transcript and source references, source-purpose and legal-use checks, application predicates, canonical research and atomic persistence",
+    "gaps": [
+      "Checking proposed items does not detect important omitted account content or omitted requested record reconciliation",
+      "Mixed source spans need exact eligible portions, not whole-span inheritance",
+      "Successful bounded retrieval is not proof of governing-law, procedural or adverse-authority coverage",
+      "Corpus artifact freshness does not establish current statutory law or later judicial treatment",
+      "Precedent retrieval needs relevant submissions and background alongside reasoning and orders",
+      "Findings need explicit issue, position and argument-response relationships where the requested assessment requires them",
+      "Overall sufficiency must account for both sides, strongest supported objections, replies and unresolved dependencies",
+      "Research reuse must include relevant source-purpose dependencies, not just unchanged record text"
+    ],
+    "approach": "Strengthen existing owners one slice at a time; no parallel fact store, merits engine or routine counterargument stage",
+    "context_cleanup_planned": "Reduce repeated source-classification, derived-record, passage-use and work/subject text in model inputs only after validating a lossless reference projection. Preserve every exact chronological advocate and NM message, each distinct legal-use certificate and durable source snapshot; measure semantic behavior and token savings. No new store or model stage."
+  },
+  "acceptance": {
+    "internal_recovery_public_regressions": "936-case aggregate passed for the broader uncommitted candidate only; 19 tests independently passed for the isolated source-catalogue piece. Neither proves live semantic acceptance.",
+    "useful_live_response": false,
+    "semantic_board_recovery": false,
+    "all_four_live_matters_completed": false
+  },
+  "remaining_work": [
+    "Stage 1: exact source-purpose portions and candidate-independent whole-conversation omission coverage, with attributed corrections and mixed requests; verify individual pieces and then their combined flow.",
+    "Stage 2: applicable substantive/procedural law with jurisdiction, version and honest search coverage.",
+    "Stage 3: precedent context and attribution, separating submissions, holdings, rejected propositions and later treatment.",
+    "Stage 4: evidence-linked application to both positions, strongest supported objections and responses, unresolved requirements.",
+    "Stage 5: justified overall conclusion, useful completion and dependency invalidation; integrated unfamiliar-matter qualification.",
+    "Supporting unresolved recovery: replace brittle repeated displayed-premise text with owned lossless references and precise diagnostics without relaxing grounding or adding retries. Keep this subordinate to the complete reasoning-chain objective."
+  ],
+  "engineering_navigation": {
+    "earlier_method": "Targeted file search and independent code reviews; code-graph semantic search was not used during the repair iterations",
+    "after_user_cost_feedback": "Graph found stale at earlier commit; incrementally refreshed without embedding refresh. Compact structural impact review performed. Local-provider search for the known owning function returned search_mode=fts; vector semantic search is not claimed.",
+    "savings": "No measured engineering-token saving claimed; graph estimates are not measurements",
+    "next_scope": "Keep current repair small, use compact graph ownership/dependency context and exact targeted source reads; no additional paid application call at this checkpoint"
+  },
+  "atomic_piece": {
+    "status": "verified_for_atomic_commit",
+    "isolation_base": "81f1285c690c51725f6385061d1f5a192d6331f8",
+    "production_file": "nm/brain/record_review.py",
+    "prompt": "_SOURCE_SYSTEM",
+    "function": "classify_account_sources",
+    "invariant": "Every owned advocate source ID must be classified exactly once before any affected turn is saved; uncertain and non-substantive sources remain represented.",
+    "change": "Name missing and duplicate IDs in existing correction feedback; retain closed-schema ownership validation, complete original input, canonical attribution and the existing one-correction bound. Make the single source-purpose prompt explicit about complete catalogue replacement.",
+    "tests": {
+      "path": "tests/test_brain_source_treatment_coverage.py",
+      "passed": 19,
+      "seconds": 11.32,
+      "contract_cases": 7,
+      "public_api_turn_cases": 12,
+      "receipt": "outputs/astra-brain-reliability-20261004/atomic-source-coverage.xml",
+      "isolation": "Tracked HEAD archive plus only this production patch and focused test; isolated import verified."
+    },
+    "call_contract": {
+      "source_stage": "Complete attributed conversation and owned advocate spans -> one source-purpose proposal for each owned ID. One initial call; at most one existing correction carrying unchanged original input, rejected output and exact validation feedback.",
+      "public_test_success": "Seven total calls when this material-review fixture needs the source correction; source stage uses two.",
+      "public_test_failure": "Three total calls: conversation interpretation, source classification, source correction; fail before save.",
+      "replay": "Zero calls for an already admitted identical request.",
+      "new_routine_or_retry_calls": 0,
+      "new_paid_application_calls": 0
+    },
+    "verification": {
+      "ruff": "passed for the single production file and focused test",
+      "browser": "Latest real-browser baseline remains V24, using the broader uncommitted candidate. No fresh isolated model/browser acceptance claimed; this piece proves mechanical coverage correction only.",
+      "semantic_account_accuracy_accepted": false,
+      "full_feature_accepted": false
+    },
+    "production_patch_sha256": "00ef721645147208ccf4ace77f91ce80e2586a6bf0da4fa9e104c6094e09f2e0",
+    "focused_test_sha256": "61cd30ba43c8f359a9b1468800738bda3713219693ba10cabaf9fb0166f3e46c",
+    "next_gate": "Commit and push this atomic piece before another prompt/file. Independently verify remaining source-purpose and omission pieces, then test their combined behavior through the shipped application before claiming stage-1 completion."
+  },
+  "broader_candidate_mechanisms": [
+    "Exact owned source-catalogue coverage feedback under the existing correction bound",
+    "One model-owned source selection through source_checks; code derives canonical audit source_ids",
+    "Retained request-scoped review diagnostics and sanitized provider failure categories",
+    "Structural retention candidates plus precise optional-subset validation feedback",
+    "A fully validated substantive rejection survives an exhausted optional-retention-only fault, allowing the existing writer correction",
+    "Recovered internal diagnostics remain saved separately from outstanding coverage",
+    "Substantive reply and real task limits required; no pending-request echo or canned material-admission appendix",
+    "Delivery status is separated from reply prose; supported peers remain visible",
+    "Missing local proposal associations reach existing factual-remainder recovery only after full ownership and integrity validation",
+    "Source-linked premise checks reject declared contradictions, ineligible account support and missing legal support through existing writer recovery",
+    "Failed and legally dependent premises cannot enter factual retention",
+    "Actual per-turn record-review receipts constrain completion claims; validated rejected and replacement reviews remain in internal audits",
+    "An otherwise owned review with missing selected-source checks uses the existing second call for server-keyed additions only; full semantic validation reruns over an immutable merge",
+    "Context-only source rows add no affirmative premise support; unusable, foreign or incomplete repair output remains unread",
+    "Response-review model wire uses required server-owned request/block keys; code restores canonical IDs, with unchanged saved audit shape and no missing-block repair branch"
+  ],
+  "broader_candidate_status": "Preserved in the working tree and not committed with the first atomic piece. The 936-case run and V24 browser result below apply to broad candidate d45ed0bd52b25109, not the isolated first-piece commit.",
+  "workbook_checkpoint": {
+    "sha256": "53e6ed6fac3afc6cc0ff5f1de689513e7d582953153c30d774cedb2cd51db5f8",
+    "verification": "outputs/astra-brain-reliability-20261004/workbook/atomic-source-feedback/verification.json",
+    "priority": "Full end-to-end chain; atomic source coverage is only the first stage-1 subpiece."
+  }
+}
