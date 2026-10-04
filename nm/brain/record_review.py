@@ -6,7 +6,6 @@ support and record-transition checks; source classifications never prove facts.
 from __future__ import annotations
 
 import json
-from collections import Counter
 
 from nm.brain.checked import checked_read
 from nm.shared.model_port import ContextOverflow, Prompt, SchemaViolation, Tier, estimate_tokens
@@ -46,11 +45,11 @@ mentioning a matter topic. Use uncertain if its treatment cannot be determined.
 Earlier source framing remains visible; later review requests do not retroactively
 make quoted analysis factual. Do not assess legal merit or generate account facts.
 
-Outcome: Return only source_treatments under the schema, exactly one entry for
-every ID in source_ids, with content_role and a short reason. Include uncertain
-and non-substantive spans rather than omitting them. On correction, reconcile
-missing_source_ids, duplicate_source_ids and unexpected_source_ids against the
-original source_ids and return the complete replacement catalogue. Do not
+Outcome: Return only source_treatments, an object with every required source ID
+as a key. For each key return content_role and a short reason. The server owns
+the keys; do not return an array or repeat source_id inside an entry. Classify
+uncertain and non-substantive spans too. On correction, use the original
+source_ids and the stated field error to return the complete keyed catalogue. Do not
 reproduce passages, summarise the account, classify NM spans as advocate
 evidence, or use the desired work result as evidence of source treatment."""
 
@@ -74,13 +73,15 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
     if not references:
         raise SchemaViolation("Source treatment has no attributable advocate spans")
     item = {"type": "object", "additionalProperties": False,
-            "required": ["source_id", "content_role", "reason"], "properties": {
-                "source_id": {"type": "string", "enum": list(references)},
+            "required": ["content_role", "reason"], "properties": {
                 "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
                 "reason": {"type": "string", "minLength": 1, "maxLength": 300}}}
     schema = {"type": "object", "additionalProperties": False,
               "required": ["source_treatments"], "properties": {
-                  "source_treatments": {"type": "array", "items": item}}}
+                  "source_treatments": {
+                      "type": "object", "additionalProperties": False,
+                      "required": list(references),
+                      "properties": {key: item for key in references}}}}
     current = {**payload, "source_ids": list(references)}
     prompt = Prompt(system=_SOURCE_SYSTEM,
                     user=json.dumps(current, ensure_ascii=False, separators=(",", ":")),
@@ -92,22 +93,9 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
 
     def accept(data):
         rows = data["source_treatments"]
-        ids = [row["source_id"] for row in rows]
-        counts = Counter(ids)
-        gaps = {
-            "missing_source_ids": [key for key in references if key not in counts],
-            "duplicate_source_ids": [key for key, count in counts.items() if count > 1],
-            "unexpected_source_ids": [key for key in counts if key not in references],
-        }
-        if any(gaps.values()):
-            raise SchemaViolation(
-                "Source treatments must cover every owned source_id exactly once; "
-                "coverage_mismatch=" + json.dumps(gaps, separators=(",", ":")))
-        if any(not row["reason"].strip() for row in rows):
+        if any(not row["reason"].strip() for row in rows.values()):
             raise SchemaViolation("Each source treatment needs a substantive short reason")
-        return {row["source_id"]: {**references[row["source_id"]],
-                                  "content_role": row["content_role"], "reason": row["reason"]}
-                for row in rows}
+        return {key: {**references[key], **row} for key, row in rows.items()}
 
     return checked_read(model, prompt, schema, output_limit, accept)
 

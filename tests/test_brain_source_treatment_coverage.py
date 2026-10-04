@@ -1,4 +1,4 @@
-"""Source-purpose correction names exact coverage gaps and remains atomic."""
+"""Code-owned source keys require a complete catalogue and bounded atomic correction."""
 import json
 from copy import deepcopy
 
@@ -20,20 +20,32 @@ from tests.test_brain_turn import plan
 def incomplete_catalogue(correct, fault):
     result = deepcopy(correct)
     rows = result["source_treatments"]
-    if fault in ("missing", "missing_and_duplicate"):
-        rows.pop()
-        rows.pop(0)
-    if fault in ("duplicate", "missing_and_duplicate"):
-        rows.append(deepcopy(rows[0]))
+    keys = list(rows)
+    if fault == "missing":
+        rows.pop(keys[-1])
+        rows.pop(keys[0])
+    elif fault == "wrong_envelope":
+        result["source_treatments"] = [{"source_id": key, **row} for key, row in rows.items()]
+    elif fault == "repeated_source_id":
+        rows[keys[0]]["source_id"] = keys[0]
+    else:
+        raise AssertionError(f"Unknown catalogue fault: {fault}")
     return result
 
 
-def coverage_feedback(correction):
-    return json.loads(correction["validation_issue"].split("coverage_mismatch=", 1)[1])
+def assert_keyed_feedback(correction, fault, first_key):
+    issue = correction["validation_issue"]
+    assert "source_treatments" in issue
+    if fault == "missing":
+        assert f"source_treatments.{first_key} is missing" in issue
+    elif fault == "wrong_envelope":
+        assert "object" in issue
+    else:
+        assert f"source_treatments.{first_key}" in issue and "undeclared properties" in issue
 
 
-@pytest.mark.parametrize("fault", ["missing", "duplicate", "missing_and_duplicate"])
-def test_source_correction_names_each_gap_and_preserves_the_complete_input(fault):
+@pytest.mark.parametrize("fault", ["missing", "wrong_envelope", "repeated_source_id"])
+def test_source_correction_enforces_owned_keys_and_preserves_the_complete_input(fault):
     earlier = (Message("prior", "advocate", "The receipt is unsigned. The date is disputed."),
                Message("answer", "nm", "The reported details remain uncertain."))
     payload, _, _ = addressed_sources(earlier, "Review the record. The original is unavailable.")
@@ -50,12 +62,13 @@ def test_source_correction_names_each_gap_and_preserves_the_complete_input(fault
     assert correction["original_input"] == json.loads(model.calls[0][0].user)
     assert correction["original_input"]["earlier_conversation"] == payload["earlier_conversation"]
     assert correction["rejected_output"] == wrong
-    assert coverage_feedback(correction) == {
-        "missing_source_ids": ["P1S1", "L2"] if fault != "duplicate" else [],
-        "duplicate_source_ids": ["P1S2" if fault == "missing_and_duplicate" else "P1S1"]
-        if fault != "missing" else [],
-        "unexpected_source_ids": [],
-    }
+    assert_keyed_feedback(correction, fault, "P1S1")
+    schema = model.calls[0][1]["properties"]["source_treatments"]
+    assert schema["required"] == list(roles) and set(schema["properties"]) == set(roles)
+    assert schema["additionalProperties"] is False
+    assert model.calls[1][1] == model.calls[0][1]
+    if fault == "missing":
+        assert set(roles) - set(wrong["source_treatments"]) == {"P1S1", "L2"}
     assert result["L1"]["content_role"] == "work_instruction"
     assert result["L2"]["content_role"] == "uncertain"
     assert result["P1S1"]["turn_id"] == "prior"
@@ -64,24 +77,27 @@ def test_source_correction_names_each_gap_and_preserves_the_complete_input(fault
         "Message:", "Purpose:", "Look for:", "Outcome:"))
 
 
-def test_unexpected_source_id_keeps_the_closed_schema_and_exact_reference_feedback():
+def test_unexpected_source_key_keeps_the_closed_schema_and_complete_rejected_output():
     payload, _, _ = addressed_sources((), "Review the record. The original is unavailable.")
     correct = reply({"L1": "work_instruction", "L2": "uncertain"})
     wrong = deepcopy(correct)
-    wrong["source_treatments"][1]["source_id"] = "unowned-source"
+    wrong["source_treatments"]["unowned-source"] = deepcopy(wrong["source_treatments"]["L2"])
     model = SourceModel([wrong, correct])
 
     result = classify_account_sources(model, payload=payload, latest_turn_id="current")
 
     assert set(result) == {"L1", "L2"} and len(model.calls) == 2
-    schema = model.calls[0][1]["properties"]["source_treatments"]["items"]["properties"]
-    assert schema["source_id"]["enum"] == ["L1", "L2"]
-    issue = json.loads(model.calls[1][0].user)["validation_issue"]
-    assert "source_treatments[1].source_id" in issue
-    assert "unowned-source" in issue and "outside the permitted vocabulary" in issue
+    schema = model.calls[0][1]["properties"]["source_treatments"]
+    assert schema["required"] == ["L1", "L2"]
+    assert set(schema["properties"]) == {"L1", "L2"} and schema["additionalProperties"] is False
+    correction = json.loads(model.calls[1][0].user)
+    assert "source_treatments" in correction["validation_issue"]
+    assert "undeclared properties" in correction["validation_issue"]
+    assert correction["rejected_output"] == wrong
+    assert correction["original_input"] == json.loads(model.calls[0][0].user)
 
 
-@pytest.mark.parametrize("fault", ["missing", "duplicate", "missing_and_duplicate"])
+@pytest.mark.parametrize("fault", ["missing", "wrong_envelope", "repeated_source_id"])
 def test_source_coverage_failure_exhausts_only_the_existing_correction(fault):
     payload, _, _ = addressed_sources((), "One reported detail. A second detail. Review both.")
     correct = reply({"L1": "reported_matter_account", "L2": "reported_matter_account",
@@ -89,7 +105,7 @@ def test_source_coverage_failure_exhausts_only_the_existing_correction(fault):
     wrong = incomplete_catalogue(correct, fault)
     model = SourceModel([wrong, wrong])
 
-    with pytest.raises(SchemaViolation, match="coverage_mismatch="):
+    with pytest.raises(SchemaViolation, match="source_treatments"):
         classify_account_sources(model, payload=payload, latest_turn_id="current")
 
     assert len(model.calls) == 2
@@ -122,7 +138,7 @@ class CoverageModel(PublicContinuationModel):
     "The inventory is unsigned. The receipt is dated. Review both records.",
     "The dispatch date is disputed. The shipment arrived later. Record these reported details.",
 ])
-@pytest.mark.parametrize("fault", ["missing", "duplicate", "missing_and_duplicate"])
+@pytest.mark.parametrize("fault", ["missing", "wrong_envelope", "repeated_source_id"])
 @pytest.mark.parametrize("recover", [False, True])
 def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
         client, wired, monkeypatch, message, fault, recover):
@@ -143,12 +159,13 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
     source_calls = [payload for operation, payload in model.calls
                     if operation == "classify_account_sources"]
     assert source_calls[1]["original_input"] == source_calls[0]
-    assert coverage_feedback(source_calls[1]) == {
-        "missing_source_ids": ["P1S1", "L3"] if fault != "duplicate" else [],
-        "duplicate_source_ids": ["L1" if fault == "missing_and_duplicate" else "P1S1"]
-        if fault != "missing" else [],
-        "unexpected_source_ids": [],
-    }
+    assert_keyed_feedback(source_calls[1], fault, "P1S1")
+    source_schemas = [schema for operation, schema in model.schemas
+                      if operation == "classify_account_sources"]
+    owned = source_schemas[0]["properties"]["source_treatments"]
+    assert owned["required"] == source_calls[0]["source_ids"]
+    assert set(owned["properties"]) == {"P1S1", "L1", "L2", "L3"}
+    assert owned["additionalProperties"] is False and source_schemas[1] == source_schemas[0]
     saved = wired.store.load(matter_id)
     assert saved.brain_chat[0] == original.brain_chat[0]
     if not recover:
@@ -156,7 +173,7 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
         assert saved == original
         assert [operation for operation, _ in model.calls[1:]] == [
             "interpret_conversation", "classify_account_sources", "classify_account_sources"]
-        assert "coverage_mismatch" not in response.text
+        assert "source_treatments" not in response.text
         return
     assert response.status_code == 200, response.text
     answer = response.json()

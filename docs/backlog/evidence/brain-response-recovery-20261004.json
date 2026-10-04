@@ -1,6 +1,6 @@
 {
   "date": "2026-10-04",
-  "status": "first_atomic_piece_offline_verified_full_chain_and_live_completion_unaccepted",
+  "status": "keyed_source_catalogue_browser_verified_stage1_and_full_chain_unaccepted",
   "scope": "Priority: attributed account -> substantive/procedural law -> attributed precedent -> both positions and counterreasoning -> justified conclusion. First atomic subpiece: source-catalogue completeness feedback. General rules only.",
   "queue_owners": [
     "LB-175",
@@ -347,5 +347,87 @@
     "sha256": "53e6ed6fac3afc6cc0ff5f1de689513e7d582953153c30d774cedb2cd51db5f8",
     "verification": "outputs/astra-brain-reliability-20261004/workbook/atomic-source-feedback/verification.json",
     "priority": "Full end-to-end chain; atomic source coverage is only the first stage-1 subpiece."
+  },
+  "six_stage_work": {
+    "authorisation": "User requests six stages in order until built and browser-tested; additional USD2 begins here.",
+    "budget": {
+      "ledger": "outputs/astra-brain-reliability-20261004/six-stage-usd2.sqlite",
+      "maximum_usd": 2,
+      "prior_spend_kept_separate_usd": 0.717067
+    },
+    "acceptance": "Actual browser reply, source panes and saved matter against full transcript; automated tests are regression protection.",
+    "prompt_review": "Inspect every visited prompt for Message/Purpose/Look for/Outcome, one coherent decision, provenance, ordered reasoning, clear definitions and exact contract.",
+    "material_candidate": "Preserved unapplied at outputs/astra-brain-reliability-20261004/pending-material-reconciliation.py after the prerequisite source catalogue failed before reaching it.",
+    "source_baseline": {
+      "browser": "new brief refused before save",
+      "fingerprint": "f6216dada4a01dbb",
+      "failed_owner": "classify_account_sources",
+      "failed_invariant": "every supplied advocate source must have a purpose classification",
+      "missing_sources": [
+        "P13S5",
+        "P25S4",
+        "P27S4",
+        "P27S5",
+        "P29S5"
+      ],
+      "material_prompt_reached": false,
+      "all_24_prior_turns_and_records_unchanged": true,
+      "new_stage_calls": 3,
+      "charged_usd": 0.031929,
+      "unknown_attempts": 0,
+      "decision": "Preserve material prompt candidate; replace source-catalogue array with code-owned required keys, then retry this unsaved brief through UI."
+    },
+    "keyed_source_candidate": {
+      "file": "nm/brain/record_review.py",
+      "prompt": "_SOURCE_SYSTEM",
+      "change": "Required source_treatments object keyed by code-owned source IDs; model supplies purpose and reason. Canonical saved catalogue unchanged.",
+      "call_impact": "One source classification; at most existing one correction; no new stage or raised bound.",
+      "isolated_test_receipt": "outputs/astra-brain-reliability-20261004/atomic-keyed-source-tests.xml",
+      "live_state": "Catalogue-completeness subpiece passed real browser/public flow; complete stage1 and six-stage behavior remain unaccepted.",
+      "live_receipt": {
+        "saved_version": 25,
+        "source_entries": 90,
+        "source_calls": 1,
+        "source_latency_ms": 15217,
+        "prior_24_turns_unchanged": true,
+        "new_turn_saved_once": true,
+        "whole_turn_calls": 15,
+        "incremental_usd": 0.202698,
+        "response": "unavailable",
+        "material_admitted": 0,
+        "response_diagnostic": "block 'b1' source_checks premise must be exact displayed words in that block"
+      },
+      "new_stage_total": {
+        "attempts": 18,
+        "charged_usd": 0.234627,
+        "unknown_attempts": 0
+      }
+    }
+  },
+  "passage_failure_audit": {
+    "status": "Read-only code audit; no retrieval repair implemented yet",
+    "rule": "A technical read/check failure is unread coverage, not semantic irrelevance or unsupportedness. Reject a proposed use separately from the source itself. Preserve independently valid owned peers.",
+    "existing_strengths": [
+      "Legal research keeps unread_items separate from withheld_items and conditionally retries unresolved units.",
+      "Continuation keeps accepted request peers and supports scoped missing-source-check recovery."
+    ],
+    "concrete_code_gaps": [
+      {
+        "owner": "legal_requirements.py::_search_hits/read_findings",
+        "problem": "One malformed retrieved passage can clear all hits for that subject; one invalid finding can cause whole-subject regeneration.",
+        "next_fix": "Isolate the unread passage/proposal and preserve valid peers with explicit coverage, retaining identity conflict checks."
+      },
+      {
+        "owner": "retrieval.py::LocalCollection.read/HybridSearcher.search_subject",
+        "problem": "Malformed/missing passage reads may be skipped while overall retrieval remains ok.",
+        "next_fix": "Carry technical missing coverage without turning it into no relevant results."
+      },
+      {
+        "owner": "continuation_verification.py::_check_sources/verify_continuation",
+        "problem": "Wrong copied premise excerpt can exhaust entire request review; V24 demonstrates useful delivery loss without semantic rejection.",
+        "next_fix": "Use owned displayed references and precise unit diagnostics without weakening grounding."
+      }
+    ],
+    "integrity_limit": "Do not reuse evidence when identity, ownership, attribution or shared commit integrity is untrusted; do not reclassify this as irrelevant law."
   }
 }

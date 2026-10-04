@@ -34,9 +34,9 @@ class SourceModel:
 
 
 def reply(roles):
-    return {"source_treatments": [{"source_id": key, "content_role": role,
-                                  "reason": "The source's original framing determines its use."}
-                                 for key, role in roles.items()]}
+    return {"source_treatments": {key: {
+        "content_role": role, "reason": "The source's original framing determines its use."}
+        for key, role in roles.items()}}
 
 
 def test_source_read_preserves_complete_transcript_without_candidate_framing_and_remaps_exactly():
@@ -61,11 +61,17 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
     assert model.calls[0][0].operation == "classify_account_sources"
     assert all(name in model.calls[0][0].system for name in (
         "Message:", "Purpose:", "Look for:", "Outcome:"))
+    schema = model.calls[0][1]["properties"]["source_treatments"]
+    assert schema["type"] == "object" and schema["additionalProperties"] is False
+    assert schema["required"] == list(roles) and set(schema["properties"]) == set(roles)
+    for entry in schema["properties"].values():
+        assert entry["additionalProperties"] is False
+        assert set(entry["required"]) == set(entry["properties"]) == {"content_role", "reason"}
     assert "P2S1" not in catalogue
     assert catalogue["P1S1"] == {
         "turn_id": "account", "role": "advocate", "quoted": earlier[0].text,
         "content_role": "reported_party_position", "reason": reply(roles)[
-            "source_treatments"][0]["reason"]}
+            "source_treatments"]["P1S1"]["reason"]}
     _, _, research_sources = addressed_sources(
         (*earlier, Message("latest", "advocate", latest)), "")
     research_sources = {key: ref for key, ref in research_sources.items() if ref.role == "advocate"}
@@ -78,19 +84,24 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
     assert SOURCE_TREATMENT_CONTRACT == "independent_account_source_treatment_v1"
 
 
-@pytest.mark.parametrize("damage", ["missing", "duplicate", "foreign", "empty_reason"])
+@pytest.mark.parametrize("damage", [
+    "missing", "wrong_envelope", "repeated_source_id", "foreign", "empty_reason", "blank_reason",
+])
 def test_incomplete_source_catalogue_gets_one_precise_same_input_correction(damage):
     payload, _, _ = addressed_sources((), "The party retained records. Review this account.")
     correct = reply({"L1": "reported_matter_account", "L2": "work_instruction"})
     wrong = deepcopy(correct)
     if damage == "missing":
-        wrong["source_treatments"].pop()
-    elif damage == "duplicate":
-        wrong["source_treatments"].append(deepcopy(wrong["source_treatments"][0]))
+        wrong["source_treatments"].pop("L2")
+    elif damage == "wrong_envelope":
+        wrong["source_treatments"] = [
+            {"source_id": key, **row} for key, row in wrong["source_treatments"].items()]
+    elif damage == "repeated_source_id":
+        wrong["source_treatments"]["L1"]["source_id"] = "L1"
     elif damage == "foreign":
-        wrong["source_treatments"][0]["source_id"] = "unowned"
+        wrong["source_treatments"]["unowned"] = deepcopy(wrong["source_treatments"]["L1"])
     else:
-        wrong["source_treatments"][0]["reason"] = "  "
+        wrong["source_treatments"]["L1"]["reason"] = "  " if damage == "blank_reason" else ""
     model = SourceModel([wrong, correct])
 
     result = classify_account_sources(model, payload=payload, latest_turn_id="current")

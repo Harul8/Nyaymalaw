@@ -9,10 +9,10 @@ def source_treatment_reply(operation, payload):
     """Script the separately owned source treatment, without keyword inference."""
     if operation != "classify_account_sources":
         return None
-    return {"source_treatments": [{
-        "source_id": identity, "content_role": "reported_matter_account",
+    return {"source_treatments": {identity: {
+        "content_role": "reported_matter_account",
         "reason": "The scripted source-treatment decision reports account content.",
-    } for identity in payload["source_ids"]]}
+    } for identity in payload["source_ids"]}}
 
 
 def classified_verifier(function):
