@@ -127,7 +127,8 @@ def checked_finding(row):
            "why": "The fixture retains the exact cited condition.", **row}
     sources = [source["id"] for source in row["sources"]]
     return {**row, "source_ids": sources, "material_ids": [], "use_verification": {
-        "contract": RESEARCH_VERIFICATION, "checks": {name: {
+        "contract": RESEARCH_VERIFICATION, "entailment_basis": "source_rule",
+        "checks": {name: {
             "verdict": "supported", "reason": "The exact passage supports this limited use.",
             "source_ids": sources, "material_ids": [],
         } for name in ("entailment", "application", "force")},
@@ -177,6 +178,34 @@ def _continue(model, *, latest="I have a signed receipt.", conversation=None,
 
 def _operation_names(model):
     return [prompt.operation for prompt, _ in model.calls]
+
+
+def test_ambiguous_block_id_repairs_exact_paths_and_links_before_review():
+    proposed = unit()
+    proposed["blocks"][1]["id"] = proposed["blocks"][0]["id"]
+    proposed["questions"][0]["block_id"] = proposed["blocks"][0]["id"]
+
+    def repair(payload):
+        issue = payload["correction"]["validation_issues"][0]["issue"]
+        assert "blocks[1].id 'account-0' duplicates blocks[0].id" in issue
+        assert "update each linked block_id" in issue
+        revised = deepcopy(payload["correction"]["rejected_units"][0])
+        revised["blocks"][1]["id"] = "question-0"
+        revised["questions"][0]["block_id"] = "question-0"
+        return {"units": [revised]}
+
+    model = ContinuationModel([{"units": [proposed]}, repair, verdict(0)])
+    result = _continue(model)
+
+    assert _operation_names(model) == [
+        "continue_conversation", "continue_conversation", "verify_continuation"]
+    assert len(result.units) == 1
+    checked = model.calls[2][1]["units"][0]
+    assert checked["blocks"][0]["id"] == "account-0"
+    assert checked["blocks"][1]["id"] == "question-0"
+    assert checked["questions"][0]["block_id"] == "question-0"
+    assert [row["text"] for row in checked["blocks"]] == [
+        row["text"] for row in proposed["blocks"]]
 
 
 def test_first_turn_checks_the_entire_visible_reply_and_resolves_exact_words():
@@ -813,12 +842,47 @@ def test_contextual_record_citation_preserves_answer_and_earlier_question():
     block = result.units[0]["blocks"][0]
     cited_record = next(ref for ref in block["references"] if ref["type"] == "material")
     assert cited_record["record"]["quoted"] == "Yes."
+    for prompt, packet in model.calls:
+        if prompt.operation == "verify_continuation":
+            packet = packet["input"]
+        assert packet["record_catalogue"][record["id"]]["record"][
+            "record_role"] == "nm_interpretation"
+    assert "record_role" not in record
     context = [ref for ref in block["references"] if ref["type"] == "conversation"]
     assert [(ref["turn_id"], ref["role"], ref["text"]) for ref in context] == [
         ("first", "nm", question)]
     assert context[0]["id"] in block["span_ids"]
     assert context[0]["id"].startswith("context:first:nm:")
     assert model.calls[1][1]["units"] == [proposed]
+
+
+def test_source_purpose_readdressing_is_shared_by_writer_and_reviewer_without_calls():
+    words = "The document is unsigned."
+    earlier = Conversation((
+        Message("draft", "advocate", words),
+        Message("draft", "nm", "That is material to examine."),
+        Message("account", "advocate", words),
+    ), current_matter_id="current")
+    treatments = {
+        "old-P1S1": {"turn_id": "draft", "role": "advocate", "quoted": words,
+                     "content_role": "examination_material", "reason": "Scripted draft role."},
+        "old-L1": {"turn_id": "account", "role": "advocate", "quoted": words,
+                   "content_role": "reported_matter_account", "reason": "Scripted account role."},
+    }
+    proposed = unit(text="You report an unsigned document.", span_ids=("P3S1",))
+    model = ContinuationModel([{"units": [proposed]}, verdict(0)])
+
+    result = _continue(model, conversation=earlier, latest="Summarise the account.",
+                       latest_turn_id="current", source_treatments=treatments)
+
+    assert result.units
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    classifications = model.calls[0][1]["source_classifications"]
+    assert set(classifications) == {"P1S1", "P3S1"}
+    assert classifications["P1S1"]["content_role"] == "examination_material"
+    assert classifications["P3S1"]["content_role"] == "reported_matter_account"
+    assert classifications == model.calls[1][1]["input"]["source_classifications"]
+    assert set(treatments) == {"old-P1S1", "old-L1"}
 
 
 def test_corrupt_record_context_refuses_before_composition():

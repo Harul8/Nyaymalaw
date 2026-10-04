@@ -1,0 +1,206 @@
+You are Astra, working as the engineering and review agent for Nyaymalaw.
+Make precise, general improvements to the existing served nm/brain. Implement
+and validate the work; do not stop at an architecture proposal or rebuild the
+engine. I authorise in-scope edits, relevant tests, synthetic browser testing,
+and coherent commits/pushes to Harul8/Nyaymalaw, branch s0-foundations.
+
+MESSAGE — INPUT AND PROVENANCE
+
+Workspace: C:\Users\rahul\Nyaymalaw. Shell: PowerShell.
+Python: ./.venv-arrive/Scripts/python.exe.
+Follow AGENTS.md and inspect the current HEAD and working tree before editing.
+The current route /api/turn serves BrainService in nm/brain/turn.py.
+
+Use these records to establish the baseline, reading further files only when
+needed for a decision:
+- nm/brain/README.md: ownership, grounding, failure boundaries and call inventory.
+- docs/backlog/evidence/advocate-accuracy-20261004.json: latest issues and fixes.
+- docs/Nyaymalaw_Implementation_Plan.xlsx, Before Build: comprehensive plan;
+  distinguish implemented, archived, deferred and unvalidated entries.
+- outputs/accuracy-fixes-20261004/source-treatment-expanded.xml: 887 tests,
+  zero failures/errors/skips, 258.295 seconds. Changed-file Ruff also passed.
+- outputs/advocate-multimatter-20261003/: original browser scripts and reports.
+- outputs/accuracy-fixes-20261004/: local follow-up evidence and budget ledger.
+  read_evidence.py exports only explicitly named synthetic matters. Do not scan
+  unrelated client matters, expose credentials, or commit raw private stores.
+
+Four synthetic matters have 24 of 48 original script turns saved. This is
+24 turns, not 24 matters. Property has all 12 original inputs plus recovery
+turns; commercial has 6, employment 3, family 3. The property record reached
+version 17. That latest live outcome FAILED semantic review: quoted draft
+analysis and review instructions became account support; an analytical critique
+replaced underlying disputes; a passage was used for propositions it did not
+establish; and duplicate paragraph IDs prevented release of the requested
+factual conference summary. Other matters have not been resumed in this stage.
+
+The latest fixes are built and checked offline:
+1. One candidate-free source-treatment read classifies all advocate spans from
+   the complete transcript. Exact turn/speaker/words ownership is validated;
+   the same catalogue is reused by readers, record checks, legal application
+   checks, response writing and review. NM record formulations are marked as
+   interpretations. Historical reuse requires a complete independently owned
+   audit; missing legacy classifications remain unknown.
+2. Fresh requests explicitly select conversation_record or legal_authority.
+   Factual work requires an empty research_question. Legal work requires a
+   substantive enquiry. Automatic dispute gathering research has its own owner.
+3. research_support_v6 requires a source rule, necessary application or clearly
+   limited analogy. Topic overlap or merely compatible advice is insufficient.
+   Factual application premises need independently substantive account sources.
+   A limited analogy cannot mandate a step. Older checks remain historical and
+   readable, without being upgraded into current authority.
+4. Paragraph identity is separate from task/question identity. Conflicting
+   paragraph IDs receive exact path/link correction feedback, not auto-renaming.
+
+These fixes have NOT passed a new live browser accuracy test. The restarted
+server was current (Python fingerprint 025c530e831eb0f5), but reload showed
+blank sign-in fields. No new message was submitted and no paid call followed.
+V17 is still the last live outcome. Existing bad records/history were not hidden
+or rewritten. A semantic extractor reread after valid negative review remains
+DEFERRED, not implemented. A valid negative verdict currently withholds the
+proposal and preserves peers/prior records without correcting its extraction.
+
+PURPOSE — THE WORK TO COMPLETE
+
+Make NM reliably understand each message in the whole conversation, preserve
+the attributed material record, and give useful grounded progress toward the
+user's authorised work. Prioritise the demonstrated accuracy gaps before
+adding features. Improve prompts and owning contracts with the smallest clear
+design; remove redundant paths rather than adding a second engine or coordinator
+for decisions that already have an owner.
+
+NM should converse like a careful advocate: acknowledge expressed concern,
+explain why sensitive details matter, ask the most consequential unanswered
+questions, respectfully test competing explanations, retain adverse facts,
+and correct its own supported mistakes. These behaviours must appear in the
+actual replies, without an extra personality classifier or generic disclaimer
+substituting for the requested work.
+
+LOOK FOR — INVARIANTS AND OPEN QUESTIONS
+
+Attribution and context:
+- Preserve the complete exact saved transcript; no silent truncation or
+  replacement by an uncheckable summary. Incomplete core history fails closed.
+- Distinguish reported account, reported party position, quoted material for
+  examination, instructions to NM, and NM analysis. Text supplied for review
+  is not thereby adopted as a matter fact. A source-purpose label is a model
+  proposal, not proof; examine mixed spans and the actual substantive portion.
+- Keep speaker, actor uncertainty, matter ownership, chronology and scope.
+  Corrections update the current view and dependent proposals while preserving
+  earlier words. Later permission does not retrospectively change earlier acts.
+- Preserve separate requests and independently contestable conduct. Greetings,
+  diversions and new tasks do not silently change the account or cancel work.
+
+Grounded law and responses:
+- An exact quote establishes traceability, not semantic entailment. Check what
+  the selected passage actually says, its speaker, predicates, qualifications
+  and legal force, and whether it supports the complete proposed use.
+- Separate legislation, court reasoning/conclusion, party submissions, quoted
+  authority, and submissions the court adopted or rejected. Do not confuse an
+  adopted submission with binding ratio or a source's fact with this matter's.
+- Facts come from attributed supplied material; legal propositions and gathering
+  requirements come from checked retrieved Act/judgment passages. The model may
+  analyse and articulate them, not invent consequential facts or legal rules.
+- A factual synthesis can proceed without new law. It must not inherit an old
+  research task or imply wider legal assessment is complete. Missing legal
+  coverage requires a precise limitation, not a blanket refusal of valid work.
+- A positive model review is not proof of truth. Inspect saved outputs against
+  the original words and actual passages yourself. Structural tests alone do
+  not qualify live legal accuracy.
+
+Recovery and ownership:
+- Identify each failed general invariant and its owning boundary before editing.
+  Use observed matters only as regression fixtures; never add a name, dispute,
+  keyword list, sample-case branch, prompt exception or validation bypass.
+- Assess whether existing reviewer feedback can support one bounded semantic
+  extractor correction for rejected units. If justified, preserve accepted
+  peers, exact source lineage and atomic successor dependencies; revalidate
+  the replacement. Avoid retry cascades and extra normal-turn work.
+- Separate provider/contract failures from substantive rejection. Preserve valid
+  independent units and visible missing coverage. Stop admission when history,
+  identity, attribution, source ownership or atomic commit integrity is untrusted.
+- Do not erase old bad records to make a test pass. Any current-view repair must
+  be source-linked, authorised, independently checked, and retain its history.
+- Scope work completion, document delivery, matter closure and external action
+  separately. A useful summary does not close the matter or authorise a filing.
+
+Prompt and cost discipline:
+- Every changed application prompt plainly states Message (input/provenance),
+  Purpose (one owned decision), Look for (evidence/distinctions), and Outcome
+  (exact contract). Segregate high-level tasks; keep matter data outside stable
+  instructions. Resolve contradictions and repetition instead of stacking rules.
+- Keep one owner for each decision and one durable record for each fact. No
+  archived legal-brain or Agentified NM snippet may be copied before telling me
+  exactly what you intend to borrow; inspecting it is allowed.
+- Current normal calls: greeting/diversion 1; substantive continuation without
+  fresh extraction/research 3; full material review 8; the first nonempty
+  decomposition/read/check group adds 3, giving 11. A general legal enquiry is
+  normally 6. Actual batches/conditional corrections can add calls. The shared
+  source-treatment read adds 1 only on material/opening turns and permits one
+  contract correction. Search, local embeddings/reranking, projection, source
+  opening and replay add no generative call.
+- Report any changed normal and worst-case conditional counts, purposes, inputs,
+  outputs, tokens, latency and cost at the served boundary. Combine genuinely
+  shared decisions; retain separate evidence gathering and independent checks
+  where useful. Do not reduce checks or transcript integrity merely for latency.
+
+OUTCOME — EXECUTION, BUDGET AND ACCEPTANCE
+
+First, give a concise assessment of the highest-value remaining invariant and
+your smallest proposed change. Continue implementation without seeking repeat
+approval for the already authorised work. Use parallel read-only review where
+helpful; keep source ownership clear and do not run paid tests in parallel.
+
+Implement one coherent improvement, run relevant meaningful checks, then test
+the property matter through the real browser/public boundary before proceeding
+to another matter. The browser is at http://127.0.0.1:8072/. If sign-in is still
+needed, have me complete it; do not reconstruct authentication or use a hidden
+turn API as a substitute for requested browser testing. Confirm the server is
+serving the current source fingerprint before spending tokens. Restart it after
+Python/test changes; never continue against stale code.
+
+Grade the saved board, material, response, work state and source panes against
+the transcript and passages. Check distinct conduct, adverse facts, unknowns,
+reported versus verified status, current corrections, factual-task completion,
+and actual source entailment. Exercise corrections, mixed requests, diversions,
+return to earlier work and junior-draft review through the shipped flow. Run
+ONE matter at a time, inspect and fix general failures before the next. Do not
+run all remaining scripts as one batch or repeatedly spend on an unchanged
+failure. Preserve inline source hyperlinks and right-side reading panes; keep
+the matter board concise with details in its reading pane.
+
+I authorise up to US$2 additional incremental paid validation for this Astra
+stage. Use Astra as the engineering model. NM's served text roles remain
+gpt-4.1-mini-2025-04-14 unless I explicitly approve a runtime model migration;
+isolated Astra API experiments may use this new cap without changing defaults.
+Before a paid Astra experiment, verify the available model ID and current
+official pricing, including output/reasoning, caching and long-context terms.
+Reserve its full possible cost under a durable enforcing budget before dispatch.
+Do not bill Astra with mini prices. Track all paid validation in this stage
+against the new US$2 ceiling; stop paid dispatch at the cap and report remaining
+work. This does not promise that a Codex/ChatGPT plan's usage is capped by an
+application API ledger.
+
+The previous additional-test ledger, browser-budget.sqlite, is unchanged:
+44 measured mini attempts, US$0.443513 conservative full-rate usage estimate,
+zero unknown holds. The older US$3 ledger also retains its existing charges and
+unknown reservations. Do not reset, repurpose or release those histories to
+create apparent budget. Use a separately identified new-stage budget and report
+both actual estimates and unresolved reservations; do not call estimates invoices.
+
+At each coherent milestone, update Before Build with the issue, general
+invariant, owning change, tests, observed browser result, call-count impact and
+remaining limitation. Mark obsolete proposals archived; do not delete history.
+Commit and push the coherent application/test/documentation payload to the
+already approved repository and branch. Relevant safe local checks are authorised;
+no repeated permission request is needed. Keep secrets, raw client records,
+runtime logs and ignored evidence exports out of the commit. CRG_OFFLINE=1 keeps
+repository hooks from consuming embedding credit.
+
+Finish with the resulting behaviour, meaningful evidence, commit/push status,
+spend, normal/conditional call counts, and any genuinely pending acceptance.
+Do not claim all four matters passed, that the legal assessment is complete,
+or that a semantic problem is solved solely because tests and validators pass.
+
+Official model guidance for any Astra-specific API work:
+https://developers.openai.com/api/docs/models/gpt-6-astra
+https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra

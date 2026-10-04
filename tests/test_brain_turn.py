@@ -115,9 +115,10 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     assert len(model.calls) == 2
     assert model.all_calls[:2] == ["interpret_conversation", "interpret_conversation"]
     assert set(model.all_calls[2:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert opened["metrics"]["llm_calls"] == 6
+    assert opened["metrics"]["llm_calls"] == 7
     assert [row["text"] for row in model.calls[1]["earlier_conversation"]] == [
         "Hello", "Hello."]
     matter = store.load(opened["matter_id"])
@@ -131,7 +132,7 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     assert opened["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
 
 
-def test_first_substantive_message_uses_six_calls_and_exact_replay_uses_none(tmp_path):
+def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(tmp_path):
     text = "Our client disputes the invoice issued on 3 March."
     brain, store, model = service(tmp_path, [
         plan(text, scope="proposed", step="legal_work",
@@ -147,9 +148,11 @@ def test_first_substantive_message_uses_six_calls_and_exact_replay_uses_none(tmp
     assert len(model.calls) == 1
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert first["metrics"]["llm_calls"] == 6
+    assert first["metrics"]["llm_calls"] == 7
+    assert model.all_calls.count("classify_account_sources") == 1
     assert first["elements"][0]["text"] == (
         "I will check the invoice and the underlying agreement "
         "before giving a legal view.")
@@ -173,7 +176,7 @@ def test_multi_party_opening_repairs_only_heading_then_checks_it(tmp_path):
 
     assert store.load(result["matter_id"]).title == "Mira Patel: Return of records"
     assert result["material_coverage"]["opening_fallback"] is False
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 9
     assert model.all_calls.count("verify_material_grounding") == 2
     assert model.all_calls.count("repair_opening") == 1
     repair = model.calls[1]
@@ -332,7 +335,7 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert "I will check the delivery terms and record before assessing remedies." in visible
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     assert [row["request_index"] for row in response["continuation"]["units"]] == [1]
     assert [row["state"] for row in response["continuation"]["coverage"]] == [
         "unavailable", "ok"]
@@ -340,7 +343,8 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert model.all_calls.count("verify_continuation") == 2
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "extract_disputes", "extract_legal_details", "verify_material_grounding",
+        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
 
 
@@ -487,7 +491,7 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
     assert [row["text"] for row in response["elements"]] == [urgent_reply, ordinary_reply]
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 5
+    assert response["metrics"]["llm_calls"] == 6
 
 
 def test_served_factual_correction_keeps_its_direct_reply_and_source(
@@ -556,7 +560,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     assert response["material"][0]["quoted"] == correction
     assert response["material"][0]["prior_references"][0]["quoted"] == (
         "the hearing is on Tuesday.")
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 7
 
 
 def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired, monkeypatch):
@@ -645,7 +649,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     response = BrainService(store, model).run(
         BrainTurn("adv", latest, "grounding-turn")).as_dict()
 
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     assert [row["statement"] for row in response["material"]] == [
         "We sent a notice."]
     assert {key: response["material_coverage"][key] for key in (

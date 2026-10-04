@@ -85,6 +85,7 @@ Normal calls vary with the work actually due:
 | Activity | Calls | Input and output |
 | --- | ---: | --- |
 | Interpret | 1 | Full transcript, latest words and scoped coverage → requests, scope and any research question |
+| Advocate-source treatment | 1 when material is read | Candidate-free full transcript and owned advocate spans → canonical source-purpose proposals |
 | Dispute extraction | 1 when material is read | Full context and active disputes → attributed proposals |
 | Dispute check | 1 when proposals exist | Proposals and sources → independent verdicts |
 | Detail extraction | 1 when material is read | Full context and disputes → attributed material |
@@ -98,6 +99,12 @@ Normal calls vary with the work actually due:
 
 A plain greeting or nonlegal diversion normally costs one call; a checked
 substantive continuation with unchanged material/research normally costs three.
+A full material-review turn with dispute/detail proposals and checked response
+normally costs eight; a nonempty first research batch adds three, giving eleven.
+The independent source-treatment read adds one call to those material turns,
+and at most one conditional contract correction. Its catalogue is reused by all
+record readers, record checks, factual application checks and response writing
+and review in the same turn.
 The first general legal question normally costs six when useful findings exist:
 interpretation, query planning, passage reading, independent source checking,
 response writing and independent response checking. Local hybrid search adds no
@@ -112,16 +119,12 @@ retry cascades. A rejected continuation gets at most one replacement generation
 and another independent check. A truncation correction may increase the writer's
 output budget, bounded at 16,384 tokens; it must return concise complete units
 instead of releasing partial JSON.
-Substantive response writing uses the stronger
-configured judge tier because it must jointly preserve meaning, sources and
-cross-turn progress. Its separate review uses an independent prompt and call
-on that tier. A downgraded routine response is not accepted for either stage.
-Interpretation also uses the configured judge tier: deciding the latest request
-against pending work is consequential, and browser testing exposed unnecessary
-material reads when that decision used the smaller routine model. Extraction
-retains its routine tier with independent checks. Interpretation, writing and
-review are separate tasks and calls, currently on the same configured model;
-they do not provide model diversity. No progress or personality call is added.
+Interpretation, substantive writing and response review use the configured
+judge role to preserve meaning, sources and cross-turn progress. Extraction
+uses the routine role with separate checks. All text roles currently use the
+authorised GPT-4.1 mini snapshot; separate prompts and calls do not provide
+model diversity. A downgraded response is not accepted for a judge-role stage.
+No progress or personality call is added.
 
 `metrics.llm_calls` and content-free `model_calls` receipts report actual service
 calls, operations, tiers, timing and token usage. `provider_retries` separately
@@ -158,12 +161,17 @@ the meaning of all blocks, so relabelling a legal assertion cannot bypass
 grounding. Correction feedback names the failed block or subject and its
 allowed reference boundary. These distinctions add no routine model calls.
 
-Current legal uses require `research_support_v3`. The existing independent
+Current legal uses require `research_support_v6`. The existing independent
 source check names who states the operative proposition and how the source
 treats it, each anchored to exact words in that same saved passage. A reported
 or rejected argument is not an adopted rule. Review also checks the whole
 finding's actor, remedy, predicates and claimed legal force; a correct source
 role does not excuse extending a passage beyond what it says.
+The use certificate states whether the finding expresses the source rule,
+a necessary application, or a limited analogy. Merely compatible advice or a
+shared topic is insufficient. Reported satisfaction or contradiction selects
+only advocate spans classified independently as substantive account content;
+unresolved conditions stay explicit. A limited analogy cannot mandate a step.
 
 The operative proposition is labeled as legislative text, court conclusion,
 court reasoning, party submission or quoted authority. Adoption does not
@@ -179,7 +187,19 @@ freshness and verification currency are separate: neither a matching corpus
 nor a source saved in the current turn upgrades an older check. Historical
 gathering items are marked as awaiting source review and excluded from current
 legal composition and cache reuse. Due research uses the ordinary pipeline;
-there is no separate migration or source-role model call.
+there is no separate migration call. Material-review and opening turns make
+one candidate-free advocate-source treatment read before proposing records.
+It sees the complete transcript without candidate formulations and owns each
+span's reported account, party position, examination, instruction or NM-analysis
+treatment. Both readers, both record Judges and legal-premise checking reuse
+that catalogue; they cannot upgrade a review instruction into evidence. These
+treatments do not prove facts. A fresh complete read has the durable
+`independent_account_source_treatment_v1` marker; historical per-candidate votes
+do not substitute for it. Pure continuation and legal-search turns add no such
+call and reuse only chronologically owned independent audits when available.
+The read has one conditional contract-correction call. Its catalogue is core
+attribution work: an unread or foreign reference stops saving, while valid
+downstream peer proposals retain their ordinary independent recovery.
 
 The interpreter defines authority needed for the user's immediate purpose.
 Automatic gathering on changed material has its own owner, so an attributed

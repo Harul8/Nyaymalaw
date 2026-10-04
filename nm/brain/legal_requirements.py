@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from nm.brain.checked import require_independent_result
 from nm.brain.material import addressed_sources
+from nm.brain.record_review import substantive_source_treatments
 from nm.shared.model_port import (
     ContextOverflow,
     ModelError,
@@ -21,11 +22,15 @@ from nm.shared.model_port import (
 )
 
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
-RESEARCH_VERIFICATION = "research_support_v5"
+RESEARCH_VERIFICATION = "research_support_v6"
 HISTORICAL_RESEARCH_VERIFICATIONS = (
-    "research_support_v1", "research_support_v2", "research_support_v3", "research_support_v4"
+    "research_support_v1", "research_support_v2", "research_support_v3", "research_support_v4",
+    "research_support_v5",
 )
 FINDING_USE_CHECKS = ("entailment", "application", "force")
+ENTAILMENT_BASES = ("source_rule", "necessary_application", "limited_analogy",
+                   "consistent_only", "topic_only", "unsupported", "uncertain")
+_SUPPORTED_BASES = ENTAILMENT_BASES[:3]
 SOURCE_ASSERTION_OWNERS = (
     "legislative_text", "deciding_court", "quoted_authority", "party", "other", "unclear"
 )
@@ -99,6 +104,7 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
     if contract in ("research_support_v1", "source_support_v4"):
         return verification.get("contract") in (None, contract)
     if (contract not in ("research_support_v2", "research_support_v3", "research_support_v4",
+                         "research_support_v5",
                          RESEARCH_VERIFICATION)
             or verification.get("contract") != contract):
         return False
@@ -130,16 +136,24 @@ def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERI
     if contract in ("research_support_v1", "research_support_v2", "research_support_v3",
                     "source_support_v4"):
         return True
-    if (contract not in ("research_support_v4", RESEARCH_VERIFICATION)
+    if (contract not in ("research_support_v4", "research_support_v5", RESEARCH_VERIFICATION)
             or not isinstance(finding, dict)):
         return False
     verification = finding.get("use_verification")
-    fields = ({"contract", "checks", "application_premises"}
-              if contract == RESEARCH_VERIFICATION else {"contract", "checks"})
+    fields = {"contract", "checks"}
+    if contract in ("research_support_v5", RESEARCH_VERIFICATION):
+        fields.add("application_premises")
+    if contract == RESEARCH_VERIFICATION:
+        fields.add("entailment_basis")
     if (not isinstance(verification, dict) or set(verification) != fields
             or verification.get("contract") != contract
             or not isinstance(verification.get("checks"), dict)
             or set(verification["checks"]) != set(FINDING_USE_CHECKS)):
+        return False
+    if contract == RESEARCH_VERIFICATION and (
+            verification.get("entailment_basis") not in _SUPPORTED_BASES
+            or (verification["entailment_basis"] == "limited_analogy"
+                and finding.get("force") == "required")):
         return False
     sources, material = finding.get("source_ids"), finding.get("material_ids")
     source_rows = finding.get("sources")
@@ -328,8 +342,11 @@ needs exact court treatment words, never merely a citation, silence or shared
 terms. A finding about rejection must use the court's rejecting reason.
 Outcome: For each cited source select exact support, ownership and treatment
 fragment IDs from that source only. Give assertion_owner, assertion_role,
-owner_label, one faithful assertion_statement and source_treatment. Court roles
-require deciding_court; party_submission requires party; quoted_authority
+owner_label, one faithful assertion_statement and source_treatment.
+The assertion_statement articulates the source's own proposition; it cannot add
+this matter's requested work or advice absent from those words. Source truth,
+ownership and agreement with a recommendation are separate decisions.
+Court roles require deciding_court; party_submission requires party; quoted_authority
 requires quoted_authority; legislative_text requires provision text and
 legislative_text ownership. Name a party only when the ownership words support
 that identity. Legal support requires a known operative role and adopted
@@ -342,13 +359,20 @@ Context does not become another legal-support proposition.
 Activity 2 - Check the complete finding's meaning.
 Look for: Every consequential claim in label, need and why against the retained
 passages: actor, relationship, action, remedy, timing, conditions and exceptions.
-Shared terms or exact quotation alone are not entailment. Express rules and
+Shared terms, exact quotation or advice consistent with a source alone are not
+entailment. The operative rule must support the exact proposition or gathering
+step, rather than merely make it prudent or share its topic. Express rules and
 supported inferences differ from analogy. An analogy supports only a faithfully
 limited comparison or enquiry, not missing applicability or a mandatory step.
 A case's facts, procedural history or disposition do not themselves prescribe
 a step in another matter. A condition of one legal route cannot become a
 universal prerequisite or exclude other routes without supporting passages.
-Outcome: Give label_verdict faithful/unsupported/uncertain and an entailment
+Outcome: Give entailment_basis source_rule for the actual rule,
+necessary_application for a consequence supported by its predicates,
+limited_analogy for an expressly limited comparison or enquiry, consistent_only
+for merely compatible advice, topic_only for shared subject matter, or unsupported
+or uncertain. Only the first three can support a finding; limited_analogy cannot
+make a gathering item required. Give label_verdict faithful/unsupported/uncertain and an entailment
 use_check supported/unsupported/uncertain with actual retained supporting IDs.
 A correct role or overall verdict cannot override an unsupported claim.
 
@@ -363,10 +387,13 @@ for that temporal reach. Absence of mention does not prove nonoccurrence.
 Reported documents remain uninspected; possession does not prove contents.
 Outcome: Give application use_check and application_premises for each retained
 source's limiting predicates. Each premise selects source_id and its exact
-predicate_fragment_id, account_source_ids only from advocate spans, a status
+predicate_fragment_id, account_source_ids only from the supplied independent
+substantive_account_sources catalogue, a status
 reported_satisfied/unresolved/reported_contradicted, and a reason explaining
 the actor, relationship and time comparison. Satisfaction and contradiction
-need attributable account IDs, not legal text or NM's words. They describe
+need attributable account IDs, not legal text, work instructions, examination
+material or NM's words. This reviewer cannot upgrade independently read source
+treatment. Missing eligible content leaves applicability unresolved. They describe
 the reported account, not proof. For an unresolved or contrary predicate,
 preserved_condition must copy an existing explicit qualification or enquiry
 from the proposed need or why. Preserve the entire relevant limit, not an
@@ -971,6 +998,7 @@ def _verification_schema(
             "material_checks",
             "source_checks",
             "use_checks",
+            "entailment_basis",
             "application_premises",
             "verdict",
             "reason",
@@ -979,6 +1007,7 @@ def _verification_schema(
             "candidate_id": {"type": "string", "enum": list(candidate_ids)},
             "label_verdict": {"type": "string", "enum": ["faithful", "unsupported", "uncertain"]},
             "label_reason": {"type": "string", "minLength": 1},
+            "entailment_basis": {"type": "string", "enum": list(ENTAILMENT_BASES)},
             "material_checks": {
                 "type": "array",
                 "items": {
@@ -1076,6 +1105,10 @@ def _finding_verdict(
     if decision["verdict"] != "supported" or decision["label_verdict"] != "faithful":
         return None
     if any(check["verdict"] != "supported" for check in decision["use_checks"].values()):
+        return None
+    if (decision["entailment_basis"] not in _SUPPORTED_BASES
+            or (decision["entailment_basis"] == "limited_analogy"
+                and item["force"] == "required")):
         return None
     if len(checks) != len(sources):
         raise SchemaViolation("Check every cited passage exactly once for a supported item")
@@ -1244,6 +1277,7 @@ def _finding_verdict(
         ],
         "use_verification": {"contract": RESEARCH_VERIFICATION,
                              "checks": deepcopy(decision["use_checks"]),
+                             "entailment_basis": decision["entailment_basis"],
                              "application_premises": premises},
     }
     for aspect, check in decision["use_checks"].items():
@@ -1273,6 +1307,7 @@ def verify_findings(
     material_by_subject: dict[str, list[dict]],
     proposed: dict[str, list[dict]],
     conversation: tuple[object, ...],
+    source_treatments: dict[str, dict] | None = None,
 ) -> ResearchVerification:
     rows, material_ids = _subject_input(subjects, material_by_subject)
     if set(proposed) != set(material_ids):
@@ -1281,6 +1316,8 @@ def verify_findings(
     attributed, _, account_sources = addressed_sources(conversation, "")
     words = attributed["earlier_conversation"]
     account_sources = {key: ref for key, ref in account_sources.items() if ref.role == "advocate"}
+    classified = substantive_source_treatments(source_treatments or {}, account_sources)
+    account_sources = {key: ref for key, ref in account_sources.items() if key in classified}
     result = {key: [] for key in material_ids}
     coverage, originals, atoms = _coverage(material_ids), {}, []
     for row in rows:
@@ -1383,7 +1420,8 @@ def verify_findings(
             ),
         )
         payload = _repair_payload(
-            {"conversation": words, "subjects": list(grouped.values())}, issues, rejected
+            {"conversation": words, "subjects": list(grouped.values()),
+             "substantive_account_sources": classified}, issues, rejected
         )
         prompt = _prompt(
             _VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),

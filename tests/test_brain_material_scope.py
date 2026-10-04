@@ -27,10 +27,12 @@ def test_linked_assignment_owns_scope_without_an_independent_scope_choice(
                 "basis": "uncertain", "placement": "disputes", "dispute_ids": ["issue"]}
     scope = "current" if has_current_matter else "proposed"
     model = Model({"details": [original]})
+    dispute = _dispute()
+    before = deepcopy(dispute)
 
     rows = extract_details(model, earlier=(), latest="The amount may be three units.",
                            current_matter_id="mat_scope" if has_current_matter else None,
-                           disputes=(_dispute(),))
+                           disputes=(dispute,))
 
     assert len(model.calls) == 1
     assert rows[0].matter_scope == scope
@@ -38,7 +40,9 @@ def test_linked_assignment_owns_scope_without_an_independent_scope_choice(
     assert rows[0].quoted == "The amount may be three units."
     payload = json.loads(model.calls[0][0].user)
     target = next(row for row in payload["assignment_targets"] if row["id"] == "issue")
-    assert target["matter_scope"] == scope and target["record"] == _dispute()
+    assert target["matter_scope"] == scope
+    assert target["record"] == {**dispute, "record_role": "nm_interpretation"}
+    assert dispute == before
     fields = model.calls[0][1]["properties"]["new_items"]["items"]["properties"]
     assert not {"matter_scope", "dispute_ids", "placement"}.intersection(fields)
 
@@ -258,7 +262,7 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
 
     assert changed.status_code == 200, changed.text
     result = changed.json()
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert result["material"][0]["relation"] == "new"
     assert result["material"][0]["matter_scope"] == "uncertain"
     record = client.get(f"/api/matters/{result['matter_id']}").json()["material_record"]
@@ -285,7 +289,7 @@ def test_public_boundary_single_assignment_preserves_fact_uncertainty_without_re
     result = response.json()
     assert [row["matter_scope"] for row in result["material"]] == ["proposed", "proposed"]
     assert result["material"][1]["basis"] == "uncertain"
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 1
     assert len(wired.store.load(result["matter_id"]).brain_chat) == 1
     record = client.get(f"/api/matters/{result['matter_id']}").json()["material_record"]

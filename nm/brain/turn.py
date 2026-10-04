@@ -27,9 +27,15 @@ from nm.brain.legal_requirements import (
     read_findings,
     verify_findings,
 )
-from nm.brain.material import extract_details
+from nm.brain.material import addressed_sources, extract_details
 from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
+from nm.brain.record_review import (
+    SOURCE_TREATMENT_CONTRACT,
+    classify_account_sources,
+    owned_source_treatments,
+    source_treatment_reference_valid,
+)
 from nm.brain.requirements_state import (
     RESEARCH_VERIFICATION,
     dispute_research_subjects,
@@ -271,6 +277,39 @@ def _history(store: StorePort, matter: Matter, corpus_revision=None) -> Conversa
     return _current_records(store, matter, corpus_revision)[0]
 
 
+def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict[str, dict]:
+    """Reuse only complete focused reads with their original chronological owners."""
+    positions = {(message.turn_id, message.role): index
+                 for index, message in enumerate(conversation.messages)}
+    catalogue = {}
+    for saved in matter.brain_chat:
+        coverage = saved["response"].get("material_coverage", {})
+        if (not isinstance(coverage, dict)
+                or coverage.get("source_treatment_contract") != SOURCE_TREATMENT_CONTRACT):
+            continue
+        index = positions.get((saved["turn_id"], "advocate"))
+        if index is None or conversation.messages[index].text != saved["message"]:
+            raise IncompleteConversation("A saved source-treatment read has no source turn")
+        _, latest, prior = addressed_sources(conversation.messages[:index], saved["message"])
+        expected = {key: (ref.turn_id, ref.role, ref.quoted)
+                    for key, ref in prior.items() if ref.role == "advocate"}
+        expected.update({key: (saved["turn_id"], "advocate", text)
+                         for key, text in latest.items()})
+        try:
+            current = owned_source_treatments(coverage.get("source_treatments"), latest, prior)
+        except SchemaViolation as exc:
+            raise IncompleteConversation(
+                "A saved source-treatment catalogue is incomplete") from exc
+        if any(not source_treatment_reference_valid(row, {expected[key]})
+               for key, row in current.items()):
+            raise IncompleteConversation("A saved source-treatment reference has another owner")
+        # Every focused read covers all advocate spans available at its turn.
+        # The latest complete read can replace earlier role proposals without
+        # rewriting their saved history or treating future words as evidence.
+        catalogue = {key: dict(row) for key, row in current.items()}
+    return catalogue
+
+
 def _reply(plan) -> tuple[str, bool, bool]:
     needs_work = any(item.next_step == "legal_work" for item in plan.items)
     parts = []
@@ -325,16 +364,18 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
 
 
 def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
-                   audit: list[dict] | None = None):
+                   audit: list[dict] | None = None, *, source_treatments=None):
     """Read disputes, then details that can link to newly identified issues."""
     arguments = {"earlier": conversation.messages, "latest": latest,
                  "current_matter_id": conversation.current_matter_id}
     disputes = verify_disputes(
         model,
         candidates=extract_disputes(
-            model, prior_disputes=conversation.open_disputes, **arguments),
+            model, prior_disputes=conversation.open_disputes,
+            source_treatments=source_treatments, **arguments),
         earlier=conversation.messages, latest=latest,
-        active_disputes=conversation.open_disputes, audit=audit)
+        active_disputes=conversation.open_disputes, audit=audit,
+        source_treatments=source_treatments)
     active = {row["id"]: row for row in conversation.open_disputes}
     for index, candidate in enumerate(disputes, start=1):
         if not (candidate.matter_scope == "current" or
@@ -348,13 +389,15 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
             active[row["id"]] = row
     details = extract_details(
         model, disputes=tuple(active.values()),
-        prior_material=conversation.open_material, **arguments)
+        prior_material=conversation.open_material,
+        source_treatments=source_treatments, **arguments)
     return (*disputes, *details), tuple(active.values())
 
 
 def _legal_reads(model, search, *, conversation: Conversation,
                  subjects: tuple[dict, ...], material_by_subject: dict,
-                 current: dict, corpus_revision: str | None) -> list[dict]:
+                 current: dict, corpus_revision: str | None,
+                 source_treatments=None) -> list[dict]:
     """Research due independent subjects; bounded correction belongs to each reader."""
     due = tuple(subject for subject in subjects
                 if not current["reuse_allowed"].get(subject["id"], False))
@@ -395,7 +438,8 @@ def _legal_reads(model, search, *, conversation: Conversation,
                                                    for row in verifiable},
                               proposed={row["id"]: found.rows[row["id"]]
                                         for row in verifiable},
-                              conversation=conversation.messages)
+                              conversation=conversation.messages,
+                              source_treatments=source_treatments)
     reads = []
     for subject in due:
         identity = subject["id"]
@@ -478,11 +522,18 @@ class BrainService:
         try:
             conversation = (_history(self.store, matter, corpus_revision) if persisted else
                             Conversation((), progress=project_work(matter)))
+            source_treatments = _saved_source_treatments(matter, conversation)
             plan = interpret(counted_model, conversation, turn.message)
             dispute_audit: list[dict] = []
+            source_reviewed = False
             if plan.material_review or plan.opening.ready:
+                source_payload, _, _ = addressed_sources(conversation.messages, turn.message)
+                source_treatments = classify_account_sources(
+                    counted_model, payload=source_payload, latest_turn_id=turn.turn_id)
+                source_reviewed = True
                 candidates, active_disputes = _read_material(
-                    counted_model, conversation, turn.message, turn.turn_id, dispute_audit)
+                    counted_model, conversation, turn.message, turn.turn_id, dispute_audit,
+                    source_treatments=source_treatments)
             else:
                 candidates, active_disputes = (), conversation.open_disputes
             grounded = verify_material_grounding(
@@ -490,7 +541,8 @@ class BrainService:
                 earlier=conversation.messages, latest=turn.message,
                 active_disputes=active_disputes,
                 prior_material=conversation.open_material,
-                current_matter_id=conversation.current_matter_id)
+                current_matter_id=conversation.current_matter_id,
+                source_treatments=source_treatments)
             candidates = (tuple(candidate for candidate in candidates
                                 if candidate.kind == "dispute") + grounded.details)
         except IncompleteConversation as exc:
@@ -557,7 +609,8 @@ class BrainService:
                 try:
                     checked = verify_material_grounding(
                         counted_model, candidates=(), opening=proposal,
-                        earlier=conversation.messages, latest=turn.message)
+                        earlier=conversation.messages, latest=turn.message,
+                        source_treatments=source_treatments)
                 except (ModelError, ContextOverflow) as exc:
                     logging.getLogger(__name__).warning(
                         "Opening correction could not be checked: %s", exc)
@@ -592,6 +645,9 @@ class BrainService:
                         "withheld_details": grounded.rejected_details,
                         "rejected_proposals": list(grounded.rejected_proposals),
                         "dispute_review": dispute_audit,
+                        "source_treatments": source_treatments if source_reviewed else {},
+                        "source_treatment_contract": SOURCE_TREATMENT_CONTRACT
+                        if source_reviewed else "",
                         "opening_fallback": not opening_supported},
                     "research_reads": [],
                     "metrics": counted_model.metrics(),
@@ -634,7 +690,8 @@ class BrainService:
                             messages=(*conversation.messages,
                                       Message(turn.turn_id, "advocate", turn.message))),
                         subjects=subjects, material_by_subject=contexts,
-                        current=current, corpus_revision=corpus_revision)
+                        current=current, corpus_revision=corpus_revision,
+                        source_treatments=source_treatments)
                     response["research_reads"] = reads
                     # Persist only a fully attributable canonical projection;
                     # ordinary rejected proposals already have local coverage.
@@ -654,7 +711,8 @@ class BrainService:
                     counted_model, conversation=conversation, latest=turn.message,
                     latest_turn_id=turn.turn_id, plan=plan, disputes=disputes,
                     material=details, requirements=checked, research=current,
-                    progress=conversation.progress).as_dict()
+                    progress=conversation.progress,
+                    source_treatments=source_treatments).as_dict()
                 continuation = seal_progress(
                     continuation, matter_id=str(matter.id), turn_id=turn.turn_id,
                     plan=plan, prior_progress=conversation.progress)

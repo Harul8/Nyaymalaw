@@ -2,6 +2,45 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from functools import wraps
+
+
+def source_treatment_reply(operation, payload):
+    """Script the separately owned source treatment, without keyword inference."""
+    if operation != "classify_account_sources":
+        return None
+    return {"source_treatments": [{
+        "source_id": identity, "content_role": "reported_matter_account",
+        "reason": "The scripted source-treatment decision reports account content.",
+    } for identity in payload["source_ids"]]}
+
+
+def classified_verifier(function):
+    """Supply explicit scripted provenance for direct owning-boundary tests."""
+    @wraps(function)
+    def called(model, **kwargs):
+        if "source_treatments" not in kwargs:
+            kwargs["source_treatments"] = scripted_source_treatments(
+                kwargs["earlier"], kwargs["latest"])
+        return function(model, **kwargs)
+
+    return called
+
+
+def scripted_source_treatments(earlier, latest, *, roles=None, turn_id="current"):
+    """Explicit canonical provenance decisions for offline fixtures."""
+    from nm.brain.material import addressed_sources
+
+    _, current, prior = addressed_sources(earlier, latest)
+    roles = roles or {}
+    rows = {key: {"turn_id": ref.turn_id, "role": ref.role, "quoted": ref.quoted,
+                  "content_role": roles.get(key, "reported_matter_account"),
+                  "reason": "Scripted treatment"}
+            for key, ref in prior.items() if ref.role == "advocate"}
+    rows.update({key: {"turn_id": turn_id, "role": "advocate", "quoted": text,
+                       "content_role": roles.get(key, "reported_matter_account"),
+                       "reason": "Scripted treatment"} for key, text in current.items()})
+    return rows
 
 
 def reviewed_record_verdicts(payload, data):
@@ -24,6 +63,13 @@ def reviewed_record_verdicts(payload, data):
             "source_ids": sources[:1] if accepted else [],
             "reason": "The scripted record decision checks the attributed account layer.",
         })
+        account = row.get("account_check")
+        if isinstance(account, dict) and isinstance(account.get("source_ids"), list):
+            account.setdefault("source_checks", [{
+                "source_id": source_id,
+                "supplies_account_content": True, "supports_proposal": True,
+                "reason": "The scripted source decision supplies attributed account content.",
+            } for source_id in account["source_ids"]])
         row.setdefault("target_checks", [{
             "target_id": target, "identity_relation": "same_underlying_account",
             "account_preserved": accepted, "required_peer_ids": [],

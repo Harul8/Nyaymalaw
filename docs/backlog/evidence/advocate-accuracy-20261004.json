@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "date": "2026-10-04",
-  "status": "structural_checks_passed_live_accuracy_incomplete",
+  "status": "source_treatment_v6_offline_validated_live_validation_pending_sign_in",
   "scope": "Browser follow-up of the existing named synthetic property matter, one matter at a time. No other matter was run in this milestone.",
   "model_policy": {
     "text_model": "gpt-4.1-mini-2025-04-14",
@@ -12,8 +12,8 @@
   "budget": {
     "additional_authorised_usd": 2,
     "ledger": "outputs/accuracy-fixes-20261004/browser-budget.sqlite",
-    "physical_attempts": 32,
-    "measured_full_rate_usd": 0.320390,
+    "physical_attempts": 44,
+    "measured_full_rate_usd": 0.443513,
     "unknown_reservations_usd": 0,
     "invoice_charge": false,
     "old_3_usd_ledger_reset": false
@@ -21,29 +21,43 @@
   "coverage": {
     "original_script_turns_saved": 24,
     "original_script_turns_planned": 48,
-    "total_saved_rows": 28,
-    "saved_recovery_rows": 4,
-    "new_browser_attempts": 5,
-    "new_saved_rows": 3,
+    "total_saved_rows": 29,
+    "saved_recovery_rows": 5,
+    "new_browser_attempts": 6,
+    "new_saved_rows": 4,
     "new_unsaved_attempts": 2,
-    "other_matters_resumed": false
+    "other_matters_resumed": false,
+    "per_matter_saved_rows": {
+      "property": 17,
+      "commercial": 6,
+      "employment": 3,
+      "family": 3
+    }
   },
   "general_changes": [
     "Pinned all text roles to the authorised mini snapshot under an explicit same-model review policy.",
-    "Research V5 checks legal application premises against exact attributed advocate references and preserves unresolved conditions; historical V4 is readable but is not reused as current research.",
+    "Current research_support_v6 checks operative-rule entailment, complete consequential propositions and independently substantive account premises. Source rules, necessary applications and qualified limited analogies can support findings; mere consistency or topical overlap cannot, and analogy cannot mandate a gathering step. V5 and earlier known contracts remain readable as historical checks without current reuse.",
     "Selected legal passages are bound to accepted uses; work and question identity are checked separately from displayed paragraph ownership.",
     "Authorised review reaches the existing dispute and material readers without requiring invented new facts.",
     "Existing record reviewers expose account-layer, every-target and required-restoration-peer checks. Missing accepted successors preserve the prior record and raw model decision.",
     "Malformed adapter output and incomplete completion enter the existing single conditional correction. Pending-ID feedback preserves exact failed checks without logging source passage text.",
-    "Eligible restoration peers exclude the proposal itself and unrelated targets; singleton/no-overlap peer pools are empty. Admission rules remain strict."
+    "Eligible restoration peers exclude the proposal itself and unrelated targets; singleton/no-overlap peer pools are empty. Admission rules remain strict.",
+    "One candidate-free source-treatment read sees the complete attributed transcript before extraction. Its exact turn/speaker/span catalogue is shared by both readers, record checks, legal application checks and response composition/review. Review instructions, examination material and NM formulations cannot supply substantive account evidence.",
+    "Fresh request interpretation explicitly declares conversation_record or legal_authority. Contradictory basis/query pairs receive precise bounded correction; factual work does not inherit old research questions. Automatic dispute gathering research remains separately owned.",
+    "Response paragraph IDs must be nonempty and unique within each request unit; correction feedback identifies every conflicting path and requires all referring links to be updated together. No ambiguous automatic renaming is performed.",
+    "Historical source-treatment audits require their marker, chronological owned references and exact canonical passages; no silent upgrade of old role or law checks.",
+    "Semantic extractor re-extraction and an extra semantic coordinator are intentionally deferred; no such retry was added."
   ],
   "checks": {
-    "expanded_tests": 835,
+    "expanded_tests": 887,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
     "ruff": "passed",
-    "checks_are_live_semantic_acceptance": false
+    "checks_are_live_semantic_acceptance": false,
+    "seconds": 258.295,
+    "xml": "outputs/accuracy-fixes-20261004/source-treatment-expanded.xml",
+    "served_python_fingerprint": "025c530e831eb0f5"
   },
   "browser_results": [
     {
@@ -86,25 +100,87 @@
         "A factual work product about a legal matter is distinct from a fresh legal-authority enquiry.",
         "A semantic rejection should support bounded extractor correction while preserving valid peers and original account lineage."
       ]
+    },
+    {
+      "saved_turn_id": "turn_5e0ba31e-f181-449c-b62b-48794de3271c",
+      "matter_version": 17,
+      "calls": 12,
+      "result": "semantic_fail_response_withheld",
+      "finding": "Explicit per-source role and support fields passed structural checks, but the reviewer mislabeled disclaimed draft assertions and review instructions as substantive account support. The copied analytical critique remained the board formulation. Research falsely attributed incident-separation and agency propositions to an easement/title passage. Both writer attempts failed ambiguous duplicate paragraph IDs, so no factual conference summary was released.",
+      "general_remedy": "Source purpose must be assessed from the original account independently of the candidate formulation; entailment must test the actual asserted proposition rather than thematic consistency. Paragraph identity and all referring links require precise conditional correction. A requested factual work product must remain distinct from a legal-authority enquiry.",
+      "acceptance": "No board-restoration, factual-summary or legal-research accuracy acceptance.",
+      "recorded_turn_metrics": {
+        "tokens_in": 245480,
+        "tokens_out": 15578,
+        "cost_usd": 0.1231168,
+        "summed_model_latency_seconds": 103.4,
+        "summed_latency_is_wall_clock": false
+      },
+      "current_general_remedies": "Candidate-free shared source treatment, explicit response basis, current V6 operative entailment and exact duplicate-ID correction are implemented and offline checked; live adherence remains pending.",
+      "accuracy_accepted": false
     }
   ],
+  "latest_fix_browser_validation": {
+    "status": "pending_sign_in",
+    "server_health": "current; both text roles use gpt-4.1-mini-2025-04-14",
+    "new_paid_calls_after_fixes": 0,
+    "new_saved_turns_after_fixes": 0,
+    "observation": "Reloading the restarted app showed blank sign-in fields. No new brief was submitted. V17 remains the latest failed live outcome; existing bad records were not rewritten or hidden.",
+    "server_fingerprint": "025c530e831eb0f5"
+  },
   "call_inventory": {
-    "new_normal_calls_added": 0,
+    "new_normal_calls_added": 1,
+    "added_call_scope": "Material-review/opening turns only: one shared candidate-free source-treatment read; other turn types add no normal call.",
     "typical_greeting": 1,
     "typical_continuation_without_new_extraction_or_research": 3,
-    "fresh_factual_matter_before_research": 7,
-    "fresh_factual_matter_with_one_batch_per_research_stage": 10,
+    "fresh_factual_matter_before_research": 8,
+    "fresh_factual_matter_with_one_batch_per_research_stage": 11,
     "fresh_legal_question_with_one_batch_per_research_stage": 6,
-    "conditional_corrections": "Each read/reviewer allows one contract correction. Research uses actual fitting batches with pending-only correction. Writer/reviewer repair is bounded to six calls for a single request or eight for mixed requests; exceptional opening recovery can add up to six calls.",
-    "zero_paid_calls": ["exact replay", "local hybrid search", "local embeddings", "local reranking", "source opening", "projection", "save"],
-    "cache_contract": "Same owner, scope, fact fingerprint, corpus revision and current V5 verification. Full saved conversation is retained."
+    "conditional_corrections": "The shared source-treatment read allows one contract correction. Existing readers/reviewers retain bounded correction and pending-only retries. Research uses actual fitting batches. A rejected continuation allows one replacement generation and another independent review. No semantic extractor-repair coordinator is implemented.",
+    "zero_paid_calls": [
+      "exact replay",
+      "local hybrid search",
+      "local embeddings",
+      "local reranking",
+      "source opening",
+      "projection",
+      "save"
+    ],
+    "cache_contract": "Same owner, scope, context fingerprint, known corpus revision and current V6 verification. Full saved conversation is retained; V5 is historical, not current reuse.",
+    "source_treatment": "One shared candidate-free call only on material-review/opening-ready turns; existing contract correction adds at most one call. No-new-material follow-ups reuse canonical owned source-role audits.",
+    "successful_offline_examples_with_unavailable_corpus": {
+      "opening": 9,
+      "no_change_authorised_record_review": 7,
+      "examples_are_universal_turn_counts": false,
+      "decomposition_can_run_without_read_or_verifier": true
+    }
   },
   "evidence_paths": [
     "outputs/accuracy-fixes-20261004/milestone-checks.xml",
+    "outputs/accuracy-fixes-20261004/source-treatment-expanded.xml",
     "outputs/accuracy-fixes-20261004/property-access-possession-saved.json",
     "outputs/accuracy-fixes-20261004/server-call-log.txt",
     "outputs/accuracy-fixes-20261004/property-unsaved-review.png",
-    "docs/Nyaymalaw_Implementation_Plan.xlsx"
+    "docs/Nyaymalaw_Implementation_Plan.xlsx",
+    "outputs/reliability-plan-20261004-second/verification.json"
   ],
-  "limitations": "No end-to-end, legal-accuracy or four-matter acceptance is claimed. Historical responses and exact original account words remain preserved. No donor snippet, scenario-specific branch, keyword exception or source-validation bypass was introduced."
+  "limitations": "887 passing offline checks validate mechanisms, not live source treatment, legal entailment, factual summary or matter closure. Source roles, factual-versus-legal routing and V6 entailment still depend on semantic model judgments; separate calls using the same mini model do not provide model diversity. The latest live V17 remains failed; the new-code browser retest did not proceed because sign-in was unavailable. Historical responses and exact account words remain preserved. No other matter resumed; no scenario-specific branch, donor snippet or source-validation bypass was introduced. Semantic re-extraction remains deferred.",
+  "published_milestones": [
+    {
+      "commit": "36a285e",
+      "status": "structural_model_policy_checked_live_accuracy_failed",
+      "expanded_tests": 835,
+      "measured_physical_attempts": 32,
+      "measured_full_rate_usd": 0.32039
+    }
+  ],
+  "source_fingerprint": "025c530e831eb0f5",
+  "next_testing_authorisation": {
+    "amount_usd": 2,
+    "purpose": "Astra engineering handoff and additional paid validation",
+    "separate_ledger_required": true,
+    "spent_in_this_milestone_usd": 0,
+    "existing_ledgers_reset": false,
+    "start_after_sign_in": true
+  }
 }

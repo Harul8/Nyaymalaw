@@ -45,7 +45,7 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
 
     assert answer.status_code == 200, answer.text
     result = answer.json()
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert [call.operation for call in model.material_calls] == [
         "extract_disputes", "extract_legal_details"]
     detail_input = json.loads(model.material_calls[1].user)
@@ -242,7 +242,7 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     changed = send(client, next_message, "change", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 6
+    assert changed.json()["metrics"]["llm_calls"] == 7
     record = _board(client, opened.json()["matter_id"])["material_record"]
     assert record["state"] == "ok"
     assert [row["id"] for row in record["rows"]] == ["change:material:1"]
@@ -313,7 +313,7 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
     corrected = send(client, latest, "correction", opened=opened.json())
 
     assert corrected.status_code == 200, corrected.text
-    assert corrected.json()["metrics"]["llm_calls"] == 6
+    assert corrected.json()["metrics"]["llm_calls"] == 7
     checked = [row for payload in model.check_inputs
                for row in payload["candidates"] if row.get("relation") == "corrects"]
     assert checked
@@ -366,7 +366,7 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
     response = send(client, message, "repaired")
 
     assert response.status_code == 200, response.text
-    assert response.json()["metrics"]["llm_calls"] == 8
+    assert response.json()["metrics"]["llm_calls"] == 9
     repair_inputs = [json.loads(call.user) for call in model.material_calls
                      if "original_input" in json.loads(call.user)]
     assert len(repair_inputs) == 1

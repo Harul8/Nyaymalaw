@@ -11,7 +11,7 @@ from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, TierUnavailable, Usage
 from tests.brain_continuation_fixture import citation_units, interpretation, reviewed_verdicts
-from tests.brain_reader_fixture import reviewed_record_verdicts
+from tests.brain_reader_fixture import reviewed_record_verdicts, source_treatment_reply
 from tests.test_brain_continuation import mixed_purpose_unit, unit, verdict
 from tests.test_brain_turn import plan
 
@@ -38,7 +38,10 @@ class PublicContinuationModel:
         self.calls.append((prompt.operation, payload))
         self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
-        if prompt.operation == "interpret_conversation":
+        treatment = source_treatment_reply(prompt.operation, payload)
+        if treatment is not None:
+            data = treatment
+        elif prompt.operation == "interpret_conversation":
             planned = next(self.routes)
             data = interpretation(planned(payload) if callable(planned) else deepcopy(planned))
         elif prompt.operation == "extract_disputes":
@@ -184,11 +187,12 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     assert "What outcome would you like to achieve?" in visible
     assert "The record and applicable legal sources have not been checked." in visible
     assert "I will examine your request" not in visible
-    assert first["metrics"]["llm_calls"] == 6
+    assert first["metrics"]["llm_calls"] == 7
     assert [operation for operation, _ in model.calls] == [
-        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "interpret_conversation", "classify_account_sources",
+        "extract_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
-    assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE,
+    assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE, Tier.ROUTINE,
                            Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
     composition = next(payload for operation, payload in model.calls
                        if operation == "continue_conversation")
@@ -262,12 +266,13 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     second = send(client, latest, "contribution-later", opened=first)
     replay = send(client, latest, "contribution-later", opened=first)
 
-    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 6
+    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 7
     assert replay["metrics"]["llm_calls"] == 0
     assert corpus.calls == []
-    last_calls = model.seen[6:]
+    last_calls = model.seen[7:]
     assert [prompt.operation for prompt, _, _ in last_calls] == [
-        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "interpret_conversation", "classify_account_sources",
+        "extract_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
     composition = next(payload for prompt, payload, _ in last_calls
                        if prompt.operation == "continue_conversation")
@@ -336,9 +341,9 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert after_aside == before_aside
     last = send(client, returned, "public-return", opened=aside)
 
-    assert second["metrics"]["llm_calls"] == 5
+    assert second["metrics"]["llm_calls"] == 6
     assert aside["metrics"]["llm_calls"] == 1
-    assert last["metrics"]["llm_calls"] == 5
+    assert last["metrics"]["llm_calls"] == 6
     continuation_payloads = [payload for operation, payload in model.calls
                              if operation == "continue_conversation"]
     earlier = continuation_payloads[-1]["earlier_conversation"]
@@ -364,7 +369,7 @@ def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired
 
     released = send(client, message, "public-mixed-block")
 
-    assert released["metrics"]["llm_calls"] == 6
+    assert released["metrics"]["llm_calls"] == 7
     assert released["continuation"]["units"][0]["blocks"][0]["kind"] == "limitation"
     assert released["elements"][0]["kind"] == "question"
     assert released["elements"][0]["section"] == "needed"
@@ -390,7 +395,7 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     assert "deliberately concealed" not in json.dumps(response["elements"])
     assert response["continuation"]["units"] == []
     assert response["continuation"]["coverage"][0]["state"] == "unavailable"
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     saved = wired.store.load(response["matter_id"])
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["message"] == message
@@ -630,7 +635,7 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
     saved_id = chat_matter_id("adv_demo", first["chat_id"])
     first_saved = wired.store.load(saved_id)
 
-    assert first["metrics"]["llm_calls"] == 4
+    assert first["metrics"]["llm_calls"] == 5
     assert first["matter_id"] is None
     assert first["material"] == []
     assert first["material_coverage"]["withheld_details"] == 1

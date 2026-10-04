@@ -66,6 +66,14 @@ class WorkItem:
     clarification: str = ""
     intent: Literal["request", "contribution"] = "request"
     research_question: str = ""
+    response_basis: Literal["conversation_record", "legal_authority"] | None = None
+
+    def __post_init__(self) -> None:
+        # Older in-process callers supplied the question without a separate
+        # basis. Fresh interpreter output must state and validate both below.
+        if self.response_basis is None:
+            object.__setattr__(self, "response_basis", "legal_authority"
+                               if self.research_question else "conversation_record")
 
 
 @dataclass(frozen=True)
@@ -110,7 +118,7 @@ _SCHEMA = {
             "type": "object", "additionalProperties": False,
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
-                         "clarification", "intent", "research_question"],
+                         "clarification", "intent", "response_basis", "research_question"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -123,6 +131,8 @@ _SCHEMA = {
                     "answer", "legal_work", "clarify"]},
                 "reply": {"type": "string"},
                 "clarification": {"type": "string"},
+                "response_basis": {"type": "string", "enum": [
+                    "conversation_record", "legal_authority"]},
                 "research_question": {"type": "string"},
             },
         }},
@@ -289,33 +299,47 @@ A requested NM activity changes work progress, not the client's real-world
 objective or factual account; distinguish those layers.
 
 Activity 5 - Define the needed legal-source enquiry.
-Purpose: Identify the legal authority needed for the immediate requested
-outcome, without enlarging that outcome or deciding its answer.
+Purpose: Decide whether the immediate requested outcome needs legal authority
+and, only then, identify the substantive legal question to research. Do not
+enlarge the requested outcome or decide its answer.
 Look for: What the latest words actually ask or contribute in the full
-conversation, and whether responding to that immediate purpose needs a legal
-proposition. A contribution can require checked attribution, careful handling
-of uncertainty and a respectful response without requesting a merits opinion.
-Automatic gathering research on changed matter material has a separate owner;
-it does not turn each factual contribution into a new requested legal enquiry.
-Compare the purpose and scope of saved research
-coverage with the latest request. Gathering needs alone do not establish a
-merits opinion, legal principle, remedy or drafting basis. A purely attributed
-recap or factual clarification can proceed without a new legal-source enquiry.
-Outcome: For every item needing a legal proposition, legal assessment, remedy,
-strategy or other legal-authority basis, keep `research_question` nonempty:
-state a concise self-contained enquiry identifying the authority needed.
-When saved research addresses the same enquiry, copy that exact question;
-the server decides whether its coverage is current and reusable. A saved
-coverage label or earlier NM explanation is not a legal passage. Preserve
-applicable jurisdiction or timing
-only when supplied; expose missing scope rather than inventing it. A question
-is a search hypothesis, not a finding. Keep its factual premises attributed
-and faithful to the complete account, including sequence, dates, negation
-and uncertainty. Do not assert onset, causation or a changed status without
-support from those words. Leave it empty when the immediate work needs
-conversation attribution rather than a legal-authority basis.
-Leave it empty for answer/clarify.
-Do not invent a dispute to support a general legal question.
+conversation. Distinguish legal propositions needed for the result from work
+that only reconstructs, summarises, compares or clarifies the attributed
+account and NM's formulations. Both can use `legal_work` for checked
+attribution and work progress; that route does not itself require a new
+legal-source enquiry. The matter's legal subject, a missing research result
+or unfinished broader legal work does not change a factual deliverable into
+a request for law. Decide the current result's evidence basis before considering
+any saved research question for reuse. Saved research questions are NM search
+proposals, not authority that the current outcome requires law; historical
+task or process wording cannot determine the basis of a new or resumed request.
+Automatic gathering research on dispute material has a separate owner and
+remains independent of this decision.
+Preserve distinct requested factual and legal outcomes as separate work items
+when either can usefully proceed without the other. Each has its own scope
+and sufficiency; completing a factual result does not complete the wider
+legal work. Do not split a single legal decision into a purported factual
+answer to avoid the authority that decision needs.
+Outcome: Set `response_basis` to `conversation_record` when this item's result
+needs only attributed conversation or record reconciliation. Its
+`research_question` must be empty, even if `material_review` is true or earlier
+legal research remains unfinished. This basis does not permit a legal claim
+without checked sources. Set `response_basis` to `legal_authority` only when
+the requested result needs a substantive legal proposition, assessment, remedy
+or strategy. This requires `legal_work` and a nonempty `research_question`:
+state a concise self-contained substantive legal question identifying the
+authority needed. Never put task, process or deliverable instructions in this
+field; extract the needed legal question from a broader work request.
+Compare saved research's purpose and scope with that legal question. Copy its
+exact question only for the same substantive enquiry; the server decides
+whether coverage is current and reusable. A coverage label or earlier NM
+explanation is not a legal passage. Preserve jurisdiction and timing only
+when supplied; expose missing scope rather than inventing it. Keep factual
+premises attributed and faithful to the whole account, including sequence,
+dates, negation and uncertainty. A research question is a search hypothesis,
+not a finding; do not infer causation, onset or changed legal status. Leave
+the field empty and use `conversation_record` for answer/clarify. Do not
+invent a dispute to support a general legal question.
 
 Outcome: Return only the declared JSON object with `items`,
 `opening`, and `material_review`. Do not alter any matter
@@ -471,17 +495,34 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
     has_prior_context = bool(conversation.messages or conversation.current_work
                              or conversation.current_matter_id)
     items = []
-    for row in rows:
+    for index, row in enumerate(rows):
         if not isinstance(row, dict):
             raise SchemaViolation("A work item is not an object")
         request = row.get("request")
         reply = row.get("reply")
         clarification = row.get("clarification")
         research_question = row.get("research_question")
+        response_basis = row.get("response_basis")
         if (not isinstance(request, str) or not request.strip()
                 or not isinstance(reply, str) or not isinstance(clarification, str)
                 or not isinstance(research_question, str)):
             raise SchemaViolation("A work item lacks a usable request")
+        if response_basis not in ("conversation_record", "legal_authority"):
+            raise SchemaViolation(
+                f"items[{index}].response_basis must state conversation_record or legal_authority "
+                "for the current requested result")
+        if response_basis == "conversation_record" and research_question.strip():
+            raise SchemaViolation(
+                f"items[{index}]: response_basis conversation_record requires an empty "
+                "research_question. Do not inherit a saved legal enquiry for factual work. "
+                "If the requested result actually needs law, correct response_basis and state "
+                "the substantive legal question instead")
+        if response_basis == "legal_authority" and (
+                row.get("next_step") != "legal_work" or not research_question.strip()):
+            raise SchemaViolation(
+                f"items[{index}]: response_basis legal_authority requires legal_work and a "
+                "nonempty substantive research_question. Otherwise select conversation_record "
+                "and leave research_question empty")
         if row.get("next_step") in ("answer", "legal_work") and not reply.strip():
             raise SchemaViolation("A response needs reply text for its chosen step")
         if row.get("next_step") == "clarify" and reply.strip():
@@ -501,7 +542,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             next_step=row["next_step"],
                             reply=reply,
                             clarification=clarification, intent=row["intent"],
-                            research_question=research_question.strip())
+                            research_question=research_question.strip(),
+                            response_basis=response_basis)
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")

@@ -109,6 +109,7 @@ class Model:
                 "candidate_id": candidate["candidate_id"],
                 "label_verdict": "faithful",
                 "label_reason": "The short heading restates the supported need.",
+                "entailment_basis": "source_rule",
                 "use_checks": {name: {
                     "verdict": "supported", "reason": "The cited passage supports this use.",
                     "source_ids": [source["id"] for source in candidate["sources"]],
@@ -253,9 +254,9 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     brain, store = _service(tmp_path, model, search)
 
     first = _send(brain, FIRST, "first")
-    assert first["metrics"]["llm_calls"] == 10
+    assert first["metrics"]["llm_calls"] == 11
     assert [operation for operation, _ in model.calls] == [
-        "interpret_conversation", "extract_disputes", "verify_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "decompose_disputes", "read_legal_requirements",
         "verify_legal_requirements",
@@ -280,7 +281,7 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     assert len(plans["subjects"]) == 2
 
     second = _send(brain, DETAIL, "second", first)
-    assert second["metrics"]["llm_calls"] == 9
+    assert second["metrics"]["llm_calls"] == 10
     assert len(search.calls) == 3
     assert search.calls[-1][0]["id"] == first_read[0]["subject"]["id"]
     assert len(second["research_reads"]) == 1
@@ -324,7 +325,7 @@ def test_unavailable_corpus_never_yields_a_requirement(tmp_path):
     brain, store = _service(tmp_path, model, search)
 
     opened = _send(brain, FIRST, "first")
-    assert opened["metrics"]["llm_calls"] == 8
+    assert opened["metrics"]["llm_calls"] == 9
     assert [operation for operation, _ in model.calls][-3:] == [
         "decompose_disputes", "continue_conversation", "verify_continuation"]
     assert len(search.calls) == 2
@@ -425,7 +426,7 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
     assert [row["label"] for row in rows] == ["Customer withheld payment"]
     assert len(opened["research_reads"]) == 1
     assert opened["research_reads"][0]["state"] == "ok"
-    assert opened["metrics"]["llm_calls"] == 10
+    assert opened["metrics"]["llm_calls"] == 11
 
 
 def test_dispute_verifier_outage_refuses_before_turn_is_saved(tmp_path):
@@ -467,7 +468,7 @@ def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     brain, store = _service(tmp_path, model, Search())
 
     opened = _send(brain, FIRST, "first")
-    assert opened["metrics"]["llm_calls"] == 11
+    assert opened["metrics"]["llm_calls"] == 12
     reads = opened["research_reads"]
     failed, checked = reads
     assert failed["state"] == "partial" and failed["rows"] == []
@@ -537,7 +538,7 @@ def test_invalid_subject_unit_keeps_checked_peer_and_repairs_only_unread_subject
     assert "Establish the obligation (Customer withheld payment)" in \
         opened["elements"][0]["text"]
     assert "incomplete for 1 dispute" in opened["elements"][0]["text"]
-    assert opened["metrics"]["llm_calls"] == 11
+    assert opened["metrics"]["llm_calls"] == 12
     attempts = [payload for name, payload in model.calls if name == operation]
     assert len(attempts) == 2
     assert len(attempts[0]["subjects"]) == 2
@@ -575,7 +576,7 @@ def test_provider_outage_does_not_fan_out_into_dispute_retries(
     opened = _send(brain, FIRST, "first")
 
     assert opened["metrics"]["llm_calls"] == (
-        8 if operation == "decompose_disputes" else 9)
+        9 if operation == "decompose_disputes" else 10)
     assert sum(name == operation for name, _ in model.calls) == 1
     assert len(opened["research_reads"]) == 2
     expected_state = "unavailable"
@@ -598,7 +599,7 @@ def test_wholly_unread_provider_output_cannot_invent_a_valid_peer(tmp_path, oper
     brain, _ = _service(tmp_path, model, Search())
     opened = _send(brain, FIRST, "unread-output")
 
-    assert opened["metrics"]["llm_calls"] == (9 if operation == "decompose_disputes" else 10)
+    assert opened["metrics"]["llm_calls"] == (10 if operation == "decompose_disputes" else 11)
     assert sum(name == operation for name, _ in model.calls) == 2
     assert all(read["state"] == "unavailable" and read["rows"] == []
                for read in opened["research_reads"])
@@ -734,7 +735,7 @@ def test_served_matter_board_exposes_short_requirements_beneath_disputes(
                                             "turn_id": "requirements-first"})
     assert served.status_code == 200, served.text
     opened = served.json()
-    assert opened["metrics"]["llm_calls"] == 10
+    assert opened["metrics"]["llm_calls"] == 11
 
     board_response = client.get(f"/api/matters/{opened['matter_id']}")
     assert board_response.status_code == 200, board_response.text

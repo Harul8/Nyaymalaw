@@ -59,6 +59,7 @@ def supported(candidate, *, verdict="supported"):
     return {"candidate_id": candidate["candidate_id"],
             "verdict": verdict, "reason": "The exact cited passage supports the conditional item.",
             "label_verdict": "faithful", "label_reason": "The label preserves the item's meaning.",
+            "entailment_basis": "source_rule",
             "use_checks": {name: {
                 "verdict": verdict, "reason": "The selected passage supports this conditional use.",
                 "source_ids": [source["id"] for source in candidate["sources"]],

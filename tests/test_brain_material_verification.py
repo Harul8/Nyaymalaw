@@ -9,7 +9,9 @@ from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
-from tests.brain_reader_fixture import reviewed_record_verdicts
+from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
+
+verify_material_grounding = classified_verifier(verify_material_grounding)
 
 
 class Model:

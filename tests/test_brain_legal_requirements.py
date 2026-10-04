@@ -1,5 +1,6 @@
 """Dispute search plans and gathering needs retain attribution and passage links."""
 import json
+from functools import wraps
 
 import pytest
 
@@ -24,6 +25,19 @@ from nm.shared.model_port import (
     Usage,
     estimate_tokens,
 )
+from tests.brain_reader_fixture import scripted_source_treatments
+
+
+def _classified_findings(function):
+    @wraps(function)
+    def called(model, **kwargs):
+        kwargs.setdefault("source_treatments", scripted_source_treatments(
+            kwargs["conversation"], ""))
+        return function(model, **kwargs)
+    return called
+
+
+verify_findings = _classified_findings(verify_findings)
 
 
 class Model:
@@ -65,6 +79,7 @@ class Model:
                 "label_verdict": decision.get("label_verdict", "faithful"),
                 "label_reason": decision.get(
                     "label_reason", "The short label restates the need."),
+                "entailment_basis": decision.get("entailment_basis", "source_rule"),
                 "material_checks": decision.get("material_checks", [{
                     "material_id": material_id,
                     "verdict": "addresses",
@@ -1723,9 +1738,63 @@ def test_historical_v4_use_remains_checked_history_without_inventing_application
     row["sources"][0]["verification"]["contract"] = "research_support_v4"
     row["use_verification"]["contract"] = "research_support_v4"
     row["use_verification"].pop("application_premises")
+    row["use_verification"].pop("entailment_basis")
 
     assert finding_verification_valid(row, contract="research_support_v4") is True
     assert finding_verification_valid(row) is False
     assert "application_premises" not in row["use_verification"]
     row["use_verification"]["checks"]["application"]["verdict"] = "unsupported"
     assert finding_verification_valid(row, contract="research_support_v4") is False
+
+
+@pytest.mark.parametrize("basis", ["consistent_only", "topic_only", "unsupported", "uncertain"])
+def test_compatible_or_topical_recommendation_cannot_override_failed_rule_relation(basis):
+    source = request_hits()["q1"]["candidates"][0]
+    proposal = {**finding(), "sources": [source]}
+    wrong = supported_verdict("r1", source["id"])
+    wrong["entailment_basis"] = basis
+    model = Model([{"decisions": [wrong, supported_verdict("r2", source["id"])]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [proposal, {**proposal, "label": "Valid peer"}]},
+                             conversation=CONVERSATION)
+
+    assert [row["label"] for row in result.rows["q1"]] == ["Valid peer"]
+    assert result.coverage["q1"]["withheld_items"] == 1
+    assert result.coverage["q1"]["unread_items"] == 0 and len(model.calls) == 1
+    assert result.rows["q1"][0]["use_verification"]["entailment_basis"] == "source_rule"
+
+
+def test_review_instruction_cannot_satisfy_source_predicate_without_independent_account_content():
+    candidate, _ = application_case()
+    conversation = (Message("review", "advocate", "Review the draft's legal conclusion."),)
+    catalogue = scripted_source_treatments(conversation, "", roles={"P1S1": "work_instruction"})
+    wrong = conditional_application_decision()
+    wrong["application_premises"][0].update(status="reported_satisfied",
+                                            account_source_ids=["P1S1"], preserved_condition="")
+    fixed = conditional_application_decision()
+    fixed["application_premises"][0]["account_source_ids"] = []
+    model = Model([{"decisions": [wrong]}, {"decisions": [fixed]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation,
+                             source_treatments=catalogue)
+
+    assert len(model.calls) == 2 and len(result.rows["q1"]) == 1
+    assert json.loads(model.calls[0][0].user)["substantive_account_sources"] == {}
+    premise = result.rows["q1"][0]["use_verification"]["application_premises"][0]
+    assert premise["status"] == "unresolved" and premise["account_references"] == []
+    assert "account_source_ids" in json.loads(model.calls[1][0].user)["validation_issues"]["r1"]
+
+
+def test_v5_remains_readable_without_acquiring_v6_source_treatment_or_rule_relation():
+    candidate, conversation = application_case()
+    result = verify_findings(Model([{"decisions": [conditional_application_decision()]}]),
+                             subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+    row = result.rows["q1"][0]
+    row["sources"][0]["verification"]["contract"] = "research_support_v5"
+    row["use_verification"]["contract"] = "research_support_v5"
+    row["use_verification"].pop("entailment_basis")
+    assert finding_verification_valid(row, contract="research_support_v5")
+    assert not finding_verification_valid(row)

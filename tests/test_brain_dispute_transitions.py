@@ -90,7 +90,7 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
     response = send(client, latest, "followup", opened=opened.json())
     assert response.status_code == 200, response.text
     answer = response.json()
-    assert answer["metrics"]["llm_calls"] == 6
+    assert answer["metrics"]["llm_calls"] == 7
     assert len(model.dispute_checks) == 2
     checked = model.dispute_checks[-1]
     assert "".join(span["text"] for span in checked["latest_message_spans"]) == latest

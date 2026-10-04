@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from tests.brain_reader_fixture import source_treatment_reply
+
 
 def citation_units(payload, data):
     """Supply declared anchors for old offline drafts, preserving explicit invalid anchors."""
@@ -92,11 +94,17 @@ def reviewed_verdicts(payload, data):
 def interpretation(data):
     return {**{key: value for key, value in data.items() if key != "active_work_after"},
             "items": [{**item, "intent": item.get("intent", "request"),
+                       "response_basis": item.get("response_basis", "legal_authority"
+                                                  if item.get("research_question")
+                                                  else "conversation_record"),
                        "research_question": item.get("research_question", "")}
                       for item in data["items"]]}
 
 
 def continuation_reply(operation, payload, *, scripted_items=()):
+    treatment = source_treatment_reply(operation, payload)
+    if treatment is not None:
+        return treatment
     if operation == "verify_continuation":
         return reviewed_verdicts(payload, {"verdicts": [{"request_index": unit["request_index"],
                               "verdict": "accept",

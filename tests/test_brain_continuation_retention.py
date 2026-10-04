@@ -408,7 +408,7 @@ def test_public_adverse_disclosure_retains_supported_response_context_and_pendin
     answer = send(client, DISCLOSURE, "retained-disclosure", opened=first)
     replay = send(client, DISCLOSURE, "retained-disclosure", opened=first)
 
-    assert answer["metrics"]["llm_calls"] == 7
+    assert answer["metrics"]["llm_calls"] == 8
     assert replay["metrics"]["llm_calls"] == 0
     assert answer["blocked"] is True
     assert answer["continuation"]["coverage"][0]["state"] == "partial"

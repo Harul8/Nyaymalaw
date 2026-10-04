@@ -89,4 +89,4 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
     assert [row["message"] for row in saved.brain_chat] == [first, latest]
     assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 2
     assert len(model.grounding_inputs) == 2
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 7

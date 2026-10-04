@@ -195,7 +195,7 @@ def test_first_account_retains_distinct_sourced_material_without_admission(
     assert saved.facts == ()
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 7
     payload = json.loads(model.calls[0].user)
     assert payload["earlier_conversation"] == []
     assert payload["latest_message"] == message
@@ -276,7 +276,7 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
     changed = send(client, correction, "second", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 6
+    assert changed.json()["metrics"]["llm_calls"] == 7
     matter = wired.store.load(opened.json()["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -364,9 +364,9 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
     result = response.json()
     replay = send(client, request, "review", opened=opened).json()
 
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
-        "interpret_conversation", "extract_disputes", "verify_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
     assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
@@ -409,9 +409,10 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["material"] == []
-    assert result["metrics"]["llm_calls"] == 5
+    assert result["metrics"]["llm_calls"] == 6
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
-        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "extract_legal_details",
         "continue_conversation", "verify_continuation"]
     assert client.get(f"/api/matters/{matter_id}").json()["proposed_disputes"] == before
 
@@ -482,7 +483,7 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
         f"{first};", f"separately, {second}."]
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert served.json()["metrics"]["llm_calls"] == 7
+    assert served.json()["metrics"]["llm_calls"] == 8
 
 
 @pytest.mark.parametrize("invalid_candidate", [
@@ -553,7 +554,7 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == message
-    assert served.json()["metrics"]["llm_calls"] == 7
+    assert served.json()["metrics"]["llm_calls"] == 8
     repair = [json.loads(prompt.user) for prompt in model.material_calls
               if "original_input" in json.loads(prompt.user)]
     assert len(repair) == 1

@@ -36,11 +36,12 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                       scope_excerpt="Where the agreed condition applies",
                       scope_status="conditional", reason="The finding preserves this condition."))
     if verification in ("research_support_v2", "research_support_v3", "research_support_v4",
-                        RESEARCH_VERIFICATION):
+                        "research_support_v5", RESEARCH_VERIFICATION):
         source["verification"].update(
             contract=verification, assertion_owner="legislative_text", owner_label="Test Act",
             owner_excerpt=PASSAGE, source_treatment="adopted", treatment_excerpt=PASSAGE)
-    if verification in ("research_support_v3", "research_support_v4", RESEARCH_VERIFICATION):
+    if verification in ("research_support_v3", "research_support_v4", "research_support_v5",
+                        RESEARCH_VERIFICATION):
         source["verification"].update(assertion_role="legislative_text",
                                       assertion_statement=PASSAGE, context_statements=[])
     row = dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
@@ -48,12 +49,12 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                 force="required" if kind == "gathering" else "none",
                 material_ids=list(linked), source_ids=[source["id"]], sources=[source],
                 record_status="mentioned" if linked else "not_mentioned")
-    if verification in ("research_support_v4", RESEARCH_VERIFICATION):
+    if verification in ("research_support_v4", "research_support_v5", RESEARCH_VERIFICATION):
         row["use_verification"] = dict(contract=verification, checks={
             aspect: dict(verdict="supported", reason="The conditional finding preserves its limit.",
                          source_ids=[source["id"]], material_ids=list(linked))
             for aspect in ("entailment", "application", "force")})
-    if verification == RESEARCH_VERIFICATION:
+    if verification in ("research_support_v5", RESEARCH_VERIFICATION):
         row["use_verification"]["application_premises"] = [{
             "source_id": source["id"],
             "predicate_excerpt": "Where the agreed condition applies",
@@ -61,6 +62,8 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
             "preserved_condition": "Where the agreed condition applies",
             "reason": "The legal condition remains explicit; its application is unresolved.",
         }]
+    if verification == RESEARCH_VERIFICATION:
+        row["use_verification"]["entailment_basis"] = "source_rule"
     return row
 
 
@@ -718,10 +721,11 @@ def test_board_research_uses_authorised_earlier_account_words():
     assert result["by_dispute"][selected["id"]][0]["label"] == row["label"]
 
 
-def test_historical_v4_research_remains_readable_without_invented_application_accounts():
+@pytest.mark.parametrize("contract", ["research_support_v4", "research_support_v5"])
+def test_historical_research_is_readable_without_inventing_stronger_checks(contract):
     file = matter()
     selected = subject(file)
-    old = read(selected, verification="research_support_v4")
+    old = read(selected, verification=contract)
     saved = append(file, [old])
     untouched = deepcopy(saved.brain_chat)
 
@@ -730,6 +734,7 @@ def test_historical_v4_research_remains_readable_without_invented_application_ac
     assert result["state"] == "ok" and result["by_subject"][selected["id"]]
     assert result["reuse_allowed"][selected["id"]] is False
     assert result["coverage_by_subject"][selected["id"]]["verification_current"] is False
-    assert "application_premises" not in result["by_subject"][selected["id"]][0][
-        "use_verification"]
+    check = result["by_subject"][selected["id"]][0]["use_verification"]
+    assert ("application_premises" in check) is (contract == "research_support_v5")
+    assert "entailment_basis" not in check
     assert saved.brain_chat == untouched

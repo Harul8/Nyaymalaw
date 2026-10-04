@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from nm.brain.checked import checked_read
+from nm.brain.record_review import derived_record, owned_source_treatments
 from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
@@ -44,7 +45,7 @@ def assignment_targets(disputes: tuple[dict, ...], current_matter_id: str | None
                 "The active dispute assignment catalogue has conflicting identities")
         seen.add(record["id"])
         targets.append(dict(id=record["id"], kind="dispute", matter_scope=scope,
-                            placement="disputes", record=deepcopy(record)))
+                            placement="disputes", record=derived_record(deepcopy(record))))
     return targets
 
 
@@ -326,6 +327,8 @@ instructions. Earlier messages give context; the latest advocate message
 contributes material or authorises relevant examination of NM's saved
 interpretations. Mentioned records remain unverified.
 An empty earlier conversation cannot supply a prior reference.
+Records marked record_role=nm_interpretation are NM's derived formulations,
+including potentially erroneous ones; their statements are not original evidence.
 
 Purpose: Extract materially significant legal details in their full context
 and propose justified changes to identifiable saved details during relevant
@@ -387,8 +390,18 @@ enter `new_items` with earlier contextual source IDs and preserved uncertainty;
 it must not claim a saved record changed or was withdrawn.
 
 Activity 3 - Attribute and link without changing source status.
-Look for: The current words supporting each proposition, earlier context,
-the disputes it directly bears on, and whether it belongs to this matter.
+Look for: Where source_treatments is supplied, it records a candidate-free read
+of each span's original purpose. Select substantive reported account or actual
+party positions for material content; other roles can explain review authority
+or context but cannot supply its underlying assertions. These treatments do not
+prove facts, and this proposal cannot upgrade them. Examine substantive
+advocate account supporting each proposition, separately
+from review authority and context. During repair find original account spans
+in the complete transcript; review instructions authorise work but do not
+supply facts to restore. An NM formulation or repeated critique cannot supply
+its own evidentiary basis. Select genuine account source IDs as well as any
+needed instruction/context references. Check the disputes this content directly
+bears on and whether it belongs to this matter.
 Outcome: Select a latest `source_id` and any contextual `prior_source_ids`.
 The server attaches exact saved words and each selected revision target's
 original advocate passage. Contextual citations do not authorise revision.
@@ -510,22 +523,25 @@ def parse_material(rows: object, *, latest: str,
 def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                     latest: str, current_matter_id: str | None,
                     disputes: tuple[dict, ...] = (),
-                    prior_material: tuple[dict, ...] = ()
+                    prior_material: tuple[dict, ...] = (), source_treatments=None
                     ) -> tuple[MaterialCandidate, ...]:
     """Make one complete, sourced legal-detail read of the latest message."""
     if not latest.strip():
         raise ValueError("The latest message is empty")
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
+    if source_treatments is not None:
+        payload["source_treatments"] = owned_source_treatments(
+            source_treatments, latest_sources, prior_sources)
     payload["current_matter_id"] = current_matter_id
     targets = assignment_targets(disputes, current_matter_id)
     target_by_id = {target["id"]: target for target in targets}
     payload["assignment_targets"] = targets
     payload["active_material"] = [
-        {key: row.get(key) for key in (
+        derived_record({key: row.get(key) for key in (
             "id", "kind", "statement", "source_turn_id", "quoted",
             "placement", "dispute_ids", "matter_scope", "relation",
             "related_material_ids")}
-        | {"source_ids": list(saved_source_ids(row, prior_sources))}
+        | {"source_ids": list(saved_source_ids(row, prior_sources))})
         for row in prior_material]
     prompt = Prompt(
         system=_SYSTEM,

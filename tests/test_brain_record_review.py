@@ -59,7 +59,8 @@ def test_public_review_cannot_replace_distinct_accounts_with_analysis_and_preser
                 row.update(verdict="reject", operation_supported=False,
                            reason="Review work and new NM law cannot replace distinct accounts.")
                 row["account_check"].update(content_role="nm_analysis", supported=False,
-                                             introduces_legal_analysis=True, source_ids=[])
+                                             introduces_legal_analysis=True, source_ids=[],
+                                             source_checks=[])
                 row["target_checks"] = []
         return decisions
 
@@ -74,7 +75,7 @@ def test_public_review_cannot_replace_distinct_accounts_with_analysis_and_preser
 
     assert response.status_code == 200, response.text
     result = response.json()
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert [row["statement"] for row in result["material"]] == [
         issue["statement"], detail["statement"]]
     saved = wired.store.load(opened["matter_id"])
@@ -160,7 +161,7 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
         audit = result["material_coverage"]["dispute_review"][0]
         assert audit["model_decision"]["verdict"] == "accept"
         assert audit["verdict"] == "reject" and audit["missing_peer_ids"] == ["C2"]
-        assert result["metrics"]["llm_calls"] == 6
+        assert result["metrics"]["llm_calls"] == 7
     else:
         assert {row["id"] for row in disputes["rows"]} == {
             "restore:material:1", "restore:material:2"}
@@ -168,7 +169,7 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
             "restore:material:3", "restore:material:4"}
         assert all(row["prior_references"] == list(refs) for row in result["material"])
         assert len(disputes["history"]) == len(records["history"]) == 3
-        assert result["metrics"]["llm_calls"] == 7
+        assert result["metrics"]["llm_calls"] == 8
 
 
 def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovered_account(
@@ -220,10 +221,117 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     assert response.status_code == 200, response.text
     result = response.json()
     assert len(checks) == 2 and "required_peer_ids" in checks[1]["validation_issue"]
-    assert result["material"] == [] and result["metrics"]["llm_calls"] == 7
+    assert result["material"] == [] and result["metrics"]["llm_calls"] == 8
     saved = wired.store.load(opened["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
 
     assert saved.brain_chat[0] == original_turn and saved.facts == ()
     assert [row["id"] for row in proposed_disputes(saved)["rows"]] == ["merged:material:1"]
     assert result["material_coverage"]["dispute_review"][0]["verdict"] == "reject"
+
+
+def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_sources_survive(
+        client, wired, monkeypatch):
+    review = "Review the draft."
+    fact = "The custodian withheld our records."
+    account = f"{review} {fact}"
+    # Simulate an earlier NM interpretation that incorrectly cites a work instruction.
+    original = [material("dispute", "NM draft classification", review),
+                material("dispute", "Custodian withheld records", fact),
+                material("position", "NM's draft classifies the account.", review,
+                         placement="disputes", dispute_ids=("source-seed:material:1",)),
+                material("event", fact, fact, placement="disputes",
+                         dispute_ids=("source-seed:material:2",))]
+    request = "Complete the authorised review."
+    position = "The counterparty alleges we owe a fee under an oral arrangement, which we dispute."
+    mixed = "Please review and note that a courier retained our receipt."
+    latest = f"{request} {position} {mixed}"
+    refs = ({"turn_id": "source-seed", "role": "advocate", "quoted": review},)
+    unsupported = material("dispute", "NM's classification is corrected", request,
+                           relation="corrects", references=refs, scope="current")
+    unsupported["related_dispute_ids"] = ["source-seed:material:1"]
+    unsupported_detail = material("position", "NM's classification is now different.", request,
+                                  relation="corrects", references=refs, scope="current",
+                                  related_material_ids=("source-seed:material:3",))
+    party = material("dispute", "Counterparty's disputed fee demand", position, scope="current",
+                     basis="attributed")
+    courier = material("dispute", "Courier retained receipt", mixed, scope="current")
+    party_detail = material("position", "The counterparty alleges a fee under an oral arrangement.",
+                            position, scope="current", basis="attributed", placement="disputes",
+                            dispute_ids=("source-review:material:1",))
+    courier_detail = material("event", "The advocate reports that a courier retained the receipt.",
+                              mixed, scope="current", placement="disputes",
+                              dispute_ids=("source-review:material:2",))
+    checked = []
+
+    def certify_sources(operation, payload, decisions):
+        checked.append(payload)
+        proposals = {row["candidate_id"]: row for row in payload["candidates"]}
+        for row in decisions["verdicts"]:
+            proposal = proposals[row["candidate_id"]]
+            invalid = bool(proposal.get("related_dispute_ids")
+                           or proposal.get("related_material_ids"))
+            account_check = row["account_check"]
+            if invalid:
+                account_check["source_ids"] = proposal["allowed_account_source_ids"]
+                account_check["source_checks"] = [{
+                    "source_id": source_id,
+                    "supplies_account_content": False, "supports_proposal": False,
+                    "reason": "This passage authorises review but supplies no account content.",
+                } for source_id in account_check["source_ids"]]
+                if "validation_issue" in payload:
+                    row.update(verdict="reject", operation_supported=False,
+                               reason="The selected instructions do not substantiate this account.")
+                # The first response deliberately leaves overall supported/accept true.
+        return decisions
+
+    class SourceReviewModel(ReviewModel):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            if prompt.operation == "classify_account_sources":
+                payload = json.loads(prompt.user)
+                # Seed the historical bad interpretation; the later independent read
+                # explicitly treats its exact instruction as authority, not content.
+                if "".join(span["text"] for span in payload["latest_message_spans"]) == latest:
+                    roles = {"L1": "work_instruction", "L2": "reported_party_position",
+                             "L3": "mixed", "P1S1": "work_instruction"}
+                    data = deepcopy(result.data)
+                    for row in data["source_treatments"]:
+                        row["content_role"] = roles.get(row["source_id"], "reported_matter_account")
+                    return replace(result, data=data)
+            return result
+
+    model = SourceReviewModel([
+        plan(account, candidates=original, opening=True),
+        plan(latest, candidates=[unsupported, party, courier, unsupported_detail,
+                                 party_detail, courier_detail])], certify_sources)
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    opened = send(client, account, "source-seed").json()
+    saved_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
+    response = send(client, latest, "source-review", opened=opened)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["metrics"]["llm_calls"] == 10
+    assert {row["statement"] for row in result["material"]} == {
+        party["statement"], courier["statement"], party_detail["statement"],
+        courier_detail["statement"]}
+    repairs = [payload for payload in checked if "validation_issue" in payload]
+    assert len(repairs) == 2
+    assert all(len(payload["candidates"]) == 1 for payload in repairs)
+    assert all(len(payload["retained_candidate_context"]) == 2 for payload in repairs)
+    assert all("substantive reported account content" in payload["validation_issue"]
+               for payload in repairs)
+    assert all(row["record_role"] == "nm_interpretation"
+               for row in checked[0]["active_disputes"])
+    saved = wired.store.load(opened["matter_id"])
+    assert saved.brain_chat[0] == saved_turn and saved.facts == ()
+    from nm.brain.dispute_state import proposed_disputes
+    from nm.brain.material_state import material_record
+
+    disputes = proposed_disputes(saved)
+    records = material_record(saved, disputes=disputes)
+    assert {"source-seed:material:1", "source-seed:material:2"} <= {
+        row["id"] for row in disputes["rows"]}
+    assert {"source-seed:material:3", "source-seed:material:4"} <= {
+        row["id"] for row in records["rows"]}
+    assert send(client, latest, "source-review", opened=opened).json()["metrics"]["llm_calls"] == 0

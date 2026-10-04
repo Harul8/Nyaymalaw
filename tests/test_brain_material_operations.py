@@ -13,10 +13,11 @@ from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from nm.shared.model_port import SchemaViolation
-from tests.brain_reader_fixture import reviewed_record_verdicts
+from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
 from tests.test_brain_material import Model, material, plan, send
 from tests.test_brain_material_verification import Model as CheckerModel
 
+verify_material_grounding = classified_verifier(verify_material_grounding)
 FIRST = "We paid the contractor an advance of 4 lakh."
 ORIGINAL = "The advocate reports an advance payment of 4 lakh."
 CORRECTION = "Correction: our advance payment was 3 lakh, not 4 lakh."
@@ -76,7 +77,8 @@ def test_inconsistent_accept_repairs_only_that_operation_and_preserves_peer_cont
     assert repair["retained_candidate_context"][0]["decision"]["verdict"] == "accept"
     assert "operation_supported true" in repair["validation_issue"]
     assert repair["linked_records"] == [
-        {"id": prior["id"], "type": "material", "record": prior}]
+        {"id": prior["id"], "type": "material", "record": {
+            **prior, "record_role": "nm_interpretation"}}]
     audit, = result.rejected_proposals
     assert audit["operation_supported"] is False
     assert audit["verdict"] == "reject"
@@ -197,9 +199,10 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
     response = send(client, latest, "followup", opened=opened.json())
     assert response.status_code == 200, response.text
     answer = response.json()
-    assert answer["metrics"]["llm_calls"] == 6
+    assert answer["metrics"]["llm_calls"] == 7
     assert [row["operation"] for row in answer["metrics"]["model_calls"]] == [
-        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
     assert len(model.material_checks) == 2
     checked = model.material_checks[-1]

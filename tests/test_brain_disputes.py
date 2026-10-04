@@ -129,8 +129,9 @@ def test_contextual_correction_uses_full_attributed_history_and_exact_reference(
             for message in payload["earlier_conversation"]] == [
                 (message.turn_id, message.role, message.text) for message in earlier]
     assert _source_text(payload["latest_message_spans"]) == latest
-    assert [{key: value for key, value in row.items() if key != "source_ids"}
+    assert [{key: value for key, value in row.items() if key not in ("source_ids", "record_role")}
             for row in payload["prior_disputes"]] == list(prior_disputes)
+    assert payload["prior_disputes"][0]["record_role"] == "nm_interpretation"
     assert payload["prior_disputes"][0]["source_ids"] == ["P1S1"]
     item = schema["properties"]["changes"]["items"]
     assert item["properties"]["prior_source_ids"]["items"]["enum"] == [

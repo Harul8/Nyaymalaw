@@ -16,7 +16,9 @@ from nm.shared.model_port import (
     TierUnavailable,
     Usage,
 )
-from tests.brain_reader_fixture import reviewed_record_verdicts
+from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
+
+verify_disputes = classified_verifier(verify_disputes)
 
 
 def _candidate(quoted: str, label: str, *, relation: str = "new",
@@ -105,7 +107,8 @@ def test_overall_acceptance_cannot_override_failed_account_or_each_target_check(
     correction = json.loads(model.calls[1][0].user)
     assert [row["candidate_id"] for row in correction["candidates"]] == ["C1"]
     assert [row["candidate_id"] for row in correction["retained_candidate_context"]] == ["C2"]
-    assert correction["active_disputes"] == list(targets)
+    assert correction["active_disputes"] == [
+        {**row, "record_role": "nm_interpretation"} for row in targets]
     initial = json.loads(model.calls[0][0].user)
     assert all(row["allowed_restoration_peer_ids"] == [] for row in initial["candidates"])
     peer_pool = model.calls[0][1]["properties"]["verdicts"]["items"]["properties"][
