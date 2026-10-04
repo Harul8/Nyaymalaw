@@ -123,12 +123,22 @@ def checked_law(source, *, reason="The exact synthetic passage supports this use
 
 
 def checked_finding(row):
+    row = {"need": "\n".join(source["text"] for source in row["sources"]),
+           "why": "The fixture retains the exact cited condition.", **row}
     sources = [source["id"] for source in row["sources"]]
     return {**row, "source_ids": sources, "material_ids": [], "use_verification": {
         "contract": RESEARCH_VERIFICATION, "checks": {name: {
             "verdict": "supported", "reason": "The exact passage supports this limited use.",
             "source_ids": sources, "material_ids": [],
-        } for name in ("entailment", "application", "force")}}}
+        } for name in ("entailment", "application", "force")},
+        "application_premises": [{
+            "source_id": source["id"],
+            "predicate_excerpt": source["verification"]["scope_excerpt"],
+            "status": "unresolved", "account_references": [],
+            "preserved_condition": row.get("need", source["text"]),
+            "reason": "The conditional fixture does not assert factual satisfaction.",
+        } for source in row["sources"]
+          if source["verification"]["scope_status"] != "no_special_condition"]}}
 
 
 def mixed_purpose_unit():
@@ -1044,7 +1054,7 @@ def test_source_free_answer_route_needs_no_continuation_or_verifier(relation):
     assert model.calls == []
 
 
-@pytest.mark.parametrize("damage", ["no_requested_task", "contribution_task", "duplicate_owner"])
+@pytest.mark.parametrize("damage", ["no_requested_task", "contribution_task"])
 def test_progress_contract_repairs_only_invalid_unit_before_independent_check(damage):
     good = unit()
     invalid = deepcopy(good)
@@ -1056,8 +1066,6 @@ def test_progress_contract_repairs_only_invalid_unit_before_independent_check(da
         items = (WorkItem(request="A clarification of the reported account", relation="continues",
                           matter_scope="current", priority="ordinary", next_step="legal_work",
                           intent="contribution"),)
-    else:
-        invalid["next_work"] = [deepcopy(invalid["questions"][0])]
     model = ContinuationModel([{"units": [invalid]}, {"units": [good]}, verdict(0)])
 
     result = _continue(model, plan=conversation_plan(items=items))

@@ -8,7 +8,7 @@ from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
 from tests.brain_continuation_fixture import continuation_reply, interpretation
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
 class Model:
@@ -51,6 +51,7 @@ class Model:
                     if prompt.operation == "verify_disputes" else {}),
                  "verdict": "accept", "reason": "Attributable proposal"}
                 for row in payload["candidates"]]}
+            data = reviewed_record_verdicts(payload, data)
         else:
             self.calls.append(prompt)
             planned = next(self.plans)
@@ -325,6 +326,94 @@ def test_work_request_without_new_material_preserves_record_with_three_calls(
     saved = wired.store.load(matter_id)
     assert [row["message"] for row in saved.brain_chat] == [first, request]
     assert saved.facts == ()
+
+
+def test_public_authorised_formulation_review_reads_saved_account_without_new_facts(
+        client, wired, monkeypatch):
+    from copy import deepcopy
+
+    from nm.brain.dispute_state import proposed_disputes
+    from nm.brain.material_state import material_record
+
+    account = "Our packages are withheld in the depot by someone whose identity I do not know."
+    request = ("Reconcile the board descriptions with my saved account and repair your wording "
+               "without treating this review request as any new facts.")
+    # Simulate an earlier accepted NM interpretation; the saved advocate words
+    # never identified this actor. The review repairs that interpretation only.
+    old_dispute = material("dispute", "Depot manager withheld packages", account,
+                           basis="inferred")
+    old_detail = material("event", "The depot manager withheld the packages.", account,
+                          basis="inferred", placement="disputes",
+                          dispute_ids=("original:material:1",))
+    lineage = ({"turn_id": "original", "role": "advocate", "quoted": account},)
+    dispute = material("dispute", "Packages withheld in depot; actor unidentified", request,
+                       relation="corrects", references=lineage, scope="current")
+    dispute["related_dispute_ids"] = ["original:material:1"]
+    detail = material("event", "The advocate reports withheld packages; the actor is unidentified.",
+                      request, relation="corrects", references=lineage, scope="current",
+                      placement="disputes", dispute_ids=("review:material:1",),
+                      related_material_ids=("original:material:2",))
+    review_plan = plan(request, candidates=[dispute, detail])
+    model = Model([plan(account, candidates=[old_dispute, old_detail], opening=True), review_plan])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    opened = send(client, account, "original").json()
+    original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
+
+    response = send(client, request, "review", opened=opened)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    replay = send(client, request, "review", opened=opened).json()
+
+    assert result["metrics"]["llm_calls"] == 7
+    assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
+        "interpret_conversation", "extract_disputes", "verify_disputes",
+        "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
+    assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
+    saved = wired.store.load(opened["matter_id"])
+    assert [row["message"] for row in saved.brain_chat] == [account, request]
+    assert saved.brain_chat[0] == original_turn
+    assert saved.facts == ()
+    disputes = proposed_disputes(saved)
+    records = material_record(saved, disputes=disputes)
+    assert [row["id"] for row in disputes["rows"]] == ["review:material:1"]
+    assert [row["id"] for row in records["rows"]] == ["review:material:2"]
+    assert disputes["rows"][0]["related_dispute_ids"] == ["original:material:1"]
+    assert records["rows"][0]["related_material_ids"] == ["original:material:2"]
+    assert all(row["quoted"] == request and row["source_turn_id"] == "review"
+               and row["prior_references"] == list(lineage) for row in result["material"])
+    assert len(disputes["history"]) == len(records["history"]) == 2
+    interpreter = model.calls[-1]
+    assert "without any new factual" in interpreter.system
+    assert "and for relevant authorised review" in interpreter.system
+    assert json.loads(interpreter.user)["latest_message"] == request
+    assert [row["text"] for row in json.loads(interpreter.user)["earlier_conversation"]
+            if row["role"] == "advocate"] == [account]
+
+
+def test_authorised_formulation_review_may_leave_the_record_unchanged(
+        client, wired, monkeypatch):
+    account = "A party disputes the handover and the responsible actor is unknown."
+    request = "Check whether your saved description faithfully reflects my account."
+    original = material("dispute", "Disputed handover; actor unknown", account)
+    review = plan(request)
+    review["material_review"] = True
+    model = Model([plan(account, candidates=[original], opening=True), review])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    opened = send(client, account, "original-review-empty").json()
+    matter_id = opened["matter_id"]
+    before = client.get(f"/api/matters/{matter_id}").json()["proposed_disputes"]
+
+    response = send(client, request, "review-empty", opened=opened)
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["material"] == []
+    assert result["metrics"]["llm_calls"] == 5
+    assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
+        "interpret_conversation", "extract_disputes", "extract_legal_details",
+        "continue_conversation", "verify_continuation"]
+    assert client.get(f"/api/matters/{matter_id}").json()["proposed_disputes"] == before
 
 
 def test_answer_to_prior_nm_question_can_support_material(

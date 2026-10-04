@@ -18,7 +18,7 @@ from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import matter_list_projection
 from tests.brain_continuation_fixture import continuation_reply, interpretation
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
 class Model:
@@ -60,6 +60,8 @@ class Model:
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
                 self.current_items = data["items"]
+        if prompt.operation == "verify_material_grounding":
+            data = reviewed_record_verdicts(json.loads(prompt.user), data)
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
@@ -195,7 +197,8 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
                         {"candidate_id": "O1", "verdict": "reject",
                          "operation_supported": False,
                          "reason": "A clearly named client was omitted."}]}
-                    return replace(result, data=rejected)
+                    return replace(result, data=reviewed_record_verdicts(
+                        json.loads(prompt.user), rejected))
             return result
 
     text = "Our client Mira Patel says a supplier retained her records."
@@ -623,7 +626,8 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                      "related_material_ids": [], "source_id": spans[1]["id"]},
                 ], json.loads(prompt.user), link_field="related_material_ids"))
             if prompt.operation == "verify_material_grounding":
-                return replace(result, data={"verdicts": [
+                return replace(result, data=reviewed_record_verdicts(json.loads(prompt.user), {
+                    "verdicts": [
                     {"candidate_id": "D1", "verdict": "accept",
                      "operation_supported": True,
                      "reason": "The notice is reported."},
@@ -633,7 +637,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                     {"candidate_id": "O1", "verdict": "reject",
                      "operation_supported": False,
                      "reason": "The opening adds an admission."},
-                ]})
+                ]}))
             return result
 
     store = FileMatterStore(tmp_path, key="a-test-sealing-key")

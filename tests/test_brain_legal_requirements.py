@@ -9,6 +9,7 @@ from nm.brain.legal_requirements import (
     RESEARCH_VERIFICATION,
     decompose,
     decompose_subjects,
+    finding_verification_valid,
     read_findings,
     read_requirements,
     verify_findings,
@@ -86,6 +87,15 @@ class Model:
                 "source_checks": [self._source_check(check, candidates.get(
                     decision.get("candidate_id"), {}))
                     for check in decision.get("source_checks", [])],
+                "application_premises": decision.get("application_premises", [{
+                    "source_id": check["source_id"],
+                    "predicate_fragment_id": check["scope_fragment_id"],
+                    "status": "unresolved", "account_source_ids": [],
+                    "preserved_condition": candidates.get(
+                        decision.get("candidate_id"), {}).get("need", ""),
+                    "reason": "The proposed need retains the source condition without applying it.",
+                } for check in decision.get("source_checks", [])
+                    if check["verdict"] == "supported" and check.get("scope_fragment_id")]),
             } for decision in value.get("decisions", [])]}
         return ModelResult(
             text=None, data=value, tier=tier, provider="offline",
@@ -170,6 +180,13 @@ def _candidate_rows(payload):
     return [candidate for subject in payload["subjects"] for candidate in subject["candidates"]]
 
 
+def conversation_words(payload):
+    return [{"turn_id": row["turn_id"], "role": row["role"],
+             "text": row.get("text", "".join(span["text"]
+                                              for span in row.get("source_spans", [])))}
+            for row in payload["conversation"]]
+
+
 def plan(dispute_id, *phrases):
     return {"dispute_id": dispute_id,
             "queries": [{"text": phrase} for phrase in phrases]}
@@ -238,7 +255,7 @@ def test_decomposition_batches_disputes_with_complete_attributed_conversation():
     assert all(marker in prompt.system for marker in (
         "Message:", "Purpose:", "Look for:", "Outcome:"))
     data = json.loads(prompt.user)
-    assert data["conversation"] == [
+    assert conversation_words(data) == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text}
         for row in CONVERSATION]
     assert [row["subject"]["id"] for row in data["subjects"]] == ["d1", "d2"]
@@ -415,7 +432,7 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
     assert all(marker in prompt.system for marker in (
         "Message:", "Purpose:", "Look for:", "Outcome:"))
     payload = json.loads(prompt.user)
-    assert payload["conversation"] == [
+    assert conversation_words(payload) == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text}
         for row in CONVERSATION]
     assert _candidate_rows(payload)[0]["sources"][0]["fragments"] == [{
@@ -855,7 +872,7 @@ def test_decomposition_splits_into_fewest_complete_groups_when_needed():
     assert [[row["subject"]["id"] for row in json.loads(call[0].user)[
         "subjects"]] for call in model.calls] == [["d1", "d2"], ["d3"]]
     for call in model.calls:
-        assert json.loads(call[0].user)["conversation"] == [
+        assert conversation_words(json.loads(call[0].user)) == [
             {"turn_id": row.turn_id, "role": row.role, "text": row.text}
             for row in THREE_CONVERSATION]
 
@@ -905,7 +922,7 @@ def test_requirement_batches_keep_exact_passages_with_their_disputes():
     assert output["d3"][0]["sources"] == third_hits["d3"]["candidates"]
     assert output["d2"] == []
     for call in model.calls:
-        assert json.loads(call[0].user)["conversation"] == [
+        assert conversation_words(json.loads(call[0].user)) == [
             {"turn_id": row.turn_id, "role": row.role, "text": row.text}
             for row in THREE_CONVERSATION]
     first_schema = model.calls[0][1]
@@ -954,7 +971,7 @@ def test_request_findings_use_passages_without_creating_a_dispute_or_gathering_i
     payload = json.loads(model.calls[0][0].user)
     assert payload["subjects"][0]["subject"] == REQUEST_SUBJECT
     assert payload["subjects"][0]["material"] == []
-    assert payload["conversation"][-1]["text"] == CONVERSATION[-1].text
+    assert conversation_words(payload)[-1]["text"] == CONVERSATION[-1].text
 
 
 def test_conditional_scope_needs_exact_predicate_and_an_independent_faithfulness_check():
@@ -1089,7 +1106,7 @@ def test_oversized_reading_subject_does_not_hide_another_subjects_passages():
     assert "d1" not in reading.rows and reading.coverage["d1"]["unread_items"] == 1
     assert reading.rows["d2"][0]["sources"] == hits()["d2"]["candidates"]
     assert len(model.calls) == 1
-    assert json.loads(model.calls[0][0].user)["conversation"] == [
+    assert conversation_words(json.loads(model.calls[0][0].user)) == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text} for row in CONVERSATION]
 
 
@@ -1380,7 +1397,7 @@ def test_source_adoption_cannot_override_a_failed_whole_finding_use_check(
     assert audit["use_checks"][aspect]["verdict"] == "unsupported"
     assert "sources" not in audit and "use_verification" not in audit
     assert len(model.calls) == 1
-    assert json.loads(model.calls[0][0].user)["conversation"] == [
+    assert conversation_words(json.loads(model.calls[0][0].user)) == [
         {"turn_id": row.turn_id, "role": row.role, "text": row.text} for row in (earlier, later)]
     assert checked.rows["q1"][0]["use_verification"]["contract"] == RESEARCH_VERIFICATION
 
@@ -1527,3 +1544,188 @@ def test_context_fragment_cannot_borrow_another_sources_words_or_repeat_valid_pe
     repair = json.loads(model.calls[1][0].user)
     assert [candidate["candidate_id"] for candidate in _candidate_rows(repair)] == ["r1"]
     assert "context_statements[0].owner_fragment_id" in repair["validation_issues"]["r1"]
+
+
+def application_premise(source_id="condition", *, status="unresolved", ids=(),
+                        condition="If consent covered the relevant period, check its terms."):
+    return {"source_id": source_id, "predicate_fragment_id": "f1", "status": status,
+            "account_source_ids": list(ids), "preserved_condition": condition,
+            "reason": "The reported dates do not establish the condition throughout the period."}
+
+
+def application_case():
+    source = dict(id="condition", kind="provision", title="Synthetic rule", locator="section 4",
+                  text="Where consent covers the relevant period, its terms govern that use.")
+    candidate = {**finding(source_ids=["condition"], label="Check the scope of consent",
+                          need="If consent covered the relevant period, check its terms."),
+                 "sources": [source]}
+    conversation = (
+        Message("early", "advocate", "Use began in 2016."),
+        Message("early", "nm", "The use was authorised from the outset."),
+        Message("later", "advocate",
+                "Consent was first given in 2021. Its earlier reach is unknown."),
+    )
+    return candidate, conversation
+
+
+def conditional_application_decision(candidate_id="r1"):
+    decision = supported_verdict(candidate_id, "condition")
+    decision["source_checks"][0].update(scope_status="conditional", scope_fragment_id="f1")
+    decision["application_premises"] = [application_premise(ids=("P1S1", "P3S1", "P3S2"))]
+    return decision
+
+
+def test_application_preserves_exact_account_chronology_without_repeating_transcript_text():
+    candidate, conversation = application_case()
+    model = Model([{"decisions": [conditional_application_decision()]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+
+    premise = result.rows["q1"][0]["use_verification"]["application_premises"][0]
+    assert premise["status"] == "unresolved"
+    assert premise["preserved_condition"] in candidate["need"]
+    assert premise["predicate_excerpt"] == candidate["sources"][0]["text"]
+    assert premise["account_references"] == [
+        {"turn_id": "early", "role": "advocate", "quoted": "Use began in 2016."},
+        {"turn_id": "later", "role": "advocate", "quoted": "Consent was first given in 2021."},
+        {"turn_id": "later", "role": "advocate", "quoted": "Its earlier reach is unknown."},
+    ]
+    payload = json.loads(model.calls[0][0].user)
+    assert conversation_words(payload) == [vars(message) for message in conversation]
+    assert all("text" not in row and row["source_spans"] for row in payload["conversation"])
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("damage", [
+    "missing_predicate", "nm_only_account", "unknown_account", "unpreserved_condition",
+    "condition_outside_proposal", "foreign_source", "foreign_fragment",
+    "reported_without_account", "contradicted_without_account", "duplicate_predicate",
+])
+def test_application_contract_failure_repairs_only_its_candidate_and_preserves_valid_peer(damage):
+    candidate, conversation = application_case()
+    peer = {**finding(label="Independent supported point"),
+            "sources": request_hits()["q1"]["candidates"]}
+    wrong = conditional_application_decision()
+    premise = wrong["application_premises"][0]
+    if damage == "missing_predicate":
+        wrong["application_premises"] = []
+    elif damage == "nm_only_account":
+        premise.update(status="reported_satisfied", account_source_ids=["P2S1"],
+                       preserved_condition="")
+    elif damage == "unknown_account":
+        premise["account_source_ids"] = ["unavailable"]
+    elif damage == "unpreserved_condition":
+        premise["preserved_condition"] = ""
+    elif damage == "condition_outside_proposal":
+        premise["preserved_condition"] = "An invented qualifier absent from the proposed finding."
+    elif damage == "foreign_source":
+        premise["source_id"] = "s1"
+    elif damage == "foreign_fragment":
+        premise["predicate_fragment_id"] = "f90"
+    elif damage == "reported_without_account":
+        premise.update(status="reported_satisfied", account_source_ids=[], preserved_condition="")
+    elif damage == "contradicted_without_account":
+        premise.update(status="reported_contradicted", account_source_ids=[])
+    else:
+        wrong["application_premises"] *= 2
+    model = Model([{"decisions": [wrong, supported_verdict("r2", "s1")]},
+                   {"decisions": [conditional_application_decision()]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate, peer]}, conversation=conversation)
+
+    assert len(result.rows["q1"]) == 2
+    assert result.coverage["q1"]["checked_items"] == 2
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in _candidate_rows(repair)] == ["r1"]
+    assert "r1" in repair["validation_issues"] and "r2" not in repair["validation_issues"]
+
+
+def test_unconditional_application_cannot_retain_unresolved_predicate_as_established():
+    candidate, conversation = application_case()
+    candidate["material_ids"] = ["reported"]
+    material = {"q1": [{"id": "reported", "quoted": "Use began in 2016.",
+                        "source_turn_id": "early", "basis": "stated"}]}
+    subject = {**REQUEST_SUBJECT, "scope": "current", "record_ids": ["reported"]}
+    wrong = conditional_application_decision()
+    wrong["source_checks"][0]["scope_status"] = "established"
+    wrong["use_checks"] = use_checks(["condition"], ["reported"])
+    fixed = conditional_application_decision()
+    model = Model([{"decisions": [wrong]}, {"decisions": [fixed]}])
+
+    result = verify_findings(model, subjects=(subject,), material_by_subject=material,
+                             proposed={"q1": [candidate]}, conversation=conversation)
+
+    assert result.rows["q1"][0]["sources"][0]["verification"]["scope_status"] == "conditional"
+    assert len(model.calls) == 2
+
+
+def test_repeated_exact_account_reference_is_normalised_after_every_id_is_validated():
+    candidate, conversation = application_case()
+    decision = conditional_application_decision()
+    decision["application_premises"][0]["account_source_ids"] *= 2
+    model = Model([{"decisions": [decision]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+
+    assert len(result.rows["q1"][0]["use_verification"]["application_premises"][0][
+        "account_references"]) == 3
+    assert len(model.calls) == 1
+
+
+def test_attributed_contradiction_can_support_only_an_explicitly_conditional_enquiry():
+    candidate, conversation = application_case()
+    decision = conditional_application_decision()
+    decision["application_premises"][0]["status"] = "reported_contradicted"
+    model = Model([{"decisions": [decision]}])
+
+    result = verify_findings(model, subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+
+    assert result.rows["q1"][0]["use_verification"]["application_premises"][0]["status"] == (
+        "reported_contradicted")
+    assert result.rows["q1"][0]["need"] == candidate["need"]
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("damage", ["missing_need", "nonstring_need", "missing_why",
+                                    "wrong_predicate", "wrong_source_shape"])
+def test_current_application_readback_rejects_corrupt_contract_without_throwing(damage):
+    candidate, conversation = application_case()
+    result = verify_findings(Model([{"decisions": [conditional_application_decision()]}]),
+                             subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+    row = result.rows["q1"][0]
+    if damage == "missing_need":
+        row.pop("need")
+    elif damage == "nonstring_need":
+        row["need"] = None
+    elif damage == "missing_why":
+        row.pop("why")
+    elif damage == "wrong_predicate":
+        row["use_verification"]["application_premises"][0]["predicate_excerpt"] = (
+            "its terms govern that use.")
+    else:
+        row["sources"][0].pop("id")
+
+    assert finding_verification_valid(row) is False
+
+
+def test_historical_v4_use_remains_checked_history_without_inventing_application_premises():
+    candidate, conversation = application_case()
+    result = verify_findings(Model([{"decisions": [conditional_application_decision()]}]),
+                             subjects=(REQUEST_SUBJECT,), material_by_subject={"q1": []},
+                             proposed={"q1": [candidate]}, conversation=conversation)
+    row = result.rows["q1"][0]
+    row["sources"][0]["verification"]["contract"] = "research_support_v4"
+    row["use_verification"]["contract"] = "research_support_v4"
+    row["use_verification"].pop("application_premises")
+
+    assert finding_verification_valid(row, contract="research_support_v4") is True
+    assert finding_verification_valid(row) is False
+    assert "application_premises" not in row["use_verification"]
+    row["use_verification"]["checks"]["application"]["verdict"] = "unsupported"
+    assert finding_verification_valid(row, contract="research_support_v4") is False

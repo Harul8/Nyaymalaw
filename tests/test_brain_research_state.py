@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from nm.brain.conversation import Message
 from nm.brain.requirements_state import (
     RESEARCH_VERIFICATION,
     dispute_research_subjects,
@@ -34,11 +35,12 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                   text=PASSAGE, verification=dict(support_excerpt=PASSAGE,
                       scope_excerpt="Where the agreed condition applies",
                       scope_status="conditional", reason="The finding preserves this condition."))
-    if verification in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION):
+    if verification in ("research_support_v2", "research_support_v3", "research_support_v4",
+                        RESEARCH_VERIFICATION):
         source["verification"].update(
             contract=verification, assertion_owner="legislative_text", owner_label="Test Act",
             owner_excerpt=PASSAGE, source_treatment="adopted", treatment_excerpt=PASSAGE)
-    if verification in ("research_support_v3", RESEARCH_VERIFICATION):
+    if verification in ("research_support_v3", "research_support_v4", RESEARCH_VERIFICATION):
         source["verification"].update(assertion_role="legislative_text",
                                       assertion_statement=PASSAGE, context_statements=[])
     row = dict(kind=kind, label="Establish the stated condition", need=PASSAGE,
@@ -46,11 +48,19 @@ def finding(*, kind="condition", linked=(), verification=RESEARCH_VERIFICATION):
                 force="required" if kind == "gathering" else "none",
                 material_ids=list(linked), source_ids=[source["id"]], sources=[source],
                 record_status="mentioned" if linked else "not_mentioned")
-    if verification == RESEARCH_VERIFICATION:
+    if verification in ("research_support_v4", RESEARCH_VERIFICATION):
         row["use_verification"] = dict(contract=verification, checks={
             aspect: dict(verdict="supported", reason="The conditional finding preserves its limit.",
                          source_ids=[source["id"]], material_ids=list(linked))
             for aspect in ("entailment", "application", "force")})
+    if verification == RESEARCH_VERIFICATION:
+        row["use_verification"]["application_premises"] = [{
+            "source_id": source["id"],
+            "predicate_excerpt": "Where the agreed condition applies",
+            "status": "unresolved", "account_references": [],
+            "preserved_condition": "Where the agreed condition applies",
+            "reason": "The legal condition remains explicit; its application is unresolved.",
+        }]
     return row
 
 
@@ -596,3 +606,130 @@ def test_absent_legacy_attestation_cannot_mask_malformed_exact_source():
     assert result["state"] == "incomplete"
     assert result["by_dispute"][dispute["id"]] == []
     assert all("predate" not in problem for problem in result["diagnostics"])
+
+
+def account_finding(turn_id, quoted):
+    row = finding()
+    row["use_verification"]["application_premises"][0].update(
+        status="reported_satisfied", account_references=[{
+            "turn_id": turn_id, "role": "advocate", "quoted": quoted,
+        }])
+    return row
+
+
+@pytest.mark.parametrize("origin", ["current", "earlier_brain", "earlier_legacy"])
+def test_application_account_words_are_exact_on_readback_without_rewriting_sources(origin):
+    file = matter()
+    selected = subject(file)
+    prior = ()
+    if origin == "current":
+        source_turn = "turn-one"
+    elif origin == "earlier_brain":
+        file = append(file, [], identity="turn-earlier")
+        source_turn = "turn-earlier"
+    else:
+        source_turn = "turn-legacy"
+        prior = (Message(source_turn, "advocate", "An attributed request."),
+                 Message(source_turn, "nm", "The earlier response is not account evidence."))
+    saved = append(file, [read(selected, rows=[account_finding(
+        source_turn, "attributed request")])])
+    untouched = deepcopy(saved.brain_chat)
+
+    result = research_record(saved, subjects=(selected,),
+                             material_by_subject={selected["id"]: []},
+                             corpus_revision=REVISION, prior_conversation=prior)
+
+    assert result["state"] == "ok" and result["reuse_allowed"][selected["id"]] is True
+    assert result["by_subject"][selected["id"]][0]["use_verification"][
+        "application_premises"][0]["account_references"][0]["quoted"] == "attributed request"
+    assert saved.brain_chat == untouched
+
+
+@pytest.mark.parametrize("damage", ["unknown_turn", "foreign_words", "wrong_order",
+                                   "future_turn", "nm_role", "malformed"])
+def test_invalid_account_reference_rejects_its_read_and_preserves_valid_peer(damage):
+    file = matter()
+    selected = subject(file)
+    peer = subject(file, identity="peer", question="A separate scoped enquiry")
+    bad = read(selected, rows=[account_finding("turn-one", "An attributed request.")])
+    reference = bad["rows"][0]["use_verification"]["application_premises"][0][
+        "account_references"][0]
+    if damage == "unknown_turn":
+        reference["turn_id"] = "another-matter-turn"
+    elif damage == "foreign_words":
+        reference["quoted"] = "A fact never stated in this file."
+    elif damage == "wrong_order":
+        reference["quoted"] = "request. attributed An"
+    elif damage == "future_turn":
+        reference["turn_id"] = "turn-two"
+    elif damage == "nm_role":
+        reference["role"] = "nm"
+    else:
+        reference["quoted"] = []
+    saved = append(file, [bad, read(peer)])
+    if damage == "future_turn":
+        saved = append(saved, [], identity="turn-two")
+    raw = deepcopy(saved.brain_chat)
+    # Passing the full canonical transcript must not make later brain turns
+    # available to an earlier saved research read.
+    complete = tuple(Message(turn["turn_id"], "advocate", turn["message"])
+                     for turn in saved.brain_chat)
+
+    result = research_record(saved, subjects=(selected, peer),
+                             material_by_subject={selected["id"]: [], peer["id"]: []},
+                             corpus_revision=REVISION, prior_conversation=complete)
+
+    assert result["state"] == "incomplete"
+    assert result["by_subject"][selected["id"]] == []
+    assert result["reuse_allowed"][selected["id"]] is False
+    assert result["reuse_allowed"][peer["id"]] is True
+    assert saved.brain_chat == raw
+
+
+def test_supplied_transcript_cannot_override_canonical_saved_brain_words():
+    file = matter()
+    selected = subject(file)
+    saved = append(file, [read(selected, rows=[account_finding(
+        "turn-one", "Altered account words.")])])
+    supplied = (Message("turn-one", "advocate", "Altered account words."),)
+
+    result = research_record(saved, subjects=(selected,),
+                             material_by_subject={selected["id"]: []},
+                             corpus_revision=REVISION, prior_conversation=supplied)
+
+    assert result["state"] == "incomplete" and result["by_subject"][selected["id"]] == []
+
+
+def test_board_research_uses_authorised_earlier_account_words():
+    file = matter()
+    disputes, material = board_inputs()
+    subjects, contexts = dispute_research_subjects(file, disputes=disputes, material=material)
+    selected = subjects[0]
+    row = account_finding("turn-legacy", "The condition is reported.")
+    row.update(kind="gathering", force="required")
+    saved = append(file, [read(selected, contexts[selected["id"]], rows=[row])],
+                   records=contexts[selected["id"]])
+    prior = (Message("turn-legacy", "advocate", "The condition is reported."),)
+
+    result = requirements_record(saved, disputes=disputes, material=material,
+                                 corpus_revision=REVISION, prior_conversation=prior)
+
+    assert result["state"] == "ok"
+    assert result["by_dispute"][selected["id"]][0]["label"] == row["label"]
+
+
+def test_historical_v4_research_remains_readable_without_invented_application_accounts():
+    file = matter()
+    selected = subject(file)
+    old = read(selected, verification="research_support_v4")
+    saved = append(file, [old])
+    untouched = deepcopy(saved.brain_chat)
+
+    result = project(saved, selected)
+
+    assert result["state"] == "ok" and result["by_subject"][selected["id"]]
+    assert result["reuse_allowed"][selected["id"]] is False
+    assert result["coverage_by_subject"][selected["id"]]["verification_current"] is False
+    assert "application_premises" not in result["by_subject"][selected["id"]][0][
+        "use_verification"]
+    assert saved.brain_chat == untouched

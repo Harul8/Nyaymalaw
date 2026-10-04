@@ -1,6 +1,37 @@
 """Express scripted reader proposals through the shipped operation contract."""
 from __future__ import annotations
 
+from copy import deepcopy
+
+
+def reviewed_record_verdicts(payload, data):
+    """Express scripted semantic decisions through explicit shipped checks."""
+    result = deepcopy(data)
+    if not isinstance(result, dict) or not isinstance(result.get("verdicts"), list):
+        return result
+    candidates = {row["candidate_id"]: row for row in payload.get("candidates", [])}
+    for row in result.get("verdicts", []):
+        if not isinstance(row, dict) or not isinstance(row.get("candidate_id"), str):
+            continue
+        candidate = candidates.get(row.get("candidate_id"))
+        if candidate is None:
+            continue
+        accepted = row.get("verdict") == "accept"
+        sources = candidate.get("allowed_account_source_ids", [])
+        row.setdefault("account_check", {
+            "content_role": "reported_matter_account" if accepted else "uncertain",
+            "supported": accepted, "introduces_legal_analysis": False,
+            "source_ids": sources[:1] if accepted else [],
+            "reason": "The scripted record decision checks the attributed account layer.",
+        })
+        row.setdefault("target_checks", [{
+            "target_id": target, "identity_relation": "same_underlying_account",
+            "account_preserved": accepted, "required_peer_ids": [],
+            "reason": "The scripted operation retains the selected account's identity.",
+        } for target in candidate.get("related_dispute_ids",
+                                      candidate.get("related_material_ids", []))])
+    return result
+
 
 def reader_operations(rows, payload, *, link_field, infer_targets=True):
     sources = payload.get("original_input", payload)

@@ -33,7 +33,8 @@ def test_inconsistent_accept_repairs_only_pending_review_without_rewriting_valid
         return verdict(1)
 
     model = ContinuationModel([lambda payload: inconsistent(payload, 1), corrected])
-    result = verify_continuation(model, input_payload={"legal_sources": {}}, units=(good, pending))
+    result = verify_continuation(model, input_payload={
+        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=(good, pending))
 
     assert result.decisions[0][0] is result.decisions[1][0] is True
     assert result.unavailable == ()
@@ -43,7 +44,8 @@ def test_inconsistent_accept_repairs_only_pending_review_without_rewriting_valid
 
 def test_repeated_inconsistent_accept_is_unavailable_and_preserves_valid_peer():
     model = ContinuationModel([lambda payload: inconsistent(payload, 1)] * 2)
-    result = verify_continuation(model, input_payload={"legal_sources": {}},
+    result = verify_continuation(model, input_payload={
+        "legal_sources": {}, "progress": {"state": "ok", "rows": []}},
                                  units=(unit(), unit(1)))
 
     assert set(result.decisions) == {0} and result.decisions[0][0] is True
@@ -59,7 +61,8 @@ def test_missing_legal_support_with_explicit_block_rejection_is_a_complete_revie
         return data
 
     model = ContinuationModel([rejected])
-    result = verify_continuation(model, input_payload={"legal_sources": {}}, units=(unit(),))
+    result = verify_continuation(model, input_payload={
+        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=(unit(),))
 
     assert result.decisions[0][0] is False and result.unavailable == ()
     assert "actual selected checked legal passage" in result.decisions[0][1]

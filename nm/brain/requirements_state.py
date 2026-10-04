@@ -5,6 +5,7 @@ import hashlib
 import json
 from copy import deepcopy
 
+from nm.brain.conversation import Message
 from nm.brain.legal_requirements import (
     HISTORICAL_RESEARCH_VERIFICATIONS,
     RESEARCH_KINDS,
@@ -187,10 +188,42 @@ def _read_valid(read: dict, *, legacy: bool, owner: str) -> bool:
     return True
 
 
+def _prior_account_words(matter: Matter,
+                         prior_conversation: tuple[Message, ...]) -> dict[tuple[str, str], str]:
+    """Preload only earlier canonical words; owned brain turns are replayed in order."""
+    owned_turns = {row["turn_id"] for row in matter.brain_chat
+                   if isinstance(row, dict) and isinstance(row.get("turn_id"), str)}
+    words = {}
+    for message in prior_conversation:
+        if not isinstance(message, Message):
+            raise ValueError("the earlier research conversation is unreadable")
+        if message.turn_id in owned_turns:
+            continue
+        key = (message.turn_id, message.role)
+        if key in words:
+            raise ValueError("the earlier research conversation identities conflict")
+        words[key] = message.text
+    return words
+
+
+def _account_references_valid(read: dict, words: dict[tuple[str, str], str]) -> bool:
+    """A checked application premise still needs its exact authorised account words."""
+    if read.get("verification") != RESEARCH_VERIFICATION:
+        return True
+    for row in read["rows"]:
+        for premise in row["use_verification"]["application_premises"]:
+            for reference in premise["account_references"]:
+                key = (reference["turn_id"], reference["role"])
+                if key not in words or reference["quoted"] not in words[key]:
+                    return False
+    return True
+
+
 def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                     material_by_subject: dict[str, list[dict]],
                     corpus_revision: str | None = None,
-                    verification: str = RESEARCH_VERIFICATION) -> dict:
+                    verification: str = RESEARCH_VERIFICATION,
+                    prior_conversation: tuple[Message, ...] = ()) -> dict:
     """Retain exact checked work while distinguishing readable history from reusable research."""
     owner = research_owner_id(matter)
     active, contexts, fingerprints = {}, {}, {}
@@ -199,6 +232,7 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                   read_subject_id_by_subject={}, source_turn_id_by_subject={},
                   subjects=active, diagnostics=[])
     try:
+        account_words = _prior_account_words(matter, prior_conversation)
         for subject in subjects:
             if not _subject_valid(subject, owner) or subject["id"] in active:
                 raise ValueError("the active research subjects are unreadable or conflict")
@@ -236,9 +270,13 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
     seen_turns = set()
     owned_records = {row["id"] for context in contexts.values() for row in context}
     for turn in matter.brain_chat:
+        if not isinstance(turn, dict):
+            reject("a saved research turn has no consistent released owner", active)
+            continue
         response = turn.get("response")
         turn_id = turn.get("turn_id")
         if (not isinstance(turn_id, str) or not turn_id.strip()
+                or not isinstance(turn.get("message"), str) or not turn["message"].strip()
                 or not isinstance(response, dict) or turn_id in seen_turns
                 or turn.get("advocate_id") != matter.advocate_id
                 or turn.get("matter_id") != str(matter.id)
@@ -248,6 +286,7 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
             reject("a saved research turn has no consistent released owner", active)
             continue
         seen_turns.add(turn["turn_id"])
+        account_words[(turn_id, "advocate")] = turn["message"]
         proposals = response.get("material", [])
         if (not isinstance(proposals, list)
                 or any(not isinstance(row, dict) or not isinstance(row.get("id"), str)
@@ -291,8 +330,8 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                 except ValueError:
                     reject("a saved research dependency is unreadable", matches)
                     continue
-            if identity in seen or not _read_valid(
-                    read, legacy=legacy, owner=owner):
+            if (identity in seen or not _read_valid(read, legacy=legacy, owner=owner)
+                    or not _account_references_valid(read, account_words)):
                 reject("a saved legal read lacks valid attributed sources", matches)
                 continue
             seen.add(identity)
@@ -354,7 +393,8 @@ def dispute_research_subjects(matter: Matter, *, disputes: dict,
 
 
 def requirements_record(matter: Matter, *, disputes: dict, material: dict,
-                        corpus_revision: str | None = None) -> dict:
+                        corpus_revision: str | None = None,
+                        prior_conversation: tuple[Message, ...] = ()) -> dict:
     """Expose only gathering items owned by identified current disputes."""
     try:
         subjects, contexts = dispute_research_subjects(matter, disputes=disputes, material=material)
@@ -363,7 +403,8 @@ def requirements_record(matter: Matter, *, disputes: dict, material: dict,
                     diagnostics_by_dispute={}, fingerprints={}, diagnostics=[
                         "the dispute or material record is incomplete"])
     research = research_record(matter, subjects=subjects, material_by_subject=contexts,
-                               corpus_revision=corpus_revision)
+                               corpus_revision=corpus_revision,
+                               prior_conversation=prior_conversation)
     gathering = {identity: [row for row in rows if row["kind"] == "gathering"]
                  for identity, rows in research["by_subject"].items()}
     return dict(state=research["state"], by_dispute=gathering,

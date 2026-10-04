@@ -37,3 +37,31 @@ def test_using_the_author_snapshot_as_the_judge_still_fails():
             "NM_MODEL_JUDGE": "gpt-4o-mini-2024-07-18",
             "NM_EMBED_MODEL": "text-embedding-3-large",
         })
+
+
+def test_explicit_same_model_policy_preserves_each_role_and_exact_prices():
+    config = load({
+        "NM_MODEL_PROVIDER": "openai",
+        "NM_MODEL_ROUTINE": "gpt-4.1-mini-2025-04-14",
+        "NM_MODEL_HARD": "gpt-4.1-mini-2025-04-14",
+        "NM_MODEL_JUDGE": "gpt-4.1-mini-2025-04-14",
+        "NM_ALLOW_SAME_MODEL_REVIEW": "true",
+        "NM_EMBED_MODEL": "text-embedding-3-large",
+    })
+    for tier in (Tier.ROUTINE, Tier.HARD, Tier.JUDGE):
+        selected = require_priced_snapshot(config.for_tier(tier), provider="openai")
+        assert selected.tier is tier
+        assert selected.model == "gpt-4.1-mini-2025-04-14"
+        assert selected.cost(1000, 1000) == pytest.approx(0.002)
+
+
+@pytest.mark.parametrize("policy", ["false", "", "yes", "automatic"])
+def test_same_model_policy_is_explicit_and_cannot_be_misspelled(policy):
+    with pytest.raises(ConfigurationError):
+        load({
+            "NM_MODEL_PROVIDER": "openai",
+            "NM_MODEL_ROUTINE": "gpt-4.1-mini-2025-04-14",
+            "NM_MODEL_JUDGE": "gpt-4.1-mini-2025-04-14",
+            "NM_ALLOW_SAME_MODEL_REVIEW": policy,
+            "NM_EMBED_MODEL": "text-embedding-3-large",
+        })

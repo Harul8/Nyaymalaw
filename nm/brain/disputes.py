@@ -32,8 +32,11 @@ words give context, not new assertions. The account and mentioned records
 remain unverified. An empty earlier conversation is a valid first turn.
 
 Purpose: Propose independently contestable disputes contributed by the latest
-message in its full context, their identification status, and any explicit
-record changes. This is not admission of a fact, legal merit, permission,
+message in its full context, their identification status, and justified
+changes to sourced formulations during relevant authorised review. A review
+request can authorise repair of NM's formulation without a new account fact;
+the original advocate words remain its evidentiary basis.
+This is not admission of a fact, legal merit, permission,
 action or completed assessment.
 
 Activity 1 - Identify the contested issue.
@@ -54,6 +57,11 @@ and time. An undertaking does not establish responsibility for an earlier act;
 continued conditions do not establish breach before the undertaking is due.
 Earlier NM formulations are interpretations to recheck against the attributed
 account, not evidence supplying missing actors or temporal predicates.
+Keep the issue layer distinct from work on it. A disagreement with a draft or
+NM's formulation is review work, not itself reported adverse conduct or an
+actual party's contested matter position. Do not put the critique, correction
+process or your legal assessment on the dispute board. Material supplied only
+for examination does not become an actual party position because it is quoted.
 Outcome: Give each issue a crisp `label` naming concrete conduct or a
 contested position, a full neutral question in `statement`, and a short
 `why_material` explaining its distinct practical conclusion. Paraphrase
@@ -81,6 +89,12 @@ corrected against exact saved advocate words without a new factual assertion.
 Restore the sourced conduct or position, not a critique of NM's reasoning.
 Preserve the underlying account, unknowns and issue lineage; a diversion or
 new legal theory does not authorise changing them. Explain which layer changed.
+Each replacement remains one independently contestable underlying issue.
+Multiple targets require genuinely duplicate or same-issue formulations;
+shared review instructions, actors, sources or topics do not make distinct
+issues one issue. If NM incorrectly merged issues, restore atomic sourced
+successors with explicit links to that target and retain all the underlying
+accounts. New legal analysis belongs in the supported response, not the board.
 Outcome: Put a distinct new formulation in `new_items`, without `relation`
 or `related_dispute_ids` fields. It cannot retire a saved dispute. Put a
 revision in `changes`, with at least one exact active ID in
@@ -118,7 +132,9 @@ consequential missing question. Contested merits alone do not make the
 issue's identity uncertain.
 
 Outcome: Return only the declared JSON object with `new_items` and `changes`.
-Return both arrays empty when the latest message contributes no dispute."""
+Return both arrays empty when no new dispute or justified repair arises from
+the latest contribution or relevant authorised review. Do not manufacture a
+change merely because review was requested."""
 
 
 def _schema(*, latest_ids: tuple[str, ...], prior_ids: tuple[str, ...],

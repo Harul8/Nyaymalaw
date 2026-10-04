@@ -11,6 +11,7 @@ from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, TierUnavailable, Usage
 from tests.brain_continuation_fixture import citation_units, interpretation, reviewed_verdicts
+from tests.brain_reader_fixture import reviewed_record_verdicts
 from tests.test_brain_continuation import mixed_purpose_unit, unit, verdict
 from tests.test_brain_turn import plan
 
@@ -63,6 +64,8 @@ class PublicContinuationModel:
             data = reviewed_verdicts(payload, data)
         else:
             raise AssertionError(f"Unexpected public model operation: {prompt.operation}")
+        if prompt.operation == "verify_material_grounding":
+            data = reviewed_record_verdicts(payload, data)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
@@ -616,6 +619,8 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
                 } for row in json.loads(prompt.user)["candidates"]]}
             else:
                 return result
+            if prompt.operation == "verify_material_grounding":
+                data = reviewed_record_verdicts(json.loads(prompt.user), data)
             return replace(result, data=data)
 
     model = RejectedDetail([

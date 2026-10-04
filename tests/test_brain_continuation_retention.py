@@ -382,7 +382,8 @@ def test_retention_approval_with_bad_coverage_is_unread_and_cannot_override_reje
         return data
 
     model = ContinuationModel([invalid, invalid])
-    checked = verify_continuation(model, input_payload={"legal_sources": {}}, units=(proposed,))
+    checked = verify_continuation(model, input_payload={
+        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=(proposed,))
 
     assert checked.decisions == {} and checked.retained == {} and checked.unavailable == (0,)
     assert len(model.calls) == 2

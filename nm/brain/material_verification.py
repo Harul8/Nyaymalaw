@@ -7,6 +7,15 @@ from dataclasses import asdict, dataclass
 from nm.brain.checked import require_independent_result
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
 from nm.brain.material import MaterialCandidate, addressed_sources
+from nm.brain.record_review import (
+    admitted_record_decisions,
+    candidate_account_ids,
+    restoration_peer_ids,
+    review_contract_issue,
+    review_issues_text,
+    review_properties,
+    validate_record_checks,
+)
 from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
@@ -82,7 +91,41 @@ speaker, scope, relation and every selected assignment or revision target.
 Otherwise set it false. Explain changed layer, source basis and operation in the
 short reason.
 
-Activity 3 - Check the opening description, when supplied.
+Activity 3 - Certify the account layer and every replacement target.
+Look for: The underlying reported proposition, separately from work on it.
+A critique, correction process or analysis of a draft or NM interpretation is
+work product, not a new matter position. Examination material is not adopted
+account content. A reported legal position remains attributed to its actual
+speaker; NM's own legal inference cannot be recorded as that person's position,
+even with tentative wording. This call has no checked legal passages and cannot
+create legal findings. Each replacement is atomic: it can consolidate genuine
+duplicates but cannot retire independent material details sharing a source,
+assignment or review request. Compare each selected target's full source and
+context. Repair of an invalid NM merged or analytical target may restore atomic
+sourced successors without preserving its mistaken identity, provided the
+other underlying accounts are retained. Examine collective successor coverage.
+Outcome: Give account_check with content_role reported_matter_account,
+examination_material, nm_analysis or uncertain; supported; introduces_legal_analysis;
+exact source_ids from this candidate's allowed_account_source_ids; and reason.
+Support concerns the whole proposition, not the existence of quoted words.
+Set introduces_legal_analysis true for new NM legal classifications/conclusions;
+a faithfully attributed reported party position does not itself introduce NM law.
+For every selected related_material_id give target_checks: identity_relation
+same_underlying_account, duplicate, restore_invalid_interpretation, different or
+uncertain; account_preserved; required_peer_ids; and reason. Preservation means
+faithful source, attribution, uncertainty and distinct account scope through
+authorised changes or withdrawals, not a ban on factual corrections. Restoring
+an invalid NM target requires exact original advocate support and explanation
+of its invalid layer. Declare only OTHER same-target candidate IDs from
+allowed_restoration_peer_ids when their acceptance is required for complete
+atomic restoration. Never include this candidate's own ID. Otherwise
+required_peer_ids is empty, including when no eligible other candidate exists.
+Empty dependencies do not establish complete coverage: reject if this proposal
+and accepted peers fail to preserve the full original account.
+A new detail or opening has no target checks. Rejected proposals may omit
+unused source/target checks while explaining the unsupported layer.
+
+Activity 4 - Check the opening description, when supplied.
 Look for: Check the proposed `party_name`, `subject`, and summary against the
 advocate's whole account; none may assert an unsupported allegation. Independently
 look for whether the advocate clearly identifies a named person or entity on
@@ -101,6 +144,9 @@ supports this description of the matter being opened, without new allegations.
 Outcome: Return only the declared JSON object, with exactly one verdict for
 each listed candidate ID. `accept` means the complete proposal is grounded
 and faithful and `operation_supported` is true; otherwise use `reject`.
+Acceptance also requires supported reported_matter_account with actual
+attributable source IDs, no introduced NM legal analysis and supported preserved
+target identities. Overall acceptance cannot override these checks.
 Give a short reason. Do not rewrite a
 proposal, copy a passage, decide whether the allegation is true, or add facts."""
 
@@ -126,49 +172,63 @@ _VERDICT = {
 }
 
 
-def _schema(ids: tuple[str, ...]) -> dict:
+def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=()) -> dict:
     verdict = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
+        **review_properties(source_ids, target_ids, peer_ids),
         "candidate_id": {"type": "string", "enum": list(ids)},
-    }}
+    }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
     return {"type": "object", "additionalProperties": False,
             "required": ["verdicts"],
             "properties": {"verdicts": {"type": "array", "items": verdict}}}
 
 
-def _read_verdicts(data: object, ids: tuple[str, ...]
-                   ) -> tuple[dict[str, dict], tuple[str, ...]]:
+def _read_verdicts(data: object, ids: tuple[str, ...],
+                   *, account_ids: dict[str, set[str]], targets: dict[str, set[str]]
+                   ) -> tuple[dict[str, dict], dict[str, tuple[str, ...]]]:
     """Retain valid peers and retry only missing or malformed decisions."""
     rows = data.get("verdicts") if isinstance(data, dict) else None
     if not isinstance(rows, list):
-        return {}, ids
+        return {}, {key: ("verdicts must be an array",) for key in ids}
     grouped: dict[str, list[object]] = {key: [] for key in ids}
     for row in rows:
-        if isinstance(row, dict) and row.get("candidate_id") in grouped:
+        if (isinstance(row, dict) and isinstance(row.get("candidate_id"), str)
+                and row["candidate_id"] in grouped):
             grouped[row["candidate_id"]].append(row)
     decisions: dict[str, dict] = {}
-    unresolved = []
+    issues = {}
     for candidate_id in ids:
         group = grouped[candidate_id]
         if len(group) != 1:
-            unresolved.append(candidate_id)
+            issues[candidate_id] = (("verdict is absent" if not group
+                                     else "candidate_id has duplicate verdicts"),)
             continue
         row = group[0]
+        conflicts = []
         try:
-            require_schema(row, {**_VERDICT, "properties": {
+            require_schema(row, {**_VERDICT, "required": [
+                *_VERDICT["required"], "account_check", "target_checks"], "properties": {
                 **_VERDICT["properties"],
+                **review_properties(tuple(account_ids[candidate_id]),
+                                    tuple(targets[candidate_id]),
+                                    restoration_peer_ids(candidate_id, targets)),
                 "candidate_id": {"type": "string", "enum": [candidate_id]},
             }})
-        except SchemaViolation:
-            unresolved.append(candidate_id)
+            validate_record_checks(
+                row, source_ids=account_ids[candidate_id], target_ids=targets[candidate_id],
+                candidate_id=candidate_id, candidates=targets, issues=conflicts)
+        except SchemaViolation as exc:
+            issues[candidate_id] = (review_contract_issue(exc),)
             continue
         if not row["reason"].strip():
-            unresolved.append(candidate_id)
-        elif row["verdict"] == "accept" and not row["operation_supported"]:
-            unresolved.append(candidate_id)
+            conflicts.append("reason is empty")
+        if row["verdict"] == "accept" and not row["operation_supported"]:
+            conflicts.append("accept conflicts with operation_supported=false")
+        if conflicts:
+            issues[candidate_id] = tuple(conflicts)
         else:
             decisions[candidate_id] = {**row, "reason": row["reason"].strip()}
-    return decisions, tuple(unresolved)
+    return decisions, issues
 
 
 def verify_material_grounding(
@@ -182,7 +242,7 @@ def verify_material_grounding(
                     if candidate.kind != "dispute")
     if not details and not opening.ready:
         return GroundingResult((), True, 0)
-    payload, _, _ = addressed_sources(earlier, latest)
+    payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     payload["current_matter_id"] = current_matter_id
     selected_disputes = {identity for candidate in details for identity in candidate.dispute_ids}
     selected_material = {identity for candidate in details
@@ -206,6 +266,9 @@ def verify_material_grounding(
     payload["linked_records"] = linked_records
     keyed = {f"D{index}": candidate
              for index, candidate in enumerate(details, start=1)}
+    account_ids = {key: candidate_account_ids(candidate, latest_sources, prior_sources)
+                   for key, candidate in keyed.items()}
+    targets = {key: set(candidate.related_material_ids) for key, candidate in keyed.items()}
     proposed = [
         {"candidate_id": key, "type": "detail",
          "kind": candidate.kind, "statement": candidate.statement,
@@ -220,13 +283,20 @@ def verify_material_grounding(
                                     for ref in candidate.prior_references]}
         for key, candidate in keyed.items()]
     if opening.ready:
+        account_ids["O1"] = candidate_account_ids(None, latest_sources, prior_sources)
+        targets["O1"] = set()
         party_name, subject = opening.title_parts()
         proposed.append({"candidate_id": "O1", "type": "opening",
                          "title": opening.title, "party_name": party_name,
                          "subject": subject, "summary": opening.summary})
     payload["candidates"] = proposed
+    for row in proposed:
+        row["allowed_account_source_ids"] = sorted(account_ids[row["candidate_id"]])
+        row["allowed_restoration_peer_ids"] = list(
+            restoration_peer_ids(row["candidate_id"], targets))
     decisions: dict[str, dict] = {}
     pending = tuple(row["candidate_id"] for row in proposed)
+    issues: dict[str, tuple[str, ...]] = {}
     for attempt in range(2):
         current = {**payload,
                    "candidates": [row for row in proposed
@@ -236,31 +306,42 @@ def verify_material_grounding(
                 {**row, "decision": decisions[row["candidate_id"]]}
                 for row in proposed if row["candidate_id"] in decisions]
             current["validation_issue"] = (
-                "The previous verdicts for these candidate IDs were absent, "
-                "duplicated, malformed, lacked a reason, or accepted an "
-                "unsupported operation. Return one valid verdict per listed "
-                "ID; acceptance requires operation_supported true.")
+                review_issues_text(issues) + ". "
+                "Return one valid verdict per listed "
+                "ID; acceptance requires reported matter account with no invented legal "
+                "analysis, operation_supported true and complete supported target checks. "
+                "Failed account or target checks cannot be overridden by overall acceptance.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 512 * len(pending)))
         if (estimate_tokens(_SYSTEM + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow(
                 "The full conversation exceeds the material verification budget")
-        result = model.structured(
-            Prompt(system=_SYSTEM, user=user, operation="verify_material_grounding"),
-            _schema(pending), Tier.JUDGE, max_tokens=output_limit)
-        require_independent_result(result)
-        if not result.usable:
-            raise SchemaViolation("Material grounding verification did not finish")
-        checked, unresolved = _read_verdicts(result.data, pending)
+        try:
+            result = model.structured(
+                Prompt(system=_SYSTEM, user=user, operation="verify_material_grounding"),
+                _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
+                        tuple(sorted(set().union(*targets.values()))),
+                        tuple(sorted({peer for key in pending
+                                      for peer in restoration_peer_ids(key, targets)}))),
+                Tier.JUDGE, max_tokens=output_limit)
+            require_independent_result(result)
+            if not result.usable:
+                raise SchemaViolation("Material grounding verification did not finish")
+            checked, issues = _read_verdicts(result.data, pending, account_ids=account_ids,
+                                            targets=targets)
+        except SchemaViolation as exc:
+            issues = {key: (review_contract_issue(exc),) for key in pending}
+            continue
         decisions.update(checked)
-        pending = unresolved
+        pending = tuple(issues)
         if not pending:
             break
     if pending:
         raise SchemaViolation(
             "Material grounding verification remained incomplete for "
-            + ", ".join(pending))
+            + ", ".join(pending) + ": " + review_issues_text(issues))
+    decisions = admitted_record_decisions(decisions)
     accepted = tuple(candidate for key, candidate in keyed.items()
                      if decisions[key]["verdict"] == "accept")
     title_issue = opening_title_issue(opening.title) if opening.ready else None

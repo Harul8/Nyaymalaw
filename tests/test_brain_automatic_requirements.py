@@ -16,7 +16,7 @@ from nm.shared.model_port import (
 )
 from nm.shared.store_file_store import FileMatterStore
 from tests.brain_continuation_fixture import continuation_reply, interpretation
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 FIRST = ("The supplier retained our tools. "
          "The customer withheld payment for the tools.")
@@ -120,6 +120,7 @@ class Model:
                     "reason": "The reported detail concerns the item.",
                 } for material_id in candidate["material_ids"]],
                 "verdict": "supported",
+                "application_premises": [],
                 "source_checks": [{
                     "source_id": source["id"], "verdict": "supported",
                     "assertion_owner": "legislative_text"
@@ -141,6 +142,8 @@ class Model:
             } for row in payload["subjects"] for candidate in row["candidates"]]}
         else:
             raise AssertionError(f"unexpected model call: {prompt.operation}")
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            data = reviewed_record_verdicts(payload, data)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
@@ -397,14 +400,14 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
                 self.calls.append((prompt.operation, payload))
                 return ModelResult(
                     text=None,
-                    data={"verdicts": [{
+                    data=reviewed_record_verdicts(payload, {"verdicts": [{
                         "candidate_id": row["candidate_id"],
                         "candidate_role": "evidence_gap_or_question" if index == 0
                         else "independent_dispute",
                         "operation_supported": index != 0,
                         "verdict": "reject" if index == 0 else "accept",
                         "reason": "Independent attributed decision.",
-                    } for index, row in enumerate(payload["candidates"])]},
+                    } for index, row in enumerate(payload["candidates"])]}),
                     tier=tier, provider="offline", model="offline",
                     usage=Usage(0, 0, 0), latency_ms=0,
                     completion=Completion.COMPLETE)

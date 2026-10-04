@@ -67,6 +67,13 @@ def supported(candidate, *, verdict="supported"):
             "material_checks": [{"material_id": identifier, "verdict": "addresses",
                                  "reason": "The reported material concerns the selected point."}
                                 for identifier in candidate["material_ids"]],
+            "application_premises": [{
+                "source_id": source["id"],
+                "predicate_fragment_id": source["fragments"][0]["id"],
+                "status": "unresolved", "account_source_ids": [],
+                "preserved_condition": candidate["need"],
+                "reason": "The condition is stated generally; factual applicability remains open.",
+            } for source in candidate["sources"]],
             "source_checks": [{"source_id": source["id"], "verdict": "supported",
                                "assertion_owner": "legislative_text"
                                if source["kind"] == "provision" else "deciding_court",

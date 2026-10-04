@@ -63,9 +63,29 @@ def reviewed_verdicts(payload, data):
         } for block in unit["blocks"]])
         row.setdefault("proposal_checks", [{
             "section": section, "proposal_id": link["id"], "block_id": link["block_id"],
-            "purpose_expressed": True, "verdict": "accept",
+            "purpose_expressed": True, "identity_preserved": True, "verdict": "accept",
             "reason": "The scripted purpose is expressed by its displayed owner.",
         } for section in ("questions", "next_work") for link in unit[section]])
+        row.setdefault("work_check", {
+            "existing_id": unit["work"]["existing_id"], "scope_preserved": True,
+            "verdict": "accept", "reason": "The scripted work retains its selected scope.",
+        })
+        row.setdefault("progress_checks", [{
+            "target_id": update["target_id"], "status": update["status"],
+            "scope_preserved": True, "result_supported": True, "verdict": "accept",
+            "reason": "The scripted transition retains its scoped attributed support.",
+        } for update in unit["progress_updates"]])
+        questions = {item["id"]: item for item in payload["input"]["progress"]["rows"]
+                     if item["kind"] == "question"}
+        resolutions = {link["existing_id"]: {
+            "question_id": link["existing_id"], "status": questions[link["existing_id"]]["status"],
+            "block_id": link["block_id"],
+        } for link in unit["questions"] if link["existing_id"] in questions}
+        resolutions.update({update["target_id"]: {
+            "question_id": update["target_id"], "status": update["status"],
+            "block_id": update["block_id"],
+        } for update in unit["progress_updates"] if update["target_id"] in questions})
+        row.setdefault("question_resolutions", list(resolutions.values()))
     return result
 
 

@@ -1,5 +1,6 @@
 """A source ID cannot by itself establish a model-written material fact."""
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -8,6 +9,7 @@ from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
+from tests.brain_reader_fixture import reviewed_record_verdicts
 
 
 class Model:
@@ -21,8 +23,12 @@ class Model:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
+        answer = next(self.replies)
+        if isinstance(answer, Exception):
+            raise answer
+        data = reviewed_record_verdicts(json.loads(prompt.user), answer)
         return ModelResult(
-            text=None, data=next(self.replies), tier=tier, provider="offline",
+            text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
             completion=Completion.COMPLETE)
 
@@ -40,6 +46,112 @@ def verdict(candidate_id, *, accept=True, reason="Grounded"):
     return {"candidate_id": candidate_id,
             "operation_supported": accept,
             "verdict": "accept" if accept else "reject", "reason": reason}
+
+
+@pytest.mark.parametrize("failure", ["nm_analysis", "legal_analysis", "different_target",
+                                   "missing_source"])
+def test_material_acceptance_needs_account_and_target_checks_independently(failure):
+    earlier = (Message("old", "advocate", "The reported event is disputed."),)
+    latest = "Reconcile the saved proposition. We report another independent event."
+    changed = replace(detail("Reconcile the saved proposition.", "The reported event is disputed.",
+                             earlier=earlier[0].text), relation="corrects",
+                      related_material_ids=("old-record",))
+    peer = detail("We report another independent event.", "Another event is reported.")
+    old = {"id": "old-record", "quoted": earlier[0].text, "source_turn_id": "old",
+           "statement": "The reported event is disputed.", "basis": "stated"}
+    wrong = verdict("D1")
+    wrong["account_check"] = {
+        "content_role": "reported_matter_account", "supported": True,
+        "introduces_legal_analysis": False, "source_ids": ["P1S1"],
+        "reason": "The original advocate words supply the account, not the review request."}
+    wrong["target_checks"] = [{
+        "target_id": "old-record", "identity_relation": "same_underlying_account",
+        "account_preserved": True, "required_peer_ids": [],
+        "reason": "The underlying account stays."}]
+    if failure == "nm_analysis":
+        wrong["account_check"]["content_role"] = "nm_analysis"
+    elif failure == "legal_analysis":
+        wrong["account_check"]["introduces_legal_analysis"] = True
+    elif failure == "different_target":
+        wrong["target_checks"][0]["identity_relation"] = "different"
+    else:
+        wrong["account_check"]["source_ids"] = []
+    model = Model([{"verdicts": [wrong, verdict("D2")]},
+                   {"verdicts": [verdict("D1", accept=False)]}])
+
+    result = verify_material_grounding(model, candidates=(changed, peer),
+                                       opening=OpeningCandidate(False, "", ""), earlier=earlier,
+                                       latest=latest, prior_material=(old,))
+
+    assert result.details == (peer,) and result.rejected_details == 1
+    assert len(model.calls) == 2
+    correction = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in correction["candidates"]] == ["D1"]
+    assert [row["candidate_id"] for row in correction["retained_candidate_context"]] == ["D2"]
+    initial = json.loads(model.calls[0][0].user)
+    assert all(row["allowed_restoration_peer_ids"] == [] for row in initial["candidates"])
+    peer_pool = model.calls[0][1]["properties"]["verdicts"]["items"]["properties"][
+        "target_checks"]["items"]["properties"]["required_peer_ids"]
+    assert peer_pool["maxItems"] == 0
+    expected = {
+        "nm_analysis": "account_check.content_role=nm_analysis",
+        "legal_analysis": "account_check.introduces_legal_analysis=true",
+        "different_target": "target old-record: identity_relation=different",
+        "missing_source": "nonempty attributable account_check.source_ids",
+    }[failure]
+    assert "D1: " in correction["validation_issue"] and expected in correction["validation_issue"]
+
+
+@pytest.mark.parametrize("failure,expected", [
+    ("absent", "verdict is absent"),
+    ("duplicate", "candidate_id has duplicate verdicts"),
+    ("empty_reason", "reason is empty"),
+    ("missing_field", "result.account_check.supported is missing"),
+    ("foreign_source", "result.account_check.source_ids[0]' is outside the permitted vocabulary"),
+    ("foreign_target", "result.target_checks[0].target_id' is outside the permitted vocabulary"),
+    ("unsupported", "account_check.supported=false"),
+])
+def test_pending_material_feedback_and_exhaustion_keep_exact_safe_cause(failure, expected):
+    first = "The payment is disputed."
+    second = "The notice is contested."
+    candidates = (detail(first, first), detail(second, second))
+    wrong = verdict("D1")
+    wrong["account_check"] = {
+        "content_role": "reported_matter_account", "supported": True,
+        "introduces_legal_analysis": False, "source_ids": ["L1"],
+        "reason": "PRIVATE_MATTER_WORDS"}
+    if failure == "empty_reason":
+        wrong["reason"] = "  "
+    elif failure == "missing_field":
+        del wrong["account_check"]["supported"]
+    elif failure == "foreign_source":
+        wrong["account_check"]["source_ids"] = ["PRIVATE_MATTER_WORDS"]
+    elif failure == "foreign_target":
+        wrong["target_checks"] = [{
+            "target_id": "PRIVATE_MATTER_WORDS", "identity_relation": "same_underlying_account",
+            "account_preserved": True, "required_peer_ids": [], "reason": "Untrusted target"}]
+    elif failure == "unsupported":
+        wrong["account_check"]["supported"] = False
+    bad_rows = [] if failure == "absent" else [wrong] * (2 if failure == "duplicate" else 1)
+    first_answer = {"verdicts": [*bad_rows, verdict("D2")]}
+    model = Model([first_answer, {"verdicts": [verdict("D1", accept=False)]}])
+    result = verify_material_grounding(
+        model, candidates=candidates, earlier=(), latest=f"{first} {second}",
+        opening=OpeningCandidate(False, "", ""))
+    assert result.details == candidates[1:]
+    feedback = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in feedback["candidates"]] == ["D1"]
+    assert feedback["retained_candidate_context"][0]["candidate_id"] == "D2"
+    assert "D1: " in feedback["validation_issue"] and expected in feedback["validation_issue"]
+    assert "PRIVATE_MATTER_WORDS" not in feedback["validation_issue"]
+    failing = Model([first_answer, {"verdicts": bad_rows}])
+    with pytest.raises(SchemaViolation) as raised:
+        verify_material_grounding(
+            failing, candidates=candidates, earlier=(), latest=f"{first} {second}",
+            opening=OpeningCandidate(False, "", ""))
+    assert len(failing.calls) == 2
+    assert expected in str(raised.value) and "D1: " in str(raised.value)
+    assert all(text not in str(raised.value) for text in ("D2", first, "PRIVATE_MATTER_WORDS"))
 
 
 def test_one_batch_checks_details_and_opening_without_dropping_valid_peer():
@@ -125,6 +237,59 @@ def test_unfinished_verification_refuses_to_save_unread_detail():
             model, candidates=(proposed,),
             opening=OpeningCandidate(False, "", ""), earlier=(), latest=latest)
     assert len(model.calls) == 2
+
+
+@pytest.mark.parametrize("failure", ["adapter_contract", "incomplete_completion"])
+def test_grounding_repairs_contract_failure_at_dispatch_boundary(failure):
+    latest = "The custodian withheld the requested record."
+    proposed = detail(latest, "The custodian withheld the requested record.")
+    answer = {"verdicts": [verdict("D1")]}
+
+    class DispatchModel(Model):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            return (replace(result, completion=Completion.NOT_ESTABLISHED)
+                    if failure == "incomplete_completion" and len(self.calls) == 1 else result)
+
+    issue = "Adapter refused malformed target_checks"
+    model = DispatchModel([
+        SchemaViolation(issue) if failure == "adapter_contract" else answer, answer])
+    result = verify_material_grounding(
+        model, candidates=(proposed,), opening=OpeningCandidate(False, "", ""),
+        earlier=(), latest=latest)
+    assert result.details == (proposed,) and len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in repair["candidates"]] == ["D1"]
+    assert repair["retained_candidate_context"] == []
+    assert (issue if failure == "adapter_contract" else "did not finish") in (
+        repair["validation_issue"])
+
+
+def test_grounding_dispatch_failure_preserves_peer_context_without_third_attempt():
+    latest = "The payment is disputed. The notice is contested."
+    first = detail("The payment is disputed.", "The payment is disputed.")
+    second = detail("The notice is contested.", "The notice is contested.")
+    model = Model([{"verdicts": [verdict("D1")]},
+                   SchemaViolation("Adapter refused a missing account field")])
+    with pytest.raises(SchemaViolation, match="remained incomplete for D2"):
+        verify_material_grounding(
+            model, candidates=(first, second), opening=OpeningCandidate(False, "", ""),
+            earlier=(), latest=latest)
+    assert len(model.calls) == 2
+    repair = json.loads(model.calls[1][0].user)
+    assert [row["candidate_id"] for row in repair["candidates"]] == ["D2"]
+    assert repair["retained_candidate_context"][0]["candidate_id"] == "D1"
+
+
+def test_grounding_unhashable_candidate_identity_is_rejected_then_corrected():
+    latest = "The requested record was withheld."
+    proposed = detail(latest, "The requested record was withheld.")
+    model = Model([{"verdicts": [{"candidate_id": ["D1"]}]},
+                   {"verdicts": [verdict("D1")]}])
+    result = verify_material_grounding(
+        model, candidates=(proposed,), opening=OpeningCandidate(False, "", ""),
+        earlier=(), latest=latest)
+    assert result.details == (proposed,) and len(model.calls) == 2
 
 
 def test_no_detail_or_opening_needs_no_call():

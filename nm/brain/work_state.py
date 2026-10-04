@@ -192,7 +192,6 @@ def _seal_unit(unit: dict, previous: dict, blocks: dict, matter_id: str,
         _fail("a contribution cannot create an unrequested task")
     work["progress_id"] = (existing or _progress_id(matter_id, turn_id, index, "request")
                            if existing or work["create"] else "")
-    owned_blocks = set()
     for section, kind in _SECTIONS:
         links = unit.get(section)
         if not isinstance(links, list):
@@ -203,11 +202,9 @@ def _seal_unit(unit: dict, previous: dict, blocks: dict, matter_id: str,
                 _fail("a question or work proposal is unreadable")
             identity = _text(link.get("id"))
             existing = _text(link.get("existing_id"), empty=True)
-            if (identity in seen or link.get("block_id") not in blocks
-                    or (strict and link["block_id"] in owned_blocks)):
-                _fail("a question or work proposal has no distinct displayed owner")
+            if identity in seen or link.get("block_id") not in blocks:
+                _fail("a question or work proposal has no distinct identity or displayed owner")
             seen.add(identity)
-            owned_blocks.add(link["block_id"])
             _text(link.get("purpose"))
             _ids(link.get("target_ids"))
             _known(existing, kind, previous)

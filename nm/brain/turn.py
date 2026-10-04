@@ -185,12 +185,13 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None
 
 
 def _research_subjects(matter: Matter, disputes: dict, material: dict,
-                       plan=None) -> tuple[tuple[dict, ...], dict]:
+                       plan=None, prior_conversation=()) -> tuple[tuple[dict, ...], dict]:
     subjects, contexts = dispute_research_subjects(
         matter, disputes=disputes, material=material)
     active = {subject["id"]: subject for subject in subjects}
     # Validate the saved owner before inspecting even inactive request metadata.
-    checked = research_record(matter, subjects=(), material_by_subject={})
+    checked = research_record(matter, subjects=(), material_by_subject={},
+                              prior_conversation=prior_conversation)
     if checked["state"] != "ok":
         raise IncompleteConversation("The saved research ownership is incomplete")
     requested = {}
@@ -219,11 +220,14 @@ def _research_subjects(matter: Matter, disputes: dict, material: dict,
     return tuple(active.values()), contexts
 
 
-def _project_research(matter, disputes, material, corpus_revision, plan=None):
-    subjects, contexts = _research_subjects(matter, disputes, material, plan)
+def _project_research(matter, disputes, material, corpus_revision, plan=None,
+                      prior_conversation=()):
+    subjects, contexts = _research_subjects(
+        matter, disputes, material, plan, prior_conversation)
     current = research_record(matter, subjects=subjects,
                               material_by_subject=contexts,
-                              corpus_revision=corpus_revision)
+                              corpus_revision=corpus_revision,
+                              prior_conversation=prior_conversation)
     if current["state"] != "ok":
         raise IncompleteConversation("The saved research record is incomplete")
     return current, contexts
@@ -248,7 +252,8 @@ def _current_records(store: StorePort, matter: Matter,
                               prior_conversation=older_context)
     if details["state"] != "ok":
         raise IncompleteConversation("The saved material context is incomplete")
-    research, _ = _project_research(matter, disputes, details, corpus_revision)
+    research, _ = _project_research(matter, disputes, details, corpus_revision,
+                                    prior_conversation=older_context)
     coverage = tuple({**subject,
                       "coverage": research["coverage_by_subject"][identity],
                       "finding_kinds": sorted({row["kind"] for row in
@@ -610,7 +615,8 @@ class BrainService:
                 current_conversation, disputes, details = _current_records(
                     self.store, updated, corpus_revision)
                 current, contexts = _project_research(
-                    updated, disputes, details, corpus_revision, plan)
+                    updated, disputes, details, corpus_revision, plan,
+                    prior_conversation=conversation.messages)
                 questions = {item.research_question for item in plan.items
                              if item.next_step == "legal_work" and item.research_question}
                 current_enquiry = any(item.next_step == "legal_work" and
@@ -633,14 +639,17 @@ class BrainService:
                     # Persist only a fully attributable canonical projection;
                     # ordinary rejected proposals already have local coverage.
                     current, _ = _project_research(
-                        updated, disputes, details, corpus_revision, plan)
+                        updated, disputes, details, corpus_revision, plan,
+                        prior_conversation=conversation.messages)
                     response["metrics"] = counted_model.metrics()
             if continuation_indexes(plan):
                 checked = requirements_record(
                     updated, disputes=disputes, material=details,
-                    corpus_revision=corpus_revision)
+                    corpus_revision=corpus_revision,
+                    prior_conversation=conversation.messages)
                 current, _ = _project_research(
-                    updated, disputes, details, corpus_revision, plan)
+                    updated, disputes, details, corpus_revision, plan,
+                    prior_conversation=conversation.messages)
                 continuation = continue_conversation(
                     counted_model, conversation=conversation, latest=turn.message,
                     latest_turn_id=turn.turn_id, plan=plan, disputes=disputes,

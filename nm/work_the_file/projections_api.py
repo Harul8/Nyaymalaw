@@ -384,7 +384,8 @@ def board_projection(matter: Matter, deadlines, today=None, *, source_current=No
         "proposed_disputes": proposed,
         "material_record": material,
         "requirements_record": _project_requirements_record(
-            matter, disputes=proposed, material=material),
+            matter, disputes=proposed, material=material,
+            prior_conversation=prior_conversation),
         # The regression to watch: this must be a function of thread count
         # alone, never of turns, facts, issues or authorities.
         "row_count": len(rows),

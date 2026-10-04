@@ -3,11 +3,11 @@
 Everything switchable lives in `.env`; NO OTHER FILE CHANGES when the provider
 changes. This module is the only place that reads it.
 
-Three things are refused at STARTUP rather than used (PRD §7.4.3, §7.4.5):
+Configuration is checked at startup:
 
   * a floating alias instead of a dated snapshot
   * a provider that is not on the permitted allow-list
-  * a `judge` tier resolving to the same model as the tier it would judge
+  * a same-model review without an explicit deployment policy
 
 Each is a ConfigurationError, not a warning. A warning here becomes a silently
 mis-measured baseline, an unreviewed third party holding privileged client
@@ -246,7 +246,11 @@ def load(env: dict[str, str] | None = None) -> ModelConfig:
         tiers[tier] = TierConfig(tier=tier, provider=provider, model=model,
                                  api_key=key, base_url=base or None)
 
-    _check_judge_distinct(tiers)
+    same_model_review = e.get("NM_ALLOW_SAME_MODEL_REVIEW", "false").strip().lower()
+    if same_model_review not in ("true", "false"):
+        raise ConfigurationError("NM_ALLOW_SAME_MODEL_REVIEW must be true or false")
+    if same_model_review != "true":
+        _check_judge_distinct(tiers)
     return ModelConfig(tiers=tiers)
 
 

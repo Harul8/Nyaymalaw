@@ -174,6 +174,28 @@ def test_evaluation_composition_keeps_routine_and_judge_under_one_cap(spec_root,
     assert judge.returned_models == ("gpt-5.1", "gpt-5.1-2025-11-13")
 
 
+def test_same_model_text_roles_share_one_cap_without_a_larger_model_fallback(spec_root, tmp_path):
+    from nm.shared.model_config import load
+    from nm.shared.model_openai_adapter import OpenAIModelAdapter
+
+    settings = _environment(spec_root)
+    settings.update(NM_MODEL_PROVIDER="openai",
+                    NM_MODEL_ROUTINE="gpt-4.1-mini-2025-04-14",
+                    NM_MODEL_JUDGE="gpt-4.1-mini-2025-04-14",
+                    NM_ALLOW_SAME_MODEL_REVIEW="true",
+                    NM_EVAL_BUDGET_FILE=str(tmp_path / "budget.db"), NM_EVAL_MAX_USD="3")
+    model = OpenAIModelAdapter(load(settings), client=object())
+    app = composition.Application(root=spec_root, environment=settings, model=model)
+    session = app._model_adapter._call_budget
+    assert session.models == ("gpt-4.1-mini-2025-04-14",)
+    for tier in (Tier.ROUTINE, Tier.JUDGE):
+        assert app._model_adapter.resolved_model(tier) == session.models[0]
+        ledger, limit = session.for_request(session.models[0], 2048)
+        assert ledger.maximum == 3_000_000 and limit == 2048
+    with pytest.raises(ConfigurationError, match="does not authorise"):
+        session.for_request("gpt-5.1", 2048)
+
+
 def test_an_incomplete_explicit_mapping_never_borrows_ambient_tiers(tmp_path, monkeypatch):
     for name, value in _environment(tmp_path).items():
         monkeypatch.setenv(name, value)

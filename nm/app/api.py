@@ -854,7 +854,8 @@ def _brain_source(matter, turn_id: str, element_index: int,
                          if item["id"] == source["id"])
         verification = reference.get("verification")
         contract = verification.get("contract") if isinstance(verification, dict) else None
-        if contract in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION):
+        if contract in ("research_support_v2", "research_support_v3", "research_support_v4",
+                        RESEARCH_VERIFICATION):
             if not source_verification_valid(reference, contract=contract):
                 raise missing
             provenance = {"verification": deepcopy(verification),

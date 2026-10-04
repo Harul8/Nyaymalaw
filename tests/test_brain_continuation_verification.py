@@ -17,7 +17,8 @@ def review(payload, *indexes):
 
 
 def checked(model, *units):
-    return verify_continuation(model, input_payload={"legal_sources": {}}, units=units)
+    return verify_continuation(model, input_payload={
+        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=units)
 
 
 def test_a_legal_premise_in_an_account_overrides_whole_unit_acceptance():

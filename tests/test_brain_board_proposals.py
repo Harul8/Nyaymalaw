@@ -8,7 +8,7 @@ from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import _proposed_disputes
 from tests.brain_continuation_fixture import continuation_reply, interpretation
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
 class ScriptedBrain:
@@ -51,6 +51,8 @@ class ScriptedBrain:
                     for row in self.disputes[latest]]
             answer = reader_operations(rows, sources,
                                        link_field="related_dispute_ids")
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            answer = reviewed_record_verdicts(payload, answer)
         return ModelResult(text=None, data=answer, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)

@@ -297,13 +297,26 @@ def test_scoped_links_follow_the_selected_task_without_assuming_current_matter()
     assert project_work(updated)["rows"][-1]["matter_scope"] == "other"
 
 
-def test_question_and_next_work_have_distinct_displayed_owners():
+def test_distinct_question_and_work_identities_can_share_checked_displayed_words():
     matter = Matter(id="owner-progress", advocate_id="adv_owner", title="Owned work")
     words = "Please review the account."
     response = proposed("shared", words, next_work=True)
-    response["units"][0]["next_work"][0]["block_id"] = "question"
-    with pytest.raises(IncompleteConversation, match="distinct displayed owner"):
-        append(matter, "shared", words, response)
+    unit = response["units"][0]
+    unit["blocks"] = unit["blocks"][:2]
+    unit["blocks"][1]["text"] = (
+        "What outcome do you want? If you want, we can review the available record.")
+    unit["next_work"][0]["block_id"] = "question"
+    saved = append(matter, "shared", words, response)
+    untouched = deepcopy(saved.brain_chat)
+
+    progress = project_work(saved)
+
+    question, work = progress["rows"][1:]
+    assert question["block_id"] == work["block_id"] == "question"
+    assert question["id"] != work["id"]
+    assert question["purpose"] != work["purpose"]
+    assert question["text"] == work["text"] == unit["blocks"][1]["text"]
+    assert saved.brain_chat == untouched
 
 
 def test_historical_missing_intent_stays_explicitly_untracked_without_inventing_intent():

@@ -42,6 +42,7 @@
     "nm.brain.material": "core",
     "nm.brain.material_state": "core",
     "nm.brain.material_verification": "core",
+    "nm.brain.record_review": "core",
     "nm.brain.requirements_state": "core",
     "nm.brain.source_snapshots": "core",
     "nm.brain.retrieval": "adapters",
@@ -419,7 +420,7 @@
   "expected_roles": {
     "adapters": 42,
     "bootstrap": 18,
-    "core": 200,
+    "core": 201,
     "domain": 96,
     "edge": 13,
     "infrastructure": 1,

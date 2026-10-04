@@ -5,6 +5,7 @@ from dataclasses import replace
 
 import pytest
 
+from tests.brain_reader_fixture import reviewed_record_verdicts
 from tests.test_brain_board_proposals import dispute
 from tests.test_brain_material import Model, plan, send
 
@@ -37,7 +38,7 @@ class TransitionModel(Model):
                 if supported else "The reviewer proposition is supplied for criticism, "
                 "not adoption; it cannot replace the underlying conduct disputes.",
             })
-        return replace(result, data={"verdicts": decisions})
+        return replace(result, data=reviewed_record_verdicts(payload, {"verdicts": decisions}))
 
 
 def _revision(statement, quoted, targets):

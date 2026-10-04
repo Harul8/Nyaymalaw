@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from nm.brain.checked import require_independent_result
+from nm.brain.material import addressed_sources
 from nm.shared.model_port import (
     ContextOverflow,
     ModelError,
@@ -20,9 +21,9 @@ from nm.shared.model_port import (
 )
 
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
-RESEARCH_VERIFICATION = "research_support_v4"
+RESEARCH_VERIFICATION = "research_support_v5"
 HISTORICAL_RESEARCH_VERIFICATIONS = (
-    "research_support_v1", "research_support_v2", "research_support_v3"
+    "research_support_v1", "research_support_v2", "research_support_v3", "research_support_v4"
 )
 FINDING_USE_CHECKS = ("entailment", "application", "force")
 SOURCE_ASSERTION_OWNERS = (
@@ -97,7 +98,8 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
         return False
     if contract in ("research_support_v1", "source_support_v4"):
         return verification.get("contract") in (None, contract)
-    if (contract not in ("research_support_v2", "research_support_v3", RESEARCH_VERIFICATION)
+    if (contract not in ("research_support_v2", "research_support_v3", "research_support_v4",
+                         RESEARCH_VERIFICATION)
             or verification.get("contract") != contract):
         return False
     checked = (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
@@ -125,12 +127,16 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
 
 def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
     """Keep source attribution separate from the checked use of the whole finding."""
-    if contract in HISTORICAL_RESEARCH_VERIFICATIONS or contract == "source_support_v4":
+    if contract in ("research_support_v1", "research_support_v2", "research_support_v3",
+                    "source_support_v4"):
         return True
-    if contract != RESEARCH_VERIFICATION or not isinstance(finding, dict):
+    if (contract not in ("research_support_v4", RESEARCH_VERIFICATION)
+            or not isinstance(finding, dict)):
         return False
     verification = finding.get("use_verification")
-    if (not isinstance(verification, dict) or set(verification) != {"contract", "checks"}
+    fields = ({"contract", "checks", "application_premises"}
+              if contract == RESEARCH_VERIFICATION else {"contract", "checks"})
+    if (not isinstance(verification, dict) or set(verification) != fields
             or verification.get("contract") != contract
             or not isinstance(verification.get("checks"), dict)
             or set(verification["checks"]) != set(FINDING_USE_CHECKS)):
@@ -139,9 +145,12 @@ def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERI
     source_rows = finding.get("sources")
     if (not isinstance(sources, list) or not isinstance(material, list)
             or any(not isinstance(key, str) or not key for key in (*sources, *material))
+            or len(sources) != len(set(sources)) or len(material) != len(set(material))
             or not isinstance(source_rows, list)
             or any(not isinstance(source, dict)
-                   or not isinstance(source.get("verification"), dict) for source in source_rows)):
+                   or not source_verification_valid(source, contract=contract)
+                   for source in source_rows)
+            or [source.get("id") for source in source_rows] != sources):
         return False
     for aspect, check in verification["checks"].items():
         if (not isinstance(check, dict)
@@ -161,7 +170,67 @@ def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERI
             return False
     established = any(source["verification"].get("scope_status") == "established"
                       for source in source_rows)
-    return not established or bool(verification["checks"]["application"]["material_ids"])
+    if established and not verification["checks"]["application"]["material_ids"]:
+        return False
+    return (contract == "research_support_v4"
+            or _application_premises_valid(finding))
+
+
+def _application_premises_valid(finding: dict) -> bool:
+    """Require source conditions and their attributed application to travel together."""
+    premises = finding["use_verification"].get("application_premises")
+    if (not isinstance(premises, list)
+            or any(not isinstance(finding.get(field), str) or not finding[field].strip()
+                   for field in ("need", "why"))):
+        return False
+    sources = {source["id"]: source for source in finding["sources"]}
+    signatures = set()
+    for row in premises:
+        if (not isinstance(row, dict) or set(row) != {
+                "source_id", "predicate_excerpt", "status", "account_references",
+                "preserved_condition", "reason"}
+                or row.get("source_id") not in sources
+                or row.get("status") not in (
+                    "reported_satisfied", "unresolved", "reported_contradicted")
+                or not isinstance(row.get("predicate_excerpt"), str)
+                or not row["predicate_excerpt"].strip()
+                or len(row["predicate_excerpt"]) > 800
+                or row["predicate_excerpt"] not in sources[row["source_id"]]["text"]
+                or not isinstance(row.get("reason"), str) or not row["reason"].strip()
+                or len(row["reason"]) > 500
+                or not isinstance(row.get("preserved_condition"), str)
+                or len(row["preserved_condition"]) > 1000
+                or not isinstance(row.get("account_references"), list)):
+            return False
+        references = row["account_references"]
+        if any(not isinstance(ref, dict) or set(ref) != {"turn_id", "role", "quoted"}
+               or ref.get("role") != "advocate"
+               or any(not isinstance(ref.get(field), str) or not ref[field].strip()
+                      for field in ("turn_id", "quoted")) for ref in references):
+            return False
+        if row["status"] in ("reported_satisfied", "reported_contradicted") and not references:
+            return False
+        signature = json.dumps(row, sort_keys=True, ensure_ascii=False)
+        ref_signatures = {(ref["turn_id"], ref["role"], ref["quoted"]) for ref in references}
+        if signature in signatures or len(ref_signatures) != len(references):
+            return False
+        signatures.add(signature)
+        condition = row["preserved_condition"]
+        if condition and not any(condition in finding[field] for field in ("need", "why")):
+            return False
+        if row["status"] != "reported_satisfied" and not condition.strip():
+            return False
+        scope = sources[row["source_id"]]["verification"]["scope_status"]
+        if scope == "established" and row["status"] != "reported_satisfied":
+            return False
+        if row["status"] != "reported_satisfied" and scope not in (
+                "conditional", "asked_to_establish"):
+            return False
+    return all(source["verification"]["scope_status"] == "no_special_condition"
+               or any(row["source_id"] == identity
+                      and row["predicate_excerpt"] == source["verification"]["scope_excerpt"]
+                      for row in premises)
+               for identity, source in sources.items())
 
 _DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation and research subjects with their owner, scope, purpose, question
@@ -212,6 +281,12 @@ version, jurisdictional reach, precedent treatment or binding weight. Select
 material only when its actual words address the finding; reported document
 possession does not establish contents or prove an element. Do not invent
 facts, document types, duties, holdings or sources.
+Make factual application a separate comparison: identify whose attributed
+words describe each predicate and the period those words cover. Record
+headings and NM's earlier interpretations cannot establish factual predicates.
+A source condition remains an express condition of the proposed need until
+the attributed account addresses its entire actor, relationship and period;
+otherwise propose gathering or conditional law, not satisfied applicability.
 Each finding/source use must rely on one operative proposition. Where distinct
 positions in a passage differ in speaker, role or treatment, keep them in
 separate findings rather than assigning one label to the whole passage.
@@ -230,135 +305,106 @@ selection boundary. A relevant passage supplied only to a different subject
 is not available here; omit that finding rather than borrowing its ID.
 No proposal proves the account, legal force or success."""
 
-_VERIFY_SYSTEM = """Message: You receive the complete ordered, attributed
-conversation, research subjects and their attributed record, and proposed
-findings with exact cited passages shown as overlapping numbered fragments.
-Proposals are untrusted; retrieval rank and citation IDs are not support.
+_VERIFY_SYSTEM = """Message: You receive the complete ordered conversation in
+attributed source_spans, owned research subjects and their reported record,
+and untrusted findings with exact cited legal passages in numbered fragments.
+All saved words are present. IDs, retrieval rank and earlier NM analysis are
+not evidence of truth, legal support, applicability or authority.
 
-Purpose: Independently check each finding's full label, need, why, kind and
-force against its own passages, subject and attributed record. Separately
-decide entailment, factual application and the claimed force of its proposed
-work or action. Attribution alone does not decide any of these. Only supported
-findings may enter the research record. Do not supply law or facts, decide
-merits beyond the passages or repair the proposed wording.
+Purpose: Independently decide whether each complete finding may enter the
+research record. Check source provenance, entailment, factual application and
+claimed force separately. Do not repair wording, supply missing law or facts,
+decide merits beyond the supplied passages or certify proof or binding status.
 
-Activity 1 - Identify the proposition and its provenance.
-Look for: Examine every cited source and its limiting predicates. Shared
-terminology is not support; another legal setting cannot be stretched to this
-subject. Distinguish actual judgment reasoning from argument or background.
-Identify whose operative proposition the finding relies on and how this
-source treats it. A source's report of an argument, another case's facts or a
-rejected contention is not an adopted legal rule. A judgment may expressly
-adopt a quoted authority or party's proposition; anchor that adoption in the
-court's actual treatment. A finding about rejection must rely on the court's
-rejecting reason, not present the rejected position as its rule. Direct
-provision text is legislative_text; its own words anchor the assertion and
-treatment. Do not infer adoption from a citation, shared terms or silence.
-Classify only the operative proposition used, not its entire mixed paragraph.
-Distinguish a deciding court's conclusion from its reasoning, a particular
-party's submission, quoted authority, case background and legislative text.
-Name the speaker or particular party in owner_label only when the selected
-ownership words establish that identity; do not infer their position or name.
-An adopted party submission or quotation keeps its original speaker and role;
-court adoption does not turn it into a court conclusion or binding ratio.
-Preserve any related position needed to understand that operative assertion
-separately: whose submission or quoted position it was and whether the issuing
-court adopted, reported or rejected it. Such context is not legal support.
+Activity 1 - Identify the operative source proposition.
+Look for: Whose words the finding relies on, their role, and how the issuing
+source treats that particular proposition. Distinguish the deciding court's
+conclusion or reasoning from a particular party's submission, quoted authority,
+case background and direct legislative text. A mixed paragraph needs separate
+positions, not a single blanket role. An adopted submission or quotation keeps
+its original speaker and role; adoption does not make it a court conclusion
+or binding ratio. A reported or rejected position is not adopted law. Adoption
+needs exact court treatment words, never merely a citation, silence or shared
+terms. A finding about rejection must use the court's rejecting reason.
+Outcome: For each cited source select exact support, ownership and treatment
+fragment IDs from that source only. Give assertion_owner, assertion_role,
+owner_label, one faithful assertion_statement and source_treatment. Court roles
+require deciding_court; party_submission requires party; quoted_authority
+requires quoted_authority; legislative_text requires provision text and
+legislative_text ownership. Name a party only when the ownership words support
+that identity. Legal support requires a known operative role and adopted
+source_treatment. Case background and unclear roles are not operative law.
+Keep context_statements only for related positions needed to understand the
+operative use; otherwise []. Each context retains its own speaker, role,
+statement, exact fragments and adopted/reported/rejected/unclear treatment.
+Context does not become another legal-support proposition.
 
-Activity 2 - Check entailment of the complete finding.
-Look for: Whether the retained passages together support every consequential
-part of label, need and why, including the actor, relationship, action, remedy
-and time range. A correct source role, matching terms or an exact fragment
-does not establish that connection. Distinguish an express rule or supported
-inference from analogy. An analogy can support an expressly limited comparison
-or research question, but cannot supply an operative rule, mandatory step or
-factual application that the passages do not establish. A case's procedural
-history, facts or disposition do not by themselves prescribe what to obtain
-or do in another matter. Do not convert a condition necessary for one cited
-route into a universal prerequisite or exclude other routes without support.
-Every retained proposition, inference and claimed mandatory step must follow
-from selected passages without filling gaps from legal memory or another
-subject. The label must faithfully express the supported need or proposition
-and its caveats.
+Activity 2 - Check the complete finding's meaning.
+Look for: Every consequential claim in label, need and why against the retained
+passages: actor, relationship, action, remedy, timing, conditions and exceptions.
+Shared terms or exact quotation alone are not entailment. Express rules and
+supported inferences differ from analogy. An analogy supports only a faithfully
+limited comparison or enquiry, not missing applicability or a mandatory step.
+A case's facts, procedural history or disposition do not themselves prescribe
+a step in another matter. A condition of one legal route cannot become a
+universal prerequisite or exclude other routes without supporting passages.
+Outcome: Give label_verdict faithful/unsupported/uncertain and an entailment
+use_check supported/unsupported/uncertain with actual retained supporting IDs.
+A correct role or overall verdict cannot override an unsupported claim.
 
-Activity 3 - Check application and chronology.
-Look for: Each express or implicit source predicate, exception, actor,
-relationship and relevant period against the attributed record. Preserve
-uncertainty and reported versus inspected status. General legal words cannot
-establish that a person or event satisfies a predicate. Later permission,
-conduct, records or legal treatment do not establish an earlier status without
-an attributed basis for that temporal reach; do not backdate or extend them
-by assumption. Absence of mention is not proof that an event did not occur.
-Earlier NM analysis and a quoted draft remain context, not evidence that their
-interpretation is correct. Unknown applicability supports a conditional finding only if
-the entire limiting predicate is expressly preserved without claiming the
-record meets it. Use established only with attributed supporting words, or
-asked_to_establish when gathering work expressly seeks that predicate.
-no_special_condition is valid only when the operative proposition has no
-limiting predicate; it cannot discard an expressed condition or a
-case-specific premise. Source support shows what the law says, not that it
-applies here. A general or conditional finding may lack material links only
-when it makes no assertion that the record satisfies its legal predicates.
+Activity 3 - Compare each legal predicate with the attributed account.
+Look for: Every express or implicit limiting predicate, relevant actor,
+relationship and period. Read original advocate spans together with earlier
+qualifications and corrections. Material headings and prior NM conclusions are
+interpretations, not factual evidence. Distinguish the advocate's own report
+from a quoted draft or another position they ask you to review. Later events
+or treatment do not establish an earlier status without attributed support
+for that temporal reach. Absence of mention does not prove nonoccurrence.
+Reported documents remain uninspected; possession does not prove contents.
+Outcome: Give application use_check and application_premises for each retained
+source's limiting predicates. Each premise selects source_id and its exact
+predicate_fragment_id, account_source_ids only from advocate spans, a status
+reported_satisfied/unresolved/reported_contradicted, and a reason explaining
+the actor, relationship and time comparison. Satisfaction and contradiction
+need attributable account IDs, not legal text or NM's words. They describe
+the reported account, not proof. For an unresolved or contrary predicate,
+preserved_condition must copy an existing explicit qualification or enquiry
+from the proposed need or why. Preserve the entire relevant limit, not an
+unrelated caveat. Reject application if the proposal asserts satisfaction
+instead of preserving that limit; do not invent a replacement qualification.
+Use empty preserved_condition only for a reported_satisfied predicate.
+Select scope_fragment_id for each source's operative predicate. established
+needs reported_satisfied premises and attributed application.material_ids;
+asked_to_establish means gathering work actually seeks the predicate;
+conditional means the complete limiting predicate is preserved without
+claiming satisfaction. no_special_condition permits an empty scope ID and
+no premises only when the proposition has no limiting predicate. Other scopes
+need an exact scope fragment. General or conditional uses may lack material
+links only if they make no claim that the record satisfies their predicates.
+Check every selected material ID exactly once as addresses/does_not_address/
+uncertain against its words; remove an incorrect link independently.
 
 Activity 4 - Check force and proposed work.
-Look for: Whether the actual supported rule mandates the exact proposed step
-or element, by the stated actor and within its preserved conditions and time.
-Required is not a synonym for prudent, helpful, customary or previously done
-in another case. A recommendation must have a supported connection to this
-enquiry and remain strengthening; an irrelevant analogy cannot manufacture
-even a useful requirement. Non-gathering findings have force none. Check
-every material ID against its words independently; an incorrect material link
-can be removed without losing a supported finding. Reported documents remain
-uninspected. Fragmentary or indeterminate support is uncertain; verification
-does not establish binding status or proof.
+Look for: Whether the supported rule mandates the exact step or element,
+by the stated actor within its preserved conditions and period. Required is
+not prudent, helpful, customary or something done in a previous case. Even a
+strengthening recommendation needs a passage-supported connection to this
+enquiry. Fragmentary or indeterminate support is uncertain.
+Outcome: Give force use_check with actual supporting source IDs. Gathering
+force is required only under the preserved mandate, otherwise strengthening;
+other kinds have force none. Reject overstated mandatory force.
 
-Outcome: Return exactly one independent decision per candidate_id. Use
-supported, unsupported or uncertain overall; faithful, unsupported or uncertain
-for the label. Also return use_checks with exactly entailment, application and
-force. Each independently states supported, unsupported or uncertain, a
-specific reason and the candidate's source_ids and material_ids supporting
-that decision. Entailment and force need actual supporting source IDs.
-Application material IDs identify attributed support, not proof of the account;
-they may be empty for a genuinely general or expressly conditional use.
-An established predicate needs attributed material support, never legal words
-alone. All three checks must support a retained finding. A failed use check
-cannot be overridden by overall acceptance. References must be this candidate's
-cited sources and linked material; unused or rejected references are not support.
-Reasons are nonempty and at most 500 characters. Rejected
-findings or unfaithful labels are withheld and may have empty unused source
-and material checks. For a supported faithful finding check EVERY cited source
-and selected material exactly once. Select support_fragment_id only from that
-source's exact fragments when its words support the finding; rejected sources
-need an empty support ID. Select scope_fragment_id for a limiting predicate.
-For every source check state assertion_owner and a short owner_label, then
-select owner_fragment_id and treatment_fragment_id from this source only.
-Also give assertion_role and a concise, faithful assertion_statement of the
-one operative proposition used, grounded in the exact support, ownership and
-treatment words. Court roles require deciding_court ownership, party_submission
-requires party, quoted_authority requires quoted_authority, and legislative_text
-requires direct provision text. Case background and unclear roles cannot be
-operative legal support. Different independently used positions require
-separate findings; do not blanket-label a paragraph or add unstated law.
-Return context_statements only for relevant related positions actually needed
-to understand this source use, otherwise an empty array. Each uses the same
-role, assertion_statement, assertion_owner, owner_label and exact support,
-ownership and treatment fragment fields. Context may have adopted, reported,
-rejected or unclear treatment, without becoming the operative proposition or
-another legal-support citation. A rejecting court conclusion may be operative
-support while the specific party's rejected submission is retained as context.
-source_treatment describes how the issuing source treats that proposition:
-adopted, reported, rejected or unclear. Supported legal sources require a
-known assertion owner and exact ownership and adopted-treatment fragments;
-the same fragment may serve several roles. Reported, rejected or unclear
-treatment cannot support the finding as law. If its full support, actor,
-remedy, predicate or mandatory force is uncertain, withhold the finding.
-Supported sources require established, asked_to_establish, conditional or
-no_special_condition scope. conditional needs an exact scope fragment and
-faithful preservation of its full predicate without asserting satisfaction.
-no_special_condition needs an empty scope ID; other supported scopes need an
-exact fragment. Overall support requires the retained passages together to
-support the entire meaning, force and limits. No verdict proves the account or
-source authority. Return only the declared decisions object."""
+Outcome: Return only the declared decisions object, exactly one decision per
+candidate_id. Overall verdict is supported/unsupported/uncertain. Retention
+requires a faithful label and supported entailment, application and force;
+failed independent checks cannot be overridden by overall acceptance.
+References select only this candidate's cited sources and linked material;
+peer, unused or rejected references are not support. A supported finding must
+check every cited source and linked material exactly once and have retained
+support for its full meaning. Rejected findings may omit unused source,
+material and premise checks. Reasons are nonempty and at most 500 characters.
+Support fragments, role statements and preserved conditions must come from
+their declared input; return no new facts, law or wording repairs."""
 
 _REPAIR_SYSTEM = """\n\nMessage: This corrects rejected units of the same
 research activity. Valid peers are already retained.
@@ -844,6 +890,7 @@ def _verification_schema(
     source_ids: tuple[str, ...],
     fragment_ids: tuple[str, ...],
     material_ids: tuple[str, ...],
+    account_ids: tuple[str, ...] = (),
 ) -> dict:
     use_check = {
         "type": "object", "additionalProperties": False,
@@ -924,6 +971,7 @@ def _verification_schema(
             "material_checks",
             "source_checks",
             "use_checks",
+            "application_premises",
             "verdict",
             "reason",
         ],
@@ -952,6 +1000,24 @@ def _verification_schema(
                 "type": "object", "additionalProperties": False,
                 "required": list(FINDING_USE_CHECKS),
                 "properties": {aspect: deepcopy(use_check) for aspect in FINDING_USE_CHECKS},
+            },
+            "application_premises": {
+                "type": "array", "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["source_id", "predicate_fragment_id", "status",
+                                 "account_source_ids", "preserved_condition", "reason"],
+                    "properties": {
+                        "source_id": {"type": "string", "enum": list(source_ids)},
+                        "predicate_fragment_id": {"type": "string", "enum": list(fragment_ids)},
+                        "status": {"type": "string", "enum": [
+                            "reported_satisfied", "unresolved", "reported_contradicted"]},
+                        "account_source_ids": {"type": "array", "items": {
+                            "type": "string", "enum": list(account_ids) or [""]},
+                            **({"maxItems": 0} if not account_ids else {})},
+                        "preserved_condition": {"type": "string", "maxLength": 1000},
+                        "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                    },
+                },
             },
             "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1},
@@ -983,7 +1049,8 @@ def _resolve_statement(check: dict, source: dict, fragments: dict[str, str], *,
 
 
 def _finding_verdict(
-    decision: dict, *, candidate_id: str, original: tuple[str, dict, dict[str, dict]]
+    decision: dict, *, candidate_id: str, original: tuple[str, dict, dict[str, dict]],
+    account_sources: dict,
 ) -> dict | None:
     _, item, sources = original
     fragments = tuple(
@@ -994,7 +1061,8 @@ def _finding_verdict(
         )
     )
     schema = _verification_schema(
-        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"])
+        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"]),
+        tuple(account_sources)
     )
     require_schema(decision, schema["properties"]["decisions"]["items"])
     checks = decision["source_checks"]
@@ -1137,6 +1205,35 @@ def _finding_verdict(
     if decision["verdict"] == "supported" and not selected:
         raise SchemaViolation("A supported item needs at least one supported passage")
     kept = [source_id for source_id in item["source_ids"] if source_id in selected]
+    premises = []
+    for index, premise in enumerate(decision["application_premises"]):
+        label = f"application_premises[{index}]"
+        source_id = premise["source_id"]
+        if source_id not in selected:
+            raise SchemaViolation(
+                f"{label}.source_id must select a retained source from this candidate")
+        fragments_by_id = {row["id"]: row["text"]
+                           for row in _passage_fragments(sources[source_id]["text"])}
+        fragment = premise["predicate_fragment_id"]
+        if fragment not in fragments_by_id:
+            raise SchemaViolation(
+                f"{label}.predicate_fragment_id must select this source's exact words")
+        references, seen_references = [], set()
+        for identity in premise["account_source_ids"]:
+            reference = account_sources.get(identity)
+            if reference is None or reference.role != "advocate":
+                raise SchemaViolation(
+                    f"{label}.account_source_ids requires exact advocate words; "
+                    "NM's interpretation cannot establish factual application")
+            identity = (reference.turn_id, reference.role, reference.quoted)
+            if identity not in seen_references:
+                references.append(vars(reference))
+                seen_references.add(identity)
+        premises.append({
+            "source_id": source_id, "predicate_excerpt": fragments_by_id[fragment],
+            "status": premise["status"], "account_references": references,
+            "preserved_condition": premise["preserved_condition"], "reason": premise["reason"],
+        })
     finding = {
         **item,
         "source_ids": kept,
@@ -1146,7 +1243,8 @@ def _finding_verdict(
             {**sources[source_id], "verification": selected[source_id]} for source_id in kept
         ],
         "use_verification": {"contract": RESEARCH_VERIFICATION,
-                             "checks": deepcopy(decision["use_checks"])},
+                             "checks": deepcopy(decision["use_checks"]),
+                             "application_premises": premises},
     }
     for aspect, check in decision["use_checks"].items():
         for field, allowed in (("source_ids", kept), ("material_ids", linked)):
@@ -1160,8 +1258,11 @@ def _finding_verdict(
                 f"use_checks.{aspect}.source_ids needs actual supporting passages")
     if not finding_verification_valid(finding):
         raise SchemaViolation(
-            "use_checks.application.material_ids needs attributed material for an established "
-            "predicate; legal source words cannot establish factual application")
+            "Application premises must cover each retained source's limiting predicates, "
+            "resolve exact advocate account words and preserve unresolved or contrary "
+            "conditions in the existing need or why. An established scope needs reported "
+            "satisfied premises and use_checks.application.material_ids; legal source words "
+            "or prior NM interpretations cannot establish factual application")
     return finding
 
 
@@ -1176,7 +1277,10 @@ def verify_findings(
     rows, material_ids = _subject_input(subjects, material_by_subject)
     if set(proposed) != set(material_ids):
         raise SchemaViolation("Verification needs every supplied research subject")
-    words = _conversation_rows(conversation)
+    _conversation_rows(conversation)
+    attributed, _, account_sources = addressed_sources(conversation, "")
+    words = attributed["earlier_conversation"]
+    account_sources = {key: ref for key, ref in account_sources.items() if ref.role == "advocate"}
     result = {key: [] for key in material_ids}
     coverage, originals, atoms = _coverage(material_ids), {}, []
     for row in rows:
@@ -1269,7 +1373,8 @@ def verify_findings(
         linked = tuple(
             dict.fromkeys(key for candidate in candidates for key in candidate["material_ids"])
         )
-        schema = _verification_schema(ids, source_ids, fragment_ids, linked)
+        schema = _verification_schema(ids, source_ids, fragment_ids, linked,
+                                      tuple(account_sources))
         limit = min(
             12288,
             max(
@@ -1352,7 +1457,8 @@ def verify_findings(
                     continue
                 try:
                     value = _finding_verdict(
-                        group[0], candidate_id=candidate_id, original=originals[candidate_id]
+                        group[0], candidate_id=candidate_id, original=originals[candidate_id],
+                        account_sources=account_sources
                     )
                 except SchemaViolation as exc:
                     issues[candidate_id], rejected[candidate_id] = str(exc), group[0]

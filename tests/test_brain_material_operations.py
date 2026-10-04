@@ -13,6 +13,7 @@ from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from nm.shared.model_port import SchemaViolation
+from tests.brain_reader_fixture import reviewed_record_verdicts
 from tests.test_brain_material import Model, material, plan, send
 from tests.test_brain_material_verification import Model as CheckerModel
 
@@ -135,7 +136,7 @@ class OperationModel(Model):
             supported = row.get("statement") not in self.rejected_statements
             verdicts.append(_decision(row["candidate_id"], supported=supported,
                                       accept=supported))
-        return replace(result, data={"verdicts": verdicts})
+        return replace(result, data=reviewed_record_verdicts(payload, {"verdicts": verdicts}))
 
 
 def _change(statement, latest, *, basis="stated"):

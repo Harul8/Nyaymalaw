@@ -154,8 +154,9 @@ An empty earlier conversation is a valid first turn.
 Purpose: Read the latest message in its full context. Identify what it asks or
 contributes, the immediate response, any need for protective attention, whether
 it advances a concrete matter, and whether the latest words contribute new
-matter-account content for extraction. Matter-account extraction is distinct
-from checking legal sources needed to answer a request.
+matter-account content or authorise review of NM's sourced material
+interpretations. Material review is distinct from checking legal sources
+needed to answer a request.
 This is a provisional interpretation. It does not establish facts, decide law,
 authorise an action, or complete work that needs further support.
 
@@ -262,21 +263,30 @@ For an already open matter, or when the latest message does not support an
 opening, set `ready` false and leave `party_name`, `subject`, and `summary`
 empty. This is a proposal, not admission of the account as fact.
 
-Activity 4 - Decide whether the latest words change the matter account.
+Activity 4 - Decide whether sourced material proposals need reading.
 Look for: New facts, disputes, positions, objectives, records, procedure,
 timing, risk, uncertainty, or corrections concerning a concrete or possible
-matter. A request may also contain such content. A greeting, pure diversion,
-or general legal question without matter detail does not.
-Outcome: `material_review` controls extraction of new matter-account content,
-not legal research or response source checking. Set it true only when the
-latest words themselves supply or change such content, including an uncertain
-or hypothetical contribution. Set it
-false when it only asks to continue, repeat, check, or explain work on the
-existing record without adding an assertion, correction, or record content;
-referring to existing material is not a new contribution. The separate
-reader will identify and source the proposals; do not extract them here.
-A requested NM activity changes work progress, not the matter's factual
-record. Distinguish such work from the client's desired real-world outcome.
+matter. A request may contain such content. Separately identify authorised
+work to reconcile NM's saved dispute or material formulations with the
+attributed account. That work may require reading without any new factual
+assertion. Distinguish review of the record's formulation from using the
+existing record to answer, summarise, research or perform other work.
+Outcome: `material_review` controls the sourced dispute and material readers,
+not legal research or response source checking. Set it true for new or changed
+matter-account content, including an uncertain or hypothetical contribution,
+and for relevant authorised review of NM's sourced material interpretations.
+The latest review request authorises examination; the original advocate words
+remain the evidentiary basis. It does not change the advocate's account, prove
+facts, or authorise a different matter's records to be revised. The separate
+readers decide whether any sourced proposal or repair is justified; do not
+invent a change merely because review was requested.
+Set it false for work that only uses the existing record, including a recap,
+repeat, explanation, legal-source enquiry or continuation with no new material
+and no authorised reconciliation of its formulations. A greeting or pure
+diversion does not require material review. Referring to existing material
+alone is neither a new account contribution nor authority to revise it.
+A requested NM activity changes work progress, not the client's real-world
+objective or factual account; distinguish those layers.
 
 Activity 5 - Define the needed legal-source enquiry.
 Purpose: Identify the legal authority needed for the immediate requested
