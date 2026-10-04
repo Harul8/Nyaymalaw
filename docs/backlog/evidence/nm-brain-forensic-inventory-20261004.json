@@ -1,0 +1,2601 @@
+{
+  "review_date": "2026-10-04",
+  "base_commit": "9155a5bb52d3ae6d78cb5550cf511d1885143586",
+  "branch": "s0-foundations",
+  "scope": "Static forensic review of current working tree; inherited browser evidence inspected; no production edits or new paid application-model calls. Symbols aid navigation, not evidence every function was exercised.",
+  "graph_search_mode": "incremental local code graph and FTS; no embedding calls",
+  "file_count": 30,
+  "stable_four_part_prompt_count": 13,
+  "stable_prompts": [
+    {
+      "file": "nm/brain/continuation.py",
+      "name": "_SYSTEM",
+      "line": 34,
+      "words": 1351,
+      "characters": 9319,
+      "sha256": "0d804a2560c760e5c385e4b7fcaeadf9ea76dca9ccded8cfe967c18450ac12b5"
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "name": "_SYSTEM",
+      "line": 27,
+      "words": 1432,
+      "characters": 10423,
+      "sha256": "a4ba3788d9ce8bdb20a907000a8a6b459143c169321f129c0992b49aea3e9273"
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "name": "_SYSTEM",
+      "line": 153,
+      "words": 2003,
+      "characters": 13346,
+      "sha256": "c64df9496b586e55064b4c2126b4d33cda357ee24d60053891504498e5dc7d5b"
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "name": "_REPAIR_OPENING_SYSTEM",
+      "line": 375,
+      "words": 166,
+      "characters": 1121,
+      "sha256": "0954d385d8be933ba70b69e9f095bacf6e56f482d2210632b8a77f1adf00b9d5"
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "name": "_SYSTEM",
+      "line": 31,
+      "words": 1412,
+      "characters": 10153,
+      "sha256": "9e59f7418d85d4413063fe5e5b9064d61af9b5782976e28695953e6b0a49c65b"
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "name": "_SYSTEM",
+      "line": 28,
+      "words": 1198,
+      "characters": 8234,
+      "sha256": "d70729ca330d6f8f6d6ef2396042758903b8d593ccfab808b09076d47459421e"
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "name": "_DECOMPOSE_SYSTEM",
+      "line": 249,
+      "words": 179,
+      "characters": 1271,
+      "sha256": "17a254787f14fa5d557d71f6fcb75f91dc4247aa16cfd50b8d97cc929e0adca0"
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "name": "_REQUIREMENTS_SYSTEM",
+      "line": 271,
+      "words": 487,
+      "characters": 3415,
+      "sha256": "f7e05c6111000722b387a91a246ab0389074aaededf79b1fde5b061be1280314"
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "name": "_VERIFY_SYSTEM",
+      "line": 322,
+      "words": 1073,
+      "characters": 7975,
+      "sha256": "309fe48553c6f7699e95532e5d3139b5f5db1e5941a4d6f0d1dd5e95478c9591"
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "name": "_REPAIR_SYSTEM",
+      "line": 436,
+      "words": 66,
+      "characters": 449,
+      "sha256": "0a46e2094a5e80a96f996f1b53fefdde9c5712867246aa6e9bde8f73831e2428"
+    },
+    {
+      "file": "nm/brain/material.py",
+      "name": "_SYSTEM",
+      "line": 322,
+      "words": 1126,
+      "characters": 7782,
+      "sha256": "64c7f429133fdda2bcc56acc37a2638680ea29ad683fa37496ca61e9739234de"
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "name": "_SYSTEM",
+      "line": 32,
+      "words": 1425,
+      "characters": 10240,
+      "sha256": "1c8f3c979aad009df3b944cad98dea22c1270741227603d8bdfde53d7a144acf"
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "name": "_SOURCE_SYSTEM",
+      "line": 18,
+      "words": 364,
+      "characters": 2536,
+      "sha256": "c73f34470f32b6f059a9f365aaf14019ca453139b739e28d7800aaa1ca73c1c4"
+    }
+  ],
+  "files": [
+    {
+      "file": "nm/brain/__init__.py",
+      "sha256": "bbbaeddb5f2489ff94dd9c963907c10c55f25f8a40fda18d18dc3e4177d342f8",
+      "lines": 1,
+      "working_tree_status": "clean",
+      "symbols": []
+    },
+    {
+      "file": "nm/brain/checked.py",
+      "sha256": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb",
+      "lines": 80,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "require_independent_result",
+          "line": 21,
+          "end_line": 23
+        },
+        {
+          "name": "checked_read",
+          "line": 26,
+          "end_line": 80
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/continuation.py",
+      "sha256": "b238f00be47eabbdc824eed4368474616217d335533161db2017a945620e25cc",
+      "lines": 1201,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "ContinuationResult",
+          "line": 269,
+          "end_line": 275
+        },
+        {
+          "name": "_ContentFailure",
+          "line": 278,
+          "end_line": 283
+        },
+        {
+          "name": "continuation_indexes",
+          "line": 286,
+          "end_line": 292
+        },
+        {
+          "name": "_identifier_array",
+          "line": 295,
+          "end_line": 299
+        },
+        {
+          "name": "_progress_catalogue",
+          "line": 302,
+          "end_line": 318
+        },
+        {
+          "name": "_work_choices",
+          "line": 321,
+          "end_line": 325
+        },
+        {
+          "name": "_selected_work",
+          "line": 328,
+          "end_line": 352
+        },
+        {
+          "name": "_progress_target",
+          "line": 355,
+          "end_line": 358
+        },
+        {
+          "name": "_bind_progress_sources",
+          "line": 361,
+          "end_line": 397
+        },
+        {
+          "name": "_record_context",
+          "line": 400,
+          "end_line": 420
+        },
+        {
+          "name": "_schema",
+          "line": 423,
+          "end_line": 468
+        },
+        {
+          "name": "_input",
+          "line": 471,
+          "end_line": 667
+        },
+        {
+          "name": "_identifier_in_text",
+          "line": 670,
+          "end_line": 671
+        },
+        {
+          "name": "_check_inline_citations",
+          "line": 674,
+          "end_line": 678
+        },
+        {
+          "name": "_inline_reference",
+          "line": 681,
+          "end_line": 694
+        },
+        {
+          "name": "_validate_unit",
+          "line": 697,
+          "end_line": 883
+        },
+        {
+          "name": "_read_units",
+          "line": 886,
+          "end_line": 934
+        },
+        {
+          "name": "_limited_unit",
+          "line": 937,
+          "end_line": 951
+        },
+        {
+          "name": "_resolve",
+          "line": 954,
+          "end_line": 980
+        },
+        {
+          "name": "continue_conversation",
+          "line": 983,
+          "end_line": 1201
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "sha256": "3cf8b2a6385b16fd7ae86428cef14736186d00a704d5d682a19e4556697f6ba7",
+      "lines": 980,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "_RetentionViolation",
+          "line": 275,
+          "end_line": 281
+        },
+        {
+          "name": "_SourceCoverageViolation",
+          "line": 284,
+          "end_line": 290
+        },
+        {
+          "name": "ContinuationVerification",
+          "line": 294,
+          "end_line": 300
+        },
+        {
+          "name": "_review_sources",
+          "line": 303,
+          "end_line": 342
+        },
+        {
+          "name": "_selected_evidence",
+          "line": 345,
+          "end_line": 355
+        },
+        {
+          "name": "_check_sources",
+          "line": 358,
+          "end_line": 429
+        },
+        {
+          "name": "_review_audit",
+          "line": 432,
+          "end_line": 440
+        },
+        {
+          "name": "_retention_candidates",
+          "line": 443,
+          "end_line": 449
+        },
+        {
+          "name": "_owned_object",
+          "line": 452,
+          "end_line": 454
+        },
+        {
+          "name": "_word_spans",
+          "line": 457,
+          "end_line": 459
+        },
+        {
+          "name": "_source_wire_schema",
+          "line": 462,
+          "end_line": 466
+        },
+        {
+          "name": "_resolve_source_check",
+          "line": 469,
+          "end_line": 487
+        },
+        {
+          "name": "_wire_verdict_schema",
+          "line": 490,
+          "end_line": 537
+        },
+        {
+          "name": "_schema",
+          "line": 540,
+          "end_line": 544
+        },
+        {
+          "name": "_canonical_review",
+          "line": 547,
+          "end_line": 585
+        },
+        {
+          "name": "_decision",
+          "line": 588,
+          "end_line": 774
+        },
+        {
+          "name": "_source_repair_schema",
+          "line": 777,
+          "end_line": 782
+        },
+        {
+          "name": "verify_continuation",
+          "line": 785,
+          "end_line": 980
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "sha256": "395ce27b623111109d0c7f71141e2cd624af680a9799c991af27344b03f78f8c",
+      "lines": 585,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "IncompleteConversation",
+          "line": 25,
+          "end_line": 26
+        },
+        {
+          "name": "Message",
+          "line": 30,
+          "end_line": 39
+        },
+        {
+          "name": "Conversation",
+          "line": 43,
+          "end_line": 55
+        },
+        {
+          "name": "WorkItem",
+          "line": 59,
+          "end_line": 76
+        },
+        {
+          "name": "OpeningCandidate",
+          "line": 80,
+          "end_line": 94
+        },
+        {
+          "name": "opening_from_parts",
+          "line": 97,
+          "end_line": 102
+        },
+        {
+          "name": "TurnPlan",
+          "line": 106,
+          "end_line": 110
+        },
+        {
+          "name": "opening_title_issue",
+          "line": 360,
+          "end_line": 372
+        },
+        {
+          "name": "repair_opening",
+          "line": 405,
+          "end_line": 437
+        },
+        {
+          "name": "_prompt",
+          "line": 440,
+          "end_line": 462
+        },
+        {
+          "name": "interpret",
+          "line": 465,
+          "end_line": 488
+        },
+        {
+          "name": "_turn_plan",
+          "line": 491,
+          "end_line": 585
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/dispute_state.py",
+      "sha256": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839",
+      "lines": 176,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "belongs_to_current_matter",
+          "line": 11,
+          "end_line": 23
+        },
+        {
+          "name": "_short_label",
+          "line": 26,
+          "end_line": 31
+        },
+        {
+          "name": "_read_identity",
+          "line": 34,
+          "end_line": 56
+        },
+        {
+          "name": "proposed_disputes",
+          "line": 59,
+          "end_line": 176
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "sha256": "d15878ab31da9dd99acb93a368c847020c4dc6f7f3a69dab8c7014e84572328b",
+      "lines": 344,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "_schema",
+          "line": 192,
+          "end_line": 200
+        },
+        {
+          "name": "_read_verdicts",
+          "line": 203,
+          "end_line": 253
+        },
+        {
+          "name": "verify_disputes",
+          "line": 256,
+          "end_line": 344
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "sha256": "f8fc2cfaf9e8ef6f0efe45f582b0672dd77338016dec9bc27698ed96075072d6",
+      "lines": 231,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "_schema",
+          "line": 153,
+          "end_line": 174
+        },
+        {
+          "name": "extract_disputes",
+          "line": 177,
+          "end_line": 231
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/history.py",
+      "sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+      "lines": 70,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "released_older_turns",
+          "line": 9,
+          "end_line": 20
+        },
+        {
+          "name": "from_turns",
+          "line": 23,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "sha256": "cee274c03d0ee3a10902de3c1132e82cad02f40abfd292eac5465c728adc3873",
+      "lines": 1593,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "_operative_assertion",
+          "line": 55,
+          "end_line": 56
+        },
+        {
+          "name": "_statement_valid",
+          "line": 59,
+          "end_line": 78
+        },
+        {
+          "name": "source_verification_valid",
+          "line": 81,
+          "end_line": 131
+        },
+        {
+          "name": "finding_verification_valid",
+          "line": 134,
+          "end_line": 190
+        },
+        {
+          "name": "_application_premises_valid",
+          "line": 193,
+          "end_line": 247
+        },
+        {
+          "name": "ResearchResult",
+          "line": 446,
+          "end_line": 449
+        },
+        {
+          "name": "_conversation_rows",
+          "line": 456,
+          "end_line": 468
+        },
+        {
+          "name": "_subject_input",
+          "line": 471,
+          "end_line": 513
+        },
+        {
+          "name": "_coverage",
+          "line": 516,
+          "end_line": 526
+        },
+        {
+          "name": "_prompt",
+          "line": 529,
+          "end_line": 542
+        },
+        {
+          "name": "_ordered_batches",
+          "line": 545,
+          "end_line": 572
+        },
+        {
+          "name": "_repair_payload",
+          "line": 575,
+          "end_line": 578
+        },
+        {
+          "name": "_read_subject_groups",
+          "line": 581,
+          "end_line": 653
+        },
+        {
+          "name": "_decomposition_schema",
+          "line": 656,
+          "end_line": 681
+        },
+        {
+          "name": "decompose_subjects",
+          "line": 684,
+          "end_line": 719
+        },
+        {
+          "name": "_findings_schema",
+          "line": 722,
+          "end_line": 756
+        },
+        {
+          "name": "_search_hits",
+          "line": 759,
+          "end_line": 788
+        },
+        {
+          "name": "_finding",
+          "line": 791,
+          "end_line": 817
+        },
+        {
+          "name": "read_findings",
+          "line": 820,
+          "end_line": 899
+        },
+        {
+          "name": "_passage_fragments",
+          "line": 902,
+          "end_line": 912
+        },
+        {
+          "name": "_verification_schema",
+          "line": 915,
+          "end_line": 1060
+        },
+        {
+          "name": "_resolve_statement",
+          "line": 1063,
+          "end_line": 1077
+        },
+        {
+          "name": "_finding_verdict",
+          "line": 1080,
+          "end_line": 1300
+        },
+        {
+          "name": "verify_findings",
+          "line": 1303,
+          "end_line": 1536
+        },
+        {
+          "name": "_dispute_subjects",
+          "line": 1539,
+          "end_line": 1564
+        },
+        {
+          "name": "decompose",
+          "line": 1567,
+          "end_line": 1571
+        },
+        {
+          "name": "read_requirements",
+          "line": 1574,
+          "end_line": 1582
+        },
+        {
+          "name": "verify_requirements",
+          "line": 1585,
+          "end_line": 1593
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material.py",
+      "sha256": "a7e133c7229ebef40bb662d0878c15c5463f3dd21a10ea0d523777d63a7a0902",
+      "lines": 614,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "assignment_targets",
+          "line": 31,
+          "end_line": 49
+        },
+        {
+          "name": "resolve_assignment",
+          "line": 52,
+          "end_line": 69
+        },
+        {
+          "name": "PriorReference",
+          "line": 73,
+          "end_line": 76
+        },
+        {
+          "name": "MaterialCandidate",
+          "line": 80,
+          "end_line": 121
+        },
+        {
+          "name": "addressed_sources",
+          "line": 153,
+          "end_line": 185
+        },
+        {
+          "name": "addressed_item_schema",
+          "line": 188,
+          "end_line": 215
+        },
+        {
+          "name": "resolve_sources",
+          "line": 218,
+          "end_line": 235
+        },
+        {
+          "name": "saved_source_ids",
+          "line": 238,
+          "end_line": 245
+        },
+        {
+          "name": "fill_empty_link_sources",
+          "line": 248,
+          "end_line": 264
+        },
+        {
+          "name": "operation_schema",
+          "line": 267,
+          "end_line": 286
+        },
+        {
+          "name": "operation_rows",
+          "line": 289,
+          "end_line": 292
+        },
+        {
+          "name": "_extraction_schema",
+          "line": 295,
+          "end_line": 320
+        },
+        {
+          "name": "parse_material",
+          "line": 437,
+          "end_line": 520
+        },
+        {
+          "name": "extract_details",
+          "line": 523,
+          "end_line": 614
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material_state.py",
+      "sha256": "32e93b93dbbdfc567ab755341e1fc7acc68efb3e6db50f41e0e4f988819c8289",
+      "lines": 295,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "sourced_detail_for_display",
+          "line": 9,
+          "end_line": 23
+        },
+        {
+          "name": "_identity",
+          "line": 26,
+          "end_line": 40
+        },
+        {
+          "name": "_source_matches",
+          "line": 43,
+          "end_line": 70
+        },
+        {
+          "name": "_current_links",
+          "line": 73,
+          "end_line": 88
+        },
+        {
+          "name": "material_record",
+          "line": 91,
+          "end_line": 295
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "sha256": "665db2caa56337652fe562237cd235fb2921fd6df10787e088c6a946caa13199",
+      "lines": 391,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "GroundingResult",
+          "line": 183,
+          "end_line": 188
+        },
+        {
+          "name": "_schema",
+          "line": 203,
+          "end_line": 211
+        },
+        {
+          "name": "_read_verdicts",
+          "line": 214,
+          "end_line": 262
+        },
+        {
+          "name": "verify_material_grounding",
+          "line": 265,
+          "end_line": 391
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "sha256": "28a77fc9d848d4574004b2fac27aa548347d2b6459b440fdb09e33dbb3e69acf",
+      "lines": 343,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "classify_account_sources",
+          "line": 57,
+          "end_line": 100
+        },
+        {
+          "name": "owned_source_treatments",
+          "line": 103,
+          "end_line": 117
+        },
+        {
+          "name": "source_treatment_reference_valid",
+          "line": 120,
+          "end_line": 128
+        },
+        {
+          "name": "substantive_source_treatments",
+          "line": 131,
+          "end_line": 147
+        },
+        {
+          "name": "derived_record",
+          "line": 150,
+          "end_line": 152
+        },
+        {
+          "name": "review_contract_issue",
+          "line": 155,
+          "end_line": 160
+        },
+        {
+          "name": "review_issues_text",
+          "line": 163,
+          "end_line": 166
+        },
+        {
+          "name": "candidate_account_ids",
+          "line": 169,
+          "end_line": 178
+        },
+        {
+          "name": "restoration_peer_ids",
+          "line": 181,
+          "end_line": 184
+        },
+        {
+          "name": "review_properties",
+          "line": 187,
+          "end_line": 236
+        },
+        {
+          "name": "validate_record_checks",
+          "line": 239,
+          "end_line": 315
+        },
+        {
+          "name": "recorded_review_decision",
+          "line": 318,
+          "end_line": 322
+        },
+        {
+          "name": "admitted_record_decisions",
+          "line": 325,
+          "end_line": 343
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/requirements_state.py",
+      "sha256": "bfda84a045fca1e225d6b20e72ec946cc08ddd96c7e481a0d93843eafab38e63",
+      "lines": 416,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "_digest",
+          "line": 21,
+          "end_line": 24
+        },
+        {
+          "name": "subject_fingerprint",
+          "line": 27,
+          "end_line": 38
+        },
+        {
+          "name": "research_owner_id",
+          "line": 41,
+          "end_line": 43
+        },
+        {
+          "name": "_identities",
+          "line": 46,
+          "end_line": 49
+        },
+        {
+          "name": "_subject_valid",
+          "line": 52,
+          "end_line": 61
+        },
+        {
+          "name": "_context",
+          "line": 64,
+          "end_line": 75
+        },
+        {
+          "name": "research_fingerprint",
+          "line": 78,
+          "end_line": 94
+        },
+        {
+          "name": "_valid_row",
+          "line": 97,
+          "end_line": 128
+        },
+        {
+          "name": "_legacy_read",
+          "line": 131,
+          "end_line": 153
+        },
+        {
+          "name": "_read_valid",
+          "line": 156,
+          "end_line": 188
+        },
+        {
+          "name": "_prior_account_words",
+          "line": 191,
+          "end_line": 206
+        },
+        {
+          "name": "_account_references_valid",
+          "line": 209,
+          "end_line": 219
+        },
+        {
+          "name": "research_record",
+          "line": 222,
+          "end_line": 373
+        },
+        {
+          "name": "dispute_research_subjects",
+          "line": 376,
+          "end_line": 392
+        },
+        {
+          "name": "requirements_record",
+          "line": 395,
+          "end_line": 416
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/retrieval.py",
+      "sha256": "097213abc492c485d8354323cf33bb7394290e6cca79a29c20f406838801610d",
+      "lines": 498,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "SearchUnavailable",
+          "line": 34,
+          "end_line": 35
+        },
+        {
+          "name": "Collection",
+          "line": 38,
+          "end_line": 47
+        },
+        {
+          "name": "_rrf",
+          "line": 50,
+          "end_line": 55
+        },
+        {
+          "name": "_ordered",
+          "line": 58,
+          "end_line": 59
+        },
+        {
+          "name": "_Models",
+          "line": 62,
+          "end_line": 90
+        },
+        {
+          "name": "LocalCollection",
+          "line": 93,
+          "end_line": 291
+        },
+        {
+          "name": "_candidate",
+          "line": 294,
+          "end_line": 319
+        },
+        {
+          "name": "HybridSearcher",
+          "line": 322,
+          "end_line": 486
+        },
+        {
+          "name": "_default_searcher",
+          "line": 490,
+          "end_line": 491
+        },
+        {
+          "name": "search_dispute",
+          "line": 494,
+          "end_line": 498
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/source_snapshots.py",
+      "sha256": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2",
+      "lines": 108,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "source_snapshots",
+          "line": 7,
+          "end_line": 65
+        },
+        {
+          "name": "inline_source_links",
+          "line": 68,
+          "end_line": 108
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/turn.py",
+      "sha256": "d9b36f134a516fee4f1f2d09f263490ee579a7c1d53c0cf8d752e6d7d79c5de6",
+      "lines": 780,
+      "working_tree_status": " M",
+      "symbols": [
+        {
+          "name": "BrainRefused",
+          "line": 60,
+          "end_line": 68
+        },
+        {
+          "name": "BrainTurn",
+          "line": 72,
+          "end_line": 79
+        },
+        {
+          "name": "BrainOutput",
+          "line": 83,
+          "end_line": 87
+        },
+        {
+          "name": "_CountedModel",
+          "line": 90,
+          "end_line": 143
+        },
+        {
+          "name": "_digest",
+          "line": 146,
+          "end_line": 149
+        },
+        {
+          "name": "chat_matter_id",
+          "line": 152,
+          "end_line": 153
+        },
+        {
+          "name": "_saved_reply",
+          "line": 156,
+          "end_line": 190
+        },
+        {
+          "name": "_research_subjects",
+          "line": 193,
+          "end_line": 226
+        },
+        {
+          "name": "_project_research",
+          "line": 229,
+          "end_line": 239
+        },
+        {
+          "name": "_current_records",
+          "line": 242,
+          "end_line": 273
+        },
+        {
+          "name": "_history",
+          "line": 276,
+          "end_line": 277
+        },
+        {
+          "name": "_saved_source_treatments",
+          "line": 280,
+          "end_line": 310
+        },
+        {
+          "name": "_reply",
+          "line": 313,
+          "end_line": 327
+        },
+        {
+          "name": "_continuation_elements",
+          "line": 330,
+          "end_line": 370
+        },
+        {
+          "name": "_read_material",
+          "line": 373,
+          "end_line": 401
+        },
+        {
+          "name": "_legal_reads",
+          "line": 404,
+          "end_line": 479
+        },
+        {
+          "name": "BrainService",
+          "line": 482,
+          "end_line": 780
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/work_state.py",
+      "sha256": "f9e0ef91b2530f2f654d11dc77cbe13c5218aeed90b90df0025d6858678d28d1",
+      "lines": 439,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "_fail",
+          "line": 19,
+          "end_line": 20
+        },
+        {
+          "name": "_text",
+          "line": 23,
+          "end_line": 26
+        },
+        {
+          "name": "_ids",
+          "line": 29,
+          "end_line": 34
+        },
+        {
+          "name": "_progress_id",
+          "line": 37,
+          "end_line": 42
+        },
+        {
+          "name": "_catalogue",
+          "line": 45,
+          "end_line": 61
+        },
+        {
+          "name": "_blocks",
+          "line": 64,
+          "end_line": 103
+        },
+        {
+          "name": "_known",
+          "line": 106,
+          "end_line": 108
+        },
+        {
+          "name": "_update",
+          "line": 111,
+          "end_line": 133
+        },
+        {
+          "name": "seal_progress",
+          "line": 136,
+          "end_line": 171
+        },
+        {
+          "name": "_seal_unit",
+          "line": 174,
+          "end_line": 240
+        },
+        {
+          "name": "_read_words",
+          "line": 243,
+          "end_line": 273
+        },
+        {
+          "name": "_displayed",
+          "line": 276,
+          "end_line": 296
+        },
+        {
+          "name": "_entry",
+          "line": 299,
+          "end_line": 305
+        },
+        {
+          "name": "_event",
+          "line": 308,
+          "end_line": 315
+        },
+        {
+          "name": "project_work",
+          "line": 318,
+          "end_line": 370
+        },
+        {
+          "name": "_project_unit",
+          "line": 373,
+          "end_line": 430
+        },
+        {
+          "name": "_create",
+          "line": 433,
+          "end_line": 439
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/README.md",
+      "sha256": "4fe8b531818f6524c38d42229fd942de05d0715341b3670e4ab5df434f174c28",
+      "lines": 367,
+      "working_tree_status": " M",
+      "symbols": []
+    },
+    {
+      "file": "nm/app/api.py",
+      "sha256": "a5b443762104b2f120e0ff24a35718305e9ecc279758e31f16a9570eebed638b",
+      "lines": 5798,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "invalid_request",
+          "line": 92,
+          "end_line": 118
+        },
+        {
+          "name": "unavailable_authentication",
+          "line": 126,
+          "end_line": 128
+        },
+        {
+          "name": "application",
+          "line": 134,
+          "end_line": 145
+        },
+        {
+          "name": "set_application",
+          "line": 148,
+          "end_line": 150
+        },
+        {
+          "name": "_Released",
+          "line": 156,
+          "end_line": 189
+        },
+        {
+          "name": "_release",
+          "line": 192,
+          "end_line": 194
+        },
+        {
+          "name": "_not_blank",
+          "line": 200,
+          "end_line": 210
+        },
+        {
+          "name": "_device",
+          "line": 231,
+          "end_line": 234
+        },
+        {
+          "name": "_client_label",
+          "line": 237,
+          "end_line": 250
+        },
+        {
+          "name": "signed_in",
+          "line": 253,
+          "end_line": 269
+        },
+        {
+          "name": "_origins",
+          "line": 288,
+          "end_line": 292
+        },
+        {
+          "name": "_require_origin",
+          "line": 295,
+          "end_line": 308
+        },
+        {
+          "name": "csrf_protected",
+          "line": 311,
+          "end_line": 359
+        },
+        {
+          "name": "_uploads",
+          "line": 371,
+          "end_line": 375
+        },
+        {
+          "name": "_upload_call",
+          "line": 378,
+          "end_line": 389
+        },
+        {
+          "name": "open_upload_first_intake",
+          "line": 393,
+          "end_line": 395
+        },
+        {
+          "name": "correct_opening",
+          "line": 399,
+          "end_line": 401
+        },
+        {
+          "name": "begin_upload",
+          "line": 405,
+          "end_line": 406
+        },
+        {
+          "name": "list_uploads",
+          "line": 410,
+          "end_line": 411
+        },
+        {
+          "name": "inspect_upload",
+          "line": 415,
+          "end_line": 416
+        },
+        {
+          "name": "receive_upload_chunk",
+          "line": 421,
+          "end_line": 431
+        },
+        {
+          "name": "complete_upload",
+          "line": 435,
+          "end_line": 436
+        },
+        {
+          "name": "cancel_upload",
+          "line": 440,
+          "end_line": 441
+        },
+        {
+          "name": "held_upload_content",
+          "line": 445,
+          "end_line": 488
+        },
+        {
+          "name": "TurnRequest",
+          "line": 491,
+          "end_line": 535
+        },
+        {
+          "name": "serving_state",
+          "line": 566,
+          "end_line": 612
+        },
+        {
+          "name": "health",
+          "line": 616,
+          "end_line": 617
+        },
+        {
+          "name": "transcribe_dictation",
+          "line": 621,
+          "end_line": 655
+        },
+        {
+          "name": "_socket_from_this_page",
+          "line": 658,
+          "end_line": 674
+        },
+        {
+          "name": "dictation_socket",
+          "line": 678,
+          "end_line": 749
+        },
+        {
+          "name": "source_excerpt",
+          "line": 753,
+          "end_line": 787
+        },
+        {
+          "name": "_brain_source",
+          "line": 790,
+          "end_line": 872
+        },
+        {
+          "name": "_read_brain_source",
+          "line": 875,
+          "end_line": 887
+        },
+        {
+          "name": "brain_matter_source",
+          "line": 891,
+          "end_line": 895
+        },
+        {
+          "name": "brain_chat_source",
+          "line": 899,
+          "end_line": 904
+        },
+        {
+          "name": "_source_view",
+          "line": 907,
+          "end_line": 946
+        },
+        {
+          "name": "_stored_document",
+          "line": 949,
+          "end_line": 995
+        },
+        {
+          "name": "_brain_chat_rows",
+          "line": 998,
+          "end_line": 1046
+        },
+        {
+          "name": "chats",
+          "line": 1050,
+          "end_line": 1054
+        },
+        {
+          "name": "_pending_chat_list",
+          "line": 1057,
+          "end_line": 1091
+        },
+        {
+          "name": "work",
+          "line": 1095,
+          "end_line": 1106
+        },
+        {
+          "name": "chat",
+          "line": 1110,
+          "end_line": 1120
+        },
+        {
+          "name": "transcript",
+          "line": 1124,
+          "end_line": 1196
+        },
+        {
+          "name": "ReplyFeedbackBody",
+          "line": 1199,
+          "end_line": 1207
+        },
+        {
+          "name": "rate_reply",
+          "line": 1212,
+          "end_line": 1246
+        },
+        {
+          "name": "_register_of",
+          "line": 1249,
+          "end_line": 1254
+        },
+        {
+          "name": "_checked_checklists",
+          "line": 1260,
+          "end_line": 1305
+        },
+        {
+          "name": "_registers",
+          "line": 1308,
+          "end_line": 1340
+        },
+        {
+          "name": "matters",
+          "line": 1344,
+          "end_line": 1365
+        },
+        {
+          "name": "matter",
+          "line": 1370,
+          "end_line": 1404
+        },
+        {
+          "name": "matter_cover",
+          "line": 1409,
+          "end_line": 1427
+        },
+        {
+          "name": "get_casefile",
+          "line": 1431,
+          "end_line": 1455
+        },
+        {
+          "name": "PremiseStatement",
+          "line": 1458,
+          "end_line": 1470
+        },
+        {
+          "name": "state_premise",
+          "line": 1475,
+          "end_line": 1523
+        },
+        {
+          "name": "ReliefStatement",
+          "line": 1526,
+          "end_line": 1556
+        },
+        {
+          "name": "state_relief",
+          "line": 1561,
+          "end_line": 1649
+        },
+        {
+          "name": "CapacityUpdate",
+          "line": 1652,
+          "end_line": 1656
+        },
+        {
+          "name": "update_capacity",
+          "line": 1660,
+          "end_line": 1672
+        },
+        {
+          "name": "UnavailableNeed",
+          "line": 1675,
+          "end_line": 1684
+        },
+        {
+          "name": "ResumeNeed",
+          "line": 1687,
+          "end_line": 1690
+        },
+        {
+          "name": "_commit_matter",
+          "line": 1693,
+          "end_line": 1699
+        },
+        {
+          "name": "mark_need_unavailable",
+          "line": 1704,
+          "end_line": 1725
+        },
+        {
+          "name": "resume_need",
+          "line": 1730,
+          "end_line": 1742
+        },
+        {
+          "name": "RetentionAsset",
+          "line": 1745,
+          "end_line": 1751
+        },
+        {
+          "name": "RetentionCopy",
+          "line": 1754,
+          "end_line": 1766
+        },
+        {
+          "name": "RetentionRequestBody",
+          "line": 1769,
+          "end_line": 1788
+        },
+        {
+          "name": "create_retention_request",
+          "line": 1793,
+          "end_line": 1841
+        },
+        {
+          "name": "get_retention_request",
+          "line": 1845,
+          "end_line": 1866
+        },
+        {
+          "name": "HoldBody",
+          "line": 1869,
+          "end_line": 1877
+        },
+        {
+          "name": "ReleaseHoldBody",
+          "line": 1880,
+          "end_line": 1885
+        },
+        {
+          "name": "ResolveCopyBody",
+          "line": 1888,
+          "end_line": 1893
+        },
+        {
+          "name": "AdvanceBody",
+          "line": 1896,
+          "end_line": 1911
+        },
+        {
+          "name": "RestoreCheckBody",
+          "line": 1914,
+          "end_line": 1920
+        },
+        {
+          "name": "_retention_or_404",
+          "line": 1923,
+          "end_line": 1928
+        },
+        {
+          "name": "_save_retention",
+          "line": 1931,
+          "end_line": 1939
+        },
+        {
+          "name": "place_retention_hold",
+          "line": 1944,
+          "end_line": 1964
+        },
+        {
+          "name": "release_retention_hold",
+          "line": 1969,
+          "end_line": 1985
+        },
+        {
+          "name": "resolve_retention_copy",
+          "line": 1990,
+          "end_line": 2006
+        },
+        {
+          "name": "advance_retention_request",
+          "line": 2011,
+          "end_line": 2043
+        },
+        {
+          "name": "check_restore",
+          "line": 2047,
+          "end_line": 2064
+        },
+        {
+          "name": "AdviceDecisionBody",
+          "line": 2067,
+          "end_line": 2086
+        },
+        {
+          "name": "record_advice_decision",
+          "line": 2091,
+          "end_line": 2133
+        },
+        {
+          "name": "list_advice_decisions",
+          "line": 2137,
+          "end_line": 2150
+        },
+        {
+          "name": "ComparisonFigure",
+          "line": 2153,
+          "end_line": 2158
+        },
+        {
+          "name": "ComparisonOption",
+          "line": 2161,
+          "end_line": 2177
+        },
+        {
+          "name": "ComparisonBody",
+          "line": 2180,
+          "end_line": 2191
+        },
+        {
+          "name": "record_comparison",
+          "line": 2195,
+          "end_line": 2250
+        },
+        {
+          "name": "get_comparison",
+          "line": 2254,
+          "end_line": 2265
+        },
+        {
+          "name": "SourceBindingBody",
+          "line": 2268,
+          "end_line": 2286
+        },
+        {
+          "name": "bind_source_to_thread",
+          "line": 2291,
+          "end_line": 2359
+        },
+        {
+          "name": "list_source_bindings",
+          "line": 2363,
+          "end_line": 2393
+        },
+        {
+          "name": "DraftClaim",
+          "line": 2396,
+          "end_line": 2409
+        },
+        {
+          "name": "DraftingPackageBody",
+          "line": 2412,
+          "end_line": 2443
+        },
+        {
+          "name": "_draft_claims",
+          "line": 2446,
+          "end_line": 2452
+        },
+        {
+          "name": "prepare_drafting_package",
+          "line": 2457,
+          "end_line": 2517
+        },
+        {
+          "name": "_matter_sources",
+          "line": 2520,
+          "end_line": 2534
+        },
+        {
+          "name": "get_drafting_package",
+          "line": 2538,
+          "end_line": 2547
+        },
+        {
+          "name": "export_drafting_package",
+          "line": 2551,
+          "end_line": 2566
+        },
+        {
+          "name": "HandoverBody",
+          "line": 2569,
+          "end_line": 2582
+        },
+        {
+          "name": "HandoverActBody",
+          "line": 2585,
+          "end_line": 2590
+        },
+        {
+          "name": "ClosureBody",
+          "line": 2593,
+          "end_line": 2603
+        },
+        {
+          "name": "matter_re_entry",
+          "line": 2607,
+          "end_line": 2618
+        },
+        {
+          "name": "offer_handover",
+          "line": 2622,
+          "end_line": 2652
+        },
+        {
+          "name": "accept_handover",
+          "line": 2657,
+          "end_line": 2693
+        },
+        {
+          "name": "decline_handover",
+          "line": 2698,
+          "end_line": 2723
+        },
+        {
+          "name": "close_matter",
+          "line": 2728,
+          "end_line": 2767
+        },
+        {
+          "name": "reopen_matter",
+          "line": 2772,
+          "end_line": 2801
+        },
+        {
+          "name": "EventBody",
+          "line": 2804,
+          "end_line": 2813
+        },
+        {
+          "name": "record_matter_event",
+          "line": 2818,
+          "end_line": 2847
+        },
+        {
+          "name": "ActionProposalBody",
+          "line": 2850,
+          "end_line": 2864
+        },
+        {
+          "name": "ConfirmActionBody",
+          "line": 2867,
+          "end_line": 2875
+        },
+        {
+          "name": "OutcomeBody",
+          "line": 2878,
+          "end_line": 2891
+        },
+        {
+          "name": "ReconcileBody",
+          "line": 2894,
+          "end_line": 2914
+        },
+        {
+          "name": "create_action_proposal",
+          "line": 2919,
+          "end_line": 2951
+        },
+        {
+          "name": "confirm_action",
+          "line": 2956,
+          "end_line": 2981
+        },
+        {
+          "name": "execute_action",
+          "line": 2986,
+          "end_line": 3008
+        },
+        {
+          "name": "record_action_outcome",
+          "line": 3013,
+          "end_line": 3042
+        },
+        {
+          "name": "reconcile_action",
+          "line": 3047,
+          "end_line": 3077
+        },
+        {
+          "name": "HearingPackBody",
+          "line": 3080,
+          "end_line": 3098
+        },
+        {
+          "name": "WitnessBody",
+          "line": 3101,
+          "end_line": 3127
+        },
+        {
+          "name": "ExpertBody",
+          "line": 3130,
+          "end_line": 3152
+        },
+        {
+          "name": "ConcessionCheckBody",
+          "line": 3155,
+          "end_line": 3166
+        },
+        {
+          "name": "create_hearing_pack",
+          "line": 3170,
+          "end_line": 3216
+        },
+        {
+          "name": "get_hearing_pack",
+          "line": 3220,
+          "end_line": 3236
+        },
+        {
+          "name": "add_witness_plan",
+          "line": 3241,
+          "end_line": 3288
+        },
+        {
+          "name": "add_expert_instruction",
+          "line": 3293,
+          "end_line": 3338
+        },
+        {
+          "name": "in_court_view",
+          "line": 3342,
+          "end_line": 3366
+        },
+        {
+          "name": "check_concession",
+          "line": 3371,
+          "end_line": 3392
+        },
+        {
+          "name": "ServiceAuthorityBody",
+          "line": 3395,
+          "end_line": 3411
+        },
+        {
+          "name": "CancelServiceBody",
+          "line": 3414,
+          "end_line": 3421
+        },
+        {
+          "name": "ServiceJobBody",
+          "line": 3424,
+          "end_line": 3436
+        },
+        {
+          "name": "set_service_authority",
+          "line": 3441,
+          "end_line": 3486
+        },
+        {
+          "name": "cancel_service_authority",
+          "line": 3491,
+          "end_line": 3526
+        },
+        {
+          "name": "schedule_service_job",
+          "line": 3530,
+          "end_line": 3570
+        },
+        {
+          "name": "get_service",
+          "line": 3574,
+          "end_line": 3592
+        },
+        {
+          "name": "Correction",
+          "line": 3595,
+          "end_line": 3623
+        },
+        {
+          "name": "correct_fact",
+          "line": 3628,
+          "end_line": 3752
+        },
+        {
+          "name": "get_dependencies",
+          "line": 3756,
+          "end_line": 3769
+        },
+        {
+          "name": "get_commission",
+          "line": 3773,
+          "end_line": 3789
+        },
+        {
+          "name": "set_commission",
+          "line": 3793,
+          "end_line": 3914
+        },
+        {
+          "name": "declare_emergency",
+          "line": 3918,
+          "end_line": 4019
+        },
+        {
+          "name": "get_emergency",
+          "line": 4023,
+          "end_line": 4065
+        },
+        {
+          "name": "_record_urgency",
+          "line": 4068,
+          "end_line": 4145
+        },
+        {
+          "name": "_outstanding_screens",
+          "line": 4148,
+          "end_line": 4161
+        },
+        {
+          "name": "conceded",
+          "line": 4165,
+          "end_line": 4180
+        },
+        {
+          "name": "_emergency_target",
+          "line": 4183,
+          "end_line": 4197
+        },
+        {
+          "name": "_revoke_emergency",
+          "line": 4200,
+          "end_line": 4234
+        },
+        {
+          "name": "concede",
+          "line": 4238,
+          "end_line": 4289
+        },
+        {
+          "name": "_owned",
+          "line": 4292,
+          "end_line": 4297
+        },
+        {
+          "name": "_capacity_of",
+          "line": 4300,
+          "end_line": 4311
+        },
+        {
+          "name": "_record_refusal",
+          "line": 4314,
+          "end_line": 4329
+        },
+        {
+          "name": "_commission_from",
+          "line": 4332,
+          "end_line": 4393
+        },
+        {
+          "name": "matter_summary",
+          "line": 4397,
+          "end_line": 4419
+        },
+        {
+          "name": "turn",
+          "line": 4423,
+          "end_line": 4471
+        },
+        {
+          "name": "search",
+          "line": 4476,
+          "end_line": 4524
+        },
+        {
+          "name": "ResearchRequest",
+          "line": 4545,
+          "end_line": 4555
+        },
+        {
+          "name": "AttachRequest",
+          "line": 4558,
+          "end_line": 4564
+        },
+        {
+          "name": "_stale",
+          "line": 4567,
+          "end_line": 4574
+        },
+        {
+          "name": "_research_rows",
+          "line": 4577,
+          "end_line": 4579
+        },
+        {
+          "name": "_research_or_404",
+          "line": 4582,
+          "end_line": 4590
+        },
+        {
+          "name": "_discovery_dict",
+          "line": 4593,
+          "end_line": 4610
+        },
+        {
+          "name": "_search_position",
+          "line": 4613,
+          "end_line": 4622
+        },
+        {
+          "name": "start_research",
+          "line": 4627,
+          "end_line": 4740
+        },
+        {
+          "name": "list_research",
+          "line": 4744,
+          "end_line": 4748
+        },
+        {
+          "name": "get_research",
+          "line": 4752,
+          "end_line": 4756
+        },
+        {
+          "name": "inspect_case",
+          "line": 4760,
+          "end_line": 4801
+        },
+        {
+          "name": "attach_source",
+          "line": 4806,
+          "end_line": 4900
+        },
+        {
+          "name": "Credentials",
+          "line": 4903,
+          "end_line": 4905
+        },
+        {
+          "name": "ModelPermissionRequest",
+          "line": 4908,
+          "end_line": 4912
+        },
+        {
+          "name": "model_permission",
+          "line": 4916,
+          "end_line": 4925
+        },
+        {
+          "name": "set_model_permission",
+          "line": 4929,
+          "end_line": 4944
+        },
+        {
+          "name": "RegistrationConsent",
+          "line": 4947,
+          "end_line": 4960
+        },
+        {
+          "name": "Registration",
+          "line": 4963,
+          "end_line": 4979
+        },
+        {
+          "name": "_consent",
+          "line": 4982,
+          "end_line": 4993
+        },
+        {
+          "name": "ForgotPassword",
+          "line": 4996,
+          "end_line": 5001
+        },
+        {
+          "name": "PasswordResetRequest",
+          "line": 5004,
+          "end_line": 5011
+        },
+        {
+          "name": "_workspace",
+          "line": 5028,
+          "end_line": 5035
+        },
+        {
+          "name": "_professional_status",
+          "line": 5038,
+          "end_line": 5040
+        },
+        {
+          "name": "_professional_access",
+          "line": 5043,
+          "end_line": 5045
+        },
+        {
+          "name": "registration_origin",
+          "line": 5061,
+          "end_line": 5069
+        },
+        {
+          "name": "_admit_auth_attempt",
+          "line": 5072,
+          "end_line": 5087
+        },
+        {
+          "name": "register",
+          "line": 5092,
+          "end_line": 5201
+        },
+        {
+          "name": "_public_registration_available",
+          "line": 5210,
+          "end_line": 5217
+        },
+        {
+          "name": "account_capabilities",
+          "line": 5221,
+          "end_line": 5227
+        },
+        {
+          "name": "_send_confirmation",
+          "line": 5230,
+          "end_line": 5239
+        },
+        {
+          "name": "ConfirmEmail",
+          "line": 5242,
+          "end_line": 5248
+        },
+        {
+          "name": "PendingCancellation",
+          "line": 5251,
+          "end_line": 5254
+        },
+        {
+          "name": "cancel_registration",
+          "line": 5258,
+          "end_line": 5273
+        },
+        {
+          "name": "confirm_email",
+          "line": 5277,
+          "end_line": 5302
+        },
+        {
+          "name": "resend_confirmation",
+          "line": 5306,
+          "end_line": 5324
+        },
+        {
+          "name": "public_origin",
+          "line": 5333,
+          "end_line": 5340
+        },
+        {
+          "name": "login_origin",
+          "line": 5343,
+          "end_line": 5345
+        },
+        {
+          "name": "_public_base",
+          "line": 5348,
+          "end_line": 5360
+        },
+        {
+          "name": "_send_reset_link",
+          "line": 5363,
+          "end_line": 5395
+        },
+        {
+          "name": "forgot_password",
+          "line": 5401,
+          "end_line": 5425
+        },
+        {
+          "name": "reset_password",
+          "line": 5430,
+          "end_line": 5465
+        },
+        {
+          "name": "login",
+          "line": 5470,
+          "end_line": 5571
+        },
+        {
+          "name": "logout",
+          "line": 5575,
+          "end_line": 5599
+        },
+        {
+          "name": "sessions",
+          "line": 5603,
+          "end_line": 5646
+        },
+        {
+          "name": "revoke_sessions",
+          "line": 5650,
+          "end_line": 5674
+        },
+        {
+          "name": "SelectedSession",
+          "line": 5677,
+          "end_line": 5679
+        },
+        {
+          "name": "revoke_selected_session",
+          "line": 5683,
+          "end_line": 5697
+        },
+        {
+          "name": "whoami",
+          "line": 5701,
+          "end_line": 5713
+        },
+        {
+          "name": "_access_window",
+          "line": 5716,
+          "end_line": 5722
+        },
+        {
+          "name": "session_activity",
+          "line": 5726,
+          "end_line": 5732
+        },
+        {
+          "name": "draft_key",
+          "line": 5736,
+          "end_line": 5744
+        },
+        {
+          "name": "_loop_session_current",
+          "line": 5749,
+          "end_line": 5756
+        }
+      ]
+    },
+    {
+      "file": "nm/app/app.js",
+      "sha256": "a78f65d6dbf24e6acd4fccb9aa2a6f08e649079f65cde7432efccc67e339ab51",
+      "lines": 6616,
+      "working_tree_status": " M",
+      "symbols": []
+    },
+    {
+      "file": "nm/app/brain-sources.js",
+      "sha256": "849767ab145cec5b733c319db48cda011737a769a991ec039da1862f610d457c",
+      "lines": 262,
+      "working_tree_status": "clean",
+      "symbols": []
+    },
+    {
+      "file": "nm/app/composition.py",
+      "sha256": "1e65bcd5e4c3c639b68084e21df9a8e981a994b001747696d28592211c5c8806",
+      "lines": 1115,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "build_model",
+          "line": 69,
+          "end_line": 86
+        },
+        {
+          "name": "build_mail",
+          "line": 89,
+          "end_line": 112
+        },
+        {
+          "name": "Application",
+          "line": 115,
+          "end_line": 1034
+        },
+        {
+          "name": "SharedSealRefused",
+          "line": 1046,
+          "end_line": 1047
+        },
+        {
+          "name": "_refuse_a_shared_seal",
+          "line": 1050,
+          "end_line": 1099
+        },
+        {
+          "name": "_ensure_local_key",
+          "line": 1102,
+          "end_line": 1115
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_port.py",
+      "sha256": "f4a566dfdd8b2b0d0f5c8a035885ca406be59c3de1e8b6891b5dff0586390288",
+      "lines": 621,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "Tier",
+          "line": 37,
+          "end_line": 43
+        },
+        {
+          "name": "ModelError",
+          "line": 52,
+          "end_line": 62
+        },
+        {
+          "name": "RateLimited",
+          "line": 65,
+          "end_line": 66
+        },
+        {
+          "name": "ProviderUnavailable",
+          "line": 69,
+          "end_line": 70
+        },
+        {
+          "name": "OutputTruncated",
+          "line": 73,
+          "end_line": 81
+        },
+        {
+          "name": "ContextOverflow",
+          "line": 84,
+          "end_line": 89
+        },
+        {
+          "name": "ContentRefused",
+          "line": 92,
+          "end_line": 97
+        },
+        {
+          "name": "SchemaViolation",
+          "line": 100,
+          "end_line": 106
+        },
+        {
+          "name": "TierUnavailable",
+          "line": 109,
+          "end_line": 110
+        },
+        {
+          "name": "ConfigurationError",
+          "line": 113,
+          "end_line": 118
+        },
+        {
+          "name": "Prompt",
+          "line": 125,
+          "end_line": 142
+        },
+        {
+          "name": "Usage",
+          "line": 146,
+          "end_line": 170
+        },
+        {
+          "name": "ModelResult",
+          "line": 174,
+          "end_line": 211
+        },
+        {
+          "name": "EmbeddingResult",
+          "line": 215,
+          "end_line": 219
+        },
+        {
+          "name": "ToolDefinition",
+          "line": 223,
+          "end_line": 237
+        },
+        {
+          "name": "ToolCall",
+          "line": 241,
+          "end_line": 254
+        },
+        {
+          "name": "ToolMessage",
+          "line": 258,
+          "end_line": 283
+        },
+        {
+          "name": "ToolCallResult",
+          "line": 287,
+          "end_line": 306
+        },
+        {
+          "name": "tool_request_text",
+          "line": 309,
+          "end_line": 321
+        },
+        {
+          "name": "require_tool_request",
+          "line": 324,
+          "end_line": 332
+        },
+        {
+          "name": "validate_tool_history",
+          "line": 335,
+          "end_line": 355
+        },
+        {
+          "name": "require_tool_calls",
+          "line": 358,
+          "end_line": 370
+        },
+        {
+          "name": "estimate_tokens",
+          "line": 396,
+          "end_line": 415
+        },
+        {
+          "name": "on_the_wire",
+          "line": 421,
+          "end_line": 464
+        },
+        {
+          "name": "require_schema",
+          "line": 467,
+          "end_line": 474
+        },
+        {
+          "name": "_require_type",
+          "line": 481,
+          "end_line": 523
+        },
+        {
+          "name": "_require_tool_schema",
+          "line": 526,
+          "end_line": 560
+        },
+        {
+          "name": "ModelPort",
+          "line": 564,
+          "end_line": 621
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_budget.py",
+      "sha256": "57c3a2063bd3633b5b96725a4be96f0be9e25e50d326c9cad66a81d3720923e0",
+      "lines": 66,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "prompt_tokens",
+          "line": 37,
+          "end_line": 38
+        },
+        {
+          "name": "guard_budget",
+          "line": 41,
+          "end_line": 55
+        },
+        {
+          "name": "guard_tool_budget",
+          "line": 58,
+          "end_line": 66
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_openai_adapter.py",
+      "sha256": "69cf07831b607a853eb2aab8a6af2d3f5b21bef815ad43421df863da09f45651",
+      "lines": 400,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "_completion_of",
+          "line": 73,
+          "end_line": 77
+        },
+        {
+          "name": "OpenAIModelAdapter",
+          "line": 80,
+          "end_line": 400
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_config.py",
+      "sha256": "2f1fc48db2f80bee1dfc212ff31aef42f2b1ac548aa5ea968078bf50d3f869c7",
+      "lines": 279,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "reservation_micro_usd",
+          "line": 89,
+          "end_line": 98
+        },
+        {
+          "name": "load_dotenv",
+          "line": 122,
+          "end_line": 134
+        },
+        {
+          "name": "TierConfig",
+          "line": 138,
+          "end_line": 154
+        },
+        {
+          "name": "require_priced_snapshot",
+          "line": 157,
+          "end_line": 166
+        },
+        {
+          "name": "ModelConfig",
+          "line": 170,
+          "end_line": 197
+        },
+        {
+          "name": "_require_pinned",
+          "line": 200,
+          "end_line": 206
+        },
+        {
+          "name": "_require_permitted",
+          "line": 209,
+          "end_line": 215
+        },
+        {
+          "name": "load",
+          "line": 218,
+          "end_line": 254
+        },
+        {
+          "name": "_check_judge_distinct",
+          "line": 257,
+          "end_line": 279
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_call_budget.py",
+      "sha256": "b0679c27638442a698c5f32e9c79f903f1298b6c12fc21a8833b4599fefdd7e3",
+      "lines": 257,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "CallBudget",
+          "line": 27,
+          "end_line": 199
+        },
+        {
+          "name": "SessionCallBudget",
+          "line": 202,
+          "end_line": 257
+        }
+      ]
+    },
+    {
+      "file": "nm/shared/model_transport.py",
+      "sha256": "d4bf2dc3a6f366b344557aeb5d42a8d57b72ff66cbeefb8ea22234c46af61810",
+      "lines": 74,
+      "working_tree_status": "clean",
+      "symbols": [
+        {
+          "name": "normalise_error",
+          "line": 20,
+          "end_line": 43
+        },
+        {
+          "name": "request_with_retries",
+          "line": 46,
+          "end_line": 74
+        }
+      ]
+    }
+  ],
+  "paid_ledger_snapshot": {
+    "file": "outputs/astra-brain-reliability-20261004/six-stage-usd2.sqlite",
+    "unit": "microUSD conservative recorded token charges, not provider invoice",
+    "rows": [
+      [
+        "measured",
+        95,
+        1574779,
+        3494660,
+        110550
+      ]
+    ]
+  }
+}
