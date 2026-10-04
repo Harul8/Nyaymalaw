@@ -134,8 +134,12 @@ Establish its observed baseline and failed general invariant, then fix the
 owning prompt and code together where needed. Test through the shipped public
 boundary, inspect saved records and actual browser replies, and repair general
 failures before proceeding. Offline checks, positive model verdicts and saved
-turns alone do not establish semantic accuracy or useful completion. Record
-the evidence, call impact and remaining limits in Before Build. At each logical
+turns alone do not establish semantic accuracy or useful completion. Use
+browser-observed behaviour as the primary acceptance evidence: judge the actual
+reply, source panes and saved matter against the complete conversation and
+requested work. Keep automated checks focused on regression protection; passing
+counts are not a completion criterion and must not displace browser evaluation.
+Record the evidence, call impact and remaining limits in Before Build. At each logical
 milestone, complete the relevant checks and browser review, then commit and
 push that coherent change to the working branch before moving to the next
 milestone. Report the commit and any remaining limitations.
