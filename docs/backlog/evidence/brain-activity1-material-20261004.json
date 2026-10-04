@@ -1,0 +1,108 @@
+{
+  "base_commit": "b9f59a4",
+  "prompt_change_only": "material._SYSTEM duplication clarification",
+  "pre_candidate_ledger": {
+    "measured_attempts": 112,
+    "charged_usd": 1.613858,
+    "cap_usd": 3
+  },
+  "upstream_opening_attempts": {
+    "attempts": 2,
+    "dispatches": 4,
+    "saved": false,
+    "diagnostic": "opening candidate lacks current-message support",
+    "material_prompt_reached": false
+  },
+  "existing_matter_addition": {
+    "turn_id": "turn_6f4c4b62-49a3-4c45-a625-ca7b1a0b5b15",
+    "saved": true,
+    "reply_delivered": true,
+    "material_rows": 0,
+    "material_prompt_reached": false,
+    "calls": 2,
+    "cost_usd": 0.004623600000000001,
+    "observed_issue": "Significant latest account received but material extraction skipped; no material rows saved"
+  },
+  "offline_checks": {
+    "command": "pytest tests/test_brain_material.py -q",
+    "passed": 13,
+    "scope": "Exact committed baseline with one prompt paragraph changed; mocked checks protect existing contract, not semantic qualification"
+  },
+  "status": "not qualified; failed candidate preserved and production prompt restored",
+  "activity_1_complete": false,
+  "explicit_record_update": {
+    "turn_id": "turn_1871e35a-3661-46db-9d2f-14067591c908",
+    "saved": true,
+    "material_prompt_reached": true,
+    "extractor_calls": 1,
+    "non_dispute_material_rows": 0,
+    "changed_dispute_rows": 1,
+    "material_projection_rows": 0,
+    "browser_pane": "No material is linked to this dispute yet.",
+    "reply_claim": "This updated attributed material record incorporates all independently checkable details as distinct facts, each linked to its original reported passage.",
+    "assessment": "Claimed material-record completion is contradicted by saved projection and browser pane",
+    "calls": 9,
+    "operations": [
+      "interpret_conversation",
+      "classify_account_sources",
+      "extract_disputes",
+      "verify_disputes",
+      "extract_legal_details",
+      "decompose_disputes",
+      "continue_conversation",
+      "continue_conversation",
+      "verify_continuation"
+    ],
+    "usage_cost_usd": 0.0321632,
+    "model_time_ms": 39667
+  },
+  "scope": {
+    "production_file": "nm/brain/material.py",
+    "prompt": "_SYSTEM",
+    "logic": "Distinguish material deduplication from facts in dispute assignment targets",
+    "python_or_schema_changes": 0,
+    "additional_model_stages": 0,
+    "guards_relaxed": false,
+    "production_change_retained": false,
+    "candidate_preserved": "outputs/brain-activity1-material-20261004/failed-material-clarification.patch"
+  },
+  "test_cost": {
+    "physical_dispatches": 15,
+    "candidate_budget_charge_usd": 0.04478,
+    "ledger_measured_attempts": 127,
+    "ledger_charged_usd": 1.658638,
+    "cap_usd": 3,
+    "remaining_usd": 1.341362,
+    "unknown_or_reserved_attempts": 0
+  },
+  "unverified": [
+    "Initial opening blocked upstream",
+    "Automatic material capture skipped on significant account",
+    "Duplication/correction follow-ups not run because initial material capture failed",
+    "Legal corpus unavailable in isolated fixture; no legal-retrieval qualification"
+  ],
+  "general_invariants_exposed": [
+    "A factual recap cannot substitute for capturing materially significant account",
+    "A dispute description cannot substitute for independent material details",
+    "An empty valid proposal envelope does not establish complete material coverage",
+    "Claims about record updates must agree with the authoritative saved record"
+  ],
+  "next_step": "Discuss a single owning-boundary change with the user before editing another prompt or production file",
+  "screenshots": {
+    "baseline-browser.png": "2f366b52ffe7cde707f8581c69b2f24912e696f19802aa2925f1d78fad53e87c",
+    "material-empty-pane.png": "9b94afadf575d6dc29fb66ff33bbd1f4924228c65c4be87931da23a8de95dde0"
+  },
+  "before_build": {
+    "owner": "LB-178",
+    "before_build_row": 370,
+    "implementation_plan_row": 531,
+    "changed_cells": 10,
+    "unexpected_changes": 0,
+    "formula_or_mirror_errors": 0,
+    "index_workbook_sha256": "6d015f2aa4f9beac20dcfa7d822af4d4351652c033beddd52aee1f1418f7d259",
+    "canonical_other_candidate_changes_preserved": true,
+    "accepted_split_lineage_scope_preserved": true,
+    "current_experiment_accepted": false,
+    "visual_method": "Expanded reading preview; no native Excel rendering claimed"
+  }
+}
