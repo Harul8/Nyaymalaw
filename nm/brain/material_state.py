@@ -84,7 +84,12 @@ def _current_links(dispute_id: str, *, active: set[str],
         if item in active:
             reached.add(item)
         else:
-            pending.extend(successors.get(item, ()))
+            replacements = successors.get(item, set())
+            # Later withdrawal or recombination does not assign the old
+            # detail to a branch. Only an explicit material revision can.
+            if len(replacements) > 1:
+                return set()
+            pending.extend(replacements)
     return reached
 
 

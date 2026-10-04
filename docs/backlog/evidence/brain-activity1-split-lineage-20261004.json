@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "activity": 1,
+  "activity_status": "in_progress",
+  "slice_status": "qualified",
+  "before_build_owner": "LB-178, row 370; Implementation Plan row 531",
+  "production_file": "nm/brain/material_state.py",
+  "decision_owner": "_current_links",
+  "prompt_changes": 0,
+  "invariant": "A historical split does not become an unambiguous material assignment merely because only one successor is active later. Assignment requires an explicit validated material revision.",
+  "observed_failure": "The original detail appeared as linked material under the surviving issue after its sibling was withdrawn. Recombination reproduced the same failure in the focused regression.",
+  "repair": "Stop inherited material-link resolution at a historical node with multiple successors. Preserve the original detail as unresolved, direct valid links and unambiguous single-successor chains. Explicit material correction resolves assignment while retaining history.",
+  "browser": {
+    "boundary": "Shipped application, normal sign-in, actual GET matter/transcript endpoints and dispute reader",
+    "fixture": "Isolated encrypted temporary store with explicit synthetic saved proposals; no auth override or mocked HTTP responses",
+    "user_session": "Existing 127.0.0.1:8072 application and signed-in session untouched",
+    "before": "The dates detail was incorrectly displayed under First revised issue",
+    "after": "First revised issue has no inherited material; exact dates detail appears under Unassigned material (1)",
+    "reload": "Unresolved assignment survives page reload and reopening",
+    "valid_peer": "The independent receipt detail remains linked to Independent issue",
+    "explicit_revision": "A fixture carrying an explicitly grounded material correction links the revised detail and displays its original reference",
+    "model_calls": 0,
+    "saved_history_unchanged": true,
+    "screenshot": "docs/backlog/evidence/brain-activity1-split-lineage-20261004.png",
+    "local_artifacts": "outputs/brain-activity1-split-20261004"
+  },
+  "regression": {
+    "working_tree": "20 focused checks passed",
+    "isolated_committed_baseline": "30 focused checks passed against a968b8794c6f23a262a09396659b332765d4e341 with only this production file and new regression test overlaid",
+    "cases": ["split then withdrawal", "split then recombination", "explicit checked material relink", "single-successor chain", "valid independent link", "authenticated board reread", "exact transcript preservation"],
+    "test_file": "tests/test_brain_material_split_lineage.py",
+    "production_sha256": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711",
+    "test_sha256": "2c85e5fd86ee1a211090abb574d500243f21897b178a477f83c22eee86f16055"
+  },
+  "call_impact": {
+    "normal_added_calls_per_user_turn": 0,
+    "conditional_added_calls_per_user_turn": 0,
+    "projection_read_calls": 0,
+    "input": "Existing validated dispute lineage and attributed material proposals from saved history",
+    "output": "Current inherited assignments or unresolved placement; original records unchanged",
+    "paid_application_cost_usd": 0
+  },
+  "remaining_limits": [
+    "Synthetic saved-history checks qualify projection, not live model extraction or semantic review",
+    "Activity 1 source-purpose boundaries, omission coverage and extraction recovery remain unqualified",
+    "Activities 2 through 6 remain queued in the requested order",
+    "Existing larger unfinished changes are preserved and excluded from this production milestone"
+  ]
+}
