@@ -13,6 +13,40 @@ stable instruction. Validate structured output and its references before use.
 An interpretation is a proposal, never authority to change a fact, permission,
 source status, or external action.
 
+Keep each model call focused on one coherent responsibility. Related decisions
+may share a call when they need the same context and quality; do not add a call
+for each instruction. Order the prompt by decision dependencies: understand the
+request, examine original sources, determine supported content and gaps,
+associate any relevant work progress, then return the declared output. Keep
+formatting requirements together. Define consequential terms once and use them
+consistently across instructions, input fields and output contracts. Distinguish
+checked matter work from work that needs legal authority.
+
+Write direct general rules and precise definitions. Consolidate repeated
+warnings without losing attribution, source purpose, chronology, certainty,
+scope or other necessary distinctions. Separate original conversation,
+current input, NM interpretations, work state and retrieved material visibly.
+Retain the complete exact transcript; reduce duplicate representations and
+irrelevant bookkeeping rather than replacing original words with summaries.
+
+Let the model decide meaning and semantic relationships. Let code perform
+mechanical work it can safely derive: assign durable IDs, resolve and validate
+selected exact words, enforce owned references and allowed fields, reconcile
+declared coverage and bound retries. Never silently resolve an ambiguous
+reference or association. Require concise source-linked reasons for
+consequential judgments, explicit unresolved distinctions and preservation of
+independently supported work. Independent reviewers examine original evidence,
+unsupported additions and omissions; they do not merely endorse a writer's
+explanation. Correction feedback identifies the failed unit, selected source
+and precise mismatch.
+
+Judge prompt changes by measured behavior on unfamiliar conversations using
+the actual pinned model, not by brevity or apparent elegance. Compare wrong
+admissions, omissions, false completion, useful delivered work, retries,
+tokens, latency and cost. Do not assume a cleaner prompt makes different model
+versions equally capable. Prompt cleanup alone adds no routine model stage;
+any coverage or recovery additions require separate call accounting.
+
 On every message, identify materially significant legal content against the
 whole conversation. Preserve the exact current words, any earlier words needed
 to understand them, their speaker, matter scope, attribution, uncertainty,
@@ -43,6 +77,12 @@ layering another special case on top.
 For every error, check the owning logic and whether its prompt is clean and
 easy to follow. Corrections must be logical, strategic and general, with
 graceful handling of comparable failures. Never add a scenario-specific bypass.
+An observed matter is a test case, never a template for a repair. Identify the
+failed general rule and fix its owning boundary. No matter names, keyword
+lists or scenario-specific exceptions may enter production logic or prompts
+to make an observed case pass. Verify every repair across different matters
+and conversation patterns, using concrete cases only as regression fixtures.
+Apply this rule consistently to every slice, including prompt-only changes.
 
 For every new or changed model flow, report the number of model calls per user
 turn, including conditional calls, their purpose, and what input and output
@@ -60,6 +100,13 @@ history, identity, attribution, source ownership, or commit integrity cannot
 be trusted; saving an empty result for an unread stage would silently lose
 material and is not graceful recovery.
 
-At each logical milestone, complete the relevant checks and browser review,
-then commit and push that coherent change to the working branch before moving
-to the next milestone. Report the commit and any remaining limitations.
+Use Before Build as the work queue and take one feature or slice at a time.
+Establish its observed baseline and failed general invariant, then fix the
+owning prompt and code together where needed. Test through the shipped public
+boundary, inspect saved records and actual browser replies, and repair general
+failures before proceeding. Offline checks, positive model verdicts and saved
+turns alone do not establish semantic accuracy or useful completion. Record
+the evidence, call impact and remaining limits in Before Build. At each logical
+milestone, complete the relevant checks and browser review, then commit and
+push that coherent change to the working branch before moving to the next
+milestone. Report the commit and any remaining limitations.
