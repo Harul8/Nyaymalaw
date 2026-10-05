@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-185",
+  "base_commit": "7243340",
+  "status": "Narrow response-release safeguard implemented; useful browser delivery and record-operation completion remain unqualified",
+  "failed_general_invariant": "A provisional route and matter-scope label must not authorise release of unchecked interpreter prose.",
+  "baseline": {
+    "matter": "Synthetic hypothetical test account only",
+    "saved_turn_id": "turn_603550b4-97fa-4a58-b8a0-f2ae6dc31406",
+    "observed": "The reply claimed an assignment date was updated to 26 September, while the attributed material remained at 24 September. No extraction or independent response review ran.",
+    "route": {"next_step": "answer", "matter_scope": "none", "material_review": false},
+    "calls": 2,
+    "interpretation_only_attempts": 4,
+    "cost_usd": 0.012313,
+    "evidence": "outputs/material-provenance-20261005/browser-matter.json and live-model-packets.jsonl"
+  },
+  "change": {
+    "production_files": ["nm/brain/continuation.py"],
+    "functions": ["continuation_indexes"],
+    "prompts_changed": [],
+    "rule": "Include every interpreted request/contribution in the existing response writer and independent reviewer. Do not publish the interpreter's answer directly.",
+    "not_implemented": [
+      "Independent guarantee that material extraction runs when needed",
+      "Turn-owned operation and record-effect receipts",
+      "Receipt-backed completion decisions",
+      "Reviewer contract repair or automatic recovery improvements"
+    ]
+  },
+  "validation": {
+    "affected_flow_tests": {"tests": 127, "failures": 0, "errors": 0, "skipped": 0},
+    "fixture_migration": "Four existing test/fixture files now explicitly model checked answers and their call counts. No production decision was added to a test helper.",
+    "focused_counterexamples": "Exact HEAD gate fails all three public cases: false record completion, greeting, and mixed answer/task. Candidate passes all three.",
+    "regression_coverage": "Scripted false writer completion is independently rejected, receives bounded correction, leaves the task pending, preserves the material and exact history, and replays with zero calls.",
+    "limitation": "Scripted verdicts establish boundary mechanics, not live semantic reviewer accuracy.",
+    "junit": "outputs/release-gate-20261005/release-gate-focused.xml",
+    "lint": "Production function and two added public regression files pass Ruff."
+  },
+  "browser": {
+    "source_root": "outputs/release-gate-20261005/head-source",
+    "isolated_production_delta": "Only continuation_indexes differs from HEAD; the material input/prompt candidate and larger dirty changes were excluded.",
+    "model": "gpt-4.1-mini-2025-04-14 for all text roles",
+    "greeting": {
+      "turn_id": "turn_3a33832b-eece-462a-b3fe-18c305013ead",
+      "calls": 5,
+      "result": "Answer reached writer and independent reviewer. Reviewer accepted the wording but twice populated partial-retention fields, so validation withheld the reply. The saved fallback asks the advocate to continue; that delivery defect remains open.",
+      "unchecked_router_reply_released": false,
+      "useful_delivery_qualified": false
+    },
+    "saved_correction_followup": {
+      "calls": 2,
+      "result": "Interpreter twice selected answer/current; existing scope restriction rejected the turn before save. No new seventh turn or material changes were saved.",
+      "qualified": false
+    },
+    "preservation": {
+      "original_five_turns_unchanged": true,
+      "disputes_unchanged": true,
+      "material_unchanged": true,
+      "work_unchanged": true,
+      "saved_turns": 6
+    },
+    "evidence": [
+      "outputs/release-gate-20261005/browser-matter.json",
+      "outputs/release-gate-20261005/browser-preservation.json",
+      "outputs/release-gate-20261005/live-model-packets.jsonl",
+      "outputs/release-gate-20261005/browser-router-rejection.png"
+    ]
+  },
+  "model_calls": {
+    "formerly_unchecked_answer_normal": {"before": 1, "after": 3},
+    "normal_stages": ["interpret_conversation", "continue_conversation", "verify_continuation"],
+    "mixed_units_share_writer_and_reviewer": true,
+    "conditional_response_replacement": "One existing writer replacement and its review; normal scripted repair uses five calls total.",
+    "response_only_theoretical_ceiling": 8,
+    "ceiling_detail": "Two interpretation attempts, two writer attempts, and up to two malformed-verdict attempts per writer.",
+    "new_extraction_or_research_stage": false,
+    "release_slice_attempts": 7,
+    "release_slice_cost_usd": 0.029394,
+    "ledger_attempts": 149,
+    "ledger_charged_usd": 1.758046,
+    "ledger_cap_usd": 3.0
+  },
+  "rejection_quality_requirements": [
+    "Code checks observable ownership, source identity, execution and commit facts; legal meaning stays with the model and sourced review.",
+    "Derive IDs and applicable schema choices in code instead of asking a model to duplicate bookkeeping.",
+    "Normalise only unambiguous meaning-preserving formatting; never alter facts, attribution, permissions or uncertain references.",
+    "An optional metadata defect should not destroy independent valid content unless its meaning, grounding or completion depends on that field.",
+    "A successful review may yield no changes; a prior committed operation may establish already completed work. Zero new rows alone is not failure.",
+    "Require precise consequential rejection reasons and measure false acceptance, false rejection, retries, useful delivery, tokens, latency and cost on unfamiliar pinned-model browser conversations."
+  ],
+  "parked_material_candidate": "The four active-material provenance fields are preserved, offline checked, unqualified through the browser and excluded from this production milestone.",
+  "remaining_work": "Fix interpretation routing, reviewer representation, operation receipts and completion gates in separately discussed atomic pieces. This evidence does not mark the complete material-extraction feature or accuracy repair finished."
+}

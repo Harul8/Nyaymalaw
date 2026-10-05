@@ -1105,17 +1105,31 @@ def test_verifier_outage_never_releases_the_unchecked_draft():
 
 
 @pytest.mark.parametrize("relation", ["aside", "new", "continues"])
-def test_source_free_answer_route_needs_no_continuation_or_verifier(relation):
-    model = ContinuationModel([])
+def test_source_free_answer_route_uses_checked_reply_without_creating_work(relation):
+    greeting = unit(text="Hello.")
+    greeting["blocks"] = [greeting["blocks"][0]]
+    greeting["blocks"][0].update(kind="completion", uncertainty="none")
+    greeting.update(questions=[], next_work=[], progress_updates=[],
+                    work={"existing_id": "", "create": False},
+                    sufficiency={"status": "complete", "block_id": "account-0"})
+    model = ContinuationModel([{"units": [greeting]}, verdict(0)])
     plan = conversation_plan(items=(WorkItem(
         request="Hello", relation=relation, matter_scope="none",
-        priority="ordinary", next_step="answer", reply="Hello."),))
+        priority="ordinary", next_step="answer", reply="Hello.", intent="contribution"),))
 
     result = _continue(model, latest="Hello", plan=plan)
 
-    assert result.units == ()
-    assert result.coverage == ()
-    assert model.calls == []
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
+    assert len(model.calls) == 2
+    assert result.coverage[0]["state"] == "ok"
+    assert len(result.units) == 1
+    released = result.units[0]
+    assert released["blocks"][0]["text"] == "Hello."
+    assert released["questions"] == released["next_work"] == released["progress_updates"] == []
+    assert released["work"] == {"existing_id": "", "create": False}
+    assert released["blocks"][0]["record_ids"] == released["blocks"][0]["legal_source_ids"] == []
+    assert [row["request_index"] for row in model.calls[0][1]["work_items"]] == [0]
+    assert [row["request_index"] for row in model.calls[1][1]["units"]] == [0]
 
 
 @pytest.mark.parametrize("damage", ["no_requested_task", "contribution_task"])

@@ -117,8 +117,6 @@ def continuation_reply(operation, payload, *, scripted_items=()):
     requirements = {key: row for key, row in records.items()
                     if row["type"] == "requirement"}
     units = []
-    needs_legal_work = any(item["next_step"] == "legal_work"
-                           for item in payload["work_items"])
     for item in payload["work_items"]:
         index = item["request_index"]
         scripted = scripted_items[index]
@@ -130,7 +128,7 @@ def continuation_reply(operation, payload, *, scripted_items=()):
             questions = [{"id": f"question:{index}", "block_id": f"block:{index}",
                           "purpose": "Resolve the distinction needed to proceed.",
                           "target_ids": [], "existing_id": ""}]
-        elif item["next_step"] == "answer" and not needs_legal_work:
+        elif item["next_step"] == "answer":
             kind, text, status = "completion", scripted["reply"], "complete"
         else:
             kind, status = "limitation", "not_completed"

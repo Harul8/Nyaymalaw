@@ -295,9 +295,12 @@ class _ContentFailure(SchemaViolation):
 
 
 def continuation_indexes(plan: TurnPlan) -> tuple[int, ...]:
-    """Compose only the activities selected by the interpretation owner."""
-    return tuple(index for index, item in enumerate(plan.items)
-                 if item.next_step in ("legal_work", "clarify"))
+    """Every displayed reply needs the same grounding and scope boundary.
+
+    A provisional route or scope label cannot authorise publishing unchecked
+    prose. This includes an item labelled as an immediate non-matter answer.
+    """
+    return tuple(range(len(plan.items)))
 
 
 def _identifier_array(ids: tuple[str, ...]) -> dict:

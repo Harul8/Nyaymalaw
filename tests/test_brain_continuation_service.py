@@ -314,6 +314,7 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     ]
     def aside_route(payload):
         aside = plan(greeting, scope="none", relation="aside", reply="Hello.")
+        aside["items"][0]["intent"] = "contribution"
         aside["active_work_after"] = payload["current_work"]
         return aside
 
@@ -326,8 +327,14 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     final = unit(
         text="You have said that a signed copy is unavailable.", span_ids=("L2",),
         question="Would you like to assess the record that remains available?")
+    greeted = unit(text="Hello.")
+    greeted["blocks"] = [greeted["blocks"][0]]
+    greeted["blocks"][0].update(kind="completion", uncertainty="none")
+    greeted.update(questions=[], work={"existing_id": "", "create": False},
+                   sufficiency={"status": "complete", "block_id": "account-0"})
     model = PublicContinuationModel(routes, [
-        {"units": [unit()]}, {"units": [corrected]}, {"units": [final]},
+        {"units": [unit()]}, {"units": [corrected]},
+        {"units": [greeted]}, {"units": [final]},
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -342,7 +349,9 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     last = send(client, returned, "public-return", opened=aside)
 
     assert second["metrics"]["llm_calls"] == 6
-    assert aside["metrics"]["llm_calls"] == 1
+    assert aside["metrics"]["llm_calls"] == 3
+    assert aside["continuation"]["coverage"][0]["state"] == "ok"
+    assert aside["elements"][0]["text"] == "Hello."
     assert last["metrics"]["llm_calls"] == 6
     continuation_payloads = [payload for operation, payload in model.calls
                              if operation == "continue_conversation"]
@@ -505,15 +514,24 @@ def test_public_interpreter_correction_keeps_configured_tier_and_saves_input_onc
                 raise SchemaViolation("The synthetic response omitted the declared items.")
             return super().structured(prompt, schema, tier, max_tokens=max_tokens)
 
-    model = InitialParseFailure([plan("Hello", reply="Hello.")], [])
+    greeted = unit(text="Hello.")
+    greeted["blocks"] = [greeted["blocks"][0]]
+    greeted["blocks"][0].update(kind="completion", uncertainty="none")
+    greeted.update(questions=[], work={"existing_id": "", "create": False},
+                   sufficiency={"status": "complete", "block_id": "account-0"})
+    routed = plan("Hello", reply="Hello.")
+    routed["items"][0]["intent"] = "contribution"
+    model = InitialParseFailure([routed], [{"units": [greeted]}])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     greeting = send(client, "Hello", "repaired-interpretation")
 
-    assert greeting["metrics"]["llm_calls"] == 2
+    assert greeting["metrics"]["llm_calls"] == 4
     assert greeting["matter_id"] is None
-    assert [operation for operation, _ in model.calls] == ["interpret_conversation"] * 2
-    assert model.tiers == [Tier.JUDGE, Tier.JUDGE]
+    assert [operation for operation, _ in model.calls] == [
+        "interpret_conversation", "interpret_conversation",
+        "continue_conversation", "verify_continuation"]
+    assert model.tiers == [Tier.JUDGE] * 4
     correction = model.calls[1][1]
     assert correction["original_input"]["latest_message"] == "Hello"
     assert "omitted the declared items" in correction["validation_issue"]
@@ -521,7 +539,7 @@ def test_public_interpreter_correction_keeps_configured_tier_and_saves_input_onc
     assert [turn["message"] for turn in saved.brain_chat] == ["Hello"]
 
 
-def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_one_call(
+def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_three_calls(
         client, wired, monkeypatch):
     from nm.brain.work_state import project_work
 
@@ -530,8 +548,14 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_on
     acknowledged = plan(acknowledgment, scope="none", relation="continues",
                         step="answer", reply="You're welcome.")
     acknowledged["items"][0]["intent"] = "contribution"
+    delivered = unit(text="You're welcome.")
+    delivered["blocks"] = [delivered["blocks"][0]]
+    delivered["blocks"][0].update(kind="completion", uncertainty="none")
+    delivered.update(questions=[], work={"existing_id": "", "create": False},
+                     sufficiency={"status": "complete", "block_id": "account-0"})
     model = PublicContinuationModel(
-        [opening_route(first_words), acknowledged], [{"units": [unit()]}])
+        [opening_route(first_words), acknowledged],
+        [{"units": [unit()]}, {"units": [delivered]}])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     first = send(client, first_words, "sourcefree-open")
     before = project_work(wired.store.load(first["matter_id"]))
@@ -539,10 +563,11 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_on
 
     reply = send(client, acknowledgment, "sourcefree-acknowledgment", opened=first)
 
-    assert reply["metrics"]["llm_calls"] == 1
-    assert model.calls[previous_calls:][0][0] == "interpret_conversation"
-    assert len(model.calls) == previous_calls + 1
-    assert model.tiers[-1] is Tier.JUDGE
+    assert reply["metrics"]["llm_calls"] == 3
+    assert [operation for operation, _ in model.calls[previous_calls:]] == [
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert len(model.calls) == previous_calls + 3
+    assert model.tiers[-3:] == [Tier.JUDGE] * 3
     assert [row["text"] for row in reply["elements"]] == ["You're welcome."]
     saved = wired.store.load(first["matter_id"])
     assert project_work(saved) == before
@@ -628,14 +653,24 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
                 data = reviewed_record_verdicts(json.loads(prompt.user), data)
             return replace(result, data=data)
 
+    thanked = unit(text="Thank you.")
+    thanked["blocks"] = [thanked["blocks"][0]]
+    thanked["blocks"][0].update(kind="completion", uncertainty="none")
+    thanked.update(questions=[], work={"existing_id": "", "create": False},
+                   sufficiency={"status": "complete", "block_id": "account-0"})
+    greeted = deepcopy(thanked)
+    greeted["blocks"][0]["text"] = "Hello."
+    aside = plan(greeting, relation="aside", scope="none", reply="Hello.")
+    aside["items"][0]["intent"] = "contribution"
     model = RejectedDetail([
-        acknowledgment, plan(greeting, relation="aside", scope="none", reply="Hello.")], [])
+        acknowledgment, aside],
+        [{"units": [thanked]}, {"units": [greeted]}])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     first = send(client, first_words, "rejected-notice-first")
     saved_id = chat_matter_id("adv_demo", first["chat_id"])
     first_saved = wired.store.load(saved_id)
 
-    assert first["metrics"]["llm_calls"] == 5
+    assert first["metrics"]["llm_calls"] == 7
     assert first["matter_id"] is None
     assert first["material"] == []
     assert first["material_coverage"]["withheld_details"] == 1
@@ -646,16 +681,17 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
 
     second = send(client, greeting, "rejected-notice-second", opened=first)
 
-    assert second["metrics"]["llm_calls"] == 1
-    assert model.calls[-1][0] == "interpret_conversation"
-    prior = model.calls[-1][1]["earlier_conversation"]
+    assert second["metrics"]["llm_calls"] == 3
+    assert [operation for operation, _ in model.calls[-3:]] == [
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    prior = model.calls[-3][1]["earlier_conversation"]
     assert [(row["role"], row["text"]) for row in prior] == [
         ("advocate", first_words), ("nm", "\n".join(row["text"] for row in first["elements"]))]
     saved = wired.store.load(saved_id)
     assert [row["message"] for row in saved.brain_chat] == [first_words, greeting]
     assert all(row["elements"] == row["response"]["elements"] for row in saved.brain_chat)
-    assert all(operation not in ("continue_conversation", "verify_continuation")
-               for operation, _ in model.calls)
+    assert sum(operation == "continue_conversation" for operation, _ in model.calls) == 2
+    assert sum(operation == "verify_continuation" for operation, _ in model.calls) == 2
 
 
 @pytest.mark.parametrize("conflict", ["preflight", "commit"])

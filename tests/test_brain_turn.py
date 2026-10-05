@@ -104,6 +104,7 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     greeting = brain.run(first).as_dict()
     assert greeting["matter_id"] is None
     assert greeting["chat_id"] == "turn-one"
+    assert greeting["metrics"]["llm_calls"] == 3
     assert len(model.calls) == 1
     assert model.calls[0]["earlier_conversation"] == []
     assert matter_list_projection(store.list_for("adv"), registers={})["matters"] == []
@@ -113,8 +114,10 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     opened = brain.run(second).as_dict()
     assert opened["matter_id"] == chat_matter_id("adv", "turn-one")
     assert len(model.calls) == 2
-    assert model.all_calls[:2] == ["interpret_conversation", "interpret_conversation"]
-    assert set(model.all_calls[2:]) == {
+    assert model.all_calls[:4] == [
+        "interpret_conversation", "continue_conversation", "verify_continuation",
+        "interpret_conversation"]
+    assert set(model.all_calls[4:]) == {
         "classify_account_sources", "extract_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
@@ -235,10 +238,10 @@ def test_turn_metrics_separate_logical_calls_from_provider_retries(tmp_path):
 
     model.structured = with_provider_retries
     response = brain.run(BrainTurn("adv", "Hello", "retry-metrics")).as_dict()
-    assert response["metrics"]["llm_calls"] == 1
-    assert response["metrics"]["provider_retries"] == 2
+    assert response["metrics"]["llm_calls"] == 3
+    assert response["metrics"]["provider_retries"] == 6
     assert [row["operation"] for row in response["metrics"]["model_calls"]] == [
-        "interpret_conversation"]
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
 
 
 @pytest.mark.parametrize("usage", [None, Usage(21, 8, 0.002)])
