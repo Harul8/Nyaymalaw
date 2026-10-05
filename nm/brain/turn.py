@@ -889,6 +889,9 @@ class BrainService:
             if current is not None and current.advocate_id == turn.advocate_id:
                 prior = _saved_reply(current, turn.turn_id, offer_digest)
                 if prior is not None:
+                    # Delivery reuses the saved reply, but this attempt already
+                    # ran its models. A replay found before analysis runs none.
+                    prior["metrics"] = counted_model.metrics()
                     return BrainOutput(prior)
             raise
         return BrainOutput(response)

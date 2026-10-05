@@ -1,0 +1,441 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-178",
+  "base_commit": "4c4579b",
+  "status": "Recovered-save current-attempt accounting verified; material semantic completeness and requested-effect completion remain open",
+  "failed_general_invariant": "Durable reply lookup after lost acknowledgement reset current-attempt model metrics to zero even though that attempt had already executed model operations.",
+  "change": {
+    "production_files": [
+      "nm/brain/turn.py"
+    ],
+    "prompts_changed": [],
+    "rule": "Use this attempt's counted metrics only after a failed commit acknowledgement resolves to a matching durable reply; ordinary replay found before analysis remains zero-call. Saved reply, receipt and effect remain unchanged.",
+    "additional_model_stages": 0
+  },
+  "validation": {
+    "baseline": {
+      "failed": 1,
+      "actual_calls": 7,
+      "reported_calls": 0,
+      "report": "/tmp/nm-material-recovery-metrics-baseline.xml"
+    },
+    "focused_execution_and_turn": {
+      "passed": 37,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "/tmp/nm-material-recovery-metrics-final.xml"
+    },
+    "browser": {
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 17.354,
+      "report": "outputs/material-recovery-accounting-20261005/browser-tests.xml"
+    },
+    "ruff": "passed",
+    "whitespace": "passed"
+  },
+  "qualification_scope": "Scripted model meaning and reviewer decisions establish actual public/browser execution, encrypted commit/reopen, code-owned receipts and bounded replay mechanics. No paid calls or real-model semantic qualification.",
+  "browser": {
+    "correction": {
+      "code_identity": {
+        "serving": "5c1cd063ce5e82bc",
+        "tree": "5c1cd063ce5e82bc",
+        "code_state": "current"
+      },
+      "opening_calls": 9,
+      "opening_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "verify_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "followup_calls": 8,
+      "followup_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "lost_ack_commit_versions": [],
+      "subsequent_replay_calls": 0,
+      "receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_370aa43611d144ab59be53635456a827",
+        "owner": {
+          "matter_id": "mat_fc0dac7f1461d23ffafb4ecc5d879296",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_c43c7cc5-5ed3-4c64-b77c-d6e32675be3c",
+          "offer_digest": "fc9208f28b6a75a31f11b6b3d0896177f833b4726e93961bd67cb6e4739b6a61"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Correction: the delivery took place on 17 June.",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 1
+          },
+          "detail_review": {
+            "state": "checked",
+            "accepted": 1,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [
+              "turn_c43c7cc5-5ed3-4c64-b77c-d6e32675be3c:material:1"
+            ],
+            "retired_record_ids": [
+              "turn_7af89141-b4ab-414d-9725-d73184fcf613:material:2"
+            ],
+            "operations": [
+              {
+                "result_id": "turn_c43c7cc5-5ed3-4c64-b77c-d6e32675be3c:material:1",
+                "relation": "corrects",
+                "target_record_ids": [
+                  "turn_7af89141-b4ab-414d-9725-d73184fcf613:material:2"
+                ],
+                "retired_target_ids": [
+                  "turn_7af89141-b4ab-414d-9725-d73184fcf613:material:2"
+                ],
+                "source_references": [
+                  {
+                    "turn_id": "turn_c43c7cc5-5ed3-4c64-b77c-d6e32675be3c",
+                    "role": "advocate",
+                    "quoted": "Correction: the delivery took place on 17 June."
+                  },
+                  {
+                    "turn_id": "turn_7af89141-b4ab-414d-9725-d73184fcf613",
+                    "role": "advocate",
+                    "quoted": "The delivery took place on 16 June."
+                  }
+                ]
+              }
+            ],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "original_turn_unchanged": true,
+      "paid_calls": 0,
+      "evidence": "outputs/material-recovery-accounting-20261005/correction-receipt.json",
+      "screenshots": [
+        "correction-material.png",
+        "correction-reopened.png"
+      ]
+    },
+    "no_change": {
+      "code_identity": {
+        "serving": "5c1cd063ce5e82bc",
+        "tree": "5c1cd063ce5e82bc",
+        "code_state": "current"
+      },
+      "opening_calls": 9,
+      "opening_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "verify_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "followup_calls": 7,
+      "followup_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "extract_legal_details",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "lost_ack_commit_versions": [],
+      "subsequent_replay_calls": 0,
+      "receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_2f7a0fcd2c27e13764e0d479e19ecad3",
+        "owner": {
+          "matter_id": "mat_5d9139f33b95b513805a4d7d099ea75a",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_3cf71ffd-3fba-46c6-b50c-170576489560",
+          "offer_digest": "cf7a5c40254a2b85d9f0dff5d12d588170119e0e96da3654f15857731e24a7b9"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Check that your saved delivery description matches my account.",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "detail_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "active_statements": [
+        "The delivery took place on 16 June."
+      ],
+      "original_turn_unchanged": true,
+      "paid_calls": 0,
+      "evidence": "outputs/material-recovery-accounting-20261005/no_change-receipt.json",
+      "screenshots": [
+        "no_change-material.png",
+        "no_change-reopened.png"
+      ]
+    },
+    "lost_ack": {
+      "code_identity": {
+        "serving": "5c1cd063ce5e82bc",
+        "tree": "5c1cd063ce5e82bc",
+        "code_state": "current"
+      },
+      "opening_calls": 9,
+      "opening_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "verify_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "followup_calls": 8,
+      "followup_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "lost_ack_commit_versions": [
+        2
+      ],
+      "subsequent_replay_calls": 0,
+      "receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_ec31b0fb2b98a892304e09a93e4f3bcb",
+        "owner": {
+          "matter_id": "mat_011a5ad2c64aca17bf994d94eca6edf9",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_540ee531-910b-434e-bad0-52e9f66590d3",
+          "offer_digest": "ebf9642fb3a35ae43f1ec53e15ae6f5ab362d0a93bc0e76ac357ed9cc5cea166"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Correction: the delivery took place on 17 June.",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 1
+          },
+          "detail_review": {
+            "state": "checked",
+            "accepted": 1,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [
+              "turn_540ee531-910b-434e-bad0-52e9f66590d3:material:1"
+            ],
+            "retired_record_ids": [
+              "turn_56e7a6c5-24ea-40b2-a9b6-e5da20830a0a:material:2"
+            ],
+            "operations": [
+              {
+                "result_id": "turn_540ee531-910b-434e-bad0-52e9f66590d3:material:1",
+                "relation": "corrects",
+                "target_record_ids": [
+                  "turn_56e7a6c5-24ea-40b2-a9b6-e5da20830a0a:material:2"
+                ],
+                "retired_target_ids": [
+                  "turn_56e7a6c5-24ea-40b2-a9b6-e5da20830a0a:material:2"
+                ],
+                "source_references": [
+                  {
+                    "turn_id": "turn_540ee531-910b-434e-bad0-52e9f66590d3",
+                    "role": "advocate",
+                    "quoted": "Correction: the delivery took place on 17 June."
+                  },
+                  {
+                    "turn_id": "turn_56e7a6c5-24ea-40b2-a9b6-e5da20830a0a",
+                    "role": "advocate",
+                    "quoted": "The delivery took place on 16 June."
+                  }
+                ]
+              }
+            ],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "original_turn_unchanged": true,
+      "paid_calls": 0,
+      "evidence": "outputs/material-recovery-accounting-20261005/lost_ack-receipt.json",
+      "screenshots": [
+        "lost_ack-material.png",
+        "lost_ack-reopened.png"
+      ]
+    }
+  },
+  "completed_milestones": {
+    "answer_routing": "702a071",
+    "material_purpose_planning": "2e593b8",
+    "execution_receipts": "f390f5c",
+    "input_provenance": "4c4579b"
+  },
+  "remaining": [
+    "Independent omission and empty-result semantic completeness review plus bounded recovery",
+    "Per-request owned target/success condition linked to relevant saved outcome and code-owned completion/effect statements",
+    "Reviewer verdict-specific schema and bounded metadata correction preserving independent valid work",
+    "Actual pinned-model unfamiliar independently labelled evaluations for semantic accuracy, false acceptance, false rejection, retries, useful delivery, latency and cost; required credentials absent"
+  ]
+}

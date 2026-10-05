@@ -1,7 +1,7 @@
 """Checked account answers reach the shipped page and saved material record.
 
-Model decisions are explicitly scripted. These two browser cases establish
-routing, review handoffs, persistence and rendering, not semantic-model quality.
+Model decisions are explicitly scripted. These browser cases establish routing,
+review handoffs, persistence, recovery accounting and rendering, not semantic quality.
 The browser talks to the real application; no HTTP response is mocked.
 """
 import json
@@ -14,6 +14,7 @@ import pytest
 from assurance.journeys.served import PASSWORD, running
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
+from nm.shared.store_port import StaleWrite
 from tests.test_brain_material import Model, material
 from tests.test_brain_material_answer_routing import answer_plan, operations
 from tests.test_the_journey_login_to_logout import _sign_in
@@ -21,7 +22,7 @@ from tests.test_the_journey_login_to_logout import _sign_in
 pytestmark = pytest.mark.journey
 playwright_api = pytest.importorskip("playwright.sync_api")
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-input-provenance-20261005"
+ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-recovery-accounting-20261005"
 ACCOUNT = "The delivery date is disputed. The delivery took place on 16 June."
 ORIGINAL_DATE = "The delivery took place on 16 June."
 
@@ -102,9 +103,10 @@ def displayed_date(page, statement):
     return reader
 
 
-@pytest.mark.parametrize("outcome", ("correction", "no_change"))
+@pytest.mark.parametrize("outcome", ("correction", "no_change", "lost_ack"))
 def test_checked_material_answer_survives_reopening(
-        page, tmp_path, scripted_application_environment, outcome):
+        page, tmp_path, scripted_application_environment, monkeypatch, outcome):
+    is_correction = outcome in ("correction", "lost_ack")
     original = material("event", ORIGINAL_DATE, ORIGINAL_DATE, placement="matter")
     disputed = material("dispute", "Delivery date dispute", "The delivery date is disputed.")
     seed = answer_plan(
@@ -125,7 +127,7 @@ def test_checked_material_answer_survives_reopening(
         reader.get_by_text(ORIGINAL_DATE, exact=True).wait_for()
         page.click("#dispute-reader-close")
 
-        if outcome == "correction":
+        if is_correction:
             message = "Correction: the delivery took place on 17 June."
             expected = "The delivery took place on 17 June."
             reply = "Your corrected account records delivery on 17 June."
@@ -155,7 +157,22 @@ def test_checked_material_answer_survives_reopening(
                 "continue_conversation", "verify_continuation"]
         model.plans = iter([follow_up, follow_up])
 
-        response = submit(page, message)
+        commit_versions = []
+        if outcome == "lost_ack":
+            original_commit = store.commit
+
+            def commit_then_lose_acknowledgement(candidate, *, expected_version):
+                original_commit(candidate, expected_version=expected_version)
+                commit_versions.append(candidate.version)
+                raise StaleWrite("Injected lost acknowledgement after successful commit")
+
+            with monkeypatch.context() as patch:
+                patch.setattr(store, "commit", commit_then_lose_acknowledgement)
+                response = submit(page, message)
+            assert response["replayed"] is True
+        else:
+            response = submit(page, message)
+            assert response["replayed"] is False
         submitted_request = deepcopy(page.last_turn_request)
 
         assert operations(response) == expected_operations
@@ -195,6 +212,8 @@ def test_checked_material_answer_survives_reopening(
         }
         assert execution["expected_version"] == opened["matter_version"]
         assert execution["resulting_version"] == saved.version
+        if outcome == "lost_ack":
+            assert commit_versions == [saved.version]
         assert execution["persistence"] == "committed"
         assert execution["semantic_coverage"] == "unassessed"
         assert execution["requests"][0]["material_purposes"] == expected_purposes
@@ -203,9 +222,9 @@ def test_checked_material_answer_survives_reopening(
         assert stages["source_classification"]["state"] == "returned"
         assert stages["dispute_extraction"] == {"state": "returned", "proposals": 0}
         assert stages["detail_extraction"] == {
-            "state": "returned", "proposals": 1 if outcome == "correction" else 0}
+            "state": "returned", "proposals": 1 if is_correction else 0}
         assert stages["detail_review"]["state"] == (
-            "checked" if outcome == "correction" else "no_candidates")
+            "checked" if is_correction else "no_candidates")
         effects = execution["effects"]["details"]
         before_ids = {row["id"] for row in before["rows"]}
         after_ids = {row["id"] for row in record["rows"]}
@@ -221,7 +240,7 @@ def test_checked_material_answer_survives_reopening(
         assert [entry["operation"] for entry in model_inputs] == [
             "continue_conversation", "verify_continuation"]
         assert all(entry["execution"] == prepared for entry in model_inputs)
-        if outcome == "correction":
+        if is_correction:
             assert len(record["history"]) == 2
             assert record["rows"][0]["related_material_ids"] == [
                 f"{first_turn_id}:material:2"]
@@ -240,7 +259,7 @@ def test_checked_material_answer_survives_reopening(
             assert record == before
             assert effects["operations"] == []
         reader = displayed_date(page, expected)
-        if outcome == "correction":
+        if is_correction:
             assert reader.get_by_text(f"Event: {ORIGINAL_DATE}", exact=True).count() == 0
             reader.get_by_text(f"Earlier your message: {ORIGINAL_DATE}", exact=True).wait_for()
         ARTIFACTS.mkdir(parents=True, exist_ok=True)
@@ -279,6 +298,7 @@ def test_checked_material_answer_survives_reopening(
             "boundary": "shipped browser, normal sign-in and authenticated HTTP endpoints",
             "model_decisions": "explicitly scripted; semantic model quality unqualified",
             "outcome": outcome, "opening_response": opened, "response": response,
+            "lost_ack_commit_versions": commit_versions,
             "declared_interpretations": model.interpretations,
             "reader_input": reader_input,
             "execution_inputs": model_inputs, "execution": execution,

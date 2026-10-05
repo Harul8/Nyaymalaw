@@ -413,6 +413,7 @@ def test_lost_commit_acknowledgement_returns_saved_receipt_without_duplicate_eff
     before = wired.store.load(opened["matter_id"])
     commit = wired.store.commit
     commits = []
+    call_start = len(model.seen)
 
     def commit_then_lose_acknowledgement(matter, *, expected_version):
         commits.append(matter.version)
@@ -426,21 +427,33 @@ def test_lost_commit_acknowledgement_returns_saved_receipt_without_duplicate_eff
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["replayed"] is True
+    operations = [operation for operation, _ in model.seen[call_start:]]
+    assert len(operations) == 7
+    assert result["metrics"]["llm_calls"] == len(operations)
+    assert [row["operation"] for row in result["metrics"]["model_calls"]] == operations
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-lost-ack",
         request=correction, purposes=("account_contribution",))
     assert receipt["effects"]["details"]["activated_record_ids"] == [
         "receipt-lost-ack:material:1"]
     assert commits == [before.version + 1]
+    saved = deepcopy(wired.store.load(opened["matter_id"]))
+    saved_response = saved.brain_chat[-1]["response"]
+    assert result["elements"] == saved_response["elements"]
+    assert result["material"] == saved_response["material"]
+    assert result["metrics"] == saved_response["metrics"]
     calls = len(model.seen)
 
     repeated = send(client, correction, "receipt-lost-ack", opened=opened)
 
     assert repeated.status_code == 200, repeated.text
     assert execution(repeated.json()) == receipt
+    assert repeated.json()["metrics"]["llm_calls"] == 0
+    assert repeated.json()["metrics"]["model_calls"] == []
     assert len(model.seen) == calls
     assert commits == [before.version + 1]
-    assert len(wired.store.load(opened["matter_id"]).brain_chat) == 2
+    assert wired.store.load(opened["matter_id"]) == saved
+    assert len(saved.brain_chat) == 2
 
 
 @pytest.mark.parametrize("produces_effect", [False, True])
