@@ -1,5 +1,13 @@
 # Nyaymalaw build rules
 
+These standing rules apply to every new or changed feature, prompt, schema,
+tool, recovery path and completion claim. For the affected flow, identify the
+owning boundary, observable pass condition and consequential counterexample
+before implementation. Record any unmet requirement as remaining work; these
+instructions are obligations, not evidence that the current code implements
+them. Use the existing build guide, gate contracts and Before Build records
+rather than creating competing policy or status owners.
+
 The advocate's latest message is interpreted in the context of the whole saved
 conversation and the current authorised work. Preserve the complete transcript.
 Do not silently trim it, replace it with an uncheckable summary, or treat a
@@ -12,6 +20,13 @@ exact output contract). Keep matter data in the variable input, outside the
 stable instruction. Validate structured output and its references before use.
 An interpretation is a proposal, never authority to change a fact, permission,
 source status, or external action.
+Keep provenance, authority to review or act, factual certainty, matter ownership
+and execution outcome distinct. A review instruction can authorise repair of
+NM's derived interpretation using earlier original account; it cannot supply
+the fact being restored merely by authorising review. Attribute any substantive
+account accompanying the request separately. Do not require a fresh factual
+assertion for a legitimate repair, or let an NM interpretation substantiate
+itself.
 
 Keep each model call focused on one coherent responsibility. Related decisions
 may share a call when they need the same context and quality; do not add a call
@@ -40,12 +55,105 @@ unsupported additions and omissions; they do not merely endorse a writer's
 explanation. Correction feedback identifies the failed unit, selected source
 and precise mismatch.
 
+Tie each requested outcome to evidence of what actually happened. Represent
+each independent request and its required effect explicitly, with an owned
+target and success condition. Check that the plan includes the necessary work;
+a requested change without relevant checked evidence requires correction,
+not a success reply. Verified current state or reusable applicable evidence
+may suffice; do not demand a fresh extraction merely because a stage did not
+run. A model's intention, a successful model call, valid JSON, a positive
+reviewer verdict or an unrelated state change is never proof that the requested
+outcome occurred.
+
+Let code own operation evidence and completion status. Bind the request or
+work-unit ID to the relevant authorised operation, original supporting sources,
+owned target, checked result and persistence confirmation where required.
+Record whether work was evaluated, applied, rejected, skipped, failed or remains
+unconfirmed; distinguish proposals from executed effects. For saved changes,
+include the resulting record/version and preserve correction lineage. A receipt
+that a stage ran and a diff showing a change serve different purposes; verify
+that the resulting state satisfies this request. Read-only work needs checked
+results and relevant coverage, not an invented write receipt.
+
+Derive completion separately for each requested outcome. A saved correction,
+a current record already satisfying the request, a completed review declining
+the proposed edit, and unfinished work are distinct outcomes. The declined edit
+was not applied; a completed reply or fallback does not complete its underlying
+task. Empty extraction is legitimate only when checked coverage supports that
+result; an empty envelope alone never proves the message was examined. A claim
+about the current value needs checked current state. A claim that NM previously
+changed it additionally needs saved historical evidence that remains applicable.
+
+Every public reply route must use the same trusted release boundary, including
+answers, clarifications, legal work and recovery notices. Independent semantic
+review of substantive model-generated content compares the requested work,
+complete original evidence and actual results with the response, checking
+unsupported additions, omissions and contradictions. Fixed code-authored status
+notices require mechanical truth checks, not an additional model call.
+Code separately enforces ownership, references, relevant effect evidence and
+persistence; reviewer acceptance cannot bypass those controls.
+Generate effect and completion statements from checked structured outcomes in
+code, or validate their selected typed evidence before rendering. Free prose
+must agree with those outcomes: an accurate status line does not cure a false
+claim elsewhere. Do not promise mechanical certainty for unrestricted prose
+or legal interpretation.
+
+A tentative matter reply may be composed from checked proposed state. Commit
+the state, operation evidence and exact releasable matter reply together through
+the existing atomic, version-checked storage boundary, then release only after
+confirmation. A failed or unconfirmed save may produce a truthful service
+status under the existing gate/scope contract. It may report independently
+confirmed earlier results, but cannot claim this attempt saved input or
+applied/completed its failed or unconfirmed effect. Preserve accepted input and
+successful effects across bounded recovery. After a lost acknowledgement, use
+durable receipt lookup or idempotent replay; unknown persistence means
+unconfirmed, not saved or unsaved. Retrying delivery must not repeat the effect.
+For external operations, use their owned execution and recovery contract;
+a local save does not prove an external action.
+
+Design validation to prevent consequential errors with minimal false rejection.
+Code checks observable contracts; semantic meaning and legal applicability
+remain independently reviewed judgments. Supply server-owned IDs, applicable
+choices and verdict-specific output shapes upfront. Derive redundant fields
+from one checked decision rather than asking the model to make them agree.
+Normalize only demonstrably meaning-preserving formatting or empty/inapplicable
+metadata. Never silently repair facts, substantive contradictory fields,
+permissions, attribution, source status or ambiguous references. Optional
+metadata blocks only when its defect affects a required invariant. Do not use
+keyword matching or stylistic preference as proof of a false effect claim.
+
+For each new or changed blocking check, name the invariant, owner, affected
+scope, precise consequential mismatch and bounded recovery. Prove it rejects
+the faulty case and admits legitimate neighbouring cases. Apply the existing
+gate contracts: a withheld scope cannot be released as a caveated fallback.
+Preserve independently valid units where the contract permits; do not discard
+them for another unit's harmless defect. A code-composed recovery notice may
+state only confirmed facts, and may say input was saved only after confirmed
+admission. It cannot bypass uncertain history, identity, attribution, ownership,
+grounding or commit integrity. Put service interruptions in service status.
+Observe uncertain new semantic heuristics before making them blocking, while
+retaining established mandatory controls; never weaken save or ownership gates
+to gather measurements.
+
 Judge prompt changes by measured behavior on unfamiliar conversations using
 the actual pinned model, not by brevity or apparent elegance. Compare wrong
 admissions, omissions, false completion, useful delivered work, retries,
 tokens, latency and cost. Do not assume a cleaner prompt makes different model
 versions equally capable. Prompt cleanup alone adds no routine model stage;
 any coverage or recovery additions require separate call accounting.
+Measure false acceptance and false rejection separately on independently
+labelled candidates, including correct answers that need no state change.
+Record check-specific reasons, useful delivery, terminal failures and conditional
+repair calls. Gate fire counts show friction, not the false-positive rate.
+Failure injection proves the exercised failure path; a mock reviewer forced to
+reject proves rejection wiring, not that a real reviewer detects the error.
+Use actual pinned-model evaluation for semantic quality and inspect persisted,
+reopened records and delivered replies for effect claims. Pair skipped or empty
+extraction, wrong-target edits, rejected proposals, save failures, concurrent
+changes and lost acknowledgements with already-correct state, authorised repair
+from earlier evidence, superseded changes, partial success and harmless metadata
+variations. Select cases proportionately to the affected invariant; add no
+routine model calls merely to populate a checklist.
 
 On every message, identify materially significant legal content against the
 whole conversation. Preserve the exact current words, any earlier words needed
@@ -74,15 +182,11 @@ boundary so the change applies to comparable matters and requests. Use the
 observed case as a regression example, not as a condition, keyword, prompt
 exception, or dispute-specific branch. Remove redundant paths rather than
 layering another special case on top.
-For every error, check the owning logic and whether its prompt is clean and
-easy to follow. Corrections must be logical, strategic and general, with
-graceful handling of comparable failures. Never add a scenario-specific bypass.
-An observed matter is a test case, never a template for a repair. Identify the
-failed general rule and fix its owning boundary. No matter names, keyword
-lists or scenario-specific exceptions may enter production logic or prompts
-to make an observed case pass. Verify every repair across different matters
-and conversation patterns, using concrete cases only as regression fixtures.
-Apply this rule consistently to every slice, including prompt-only changes.
+Check whether the owning logic and prompt are clear. Keep repairs logical,
+general and graceful across different matters and conversation patterns. No
+matter names, keyword lists or scenario-specific exceptions may enter production
+logic or prompts to make an observed case pass. Apply this rule consistently to
+every slice, including prompt-only changes.
 
 For every new or changed model flow, report the number of model calls per user
 turn, including conditional calls, their purpose, and what input and output
