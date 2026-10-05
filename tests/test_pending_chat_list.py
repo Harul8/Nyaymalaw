@@ -11,7 +11,8 @@ def test_pending_chat_list_tracks_opening_and_scopes_to_the_account(
         plan("Hello"),
         plan("My client disputes a terminated contract.", scope="proposed",
              step="legal_work", reply="I will check the contract and the record.",
-             title="Contract dispute", summary="The client disputes termination."),
+             title="Contract dispute", summary="The client disputes termination.",
+             material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: account_model)
 

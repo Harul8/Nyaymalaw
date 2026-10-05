@@ -105,7 +105,7 @@ def material(kind, statement, quoted, *, relation="new", references=(),
 
 
 def plan(message, *, candidates=(), items=None, opening=False,
-         active_work="review the account"):
+         active_work="review the account", material_purposes=()):
     if items is None:
         items = [{"request": message, "relation": "new",
                   "matter_scope": "proposed" if opening else "current",
@@ -114,8 +114,9 @@ def plan(message, *, candidates=(), items=None, opening=False,
                   "reply": ("I will check the account and available material "
                             "before reaching a legal view."),
                   "clarification": ""}]
+    items = [{**item, "material_purposes": item.get(
+        "material_purposes", list(material_purposes))} for item in items]
     return {"items": items, "material": list(candidates),
-            "material_review": bool(candidates) or opening,
             "active_work_after": active_work,
             "opening": {"ready": opening,
                         "party_name": "",
@@ -178,7 +179,8 @@ def test_first_account_retains_distinct_sourced_material_without_admission(
         material("position", "The contractor says materials were not supplied.",
                  "They say materials were not supplied", basis="attributed"),
     ]
-    model = Model([plan(message, candidates=candidates, opening=True)])
+    model = Model([plan(message, candidates=candidates, opening=True,
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     served = send(client, message, "material-first")
@@ -222,8 +224,9 @@ def test_correction_and_diversion_keep_prior_words_and_proposals(
                   "reply": "Hello. Paris is the capital of France.",
                   "clarification": ""}
     model = Model([
-        plan(first, candidates=[original], opening=True),
-        plan(correction, candidates=[revised]),
+        plan(first, candidates=[original], opening=True,
+             material_purposes=("account_contribution",)),
+        plan(correction, candidates=[revised], material_purposes=("account_contribution",)),
         plan(aside, candidates=[], items=[aside_item]),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -266,9 +269,10 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
         "matter_scope": "current", "priority": "ordinary",
         "next_step": "legal_work", "reply": "I have noted the corrected date.",
         "intent": "contribution",
-        "clarification": ""}])
-    second_plan["material_review"] = True
-    model = Model([plan(first, candidates=[original], opening=True), second_plan])
+        "clarification": ""}], material_purposes=("account_contribution",))
+    second_plan["items"][0]["material_purposes"] = ["account_contribution"]
+    model = Model([plan(first, candidates=[original], opening=True,
+                        material_purposes=("account_contribution",)), second_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, first, "first")
@@ -302,8 +306,9 @@ def test_work_request_without_new_material_preserves_record_with_three_calls(
         "priority": "ordinary", "next_step": "legal_work",
         "reply": "I will assess the existing account and identify any limit in its support.",
         "clarification": ""}])
-    assert work_plan["material_review"] is False
-    model = Model([plan(first, candidates=original, opening=True), work_plan])
+    assert work_plan["items"][0]["material_purposes"] == []
+    model = Model([plan(first, candidates=original, opening=True,
+                        material_purposes=("account_contribution",)), work_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "recorded")
     assert opened.status_code == 200, opened.text
@@ -353,8 +358,10 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
                       request, relation="corrects", references=lineage, scope="current",
                       placement="disputes", dispute_ids=("review:material:1",),
                       related_material_ids=("original:material:2",))
-    review_plan = plan(request, candidates=[dispute, detail])
-    model = Model([plan(account, candidates=[old_dispute, old_detail], opening=True), review_plan])
+    review_plan = plan(request, candidates=[dispute, detail],
+                       material_purposes=("interpretation_review",))
+    model = Model([plan(account, candidates=[old_dispute, old_detail], opening=True,
+                        material_purposes=("account_contribution",)), review_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "original").json()
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -385,7 +392,7 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
     assert len(disputes["history"]) == len(records["history"]) == 2
     interpreter = model.calls[-1]
     assert "without any new factual" in interpreter.system
-    assert "and for relevant authorised review" in interpreter.system
+    assert review_plan["items"][0]["material_purposes"] == ["interpretation_review"]
     assert json.loads(interpreter.user)["latest_message"] == request
     assert [row["text"] for row in json.loads(interpreter.user)["earlier_conversation"]
             if row["role"] == "advocate"] == [account]
@@ -397,8 +404,9 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
     request = "Check whether your saved description faithfully reflects my account."
     original = material("dispute", "Disputed handover; actor unknown", account)
     review = plan(request)
-    review["material_review"] = True
-    model = Model([plan(account, candidates=[original], opening=True), review])
+    review["items"][0]["material_purposes"] = ["interpretation_review"]
+    model = Model([plan(account, candidates=[original], opening=True,
+                        material_purposes=("account_contribution",)), review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "original-review-empty").json()
     matter_id = opened["matter_id"]
@@ -432,8 +440,8 @@ def test_answer_to_prior_nm_question_can_support_material(
         references=({"turn_id": "question-turn", "role": "nm",
                      "quoted": question},))
     model = Model([
-        plan(first, opening=True, items=[first_item]),
-        plan(answer, candidates=[confirmed]),
+        plan(first, opening=True, items=[first_item], material_purposes=("account_contribution",)),
+        plan(answer, candidates=[confirmed], material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -471,7 +479,7 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
                  second, scope="other", importance="central"),
     ]
     model = Model([plan(message, candidates=candidates, opening=True,
-                        items=items)])
+                        items=items, material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     served = send(client, message, "multiple-material")
@@ -501,8 +509,9 @@ def test_unsupported_material_refuses_the_whole_turn_without_a_write(
     if invalid_candidate["quoted"] == "the date was Tuesday":
         next_message = "Correction: the date was Tuesday, not Monday."
     model = Model([
-        plan(first, opening=True),
-        plan(next_message, candidates=[invalid_candidate]),
+        plan(first, opening=True, material_purposes=("account_contribution",)),
+        plan(next_message, candidates=[invalid_candidate],
+             material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -534,7 +543,8 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
 
     class RepairingModel(Model):
         def __init__(self):
-            super().__init__([plan(message, candidates=[candidate], opening=True)])
+            super().__init__([plan(message, candidates=[candidate], opening=True,
+                                   material_purposes=("account_contribution",))])
             self.rejected = False
 
         def structured(self, prompt, schema, tier, *, max_tokens=None):

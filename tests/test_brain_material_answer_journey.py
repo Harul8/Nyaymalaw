@@ -21,7 +21,7 @@ from tests.test_the_journey_login_to_logout import _sign_in
 pytestmark = pytest.mark.journey
 playwright_api = pytest.importorskip("playwright.sync_api")
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-answer-routing-20261005"
+ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-purpose-routing-20261005"
 ACCOUNT = "The delivery date is disputed. The delivery took place on 16 June."
 ORIGINAL_DATE = "The delivery took place on 16 June."
 
@@ -30,6 +30,10 @@ class BrowserModel(Model):
     """Expose the adapter identity required by the real composition wrappers."""
 
     provider = "scripted"
+
+    def __init__(self, plans):
+        super().__init__(plans)
+        self.interpretations = []
 
     def resolved_model(self, tier):
         return "offline"
@@ -45,6 +49,8 @@ class BrowserModel(Model):
                 text=None, data=data, tier=tier, provider="scripted", model="offline",
                 usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
         result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+        if prompt.operation == "interpret_conversation":
+            self.interpretations.append(deepcopy(result.data))
         return replace(result, provider="scripted")
 
 
@@ -91,7 +97,8 @@ def test_checked_material_answer_survives_reopening(
     disputed = material("dispute", "Delivery date dispute", "The delivery date is disputed.")
     seed = answer_plan(
         ACCOUNT, reply="Your account reports delivery on 16 June.",
-        candidates=(disputed, original), opening=True, intent="contribution")
+        candidates=(disputed, original), opening=True, intent="contribution",
+        material_purposes=("account_contribution",))
     model = BrowserModel([seed])
     with running(tmp_path, model=model) as (box, base):
         actor = box.enrol()
@@ -115,8 +122,10 @@ def test_checked_material_answer_survives_reopening(
                 placement="matter", related_material_ids=(f"{first_turn_id}:material:2",),
                 references=({"turn_id": first_turn_id, "role": "advocate",
                              "quoted": ORIGINAL_DATE},))
-            follow_up = answer_plan(message, reply=reply, candidates=(revised,),
-                                    intent="contribution")
+            follow_up = answer_plan(
+                message, reply=reply, candidates=(revised,), intent="contribution",
+                material_purposes=("account_contribution",))
+            expected_purposes = ["account_contribution"]
             expected_operations = [
                 "interpret_conversation", "classify_account_sources", "extract_disputes",
                 "extract_legal_details", "verify_material_grounding",
@@ -125,7 +134,9 @@ def test_checked_material_answer_survives_reopening(
             message = "Check that your saved delivery description matches my account."
             expected = ORIGINAL_DATE
             reply = "The saved description matches your reported delivery date."
-            follow_up = answer_plan(message, reply=reply, material_review=True)
+            follow_up = answer_plan(
+                message, reply=reply, material_purposes=("interpretation_review",))
+            expected_purposes = ["interpretation_review"]
             expected_operations = [
                 "interpret_conversation", "classify_account_sources", "extract_disputes",
                 "extract_legal_details", "decompose_disputes",
@@ -135,6 +146,9 @@ def test_checked_material_answer_survives_reopening(
         response = submit(page, message)
 
         assert operations(response) == expected_operations
+        assert model.current_items[0]["material_purposes"] == expected_purposes
+        assert len(model.interpretations) == 2
+        assert all("material_review" not in plan for plan in model.interpretations)
         assert response["metrics"]["llm_calls"] == len(expected_operations)
         page.locator("#thread .turn").last.get_by_text(reply, exact=True).wait_for()
         saved = store.load(matter_id)
@@ -174,10 +188,14 @@ def test_checked_material_answer_survives_reopening(
         assert reopened.json()["material_record"] == record
         assert store.load(matter_id).brain_chat == saved.brain_chat
         assert not page.errors, page.errors
+        health = page.request.get(f"{base}/api/health").json()
+        assert health["code_state"] == "current", health
         receipt = {
             "boundary": "shipped browser, normal sign-in and authenticated HTTP endpoints",
             "model_decisions": "explicitly scripted; semantic model quality unqualified",
             "outcome": outcome, "opening_response": opened, "response": response,
+            "declared_interpretations": model.interpretations,
+            "code_identity": {key: health[key] for key in ("serving", "tree", "code_state")},
             "before_material": before, "reopened_material": reopened.json()["material_record"],
             "saved_messages": [turn["message"] for turn in saved.brain_chat],
             "original_turn_unchanged": saved.brain_chat[0] == first_saved,

@@ -38,7 +38,8 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
         material("circumstance", "A courier mentioned another address.",
                  "A courier mentioned another address.", placement="unresolved"),
     ]
-    model = Model([plan(message, candidates=candidates, opening=True)])
+    model = Model([plan(message, candidates=candidates, opening=True,
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     answer = send(client, message, "first")
@@ -105,9 +106,11 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
                      "reply": "I will keep the new issue separate while reviewing the first file.",
                      "clarification": ""}
     model = Model([
-        plan(opening, candidates=opening_rows, opening=True),
-        plan(diversion, candidates=diversion_rows, items=[proposed_item]),
-        plan(continuation, candidates=current_rows),
+        plan(opening, candidates=opening_rows, opening=True,
+             material_purposes=("account_contribution",)),
+        plan(diversion, candidates=diversion_rows, items=[proposed_item],
+             material_purposes=("account_contribution",)),
+        plan(continuation, candidates=current_rows, material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -233,8 +236,10 @@ def test_correction_and_withdrawal_retire_only_cited_details(
                  references=({"turn_id": "original", "role": "advocate",
                               "quoted": "The invoice was due on 8 May."},)),
     ]
-    model = Model([plan(first, candidates=first_rows, opening=True),
-                   plan(next_message, candidates=next_rows)])
+    model = Model([plan(first, candidates=first_rows, opening=True,
+                        material_purposes=("account_contribution",)),
+                   plan(next_message, candidates=next_rows,
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, first, "original")
@@ -285,8 +290,10 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
 
     class CheckingModel(Model):
         def __init__(self):
-            super().__init__([plan(first, candidates=original, opening=True),
-                              plan(latest, candidates=[revised])])
+            super().__init__([plan(first, candidates=original, opening=True,
+                                   material_purposes=("account_contribution",)),
+                              plan(latest, candidates=[revised],
+                                   material_purposes=("account_contribution",))])
             self.check_inputs = []
 
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -347,7 +354,7 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
             super().__init__([plan(message, candidates=[
                 material("dispute", "Contested charge",
                          "The tenant contests the charge."), candidate],
-                         opening=True)])
+                         opening=True, material_purposes=("account_contribution",))])
             self.rejected = False
 
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -385,8 +392,10 @@ def test_twice_invalid_detail_link_refuses_turn_without_partial_write(
                        scope="current", placement="disputes",
                        dispute_ids=("unknown:material:1",))
     model = Model([plan(first, candidates=[material(
-        "dispute", "Contested charge", first)], opening=True),
-                   plan(next_message, candidates=[invalid])])
+        "dispute", "Contested charge", first)], opening=True,
+                        material_purposes=("account_contribution",)),
+                   plan(next_message, candidates=[invalid],
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, first, "valid")
@@ -434,7 +443,8 @@ def test_damaged_saved_detail_is_visible_as_incomplete_and_blocks_next_read(
         material("dispute", "Shipment dispute", "The shipment is disputed."),
         material("evidence", "A dispatch note is available.",
                  "A dispatch note is available.", placement="disputes",
-                 dispute_ids=("first:material:1",))], opening=True)])
+                 dispute_ids=("first:material:1",))], opening=True,
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, message, "first")
     assert opened.status_code == 200, opened.text
@@ -527,7 +537,8 @@ def test_transcript_exposes_legacy_detail_quote_without_old_model_assertion(
         client, wired, monkeypatch):
     message = "We have a signed letter."
     model = Model([plan(message, candidates=[material(
-        "evidence", "We have a signed letter.", message)], opening=True)])
+        "evidence", "We have a signed letter.", message)], opening=True,
+                        material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, message, "legacy-transcript")
     assert opened.status_code == 200, opened.text

@@ -252,8 +252,10 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
                     "changes": []})
             return result
 
-    model = Repairing([plan(first, candidates=[original], opening=True),
-                       plan(latest, candidates=[attempted])])
+    model = Repairing([plan(first, candidates=[original], opening=True,
+                            material_purposes=("account_contribution",)),
+                       plan(latest, candidates=[attempted],
+                            material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "ownership-first")
     assert opened.status_code == 200, opened.text
@@ -280,7 +282,8 @@ def test_public_boundary_single_assignment_preserves_fact_uncertainty_without_re
                          scope="uncertain", basis="uncertain", placement="disputes",
                          dispute_ids=("scope-first:material:1",))
 
-    model = ServiceModel([plan(words, candidates=[disputed, uncertain], opening=True)])
+    model = ServiceModel([plan(words, candidates=[disputed, uncertain], opening=True,
+                               material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     response = send(client, words, "scope-first")

@@ -84,8 +84,9 @@ def _public_model(*, invalid=None):
         references=({"turn_id": "original", "role": "advocate", "quoted": FIRST_PASSAGE},),
         related_material_ids=("original:material:1",))
     return RepeatedSelectionModel([
-        plan(FIRST, candidates=[original], opening=True),
-        plan(CORRECTION, candidates=[correction]),
+        plan(FIRST, candidates=[original], opening=True,
+             material_purposes=("account_contribution",)),
+        plan(CORRECTION, candidates=[correction], material_purposes=("account_contribution",)),
     ], invalid=invalid)
 
 

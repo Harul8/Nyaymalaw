@@ -83,14 +83,13 @@ def route(request, *, relation, scope, opening=False):
                    "matter_scope": scope, "priority": "ordinary",
                    "next_step": "legal_work",
                    "reply": "I will assess the issues against the available record.",
-                   "clarification": ""}],
+                   "clarification": "", "material_purposes": ["account_contribution"]}],
         "active_work_after": request,
         "opening": {"ready": opening,
                     "party_name": "",
                     "subject": "Supply dispute" if opening else "",
                     "summary": "The client reports disputes concerning the supply relationship."
                     if opening else ""},
-        "material_review": True,
     }
 
 

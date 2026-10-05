@@ -59,7 +59,8 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                         for row in result.data["verdicts"]]})
             return result
 
-    model = Reviewing([plan(first, candidates=initial, opening=True),
+    model = Reviewing([plan(first, candidates=initial, opening=True,
+                            material_purposes=("account_contribution",)),
                        plan(latest, candidates=[changed, receipt], items=[
                            {"request": "Update the reported amount and receipt",
                             "relation": "changes", "matter_scope": "current",
@@ -68,7 +69,9 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                             "reply": "I will review the corrected account.", "clarification": ""},
                            {"request": "Hello", "relation": "aside", "matter_scope": "none",
                             "priority": "ordinary", "next_step": "answer",
-                            "reply": "Hello.", "clarification": ""}])])
+                            "reply": "Hello.", "clarification": "",
+                            "material_purposes": []}],
+                            material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "assignment-first")
     assert opened.status_code == 200, opened.text

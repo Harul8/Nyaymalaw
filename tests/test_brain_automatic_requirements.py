@@ -34,9 +34,9 @@ def _route(message: str, *, first: bool = False, aside: bool = False) -> dict:
             "next_step": "answer" if aside else "legal_work",
             "reply": "Hello." if aside else "I will check the record and applicable law.",
             "clarification": "",
+            "material_purposes": [] if aside else ["account_contribution"],
         }],
         "active_work_after": FIRST,
-        "material_review": not aside,
         "opening": {
             "ready": first,
             "party_name": "",
@@ -312,11 +312,13 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
 
     before = len(model.calls), len(search.calls)
     aside = _send(brain, ASIDE, "third", first)
-    assert aside["metrics"]["llm_calls"] == 1
-    assert (len(model.calls), len(search.calls)) == (before[0] + 1, before[1])
+    assert aside["metrics"]["llm_calls"] == 3
+    assert [operation for operation, _ in model.calls[before[0]:]] == [
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert (len(model.calls), len(search.calls)) == (before[0] + 3, before[1])
     replay = _send(brain, ASIDE, "third", first)
     assert replay["replayed"] and replay["metrics"]["llm_calls"] == 0
-    assert (len(model.calls), len(search.calls)) == (before[0] + 1, before[1])
+    assert (len(model.calls), len(search.calls)) == (before[0] + 3, before[1])
 
 
 def test_unavailable_corpus_never_yields_a_requirement(tmp_path):
@@ -365,7 +367,7 @@ def test_gathering_coverage_does_not_stand_in_for_requested_legal_analysis(tmp_p
     first = _send(brain, FIRST, "gathering-first")
     enquiry = first["research_reads"][0]["subject"]["question"]
     requested = _route("Please analyse the relevant legal principle.")
-    requested["material_review"] = False
+    requested["items"][0]["material_purposes"] = []
     requested["items"][0]["research_question"] = enquiry
     model.routes = iter([requested])
 

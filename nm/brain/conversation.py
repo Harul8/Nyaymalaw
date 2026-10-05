@@ -67,6 +67,11 @@ class WorkItem:
     intent: Literal["request", "contribution"] = "request"
     research_question: str = ""
     response_basis: Literal["conversation_record", "legal_authority"] | None = None
+    # None preserves untracked older in-process plans. Fresh interpreter output
+    # must explicitly declare its purposes, including an empty list.
+    material_purposes: tuple[
+        Literal["account_contribution", "interpretation_review"], ...
+    ] | None = None
 
     def __post_init__(self) -> None:
         # Older in-process callers supplied the question without a separate
@@ -112,13 +117,14 @@ class TurnPlan:
 
 _SCHEMA = {
     "type": "object", "additionalProperties": False,
-    "required": ["items", "opening", "material_review"],
+    "required": ["items", "opening"],
     "properties": {
         "items": {"type": "array", "minItems": 1, "items": {
             "type": "object", "additionalProperties": False,
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
-                         "clarification", "intent", "response_basis", "research_question"],
+                         "clarification", "intent", "response_basis", "research_question",
+                         "material_purposes"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -134,6 +140,9 @@ _SCHEMA = {
                 "response_basis": {"type": "string", "enum": [
                     "conversation_record", "legal_authority"]},
                 "research_question": {"type": "string"},
+                "material_purposes": {"type": "array", "items": {
+                    "type": "string", "enum": [
+                        "account_contribution", "interpretation_review"]}},
             },
         }},
         "opening": {
@@ -146,7 +155,6 @@ _SCHEMA = {
                 "summary": {"type": "string"},
             },
         },
-        "material_review": {"type": "boolean"},
     },
 }
 
@@ -282,16 +290,22 @@ work to reconcile NM's saved dispute or material formulations with the
 attributed account. That work may require reading without any new factual
 assertion. Distinguish review of the record's formulation from using the
 existing record to answer, summarise, research or perform other work.
-Outcome: `material_review` controls the sourced dispute and material readers,
-not legal research or response source checking. Set it true for new or changed
-matter-account content, including an uncertain or hypothetical contribution,
-and for relevant authorised review of NM's sourced material interpretations.
+Outcome: In each item's `material_purposes`, select `account_contribution` for
+new or changed matter-account content, including an uncertain or hypothetical
+contribution, and `interpretation_review` for relevant authorised review of
+NM's sourced material interpretations. Select both when both purposes occur;
+do not lose account content inside a request or replace a requested review with
+an intake acknowledgement. These purposes describe why the sourced dispute
+and material readers are needed, not legal research or response source checking.
+The server derives whether to run those readers from the selected purposes;
+do not independently supply a material_review switch or claim reading occurred.
 The latest review request authorises examination; the original advocate words
 remain the evidentiary basis. It does not change the advocate's account, prove
 facts, or authorise a different matter's records to be revised. The separate
 readers decide whether any sourced proposal or repair is justified; do not
 invent a change merely because review was requested.
-Set it false for work that only uses the existing record, including a recap,
+Return an empty `material_purposes` list for work that only uses the existing
+record, including a recap,
 repeat, explanation, legal-source enquiry or continuation with no new material
 and no authorised reconciliation of its formulations. A greeting or pure
 diversion does not require material review. Referring to existing material
@@ -323,7 +337,7 @@ legal work. Do not split a single legal decision into a purported factual
 answer to avoid the authority that decision needs.
 Outcome: Set `response_basis` to `conversation_record` when this item's result
 needs only attributed conversation or record reconciliation. Its
-`research_question` must be empty, even if `material_review` is true or earlier
+`research_question` must be empty, even if material reading is needed or earlier
 legal research remains unfinished. This basis does not permit a legal claim
 without checked sources. Set `response_basis` to `legal_authority` only when
 the requested result needs a substantive legal proposition, assessment, remedy
@@ -342,8 +356,8 @@ not a finding; do not infer causation, onset or changed legal status. Leave
 the field empty and use `conversation_record` for answer/clarify. Do not
 invent a dispute to support a general legal question.
 
-Outcome: Return only the declared JSON object with `items`,
-`opening`, and `material_review`. Do not alter any matter
+Outcome: Return only the declared JSON object with `items` and
+`opening`. Do not alter any matter
 record."""
 
 
@@ -504,6 +518,13 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
         clarification = row.get("clarification")
         research_question = row.get("research_question")
         response_basis = row.get("response_basis")
+        purposes = row.get("material_purposes")
+        if (not isinstance(purposes, list) or any(
+                purpose not in ("account_contribution", "interpretation_review")
+                for purpose in purposes)):
+            raise SchemaViolation(
+                f"items[{index}].material_purposes must explicitly list "
+                "account_contribution and/or interpretation_review, or neither")
         if (not isinstance(request, str) or not request.strip()
                 or not isinstance(reply, str) or not isinstance(clarification, str)
                 or not isinstance(research_question, str)):
@@ -544,7 +565,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             reply=reply,
                             clarification=clarification, intent=row["intent"],
                             research_question=research_question.strip(),
-                            response_basis=response_basis)
+                            response_basis=response_basis,
+                            material_purposes=tuple(dict.fromkeys(purposes)))
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")
@@ -577,9 +599,7 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
             raise SchemaViolation("The opening candidate lacks current-message support")
     elif party_name or subject or summary:
         raise SchemaViolation("An unready opening cannot carry matter details")
-    material_review = data.get("material_review")
-    if type(material_review) is not bool:
-        raise SchemaViolation("The material-reading decision is missing")
+    material_review = any(item.material_purposes for item in items)
     return TurnPlan(items=tuple(items), active_work_after=conversation.current_work,
                     opening=(opening_from_parts(party_name, subject, summary)
                              if ready else OpeningCandidate(False, "", "")),

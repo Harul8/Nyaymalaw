@@ -31,18 +31,17 @@ class Model:
 
 def item(quoted, *, request=None, relation="continues", scope="current",
          priority="ordinary", step="legal_work", reply=None,
-         clarification="", intent="request"):
+         clarification="", intent="request", material_purposes=()):
     if reply is None:
         reply = (f"I will check the material needed to address {quoted}."
                  if step == "legal_work" else "")
     return {"request": request or quoted, "relation": relation,
             "matter_scope": scope, "priority": priority,
             "next_step": step, "reply": reply, "clarification": clarification,
-            "intent": intent}
+            "intent": intent, "material_purposes": list(material_purposes)}
 
 
-def interpretation(items, *, active_work_after="", opening=None,
-                   material_review=False):
+def interpretation(items, *, active_work_after="", opening=None):
     if opening is None:
         opening = {"ready": False, "party_name": "", "subject": "",
                    "summary": ""}
@@ -53,7 +52,7 @@ def interpretation(items, *, active_work_after="", opening=None,
                    "party_name": party_name if separator else "",
                    "subject": subject.strip() if separator else title,
                    "summary": opening["summary"]}
-    return route_contract({"items": items, "material_review": material_review, "opening": opening})
+    return route_contract({"items": items, "opening": opening})
 
 
 def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
@@ -144,11 +143,11 @@ def test_first_concrete_account_can_propose_a_grounded_opening():
                "summary": "The landlord kept the deposit after the move."}
     model = Model(interpretation([
         item(latest, relation="new", scope="proposed",
+             material_purposes=("account_contribution",),
              reply=("You say the deposit was kept after you moved out. I can "
                     "assess recovery once I have the agreement and the reason "
                     "given for withholding it."))],
-        active_work_after="assess deposit recovery", opening=opening,
-        material_review=True))
+        active_work_after="assess deposit recovery", opening=opening))
 
     plan = interpret(model, Conversation(()), latest)
 
@@ -167,8 +166,9 @@ def test_one_named_client_and_subject_compose_opening_title():
                "summary": "Mira Patel reports that Dev Shah retained her records."}
     model = Model(interpretation([
         item(latest, relation="new", scope="proposed",
-             reply="I will review the reported retention and the available record.")],
-        opening=opening, material_review=True))
+             reply="I will review the reported retention and the available record.",
+             material_purposes=("account_contribution",))],
+        opening=opening))
 
     result = interpret(model, Conversation(()), latest)
 
@@ -192,6 +192,7 @@ def test_later_clarification_can_complete_opening_from_prior_advocate_words():
                "summary": "The user says the landlord withheld a deposit and seeks its return."}
     model = Model(interpretation([
         item(latest, relation="continues", scope="proposed",
+             material_purposes=("account_contribution",),
              reply=("You want the deposit returned. I can assess the recovery "
                     "options after checking the agreement and communications."))],
         active_work_after="assess deposit recovery", opening=opening))
@@ -212,8 +213,8 @@ def test_open_matter_requires_an_empty_opening_decision_on_followup():
     model = Model(interpretation([
         item(latest, relation="continues", scope="current", step="legal_work",
              intent="contribution",
-             reply="I have recorded your corrected handover date.")],
-        material_review=True))
+             reply="I have recorded your corrected handover date.",
+             material_purposes=("account_contribution",))]))
 
     plan = interpret(model, conversation, latest)
 
@@ -408,3 +409,107 @@ def test_no_truncation_or_partial_model_output_is_accepted():
     limited = Model(model.data, completion=Completion.LENGTH_LIMITED)
     with pytest.raises(SchemaViolation):
         interpret(limited, conversation, "Continue")
+
+
+@pytest.mark.parametrize(("purposes", "latest"), [
+    ((), "Repeat the delivery date in my saved account."),
+    (("account_contribution",), "The delivery arrived on 17 June."),
+    (("interpretation_review",), "Repair your actor description against my original account."),
+    (("account_contribution", "interpretation_review"),
+     "It arrived on 17 June. Repair your actor description against my original account."),
+])
+def test_fresh_material_purposes_drive_reading_without_a_second_switch(purposes, latest):
+    conversation = Conversation((
+        Message("earlier", "advocate", "The delivery actor is unknown."),
+        Message("earlier", "nm", "The description remains provisional.")),
+        current_matter_id="current-file")
+    data = interpretation([item(latest, material_purposes=purposes)])
+    model = Model(data)
+
+    planned = interpret(model, conversation, latest)
+
+    assert planned.items[0].material_purposes == purposes
+    assert planned.material_review is bool(purposes)
+    assert len(model.calls) == 1
+    assert "material_review" not in data
+    schema = model.calls[0][1]
+    assert "material_review" not in schema["properties"]
+    assert "material_purposes" in schema["properties"]["items"]["items"]["required"]
+
+
+def test_mixed_account_and_review_purposes_preserve_an_independent_readonly_item():
+    conversation = Conversation((
+        Message("earlier", "advocate", "The delivery actor is unknown. It arrived at the depot."),
+        Message("earlier", "nm", "The manager delivered it.")),
+        current_matter_id="current-file")
+    latest = ("It arrived on 17 June. Repair your description against my original account. "
+              "Also repeat the previously reported location.")
+    model = Model(interpretation([
+        item("Record the arrival and reconcile your description",
+             material_purposes=("account_contribution", "interpretation_review")),
+        item("Repeat the reported location", step="answer",
+             reply="The reported location is unchanged.", material_purposes=()),
+    ]))
+
+    planned = interpret(model, conversation, latest)
+
+    assert [item.material_purposes for item in planned.items] == [
+        ("account_contribution", "interpretation_review"), ()]
+    assert planned.material_review is True
+    assert len(model.calls) == 1
+
+
+def test_repeated_material_purpose_is_normalized_without_retry_or_lost_meaning():
+    latest = "Review your saved formulation against the original account."
+    model = Model(interpretation([item(
+        latest, material_purposes=("interpretation_review", "interpretation_review"))]))
+
+    planned = interpret(model, Conversation((), current_matter_id="current-file"), latest)
+
+    assert planned.items[0].material_purposes == ("interpretation_review",)
+    assert planned.material_review is True
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("fault", ["missing", "unknown"])
+def test_invalid_fresh_purpose_gets_one_precise_correction_with_original_context(fault):
+    conversation = Conversation((
+        Message("earlier", "advocate", "The delivery actor is unknown."),),
+        current_matter_id="current-file")
+    latest = "Repair your saved delivery formulation against my original account."
+    correct = interpretation([item(latest, material_purposes=("interpretation_review",))])
+    wrong = json.loads(json.dumps(correct))
+    if fault == "missing":
+        wrong["items"][0].pop("material_purposes")
+    else:
+        wrong["items"][0]["material_purposes"] = ["completed_record_change"]
+
+    class CorrectedModel(Model):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            self.data = wrong if not self.calls else correct
+            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+
+    model = CorrectedModel(wrong)
+
+    planned = interpret(model, conversation, latest)
+
+    assert planned.items[0].material_purposes == ("interpretation_review",)
+    assert len(model.calls) == 2
+    feedback = json.loads(model.calls[1][0].user)
+    assert "material_purposes" in feedback["validation_issue"]
+    assert feedback["original_input"] == json.loads(model.calls[0][0].user)
+    assert feedback["original_input"]["earlier_conversation"][0]["text"] == (
+        "The delivery actor is unknown.")
+
+
+def test_a_model_global_material_switch_cannot_override_owned_item_purposes():
+    latest = "Repeat the reported delivery date."
+    supplied = interpretation([
+        item(latest, step="answer", reply="The reported date is unchanged.")])
+    supplied["material_review"] = True
+    model = Model(supplied)
+
+    with pytest.raises(SchemaViolation, match="undeclared properties"):
+        interpret(model, Conversation((), current_matter_id="current-file"), latest)
+
+    assert len(model.calls) == 2

@@ -56,14 +56,15 @@ def test_public_false_record_completion_is_reviewed_and_repaired_before_saving(
     remaining_gap = ("The requested record revision remains unfinished; "
                      "the saved entry is unchanged.")
     stored_item = material("circumstance", account, account, placement="matter")
-    opening = plan(account, candidates=[stored_item], opening=True)
+    opening = plan(account, candidates=[stored_item], opening=True,
+                   material_purposes=("account_contribution",))
     opening["opening"].update(subject="Reported record custody", summary=account)
     mistaken_route = plan(request, items=[{
         "request": request, "relation": "continues", "matter_scope": "none",
         "priority": "ordinary", "next_step": "answer", "reply": false_claim,
         "clarification": "", "intent": "request",
     }])
-    assert mistaken_route["material_review"] is False
+    assert mistaken_route["items"][0]["material_purposes"] == []
     unsupported = response_unit(false_claim, completed=True)
     corrected = response_unit(remaining_gap, completed=False)
 

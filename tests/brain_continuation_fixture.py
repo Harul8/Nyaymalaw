@@ -92,6 +92,7 @@ def reviewed_verdicts(payload, data):
 
 
 def interpretation(data):
+    """Preserve explicit fixture-owned purposes; never infer missing meaning."""
     return {**{key: value for key, value in data.items() if key != "active_work_after"},
             "items": [{**item, "intent": item.get("intent", "request"),
                        "response_basis": item.get("response_basis", "legal_authority"

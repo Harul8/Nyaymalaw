@@ -14,6 +14,7 @@ from tests.brain_reader_fixture import source_treatment_reply
 from tests.test_brain_account_source_treatment import SourceModel, reply
 from tests.test_brain_continuation import unit
 from tests.test_brain_continuation_service import PublicContinuationModel, send
+from tests.test_brain_release_gate_social import completed_reply
 from tests.test_brain_turn import plan
 
 
@@ -143,13 +144,18 @@ class CoverageModel(PublicContinuationModel):
 def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
         client, wired, monkeypatch, message, fault, recover):
     route = plan(message, step="legal_work")
-    route["material_review"] = True
-    model = CoverageModel([plan("Hello."), route], [{"units": [unit()]}],
+    route["items"][0]["material_purposes"] = ["account_contribution"]
+    greeting = plan("Hello.")
+    greeting["items"][0]["intent"] = "contribution"
+    model = CoverageModel([greeting, route], [
+        {"units": [completed_reply(0, "Hello.", span_ids=("L1",))]},
+        {"units": [unit()]}],
                           fault=fault, recover=recover)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, "Hello.", "coverage-before")
     matter_id = chat_matter_id("adv_demo", opened["chat_id"])
     original = deepcopy(wired.store.load(matter_id))
+    current_call_start = len(model.calls)
 
     response = client.post("/api/turn", json={
         "message": message, "turn_id": "coverage-current", "chat_id": opened["chat_id"],
@@ -171,7 +177,7 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
     if not recover:
         assert response.status_code == 503
         assert saved == original
-        assert [operation for operation, _ in model.calls[1:]] == [
+        assert [operation for operation, _ in model.calls[current_call_start:]] == [
             "interpret_conversation", "classify_account_sources", "classify_account_sources"]
         assert "source_treatments" not in response.text
         return

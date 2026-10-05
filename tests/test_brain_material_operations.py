@@ -187,9 +187,13 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
     if mode == "mixed":
         candidates.append(material("position", REPORTED_POSITION, POSITION,
                                    scope="current", basis="attributed", placement="matter"))
+    # Deliberately request account reading for the unsupported work-product
+    # cases too: independent admission must reject the faulty router/proposal
+    # combination without treating examination as authority to change facts.
     model = OperationModel([
-        plan(FIRST, candidates=[original], opening=True),
-        plan(latest, candidates=candidates),
+        plan(FIRST, candidates=[original], opening=True,
+             material_purposes=("account_contribution",)),
+        plan(latest, candidates=candidates, material_purposes=("account_contribution",)),
     ], rejected)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 

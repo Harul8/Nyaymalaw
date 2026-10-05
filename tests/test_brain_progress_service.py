@@ -12,6 +12,7 @@ from nm.shared.model_port import Tier
 from tests.brain_continuation_fixture import citation_units
 from tests.test_brain_continuation import verdict
 from tests.test_brain_continuation_service import PublicContinuationModel, send
+from tests.test_brain_release_gate_social import completed_reply
 from tests.test_brain_turn import plan
 
 FIRST = "The transaction is disputed. Please review the reported account."
@@ -25,7 +26,8 @@ def route(message, *, intent="request", opening=False, aside=False):
         relation="aside" if aside else "new" if opening else "continues",
         reply="Hello." if aside else "The interpreter's draft is not a delivered assessment.",
         title="Disputed transaction" if opening else "",
-        summary="The advocate reports that the transaction is disputed." if opening else "")
+        summary="The advocate reports that the transaction is disputed." if opening else "",
+                    material_purposes=("account_contribution",) if opening else ())
     proposal["items"][0]["intent"] = intent
     return proposal
 
@@ -144,10 +146,12 @@ def test_public_promise_unavailable_diversion_and_reask_repair_keep_question_ide
 
     model = wire(wired, monkeypatch, [
         route(FIRST, opening=True), route(promised, intent="contribution"),
-        route(unavailable, intent="contribution"), route(greeting, aside=True), route(returned)],
+        route(unavailable, intent="contribution"),
+        route(greeting, aside=True, intent="contribution"), route(returned)],
         [{"units": [response(create=True, question=True)]},
          question_transition("promised", "You intend to decide the review scope tomorrow."),
          question_transition("unavailable", "You cannot choose the review scope now."),
+         {"units": [completed_reply(0, "Hello.", span_ids=("L1",))]},
          reask, proceed])
     first = send(client, FIRST, "progress-open")
     promise = send(client, promised, "progress-promise", opened=first)
@@ -160,7 +164,7 @@ def test_public_promise_unavailable_diversion_and_reask_repair_keep_question_ide
     after = progress(wired, returned_reply)
 
     assert promise["metrics"]["llm_calls"] == absent["metrics"]["llm_calls"] == 3
-    assert aside["metrics"]["llm_calls"] == 1
+    assert aside["metrics"]["llm_calls"] == 3
     assert returned_reply["metrics"]["llm_calls"] == 4
     assert after["rows"][1]["status"] == "unavailable"
     assert after["rows"][1]["id"] == before_aside["rows"][1]["id"]

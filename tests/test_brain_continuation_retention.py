@@ -395,7 +395,7 @@ def test_public_adverse_disclosure_retains_supported_response_context_and_pendin
     follow = plan(DISCLOSURE, scope="current", relation="continues", step="legal_work",
                   reply="I will examine the corrected account.")
     follow["items"][0]["intent"] = "contribution"
-    follow["material_review"] = True
+    follow["items"][0]["material_purposes"] = ["account_contribution"]
     proposed = mixed(contribution=True)
     model = PublicContinuationModel([
         opening_route(first_words), follow],

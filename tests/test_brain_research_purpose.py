@@ -32,7 +32,8 @@ LEGAL_QUESTION = (
 def opening():
     result = plan(ACCOUNT, scope="proposed", step="legal_work", reply="I will check the account.",
                   title="Nila: Reported equipment and payment issues",
-                  summary="The advocate reports unreturned equipment and withheld payment.")
+                  summary="The advocate reports unreturned equipment and withheld payment.",
+                  material_purposes=("account_contribution",))
     result["items"][0].update(response_basis="conversation_record", research_question="")
     return result
 
@@ -127,7 +128,7 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
     requested = plan(latest, scope="current", step="legal_work", relation="continues",
                      reply="I will reconcile the attributed record.")
     requested["items"][0].update(response_basis="conversation_record", research_question="")
-    requested.update(material_review=True)
+    requested["items"][0]["material_purposes"] = ["interpretation_review"]
     model = RecordResearchModel(
         [opening(), requested],
         [{"units": [factual_unit()]},

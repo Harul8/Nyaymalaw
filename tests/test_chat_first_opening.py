@@ -21,7 +21,8 @@ def journey(tmp_path_factory):
         reply=("You report a wall on the client's land. The assessment is "
                "pending; the conveyance and boundary records are needed."),
         title="Land boundary concern",
-        summary="The advocate reports that a wall was built on the client's land.")
+        summary="The advocate reports that a wall was built on the client's land.",
+                   material_purposes=("account_contribution",))
     model = Model([opening, opening])
     with running(tmp_path_factory.mktemp("chat_first"), model=model) as (box, base):
         advocate = box.enrol()

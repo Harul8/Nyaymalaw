@@ -81,7 +81,8 @@ def opening_route(text):
         text, scope="proposed", step="legal_work",
         reply="I will examine your request before giving a supported assessment.",
         title="Receipt and agreement concern",
-        summary="The advocate reports holding a signed receipt for a disputed transaction.")
+        summary="The advocate reports holding a signed receipt for a disputed transaction.",
+                material_purposes=("account_contribution",))
 
 
 def send(client, message, turn_id, *, opened=None):
@@ -220,7 +221,7 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     latest = "A written permission was given in 2021. I do not know when it ended."
     opening = material_plan(first_words, opening=True, candidates=[material(
         "event", "The reported use began in 2019.", "The use began in 2019.",
-        placement="matter")])
+        placement="matter")], material_purposes=("account_contribution",))
     opening["opening"] = {"ready": True, "party_name": "Mira",
                           "subject": "Reported property use",
                           "summary": ("The advocate acts for Mira and reports "
@@ -233,7 +234,8 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     ], items=[{"request": "Add the reported permission and its unknown duration to the account.",
                "relation": "changes", "matter_scope": "current", "priority": "ordinary",
                "next_step": "legal_work", "reply": "I will retain the attributed chronology.",
-               "clarification": "", "intent": "contribution", "research_question": ""}])
+               "clarification": "", "intent": "contribution", "research_question": ""}],
+                        material_purposes=("account_contribution",))
     initial = unit(text="You report that the use began in 2019.", span_ids=("L2",))
     initial["blocks"] = [initial["blocks"][0]]
     initial.update(questions=[], sufficiency={"status": "complete", "block_id": "account-0"})
@@ -319,8 +321,8 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
         return aside
 
     routes[2] = aside_route
-    routes[1]["material_review"] = True
-    routes[3]["material_review"] = True
+    routes[1]["items"][0]["material_purposes"] = ["account_contribution"]
+    routes[3]["items"][0]["material_purposes"] = ["account_contribution"]
     corrected = unit(
         text="You have corrected the receipt's status to unsigned.",
         question="Is any other record of the transaction available?")
@@ -623,7 +625,7 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
     greeting = "Hello again."
     acknowledgment = plan(first_words, scope="none", step="answer", reply="Thank you.")
     acknowledgment["items"][0]["intent"] = "contribution"
-    acknowledgment["material_review"] = True
+    acknowledgment["items"][0]["material_purposes"] = ["account_contribution"]
 
     class RejectedDetail(PublicContinuationModel):
         def structured(self, prompt, schema, tier, *, max_tokens=None):

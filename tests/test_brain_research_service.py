@@ -18,6 +18,7 @@ from tests.brain_research_fixture import (
     supported,
 )
 from tests.test_brain_continuation_service import send
+from tests.test_brain_release_gate_social import completed_reply
 from tests.test_brain_turn import plan
 
 QUESTION = "Explain the legal condition governing the agreed remedy."
@@ -28,6 +29,8 @@ def route(words, *, research_question="", relation="new", aside=False):
                    step="answer" if aside else "legal_work",
                    reply="Hello." if aside else "The requested explanation needs checked sources.")
     planned["items"][0]["research_question"] = research_question
+    if aside:
+        planned["items"][0]["intent"] = "contribution"
     return planned
 
 
@@ -138,7 +141,8 @@ def test_public_supported_followup_and_aside_preserve_research_without_extra_cal
         route(QUESTION, research_question=QUESTION),
         route(followup, relation="continues", research_question=QUESTION),
         route(greeting, relation="aside", aside=True)],
-        [sourced_reply, sourced_reply])
+        [sourced_reply, sourced_reply,
+         {"units": [completed_reply(0, "Hello.", span_ids=("L1",))]}])
     wire(wired, monkeypatch, model, corpus)
     first = send(client, QUESTION, "research-followup-first")
     first_saved = deepcopy(wired.store.load(chat_matter_id("adv_demo", first["chat_id"])))
@@ -148,7 +152,7 @@ def test_public_supported_followup_and_aside_preserve_research_without_extra_cal
     replay = send(client, greeting, "research-followup-aside", opened=first)
 
     assert second["metrics"]["llm_calls"] == 3
-    assert aside["metrics"]["llm_calls"] == 1
+    assert aside["metrics"]["llm_calls"] == 3
     assert replay["metrics"]["llm_calls"] == 0
     assert len(corpus.calls) == 1
     assert sum(operation == "decompose_disputes" for operation, _ in model.calls) == 1

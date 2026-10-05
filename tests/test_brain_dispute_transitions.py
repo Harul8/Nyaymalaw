@@ -80,8 +80,10 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
         opposing["basis"] = "attributed"
         candidates.append(opposing)
     latest = " ".join(pieces)
-    model = TransitionModel([plan(FIRST, candidates=originals, opening=True),
-                             plan(latest, candidates=candidates)])
+    model = TransitionModel([plan(FIRST, candidates=originals, opening=True,
+                                  material_purposes=("account_contribution",)),
+                             plan(latest, candidates=candidates,
+                                  material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, FIRST, "original")

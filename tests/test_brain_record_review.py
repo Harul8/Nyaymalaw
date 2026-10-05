@@ -64,8 +64,10 @@ def test_public_review_cannot_replace_distinct_accounts_with_analysis_and_preser
                 row["target_checks"] = []
         return decisions
 
-    model = ReviewModel([plan(account, candidates=original, opening=True),
-                         plan(request, candidates=[wrong_issue, issue, wrong_detail, detail])],
+    model = ReviewModel([plan(account, candidates=original, opening=True,
+                              material_purposes=("account_contribution",)),
+                         plan(request, candidates=[wrong_issue, issue, wrong_detail, detail],
+                              material_purposes=("account_contribution",))],
                         reject_analysis)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "seed").json()
@@ -138,8 +140,10 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
 
     candidates = ([first, second] if reject_successor
                   else [first, second, first_detail, second_detail])
-    model = ReviewModel([plan(account, candidates=original, opening=True),
-                         plan(request, candidates=candidates)], restore_atomic)
+    model = ReviewModel([plan(account, candidates=original, opening=True,
+                              material_purposes=("account_contribution",)),
+                         plan(request, candidates=candidates,
+                              material_purposes=("interpretation_review",))], restore_atomic)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "seed-merge").json()
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -212,8 +216,11 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
                 require_schema(result.data, schema)
             return result
 
-    model = DispatchModel([plan(account, candidates=[original], opening=True),
-                           plan(request, candidates=[successor])], reject_partial_restore)
+    model = DispatchModel([
+        plan(account, candidates=[original], opening=True,
+             material_purposes=("account_contribution",)),
+        plan(request, candidates=[successor], material_purposes=("interpretation_review",)),
+    ], reject_partial_restore)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "merged").json()
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -302,9 +309,11 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
             return result
 
     model = SourceReviewModel([
-        plan(account, candidates=original, opening=True),
+        plan(account, candidates=original, opening=True,
+             material_purposes=("account_contribution",)),
         plan(latest, candidates=[unsupported, party, courier, unsupported_detail,
-                                 party_detail, courier_detail])], certify_sources)
+                                 party_detail, courier_detail],
+             material_purposes=("account_contribution", "interpretation_review"))], certify_sources)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "source-seed").json()
     saved_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])

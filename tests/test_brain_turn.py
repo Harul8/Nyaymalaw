@@ -68,15 +68,14 @@ class Model:
 
 
 def plan(quote, *, scope="none", step="answer", reply="Hello.",
-         relation="new", title="", summary=""):
+         relation="new", title="", summary="", material_purposes=()):
     party_name, separator, subject = title.partition(":")
     return {"items": [{"request": quote, "relation": relation,
                        "matter_scope": scope, "priority": "ordinary",
                        "next_step": step,
                        "reply": reply if step in ("answer", "legal_work") else "",
-                       "clarification": ""}],
+                       "clarification": "", "material_purposes": list(material_purposes)}],
             "active_work_after": quote if step == "legal_work" else "",
-            "material_review": bool(title),
             "opening": {"ready": bool(title),
                         "party_name": party_name if separator else "",
                         "subject": subject.strip() if separator else title,
@@ -98,7 +97,8 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
              reply=("I understand the supply agreement is in dispute. I will "
                     "check the agreement and the relevant terms before giving "
                     "a legal view."),
-             title="Supply agreement dispute", summary="The agreement was terminated."),
+             title="Supply agreement dispute", summary="The agreement was terminated.",
+             material_purposes=("account_contribution",)),
     ])
     first = BrainTurn("adv", "Hello", "turn-one", offer={"message": "Hello"})
     greeting = brain.run(first).as_dict()
@@ -141,7 +141,8 @@ def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(t
         plan(text, scope="proposed", step="legal_work",
              reply=("I will check the invoice and the underlying agreement "
                     "before giving a legal view."),
-             title="Invoice dispute", summary="The client disputes an invoice.")])
+             title="Invoice dispute", summary="The client disputes an invoice.",
+             material_purposes=("account_contribution",))])
     offered = BrainTurn("adv", text, "opening-id", offer={"message": text})
     first = brain.run(offered).as_dict()
     replayed = brain.run(offered).as_dict()
@@ -170,7 +171,7 @@ def test_multi_party_opening_repairs_only_heading_then_checks_it(tmp_path):
         plan(text, scope="proposed", step="legal_work",
              reply="I will check the reported retention against the record.",
              title="Mira Patel and Om Rao vs Dev Shah: Return of records",
-             summary=summary),
+             summary=summary, material_purposes=("account_contribution",)),
         {"party_name": "Mira Patel", "subject": "Return of records",
          "summary": summary},
     ])
@@ -213,7 +214,8 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
     model = OpeningRejectedOnce([
         plan(text, scope="proposed", step="legal_work",
              reply="I will check the reported retention against the record.",
-             title="Records retention", summary=summary),
+             title="Records retention", summary=summary,
+             material_purposes=("account_contribution",)),
         {"party_name": "Mira Patel", "subject": "Records retention",
          "summary": summary},
     ])
@@ -308,12 +310,13 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     latest = "The supplier missed delivery. Please assess our remedies."
     draft = plan(latest, scope="proposed", step="legal_work",
                  reply="I will check the delivery terms and record before assessing remedies.",
-                 title="Delivery dispute", summary="The advocate reports late delivery.")
+                 title="Delivery dispute", summary="The advocate reports late delivery.",
+                 material_purposes=("account_contribution",))
     draft["items"].insert(0, {
         "request": "Assess the missed delivery", "relation": "new",
         "matter_scope": "proposed", "priority": "ordinary",
         "next_step": "legal_work", "reply": "The law guarantees damages today.",
-        "clarification": "",
+        "clarification": "", "material_purposes": [],
     })
     class IndependentCheck(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -391,7 +394,8 @@ def test_a_diversion_preserves_the_full_matter_conversation_and_current_work(tmp
     return_to_work = "Please return to the termination issue."
     opening = plan(facts, scope="proposed", step="legal_work",
                    reply="I will check the agreement terms and related material.",
-                   title="Supply agreement termination", summary="The client disputes termination.")
+                   title="Supply agreement termination", summary="The client disputes termination.",
+                   material_purposes=("account_contribution",))
     aside = plan(diversion, relation="aside", scope="none", reply="Paris.")
     aside["active_work_after"] = facts
     continued = plan(return_to_work, relation="continues", scope="current",
@@ -417,20 +421,22 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
         "items": [
             {"request": "Assess recovery of the deposit", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
-             "next_step": "legal_work", "reply": legal_reply, "clarification": ""},
+             "next_step": "legal_work", "reply": legal_reply, "clarification": "",
+             "material_purposes": []},
             {"request": "What is the capital of France?", "relation": "aside",
              "matter_scope": "none", "priority": "ordinary",
-             "next_step": "answer", "reply": "Paris.", "clarification": ""},
+             "next_step": "answer", "reply": "Paris.", "clarification": "",
+             "material_purposes": []},
         ],
         "active_work_after": "assess deposit recovery",
-        "material_review": False,
         "opening": {"ready": False, "party_name": "", "subject": "",
                     "summary": ""},
     }
     reported_account = plan(
         account, scope="proposed", step="legal_work",
         reply="I can review the deposit dispute once I have the agreement.",
-        title="Deposit dispute", summary="The advocate reports a withheld deposit.")
+        title="Deposit dispute", summary="The advocate reports a withheld deposit.",
+                            material_purposes=("account_contribution",))
     reported_account["items"][0]["intent"] = "contribution"
     brain, _, model = service(tmp_path, [
         reported_account,
@@ -466,20 +472,22 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
         "items": [
             {"request": "Review the draft response", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
-             "next_step": "legal_work", "reply": ordinary_reply, "clarification": ""},
+             "next_step": "legal_work", "reply": ordinary_reply, "clarification": "",
+             "material_purposes": []},
             {"request": "Address the filing deadline", "relation": "continues",
              "matter_scope": "current", "priority": "urgent",
-             "next_step": "legal_work", "reply": urgent_reply, "clarification": ""},
+             "next_step": "legal_work", "reply": urgent_reply, "clarification": "",
+             "material_purposes": ["account_contribution"]},
         ],
         "active_work_after": "check deadline and review draft response",
-        "material_review": True,
         "opening": {"ready": False, "party_name": "", "subject": "",
                     "summary": ""},
     }
     model = Model([
         plan(account, scope="proposed", step="legal_work",
              reply="I will check the agreement and termination record.",
-             title="Supply termination", summary="The client disputes termination."),
+             title="Supply termination", summary="The client disputes termination.",
+             material_purposes=("account_contribution",)),
         urgent_plan,
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -506,7 +514,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     update = plan(correction, relation="continues", scope="current",
                   step="legal_work", reply=direct_reply)
     update["items"][0]["intent"] = "contribution"
-    update["material_review"] = True
+    update["items"][0]["material_purposes"] = ["account_contribution"]
 
     class SourcedModel(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -546,7 +554,8 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     model = SourcedModel([
         plan(account, scope="proposed", step="legal_work",
              reply="I can review the notice and hearing schedule.",
-             title="Notice dispute", summary="The client contests a notice."),
+             title="Notice dispute", summary="The client contests a notice.",
+             material_purposes=("account_contribution",)),
         update,
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -573,7 +582,8 @@ def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired
         plan(text, scope="proposed", step="legal_work",
              reply=("I will review the termination terms and the available "
                     "record before giving a legal view."),
-             title="Supply agreement termination", summary="The client disputes termination."),
+             title="Supply agreement termination", summary="The client disputes termination.",
+             material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -608,7 +618,8 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
         latest, scope="proposed", step="legal_work",
         reply="I will review the reported events.",
         title="Supplier admitted wrongdoing",
-        summary="The supplier admitted wrongdoing and retained the drawings.")
+        summary="The supplier admitted wrongdoing and retained the drawings.",
+                   material_purposes=("account_contribution",))
 
     class GroundingModel(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -675,13 +686,12 @@ def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
         {"request": "Check the legal position", "relation": "continues",
          "matter_scope": "current", "priority": "ordinary",
          "next_step": "legal_work", "reply": "I will check the law.",
-         "clarification": ""},
+         "clarification": "", "material_purposes": []},
         {"request": "Identify the order", "relation": "uncertain",
          "matter_scope": "current", "priority": "ordinary",
          "next_step": "clarify", "reply": "",
-         "clarification": "Which order do you mean?"},
+         "clarification": "Which order do you mean?", "material_purposes": []},
     ], "active_work_after": "check legal position",
-       "material_review": False,
        "opening": {"ready": False, "party_name": "", "subject": "",
                    "summary": ""}}
     model = Model([mixed])

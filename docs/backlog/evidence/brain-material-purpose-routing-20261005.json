@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-178",
+  "base_commit": "702a071",
+  "status": "Per-item material purpose handoff mechanically verified; semantic extraction and completion remain unqualified",
+  "failed_general_invariant": "An independently model-authored global material_review switch could contradict item-level material work.",
+  "change": {
+    "production_files": [
+      "nm/brain/conversation.py"
+    ],
+    "prompts_changed": [
+      "_SYSTEM"
+    ],
+    "rule": "Each work item declares account_contribution and/or interpretation_review; code derives the aggregate reader flag. Read-only work declares neither. No purpose proves execution or request fulfillment.",
+    "additional_model_stages": 0
+  },
+  "validation": {
+    "affected_non_journey": {
+      "passed": 873,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml": "/tmp/nm-material-purpose-suite.xml"
+    },
+    "interpreter_cases_included": 38,
+    "focused_public_cases_included": 7,
+    "browser": {
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 11.893,
+      "xml": "outputs/material-purpose-routing-20261005/browser-tests.xml"
+    },
+    "ruff": "passed changed Python files",
+    "whitespace": "passed",
+    "scope": "Scripted model decisions exercise actual authenticated HTTP, browser rendering, encrypted versioned save and reopen; they do not establish actual-model semantic quality."
+  },
+  "false_rejection_counterexamples": [
+    "read-only recap without material work",
+    "authorized no-change review",
+    "authorized repair using earlier original account",
+    "mixed independently scoped work",
+    "either/both/no material purposes",
+    "harmless duplicate purposes normalize without another call"
+  ],
+  "faulty_counterexamples": [
+    "missing purpose uses bounded correction",
+    "unknown purpose uses bounded correction",
+    "obsolete independent global flag fails exact output schema"
+  ],
+  "browser": {
+    "correction": {
+      "identity": {
+        "serving": "a7e501a1af7cbe11",
+        "tree": "a7e501a1af7cbe11",
+        "code_state": "current"
+      },
+      "declared_interpretations": [
+        {
+          "items": [
+            {
+              "request": "The delivery date is disputed. The delivery took place on 16 June.",
+              "relation": "new",
+              "matter_scope": "proposed",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "Your account reports delivery on 16 June.",
+              "clarification": "",
+              "intent": "contribution",
+              "response_basis": "conversation_record",
+              "research_question": "",
+              "material_purposes": [
+                "account_contribution"
+              ]
+            }
+          ],
+          "opening": {
+            "ready": true,
+            "party_name": "",
+            "subject": "Reported delivery",
+            "summary": "The delivery date is disputed. The delivery took place on 16 June."
+          }
+        },
+        {
+          "items": [
+            {
+              "request": "Correction: the delivery took place on 17 June.",
+              "relation": "continues",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "Your corrected account records delivery on 17 June.",
+              "clarification": "",
+              "intent": "contribution",
+              "response_basis": "conversation_record",
+              "research_question": "",
+              "material_purposes": [
+                "account_contribution"
+              ]
+            }
+          ],
+          "opening": {
+            "ready": false,
+            "party_name": "",
+            "subject": "",
+            "summary": ""
+          }
+        }
+      ],
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "original_turn_unchanged": true,
+      "reply": "Correction: the delivery took place on 17 June.\n\nYour corrected account records delivery on 17 June.\n\nOct 5, 06:36 PM",
+      "paid_calls": 0,
+      "receipt": "outputs/material-purpose-routing-20261005/correction-receipt.json",
+      "screenshots": [
+        "correction-material.png",
+        "correction-reopened.png"
+      ],
+      "calls": 8
+    },
+    "no_change": {
+      "identity": {
+        "serving": "a7e501a1af7cbe11",
+        "tree": "a7e501a1af7cbe11",
+        "code_state": "current"
+      },
+      "declared_interpretations": [
+        {
+          "items": [
+            {
+              "request": "The delivery date is disputed. The delivery took place on 16 June.",
+              "relation": "new",
+              "matter_scope": "proposed",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "Your account reports delivery on 16 June.",
+              "clarification": "",
+              "intent": "contribution",
+              "response_basis": "conversation_record",
+              "research_question": "",
+              "material_purposes": [
+                "account_contribution"
+              ]
+            }
+          ],
+          "opening": {
+            "ready": true,
+            "party_name": "",
+            "subject": "Reported delivery",
+            "summary": "The delivery date is disputed. The delivery took place on 16 June."
+          }
+        },
+        {
+          "items": [
+            {
+              "request": "Check that your saved delivery description matches my account.",
+              "relation": "continues",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "The saved description matches your reported delivery date.",
+              "clarification": "",
+              "intent": "request",
+              "response_basis": "conversation_record",
+              "research_question": "",
+              "material_purposes": [
+                "interpretation_review"
+              ]
+            }
+          ],
+          "opening": {
+            "ready": false,
+            "party_name": "",
+            "subject": "",
+            "summary": ""
+          }
+        }
+      ],
+      "active_statements": [
+        "The delivery took place on 16 June."
+      ],
+      "original_turn_unchanged": true,
+      "reply": "Check that your saved delivery description matches my account.\n\nThe saved description matches your reported delivery date.\n\nOct 5, 06:36 PM",
+      "paid_calls": 0,
+      "receipt": "outputs/material-purpose-routing-20261005/no_change-receipt.json",
+      "screenshots": [
+        "no_change-material.png",
+        "no_change-reopened.png"
+      ],
+      "calls": 7
+    }
+  },
+  "remaining": [
+    "Actual pinned-model purpose/extraction qualification with independently labelled unfamiliar cases",
+    "Independent omission and empty-result completeness review plus bounded recovery",
+    "Code-owned stage/effect receipts and confirmed-save handoff",
+    "Typed request target and success condition checked against relevant saved outcome",
+    "Active-material provenance input and reviewer verdict-specific shapes"
+  ]
+}

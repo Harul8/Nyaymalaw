@@ -11,16 +11,15 @@ from tests.test_brain_material import Model, material, plan, send
 
 
 def answer_plan(message, *, reply, candidates=(), opening=False,
-                intent="request", material_review=None):
+                intent="request", material_purposes=()):
     routed = plan(message, candidates=candidates, opening=opening, items=[{
         "request": message, "relation": "new" if opening else "continues",
         "matter_scope": "proposed" if opening else "current",
         "priority": "ordinary", "next_step": "answer", "reply": reply,
         "clarification": "", "intent": intent,
         "response_basis": "conversation_record", "research_question": "",
-    }])
-    if material_review is not None:
-        routed["material_review"] = material_review
+        "material_purposes": list(material_purposes),
+    }], material_purposes=("account_contribution",))
     if opening:
         routed["opening"].update(subject="Reported delivery", summary=message)
     return routed
@@ -48,8 +47,10 @@ def test_current_answer_runs_correction_saves_lineage_and_replays_without_work(
         related_material_ids=("delivery-original:material:1",))
     corrected = answer_plan(
         correction, reply="Your corrected account records delivery on 17 June.",
-        candidates=[revised], intent="contribution")
-    seed = plan(account, candidates=[original], opening=True)
+        candidates=[revised], intent="contribution",
+                     material_purposes=("account_contribution",))
+    seed = plan(account, candidates=[original], opening=True,
+                material_purposes=("account_contribution",))
     seed["opening"].update(subject="Reported delivery", summary=account)
     # A second identical interpretation permits the old guard to exhaust its
     # correction bound, so the baseline reports refusal instead of fixture EOF.
@@ -96,7 +97,8 @@ def test_proposed_matter_answer_opens_and_saves_checked_account(
     account = "The delivery took place on 16 June."
     candidate = material("event", account, account, placement="matter")
     routed = answer_plan(account, reply="Your account reports delivery on 16 June.",
-                         candidates=[candidate], opening=True, intent="contribution")
+                         candidates=[candidate], opening=True, intent="contribution",
+                  material_purposes=("account_contribution",))
     model = Model([routed, routed])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -122,8 +124,9 @@ def test_current_account_recap_answer_uses_existing_record_without_extraction(
     request = "Repeat the delivery date in my saved account."
     original = material("event", account, account, placement="matter")
     recap = answer_plan(request, reply="Your saved account reports delivery on 16 June.",
-                        material_review=False)
-    model = Model([plan(account, candidates=[original], opening=True), recap, recap])
+                 material_purposes=())
+    model = Model([plan(account, candidates=[original], opening=True,
+                        material_purposes=("account_contribution",)), recap, recap])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     seed = send(client, account, "recap-original")
     assert seed.status_code == 200, seed.text
@@ -151,8 +154,9 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
     original = material("event", account, account, placement="matter")
     review = answer_plan(
         request, reply="The saved description matches your reported delivery date.",
-        material_review=True)
-    model = Model([plan(account, candidates=[original], opening=True), review, review])
+                  material_purposes=("interpretation_review",))
+    model = Model([plan(account, candidates=[original], opening=True,
+                        material_purposes=("account_contribution",)), review, review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     seed = send(client, account, "review-original")
     assert seed.status_code == 200, seed.text
