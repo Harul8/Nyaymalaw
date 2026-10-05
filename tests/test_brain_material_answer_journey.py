@@ -21,7 +21,7 @@ from tests.test_the_journey_login_to_logout import _sign_in
 pytestmark = pytest.mark.journey
 playwright_api = pytest.importorskip("playwright.sync_api")
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-purpose-routing-20261005"
+ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-execution-routing-20261005"
 ACCOUNT = "The delivery date is disputed. The delivery took place on 16 June."
 ORIGINAL_DATE = "The delivery took place on 16 June."
 
@@ -34,11 +34,19 @@ class BrowserModel(Model):
     def __init__(self, plans):
         super().__init__(plans)
         self.interpretations = []
+        self.execution_inputs = []
 
     def resolved_model(self, tier):
         return "offline"
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
+        if prompt.operation in ("continue_conversation", "verify_continuation"):
+            payload = json.loads(prompt.user)
+            supplied = payload["input"] if prompt.operation == "verify_continuation" else payload
+            self.execution_inputs.append({
+                "operation": prompt.operation,
+                "execution": deepcopy(supplied["material_coverage"]["execution"]),
+            })
         if prompt.operation == "decompose_disputes":
             payload = json.loads(prompt.user)
             data = {"plans": [{
@@ -77,6 +85,7 @@ def submit(page, message):
         page.click("#send")
     assert sent.value.status == 200, sent.value.text()
     response = sent.value.json()
+    page.last_turn_request = deepcopy(sent.value.request.post_data_json)
     page.locator("#thread .turn").last.locator(".el > p.body").wait_for()
     page.wait_for_function("() => state.matterReady && !activeDelivery", timeout=30000)
     return response
@@ -144,6 +153,7 @@ def test_checked_material_answer_survives_reopening(
         model.plans = iter([follow_up, follow_up])
 
         response = submit(page, message)
+        submitted_request = deepcopy(page.last_turn_request)
 
         assert operations(response) == expected_operations
         assert model.current_items[0]["material_purposes"] == expected_purposes
@@ -159,15 +169,59 @@ def test_checked_material_answer_survives_reopening(
         assert fetched.status == 200, fetched.text()
         record = fetched.json()["material_record"]
         assert [row["statement"] for row in record["rows"]] == [expected]
+        execution = response["material_coverage"]["execution"]
+        assert execution == saved.brain_chat[-1]["response"]["material_coverage"]["execution"]
+        assert execution["contract"] == "material_execution_v1"
+        assert execution["owner"] == {
+            "matter_id": matter_id, "advocate_id": actor, "turn_id": response["turn_id"],
+            "offer_digest": saved.brain_chat[-1]["offer_digest"],
+        }
+        assert execution["expected_version"] == opened["matter_version"]
+        assert execution["resulting_version"] == saved.version
+        assert execution["persistence"] == "committed"
+        assert execution["semantic_coverage"] == "unassessed"
+        assert execution["requests"][0]["material_purposes"] == expected_purposes
+        assert all(request["fulfillment"] == "unassessed" for request in execution["requests"])
+        stages = execution["stages"]
+        assert stages["source_classification"]["state"] == "returned"
+        assert stages["dispute_extraction"] == {"state": "returned", "proposals": 0}
+        assert stages["detail_extraction"] == {
+            "state": "returned", "proposals": 1 if outcome == "correction" else 0}
+        assert stages["detail_review"]["state"] == (
+            "checked" if outcome == "correction" else "no_candidates")
+        effects = execution["effects"]["details"]
+        before_ids = {row["id"] for row in before["rows"]}
+        after_ids = {row["id"] for row in record["rows"]}
+        assert set(effects["activated_record_ids"]) == after_ids - before_ids
+        assert set(effects["retired_record_ids"]) == before_ids - after_ids
+        assert effects["held_record_ids"] == effects["outside_owned_record_ids"] == []
+        assert execution["effects"]["disputes"]["activated_record_ids"] == []
+        assert execution["effects"]["disputes"]["retired_record_ids"] == []
+        assert execution["effects"]["disputes"]["operations"] == []
+        prepared = {**deepcopy(execution), "persistence": "prepared_for_commit"}
+        model_inputs = [entry for entry in model.execution_inputs
+                        if entry["execution"]["owner"]["turn_id"] == response["turn_id"]]
+        assert [entry["operation"] for entry in model_inputs] == [
+            "continue_conversation", "verify_continuation"]
+        assert all(entry["execution"] == prepared for entry in model_inputs)
         if outcome == "correction":
             assert len(record["history"]) == 2
             assert record["rows"][0]["related_material_ids"] == [
                 f"{first_turn_id}:material:2"]
             assert record["rows"][0]["prior_references"] == [
                 {"turn_id": first_turn_id, "role": "advocate", "quoted": ORIGINAL_DATE}]
+            assert effects["operations"] == [{
+                "result_id": record["rows"][0]["id"], "relation": "corrects",
+                "target_record_ids": [f"{first_turn_id}:material:2"],
+                "retired_target_ids": [f"{first_turn_id}:material:2"],
+                "source_references": [
+                    {"turn_id": response["turn_id"], "role": "advocate", "quoted": message},
+                    {"turn_id": first_turn_id, "role": "advocate", "quoted": ORIGINAL_DATE}],
+            }]
         else:
             assert response["material"] == []
             assert record == before
+            assert effects["operations"] == []
         reader = displayed_date(page, expected)
         if outcome == "correction":
             assert reader.get_by_text(f"Event: {ORIGINAL_DATE}", exact=True).count() == 0
@@ -187,6 +241,18 @@ def test_checked_material_answer_survives_reopening(
         assert reopened.status == 200, reopened.text()
         assert reopened.json()["material_record"] == record
         assert store.load(matter_id).brain_chat == saved.brain_chat
+        interpreted_count = len(model.interpretations)
+        execution_input_count = len(model.execution_inputs)
+        replay = page.evaluate("""body => api('/api/turn', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        })""", submitted_request)
+        assert replay["replayed"] is True
+        assert replay["metrics"]["llm_calls"] == 0
+        assert replay["material_coverage"]["execution"] == execution
+        assert len(model.interpretations) == interpreted_count
+        assert len(model.execution_inputs) == execution_input_count
+        assert store.load(matter_id).brain_chat == saved.brain_chat
         assert not page.errors, page.errors
         health = page.request.get(f"{base}/api/health").json()
         assert health["code_state"] == "current", health
@@ -195,6 +261,9 @@ def test_checked_material_answer_survives_reopening(
             "model_decisions": "explicitly scripted; semantic model quality unqualified",
             "outcome": outcome, "opening_response": opened, "response": response,
             "declared_interpretations": model.interpretations,
+            "execution_inputs": model_inputs, "execution": execution,
+            "replayed_execution": replay["material_coverage"]["execution"],
+            "replay_model_calls": replay["metrics"]["llm_calls"],
             "code_identity": {key: health[key] for key in ("serving", "tree", "code_state")},
             "before_material": before, "reopened_material": reopened.json()["material_record"],
             "saved_messages": [turn["message"] for turn in saved.brain_chat],

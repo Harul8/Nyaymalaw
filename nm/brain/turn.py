@@ -149,6 +149,76 @@ def _digest(value: dict) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+MATERIAL_EXECUTION_CONTRACT = "material_execution_v1"
+
+
+def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
+                        plan) -> dict:
+    """Code-owned observations, distinct from requested outcome fulfillment."""
+    owner = {"matter_id": str(matter.id), "advocate_id": turn.advocate_id,
+             "turn_id": turn.turn_id, "offer_digest": offer_digest}
+    return {
+        "contract": MATERIAL_EXECUTION_CONTRACT,
+        "id": "mex_" + _digest(owner)[:32], "owner": owner,
+        "expected_version": matter.version, "resulting_version": matter.version + 1,
+        "persistence": "prepared_for_commit", "semantic_coverage": "unassessed",
+        "requests": [{"request_index": index, "request": item.request,
+                      "material_purposes": (list(item.material_purposes)
+                                            if item.material_purposes is not None else None),
+                      "fulfillment": "unassessed"}
+                     for index, item in enumerate(plan.items)],
+        "stages": {name: {"state": "not_run"} for name in (
+            "source_classification", "dispute_extraction", "dispute_review",
+            "detail_extraction", "detail_review")},
+    }
+
+
+def _material_effects(before: dict, after: dict, proposals: list[dict], *,
+                      kind: str, turn_id: str) -> dict:
+    """Read actual owned projections; accepted proposals need not change them."""
+    old = {row["id"] for row in before["rows"]}
+    current = {row["id"] for row in after["rows"]}
+    retired = old - current
+    owned = [row for row in after["history"] if row["source_turn_id"] == turn_id]
+    held = {row["id"] for row in after.get("excluded_scope", [])
+            if row["source_turn_id"] == turn_id}
+    recorded = {row["id"] for row in owned} | held
+    target_field = "related_dispute_ids" if kind == "disputes" else "related_material_ids"
+    return {
+        "activated_record_ids": sorted(current - old),
+        "retired_record_ids": sorted(retired),
+        "operations": [{
+            "result_id": row["id"], "relation": row["relation"],
+            "target_record_ids": list(row.get(target_field, [])),
+            "retired_target_ids": sorted(retired.intersection(row.get(target_field, []))),
+            "source_references": [
+                {"turn_id": row["source_turn_id"], "role": "advocate",
+                 "quoted": row["quoted"]}, *row["prior_references"]],
+        } for row in owned],
+        "held_record_ids": sorted(held),
+        # Absence from an owned projection does not resolve semantic scope.
+        "outside_owned_record_ids": [row["id"] for row in proposals
+            if (row["kind"] == "dispute") == (kind == "disputes")
+            and row["id"] not in recorded],
+    }
+
+
+def _check_execution_owner(receipt: dict, matter: Matter, turn_id: str,
+                           offer_digest: str) -> None:
+    owner = {"matter_id": str(matter.id), "advocate_id": matter.advocate_id,
+             "turn_id": turn_id, "offer_digest": offer_digest}
+    if (not isinstance(receipt, dict)
+            or receipt.get("contract") != MATERIAL_EXECUTION_CONTRACT
+            or receipt.get("owner") != owner
+            or receipt.get("id") != "mex_" + _digest(owner)[:32]
+            or receipt.get("persistence") != "committed"
+            or type(receipt.get("expected_version")) is not int
+            or type(receipt.get("resulting_version")) is not int
+            or not 0 <= receipt["expected_version"] < matter.version
+            or receipt["resulting_version"] != receipt["expected_version"] + 1):
+        raise BrainRefused(409, "The saved material execution owner could not be verified")
+
+
 def chat_matter_id(advocate_id: str, chat_id: str) -> MatterId:
     return MatterId("mat_" + _digest({"advocate": advocate_id, "chat": chat_id})[:32])
 
@@ -162,6 +232,9 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None
     response = matches[0].get("response")
     if not isinstance(response, dict) or response.get("turn_id") != turn_id:
         raise BrainRefused(409, "The saved reply could not be verified")
+    coverage = response.get("material_coverage")
+    if isinstance(coverage, dict) and "execution" in coverage:
+        _check_execution_owner(coverage["execution"], matter, turn_id, offer_digest)
     metrics = dict(response.get("metrics") or {})
     metrics["llm_calls"] = 0
     metrics["provider_retries"] = 0
@@ -273,10 +346,6 @@ def _current_records(store: StorePort, matter: Matter,
                     current_work=progress["active_work"]), disputes, details)
 
 
-def _history(store: StorePort, matter: Matter, corpus_revision=None) -> Conversation:
-    return _current_records(store, matter, corpus_revision)[0]
-
-
 def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict[str, dict]:
     """Reuse only complete focused reads with their original chronological owners."""
     positions = {(message.turn_id, message.role): index
@@ -364,18 +433,25 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
 
 
 def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
-                   audit: list[dict] | None = None, *, source_treatments=None):
+                   audit: list[dict] | None = None, *, source_treatments=None,
+                   execution: dict | None = None):
     """Read disputes, then details that can link to newly identified issues."""
     arguments = {"earlier": conversation.messages, "latest": latest,
                  "current_matter_id": conversation.current_matter_id}
+    proposed = extract_disputes(
+        model, prior_disputes=conversation.open_disputes,
+        source_treatments=source_treatments, **arguments)
+    if execution is not None:
+        execution["dispute_extraction"] = {"state": "returned", "proposals": len(proposed)}
     disputes = verify_disputes(
-        model,
-        candidates=extract_disputes(
-            model, prior_disputes=conversation.open_disputes,
-            source_treatments=source_treatments, **arguments),
+        model, candidates=proposed,
         earlier=conversation.messages, latest=latest,
         active_disputes=conversation.open_disputes, audit=audit,
         source_treatments=source_treatments)
+    if execution is not None:
+        execution["dispute_review"] = {
+            "state": "checked" if proposed else "no_candidates",
+            "accepted": len(disputes), "rejected": len(proposed) - len(disputes)}
     active = {row["id"]: row for row in conversation.open_disputes}
     for index, candidate in enumerate(disputes, start=1):
         if not (candidate.matter_scope == "current" or
@@ -391,6 +467,8 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
         model, disputes=tuple(active.values()),
         prior_material=conversation.open_material,
         source_treatments=source_treatments, **arguments)
+    if execution is not None:
+        execution["detail_extraction"] = {"state": "returned", "proposals": len(details)}
     return (*disputes, *details), tuple(active.values())
 
 
@@ -520,10 +598,16 @@ class BrainService:
         except Exception:  # noqa: BLE001 -- unknown freshness disables research reuse
             corpus_revision = None
         try:
-            conversation = (_history(self.store, matter, corpus_revision) if persisted else
-                            Conversation((), progress=project_work(matter)))
+            if persisted:
+                conversation, before_disputes, before_details = _current_records(
+                    self.store, matter, corpus_revision)
+            else:
+                conversation = Conversation((), progress=project_work(matter))
+                before_disputes = {"rows": [], "history": []}
+                before_details = {"rows": [], "history": [], "by_dispute": {}}
             source_treatments = _saved_source_treatments(matter, conversation)
             plan = interpret(counted_model, conversation, turn.message)
+            execution = _material_execution(turn, matter, offer_digest, plan)
             dispute_audit: list[dict] = []
             source_reviewed = False
             if plan.material_review or plan.opening.ready:
@@ -531,9 +615,15 @@ class BrainService:
                 source_treatments = classify_account_sources(
                     counted_model, payload=source_payload, latest_turn_id=turn.turn_id)
                 source_reviewed = True
+                execution["stages"]["source_classification"] = {"state": "returned"}
                 candidates, active_disputes = _read_material(
                     counted_model, conversation, turn.message, turn.turn_id, dispute_audit,
-                    source_treatments=source_treatments)
+                    source_treatments=source_treatments, execution=execution["stages"])
+                if any(execution["stages"][stage]["state"] != "returned" for stage in (
+                        "dispute_extraction", "detail_extraction")):
+                    raise BrainRefused(
+                        503, "NM could not confirm that the required material reading "
+                        "finished. Please try again later.", code="material_execution_unconfirmed")
             else:
                 candidates, active_disputes = (), conversation.open_disputes
             grounded = verify_material_grounding(
@@ -543,6 +633,13 @@ class BrainService:
                 prior_material=conversation.open_material,
                 current_matter_id=conversation.current_matter_id,
                 source_treatments=source_treatments)
+            detail_count = sum(candidate.kind != "dispute" for candidate in candidates)
+            execution["stages"]["detail_review"] = {
+                "state": ("checked" if detail_count or plan.opening.ready else
+                          "no_candidates" if execution["stages"]["detail_extraction"][
+                              "state"] == "returned" else "not_run"),
+                "accepted": len(grounded.details), "rejected": grounded.rejected_details,
+                "opening_proposed": plan.opening.ready}
             candidates = (tuple(candidate for candidate in candidates
                                 if candidate.kind == "dispute") + grounded.details)
         except IncompleteConversation as exc:
@@ -648,6 +745,7 @@ class BrainService:
                         "source_treatments": source_treatments if source_reviewed else {},
                         "source_treatment_contract": SOURCE_TREATMENT_CONTRACT
                         if source_reviewed else "",
+                        "execution": execution,
                         "opening_fallback": not opening_supported},
                     "research_reads": [],
                     "metrics": counted_model.metrics(),
@@ -670,6 +768,30 @@ class BrainService:
             if candidates or ready or continuation_indexes(plan):
                 current_conversation, disputes, details = _current_records(
                     self.store, updated, corpus_revision)
+                execution["effects"] = {
+                    "disputes": _material_effects(
+                        before_disputes, disputes, material, kind="disputes", turn_id=turn.turn_id),
+                    "details": _material_effects(
+                        before_details, details, material, kind="details", turn_id=turn.turn_id),
+                }
+                # A canonical effect requires a returned reader, not merely a
+                # planned purpose or a positive response-review verdict.
+                for kind, stage in (("disputes", "dispute_extraction"),
+                                    ("details", "detail_extraction")):
+                    if (execution["effects"][kind]["operations"]
+                            and execution["stages"][stage]["state"] != "returned"):
+                        raise BrainRefused(
+                            503, "NM could not verify execution evidence for the proposed "
+                            "record changes. Please try again later.",
+                            code="material_execution_unconfirmed")
+                execution["rejected_proposals"] = {
+                    "disputes": [entry["candidate_id"] for entry in dispute_audit
+                                 if entry["verdict"] != "accept"],
+                    "details": [entry["candidate_id"] for entry in grounded.rejected_proposals],
+                }
+                # This is evidence of the checked proposed state while writing;
+                # the same receipt is persisted with the final reply below.
+                details["coverage"]["execution"] = execution
                 current, contexts = _project_research(
                     updated, disputes, details, corpus_revision, plan,
                     prior_conversation=conversation.messages)
@@ -758,6 +880,9 @@ class BrainService:
                                "was saved. Sign in again to continue.",
                                retryable=False)
         try:
+            # No committed receipt is released unless this version-checked
+            # atomic save returns, or durable lookup confirms the exact turn.
+            execution["persistence"] = "committed"
             self.store.commit(updated, expected_version=matter.version)
         except StaleWrite:
             current = self.store.load(matter_id)

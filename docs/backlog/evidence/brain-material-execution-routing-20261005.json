@@ -1,0 +1,764 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-178",
+  "base_commit": "2e593b8",
+  "status": "Code-owned execution/effect receipt mechanically verified; semantic coverage and per-request fulfillment remain unassessed",
+  "failed_general_invariant": "Reply review had no durable code-owned distinction between planned reading, returned reader, checked proposals and actual owned record effects.",
+  "change": {
+    "production_files": [
+      "nm/brain/turn.py"
+    ],
+    "prompts_changed": [],
+    "receipt_contract": "material_execution_v1",
+    "rule": "Receipt records actual stage returns and canonical owned projection changes; writer/reviewer see prepared evidence; atomic version-checked save persists committed evidence with exact reply before release. Replay verifies owner/version and preserves original historical receipt.",
+    "additional_model_stages": 0
+  },
+  "validation": {
+    "affected_regressions": {
+      "passed": 883,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "/tmp/nm-material-execution-suite-final.xml"
+    },
+    "focused_execution": {
+      "passed": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "/tmp/nm-material-execution-focused.xml"
+    },
+    "browser": {
+      "passed": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "outputs/material-execution-routing-20261005/browser-tests.xml"
+    }
+  },
+  "check_scope": "Scripted meaning/review decisions verify authenticated public HTTP, encrypted canonical projection/save/reopen, stage tracking, ownership and replay mechanics; no real-model semantic claims. Five additional focused replay cases were added after the883-test regression run; production stayed unchanged.",
+  "mechanical_gate_pairs": [
+    "Missing required reader evidence (including zero-proposal review) withholds as a503 service failure without saving; genuine empty review and read-only work succeed",
+    "Corrupt receipt owner, persistence or version rejects replay; legacy absence and superseded historical receipt replay without inventing current completion",
+    "Failed atomic commit releases no committed receipt; lost acknowledgement resolves exact saved turn without repeating changes",
+    "Withdrawal retires actual target without requiring active result row; ownership-held/outside-owned proposals do not count as current effects"
+  ],
+  "browser": {
+    "correction": {
+      "code_identity": {
+        "serving": "9037d95578ff8f11",
+        "tree": "9037d95578ff8f11",
+        "code_state": "current"
+      },
+      "receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_c5ba67053429f3101ebe8d07fc00ed82",
+        "owner": {
+          "matter_id": "mat_d59d0f5742d5982d85874ceffb4fa818",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+          "offer_digest": "caa4aa39d068b054e44f7b35099d55568316981725d26305d210d35d08650dd5"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Correction: the delivery took place on 17 June.",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 1
+          },
+          "detail_review": {
+            "state": "checked",
+            "accepted": 1,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [
+              "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1"
+            ],
+            "retired_record_ids": [
+              "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+            ],
+            "operations": [
+              {
+                "result_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1",
+                "relation": "corrects",
+                "target_record_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "retired_target_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "source_references": [
+                  {
+                    "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+                    "role": "advocate",
+                    "quoted": "Correction: the delivery took place on 17 June."
+                  },
+                  {
+                    "turn_id": "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de",
+                    "role": "advocate",
+                    "quoted": "The delivery took place on 16 June."
+                  }
+                ]
+              }
+            ],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "prepared_model_inputs": [
+        {
+          "operation": "continue_conversation",
+          "execution": {
+            "contract": "material_execution_v1",
+            "id": "mex_c5ba67053429f3101ebe8d07fc00ed82",
+            "owner": {
+              "matter_id": "mat_d59d0f5742d5982d85874ceffb4fa818",
+              "advocate_id": "adv_journey",
+              "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+              "offer_digest": "caa4aa39d068b054e44f7b35099d55568316981725d26305d210d35d08650dd5"
+            },
+            "expected_version": 1,
+            "resulting_version": 2,
+            "persistence": "prepared_for_commit",
+            "semantic_coverage": "unassessed",
+            "requests": [
+              {
+                "request_index": 0,
+                "request": "Correction: the delivery took place on 17 June.",
+                "material_purposes": [
+                  "account_contribution"
+                ],
+                "fulfillment": "unassessed"
+              }
+            ],
+            "stages": {
+              "source_classification": {
+                "state": "returned"
+              },
+              "dispute_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "dispute_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0
+              },
+              "detail_extraction": {
+                "state": "returned",
+                "proposals": 1
+              },
+              "detail_review": {
+                "state": "checked",
+                "accepted": 1,
+                "rejected": 0,
+                "opening_proposed": false
+              }
+            },
+            "effects": {
+              "disputes": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              },
+              "details": {
+                "activated_record_ids": [
+                  "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1"
+                ],
+                "retired_record_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "operations": [
+                  {
+                    "result_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1",
+                    "relation": "corrects",
+                    "target_record_ids": [
+                      "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                    ],
+                    "retired_target_ids": [
+                      "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                    ],
+                    "source_references": [
+                      {
+                        "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+                        "role": "advocate",
+                        "quoted": "Correction: the delivery took place on 17 June."
+                      },
+                      {
+                        "turn_id": "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de",
+                        "role": "advocate",
+                        "quoted": "The delivery took place on 16 June."
+                      }
+                    ]
+                  }
+                ],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              }
+            },
+            "rejected_proposals": {
+              "disputes": [],
+              "details": []
+            }
+          }
+        },
+        {
+          "operation": "verify_continuation",
+          "execution": {
+            "contract": "material_execution_v1",
+            "id": "mex_c5ba67053429f3101ebe8d07fc00ed82",
+            "owner": {
+              "matter_id": "mat_d59d0f5742d5982d85874ceffb4fa818",
+              "advocate_id": "adv_journey",
+              "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+              "offer_digest": "caa4aa39d068b054e44f7b35099d55568316981725d26305d210d35d08650dd5"
+            },
+            "expected_version": 1,
+            "resulting_version": 2,
+            "persistence": "prepared_for_commit",
+            "semantic_coverage": "unassessed",
+            "requests": [
+              {
+                "request_index": 0,
+                "request": "Correction: the delivery took place on 17 June.",
+                "material_purposes": [
+                  "account_contribution"
+                ],
+                "fulfillment": "unassessed"
+              }
+            ],
+            "stages": {
+              "source_classification": {
+                "state": "returned"
+              },
+              "dispute_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "dispute_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0
+              },
+              "detail_extraction": {
+                "state": "returned",
+                "proposals": 1
+              },
+              "detail_review": {
+                "state": "checked",
+                "accepted": 1,
+                "rejected": 0,
+                "opening_proposed": false
+              }
+            },
+            "effects": {
+              "disputes": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              },
+              "details": {
+                "activated_record_ids": [
+                  "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1"
+                ],
+                "retired_record_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "operations": [
+                  {
+                    "result_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1",
+                    "relation": "corrects",
+                    "target_record_ids": [
+                      "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                    ],
+                    "retired_target_ids": [
+                      "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                    ],
+                    "source_references": [
+                      {
+                        "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+                        "role": "advocate",
+                        "quoted": "Correction: the delivery took place on 17 June."
+                      },
+                      {
+                        "turn_id": "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de",
+                        "role": "advocate",
+                        "quoted": "The delivery took place on 16 June."
+                      }
+                    ]
+                  }
+                ],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              }
+            },
+            "rejected_proposals": {
+              "disputes": [],
+              "details": []
+            }
+          }
+        }
+      ],
+      "replayed_receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_c5ba67053429f3101ebe8d07fc00ed82",
+        "owner": {
+          "matter_id": "mat_d59d0f5742d5982d85874ceffb4fa818",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+          "offer_digest": "caa4aa39d068b054e44f7b35099d55568316981725d26305d210d35d08650dd5"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Correction: the delivery took place on 17 June.",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 1
+          },
+          "detail_review": {
+            "state": "checked",
+            "accepted": 1,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [
+              "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1"
+            ],
+            "retired_record_ids": [
+              "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+            ],
+            "operations": [
+              {
+                "result_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab:material:1",
+                "relation": "corrects",
+                "target_record_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "retired_target_ids": [
+                  "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de:material:2"
+                ],
+                "source_references": [
+                  {
+                    "turn_id": "turn_2818f6ba-f888-4aa0-8aba-43017e8e02ab",
+                    "role": "advocate",
+                    "quoted": "Correction: the delivery took place on 17 June."
+                  },
+                  {
+                    "turn_id": "turn_00e8d585-6434-4b6e-aae6-46e9dff9e5de",
+                    "role": "advocate",
+                    "quoted": "The delivery took place on 16 June."
+                  }
+                ]
+              }
+            ],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "replay_calls": 0,
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "original_turn_unchanged": true,
+      "rendered_reply": "Correction: the delivery took place on 17 June.\n\nYour corrected account records delivery on 17 June.\n\nOct 5, 06:51 PM",
+      "routine_calls": 8,
+      "paid_calls": 0,
+      "evidence": "outputs/material-execution-routing-20261005/correction-receipt.json",
+      "screenshots": [
+        "correction-material.png",
+        "correction-reopened.png"
+      ]
+    },
+    "no_change": {
+      "code_identity": {
+        "serving": "9037d95578ff8f11",
+        "tree": "9037d95578ff8f11",
+        "code_state": "current"
+      },
+      "receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_88f2a9a169ed427567b42a109d3ef49d",
+        "owner": {
+          "matter_id": "mat_2d1a36408379e56eb504299bc5b68582",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_2bbe28b9-355a-412d-ac0b-2c0f6d26363b",
+          "offer_digest": "39d8b9ab7fb104f8049f4a82e3d358cf0e4370dc4d787764aa5c2c64f5a98fad"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Check that your saved delivery description matches my account.",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "detail_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "prepared_model_inputs": [
+        {
+          "operation": "continue_conversation",
+          "execution": {
+            "contract": "material_execution_v1",
+            "id": "mex_88f2a9a169ed427567b42a109d3ef49d",
+            "owner": {
+              "matter_id": "mat_2d1a36408379e56eb504299bc5b68582",
+              "advocate_id": "adv_journey",
+              "turn_id": "turn_2bbe28b9-355a-412d-ac0b-2c0f6d26363b",
+              "offer_digest": "39d8b9ab7fb104f8049f4a82e3d358cf0e4370dc4d787764aa5c2c64f5a98fad"
+            },
+            "expected_version": 1,
+            "resulting_version": 2,
+            "persistence": "prepared_for_commit",
+            "semantic_coverage": "unassessed",
+            "requests": [
+              {
+                "request_index": 0,
+                "request": "Check that your saved delivery description matches my account.",
+                "material_purposes": [
+                  "interpretation_review"
+                ],
+                "fulfillment": "unassessed"
+              }
+            ],
+            "stages": {
+              "source_classification": {
+                "state": "returned"
+              },
+              "dispute_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "dispute_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0
+              },
+              "detail_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "detail_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0,
+                "opening_proposed": false
+              }
+            },
+            "effects": {
+              "disputes": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              },
+              "details": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              }
+            },
+            "rejected_proposals": {
+              "disputes": [],
+              "details": []
+            }
+          }
+        },
+        {
+          "operation": "verify_continuation",
+          "execution": {
+            "contract": "material_execution_v1",
+            "id": "mex_88f2a9a169ed427567b42a109d3ef49d",
+            "owner": {
+              "matter_id": "mat_2d1a36408379e56eb504299bc5b68582",
+              "advocate_id": "adv_journey",
+              "turn_id": "turn_2bbe28b9-355a-412d-ac0b-2c0f6d26363b",
+              "offer_digest": "39d8b9ab7fb104f8049f4a82e3d358cf0e4370dc4d787764aa5c2c64f5a98fad"
+            },
+            "expected_version": 1,
+            "resulting_version": 2,
+            "persistence": "prepared_for_commit",
+            "semantic_coverage": "unassessed",
+            "requests": [
+              {
+                "request_index": 0,
+                "request": "Check that your saved delivery description matches my account.",
+                "material_purposes": [
+                  "interpretation_review"
+                ],
+                "fulfillment": "unassessed"
+              }
+            ],
+            "stages": {
+              "source_classification": {
+                "state": "returned"
+              },
+              "dispute_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "dispute_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0
+              },
+              "detail_extraction": {
+                "state": "returned",
+                "proposals": 0
+              },
+              "detail_review": {
+                "state": "no_candidates",
+                "accepted": 0,
+                "rejected": 0,
+                "opening_proposed": false
+              }
+            },
+            "effects": {
+              "disputes": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              },
+              "details": {
+                "activated_record_ids": [],
+                "retired_record_ids": [],
+                "operations": [],
+                "held_record_ids": [],
+                "outside_owned_record_ids": []
+              }
+            },
+            "rejected_proposals": {
+              "disputes": [],
+              "details": []
+            }
+          }
+        }
+      ],
+      "replayed_receipt": {
+        "contract": "material_execution_v1",
+        "id": "mex_88f2a9a169ed427567b42a109d3ef49d",
+        "owner": {
+          "matter_id": "mat_2d1a36408379e56eb504299bc5b68582",
+          "advocate_id": "adv_journey",
+          "turn_id": "turn_2bbe28b9-355a-412d-ac0b-2c0f6d26363b",
+          "offer_digest": "39d8b9ab7fb104f8049f4a82e3d358cf0e4370dc4d787764aa5c2c64f5a98fad"
+        },
+        "expected_version": 1,
+        "resulting_version": 2,
+        "persistence": "committed",
+        "semantic_coverage": "unassessed",
+        "requests": [
+          {
+            "request_index": 0,
+            "request": "Check that your saved delivery description matches my account.",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "fulfillment": "unassessed"
+          }
+        ],
+        "stages": {
+          "source_classification": {
+            "state": "returned"
+          },
+          "dispute_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "dispute_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0
+          },
+          "detail_extraction": {
+            "state": "returned",
+            "proposals": 0
+          },
+          "detail_review": {
+            "state": "no_candidates",
+            "accepted": 0,
+            "rejected": 0,
+            "opening_proposed": false
+          }
+        },
+        "effects": {
+          "disputes": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          },
+          "details": {
+            "activated_record_ids": [],
+            "retired_record_ids": [],
+            "operations": [],
+            "held_record_ids": [],
+            "outside_owned_record_ids": []
+          }
+        },
+        "rejected_proposals": {
+          "disputes": [],
+          "details": []
+        }
+      },
+      "replay_calls": 0,
+      "active_statements": [
+        "The delivery took place on 16 June."
+      ],
+      "original_turn_unchanged": true,
+      "rendered_reply": "Check that your saved delivery description matches my account.\n\nThe saved description matches your reported delivery date.\n\nOct 5, 06:51 PM",
+      "routine_calls": 7,
+      "paid_calls": 0,
+      "evidence": "outputs/material-execution-routing-20261005/no_change-receipt.json",
+      "screenshots": [
+        "no_change-material.png",
+        "no_change-reopened.png"
+      ]
+    }
+  },
+  "remaining": [
+    "Independent omission/empty-result semantic completeness checking and bounded recovery",
+    "Per-request owned target/success condition linked to relevant saved outcome and code-owned completion statements",
+    "Actual pinned-model unfamiliar labelled evaluations for false acceptance, false rejection, retries and useful delivery",
+    "Active material input provenance four-field transport",
+    "Reviewer verdict-specific shape and bounded metadata recovery"
+  ]
+}
