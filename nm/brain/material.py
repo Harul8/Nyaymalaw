@@ -540,7 +540,8 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
         derived_record({key: row.get(key) for key in (
             "id", "kind", "statement", "source_turn_id", "quoted",
             "placement", "dispute_ids", "matter_scope", "relation",
-            "related_material_ids")}
+            "related_material_ids", "basis", "importance", "why_material",
+            "prior_references")}
         | {"source_ids": list(saved_source_ids(row, prior_sources))})
         for row in prior_material]
     prompt = Prompt(

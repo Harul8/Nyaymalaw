@@ -21,7 +21,7 @@ from tests.test_the_journey_login_to_logout import _sign_in
 pytestmark = pytest.mark.journey
 playwright_api = pytest.importorskip("playwright.sync_api")
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-execution-routing-20261005"
+ARTIFACTS = Path(__file__).resolve().parents[1] / "outputs/material-input-provenance-20261005"
 ACCOUNT = "The delivery date is disputed. The delivery took place on 16 June."
 ORIGINAL_DATE = "The delivery took place on 16 June."
 
@@ -35,11 +35,14 @@ class BrowserModel(Model):
         super().__init__(plans)
         self.interpretations = []
         self.execution_inputs = []
+        self.detail_inputs = []
 
     def resolved_model(self, tier):
         return "offline"
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
+        if prompt.operation == "extract_legal_details":
+            self.detail_inputs.append(json.loads(prompt.user))
         if prompt.operation in ("continue_conversation", "verify_continuation"):
             payload = json.loads(prompt.user)
             supplied = payload["input"] if prompt.operation == "verify_continuation" else payload
@@ -159,6 +162,20 @@ def test_checked_material_answer_survives_reopening(
         assert model.current_items[0]["material_purposes"] == expected_purposes
         assert len(model.interpretations) == 2
         assert all("material_review" not in plan for plan in model.interpretations)
+        assert len(model.detail_inputs) == 2
+        reader_input = model.detail_inputs[-1]
+        original_row = before["rows"][0]
+        supplied_row = next(row for row in reader_input["active_material"]
+                            if row["id"] == original_row["id"])
+        assert supplied_row["record_role"] == "nm_interpretation"
+        for field in ("basis", "importance", "why_material", "prior_references"):
+            assert supplied_row[field] == original_row[field]
+        assert [(entry["turn_id"], entry["role"],
+                 "".join(span["text"] for span in entry["source_spans"]))
+                for entry in reader_input["earlier_conversation"]] == [
+            (first_turn_id, "advocate", ACCOUNT),
+            (first_turn_id, "nm", "Your account reports delivery on 16 June.")]
+        assert "".join(span["text"] for span in reader_input["latest_message_spans"]) == message
         assert response["metrics"]["llm_calls"] == len(expected_operations)
         page.locator("#thread .turn").last.get_by_text(reply, exact=True).wait_for()
         saved = store.load(matter_id)
@@ -243,6 +260,7 @@ def test_checked_material_answer_survives_reopening(
         assert store.load(matter_id).brain_chat == saved.brain_chat
         interpreted_count = len(model.interpretations)
         execution_input_count = len(model.execution_inputs)
+        detail_input_count = len(model.detail_inputs)
         replay = page.evaluate("""body => api('/api/turn', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(body),
@@ -252,6 +270,7 @@ def test_checked_material_answer_survives_reopening(
         assert replay["material_coverage"]["execution"] == execution
         assert len(model.interpretations) == interpreted_count
         assert len(model.execution_inputs) == execution_input_count
+        assert len(model.detail_inputs) == detail_input_count
         assert store.load(matter_id).brain_chat == saved.brain_chat
         assert not page.errors, page.errors
         health = page.request.get(f"{base}/api/health").json()
@@ -261,6 +280,7 @@ def test_checked_material_answer_survives_reopening(
             "model_decisions": "explicitly scripted; semantic model quality unqualified",
             "outcome": outcome, "opening_response": opened, "response": response,
             "declared_interpretations": model.interpretations,
+            "reader_input": reader_input,
             "execution_inputs": model_inputs, "execution": execution,
             "replayed_execution": replay["material_coverage"]["execution"],
             "replay_model_calls": replay["metrics"]["llm_calls"],

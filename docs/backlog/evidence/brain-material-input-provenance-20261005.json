@@ -1,0 +1,374 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-178",
+  "base_commit": "f390f5c",
+  "status": "Saved input provenance mechanically preserved; actual-model extraction remains unqualified",
+  "failed_general_invariant": "The active_material projection dropped saved factual basis, provisional importance, relevance reason and earlier source lineage while the current prompt depended on those distinctions.",
+  "change": {
+    "production_files": [
+      "nm/brain/material.py"
+    ],
+    "prompts_changed": [],
+    "fields_preserved": [
+      "basis",
+      "importance",
+      "why_material",
+      "prior_references"
+    ],
+    "additional_model_stages": 0,
+    "unchanged_contracts": [
+      "exact complete conversation",
+      "source-ID resolution",
+      "assignment decisions",
+      "model output schema"
+    ]
+  },
+  "validation": {
+    "baseline": {
+      "tests": 2,
+      "failed": 2,
+      "reason": "Both uncertain/attributed earlier-review cases fail at omitted active_material.basis",
+      "report": "/tmp/nm-material-provenance-baseline.xml"
+    },
+    "focused": {
+      "passed": 62,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "/tmp/nm-material-provenance-focused.xml"
+    },
+    "browser": {
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 12.615,
+      "report": "outputs/material-input-provenance-20261005/browser-tests.xml"
+    },
+    "ruff": "passed",
+    "whitespace": "passed"
+  },
+  "qualification_scope": "Focused scripted cases establish uncertainty/attribution and original factual lineage behind earlier review authority; browser uses stated/relevant source with empty prior references and verifies shipped handoffs/save/reopen/replay. Neither establishes real-model extraction accuracy.",
+  "browser": {
+    "correction": {
+      "code_identity": {
+        "serving": "ad0a656401883959",
+        "tree": "ad0a656401883959",
+        "code_state": "current"
+      },
+      "reader_input": {
+        "earlier_conversation": [
+          {
+            "turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+            "role": "advocate",
+            "source_spans": [
+              {
+                "id": "P1S1",
+                "text": "The delivery date is disputed."
+              },
+              {
+                "id": "P1S2",
+                "text": " The delivery took place on 16 June."
+              }
+            ]
+          },
+          {
+            "turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+            "role": "nm",
+            "source_spans": [
+              {
+                "id": "P2S1",
+                "text": "Your account reports delivery on 16 June."
+              }
+            ]
+          }
+        ],
+        "latest_message_spans": [
+          {
+            "id": "L1",
+            "text": "Correction: the delivery took place on 17 June."
+          }
+        ],
+        "source_treatments": {
+          "P1S1": {
+            "turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+            "role": "advocate",
+            "quoted": "The delivery date is disputed.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          },
+          "P1S2": {
+            "turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+            "role": "advocate",
+            "quoted": "The delivery took place on 16 June.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          },
+          "L1": {
+            "turn_id": "turn_2af17091-66b7-4fc1-9319-8843142580ff",
+            "role": "advocate",
+            "quoted": "Correction: the delivery took place on 17 June.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          }
+        },
+        "current_matter_id": "mat_a6b87ce246e7722f59c7dcd54f441732",
+        "assignment_targets": [
+          {
+            "id": "matter:discussion",
+            "kind": "matter",
+            "matter_scope": "current",
+            "placement": "matter"
+          },
+          {
+            "id": "matter:unlinked",
+            "kind": "matter",
+            "matter_scope": "current",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:other",
+            "kind": "matter",
+            "matter_scope": "other",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:none",
+            "kind": "matter",
+            "matter_scope": "none",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:uncertain",
+            "kind": "matter",
+            "matter_scope": "uncertain",
+            "placement": "unresolved"
+          },
+          {
+            "id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1:material:1",
+            "kind": "dispute",
+            "matter_scope": "current",
+            "placement": "disputes",
+            "record": {
+              "id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1:material:1",
+              "source_turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+              "state": "proposed",
+              "kind": "dispute",
+              "statement": "Delivery date dispute",
+              "quoted": "The delivery date is disputed.",
+              "relation": "new",
+              "prior_references": [],
+              "matter_scope": "proposed",
+              "basis": "stated",
+              "importance": "relevant",
+              "why_material": "It may affect the requested legal work.",
+              "label": "Delivery date dispute",
+              "identification": "identified",
+              "clarification": "",
+              "related_dispute_ids": [],
+              "record_role": "nm_interpretation"
+            }
+          }
+        ],
+        "active_material": [
+          {
+            "id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1:material:2",
+            "kind": "event",
+            "statement": "The delivery took place on 16 June.",
+            "source_turn_id": "turn_caa89974-9960-4e77-9e31-57be620fd7d1",
+            "quoted": "The delivery took place on 16 June.",
+            "placement": "matter",
+            "dispute_ids": [],
+            "matter_scope": "proposed",
+            "relation": "new",
+            "related_material_ids": [],
+            "basis": "stated",
+            "importance": "relevant",
+            "why_material": "It may affect the requested legal work.",
+            "prior_references": [],
+            "source_ids": [
+              "P1S2"
+            ],
+            "record_role": "nm_interpretation"
+          }
+        ]
+      },
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "original_turn_unchanged": true,
+      "routine_calls": 8,
+      "replay_calls": 0,
+      "paid_calls": 0,
+      "receipt": "outputs/material-input-provenance-20261005/correction-receipt.json",
+      "screenshots": [
+        "correction-material.png",
+        "correction-reopened.png"
+      ]
+    },
+    "no_change": {
+      "code_identity": {
+        "serving": "ad0a656401883959",
+        "tree": "ad0a656401883959",
+        "code_state": "current"
+      },
+      "reader_input": {
+        "earlier_conversation": [
+          {
+            "turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+            "role": "advocate",
+            "source_spans": [
+              {
+                "id": "P1S1",
+                "text": "The delivery date is disputed."
+              },
+              {
+                "id": "P1S2",
+                "text": " The delivery took place on 16 June."
+              }
+            ]
+          },
+          {
+            "turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+            "role": "nm",
+            "source_spans": [
+              {
+                "id": "P2S1",
+                "text": "Your account reports delivery on 16 June."
+              }
+            ]
+          }
+        ],
+        "latest_message_spans": [
+          {
+            "id": "L1",
+            "text": "Check that your saved delivery description matches my account."
+          }
+        ],
+        "source_treatments": {
+          "P1S1": {
+            "turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+            "role": "advocate",
+            "quoted": "The delivery date is disputed.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          },
+          "P1S2": {
+            "turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+            "role": "advocate",
+            "quoted": "The delivery took place on 16 June.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          },
+          "L1": {
+            "turn_id": "turn_fd128bbd-74c7-4ba8-8f51-592b6820a877",
+            "role": "advocate",
+            "quoted": "Check that your saved delivery description matches my account.",
+            "content_role": "reported_matter_account",
+            "reason": "The scripted source-treatment decision reports account content."
+          }
+        },
+        "current_matter_id": "mat_add6da02c40c173b865e716fc81c0588",
+        "assignment_targets": [
+          {
+            "id": "matter:discussion",
+            "kind": "matter",
+            "matter_scope": "current",
+            "placement": "matter"
+          },
+          {
+            "id": "matter:unlinked",
+            "kind": "matter",
+            "matter_scope": "current",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:other",
+            "kind": "matter",
+            "matter_scope": "other",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:none",
+            "kind": "matter",
+            "matter_scope": "none",
+            "placement": "unresolved"
+          },
+          {
+            "id": "matter:uncertain",
+            "kind": "matter",
+            "matter_scope": "uncertain",
+            "placement": "unresolved"
+          },
+          {
+            "id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210:material:1",
+            "kind": "dispute",
+            "matter_scope": "current",
+            "placement": "disputes",
+            "record": {
+              "id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210:material:1",
+              "source_turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+              "state": "proposed",
+              "kind": "dispute",
+              "statement": "Delivery date dispute",
+              "quoted": "The delivery date is disputed.",
+              "relation": "new",
+              "prior_references": [],
+              "matter_scope": "proposed",
+              "basis": "stated",
+              "importance": "relevant",
+              "why_material": "It may affect the requested legal work.",
+              "label": "Delivery date dispute",
+              "identification": "identified",
+              "clarification": "",
+              "related_dispute_ids": [],
+              "record_role": "nm_interpretation"
+            }
+          }
+        ],
+        "active_material": [
+          {
+            "id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210:material:2",
+            "kind": "event",
+            "statement": "The delivery took place on 16 June.",
+            "source_turn_id": "turn_d9aea4eb-6310-4cb1-8600-e5e15f478210",
+            "quoted": "The delivery took place on 16 June.",
+            "placement": "matter",
+            "dispute_ids": [],
+            "matter_scope": "proposed",
+            "relation": "new",
+            "related_material_ids": [],
+            "basis": "stated",
+            "importance": "relevant",
+            "why_material": "It may affect the requested legal work.",
+            "prior_references": [],
+            "source_ids": [
+              "P1S2"
+            ],
+            "record_role": "nm_interpretation"
+          }
+        ]
+      },
+      "active_statements": [
+        "The delivery took place on 16 June."
+      ],
+      "original_turn_unchanged": true,
+      "routine_calls": 7,
+      "replay_calls": 0,
+      "paid_calls": 0,
+      "receipt": "outputs/material-input-provenance-20261005/no_change-receipt.json",
+      "screenshots": [
+        "no_change-material.png",
+        "no_change-reopened.png"
+      ]
+    }
+  },
+  "remaining": [
+    "Independent omission/empty-result completeness review and bounded recovery",
+    "Per-request target/success-condition completion gates and code-owned completion/effect statements",
+    "Reviewer verdict-specific schema and bounded metadata recovery",
+    "Actual pinned-model labelled unfamiliar evaluations including false rejection, useful delivery, retries, latency and cost (credentials absent)",
+    "Recovery call-count accounting after lost commit acknowledgement"
+  ]
+}
