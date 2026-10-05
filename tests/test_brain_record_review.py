@@ -296,8 +296,8 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
                     roles = {"L1": "work_instruction", "L2": "reported_party_position",
                              "L3": "mixed", "P1S1": "work_instruction"}
                     data = deepcopy(result.data)
-                    for row in data["source_treatments"]:
-                        row["content_role"] = roles.get(row["source_id"], "reported_matter_account")
+                    for source_id, row in data["source_treatments"].items():
+                        row["content_role"] = roles.get(source_id, "reported_matter_account")
                     return replace(result, data=data)
             return result
 
