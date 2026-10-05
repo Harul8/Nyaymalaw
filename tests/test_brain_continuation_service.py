@@ -574,14 +574,12 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_th
     assert [row["message"] for row in saved.brain_chat] == [first_words, acknowledgment]
 
 
-def test_public_matter_specific_answer_is_repaired_to_checked_composition_before_release(
+def test_public_matter_specific_answer_reaches_checked_composition_without_route_repair(
         client, wired, monkeypatch):
     first_words = "I have a signed receipt for the disputed transaction. Please review it."
     requested = "Please summarize the reported account."
-    invalid = plan(requested, scope="current", relation="continues", step="answer",
+    routed = plan(requested, scope="current", relation="continues", step="answer",
                    reply="UNREVIEWED_ROUTER_ACCOUNT")
-    corrected = plan(requested, scope="current", relation="continues", step="legal_work",
-                     reply="The requested account summary will use attributed material.")
     delivered = unit(text=(
         "Your account reports a signed receipt for a disputed transaction. "
         "The receipt's contents have not been checked."), span_ids=("P1S1",))
@@ -593,7 +591,7 @@ def test_public_matter_specific_answer_is_repaired_to_checked_composition_before
         "reason": "The requested reported-account summary is delivered with its limits.",
         "span_ids": ["P1S1"]}]
     model = PublicContinuationModel(
-        [opening_route(first_words), invalid, corrected],
+        [opening_route(first_words), routed],
         [{"units": [unit()]}, {"units": [delivered]}])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     first = send(client, first_words, "scope-repair-open")
@@ -601,14 +599,11 @@ def test_public_matter_specific_answer_is_repaired_to_checked_composition_before
 
     summary = send(client, requested, "scope-repair-summary", opened=first)
 
-    assert summary["metrics"]["llm_calls"] == 4
+    assert summary["metrics"]["llm_calls"] == 3
     assert [operation for operation, _ in model.calls[prior_calls:]] == [
-        "interpret_conversation", "interpret_conversation",
+        "interpret_conversation",
         "continue_conversation", "verify_continuation"]
-    assert model.tiers[prior_calls:] == [Tier.JUDGE] * 4
-    repair = model.calls[prior_calls + 1][1]
-    assert "matter_scope=none" in repair["validation_issue"]
-    assert repair["original_input"]["latest_message"] == requested
+    assert model.tiers[prior_calls:] == [Tier.JUDGE] * 3
     assert "UNREVIEWED_ROUTER_ACCOUNT" not in json.dumps(summary["elements"])
     reference = summary["continuation"]["units"][0]["blocks"][0]["references"][0]
     assert reference["role"] == "advocate"

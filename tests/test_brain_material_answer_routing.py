@@ -1,0 +1,195 @@
+"""Checked account answers preserve extraction and admit legitimate unchanged results.
+
+The model decisions here are scripted. These public-boundary checks prove
+routing, persistence and review wiring, not real-model semantic quality.
+"""
+from copy import deepcopy
+
+from nm.brain.dispute_state import proposed_disputes
+from nm.brain.material_state import material_record
+from tests.test_brain_material import Model, material, plan, send
+
+
+def answer_plan(message, *, reply, candidates=(), opening=False,
+                intent="request", material_review=None):
+    routed = plan(message, candidates=candidates, opening=opening, items=[{
+        "request": message, "relation": "new" if opening else "continues",
+        "matter_scope": "proposed" if opening else "current",
+        "priority": "ordinary", "next_step": "answer", "reply": reply,
+        "clarification": "", "intent": intent,
+        "response_basis": "conversation_record", "research_question": "",
+    }])
+    if material_review is not None:
+        routed["material_review"] = material_review
+    if opening:
+        routed["opening"].update(subject="Reported delivery", summary=message)
+    return routed
+
+
+def operations(response):
+    return [row["operation"] for row in response["metrics"]["model_calls"]]
+
+
+def current_record(wired, matter_id):
+    saved = wired.store.load(matter_id)
+    return material_record(saved, disputes=proposed_disputes(saved))
+
+
+def test_current_answer_runs_correction_saves_lineage_and_replays_without_work(
+        client, wired, monkeypatch):
+    account = "The delivery took place on 16 June."
+    correction = "Correction: the delivery took place on 17 June."
+    original = material("event", account, account, placement="matter")
+    revised = material(
+        "event", "The delivery took place on 17 June.", correction,
+        relation="corrects", scope="current", placement="matter",
+        references=({"turn_id": "delivery-original", "role": "advocate",
+                     "quoted": account},),
+        related_material_ids=("delivery-original:material:1",))
+    corrected = answer_plan(
+        correction, reply="Your corrected account records delivery on 17 June.",
+        candidates=[revised], intent="contribution")
+    seed = plan(account, candidates=[original], opening=True)
+    seed["opening"].update(subject="Reported delivery", summary=account)
+    # A second identical interpretation permits the old guard to exhaust its
+    # correction bound, so the baseline reports refusal instead of fixture EOF.
+    model = Model([seed, corrected, corrected])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    first = send(client, account, "delivery-original")
+    assert first.status_code == 200, first.text
+    opened = first.json()
+    original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
+
+    result = send(client, correction, "delivery-corrected", opened=opened)
+
+    assert result.status_code == 200, result.text
+    response = result.json()
+    assert operations(response) == [
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
+    assert response["metrics"]["llm_calls"] == 7
+    assert response["material"][0]["related_material_ids"] == [
+        "delivery-original:material:1"]
+    saved = wired.store.load(opened["matter_id"])
+    assert saved.brain_chat[0] == original_turn
+    assert [row["message"] for row in saved.brain_chat] == [account, correction]
+    record = current_record(wired, opened["matter_id"])
+    assert [(row["id"], row["statement"]) for row in record["rows"]] == [
+        ("delivery-corrected:material:1", "The delivery took place on 17 June.")]
+    assert len(record["history"]) == 2
+    assert "17 June" in "\n".join(row["text"] for row in response["elements"])
+    reader_count, interpretation_count = len(model.material_calls), len(model.calls)
+
+    replay = send(client, correction, "delivery-corrected", opened=opened)
+
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["replayed"] is True
+    assert replay.json()["metrics"]["llm_calls"] == 0
+    assert len(model.material_calls) == reader_count
+    assert len(model.calls) == interpretation_count
+    assert current_record(wired, opened["matter_id"]) == record
+
+
+def test_proposed_matter_answer_opens_and_saves_checked_account(
+        client, wired, monkeypatch):
+    account = "The delivery took place on 16 June."
+    candidate = material("event", account, account, placement="matter")
+    routed = answer_plan(account, reply="Your account reports delivery on 16 June.",
+                         candidates=[candidate], opening=True, intent="contribution")
+    model = Model([routed, routed])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+
+    result = send(client, account, "new-delivery")
+
+    assert result.status_code == 200, result.text
+    response = result.json()
+    assert response["route"] == "matter"
+    assert operations(response) == [
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
+    assert [row["statement"] for row in current_record(
+        wired, response["matter_id"])["rows"]] == [account]
+    saved = wired.store.load(response["matter_id"])
+    assert saved.brain_chat[0]["message"] == account
+    assert saved.brain_chat[0]["elements"] == response["elements"]
+
+
+def test_current_account_recap_answer_uses_existing_record_without_extraction(
+        client, wired, monkeypatch):
+    account = "The delivery took place on 16 June."
+    request = "Repeat the delivery date in my saved account."
+    original = material("event", account, account, placement="matter")
+    recap = answer_plan(request, reply="Your saved account reports delivery on 16 June.",
+                        material_review=False)
+    model = Model([plan(account, candidates=[original], opening=True), recap, recap])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    seed = send(client, account, "recap-original")
+    assert seed.status_code == 200, seed.text
+    opened = seed.json()
+    before = current_record(wired, opened["matter_id"])
+    reader_count = len(model.material_calls)
+
+    result = send(client, request, "delivery-recap", opened=opened)
+
+    assert result.status_code == 200, result.text
+    response = result.json()
+    assert operations(response) == [
+        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert response["metrics"]["llm_calls"] == 3
+    assert response["material"] == []
+    assert len(model.material_calls) == reader_count
+    assert current_record(wired, opened["matter_id"]) == before
+    assert "16 June" in "\n".join(row["text"] for row in response["elements"])
+
+
+def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
+        client, wired, monkeypatch):
+    account = "The delivery took place on 16 June."
+    request = "Check that your saved delivery description matches my account."
+    original = material("event", account, account, placement="matter")
+    review = answer_plan(
+        request, reply="The saved description matches your reported delivery date.",
+        material_review=True)
+    model = Model([plan(account, candidates=[original], opening=True), review, review])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+    seed = send(client, account, "review-original")
+    assert seed.status_code == 200, seed.text
+    opened = seed.json()
+    before = current_record(wired, opened["matter_id"])
+
+    result = send(client, request, "delivery-review", opened=opened)
+
+    assert result.status_code == 200, result.text
+    response = result.json()
+    assert operations(response) == [
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "extract_legal_details", "continue_conversation", "verify_continuation"]
+    assert response["metrics"]["llm_calls"] == 6
+    assert response["material"] == []
+    assert current_record(wired, opened["matter_id"]) == before
+    assert "matches your reported delivery date" in "\n".join(
+        row["text"] for row in response["elements"])
+
+
+def test_legal_authority_cannot_use_answer_route_to_bypass_research(
+        client, wired, monkeypatch):
+    request = "Does this limitation period apply to my claim?"
+    routed = plan(request, items=[{
+        "request": request, "relation": "new", "matter_scope": "none",
+        "priority": "ordinary", "next_step": "answer",
+        "reply": "The limitation period applies.", "clarification": "",
+        "intent": "request", "response_basis": "legal_authority",
+        "research_question": "Which limitation period applies to this claim?",
+    }])
+    model = Model([routed, routed])
+    monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
+
+    result = send(client, request, "authority-bypass")
+
+    assert result.status_code == 503, result.text
+    assert len(model.calls) == 2
+    assert all(prompt.operation == "interpret_conversation" for prompt in model.calls)
+    assert model.material_calls == []
+    assert "The limitation period applies." not in result.text

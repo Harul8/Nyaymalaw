@@ -1,0 +1,163 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "queue_owner": "LB-178",
+  "base_commit": "4754709",
+  "status": "Checked matter-answer routing verified; complete material extraction remains unqualified",
+  "failed_general_invariant": "Response route and matter ownership were incorrectly coupled to an obsolete unchecked-answer path, rejecting legitimate account replies before required extraction.",
+  "baseline": {
+    "focused_public_tests": 5,
+    "legitimate_cases_refused": 4,
+    "legal_authority_bypass_refused": 1,
+    "failures": "Current correction, first proposed account, current recap and no-change review each returned503 at answer/matter-scope guard."
+  },
+  "change": {
+    "production_files": [
+      "nm/brain/conversation.py"
+    ],
+    "prompts_changed": [
+      "_SYSTEM"
+    ],
+    "rule": "Allow attributed matter answers through the existing checked writer/reviewer; retain legal-authority, current-matter and first-turn contracts. Material review remains independent of response route.",
+    "additional_model_stages": 0
+  },
+  "validation": {
+    "focused": {
+      "tests": 9,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "affected_flow_regressions": {
+      "tests": 102,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "tests": 2,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "ruff": "passed for changed production and test files",
+    "whitespace": "git diff --check passed",
+    "scope": "Scripted decisions establish public handoffs, encrypted save/projection, correction lineage, replay and shipped rendering. They do not qualify real-model semantic accuracy.",
+    "reports": [
+      "outputs/material-answer-routing-20261005/focused-public.xml",
+      "outputs/material-answer-routing-20261005/affected-flow.xml",
+      "outputs/material-answer-routing-20261005/browser-tests.xml"
+    ]
+  },
+  "browser": {
+    "correction": {
+      "active_statements": [
+        "The delivery took place on 17 June."
+      ],
+      "history_count": 2,
+      "original_turn_unchanged": true,
+      "followup_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "extract_legal_details",
+        "verify_material_grounding",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "rendered_reply": "Correction: the delivery took place on 17 June.\n\nYour corrected account records delivery on 17 June.\n\nOct 5, 06:17 PM",
+      "paid_calls": 0,
+      "receipt": "outputs/material-answer-routing-20261005/correction-receipt.json"
+    },
+    "no_change": {
+      "active_statements": [
+        "The delivery took place on 16 June."
+      ],
+      "history_count": 1,
+      "original_turn_unchanged": true,
+      "followup_operations": [
+        "interpret_conversation",
+        "classify_account_sources",
+        "extract_disputes",
+        "extract_legal_details",
+        "decompose_disputes",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "rendered_reply": "Check that your saved delivery description matches my account.\n\nThe saved description matches your reported delivery date.\n\nOct 5, 06:17 PM",
+      "paid_calls": 0,
+      "receipt": "outputs/material-answer-routing-20261005/no_change-receipt.json"
+    }
+  },
+  "model_calls": {
+    "account_correction": 7,
+    "unchanged_review": 6,
+    "recap": 3,
+    "browser_correction_with_automatic_dispute_planning": 8,
+    "browser_unchanged_review_with_automatic_dispute_planning": 7,
+    "replay": 0,
+    "call_change": "Removes unnecessary interpreter correction; no routine stage added. Both reply routes still use writer and independent reviewer."
+  },
+  "remaining_work": [
+    "Derive material-reading need from explicit per-item purpose instead of an independent global routing flag.",
+    "Independently check omissions and legitimate empty extraction with source dispositions and bounded recovery.",
+    "Distinguish unchecked/skipped coverage from complete material review.",
+    "Bind requested record effects and completion to relevant executed operations and committed results.",
+    "Qualify active-material provenance candidate and substantive reviewer metadata recovery.",
+    "Evaluate unfamiliar conversations using the actual pinned model; no live credentials are configured here."
+  ],
+  "screenshots": {
+    "correction-material.png": "4056f9987e0e0f6fd8da981399c85f84fc1cc8c6d0f5008b238d5bc673ce8888",
+    "correction-reopened.png": "d6eb553f5e7adad65843898dc32cf09a0f9dcc8d5c998b6ddd2474690e373bcd",
+    "no_change-material.png": "39fb6bb089510d4b9bea8fb1102dae5ce4dcc90a07acbfe391236a04f3c4402b",
+    "no_change-reopened.png": "109de7c5f3fee288ff30b0d30437f8573dbecb273c934969cbeb12a869abd76d"
+  },
+  "legal_retrieval": "No fixture corpus; legal-source quality not assessed. Existing absence disclosure preserved.",
+  "completion_claim": "Only the obsolete answer-routing refusal is closed; LB-178 remains open.",
+  "before_build": {
+    "owner": "LB-178",
+    "row": 370,
+    "implementation_plan_row": 531,
+    "closeout_changed_cells": [
+      [
+        "Implementation Plan",
+        "AD531"
+      ],
+      [
+        "Implementation Plan",
+        "AM531"
+      ],
+      [
+        "Implementation Plan",
+        "AN531"
+      ],
+      [
+        "Implementation Plan",
+        "AO531"
+      ],
+      [
+        "Implementation Plan",
+        "AP531"
+      ],
+      [
+        "Implementation Plan",
+        "AQ531"
+      ],
+      [
+        "Implementation Plan",
+        "AR531"
+      ],
+      [
+        "Before Build",
+        "J370"
+      ],
+      [
+        "Before Build",
+        "L370"
+      ]
+    ],
+    "unexpected_changes": 0,
+    "reopened_values_merge_ranges_and_tables": "checked; no native Excel rendering claimed"
+  }
+}

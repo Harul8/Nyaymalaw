@@ -216,10 +216,11 @@ strategy, assessment of disputed facts, or advice about material to gather to
 `legal_work`, regardless of its relation to the current matter. A general
 legal question and a legal aside also need `legal_work`. Do not satisfy a
 legal request by placing a legal conclusion in an `answer` item.
-An `answer` must have matter_scope `none`: if the reply describes, summarises,
-interprets or updates a matter's account or pending work, use `legal_work`
-so attribution and work progress are checked before release. Scope is about
-the reply's subject, not merely the presence of an open matter.
+An `answer` may concern the current or proposed matter when its result needs
+only the attributed conversation record. Every reply goes through the separate
+writer and independent reviewer; this provisional text cannot establish a
+record change or completed work. Select matter scope from the item's actual
+subject and decide material review separately from the response route.
 For an `answer`, be brief and address the latest contribution. Do not supply
 an automatic matter recap or task menu unless it is asked for or needed.
 For `legal_work`, write a short, specific interim `reply` that identifies the
@@ -556,11 +557,6 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
             raise SchemaViolation("A first message cannot refer to prior work")
         if item.matter_scope == "current" and not conversation.current_matter_id:
             raise SchemaViolation("There is no current matter")
-        if item.next_step == "answer" and item.matter_scope != "none":
-            raise SchemaViolation(
-                "A source-free answer must have matter_scope=none. For a "
-                "matter-specific reply, select legal_work so its attribution "
-                "and progress are checked before release")
         if item.next_step != "legal_work" and item.research_question:
             raise SchemaViolation("Only legal_work may propose a research question")
         items.append(item)
