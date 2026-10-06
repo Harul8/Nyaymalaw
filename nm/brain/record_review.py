@@ -29,6 +29,9 @@ SOURCE_SELECTION_CONTRACT = "owned_substantive_spans_v2"
 SOURCE_SUPPORT_CONTRACT = "independent_original_source_support_v2"
 COVERAGE_SELECTION_CONTRACT = "owned_account_dispositions_v2"
 REVIEW_SELECTION_CONTRACT = "checked_source_selection_v1"
+_WHOLE_SOURCE_SCHEMA = {"type": "object", "additionalProperties": False,
+                        "required": ["whole_source"], "properties": {
+                            "whole_source": {"type": "boolean", "enum": [True]}}}
 
 
 def owned_source_portions(reference: dict, selections: list[dict], *,
@@ -83,10 +86,11 @@ def _source_proposal_schema(references: dict) -> dict:
     items = {}
     for identity, reference in references.items():
         bound = len(reference["quoted"])
-        portion = {"type": "object", "additionalProperties": False,
+        exact_portion = {"type": "object", "additionalProperties": False,
             "required": ["start", "end"], "properties": {
                 "start": {"type": "integer", "minimum": 0, "maximum": bound},
                 "end": {"type": "integer", "minimum": 1, "maximum": bound}}}
+        portion = {"anyOf": [_WHOLE_SOURCE_SCHEMA, exact_portion]}
         items[identity] = {"anyOf": [
             {"type": "object", "additionalProperties": False,
              "required": ["content_role", "reason", "substantive_spans"], "properties": {
@@ -104,10 +108,20 @@ def _source_proposal_schema(references: dict) -> dict:
 
 
 def _source_proposal(reference: dict, row: dict, *, source_id: str) -> dict:
+    selections = row["substantive_spans"]
+    if isinstance(selections, list):
+        resolved = []
+        for selection in selections:
+            if isinstance(selection, dict) and "whole_source" in selection:
+                require_schema(selection, _WHOLE_SOURCE_SCHEMA)
+                resolved.append({"start": 0, "end": len(reference["quoted"])})
+            else:
+                resolved.append(selection)
+        selections = resolved
     result = {**reference, "content_role": row["content_role"], "reason": row["reason"],
               "selection_contract": SOURCE_SELECTION_CONTRACT,
               "substantive_spans": owned_source_portions(
-                  reference, row["substantive_spans"], source_id=source_id)}
+                  reference, selections, source_id=source_id)}
     canonical = {(reference["turn_id"], reference["role"], reference["quoted"])}
     if not source_treatment_reference_valid(result, canonical):
         raise SchemaViolation(
@@ -152,11 +166,13 @@ spans as advocate evidence, reproduce passages or summarise the account.
 
 Outcome: Return only the declared JSON object: source_treatments keyed by EVERY
 required source ID, with content_role, a short substantive reason and
-substantive_spans for each. A portion supplies inclusive start and exclusive
-end character offsets in that source's quoted original words from
-original_source_catalogue; schema bounds supply the whole-source endpoint.
-Select genuine reported account or party-position portions with attribution,
-negation, uncertainty and necessary conditions intact. Account roles and mixed
+substantive_spans for each. When the complete owned source is substantive
+account or party-position content, select {"whole_source": true}; the server
+resolves its complete original words without character counting. When only
+part of the source supplies that content, select inclusive start and exclusive
+end character offsets in original_source_catalogue. Retain attribution,
+negation, uncertainty and necessary conditions in every selected portion.
+Do not include a pure work instruction in an account portion. Account roles and mixed
 need nonempty portions; examination, pure work instruction, NM interpretation
 and uncertain purpose select []. Do not select desired work as account.
 Overlapping context is legitimate. The server resolves exact original words

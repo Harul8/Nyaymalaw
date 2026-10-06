@@ -85,6 +85,12 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
             if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
                 fields.add("substantive_spans")
                 offsets = branch["properties"]["substantive_spans"]["items"]
+                choices = offsets["anyOf"]
+                offsets = next(choice for choice in choices if "start" in choice["properties"])
+                whole = next(choice for choice in choices if "whole_source" in choice["properties"])
+                assert set(whole["required"]) == set(whole["properties"]) == {"whole_source"}
+                assert whole["additionalProperties"] is False
+                assert whole["properties"]["whole_source"] == {"type": "boolean", "enum": [True]}
                 assert set(offsets["required"]) == set(offsets["properties"]) == {"start", "end"}
             assert set(branch["required"]) == set(branch["properties"]) == fields
     assert "P2S1" not in catalogue

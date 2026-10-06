@@ -1674,6 +1674,28 @@
       "canonical_changes": "Two test fixtures only; all production ownership, source, effect and replay gates unchanged.",
       "call_impact": "Zero model/provider calls; scripted actual public boundary preserves eight-call assertion.",
       "remaining": "Model material Judge semantics remain unverified; fixture acceptance does not demonstrate real reviewer detection."
+    },
+    {
+      "piece": "owned whole-source extent selection",
+      "base": "1415185",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 1,
+      "invariant": "A fresh complete-source choice resolves all original words mechanically; it cannot supply authored text, ownership or semantic acceptance.",
+      "observable_pass": "Full original qualifications persist in source proof and browser pane; exact existing canonical ranges/digests and saved replay remain unchanged.",
+      "baseline": "New contract probes initially 9 failed/26 passed; later canonical-owner rejection guard added. Earlier browser source classifier ended passages midword.",
+      "verification": "221 focused tests and Ruff pass. Actual pinned-mini browser turn selected whole source for five account spans and empty portions for four work instructions. Saved v3 source proof retains complete words. Right reading pane preserves attributed auditor negation. Exact reply reopens with0 calls.",
+      "canonical_changes": "None: source treatment contract, existing owned spans, anchors, dependency hashes, saved proof and replay remain unchanged. Fresh selectors are resolved only in the proposal owner; durable owner rejects them.",
+      "call_impact": "No routine stage added. Classifier1 routine call plus existing conditional correction; reconsideration existing conditional Judge call uses same fresh schema without prompt change. Browser13 total calls:9 initial stages/units plus4 bounded corrections. No provider retries. Whole-source classifier needed1 call.",
+      "model": "gpt-4.1-mini-2025-04-14 for both tiers",
+      "packets": [
+        270,
+        283
+      ],
+      "browser_turn": "turn_3f6e433a-d4f4-45ab-9f04-28dcb8724b24",
+      "browser_feature_complete": false,
+      "false_acceptance_observed": "Two unsupported dispute classifications were saved: timing uncertainty and an auditor attributed denial without a described conflict. Reviewer equated material account support with dispute existence; labels are also raw snake_case. No inference of refusal is supported by the message.",
+      "useful_delivery_limit": "Two sourced material details saved, but invalid coverage references leave overall work unfinished. Fixed reply truthfully reports saved effects but repeats duplicates from bad disputes and detail records. Legal reading and continuation remain unfinished.",
+      "remaining": "Material/dispute coverage still counts unrelated representations and truncates its separate ranges; bounded dependent-review recovery; full material association and atomicity; dispute existence and identity; typed compound requested delivery; legal force/applicability/qualification; retrieval limits; UI diagnostics/closure; full six-activity browser qualification remains incomplete."
     }
   ],
   "additional_reviewer_input": {
@@ -2154,13 +2176,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.872821,
-    "remaining_usd": 2.127179,
-    "new_ledger_attempts": 270,
+    "combined_measured_usd": 2.938001,
+    "remaining_usd": 2.061999,
+    "new_ledger_attempts": 283,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus current measured attempts; cumulative USD5 authorization unchanged"
+    "basis": "166 frozen prior attempts plus current measured attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2408,5 +2430,9 @@
     "verification": "239 focused source/admission/cache/recovery/public-save/replay tests pass; Ruff passes. Browser9+12 calls applies quantity correction and reopens truthful saved effects. Feature coverage/semantic consistency remains open.",
     "call_impact": "No new routine stage:1 material review call plus existing bounded1 conditional correction; native source read is within same call; shared recovery8/reserve2 unchanged. Failed units keep peers. No canonical save/replay upgrade.",
     "remaining": "Unchanged source-reconsideration recovery; material coverage purpose/owned representation; complete assignment context/atomicity; dispute identity; compound typed delivery; legal force/applicability/qualification; retrieval resources; UI diagnostics/closure; remaining audit owners."
+  },
+  "source_extent_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-source-extent-20261007.json.gz",
+    "sha256": "b836b98e606447442d5192901700a6c6b97065e9aa47c051841b5659d73a0a47"
   }
 }
