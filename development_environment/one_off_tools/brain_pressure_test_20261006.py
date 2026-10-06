@@ -211,11 +211,11 @@ def run(output, rounds, additional_tests=(), additional_sources=()):
         "live_model_calls": 0,
         "browser_calls": 0,
         "transport_qualification": (
-            "Source/extractor tests label permissive Brain-owned validation and "
-            "strict adapter schema rejection separately. Material-verifier tests "
-            "use strict adapter schema validation. Public-release tests use the "
-            "explicit legacy/permissive offline transport. These are scripted "
-            "transports, not actual provider behavior or semantic quality."),
+            "Selected cases declare their scripted transport individually, including "
+            "permissive Brain-owned validation, strict require_schema rejection and "
+            "completed-output quarantine. Public tests may use legacy/permissive "
+            "ports or strict raw fabricated ports. These contracts exercise shipped "
+            "checks, not actual provider behavior or semantic quality."),
         "qualification": (
             "Scripted passages and outputs exercise shipped mechanical boundaries. "
             "Demonstrated gaps remain unprevented even when their characterization "
