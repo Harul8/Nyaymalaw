@@ -108,6 +108,10 @@ def assert_prepared_handoffs(model, start, committed):
         assert receipt["persistence"] == "prepared_for_commit"
         expected = deepcopy(committed)
         expected["persistence"] = "prepared_for_commit"
+        # Full application dependency proofs are saved under the outcome seal;
+        # writer/reviewer input needs only actual effects and checked coverage.
+        expected.pop("coverage_application", None)
+        assert "coverage_application" not in receipt
         for request in expected["requests"]:
             request["fulfillment"] = "unassessed"
             request.pop("fulfillment_check")

@@ -37,7 +37,12 @@ from nm.brain.legal_requirements import (
     read_findings,
     verify_findings,
 )
-from nm.brain.material import addressed_sources, extract_details
+from nm.brain.material import (
+    MaterialCandidate,
+    PriorReference,
+    addressed_sources,
+    extract_details,
+)
 from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
 from nm.brain.mutation_contracts import (
@@ -51,12 +56,16 @@ from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
+    admitted_record_decisions,
     candidate_account_ids,
     classify_account_sources,
     owned_source_portions,
     owned_source_treatments,
     reconsider_account_sources,
+    retained_independent_review,
+    source_dependency,
     source_treatment_reference_valid,
+    validate_record_checks,
 )
 from nm.brain.requirements_state import (
     RESEARCH_VERIFICATION,
@@ -348,6 +357,530 @@ def _material_effects(before: dict, after: dict, proposals: list[dict], *,
     }
 
 
+POST_APPLICATION_COVERAGE_CONTRACT = "owned_coverage_application_v1"
+
+
+def _post_application_coverage(coverage: dict, *, active_record_ids,
+                               candidate_result_ids: dict,
+                               historical_record_results: dict | None = None,
+                               retirement_candidate_results: dict | None = None,
+                               durable_opening_result: dict | None = None) -> dict:
+    """Bind a fresh checked reading to active results and preserved source history.
+
+    Inputs are code-owned projection/result proofs, never model declarations.
+    Historical preservation relies on the admitted target check's explicit
+    account-preservation judgment; it certifies neither current assertions nor
+    the meaning of a successor. No replacement selection is invented here.
+    """
+    if not isinstance(coverage, dict):
+        raise ExecutionEvidenceInvalid("Post-application coverage has no owned assessment")
+    result = deepcopy(coverage)
+    version = coverage.get("selection_contract")
+    if version is None:
+        return result  # Historical assessments keep their declared contract.
+    if version != COVERAGE_SELECTION_CONTRACT:
+        raise ExecutionEvidenceInvalid("Post-application coverage has an unsupported version")
+    if (isinstance(active_record_ids, (str, bytes))
+            or not isinstance(active_record_ids, (list, tuple, set, frozenset))
+            or any(not isinstance(value, str) or not value.strip() for value in active_record_ids)
+            or not isinstance(candidate_result_ids, dict)
+            or any(not isinstance(key, str) or not key.strip()
+                   or not isinstance(value, str) or not value.strip()
+                   for key, value in candidate_result_ids.items())):
+        raise ExecutionEvidenceInvalid("Post-application coverage needs actual owned result IDs")
+    active = set(active_record_ids)
+    historical = historical_record_results or {}
+    if not isinstance(historical, dict):
+        raise ExecutionEvidenceInvalid("Post-application coverage has no owned history proof")
+    proofs = {}
+    for identity, proof in historical.items():
+        if not isinstance(proof, dict):
+            raise ExecutionEvidenceInvalid("Historical representation has no checked retirement")
+        before = proof.get("record")
+        archived = proof.get("historical_record")
+        effect = proof.get("effect")
+        review = proof.get("review")
+        proposal = proof.get("proposal")
+        if (not isinstance(identity, str) or not identity.strip()
+                or not isinstance(before, dict) or before != archived
+                or before.get("id") != identity
+                or any(not isinstance(before.get(key), str) or not before[key].strip()
+                       for key in ("source_turn_id", "quoted"))
+                or not isinstance(effect, dict) or effect.get("performed") is not True
+                or effect.get("kind") not in ("details", "disputes")
+                or not isinstance(effect.get("id"), str) or not effect["id"].strip()
+                or not isinstance(effect.get("result_id"), str) or not effect["result_id"].strip()
+                or not isinstance(effect.get("target_record_ids"), list)
+                or not isinstance(effect.get("retired_target_ids"), list)
+                or identity not in effect["target_record_ids"]
+                or identity not in effect["retired_target_ids"]
+                or identity in active or not isinstance(review, dict)
+                or review.get("verdict") != "accept"
+                or review.get("operation_supported") is not True
+                or not isinstance(review.get("candidate_id"), str)
+                or not review["candidate_id"].strip()
+                or not isinstance(proposal, dict) or review.get("proposal") != proposal
+                or proposal.get("relation") != effect.get("relation")):
+            raise ExecutionEvidenceInvalid("Historical representation lost its actual retirement")
+        checks = review.get("target_checks")
+        if (not isinstance(checks, list) or any(not isinstance(check, dict) for check in checks)
+                or {check.get("target_id") for check in checks}
+                != set(effect["target_record_ids"])
+                or len(checks) != len(effect["target_record_ids"])
+                or any(check.get("account_preserved") is not True
+                       or check.get("identity_relation") not in (
+                           "same_underlying_account", "duplicate", "restore_invalid_interpretation")
+                       for check in checks)):
+            raise ExecutionEvidenceInvalid(
+                "Historical representation lacks preserved target checks")
+        account = review.get("account_check")
+        if (not isinstance(account, dict) or account.get("supported") is not True
+                or account.get("content_role") != "reported_matter_account"
+                or account.get("introduces_legal_analysis") is not False):
+            raise ExecutionEvidenceInvalid(
+                "Historical representation lacks positive account review")
+        linked = proposal.get("related_dispute_ids" if effect["kind"] == "disputes"
+                              else "related_material_ids")
+        if not isinstance(linked, (list, tuple)) or set(linked) != set(effect["target_record_ids"]):
+            raise ExecutionEvidenceInvalid(
+                "Historical representation changed its admitted proposal")
+        references = effect.get("source_references")
+        if (not isinstance(references, list) or not any(
+                isinstance(ref, dict) and ref.get("role") == "advocate"
+                and ref.get("turn_id") == before["source_turn_id"]
+                and isinstance(ref.get("quoted"), str)
+                and (before["quoted"] in ref["quoted"] or ref["quoted"] in before["quoted"])
+                and bool(ref["quoted"].strip()) for ref in references)):
+            raise ExecutionEvidenceInvalid(
+                "Historical representation lost its operation source link")
+        proofs[identity] = proof
+    opening_id = None
+    if durable_opening_result is not None:
+        opening = durable_opening_result
+        candidate = opening.get("candidate") if isinstance(opening, dict) else None
+        saved = opening.get("actual") if isinstance(opening, dict) else None
+        if (not isinstance(opening, dict) or opening.get("kind") != "opening"
+                or opening.get("candidate_id") != "O1" or opening.get("accepted") is not True
+                or not isinstance(opening.get("result_id"), str) or not opening["result_id"].strip()
+                or not isinstance(candidate, dict) or not isinstance(saved, dict)
+                or candidate.get("ready") is not True or saved.get("ready") is not True
+                or any(not isinstance(candidate.get(key), str) or not candidate[key].strip()
+                       or candidate[key] != saved.get(key) for key in ("title", "summary"))):
+            raise ExecutionEvidenceInvalid(
+                "Opening representation lacks its actual checked heading")
+        opening_id = opening["candidate_id"]
+    source_rows = coverage.get("source_checks")
+    portions = coverage.get("dispositions")
+    if (not isinstance(source_rows, list) or not isinstance(portions, list)
+            or any(not isinstance(row, dict) for row in source_rows)
+            or any(not isinstance(row.get("source_id"), str) for row in source_rows)
+            or len({row["source_id"] for row in source_rows}) != len(source_rows)):
+        raise ExecutionEvidenceInvalid("Post-application coverage lost original source checks")
+    sources = {row["source_id"]: row for row in source_rows}
+    missing = set(coverage.get("missing_source_ids", []))
+    if not missing <= sources.keys():
+        raise ExecutionEvidenceInvalid("Post-application coverage has unowned missing sources")
+    holds = []
+    retirement = retirement_candidate_results or {}
+    if not isinstance(retirement, dict):
+        raise ExecutionEvidenceInvalid("Retirement representation has no owned result proof")
+    for identity, proof in retirement.items():
+        if not isinstance(proof, dict):
+            raise ExecutionEvidenceInvalid("Retirement representation has no checked operation")
+        record, effect, review, proposal = (proof.get(key) for key in (
+            "record", "effect", "review", "proposal"))
+        if (not isinstance(record, dict) or record != proof.get("historical_record")
+                or not isinstance(effect, dict) or effect.get("performed") is not True
+                or effect.get("relation") != "withdraws" or record.get("relation") != "withdraws"
+                or effect.get("result_id") != candidate_result_ids.get(identity)
+                or effect.get("result_id") != record.get("id")
+                or record.get("id") in active or not effect.get("retired_target_ids")
+                or not isinstance(review, dict) or review.get("candidate_id") != identity
+                or review.get("verdict") != "accept"
+                or review.get("operation_supported") is not True
+                or not isinstance(proposal, dict) or review.get("proposal") != proposal
+                or proposal.get("relation") != "withdraws"):
+            raise ExecutionEvidenceInvalid(
+                "Retirement representation lost its actual admitted effect")
+        checks = review.get("target_checks")
+        account = review.get("account_check")
+        if (not isinstance(checks, list)
+                or any(not isinstance(check, dict) for check in checks)
+                or {check.get("target_id") for check in checks} != set(effect["target_record_ids"])
+                or any(check.get("account_preserved") is not True or check.get("identity_relation")
+                       not in ("same_underlying_account", "duplicate",
+                               "restore_invalid_interpretation")
+                       for check in checks)
+                or not isinstance(account, dict) or account.get("supported") is not True
+                or account.get("introduces_legal_analysis") is not False
+                or account.get("content_role") != "reported_matter_account"):
+            raise ExecutionEvidenceInvalid(
+                "Retirement representation lost preserved account review")
+
+    def retirement_for(identity, portion):
+        proof = retirement.get(identity)
+        if proof is None:
+            return None
+        original = sources[portion["source_id"]]
+        for check in proof["review"]["account_check"].get("source_checks", []):
+            reference = sources.get(check.get("source_id"))
+            if (reference is None or check.get("supports_proposal") is not True
+                    or check.get("supplies_account_content") is not True
+                    or any(reference.get(key) != original.get(key)
+                           for key in ("turn_id", "role", "quoted"))):
+                continue
+            try:
+                supported = owned_source_portions(reference, [{"start": row["start"],
+                                                              "end": row["end"]}
+                                                             for row in check["support_spans"]])
+            except (SchemaViolation, KeyError, TypeError) as exc:
+                raise ExecutionEvidenceInvalid(
+                    "Retirement representation lost exact source support") from exc
+            if any(max(row["start"], portion["start"]) < min(row["end"], portion["end"])
+                   for row in supported):
+                effect = proof["effect"]
+                return {"candidate_id": identity, "representation_kind": "performed_retirement",
+                        "effect_id": effect["id"], "result_id": effect["result_id"],
+                        "relation": effect["relation"],
+                        "target_record_ids": effect["target_record_ids"]}
+        return None
+
+    def history_for(identity, portion, *, result_id=None):
+        proof = proofs.get(identity)
+        source = sources[portion["source_id"]]
+        if proof is None or (result_id is not None and (
+                proof["effect"]["result_id"] != result_id
+                or proof["effect"]["relation"] != "withdraws")):
+            return None
+        record = proof["record"]
+        if source["role"] != "advocate" or source["turn_id"] != record["source_turn_id"]:
+            return None
+        cursor = 0
+        while True:
+            start = source["quoted"].find(record["quoted"], cursor)
+            if start < 0:
+                return None
+            end = start + len(record["quoted"])
+            if max(start, portion["start"]) < min(end, portion["end"]):
+                return {"record_id": identity,
+                        "representation_kind": "historical_supersession",
+                        "effect_id": proof["effect"]["id"],
+                        "result_id": proof["effect"]["result_id"],
+                        "relation": proof["effect"]["relation"],
+                        "original_source": {"turn_id": record["source_turn_id"],
+                                            "role": "advocate", "quoted": record["quoted"]}}
+            cursor = start + 1
+
+    for portion in result["dispositions"]:
+        identity = portion.get("source_id") if isinstance(portion, dict) else None
+        if identity not in sources:
+            raise ExecutionEvidenceInvalid("Post-application coverage selects an unowned source")
+        try:
+            canonical = owned_source_portions(sources[identity], [{
+                key: portion[key] for key in ("start", "end")}])[0]
+        except (SchemaViolation, KeyError) as exc:
+            raise ExecutionEvidenceInvalid(
+                "Post-application coverage lost its exact portion") from exc
+        if (any(portion.get(key) != value for key, value in canonical.items())
+                or portion.get("turn_id") != sources[identity]["turn_id"]
+                or portion.get("role") != sources[identity]["role"]):
+            raise ExecutionEvidenceInvalid("Post-application coverage changed original evidence")
+        if portion["status"] != "represented":
+            continue
+        prior_records, prior_candidates = portion["record_ids"], portion["candidate_ids"]
+        records = [value for value in prior_records if value in active]
+        candidates = [value for value in prior_candidates
+                      if value == opening_id or candidate_result_ids.get(value) in active]
+        lost_records = [value for value in prior_records if value not in records]
+        lost_candidates = [value for value in prior_candidates if value not in candidates]
+        preserved = {}
+        for value in lost_records:
+            proof = history_for(value, portion)
+            if proof is not None:
+                preserved[value] = proof
+        for value in lost_candidates:
+            actual = candidate_result_ids.get(value)
+            if actual is not None:
+                for old in proofs:
+                    proof = history_for(old, portion, result_id=actual)
+                    if proof is not None:
+                        preserved[old] = proof
+        performed = [proof for identity in lost_candidates
+                     if (proof := retirement_for(identity, portion)) is not None]
+        portion.update(record_ids=records, candidate_ids=candidates)
+        if performed:
+            portion["operation_representations"] = performed
+        if preserved:
+            portion["historical_representations"] = list(preserved.values())
+        elif not records and not candidates and not performed:
+            portion.update(status="unresolved", reason=(
+                "The selected current representation is unavailable after actual "
+                "record application."))
+            missing.add(identity)
+        if lost_records or lost_candidates:
+            holds.append({"source_id": identity, **canonical,
+                          "record_ids": lost_records, "candidate_ids": lost_candidates,
+                          "candidate_result_ids": {key: candidate_result_ids[key]
+                                                   for key in lost_candidates
+                                                   if key in candidate_result_ids},
+                          "historically_preserved_record_ids": list(preserved)})
+    if holds:
+        result.update(post_application_contract=POST_APPLICATION_COVERAGE_CONTRACT,
+                      representation_dependencies=holds)
+        if any(row["status"] == "unresolved" for row in result["dispositions"]):
+            result.update(state="partial", reason=(
+                "Independent source reading retained; specific current representations "
+                "are unavailable after actual record application."))
+        result["missing_source_ids"] = [identity for identity in sources if identity in missing]
+        if "missing_sources" in coverage:
+            result["missing_sources"] = [{"source_id": identity,
+                **{key: sources[identity][key] for key in ("turn_id", "role", "quoted")}}
+                for identity in result["missing_source_ids"]]
+    return result
+
+
+def _application_candidate(proposal: dict) -> MaterialCandidate:
+    """Rebuild a captured original proposal without accepting extra wire fields."""
+    if (not isinstance(proposal, dict)
+            or set(proposal) != set(MaterialCandidate.__dataclass_fields__)):
+        raise ExecutionEvidenceInvalid("Coverage application lost its original proposal")
+    try:
+        values = deepcopy(proposal)
+        values["prior_references"] = tuple(PriorReference(**row)
+                                           for row in values["prior_references"])
+        for key in ("related_dispute_ids", "dispute_ids", "related_material_ids"):
+            values[key] = tuple(values[key])
+        return MaterialCandidate(**values)
+    except (TypeError, KeyError) as exc:
+        raise ExecutionEvidenceInvalid("Coverage application has an unreadable proposal") from exc
+
+
+def _application_proposal_payload(candidate: MaterialCandidate, *, stage: str) -> dict:
+    """Match the owning verifier's original candidate, not a later paraphrase."""
+    common = {"statement": candidate.statement, "relation": candidate.relation,
+              "matter_scope": candidate.matter_scope, "basis": candidate.basis,
+              "cited_earlier_passages": [vars(ref) for ref in candidate.prior_references]}
+    if stage == "dispute_review":
+        return {**common, "label": candidate.label,
+                "identification": candidate.identification,
+                "latest_message_passage": candidate.quoted,
+                "related_dispute_ids": list(candidate.related_dispute_ids)}
+    return {**common, "type": "detail", "kind": candidate.kind,
+            "why_material": candidate.why_material, "importance": candidate.importance,
+            "placement": candidate.placement, "dispute_ids": list(candidate.dispute_ids),
+            "related_material_ids": list(candidate.related_material_ids),
+            "latest_advocate_passage": candidate.quoted}
+
+
+def _capture_coverage_application(execution, *, states, proposals, candidates, material,
+                                  opening, opening_supported, sources, latest_sources,
+                                  prior_sources, opening_result) -> dict | None:
+    """Freeze pre-application assessments and original code-issued admissions."""
+    assessments = {stage: deepcopy(execution["stages"][stage]["account_coverage"])
+                   for stage in ("dispute_review", "detail_review")
+                   if execution["stages"][stage].get("account_coverage", {}).get(
+                       "selection_contract") == COVERAGE_SELECTION_CONTRACT}
+    if not assessments:
+        return None
+    receipt = {"contract": POST_APPLICATION_COVERAGE_CONTRACT,
+               "owner": deepcopy(execution["owner"]),
+               "expected_version": execution["expected_version"],
+               "pre_application_assessments": assessments,
+               "bindings": [], "opening": None}
+    actual = {}
+    for candidate, row in zip(candidates, material, strict=True):
+        actual.setdefault(candidate, []).append(row["id"])
+    for stage, rows in proposals.items():
+        prefix = "C" if stage == "dispute_review" else "D"
+        keyed = {f"{prefix}{index}": candidate for index, candidate in enumerate(rows, 1)}
+        accounts = {identity: candidate_account_ids(candidate, latest_sources, prior_sources)
+                    for identity, candidate in keyed.items()}
+        targets = {identity: set(candidate.related_dispute_ids if prefix == "C"
+                                 else candidate.related_material_ids)
+                   for identity, candidate in keyed.items()}
+        expected = {identity: _application_proposal_payload(candidate, stage=stage)
+                    for identity, candidate in keyed.items()}
+        if stage == "detail_review" and opening.ready:
+            accounts["O1"] = candidate_account_ids(None, latest_sources, prior_sources)
+            targets["O1"] = set()
+            party, subject = opening.title_parts()
+            expected["O1"] = {"type": "opening", "title": opening.title,
+                              "party_name": party, "subject": subject,
+                              "summary": opening.summary}
+        state = states.get(stage) or {}
+        cache = state.get("cache")
+        context = getattr(cache, "context", None)
+        if context is None:
+            if any(candidate in actual for candidate in keyed.values()):
+                raise ExecutionEvidenceInvalid("An admitted result has no original review cache")
+            continue
+        cached_sources = getattr(cache, "source_treatments", {})
+        changed = [identity for identity, row in sources.items()
+                   if identity in cached_sources
+                   and source_dependency(row) != source_dependency(cached_sources[identity])]
+        decisions = retained_independent_review(
+            state, context=context, source_treatments=sources, account_ids=accounts,
+            targets=targets, recheck_source_ids=changed)
+        offered = context.get("candidates")
+        if (not isinstance(offered, list)
+                or len({row.get("candidate_id") for row in offered
+                        if isinstance(row, dict)}) != len(offered)
+                or any(not isinstance(row, dict) or row.get("candidate_id") not in expected
+                       or {key: value for key, value in row.items() if key not in (
+                           "candidate_id", "allowed_account_source_ids",
+                           "allowed_restoration_peer_ids")} != expected[row["candidate_id"]]
+                       or row.get("allowed_account_source_ids") != sorted(
+                           accounts[row["candidate_id"]]) for row in offered)):
+            raise ExecutionEvidenceInvalid(
+                "Coverage application changed an original reviewed proposal")
+        for identity, candidate in keyed.items():
+            if not actual.get(candidate):
+                continue
+            review = decisions.get(identity)
+            if (not isinstance(review, dict) or review.get("verdict") != "accept"
+                    or review.get("operation_supported") is not True):
+                raise ExecutionEvidenceInvalid(
+                    "An admitted result lost its independent positive review")
+            receipt["bindings"].append({"stage": stage, "candidate_id": identity,
+                                        "result_id": actual[candidate].pop(0),
+                                        "review": deepcopy(review),
+                                        "proposal": asdict(candidate)})
+        if stage == "detail_review" and opening.ready and opening_supported:
+            review = decisions.get("O1")
+            if (isinstance(review, dict) and review.get("verdict") == "accept"
+                    and opening_result["title"] == opening.title
+                    and opening_result["summary"] == opening.summary):
+                receipt["opening"] = {"proposal": asdict(opening), "review": deepcopy(review),
+                                      "result": deepcopy(opening_result)}
+    if {row["result_id"] for row in receipt["bindings"]} != {row["id"] for row in material}:
+        raise ExecutionEvidenceInvalid("Coverage application cannot bind every admitted result")
+    receipt["seal"] = _digest(receipt)
+    return receipt
+
+
+def _apply_coverage_application(execution, receipt, *, material, source_treatments,
+                                latest_sources, prior_sources, before_disputes,
+                                before_details, disputes, details, opening_result=None) -> dict:
+    """Recompute an owned typed assessment against the actual saved prefix."""
+    if (not isinstance(receipt, dict)
+            or receipt.get("contract") != POST_APPLICATION_COVERAGE_CONTRACT
+            or receipt.get("owner") != execution["owner"]
+            or receipt.get("expected_version") != execution["expected_version"]
+            or receipt.get("seal") != _digest({key: value for key, value in receipt.items()
+                                              if key != "seal"})):
+        raise ExecutionEvidenceInvalid("Coverage application lost its owned original receipt")
+    bindings, assessments = receipt.get("bindings"), receipt.get("pre_application_assessments")
+    stages = {"dispute_review", "detail_review"}
+    if (not isinstance(bindings, list) or not isinstance(assessments, dict)
+            or not assessments or not set(assessments) <= stages
+            or any(not isinstance(row, dict) or set(row) != {
+                "stage", "candidate_id", "result_id", "review", "proposal"}
+                or row["stage"] not in stages for row in bindings)):
+        raise ExecutionEvidenceInvalid("Coverage application lost its captured admissions")
+    actual = {row["id"]: row for row in material}
+    if (len(actual) != len(material)
+            or len({row["result_id"] for row in bindings}) != len(bindings)
+            or {row["result_id"] for row in bindings} != set(actual)):
+        raise ExecutionEvidenceInvalid("Coverage application changed its actual result bindings")
+    effects = {row["result_id"]: row for row in effect_catalogue(execution).values()}
+    active = {row["id"] for row in (*disputes["rows"], *details["rows"])}
+    before = {row["id"]: row for row in (*before_disputes["history"], *before_details["history"])}
+    archive = {row["id"]: row for row in (*disputes["history"], *details["history"])}
+    captured, reviews, target_ids, account_ids = {}, {}, {}, {}
+    for binding in bindings:
+        identity = binding["candidate_id"]
+        candidate = _application_candidate(binding["proposal"])
+        dispute = binding["stage"] == "dispute_review"
+        if (identity in captured or not isinstance(identity, str)
+                or not identity.startswith("C" if dispute else "D")
+                or (candidate.kind == "dispute") != dispute):
+            raise ExecutionEvidenceInvalid(
+                "Coverage application changed original proposal ownership")
+        captured[identity] = candidate
+        reviews[identity] = binding["review"]
+        target_ids[identity] = set(candidate.related_dispute_ids if dispute
+                                   else candidate.related_material_ids)
+        owned = (before_disputes["rows"] if dispute else
+                 (*before_details["rows"], *before_details.get("excluded_scope", [])))
+        if not target_ids[identity] <= {row["id"] for row in owned}:
+            raise ExecutionEvidenceInvalid(
+                "Coverage application changed its original target domain")
+        account_ids[identity] = candidate_account_ids(candidate, latest_sources, prior_sources)
+    opening = receipt.get("opening")
+    if opening is not None:
+        if not isinstance(opening, dict):
+            raise ExecutionEvidenceInvalid("Coverage application lost its checked opening")
+        reviews["O1"] = opening.get("review")
+        target_ids["O1"] = set()
+        account_ids["O1"] = candidate_account_ids(None, latest_sources, prior_sources)
+    for identity, review in reviews.items():
+        issues = []
+        if (not isinstance(review, dict) or review.get("candidate_id") != identity
+                or review.get("verdict") != "accept"
+                or review.get("operation_supported") is not True
+                or not validate_record_checks(
+                    review, source_ids=account_ids[identity], target_ids=target_ids[identity],
+                    candidate_id=identity, candidates=target_ids, issues=issues,
+                    source_treatments=source_treatments) or issues):
+            raise ExecutionEvidenceInvalid("Coverage application lost its original positive review")
+    if any(row["verdict"] != "accept" for row in admitted_record_decisions(reviews).values()):
+        raise ExecutionEvidenceInvalid("Coverage application lost an admitted dependent peer")
+    historical, retirement, results = {}, {}, {}
+    for binding in bindings:
+        identity, result_id = binding["candidate_id"], binding["result_id"]
+        candidate, record = captured[identity], actual[result_id]
+        try:
+            index = int(result_id.removeprefix(execution["owner"]["turn_id"] + ":material:"))
+        except ValueError as exc:
+            raise ExecutionEvidenceInvalid("Coverage application has a foreign result ID") from exc
+        base = {key: value for key, value in record.items()
+                if key not in ("grounding", "mutation_authority")}
+        if index < 1 or candidate.recorded(execution["owner"]["turn_id"], index) != base:
+            raise ExecutionEvidenceInvalid(
+                "Coverage application changed the actually saved proposal")
+        results[identity] = result_id
+        effect = effects.get(result_id)
+        if effect is None or effect["performed"] is not True:
+            continue
+        review = {**reviews[identity], "proposal": binding["proposal"]}
+        for old in effect["retired_target_ids"]:
+            if old in before and archive.get(old) == before[old]:
+                historical[old] = {"record": before[old], "historical_record": archive[old],
+                                   "effect": effect, "proposal": binding["proposal"],
+                                   "review": review}
+        if effect["relation"] == "withdraws" and archive.get(result_id) == record:
+            retirement[identity] = {"record": record, "historical_record": archive[result_id],
+                                    "effect": effect, "proposal": binding["proposal"],
+                                   "review": review}
+    opening_proof = None
+    if opening is not None:
+        proposal, saved = opening.get("proposal"), opening.get("result")
+        if (not isinstance(proposal, dict) or not isinstance(saved, dict) or saved != opening_result
+                or proposal.get("ready") is not True or saved.get("ready") is not True
+                or saved.get("result_id") != execution["owner"]["matter_id"]
+                or any(proposal.get(key) != saved.get(key) for key in ("title", "summary"))):
+            raise ExecutionEvidenceInvalid("Coverage application lost its saved checked heading")
+        opening_proof = {"candidate_id": "O1", "kind": "opening", "accepted": True,
+                         "result_id": saved["result_id"], "candidate": proposal, "actual": saved}
+    applied = {}
+    for stage, assessment in assessments.items():
+        if (not isinstance(assessment, dict)
+                or assessment.get("selection_contract") != COVERAGE_SELECTION_CONTRACT
+                or assessment.get("contract") != ACCOUNT_COVERAGE_CONTRACT
+                or assessment.get("review_scope") != execution.get("review_scope")
+                or {row["source_id"] for row in assessment.get("source_checks", [])}
+                != set(source_treatments)
+                or any(any(row.get(key) != source_treatments[row["source_id"]][key]
+                           for key in ("turn_id", "role", "quoted"))
+                       for row in assessment["source_checks"])):
+            raise ExecutionEvidenceInvalid("Coverage application changed original sources or scope")
+        applied[stage] = _post_application_coverage(
+            assessment, active_record_ids=active, candidate_result_ids=results,
+            historical_record_results=historical, retirement_candidate_results=retirement,
+            durable_opening_result=opening_proof)
+    return applied
+
+
 def _execution_review_scope(execution: dict, progress: dict) -> dict:
     """Copy the exact interpreted record requirements for independent coverage."""
     requests = [{"request_index": row["request_index"],
@@ -609,6 +1142,31 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
                                     kind="details", turn_id=row["turn_id"])}
     if execution.get("effects") != effects:
         raise IncompleteConversation("The saved material effects disagree with their record")
+    application = execution.get("coverage_application")
+    if application is not None or "coverage_application_contract" in execution:
+        try:
+            if execution.get("coverage_application_contract") != POST_APPLICATION_COVERAGE_CONTRACT:
+                raise ExecutionEvidenceInvalid(
+                    "Coverage application has an unsupported owner contract")
+            original_messages = (*prior_conversation,
+                                 *from_turns(before.brain_chat, state="ok").messages)
+            _, latest_sources, prior_sources = addressed_sources(original_messages, row["message"])
+            treatments = owned_source_treatments(
+                response.get("material_coverage", {}).get("source_treatments"),
+                latest_sources, prior_sources)
+            rebuilt = _apply_coverage_application(
+                execution, application, material=response["material"],
+                source_treatments=treatments, latest_sources=latest_sources,
+                prior_sources=prior_sources, before_disputes=before_disputes,
+                before_details=before_details, disputes=disputes, details=details,
+                opening_result=row.get("opening_result"))
+            if any(execution["stages"][stage].get("account_coverage") != assessment
+                   for stage, assessment in rebuilt.items()):
+                raise ExecutionEvidenceInvalid(
+                    "Coverage application differs from actual saved results")
+        except (SchemaViolation, ExecutionEvidenceInvalid, KeyError, TypeError) as exc:
+            raise IncompleteConversation(
+                "The saved coverage application could not be verified") from exc
     changes = _record_changes(before_disputes, before_details, disputes, details, execution)
     if execution.get("record_changes") != changes:
         raise IncompleteConversation(
@@ -1814,6 +2372,23 @@ class BrainService:
         title = matter.title if matter.brain_ready or not opening.ready else opening.title
         summary = (matter.brain_opening_summary if matter.brain_ready or not opening.ready
                    else opening.summary)
+        try:
+            _, latest_sources, prior_sources = addressed_sources(
+                conversation.messages, turn.message)
+            coverage_application = _capture_coverage_application(
+                execution,
+                states={"dispute_review": recovery_context.get("dispute_review_state"),
+                        "detail_review": detail_review_state},
+                proposals={"dispute_review": recovery_context.get("dispute_proposals", ()),
+                           "detail_review": recovery_context.get("detail_proposals", ())},
+                candidates=candidates, material=material, opening=plan.opening,
+                opening_supported=grounded.opening_supported, sources=source_treatments,
+                latest_sources=latest_sources, prior_sources=prior_sources,
+                opening_result={"ready": ready, "title": title, "summary": summary,
+                                "result_id": str(matter.id)})
+        except (SchemaViolation, ExecutionEvidenceInvalid) as exc:
+            raise BrainRefused(409, "The admitted account representation could not be verified",
+                               gate_id="G-CORE", gate_state="invalid") from exc
         now = datetime.now(timezone.utc).isoformat()
         element = {"kind": "question" if asked and not needs_work else
                    "ground" if needs_work else "finding",
@@ -1858,6 +2433,9 @@ class BrainService:
                "active_work_after": plan.active_work_after,
                "elements": response["elements"], "committed": True,
                "release_state": "released", "matter_id": str(matter.id)}
+        if coverage_application is not None and coverage_application["opening"] is not None:
+            row["opening_result"] = {
+                "ready": ready, "title": title, "summary": summary, "result_id": str(matter.id)}
         updated = replace(matter, title=title, brain_ready=ready,
                           brain_opening_summary=summary,
                           brain_chat=(*matter.brain_chat, row),
@@ -1903,6 +2481,24 @@ class BrainService:
                     "disputes": [entry["candidate_id"] for entry in dispute_audit
                                  if entry.get("admission_issue") == "review_unavailable"],
                     "details": [entry["candidate_id"] for entry in grounded.unread_proposals]}
+                if coverage_application is not None:
+                    execution["coverage_application_contract"] = POST_APPLICATION_COVERAGE_CONTRACT
+                    applied = _apply_coverage_application(
+                        execution, coverage_application, material=material,
+                        source_treatments=source_treatments, latest_sources=latest_sources,
+                        prior_sources=prior_sources, before_disputes=before_disputes,
+                        before_details=before_details, disputes=disputes, details=details,
+                        opening_result=row.get("opening_result"))
+                    for stage, assessment in applied.items():
+                        execution["stages"][stage]["account_coverage"] = assessment
+                    states = [execution["stages"][name].get("account_coverage", {}).get("state")
+                              for name in ("dispute_review", "detail_review")]
+                    execution["semantic_coverage"] = (
+                        "complete" if all(state == "complete" for state in states) else
+                        "partial" if any(state in ("complete", "partial") for state in states)
+                        else "unassessed")
+                    if source_reviewed and execution["semantic_coverage"] != "complete":
+                        response["material_coverage"]["state"] = "partial"
                 execution["record_changes"] = _record_changes(
                     before_disputes, before_details, disputes, details, execution)
                 execution["display"] = _execution_display(execution)
@@ -1958,6 +2554,8 @@ class BrainService:
                     progress=conversation.progress,
                     source_treatments=source_treatments,
                     execution_receipt=execution).as_dict()
+                if coverage_application is not None:
+                    execution["coverage_application"] = coverage_application
                 _request_fulfillment(execution, continuation)
                 execution["gate_diagnostics"] = _execution_diagnostics(execution)
                 display = _execution_display(execution)
@@ -1984,6 +2582,9 @@ class BrainService:
                 response["mode"] = ("short_question" if any(
                     unit["questions"] for unit in continuation["units"])
                     else "explanation")
+            if coverage_application is not None:
+                # No-writer/fallback routes still persist the same complete owner proof.
+                execution["coverage_application"] = coverage_application
             # Release one final reply snapshot. Notices are part of the visible
             # transcript, so validate after composing them, before committing.
             row["elements"] = response["elements"]

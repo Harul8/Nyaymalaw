@@ -128,6 +128,11 @@ unknown versions fail rather than falling back or upgrading earlier replies.
 Fresh selectors, review proof and display fields cannot be supplied by replay
 metadata from another owner. An interpreted delivery mode never certifies
 semantic fulfillment.
+Keep UI-only enrichment in separate presentation copies, outside canonical
+durable source and record rows. A canonical projection change must version all
+dependent replay bindings together: result catalogues, record deltas, mutation
+targets and seals. Preserve reconstruction under earlier versions; never ignore
+unknown saved fields wholesale or regenerate historical seals to hide drift.
 
 A tentative matter reply may be composed from checked proposed state. Commit
 the state, operation evidence and exact releasable matter reply together through
