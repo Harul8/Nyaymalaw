@@ -70,8 +70,22 @@ def source_hashes():
             for p in paths}
 
 
-def test_source_hashes(tests):
+def selected_source_files(supplied_files):
+    """Pin extra input packets and helpers without opening files outside the repo."""
+    selected = []
+    for supplied in supplied_files:
+        path = (ROOT / supplied).resolve()
+        if not path.is_relative_to(ROOT) or not path.is_file():
+            raise ValueError("Pressure sources must be existing repository files")
+        relative = path.relative_to(ROOT).as_posix()
+        if relative not in selected:
+            selected.append(relative)
+    return selected
+
+
+def test_source_hashes(tests, extra_sources=()):
     paths = [ROOT / path for path in tests]
+    paths += [ROOT / path for path in extra_sources]
     paths += [ROOT / "tests" / path for path in (
         "brain_pressure_support.py", "conftest.py", "test_brain_material.py",
         "brain_reader_fixture.py", "brain_continuation_fixture.py")]
@@ -89,14 +103,15 @@ def run_command(command, env, log):
     return result.stdout
 
 
-def run(output, rounds, additional_tests=()):
+def run(output, rounds, additional_tests=(), additional_sources=()):
     if output.exists():
         raise ValueError("Use a fresh evidence directory; prior observations are preserved")
     tests = selected_test_files(additional_tests)
+    extra_sources = selected_source_files(additional_sources)
     output.mkdir(parents=True)
     start = datetime.now(timezone.utc).isoformat()
     initial_hashes = source_hashes()
-    initial_test_hashes = test_source_hashes(tests)
+    initial_test_hashes = test_source_hashes(tests, extra_sources)
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
                                    text=True).strip()
     env = dict(os.environ, NM_PARTIAL_RUN="1")
@@ -148,7 +163,7 @@ def run(output, rounds, additional_tests=()):
             raise ValueError("Every case needs both actual user words and fabricated outputs")
         if source_hashes() != initial_hashes:
             raise ValueError("Production source changed during pressure testing")
-        if test_source_hashes(tests) != initial_test_hashes:
+        if test_source_hashes(tests, extra_sources) != initial_test_hashes:
             raise ValueError("Pressure test source changed during execution")
         results.append({"round": label, "order": order, "test_count": len(testcases),
                         "case_count": len(cases), "cases": cases})
@@ -182,6 +197,7 @@ def run(output, rounds, additional_tests=()):
         "production_source_hashes": initial_hashes,
         "test_source_hashes": initial_test_hashes,
         "selected_test_files": tests,
+        "additional_source_files": extra_sources,
         "evidence_owner_sha256": hashlib.sha256(evidence_plugin.read_bytes()).hexdigest(),
         "distinct_tests": len(nodes),
         "distinct_cases": len(cases),
@@ -223,7 +239,9 @@ if __name__ == "__main__":
     parser.add_argument("--test-file", type=Path, action="append", default=[],
                         help=("Add a repository test module whose every test "
                               "records paired evidence"))
+    parser.add_argument("--source-file", type=Path, action="append", default=[],
+                        help="Pin an additional repository input or helper across all rounds")
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("rounds must be positive")
-    run(args.output.resolve(), args.rounds, args.test_file)
+    run(args.output.resolve(), args.rounds, args.test_file, args.source_file)
