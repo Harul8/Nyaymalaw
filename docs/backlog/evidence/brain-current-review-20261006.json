@@ -896,6 +896,32 @@
         "existing_fixture_migration": "Generated ordinary legacy fixtures explicitly declare empty direct legal selection; explicit fresh adversarial expressions remain untouched."
       },
       "limits": "This repairs replay normalization, not semantic meaning or useful delivery. The separately preserved legal-recovery candidate is not completed by this checkpoint."
+    },
+    {
+      "piece": "legal-corrections-use-turn-recovery-ledger",
+      "production_file": "nm/brain/legal_requirements.py",
+      "prompt_changes": 0,
+      "invariant": "Every dispatched legal correction stage claims the existing turn-owned ledger after complete-context preparation and immediately before structured dispatch; no nested reset or borrowing protected reply capacity. Denial retains checked peers, precise original mismatch and owned unfinished candidate/coverage state without fabricating provider outage.",
+      "baseline": "Ten of21 initial cases failed: four unreserved corrections, four zero-budget bypasses, coverage-only bypass and shared-limit bypass.",
+      "verification": {
+        "focused_new_cases_passed": 25,
+        "legal_owner_empty_scope_reserve_public_research_and_strict_replay_checks_passed": 227,
+        "ruff": "passed",
+        "routine_model_call_delta": 0,
+        "default_recovery_limit": 8,
+        "protected_reply_reserve": 2,
+        "ports_without_turn_ledger": "existing local two-attempt bound retained",
+        "paid_calls": 0,
+        "prompt_constants": "unchanged"
+      },
+      "operations": [
+        "decompose_disputes:correction",
+        "read_legal_requirements:correction",
+        "verify_legal_requirements:correction",
+        "verify_empty_legal_reading:correction"
+      ],
+      "call_accounting": "One nonempty fitting legal group still uses planning, reading and independent checking:3routine stages. Initial empty reading over supplied passages is independent work, not recovery; genuinely empty corpus uses zero empty-review calls. Valid repeated sources may reuse checked law with zero new law calls. Malformed result permits one local correction only if shared allowance admits it. Coverage-only correction uses the same ledger.",
+      "limits": "This closes the discovered legal retry bypass, not every semantic recovery problem. Conditional admission changes can expose existing omissions. Connected browser/model usefulness and actual token/latency totals remain to qualify."
     }
   ],
   "additional_reviewer_input": {

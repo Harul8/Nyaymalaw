@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nm.brain.checked import require_independent_result
+from nm.brain.checked import claim_recovery, require_independent_result
 from nm.brain.material import addressed_sources
 from nm.brain.record_review import substantive_source_treatments
 from nm.shared.model_port import (
@@ -752,6 +752,14 @@ def _read_subject_groups(model, rows, prepare, *, field, accept, tier=Tier.ROUTI
                         [by_id[key] for key in pending], issues, rejected
                     )
                 except ContextOverflow:
+                    break
+                phase = f"{prompt.operation}:correction"
+                if not claim_recovery(model, phase):
+                    issues = {
+                        key: issues.get(key, "This research unit remains unread")
+                        + f"; shared recovery budget exhausted for {phase}"
+                        for key in pending
+                    }
                     break
             try:
                 read = model.structured(prompt, schema, tier, max_tokens=limit)
@@ -2280,6 +2288,14 @@ def verify_findings(
                         include_scope=False,
                     )
                 except ContextOverflow:
+                    break
+                phase = f"{prompt.operation}:correction"
+                if not claim_recovery(model, phase):
+                    issues = {
+                        key: issues.get(key, "This checking unit remains unread")
+                        + f"; shared recovery budget exhausted for {phase}"
+                        for key in (*pending, *(f"coverage:{key}" for key in pending_scopes))
+                    }
                     break
             try:
                 read = model.structured(prompt, schema, Tier.JUDGE, max_tokens=limit)
