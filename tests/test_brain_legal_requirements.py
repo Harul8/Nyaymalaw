@@ -571,13 +571,15 @@ def test_one_repair_salvages_readable_items_without_individual_fanout():
     assert [len(_candidate_rows(json.loads(call[0].user))) for call in model.calls] == [2, 2]
 
 
-def test_verification_skips_model_when_no_items_were_proposed():
+def test_unconfirmed_empty_reading_skips_model_without_certifying_coverage():
     model = Model([])
     checked = verify_requirements(
         model, disputes=DISPUTES, material_by_dispute=MATERIAL,
         proposed={"d1": [], "d2": []}, conversation=CONVERSATION)
     assert checked.rows == {"d1": [], "d2": []}
-    assert all(row["state"] == "ok" for row in checked.coverage.values())
+    assert all(row["state"] == "partial" for row in checked.coverage.values())
+    assert all(row["semantic_extent"] == "unconfirmed"
+               for row in checked.coverage.values())
     assert model.calls == []
 
 

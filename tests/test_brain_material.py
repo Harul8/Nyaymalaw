@@ -7,7 +7,11 @@ import pytest
 from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
-from tests.brain_continuation_fixture import continuation_reply, interpretation
+from tests.brain_continuation_fixture import (
+    continuation_reply,
+    interpretation,
+    no_record_requirement,
+)
 from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
@@ -105,7 +109,7 @@ def material(kind, statement, quoted, *, relation="new", references=(),
 
 
 def plan(message, *, candidates=(), items=None, opening=False,
-         active_work="review the account", material_purposes=()):
+         active_work="review the account", material_purposes=(), record_requirement=None):
     if items is None:
         items = [{"request": message, "relation": "new",
                   "matter_scope": "proposed" if opening else "current",
@@ -113,7 +117,9 @@ def plan(message, *, candidates=(), items=None, opening=False,
                   "next_step": "legal_work",
                   "reply": ("I will check the account and available material "
                             "before reaching a legal view."),
-                  "clarification": ""}]
+                  "clarification": "",
+                  "record_requirement": (no_record_requirement() if record_requirement is None
+                                         else record_requirement)}]
     items = [{**item, "material_purposes": item.get(
         "material_purposes", list(material_purposes))} for item in items]
     return {"items": items, "material": list(candidates),
@@ -142,14 +148,16 @@ def test_greeting_and_general_question_add_no_matter_material(
             {"request": greeting, "relation": "new",
              "matter_scope": "none", "priority": "ordinary",
              "next_step": "answer",
-             "reply": "Hello. What would you like help with?", "clarification": ""}],
+             "reply": "Hello. What would you like help with?", "clarification": "",
+             "record_requirement": no_record_requirement()}],
              active_work=""),
         plan(question, candidates=[], items=[
             {"request": question, "relation": "new",
              "matter_scope": "none", "priority": "ordinary",
              "next_step": "legal_work",
              "reply": "I will check the applicable law before explaining it.",
-             "clarification": ""}], active_work="answer legal question"),
+             "clarification": "",
+             "record_requirement": no_record_requirement()}], active_work="answer legal question"),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -222,7 +230,7 @@ def test_correction_and_diversion_keep_prior_words_and_proposals(
                   "matter_scope": "none", "priority": "ordinary",
                   "next_step": "answer",
                   "reply": "Hello. Paris is the capital of France.",
-                  "clarification": ""}
+                  "clarification": "", "record_requirement": no_record_requirement()}
     model = Model([
         plan(first, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
@@ -269,7 +277,9 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
         "matter_scope": "current", "priority": "ordinary",
         "next_step": "legal_work", "reply": "I have noted the corrected date.",
         "intent": "contribution",
-        "clarification": ""}], material_purposes=("account_contribution",))
+        "clarification": "",
+        "record_requirement": no_record_requirement()}],
+                       material_purposes=("account_contribution",))
     second_plan["items"][0]["material_purposes"] = ["account_contribution"]
     model = Model([plan(first, candidates=[original], opening=True,
                         material_purposes=("account_contribution",)), second_plan])
@@ -305,7 +315,7 @@ def test_work_request_without_new_material_preserves_record_with_three_calls(
         "request": request, "relation": relation, "matter_scope": "current",
         "priority": "ordinary", "next_step": "legal_work",
         "reply": "I will assess the existing account and identify any limit in its support.",
-        "clarification": ""}])
+        "clarification": "", "record_requirement": no_record_requirement()}])
     assert work_plan["items"][0]["material_purposes"] == []
     model = Model([plan(first, candidates=original, opening=True,
                         material_purposes=("account_contribution",)), work_plan])
@@ -433,7 +443,8 @@ def test_answer_to_prior_nm_question_can_support_material(
     first_item = {"request": first, "relation": "new",
                   "matter_scope": "proposed", "priority": "ordinary",
                   "next_step": "clarify",
-                  "reply": "", "clarification": question}
+                  "reply": "", "clarification": question,
+                  "record_requirement": no_record_requirement()}
     confirmed = material(
         "event", "The advocate confirms the stoppage occurred on 12 June.",
         "Yes", scope="current", importance="relevant",
@@ -470,7 +481,7 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
          "matter_scope": "proposed", "priority": "ordinary",
          "next_step": "legal_work",
          "reply": "I will check the applicable authorities.",
-         "clarification": ""},
+         "clarification": "", "record_requirement": no_record_requirement()},
     ]
     candidates = [
         material("dispute", "The advocate describes a contractor work dispute.",

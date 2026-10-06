@@ -10,7 +10,11 @@ import pytest
 from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, TierUnavailable, Usage
-from tests.brain_continuation_fixture import citation_units, interpretation, reviewed_verdicts
+from tests.brain_continuation_fixture import (
+    citation_units,
+    interpretation,
+    reviewed_verdicts,
+)
 from tests.brain_reader_fixture import reviewed_record_verdicts, source_treatment_reply
 from tests.test_brain_continuation import mixed_purpose_unit, unit, verdict
 from tests.test_brain_turn import plan
@@ -234,7 +238,16 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     ], items=[{"request": "Add the reported permission and its unknown duration to the account.",
                "relation": "changes", "matter_scope": "current", "priority": "ordinary",
                "next_step": "legal_work", "reply": "I will retain the attributed chronology.",
-               "clarification": "", "intent": "contribution", "research_question": ""}],
+               "clarification": "", "intent": "contribution", "research_question": "",
+               "record_requirement": {
+                   "kind": "change",
+                   "target_ids": [],
+                   "operation": "new",
+                   "success_condition": (
+                       "The account represents both the reported 2021 "
+                       "written permission and its unknown end date."
+                   ),
+               }}],
                         material_purposes=("account_contribution",))
     initial = unit(text="You report that the use began in 2019.", span_ids=("L2",))
     initial["blocks"] = [initial["blocks"][0]]

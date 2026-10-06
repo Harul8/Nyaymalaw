@@ -8,6 +8,7 @@ from nm.brain.history import from_turns
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelResult, SchemaViolation, Tier, Usage
 from tests.brain_continuation_fixture import interpretation as route_contract
+from tests.brain_continuation_fixture import no_record_requirement
 
 
 class Model:
@@ -31,14 +32,16 @@ class Model:
 
 def item(quoted, *, request=None, relation="continues", scope="current",
          priority="ordinary", step="legal_work", reply=None,
-         clarification="", intent="request", material_purposes=()):
+         clarification="", intent="request", material_purposes=(), record_requirement=None):
     if reply is None:
         reply = (f"I will check the material needed to address {quoted}."
                  if step == "legal_work" else "")
     return {"request": request or quoted, "relation": relation,
             "matter_scope": scope, "priority": priority,
             "next_step": step, "reply": reply, "clarification": clarification,
-            "intent": intent, "material_purposes": list(material_purposes)}
+            "intent": intent, "material_purposes": list(material_purposes),
+            "record_requirement": (no_record_requirement() if record_requirement is None
+                                   else record_requirement)}
 
 
 def interpretation(items, *, active_work_after="", opening=None):
@@ -424,19 +427,39 @@ def test_no_truncation_or_partial_model_output_is_accepted():
         interpret(limited, conversation, "Continue")
 
 
-@pytest.mark.parametrize(("purposes", "latest"), [
-    ((), "Repeat the delivery date in my saved account."),
-    (("account_contribution",), "The delivery arrived on 17 June."),
-    (("interpretation_review",), "Repair your actor description against my original account."),
+@pytest.mark.parametrize(("purposes", "latest", "record_requirement"), [
+    ((), "Repeat the delivery date in my saved account.", no_record_requirement()),
+    (("account_contribution",), "The delivery arrived on 17 June.", no_record_requirement()),
+    (("interpretation_review",), "Repair your actor description against my original account.",
+     {
+         "kind": "review",
+         "target_ids": [],
+         "operation": "none",
+         "success_condition": (
+             "The description faithfully retains the original unknown "
+             "delivery actor."
+         ),
+     }),
     (("account_contribution", "interpretation_review"),
-     "It arrived on 17 June. Repair your actor description against my original account."),
+     "It arrived on 17 June. Repair your actor description against my original account.",
+     {
+         "kind": "review",
+         "target_ids": [],
+         "operation": "none",
+         "success_condition": (
+             "The account retains the new reported arrival date and the "
+             "original unknown delivery actor."
+         ),
+     }),
 ])
-def test_fresh_material_purposes_drive_reading_without_a_second_switch(purposes, latest):
+def test_fresh_material_purposes_drive_reading_without_a_second_switch(
+        purposes, latest, record_requirement):
     conversation = Conversation((
         Message("earlier", "advocate", "The delivery actor is unknown."),
         Message("earlier", "nm", "The description remains provisional.")),
         current_matter_id="current-file")
-    data = interpretation([item(latest, material_purposes=purposes)])
+    data = interpretation([item(latest, material_purposes=purposes,
+                                record_requirement=record_requirement)])
     model = Model(data)
 
     planned = interpret(model, conversation, latest)
@@ -459,7 +482,16 @@ def test_mixed_account_and_review_purposes_preserve_an_independent_readonly_item
               "Also repeat the previously reported location.")
     model = Model(interpretation([
         item("Record the arrival and reconcile your description",
-             material_purposes=("account_contribution", "interpretation_review")),
+             material_purposes=("account_contribution", "interpretation_review"),
+             record_requirement={
+                 "kind": "review",
+                 "target_ids": [],
+                 "operation": "none",
+                 "success_condition": (
+                     "The review establishes both the reported 17 June "
+                     "arrival and the original unknown delivery actor."
+                 ),
+             }),
         item("Repeat the reported location", step="answer",
              reply="The reported location is unchanged.", material_purposes=()),
     ]))
@@ -475,7 +507,16 @@ def test_mixed_account_and_review_purposes_preserve_an_independent_readonly_item
 def test_repeated_material_purpose_is_normalized_without_retry_or_lost_meaning():
     latest = "Review your saved formulation against the original account."
     model = Model(interpretation([item(
-        latest, material_purposes=("interpretation_review", "interpretation_review"))]))
+        latest, material_purposes=("interpretation_review", "interpretation_review"),
+        record_requirement={
+            "kind": "review",
+            "target_ids": [],
+            "operation": "none",
+            "success_condition": (
+                "The saved formulation faithfully represents the original "
+                "account."
+            ),
+        })]))
 
     planned = interpret(model, Conversation((), current_matter_id="current-file"), latest)
 
@@ -490,7 +531,17 @@ def test_invalid_fresh_purpose_gets_one_precise_correction_with_original_context
         Message("earlier", "advocate", "The delivery actor is unknown."),),
         current_matter_id="current-file")
     latest = "Repair your saved delivery formulation against my original account."
-    correct = interpretation([item(latest, material_purposes=("interpretation_review",))])
+    correct = interpretation([item(latest, material_purposes=("interpretation_review",),
+                                    record_requirement={
+                                        "kind": "review",
+                                        "target_ids": [],
+                                        "operation": "none",
+                                        "success_condition": (
+                                            "The delivery formulation "
+                                            "preserves the original "
+                                            "unknown actor."
+                                        ),
+                                    })])
     wrong = json.loads(json.dumps(correct))
     if fault == "missing":
         wrong["items"][0].pop("material_purposes")

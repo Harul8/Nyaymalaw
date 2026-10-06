@@ -389,6 +389,22 @@
         "nm/brain/requirements_state.py",
         "tests/test_brain_research_reuse_evidence.py"
       ]
+    },
+    {
+      "slice": "explicit-record-request-contract",
+      "owners": [
+        "LB-175",
+        "LB-176",
+        "LB-186",
+        "LB-190"
+      ],
+      "decision": "Fresh interpreted items explicitly declare none, review or change with owned target_ids, operation and desired success_condition. Reviews/changes require the matching reading route. Pure account contributions do not invent edit obligations. Whole-record no-target review and held-scope reconciliation remain legitimate; model intent never establishes fulfillment.",
+      "validation": "70 offline interpreter cases passed; 29 paired target/routing/normalization/legitimate-review cases. Fixture owners migrated explicitly; missing-field faults preserved. No API/browser calls.",
+      "files": [
+        "nm/brain/conversation.py",
+        "tests/test_brain_record_requirement.py",
+        "tests/brain_continuation_fixture.py"
+      ]
     }
   ]
 }

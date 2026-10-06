@@ -18,7 +18,11 @@ from nm.shared.model_port import (
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import matter_list_projection
-from tests.brain_continuation_fixture import continuation_reply, interpretation
+from tests.brain_continuation_fixture import (
+    continuation_reply,
+    interpretation,
+    no_record_requirement,
+)
 from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
@@ -69,13 +73,15 @@ class Model:
 
 
 def plan(quote, *, scope="none", step="answer", reply="Hello.",
-         relation="new", title="", summary="", material_purposes=()):
+         relation="new", title="", summary="", material_purposes=(), record_requirement=None):
     party_name, separator, subject = title.partition(":")
     return {"items": [{"request": quote, "relation": relation,
                        "matter_scope": scope, "priority": "ordinary",
                        "next_step": step,
                        "reply": reply if step in ("answer", "legal_work") else "",
-                       "clarification": "", "material_purposes": list(material_purposes)}],
+                       "clarification": "", "material_purposes": list(material_purposes),
+                       "record_requirement": (no_record_requirement() if record_requirement is None
+                                              else deepcopy(record_requirement))}],
             "active_work_after": quote if step == "legal_work" else "",
             "opening": {"ready": bool(title),
                         "party_name": party_name if separator else "",
@@ -350,7 +356,7 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
         "matter_scope": "proposed", "priority": "ordinary",
         "next_step": "legal_work", "reply": "The law guarantees damages today.",
         "clarification": "", "material_purposes": [],
-    })
+     "record_requirement": no_record_requirement()})
     class IndependentCheck(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
@@ -455,11 +461,11 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
             {"request": "Assess recovery of the deposit", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
              "next_step": "legal_work", "reply": legal_reply, "clarification": "",
-             "material_purposes": []},
+             "material_purposes": [], "record_requirement": no_record_requirement()},
             {"request": "What is the capital of France?", "relation": "aside",
              "matter_scope": "none", "priority": "ordinary",
              "next_step": "answer", "reply": "Paris.", "clarification": "",
-             "material_purposes": []},
+             "material_purposes": [], "record_requirement": no_record_requirement()},
         ],
         "active_work_after": "assess deposit recovery",
         "opening": {"ready": False, "party_name": "", "subject": "",
@@ -506,11 +512,12 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
             {"request": "Review the draft response", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
              "next_step": "legal_work", "reply": ordinary_reply, "clarification": "",
-             "material_purposes": []},
+             "material_purposes": [], "record_requirement": no_record_requirement()},
             {"request": "Address the filing deadline", "relation": "continues",
              "matter_scope": "current", "priority": "urgent",
              "next_step": "legal_work", "reply": urgent_reply, "clarification": "",
-             "material_purposes": ["account_contribution"]},
+             "material_purposes": ["account_contribution"],
+             "record_requirement": no_record_requirement()},
         ],
         "active_work_after": "check deadline and review draft response",
         "opening": {"ready": False, "party_name": "", "subject": "",
@@ -719,11 +726,13 @@ def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
         {"request": "Check the legal position", "relation": "continues",
          "matter_scope": "current", "priority": "ordinary",
          "next_step": "legal_work", "reply": "I will check the law.",
-         "clarification": "", "material_purposes": []},
+         "clarification": "", "material_purposes": [],
+         "record_requirement": no_record_requirement()},
         {"request": "Identify the order", "relation": "uncertain",
          "matter_scope": "current", "priority": "ordinary",
          "next_step": "clarify", "reply": "",
-         "clarification": "Which order do you mean?", "material_purposes": []},
+         "clarification": "Which order do you mean?", "material_purposes": [],
+         "record_requirement": no_record_requirement()},
     ], "active_work_after": "check legal position",
        "opening": {"ready": False, "party_name": "", "subject": "",
                    "summary": ""}}

@@ -110,7 +110,8 @@ def test_public_mixed_greeting_and_account_summary_are_both_composed_and_reviewe
         "matter_scope": "current", "priority": "ordinary", "next_step": "legal_work",
         "reply": "UNREVIEWED_ROUTER_SUMMARY", "clarification": "", "intent": "request",
         "material_purposes": [],
-    })
+        "record_requirement": {"kind": "none", "target_ids": [],
+                               "operation": "none", "success_condition": ""}})
     greeting = completed_reply(0, "Hello.", span_ids=("L1",))
     summary = completed_reply(
         1, "You report holding a signed receipt for the disputed transaction; "

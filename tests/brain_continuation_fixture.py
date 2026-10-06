@@ -91,15 +91,33 @@ def reviewed_verdicts(payload, data):
     return result
 
 
-def interpretation(data):
-    """Preserve explicit fixture-owned purposes; never infer missing meaning."""
-    return {**{key: value for key, value in data.items() if key != "active_work_after"},
+def no_record_requirement():
+    """An explicit fixture declaration; no request meaning is inferred."""
+    return {
+        "kind": "none",
+        "target_ids": [],
+        "operation": "none",
+        "success_condition": "",
+    }
+
+
+def interpretation(data, *, record_requirements=None):
+    """Carry only explicit fixture-owned outcomes, including declared no-effect work."""
+    result = {**{key: value for key, value in data.items() if key != "active_work_after"},
             "items": [{**item, "intent": item.get("intent", "request"),
                        "response_basis": item.get("response_basis", "legal_authority"
                                                   if item.get("research_question")
                                                   else "conversation_record"),
                        "research_question": item.get("research_question", "")}
                       for item in data["items"]]}
+    for index, declared in (record_requirements or {}).items():
+        if type(index) is not int or not 0 <= index < len(result["items"]):
+            raise ValueError("A scripted record requirement needs its owned item index")
+        row = result["items"][index]
+        if "record_requirement" in row and row["record_requirement"] != declared:
+            raise ValueError("Two fixture owners declared different record requirements")
+        row["record_requirement"] = deepcopy(declared)
+    return result
 
 
 def continuation_reply(operation, payload, *, scripted_items=()):

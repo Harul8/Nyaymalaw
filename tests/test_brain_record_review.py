@@ -143,7 +143,14 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
     model = ReviewModel([plan(account, candidates=original, opening=True,
                               material_purposes=("account_contribution",)),
                          plan(request, candidates=candidates,
-                              material_purposes=("interpretation_review",))], restore_atomic)
+                              material_purposes=("interpretation_review",),
+                              record_requirement={
+                                  "kind": "change", "operation": "corrects",
+                                  "target_ids": ["seed-merge:material:1", "seed-merge:material:2"],
+                                  "success_condition": (
+                                      "Restore separate sourced supplier and carrier descriptions "
+                                      "Preserve both reported acts and add no facts.")})],
+                        restore_atomic)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "seed-merge").json()
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -219,7 +226,13 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     model = DispatchModel([
         plan(account, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
-        plan(request, candidates=[successor], material_purposes=("interpretation_review",)),
+        plan(request, candidates=[successor], material_purposes=("interpretation_review",),
+             record_requirement={
+                 "kind": "change", "operation": "corrects",
+                 "target_ids": ["merged:material:1"],
+                 "success_condition": (
+                     "Restore independently sourced supplier and carrier issues without "
+                     "losing either reported act.")}),
     ], reject_partial_restore)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "merged").json()
@@ -313,7 +326,13 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
              material_purposes=("account_contribution",)),
         plan(latest, candidates=[unsupported, party, courier, unsupported_detail,
                                  party_detail, courier_detail],
-             material_purposes=("account_contribution", "interpretation_review"))], certify_sources)
+             material_purposes=("account_contribution", "interpretation_review"),
+             record_requirement={
+                 "kind": "review", "operation": "none", "target_ids": [],
+                 "success_condition": (
+                     "Examine saved formulations against their original attributed source "
+                     "purpose; preserve reported party positions and courier conduct.")})],
+        certify_sources)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "source-seed").json()
     saved_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])

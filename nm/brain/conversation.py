@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from nm.brain.checked import checked_read
+from nm.brain.record_review import derived_record
 from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
@@ -73,6 +74,10 @@ class WorkItem:
         Literal["account_contribution", "interpretation_review"], ...
     ] | None = None
 
+    # None retains genuinely untracked in-process plans; fresh output must
+    # declare even a non-record requirement explicitly.
+    record_requirement: dict | None = None
+
     def __post_init__(self) -> None:
         # Older in-process callers supplied the question without a separate
         # basis. Fresh interpreter output must state and validate both below.
@@ -115,6 +120,19 @@ class TurnPlan:
     material_review: bool
 
 
+_RECORD_REQUIREMENT_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["kind", "target_ids", "operation", "success_condition"],
+    "properties": {
+        "kind": {"type": "string", "enum": ["none", "review", "change"]},
+        "target_ids": {"type": "array", "items": {"type": "string"}},
+        "operation": {"type": "string", "enum": [
+            "new", "adds", "corrects", "contradicts", "withdraws", "none"]},
+        "success_condition": {"type": "string"},
+    },
+}
+
+
 _SCHEMA = {
     "type": "object", "additionalProperties": False,
     "required": ["items", "opening"],
@@ -124,7 +142,7 @@ _SCHEMA = {
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
                          "clarification", "intent", "response_basis", "research_question",
-                         "material_purposes"],
+                         "material_purposes", "record_requirement"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -140,6 +158,7 @@ _SCHEMA = {
                 "response_basis": {"type": "string", "enum": [
                     "conversation_record", "legal_authority"]},
                 "research_question": {"type": "string"},
+                "record_requirement": _RECORD_REQUIREMENT_SCHEMA,
                 "material_purposes": {"type": "array", "items": {
                     "type": "string", "enum": [
                         "account_contribution", "interpretation_review"]}},
@@ -160,7 +179,8 @@ _SCHEMA = {
 
 _SYSTEM = """Message: You receive the advocate's latest message, the complete attributed
 conversation in chronological order, the current matter and authorised work,
-active sourced dispute formulations, and saved progress and research coverage.
+active sourced dispute formulations, a server-owned target_catalogue of saved
+dispute and material formulations, and saved progress and research coverage.
 Progress distinguishes requested tasks, proposed work, unanswered questions,
 promises, unavailable material and scoped completion. Earlier NM words,
 formulations and research questions are interpretations and work context,
@@ -219,6 +239,29 @@ including a recap, repeat, explanation, legal-source enquiry, greeting or divers
 Reference to a record alone does not authorise changing it. Other-matter work
 cannot authorise changing this matter's records. Separate readers decide
 whether any supported proposal or repair follows; review does not force a change.
+Separately declare record_requirement for the requested record outcome. Use
+kind=none when this item requests no record review or change, even when its
+account contribution may lead the readers to propose material. Return empty
+target_ids and success_condition and operation=none for this kind; do not infer
+a requested record change from intake alone.
+Use kind=review for a requested examination of sourced record formulations.
+Select interpretation_review in material_purposes, operation=none, and exact
+target_ids when specific saved records are meant; an empty target list permits
+whole-record review. State the condition a dependable review must establish.
+A completed review may find no change needed; the review instruction does not
+supply the facts or force a new row.
+Use kind=change for an expressed or clearly entailed requested record change.
+Select account_contribution and/or interpretation_review for the relevant
+reading. State the desired condition, not a claim that it already holds.
+Select new for a distinct new record and leave target_ids empty. For adds,
+corrects, contradicts or withdraws, select at least one exact supplied target
+ID. No catalogue ID may be invented or silently substituted. A change to a
+current-matter target cannot declare matter_scope=none or other. A saved reference
+with uncertain matter scope does not establish current-matter ownership;
+select it only for an explicitly authorised scope reconciliation, preserving
+that uncertainty for independent checking. The server checks ownership and
+routing; later readers and review compare the condition with actual effects.
+Do not declare a record requirement as completed in this interpretation.
 Set response_basis=conversation_record when the result needs only attributed
 conversation or record reconciliation and leave research_question empty.
 Set legal_authority only when a substantive legal proposition, assessment,
@@ -376,6 +419,72 @@ def repair_opening(model: ModelPort, conversation: Conversation, latest: str,
                         output_limit, accept)
 
 
+def _target_catalogue(conversation: Conversation) -> list[dict]:
+    """Expose one catalogue of exact saved references, not ownership inferences."""
+    records: dict[str, dict] = {}
+    for kind, supplied in (("dispute", conversation.open_disputes),
+                           ("material", conversation.open_material)):
+        for row in supplied:
+            if (not isinstance(row, dict) or not isinstance(row.get("id"), str)
+                    or not row["id"].strip()):
+                raise IncompleteConversation("A record target has no exact saved identity")
+            value = {"id": row["id"], "type": kind,
+                     "record": derived_record(deepcopy(row))}
+            if value["id"] in records and records[value["id"]] != value:
+                raise IncompleteConversation("Saved record target identities conflict")
+            records[value["id"]] = value
+    return list(records.values())
+
+
+def _record_requirement(data: object, *, index: int, purposes: list[str],
+                        known_ids: set[str], current_ids: set[str], matter_scope: str) -> dict:
+    """Check selected contracts; meaning remains an independent model decision."""
+    path = f"items[{index}].record_requirement"
+    if (not isinstance(data, dict) or set(data) != {
+            "kind", "target_ids", "operation", "success_condition"}):
+        raise SchemaViolation(path + " must explicitly declare kind, target_ids, "
+                              "operation and success_condition")
+    kind, targets, operation, condition = (data[key] for key in (
+        "kind", "target_ids", "operation", "success_condition"))
+    if (kind not in ("none", "review", "change")
+            or operation not in ("new", "adds", "corrects", "contradicts", "withdraws", "none")
+            or not isinstance(targets, list)
+            or any(not isinstance(identity, str) or identity not in known_ids
+                   for identity in targets)
+            or not isinstance(condition, str)):
+        raise SchemaViolation(path + " contains an unknown decision or unowned target")
+    condition = condition.strip()
+    # Repeating the same selected reference changes neither target nor meaning.
+    targets = tuple(dict.fromkeys(targets))
+    if kind == "none":
+        if targets or operation != "none" or condition:
+            raise SchemaViolation(path + ": kind none requires empty target_ids and "
+                                  "success_condition and operation none")
+    elif kind == "review":
+        if operation != "none" or not condition:
+            raise SchemaViolation(path + ": review requires operation none and a "
+                                  "nonempty success_condition; no edit is promised")
+        if "interpretation_review" not in purposes:
+            raise SchemaViolation(path + ": review requires interpretation_review in "
+                                  "material_purposes so the relevant readers run")
+    else:
+        if operation == "none" or not condition:
+            raise SchemaViolation(path + ": change requires a supported operation and "
+                                  "a nonempty desired success_condition")
+        if not purposes:
+            raise SchemaViolation(path + ": change requires account_contribution and/or "
+                                  "interpretation_review in material_purposes")
+        if operation == "new" and targets:
+            raise SchemaViolation(path + ": operation new cannot target an existing record")
+        if operation != "new" and not targets:
+            raise SchemaViolation(path + ": a non-new change needs an exact saved target ID")
+        if matter_scope in ("none", "other") and current_ids.intersection(targets):
+            raise SchemaViolation(path + ": a change to a current-matter target "
+                                  "contradicts matter_scope none or other")
+    return {"kind": kind, "target_ids": list(targets), "operation": operation,
+            "success_condition": condition}
+
+
 def _prompt(conversation: Conversation, latest: str) -> Prompt:
     if not conversation.complete:
         raise IncompleteConversation("The earlier conversation is incomplete")
@@ -390,6 +499,7 @@ def _prompt(conversation: Conversation, latest: str) -> Prompt:
         "current_work": conversation.current_work,
         "saved_progress": conversation.progress,
         "saved_research_coverage": list(conversation.research_coverage),
+        "target_catalogue": _target_catalogue(conversation),
         "open_disputes": [
             {key: row.get(key) for key in (
                 "id", "label", "statement", "identification", "clarification")}
@@ -406,6 +516,11 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
     prompt = _prompt(conversation, latest)
     schema = deepcopy(_SCHEMA)
     decisions = schema["properties"]["items"]["items"]["properties"]
+    target_ids = tuple(row["id"] for row in _target_catalogue(conversation))
+    target_selection = decisions["record_requirement"]["properties"]["target_ids"]
+    target_selection["items"]["enum"] = list(target_ids) or [""]
+    if not target_ids:
+        target_selection["maxItems"] = 0
     if not conversation.current_matter_id:
         decisions["matter_scope"]["enum"].remove("current")
     else:
@@ -434,6 +549,10 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
     has_prior_context = bool(conversation.messages or conversation.current_work
                              or conversation.current_matter_id)
     items = []
+    targets = _target_catalogue(conversation)
+    known_targets = {row["id"] for row in targets}
+    current_targets = {row["id"] for row in targets
+                       if row["record"].get("matter_scope") == "current"}
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
             raise SchemaViolation("A work item is not an object")
@@ -481,6 +600,10 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
             raise SchemaViolation(
                 "For next_step=answer or legal_work, set clarification to an "
                 "empty string; use reply for the response")
+        requirement = _record_requirement(
+            row.get("record_requirement"), index=index, purposes=purposes,
+            known_ids=known_targets, current_ids=current_targets,
+            matter_scope=row.get("matter_scope"))
         try:
             item = WorkItem(request=request,
                             relation=row["relation"], matter_scope=row["matter_scope"],
@@ -490,7 +613,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             clarification=clarification, intent=row["intent"],
                             research_question=research_question.strip(),
                             response_basis=response_basis,
-                            material_purposes=tuple(dict.fromkeys(purposes)))
+                            material_purposes=tuple(dict.fromkeys(purposes)),
+                            record_requirement=requirement)
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")

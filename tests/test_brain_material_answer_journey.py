@@ -149,7 +149,12 @@ def test_checked_material_answer_survives_reopening(
             expected = ORIGINAL_DATE
             reply = "The saved description matches your reported delivery date."
             follow_up = answer_plan(
-                message, reply=reply, material_purposes=("interpretation_review",))
+                message, reply=reply, material_purposes=("interpretation_review",),
+                record_requirement={
+                    "kind": "review", "operation": "none",
+                    "target_ids": [f"{first_turn_id}:material:2"],
+                    "success_condition": (
+                        "Check that the saved delivery description matches the original account.")})
             expected_purposes = ["interpretation_review"]
             expected_operations = [
                 "interpret_conversation", "classify_account_sources", "extract_disputes",

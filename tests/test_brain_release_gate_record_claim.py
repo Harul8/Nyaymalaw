@@ -63,7 +63,8 @@ def test_public_false_record_completion_is_reviewed_and_repaired_before_saving(
         "request": request, "relation": "continues", "matter_scope": "none",
         "priority": "ordinary", "next_step": "answer", "reply": false_claim,
         "clarification": "", "intent": "request",
-    }])
+        "record_requirement": {"kind": "none", "target_ids": [],
+                               "operation": "none", "success_condition": ""}}])
     assert mistaken_route["items"][0]["material_purposes"] == []
     unsupported = response_unit(false_claim, completed=True)
     corrected = response_unit(remaining_gap, completed=False)

@@ -33,7 +33,12 @@ def opening():
     result = plan(ACCOUNT, scope="proposed", step="legal_work", reply="I will check the account.",
                   title="Nila: Reported equipment and payment issues",
                   summary="The advocate reports unreturned equipment and withheld payment.",
-                  material_purposes=("account_contribution",))
+                  material_purposes=("account_contribution",),
+                  record_requirement={
+                      "kind": "change", "operation": "new", "target_ids": [],
+                      "success_condition": (
+                          "Retain the separately reported unreturned-equipment and withheld-"
+                          "payment issues on the file without treating the account as proved.")})
     result["items"][0].update(response_basis="conversation_record", research_question="")
     return result
 
@@ -129,6 +134,11 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
                      reply="I will reconcile the attributed record.")
     requested["items"][0].update(response_basis="conversation_record", research_question="")
     requested["items"][0]["material_purposes"] = ["interpretation_review"]
+    requested["items"][0]["record_requirement"] = {
+        "kind": "review", "operation": "none", "target_ids": [],
+        "success_condition": (
+            "Check the recorded formulations against the saved account, preserving "
+            "uncertainty and leaving legal assessment unfinished.")}
     model = RecordResearchModel(
         [opening(), requested],
         [{"units": [factual_unit()]},

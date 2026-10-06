@@ -7,7 +7,11 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage
 from nm.work_the_file.matter_contracts import Matter
 from nm.work_the_file.projections_api import _proposed_disputes
-from tests.brain_continuation_fixture import continuation_reply, interpretation
+from tests.brain_continuation_fixture import (
+    continuation_reply,
+    interpretation,
+    no_record_requirement,
+)
 from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 
@@ -77,13 +81,15 @@ def _with_source_ids(row, payload):
     return converted
 
 
-def route(request, *, relation, scope, opening=False):
+def route(request, *, relation, scope, opening=False, record_requirement=None):
     return {
         "items": [{"request": request, "relation": relation,
                    "matter_scope": scope, "priority": "ordinary",
                    "next_step": "legal_work",
                    "reply": "I will assess the issues against the available record.",
-                   "clarification": "", "material_purposes": ["account_contribution"]}],
+                   "clarification": "", "material_purposes": ["account_contribution"],
+                   "record_requirement": (no_record_requirement() if record_requirement is None
+                                          else record_requirement)}],
         "active_work_after": request,
         "opening": {"ready": opening,
                     "party_name": "",

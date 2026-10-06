@@ -15,7 +15,11 @@ from nm.shared.model_port import (
     Usage,
 )
 from nm.shared.store_file_store import FileMatterStore
-from tests.brain_continuation_fixture import continuation_reply, interpretation
+from tests.brain_continuation_fixture import (
+    continuation_reply,
+    interpretation,
+    no_record_requirement,
+)
 from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
 
 FIRST = ("The supplier retained our tools. "
@@ -24,7 +28,8 @@ DETAIL = "I have a signed delivery receipt for the tools."
 ASIDE = "Hello again."
 
 
-def _route(message: str, *, first: bool = False, aside: bool = False) -> dict:
+def _route(message: str, *, first: bool = False, aside: bool = False,
+           record_requirement=None) -> dict:
     return {
         "items": [{
             "request": message,
@@ -35,6 +40,8 @@ def _route(message: str, *, first: bool = False, aside: bool = False) -> dict:
             "reply": "Hello." if aside else "I will check the record and applicable law.",
             "clarification": "",
             "material_purposes": [] if aside else ["account_contribution"],
+            "record_requirement": (no_record_requirement() if record_requirement is None
+                                   else record_requirement),
         }],
         "active_work_after": FIRST,
         "opening": {

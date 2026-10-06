@@ -104,7 +104,9 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
                      "matter_scope": "proposed", "priority": "ordinary",
                      "next_step": "legal_work",
                      "reply": "I will keep the new issue separate while reviewing the first file.",
-                     "clarification": ""}
+                     "clarification": "",
+                     "record_requirement": {"kind": "none", "target_ids": [],
+                                            "operation": "none", "success_condition": ""}}
     model = Model([
         plan(opening, candidates=opening_rows, opening=True,
              material_purposes=("account_contribution",)),

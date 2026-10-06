@@ -77,11 +77,15 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                             "relation": "changes", "matter_scope": "current",
                             "intent": "contribution",
                             "priority": "ordinary", "next_step": "legal_work",
-                            "reply": "I will review the corrected account.", "clarification": ""},
+                            "reply": "I will review the corrected account.", "clarification": "",
+                            "record_requirement": {"kind": "none", "target_ids": [],
+                                                   "operation": "none", "success_condition": ""}},
                            {"request": "Hello", "relation": "aside", "matter_scope": "none",
                             "priority": "ordinary", "next_step": "answer",
                             "reply": "Hello.", "clarification": "",
-                            "material_purposes": []}],
+                            "material_purposes": [],
+                            "record_requirement": {"kind": "none", "target_ids": [],
+                                                   "operation": "none", "success_condition": ""}}],
                             material_purposes=("account_contribution",))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "assignment-first")

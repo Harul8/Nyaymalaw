@@ -10,10 +10,12 @@ from dataclasses import replace
 
 import pytest
 
+from tests.brain_continuation_fixture import no_record_requirement
 from tests.test_brain_material import Model, material, plan, send
 
 
-def item(request, reply, *, purposes=(), intent="request", opening=False):
+def item(request, reply, *, purposes=(), intent="request", opening=False,
+         record_requirement=None):
     return {
         "request": request, "reply": reply, "clarification": "",
         "relation": "new" if opening else "continues",
@@ -21,6 +23,8 @@ def item(request, reply, *, purposes=(), intent="request", opening=False):
         "priority": "ordinary", "next_step": "answer", "intent": intent,
         "response_basis": "conversation_record", "research_question": "",
         "material_purposes": list(purposes),
+        "record_requirement": (no_record_requirement() if record_requirement is None
+                               else record_requirement),
     }
 
 
@@ -161,7 +165,16 @@ def test_interpretation_review_repairs_from_prior_account_without_new_account_fa
                      "quoted": account},),
         related_material_ids=("custody-original:material:1",))
     repair = routed(request, candidates=[revised], items=[
-        item(request, revised["statement"], purposes=("interpretation_review",)),
+        item(request, revised["statement"], purposes=("interpretation_review",),
+             record_requirement={
+                 "kind": "change",
+                 "target_ids": ["custody-original:material:1"],
+                 "operation": "corrects",
+                 "success_condition": (
+                     "The saved custody description retains the original "
+                     "unidentified custodian."
+                 ),
+             }),
     ])
     model = PurposeModel([seed, repair], review_authority_only=True)
     opened = open_account(client, wired, monkeypatch, model, account)
@@ -218,7 +231,16 @@ def test_authorised_review_without_new_rows_preserves_existing_material(
     request = "Check your custody description against my saved account."
     review = routed(request, items=[
         item(request, "The saved description reports custody at the depot.",
-             purposes=("interpretation_review",)),
+             purposes=("interpretation_review",),
+             record_requirement={
+                 "kind": "review",
+                 "target_ids": ["custody-original:material:1"],
+                 "operation": "none",
+                 "success_condition": (
+                     "The saved custody description faithfully reports the "
+                     "depot location."
+                 ),
+             }),
     ])
     model = PurposeModel([seed_plan(account), review], review_authority_only=True)
     opened = open_account(client, wired, monkeypatch, model, account)
@@ -280,7 +302,16 @@ def test_invalid_material_purpose_exhausts_one_repair_without_saving_or_losing_h
     request = "Correct the custody date in the saved account."
     update = routed(request, items=[
         item(request, "The requested change remains unsupported.",
-             purposes=("account_contribution",)),
+             purposes=("account_contribution",),
+             record_requirement={
+                 "kind": "change",
+                 "target_ids": ["custody-original:material:1"],
+                 "operation": "corrects",
+                 "success_condition": (
+                     "The requested custody-date correction has sourced "
+                     "support and retains any uncertainty."
+                 ),
+             }),
     ])
     model = PurposeModel([seed_plan(account), update, update],
                          malformed_purpose=malformed_purpose)

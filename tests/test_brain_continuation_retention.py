@@ -196,7 +196,9 @@ def test_public_ambiguous_reference_is_clarified_without_repeating_supported_pee
     second_route["items"].append({
         **second_route["items"][0], "request": "Repeat the two reported items.",
         "next_step": "legal_work", "clarification": "",
-        "reply": "I will repeat the two attributed items."})
+        "reply": "I will repeat the two attributed items.",
+        "record_requirement": {"kind": "none", "target_ids": [],
+                               "operation": "none", "success_condition": ""}})
     initial = unit(text="You report that your colleague has a storage key and appointment token.")
     initial["blocks"] = [initial["blocks"][0]]
     initial.update(questions=[], sufficiency={"status": "complete", "block_id": "account-0"})

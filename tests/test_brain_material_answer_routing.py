@@ -7,11 +7,12 @@ from copy import deepcopy
 
 from nm.brain.dispute_state import proposed_disputes
 from nm.brain.material_state import material_record
+from tests.brain_continuation_fixture import no_record_requirement
 from tests.test_brain_material import Model, material, plan, send
 
 
 def answer_plan(message, *, reply, candidates=(), opening=False,
-                intent="request", material_purposes=()):
+                intent="request", material_purposes=(), record_requirement=None):
     routed = plan(message, candidates=candidates, opening=opening, items=[{
         "request": message, "relation": "new" if opening else "continues",
         "matter_scope": "proposed" if opening else "current",
@@ -19,6 +20,8 @@ def answer_plan(message, *, reply, candidates=(), opening=False,
         "clarification": "", "intent": intent,
         "response_basis": "conversation_record", "research_question": "",
         "material_purposes": list(material_purposes),
+        "record_requirement": (no_record_requirement() if record_requirement is None
+                               else record_requirement),
     }], material_purposes=("account_contribution",))
     if opening:
         routed["opening"].update(subject="Reported delivery", summary=message)
@@ -154,7 +157,16 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
     original = material("event", account, account, placement="matter")
     review = answer_plan(
         request, reply="The saved description matches your reported delivery date.",
-                  material_purposes=("interpretation_review",))
+                  material_purposes=("interpretation_review",),
+        record_requirement={
+            "kind": "review",
+            "target_ids": ["review-original:material:1"],
+            "operation": "none",
+            "success_condition": (
+                "The saved delivery description matches the reported 16 "
+                "June date."
+            ),
+        })
     model = Model([plan(account, candidates=[original], opening=True,
                         material_purposes=("account_contribution",)), review, review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -186,7 +198,7 @@ def test_legal_authority_cannot_use_answer_route_to_bypass_research(
         "reply": "The limitation period applies.", "clarification": "",
         "intent": "request", "response_basis": "legal_authority",
         "research_question": "Which limitation period applies to this claim?",
-    }])
+     "record_requirement": no_record_requirement()}])
     model = Model([routed, routed])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 

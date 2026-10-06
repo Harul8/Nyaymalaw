@@ -225,7 +225,15 @@ def test_readonly_and_empty_review_receipts_distinguish_what_ran_without_complet
     request = ("Check your description against my saved account." if review
                else "Repeat the saved custody location.")
     purposes = ("interpretation_review",) if review else ()
-    follow = routed(request, items=[item(request, account, purposes=purposes)])
+    requirement = ({
+        "kind": "review", "operation": "none", "target_ids": ["receipt-original:material:1"],
+        "success_condition": "Check the saved custody description against the original account.",
+    } if review else {
+        "kind": "none", "operation": "none", "target_ids": [], "success_condition": "",
+    })
+    follow = routed(request, items=[
+        item(request, account, purposes=purposes, record_requirement=requirement),
+    ])
     model = PurposeModel([seed_plan(account), follow], review_authority_only=review)
     opened = open_account(client, wired, monkeypatch, model, account,
                           turn_id="receipt-original")
@@ -268,7 +276,11 @@ def test_authorised_repair_receipt_retains_original_account_and_instruction_prov
         references=({"turn_id": "receipt-original", "role": "advocate", "quoted": account},),
         related_material_ids=("receipt-original:material:1",))
     follow = routed(request, candidates=[restored], items=[
-        item(request, restored["statement"], purposes=("interpretation_review",)),
+        item(request, restored["statement"], purposes=("interpretation_review",),
+             record_requirement={
+                 "kind": "change", "operation": "corrects",
+                 "target_ids": ["receipt-original:material:1"],
+                 "success_condition": restored["statement"]}),
     ])
     model = PurposeModel([seed, follow], review_authority_only=True)
     opened = open_account(client, wired, monkeypatch, model, account,
@@ -463,7 +475,11 @@ def test_untracked_required_read_is_blocked_when_scripted_review_would_accept(
     request = ("Correction: the freight was delivered on 12 August." if produces_effect
                else "Check your saved description against my account.")
     follow = (correction_plan(account, request) if produces_effect else routed(request, items=[
-        item(request, account, purposes=("interpretation_review",)),
+        item(request, account, purposes=("interpretation_review",),
+             record_requirement={
+                 "kind": "review", "operation": "none",
+                 "target_ids": ["receipt-original:material:1"],
+                 "success_condition": "Check the saved delivery description against the account."}),
     ]))
     model = PurposeModel([seed_plan(account), follow])
     opened = open_account(client, wired, monkeypatch, model, account,
