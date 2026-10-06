@@ -282,6 +282,7 @@
     "nm.brain.dispute_state": "core",
     "nm.brain.dispute_verification": "core",
     "nm.brain.disputes": "core",
+    "nm.brain.evidence_rendering": "core",
     "nm.brain.execution_contracts": "core",
     "nm.brain.history": "core",
     "nm.brain.legal_requirements": "core",
