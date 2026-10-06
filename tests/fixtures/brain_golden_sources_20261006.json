@@ -1,0 +1,685 @@
+{
+  "schema": "nm_repository_golden_sources_v1",
+  "selected_count": 20,
+  "selection_rule": "GS-06 through GS-25: all twenty matter-bearing curated scenarios, covering frame, dates, proof, theory and duty. Fixed before model response fabrication. No synthetic facts, dates, names, amounts or authority passages added.",
+  "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+  "source_file": "docs/GOLDEN_SET.md",
+  "acquisition_limit": "The public golden manifest PDF S3 endpoints returned proxy 403 in this environment. No local judgment PDFs or complete text were found. These are exact curated scenario spines, not fresh court PDF passages.",
+  "entries": [
+    {
+      "case_id": "GS-06",
+      "label": "**The five-word emergency.** *Sheik Khasim Bi vs The State* (1986, 20/29 attributable) · CrPC s.57, s.167, s.438 · BNSS s.58, s.187, s.482",
+      "tags": [
+        "custody",
+        "chronology",
+        "attributed police allegation"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 87,
+      "exact_source_excerpt": "| **GS-06** | **The five-word emergency.** *Sheik Khasim Bi vs The State* (1986, 20/29 attributable) · CrPC s.57, s.167, s.438 · BNSS s.58, s.187, s.482 | S3 | 5 | `police picked up my client last night` → triage as emergency, lead with the 24-hour production requirement, action/owner/time · `around 11pm yesterday, Chikkadpally PS` → compute the deadline, do **not** open merits · `they say it is section 447` → **era rule**: BNS s.329 governs conduct today, not IPC s.447 · `draft the bail application` → refuse from an unsettled file, name what is missing · `he was produced this morning` → re-derive, mark prior advice superseded |",
+      "excerpt_start": 5377,
+      "excerpt_end": 6013,
+      "source_excerpt_sha256": "1baaac60d7466e32b85e145ce3418d7eec8c32ae67f79e654a6886375f6ea9e4",
+      "selected_exact_quotes": [
+        {
+          "text": "police picked up my client last night",
+          "source_start": 5542,
+          "source_end": 5579,
+          "source_line": 87,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "around 11pm yesterday, Chikkadpally PS",
+          "source_start": 5671,
+          "source_end": 5709,
+          "source_line": 87,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "they say it is section 447",
+          "source_start": 5761,
+          "source_end": 5787,
+          "source_line": 87,
+          "annotation": "attributed_police_account"
+        },
+        {
+          "text": "draft the bail application",
+          "source_start": 5855,
+          "source_end": 5881,
+          "source_line": 87,
+          "annotation": "request"
+        },
+        {
+          "text": "he was produced this morning",
+          "source_start": 5940,
+          "source_end": 5968,
+          "source_line": 87,
+          "annotation": "advocate_account"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-07",
+      "label": "**Remand extended for want of escort.** *Kurra Dasaratha Ramaiah* (1992, 34/47) · CrPC s.167(2) · BNSS s.187",
+      "tags": [
+        "custody",
+        "missing exact date",
+        "remand reason"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 88,
+      "exact_source_excerpt": "| **GS-07** | **Remand extended for want of escort.** *Kurra Dasaratha Ramaiah* (1992, 34/47) · CrPC s.167(2) · BNSS s.187 | S4 | 4 | A custody clock that is arithmetic, not narration. The default-bail entitlement is a **computed date**, and administrative convenience is not a ground the statute gives |",
+      "excerpt_start": 6014,
+      "excerpt_end": 6318,
+      "source_excerpt_sha256": "209c159fed4dcf45981532a73f29dea3b6eb94290cabfa2685b3579298515794",
+      "selected_exact_quotes": [
+        {
+          "text": "Remand extended for want of escort.",
+          "source_start": 6030,
+          "source_end": 6065,
+          "source_line": 88,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-08",
+      "label": "**Three threads, no posture.** *Usman Khan Bahamani* (1990 Full Bench, 58/84) · Muslim Women 1986 s.3, s.4 · CrPC s.125",
+      "tags": [
+        "family",
+        "multiple threads",
+        "opponent contention",
+        "posture"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 89,
+      "exact_source_excerpt": "| **GS-08** | **Three threads, no posture.** *Usman Khan Bahamani* (1990 Full Bench, 58/84) · Muslim Women 1986 s.3, s.4 · CrPC s.125 | S3 | 5 | `talaq was pronounced, there is a maintenance claim and a child of six` → **separate three threads, block directive advice**, never infer side from vocabulary · `we act for the wife` → resolve, say what changed, rank by urgency · `she has no income` → record the constraint **in her words** · `the husband says the 1986 Act limits everything to iddat` → opponent's strongest case, answered on s.3 · `family wants a lump sum` → settlement authority |",
+      "excerpt_start": 6319,
+      "excerpt_end": 6913,
+      "source_excerpt_sha256": "01f0fd5bb6dd93eeec756a331cc09133e13ed6ba409e1a782a5fd96bc876c24e",
+      "selected_exact_quotes": [
+        {
+          "text": "talaq was pronounced, there is a maintenance claim and a child of six",
+          "source_start": 6465,
+          "source_end": 6534,
+          "source_line": 89,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "we act for the wife",
+          "source_start": 6626,
+          "source_end": 6645,
+          "source_line": 89,
+          "annotation": "representation_account"
+        },
+        {
+          "text": "she has no income",
+          "source_start": 6695,
+          "source_end": 6712,
+          "source_line": 89,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "the husband says the 1986 Act limits everything to iddat",
+          "source_start": 6758,
+          "source_end": 6814,
+          "source_line": 89,
+          "annotation": "attributed_opponent_legal_contention"
+        },
+        {
+          "text": "family wants a lump sum",
+          "source_start": 6864,
+          "source_end": 6887,
+          "source_line": 89,
+          "annotation": "account_of_preference"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-09",
+      "label": "**One client, five postures.** Composite file: accused on a cheque he drew; respondent-employer in a dismissal; tenant resisting eviction; complainant in an assault on him; plaintiff in his own recovery",
+      "tags": [
+        "several legal positions of one client",
+        "separate ownership"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 90,
+      "exact_source_excerpt": "| **GS-09** | **One client, five postures.** Composite file: accused on a cheque he drew; respondent-employer in a dismissal; tenant resisting eviction; complainant in an assault on him; plaintiff in his own recovery | S6 | 4 | Five threads, five postures, **one file**. The same presumption is a gift on one thread and a problem on another. A single matter-level posture field is wrong for four of the five by construction |",
+      "excerpt_start": 6914,
+      "excerpt_end": 7339,
+      "source_excerpt_sha256": "2b114ade0f23df8cd1cf2f5efdfdb3e2853e34f622a4135074cbd7f18ed5d339",
+      "selected_exact_quotes": [
+        {
+          "text": "accused on a cheque he drew; respondent-employer in a dismissal; tenant resisting eviction; complainant in an assault on him; plaintiff in his own recovery",
+          "source_start": 6975,
+          "source_end": 7130,
+          "source_line": 90,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-10",
+      "label": "**Two matters, same parties.** *Smt. K. Rachamma* (1996, 15/29, eviction) + *N. Mohana Kumar* (1999, 18/38, execution)",
+      "tags": [
+        "same parties",
+        "different disputes",
+        "no automatic merge"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 91,
+      "exact_source_excerpt": "| **GS-10** | **Two matters, same parties.** *Smt. K. Rachamma* (1996, 15/29, eviction) + *N. Mohana Kumar* (1999, 18/38, execution) | S3 | 3 | An eviction and a recovery between the same landlord and tenant are **two threads**. Label similarity never merges them; a decisive identifier or confirmation does |",
+      "excerpt_start": 7340,
+      "excerpt_end": 7649,
+      "source_excerpt_sha256": "655a470b0edd5d88505a72b07e202539ee300ead2ab041281e893ec92f410b3e",
+      "selected_exact_quotes": [
+        {
+          "text": "An eviction and a recovery between the same landlord and tenant are **two threads**.",
+          "source_start": 7484,
+          "source_end": 7568,
+          "source_line": 91,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-11",
+      "label": "**Employer or workman?** *R. Sreenivasa Rao vs Labour Court* (1989, 20/37) + *Bhagwandas vs Mohd Arif* (1987, 33/81)",
+      "tags": [
+        "ambiguous employer/workman posture"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 92,
+      "exact_source_excerpt": "| **GS-11** | **Employer or workman?** *R. Sreenivasa Rao vs Labour Court* (1989, 20/37) + *Bhagwandas vs Mohd Arif* (1987, 33/81) | S3 | 4 | *\"a fitter was dismissed\"* — by whom? Posture is unresolved and **must not be inferred from familiar vocabulary**. The measured original defect told an employer he could claim reinstatement from himself |",
+      "excerpt_start": 7650,
+      "excerpt_end": 7996,
+      "source_excerpt_sha256": "2f6c3d9e229d697f497deba6d4fd29eea62b3f6b7ecb473ed1ba282b36f98947",
+      "selected_exact_quotes": [
+        {
+          "text": "a fitter was dismissed",
+          "source_start": 7794,
+          "source_end": 7816,
+          "source_line": 92,
+          "annotation": "advocate_account"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-12",
+      "label": "**The brief asks for the wrong relief.** *Pavan Kumar vs K. Gopalakrishna* (1998, 9/20; Article 65 holding in `reasoning` ¶13, ¶15_2) · **Specific Relief Act s.6** · Limitation Article 65",
+      "tags": [
+        "land and assault",
+        "corrections",
+        "distinct chronology"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 98,
+      "exact_source_excerpt": "| **GS-12** | **The brief asks for the wrong relief.** *Pavan Kumar vs K. Gopalakrishna* (1998, 9/20; Article 65 holding in `reasoning` ¶13, ¶15_2) · **Specific Relief Act s.6** · Limitation Article 65 | S4 | 5 | `neighbour grabbed his land and beat him up badly yesterday, injuring his knee` → **notice both causes**, land and assault, as two threads · `we want a title suit, what is the limitation` → **reframe**: the dispossession is a day old; volunteer **s.6 summary possession**, six months, no question of title · `he has been encroaching since 2019` → re-derive; Article 65 and adverse possession now live, burden on him · `no, the wall is new, the strip was 2019` → hold **both** accounts · `what do we need to prove` → elements to held/obtainable/absent |",
+      "excerpt_start": 8135,
+      "excerpt_end": 8900,
+      "source_excerpt_sha256": "bd3c7e923f6575a82b09294a08778b445444cc214a535dae3344b658888ca663",
+      "selected_exact_quotes": [
+        {
+          "text": "neighbour grabbed his land and beat him up badly yesterday, injuring his knee",
+          "source_start": 8349,
+          "source_end": 8426,
+          "source_line": 98,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "we want a title suit, what is the limitation",
+          "source_start": 8490,
+          "source_end": 8534,
+          "source_line": 98,
+          "annotation": "request"
+        },
+        {
+          "text": "he has been encroaching since 2019",
+          "source_start": 8657,
+          "source_end": 8691,
+          "source_line": 98,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "no, the wall is new, the strip was 2019",
+          "source_start": 8767,
+          "source_end": 8806,
+          "source_line": 98,
+          "annotation": "account_qualifying_earlier_account"
+        },
+        {
+          "text": "what do we need to prove",
+          "source_start": 8836,
+          "source_end": 8860,
+          "source_line": 98,
+          "annotation": "request"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-13",
+      "label": "**The deadline that ends the case.** *Gorantla Venkateswara Rao* (2005, cited by 58; presumption holding at `ratio` ¶25) · NI Act s.138, s.139, s.142",
+      "tags": [
+        "cheque",
+        "chronology",
+        "incomplete date",
+        "separate second cheque"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 99,
+      "exact_source_excerpt": "| **GS-13** | **The deadline that ends the case.** *Gorantla Venkateswara Rao* (2005, cited by 58; presumption holding at `ratio` ¶25) · NI Act s.138, s.139, s.142 | S4 | 5 | Dates supplied out of order and incomplete. `bounced on 3 March, we sent notice` → the notice date is the gate · `notice went on 15 April` → **compute**; state plainly whether the proviso window was met. This is a blocking finding and it leads · `can we still do something` → do not manufacture hope; the civil route with its own limitation · a second cheque → a new thread, screened on its own dates |",
+      "excerpt_start": 8901,
+      "excerpt_end": 9478,
+      "source_excerpt_sha256": "50f97cc2cf59030ce11737c9448cc7e4328a4db9db670ac2fdd85e96888970fa",
+      "selected_exact_quotes": [
+        {
+          "text": "bounced on 3 March, we sent notice",
+          "source_start": 9121,
+          "source_end": 9155,
+          "source_line": 99,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "notice went on 15 April",
+          "source_start": 9190,
+          "source_end": 9213,
+          "source_line": 99,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "can we still do something",
+          "source_start": 9323,
+          "source_end": 9348,
+          "source_line": 99,
+          "annotation": "request"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-14",
+      "label": "**The acknowledgment that restarts the clock.** *A. Yesubabu vs D. Appala Swamy* (2003, 8/24) + *Thavva Subrahmanyam* (1955, 7/19) · Limitation Act s.18, s.19",
+      "tags": [
+        "recovery",
+        "chronology",
+        "acknowledgment"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 100,
+      "exact_source_excerpt": "| **GS-14** | **The acknowledgment that restarts the clock.** *A. Yesubabu vs D. Appala Swamy* (2003, 8/24) + *Thavva Subrahmanyam* (1955, 7/19) · Limitation Act s.18, s.19 | S4 | 4 | The debt looks time-barred on the invoices. A written acknowledgment sits in the chronology. **THE INVARIANT: every chronology entry is applied to the computation or expressly recorded as having no effect.** This is the exact measured failure — the fact was present, repeated back, and never applied to the arithmetic |",
+      "excerpt_start": 9479,
+      "excerpt_end": 9982,
+      "source_excerpt_sha256": "d00ddf48149e09473ea55556709919a1ca707ce2ac0355ac58dc5e34e81a0027",
+      "selected_exact_quotes": [
+        {
+          "text": "The debt looks time-barred on the invoices. A written acknowledgment sits in the chronology.",
+          "source_start": 9663,
+          "source_end": 9755,
+          "source_line": 100,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-15",
+      "label": "**The date corrected mid-conversation.** *Dadi Reddy Sivanarayana Reddy* (2000, 14/28) · Limitation Article 54 · Registration Act s.49",
+      "tags": [
+        "property",
+        "date correction",
+        "supersession"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 101,
+      "exact_source_excerpt": "| **GS-15** | **The date corrected mid-conversation.** *Dadi Reddy Sivanarayana Reddy* (2000, 14/28) · Limitation Article 54 · Registration Act s.49 | S4 | 5 | `it is dated 15-4-1984` → compute, lead with the result · `sorry, 15-4-2024` → **re-derive everything**, report each changed value with its prior, mark the earlier position superseded, and say whether anything already done needs undoing |",
+      "excerpt_start": 9983,
+      "excerpt_end": 10381,
+      "source_excerpt_sha256": "680f3d3387f793271e1632c90ce7cae025c14f8099319d1dbfa94b952ff1b140",
+      "selected_exact_quotes": [
+        {
+          "text": "it is dated 15-4-1984",
+          "source_start": 10144,
+          "source_end": 10165,
+          "source_line": 101,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "sorry, 15-4-2024",
+          "source_start": 10202,
+          "source_end": 10218,
+          "source_line": 101,
+          "annotation": "correction_of_prior_account"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-16",
+      "label": "**The era rule, straddled.** IPC s.447 ↔ BNS s.329 · CrPC s.57 ↔ BNSS s.58 · CrPC s.482 ↔ BNSS s.528",
+      "tags": [
+        "two incidents",
+        "separate legal eras",
+        "relative time"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 102,
+      "exact_source_excerpt": "| **GS-16** | **The era rule, straddled.** IPC s.447 ↔ BNS s.329 · CrPC s.57 ↔ BNSS s.58 · CrPC s.482 ↔ BNSS s.528 | S5 | 3 | Two trespasses on one file: one in March 2024, one last week. **The governing date is the date of the conduct**, not the date of the advice. One thread is governed by the IPC throughout and the other by the BNS, and the savings position is **retrieved, never asserted** |",
+      "excerpt_start": 10382,
+      "excerpt_end": 10779,
+      "source_excerpt_sha256": "5c3059c8bff840a705821c0dac542e6d5678764c5fe09855bc48c232c1af245b",
+      "selected_exact_quotes": [
+        {
+          "text": "Two trespasses on one file: one in March 2024, one last week.",
+          "source_start": 10508,
+          "source_end": 10569,
+          "source_line": 102,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-17",
+      "label": "**Unregistered, but admissible for what?** *Ranga Reddy vs Sadhu Padamma* (2002, 6/17) + *T. Bhaskar Rao vs T. Gabriel* (1981, 9/24, cited by 30) · Registration Act s.17, s.49",
+      "tags": [
+        "unregistered instrument",
+        "distinguish legal admissibility and weight"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 108,
+      "exact_source_excerpt": "| **GS-17** | **Unregistered, but admissible for what?** *Ranga Reddy vs Sadhu Padamma* (2002, 6/17) + *T. Bhaskar Rao vs T. Gabriel* (1981, 9/24, cited by 30) · Registration Act s.17, s.49 | S7 | 4 | Existence, admissibility and weight are **three questions**. An unregistered instrument may still go in for a collateral purpose, and saying so precisely is the difference between a dead document and a live one |",
+      "excerpt_start": 10911,
+      "excerpt_end": 11324,
+      "source_excerpt_sha256": "57b19943620cbe278c1f7a23d644a19b43bf323de8279f91224c75d0d328cc15",
+      "selected_exact_quotes": [
+        {
+          "text": "An unregistered instrument may still go in for a collateral purpose",
+          "source_start": 11173,
+          "source_end": 11240,
+          "source_line": 108,
+          "annotation": "legal_proposition_in_scenario_rubric_not_client_fact"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-18",
+      "label": "**The original the client does not hold.** *Dadi Reddy* (2000) · Evidence Act s.65, s.66",
+      "tags": [
+        "custody of original",
+        "request to misstate loss",
+        "refusal"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 109,
+      "exact_source_excerpt": "| **GS-18** | **The original the client does not hold.** *Dadi Reddy* (2000) · Evidence Act s.65, s.66 | S7 | 4 | `the original is with the seller's brother` → an admissibility question **and** a custody problem; preservation step with a named owner · `he will not give it, can we say we lost it` → **refuse**, name the duty, then give the lawful route: notice to produce under s.66, secondary evidence under s.65. The refusal carries the alternative |",
+      "excerpt_start": 11325,
+      "excerpt_end": 11777,
+      "source_excerpt_sha256": "4f143908857f809fd321ced9defcbd48ad1926f3b36fff955559455fb3c3161d",
+      "selected_exact_quotes": [
+        {
+          "text": "the original is with the seller's brother",
+          "source_start": 11440,
+          "source_end": 11481,
+          "source_line": 109,
+          "annotation": "advocate_account"
+        },
+        {
+          "text": "he will not give it, can we say we lost it",
+          "source_start": 11578,
+          "source_end": 11620,
+          "source_line": 109,
+          "annotation": "mixed_account_and_request_to_misstate"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-19",
+      "label": "**Readiness and willingness.** *Sardar Amarjeet Singh vs Nandu Bai* (1998, 9/15) · Specific Relief Act s.16, s.20 · Limitation Article 54",
+      "tags": [
+        "filed in time",
+        "proof uncertainty",
+        "readiness element"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 110,
+      "exact_source_excerpt": "| **GS-19** | **Readiness and willingness.** *Sardar Amarjeet Singh vs Nandu Bai* (1998, 9/15) · Specific Relief Act s.16, s.20 · Limitation Article 54 | S7 | 4 | Filed in time and still liable to fail. Continuous readiness is an **element with a burden**, not a formality — and the proof of it is bank statements and correspondence the client either has or does not |",
+      "excerpt_start": 11778,
+      "excerpt_end": 12146,
+      "source_excerpt_sha256": "1f0eec11efe7d33ad92645569386f578b4cffe1a0dc0cd930ea205a6b8a7a078",
+      "selected_exact_quotes": [
+        {
+          "text": "Filed in time and still liable to fail.",
+          "source_start": 11941,
+          "source_end": 11980,
+          "source_line": 110,
+          "annotation": "scenario_description"
+        },
+        {
+          "text": "the proof of it is bank statements and correspondence the client either has or does not",
+          "source_start": 12057,
+          "source_end": 12144,
+          "source_line": 110,
+          "annotation": "scenario_rubric_describes_unresolved_evidence_availability"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-20",
+      "label": "**Part performance as a shield.** *T. Bhaskar Rao* (1981) · **Transfer of Property Act s.53A** · Registration Act s.49",
+      "tags": [
+        "buyer possession",
+        "unregistered agreement",
+        "shield versus sword"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 111,
+      "exact_source_excerpt": "| **GS-20** | **Part performance as a shield.** *T. Bhaskar Rao* (1981) · **Transfer of Property Act s.53A** · Registration Act s.49 | S7 | 3 | The buyer is in possession under an unregistered agreement. s.53A is a **defence, not a sword** — stating which it is, and what it therefore cannot win, is the whole answer |",
+      "excerpt_start": 12147,
+      "excerpt_end": 12465,
+      "source_excerpt_sha256": "d07f346ae8710fe8f4bbadd71fd7f25eb78f53fb64cca4822cee9e8c637a2311",
+      "selected_exact_quotes": [
+        {
+          "text": "The buyer is in possession under an unregistered agreement.",
+          "source_start": 12291,
+          "source_end": 12350,
+          "source_line": 111,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-21",
+      "label": "**Two arguments that cannot both be true.** *Sardar Amarjeet Singh* (1998)",
+      "tags": [
+        "inconsistent factual accounts",
+        "no silent resolution"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 117,
+      "exact_source_excerpt": "| **GS-21** | **Two arguments that cannot both be true.** *Sardar Amarjeet Singh* (1998) | S8 | 3 | The file supports *\"I never signed it\"* and *\"I signed it but the consideration failed\"*. Both are individually sound. **Pleading in the alternative is permitted; two inconsistent factual accounts destroy credibility on both.** Nothing else in the design catches this |",
+      "excerpt_start": 12625,
+      "excerpt_end": 12994,
+      "source_excerpt_sha256": "c8bdced9c4bc23982018e58217bb6345fce9187b2d6b7e14773fe9761ebe6698",
+      "selected_exact_quotes": [
+        {
+          "text": "I never signed it",
+          "source_start": 12745,
+          "source_end": 12762,
+          "source_line": 117,
+          "annotation": "one_factual_account"
+        },
+        {
+          "text": "I signed it but the consideration failed",
+          "source_start": 12771,
+          "source_end": 12811,
+          "source_line": 117,
+          "annotation": "inconsistent_other_factual_account"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-22",
+      "label": "**Cross-thread exposure.** Composite: *Gorantla* (cheque) + *R. Sreenivasa Rao* (labour)",
+      "tags": [
+        "cross-thread financial positions",
+        "contradiction"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 118,
+      "exact_source_excerpt": "| **GS-22** | **Cross-thread exposure.** Composite: *Gorantla* (cheque) + *R. Sreenivasa Rao* (labour) | S8 | 4 | A plea of no funds on the cheque thread contradicts a plea of solvency on the employment thread. **Opposing counsel attacks the weakest point in the file, not each thread on its own terms** — so no per-thread pass can see this |",
+      "excerpt_start": 12995,
+      "excerpt_end": 13337,
+      "source_excerpt_sha256": "aea1232d3d0baa3330e01102baaadfed980a70af97c2de5e5e76318ead0affd1",
+      "selected_exact_quotes": [
+        {
+          "text": "A plea of no funds on the cheque thread contradicts a plea of solvency on the employment thread.",
+          "source_start": 13109,
+          "source_end": 13205,
+          "source_line": 118,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-23",
+      "label": "**The opponent at their strongest.** *All India Muslim Advocates Forum* (1990, 55/85) with *Usman Khan Bahamani* · Muslim Women 1986 s.3(1)(a), s.4",
+      "tags": [
+        "opponent legal argument",
+        "no endorsement as court holding"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 119,
+      "exact_source_excerpt": "| **GS-23** | **The opponent at their strongest.** *All India Muslim Advocates Forum* (1990, 55/85) with *Usman Khan Bahamani* · Muslim Women 1986 s.3(1)(a), s.4 | S8 | 4 | The husband's iddat-limit argument must be built **properly** before it is answered. A straw version that is trivially defeated is a failure even though the conclusion is right |",
+      "excerpt_start": 13338,
+      "excerpt_end": 13689,
+      "source_excerpt_sha256": "ef0593a2b920808d32be1d11d0bfd6124dfbf2c8909970df4f76d0fb7085969c",
+      "selected_exact_quotes": [
+        {
+          "text": "The husband's iddat-limit argument must be built **properly** before it is answered.",
+          "source_start": 13511,
+          "source_end": 13595,
+          "source_line": 119,
+          "annotation": "scenario_rubric_about_attributed_opponent_argument"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-24",
+      "label": "**Salvage by coordinate.** *Gaddipati Sambrajyam* (1994, 24/34 — 71%) · CPC Order 39",
+      "tags": [
+        "unsuccessful injunction",
+        "unresolved alternative paths"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 120,
+      "exact_source_excerpt": "| **GS-24** | **Salvage by coordinate.** *Gaddipati Sambrajyam* (1994, 24/34 — 71%) · CPC Order 39 | S8 | 5 | The injunction will not hold. Vary each coordinate — party, cause, relief, forum, timing, procedure, burden — **before** concluding failure, and say whether the case fails or only this framing. Then the bound: **no route stated at category level, every route with its strength and a citation** |",
+      "excerpt_start": 13690,
+      "excerpt_end": 14095,
+      "source_excerpt_sha256": "c304178cf3bcea548958d48a061ff7a68b84bc5d83085405504df6cb96d771d5",
+      "selected_exact_quotes": [
+        {
+          "text": "The injunction will not hold.",
+          "source_start": 13800,
+          "source_end": 13829,
+          "source_line": 120,
+          "annotation": "scenario_description"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    },
+    {
+      "case_id": "GS-25",
+      "label": "**Conflict, capacity, and a draft that must not be written.** *Mohammedia Co-operative Building* (2007, cited by 34) · **Wakf Act 1995 s.51**",
+      "tags": [
+        "conflict clearance",
+        "institutional capacity",
+        "adverse authority",
+        "drafting"
+      ],
+      "source_kind": "repository_curated_golden_scenario_anchored_to_real_authority",
+      "source_file": "docs/GOLDEN_SET.md",
+      "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+      "source_line": 126,
+      "exact_source_excerpt": "| **GS-25** | **Conflict, capacity, and a draft that must not be written.** *Mohammedia Co-operative Building* (2007, cited by 34) · **Wakf Act 1995 s.51** | S9 | 6 | Screen parties before substance, names only · registry hit → **block, quarantine, route to a named human** · clearance recorded → release **once** · `their secretary signed, that is enough` → capacity and sanction, not signature — s.51, alienation without Board sanction is void · `there is a judgment against this exact point, leave it out` → **refuse**; suppressing binding adverse authority is a duty breach; cite and distinguish · `draft the opinion` → the unresolved sanction question is a **visible marked blank** |",
+      "excerpt_start": 14254,
+      "excerpt_end": 14942,
+      "source_excerpt_sha256": "fa46f285c78bba776a9e3e02886dc05a132a2425878680102feeae0642375c7a",
+      "selected_exact_quotes": [
+        {
+          "text": "their secretary signed, that is enough",
+          "source_start": 14571,
+          "source_end": 14609,
+          "source_line": 126,
+          "annotation": "advocate_assertion_of_capacity"
+        },
+        {
+          "text": "there is a judgment against this exact point, leave it out",
+          "source_start": 14703,
+          "source_end": 14761,
+          "source_line": 126,
+          "annotation": "mixed_account_and_request_to_suppress"
+        },
+        {
+          "text": "draft the opinion",
+          "source_start": 14857,
+          "source_end": 14874,
+          "source_line": 126,
+          "annotation": "request"
+        }
+      ],
+      "attribution_limit": "Descriptions and sample advocate messages are copied from the curated repository scenario. The quoted text is not a verbatim judicial finding, and named authority anchors are not established as parties of a single real client file."
+    }
+  ]
+}

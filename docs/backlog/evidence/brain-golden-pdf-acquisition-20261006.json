@@ -1,0 +1,156 @@
+{
+  "schema": "nm_public_golden_fetch_attempt_v1",
+  "attempted_count": 20,
+  "success_count": 0,
+  "no_pdf_extraction_performed": true,
+  "failure": "urllib.request URLError: Tunnel connection failed: 403 Forbidden from environment proxy",
+  "attempts": [
+    {
+      "doc_id": "APHC010001162024_1_2024-02-09",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010001162024_1_2024-02-09.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010010282023_1_2023-01-06",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010010282023_1_2023-01-06.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010001142019_1_2023-10-30",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010001142019_1_2023-10-30.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010009602023_1_2023-09-08",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010009602023_1_2023-09-08.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010061822024_1_2025-02-14",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2025/court=28_2/bench=aphc/APHC010061822024_1_2025-02-14.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010015762010_1_2025-02-18",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2025/court=28_2/bench=aphc/APHC010015762010_1_2025-02-18.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010008912023_1_2023-01-25",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010008912023_1_2023-01-25.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010075702024_1_2024-07-02",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010075702024_1_2024-07-02.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010189652023_1_2024-12-10",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010189652023_1_2024-12-10.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010065642011_1_2024-12-12",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010065642011_1_2024-12-12.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "HBHC010047922017_1_2023-07-20",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=36_29/bench=taphc/HBHC010047922017_1_2023-07-20.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010043302023_1_2023-03-20",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010043302023_1_2023-03-20.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010048452001_1_2023-12-26",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010048452001_1_2023-12-26.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010012602011_1_2024-08-29",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010012602011_1_2024-08-29.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010402912018_1_2024-11-14",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010402912018_1_2024-11-14.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010063552014_1_2023-03-17",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=28_2/bench=aphc/APHC010063552014_1_2023-03-17.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010078892019_1_2024-12-13",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010078892019_1_2024-12-13.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "HBHC010032902001_1_2023-06-21",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2023/court=36_29/bench=taphc/HBHC010032902001_1_2023-06-21.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010100892022_1_2022-06-29",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2024/court=28_2/bench=aphc/APHC010100892022_1_2022-06-29.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    },
+    {
+      "doc_id": "APHC010004932019_1_2025-07-29",
+      "url": "https://indian-high-court-judgments.s3.amazonaws.com/data/pdf/year=2025/court=28_2/bench=aphc/APHC010004932019_1_2025-07-29.pdf",
+      "outcome": "proxy_403",
+      "pdf_hash": null,
+      "manifest_pdf_bytes_verified": false
+    }
+  ],
+  "alternative_endpoint_checks": [
+    "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/",
+    "https://s3.amazonaws.com/indian-high-court-judgments/",
+    "http://indian-high-court-judgments.s3.amazonaws.com/"
+  ],
+  "alternative_checks_result": "same 403: no source PDF acquired",
+  "fallback": "20 exact curated GS-06\u2013GS-25 repo scenario rows/quotes; not claimed as verbatim court text."
+}
