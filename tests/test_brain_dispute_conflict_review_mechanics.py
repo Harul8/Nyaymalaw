@@ -133,8 +133,14 @@ def test_dispatch_preserves_full_original_context_and_separates_nm_formulations(
     assert payload["active_disputes"] == [{**active[0], "record_role": "nm_interpretation"}]
     assert set(payload["candidates"][0]["allowed_account_source_ids"]) == {"L1", "P1S1"}
     assert "P2S1" not in payload["source_treatments"]
-    assert set(schema["properties"]["verdicts"]["items"]["properties"][
-        "candidate_role"]["enum"]) == {
+    branches = schema["properties"]["verdicts"]["items"]["anyOf"]
+    roles_by_verdict = {
+        branch["properties"]["verdict"]["enum"][0]:
+        set(branch["properties"]["candidate_role"]["enum"])
+        for branch in branches
+    }
+    assert roles_by_verdict["accept"] == {"independent_dispute"}
+    assert roles_by_verdict["reject"] == {
             "independent_dispute", "supporting_premise", "evidence_gap_or_question",
             "duplicate", "unsupported"}
 

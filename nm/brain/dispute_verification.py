@@ -297,6 +297,13 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
                             source_references=source_references, wire=wire),
         "candidate_id": {"type": "string", "enum": list(ids) or [""]},
     }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
+    if wire:
+        accepted = deepcopy(item)
+        accepted["properties"]["verdict"]["enum"] = ["accept"]
+        accepted["properties"]["candidate_role"]["enum"] = ["independent_dispute"]
+        rejected = deepcopy(item)
+        rejected["properties"]["verdict"]["enum"] = ["reject"]
+        item = {"anyOf": [accepted, rejected]}
     properties = {"verdicts": {"type": "array", "items": item,
                                **({"maxItems": 0} if not ids else {})}}
     required = ["verdicts"]

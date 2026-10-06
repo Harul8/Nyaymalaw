@@ -139,9 +139,10 @@ def test_overall_acceptance_cannot_override_failed_account_or_each_target_check(
         {**row, "record_role": "nm_interpretation"} for row in targets]
     initial = json.loads(model.calls[0][0].user)
     assert all(row["allowed_restoration_peer_ids"] == [] for row in initial["candidates"])
-    peer_pool = model.calls[0][1]["properties"]["verdicts"]["items"]["properties"][
-        "target_checks"]["items"]["properties"]["required_peer_ids"]
-    assert peer_pool["maxItems"] == 0
+    for branch in model.calls[0][1]["properties"]["verdicts"]["items"]["anyOf"]:
+        peer_pool = branch["properties"][
+            "target_checks"]["items"]["properties"]["required_peer_ids"]
+        assert peer_pool["maxItems"] == 0
     expected = {
         "examination": "account_check.content_role=examination_material",
         "legal_analysis": "account_check.introduces_legal_analysis=true",
@@ -225,8 +226,8 @@ def test_batch_checks_independent_disputes_and_withholds_unrelated_request():
     payload = json.loads(prompt.user)
     assert [row["candidate_id"] for row in payload["candidates"]] == ["C1", "C2"]
     assert "".join(row["text"] for row in payload["latest_message_spans"]) == latest
-    assert schema["properties"]["verdicts"]["items"]["properties"][
-        "candidate_id"]["enum"] == ["C1", "C2"]
+    for branch in schema["properties"]["verdicts"]["items"]["anyOf"]:
+        assert branch["properties"]["candidate_id"]["enum"] == ["C1", "C2"]
 
 
 def test_bad_candidate_verdict_is_repaired_without_rechecking_valid_peer():

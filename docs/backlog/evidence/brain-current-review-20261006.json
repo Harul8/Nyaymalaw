@@ -1455,6 +1455,31 @@
       },
       "call_impact": "No added model stage/call. Reviewer role/verdict generation coupling and matching reviewer semantics are separately required prerequisites, to be committed individually before integrated browser qualification.",
       "remaining": "Align reviewer generation and original-conflict/coverage decisions, then repeat meaningful browser pairs. No feature completion from reader neutral success."
+    },
+    {
+      "piece": "Generation-only dispute role/verdict coupling",
+      "base": "eebda9b",
+      "production_file": "nm/brain/dispute_verification.py",
+      "prompt_changes": 0,
+      "invariant": "Fresh acceptance is possible only for an independently identified dispute. Negative verdicts retain every role and independently supported account.",
+      "observed_counterexample": "Real Judge emitted supporting_premise plus accept, then changed its semantic role to independent_dispute in correction; no new contrary evidence.",
+      "boundary": "_schema wire=True; canonical _VERDICT, admission and historical proof unchanged",
+      "pass_condition": "Reject four non-dispute acceptance combinations, admit all five negative roles and genuine dispute acceptance, retain owned references and exact source bounds in both branches, preserve valid peer and bounded correction.",
+      "verification": {
+        "baseline_new_cases": "5 failed /23 passed",
+        "new_cases": "28 passed",
+        "focused_and_replay_cases": "176 passed",
+        "lint": "passed",
+        "diff_check": "passed",
+        "semantic_detection": "Not established by scripted role decisions"
+      },
+      "schema_size": {
+        "before_characters": 2752,
+        "after_characters": 5303,
+        "scope": "Two-source, two-candidate generation fixture; characters, not measured provider tokens."
+      },
+      "call_impact": "Zero routine or conditional calls added. Existing correction remains bounded; native generation prevents inconsistent role/verdict pairs but may still choose a wrong semantic role.",
+      "remaining": "Reader grouping, matching independent reviewer and dispute coverage need integrated pinned-model/browser qualification. Full legal brain not production-ready."
     }
   ],
   "additional_reviewer_input": {

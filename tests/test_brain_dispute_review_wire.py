@@ -39,9 +39,10 @@ def test_fresh_provider_selects_once_and_admission_preserves_complete_canonical_
     call = model.calls[0]
     assert call["payload"]["review_selection_contract"] == "checked_source_selection_v1"
     provider = on_the_wire(call["schema"])
-    account = provider["properties"]["verdicts"]["items"]["properties"]["account_check"]
-    assert "source_ids" not in account["properties"]
-    assert set(account["required"]) == set(account["properties"])
+    for branch in provider["properties"]["verdicts"]["items"]["anyOf"]:
+        account = branch["properties"]["account_check"]
+        assert "source_ids" not in account["properties"]
+        assert set(account["required"]) == set(account["properties"])
     require_schema(call["output"], call["schema"])
     canonical = audit[0]["account_check"]
     assert canonical == {**row["account_check"], "source_ids": ["L1"]}
