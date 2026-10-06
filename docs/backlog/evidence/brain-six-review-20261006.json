@@ -515,6 +515,18 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_supplied_coverage.py"
       ]
+    },
+    {
+      "slice": "Closed source registry for effect-contract helper",
+      "owners": [
+        "LB-190",
+        "LB-192"
+      ],
+      "decision": "Register the new pure execution_contracts module as core in the existing closed source manifest and reconcile role counts; do not loosen undeclared-source refusal. Board readers now use the complete declared source population.",
+      "validation": "61 offline source-registry and served board/requirements tests passed; real-model/browser qualification deferred.",
+      "files": [
+        "nm/source_layout.json"
+      ]
     }
   ]
 }
