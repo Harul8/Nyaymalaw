@@ -223,7 +223,7 @@ def test_material_acceptance_needs_account_and_target_checks_independently(failu
     ("duplicate", "candidate_id has duplicate verdicts"),
     ("empty_reason", "reason is empty"),
     ("missing_field", "result.account_check.supported is missing"),
-    ("foreign_source", "result.account_check.source_ids[0]' is outside the permitted vocabulary"),
+    ("foreign_source", "source_ids is server-owned canonical proof"),
     ("foreign_target", "result.target_checks[0].target_id' is outside the permitted vocabulary"),
     ("unsupported", "account_check.supported=false"),
 ])

@@ -1055,6 +1055,23 @@
       },
       "call_impact": "No routine or recovery stage added. Reduces offered range ambiguity; conditional call reduction and semantic accuracy not measured. No paid calls.",
       "remaining": "Material wire consumer pending; coverage envelopes still have global schema bounds with exact owned admission checks. Source meaning, omission and browser readiness remain open."
+    },
+    {
+      "piece": "material reviewer fresh source-selection activation",
+      "owner": "nm/brain/material_verification.py",
+      "version": "e16d2fd plus this one production file",
+      "pass_condition": "Fresh detail/opening checks select original evidence once; owned canonical proof is derived and checked before admission. Canonical cache replay and independent O1/detail coverage remain intact.",
+      "verification": {
+        "new_tests": 9,
+        "new_baseline": "6 failed/3 passed against committed owner",
+        "focused_passed": 228,
+        "known_unchanged_baseline": "Unread opening test still expects unassessed rather than complete admitted-detail coverage; kept unchanged pending contract diagnosis. Other known heading-only fixture baseline failures remain open.",
+        "baseline_evidence": "outputs/brain-repair-20261006/material-opening-coverage-committed-baseline.txt",
+        "ruff": "passed"
+      },
+      "call_impact": "No routine or conditional stage added; original bounded correction and source-owner recovery remain. No paid calls.",
+      "test_transport": "Scripted legacy verdicts translated only after independent authored checks and only for explicit fresh contract. Raw malformed outputs remain unaltered. Golden packet hash/assertions unchanged.",
+      "remaining": "Both reviewer consumers now migrated. Actual pinned browser qualification is next; semantic atomicity, assignment, contestability, legal qualification and useful delivery still require repair."
     }
   ],
   "additional_reviewer_input": {

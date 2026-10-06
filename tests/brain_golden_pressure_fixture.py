@@ -24,6 +24,7 @@ from tests.brain_pressure_support import record_case
 from tests.brain_reader_fixture import (
     fixture_representation_choices,
     fixture_scoped_coverage,
+    fresh_review_reply,
     scripted_support_spans,
     source_portion_reply,
 )
@@ -635,6 +636,7 @@ class GoldenModel:
             raise AssertionError(f"Undeclared fabricated operation: {operation}")
         if self.hook is not None:
             data = self.hook(operation, payload, schema, deepcopy(data), self)
+        data = fresh_review_reply(payload, data)
         self.seen.append(
             {
                 "operation": operation,

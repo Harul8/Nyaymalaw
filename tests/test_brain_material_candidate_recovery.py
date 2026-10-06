@@ -24,6 +24,7 @@ from nm.shared.model_port import (
     Usage,
     require_schema,
 )
+from tests.brain_reader_fixture import fresh_review_reply
 
 
 class Stub:
@@ -43,6 +44,7 @@ class Stub:
         data = response(payload) if callable(response) else deepcopy(response)
         if isinstance(data, Exception):
             raise data
+        data = fresh_review_reply(payload, data)
         if self.strict:
             require_schema(data, schema)
         return ModelResult(

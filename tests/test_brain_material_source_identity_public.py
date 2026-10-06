@@ -3,6 +3,7 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_material import Model, fixture_scope_judgment, material, plan, send
 
 ORIGINAL = "The event happened on Monday."
@@ -39,6 +40,7 @@ class SelectedSecondSpanModel(Model):
             data["coverage"] = fixture_scope_judgment(
                 payload, data, source_purposes=self.source_purposes,
                 coverage_links=self.coverage_links)
+        data = fresh_review_reply(payload, data)
         return replace(result, data=data)
 
 

@@ -18,10 +18,12 @@ from nm.brain.mutation_contracts import model_review_scope, scoped_record_decisi
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
+    REVIEW_SELECTION_CONTRACT,
     SOURCE_SELECTION_CONTRACT,
     SOURCE_SUPPORT_CONTRACT,
     admitted_record_decisions,
     candidate_account_ids,
+    canonical_review_from_wire,
     checked_coverage,
     coverage_schema,
     derived_record,
@@ -81,13 +83,15 @@ position, even tentatively. This read has no checked legal passages and cannot
 create legal findings.
 Outcome: Give account_check with content_role reported_matter_account,
 examination_material, nm_analysis or uncertain; supported;
-introduces_legal_analysis; source_ids; source_checks; and reason.
+introduces_legal_analysis; source_checks; and reason.
 account_check.content_role describes the proposed account layer. A faithfully
 attributed actual party position can be reported_matter_account without adding NM legal analysis.
-Select exact source_ids only from this candidate's allowed_account_source_ids.
-Give exactly one source_checks entry for each selected ID, and no others:
+Select original sources only through source_checks from this candidate's
+allowed_account_source_ids. Give one entry per selected source, and no duplicates:
 source_id, supplies_account_content, supports_proposal and concise reason without
 copied passages; do not repeat source content_role in those entries.
+The server derives canonical source_ids from these checked selections; do not
+return source_ids in fresh account_check output.
 When source_support_contract is supplied, also select support_spans as exact
 start/end offsets in that source's original quoted words. Select substantive
 portions only when supplies_account_content is true, otherwise an empty list.
@@ -298,11 +302,11 @@ _VERDICT = {
 
 def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
             *, coverage_ids: tuple[str, ...] | None = None, source_references=None,
-            coverage_record_ids=(), coverage_candidate_ids=()) -> dict:
+            coverage_record_ids=(), coverage_candidate_ids=(), wire=False) -> dict:
     verdict = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
         **review_properties(source_ids, target_ids, peer_ids,
-                            source_references=source_references),
+                            source_references=source_references, wire=wire),
         "candidate_id": {"type": "string", "enum": list(ids) or [""]},
     }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
     properties = {"verdicts": {"type": "array", "items": verdict,
@@ -321,7 +325,7 @@ def _read_verdicts(data: object, ids: tuple[str, ...],
                    *, account_ids: dict[str, set[str]], targets: dict[str, set[str]],
                    source_treatments: dict[str, dict],
                    source_disagreements: list[dict] | None = None,
-                   source_references=None,
+                   source_references=None, wire=False,
                    ) -> tuple[dict[str, dict], dict[str, tuple[str, ...]]]:
     """Retain valid peers and retry only missing or malformed decisions."""
     rows = data.get("verdicts") if isinstance(data, dict) else None
@@ -352,6 +356,15 @@ def _read_verdicts(data: object, ids: tuple[str, ...],
                                     source_references=source_references),
                 "candidate_id": {"type": "string", "enum": [candidate_id]},
             }}
+            if wire:
+                wire_schema = {**schema, "properties": {
+                    **schema["properties"],
+                    **review_properties(tuple(account_ids[candidate_id]),
+                                        tuple(targets[candidate_id]),
+                                        restoration_peer_ids(candidate_id, targets),
+                                        source_references=source_references, wire=True)}}
+                row = canonical_review_from_wire(
+                    row, schema=wire_schema, source_ids=account_ids[candidate_id])
             require_schema(row, schema)
             validate_record_checks(
                 row, source_ids=account_ids[candidate_id], target_ids=targets[candidate_id],
@@ -402,6 +415,7 @@ def verify_material_grounding(
     if source_references is not None:
         payload["source_support_contract"] = SOURCE_SUPPORT_CONTRACT
     payload["current_matter_id"] = current_matter_id
+    payload["review_selection_contract"] = REVIEW_SELECTION_CONTRACT
     coverage_ids = tuple(source_treatments) if requested_coverage else None
     if requested_coverage:
         payload["review_scope"] = model_review_scope(review_scope)
@@ -538,7 +552,7 @@ def verify_material_grounding(
                             coverage_ids=coverage_ids if read_coverage else None,
                             source_references=source_references,
                             coverage_record_ids=coverage_record_ids,
-                            coverage_candidate_ids=coverage_candidate_ids),
+                            coverage_candidate_ids=coverage_candidate_ids, wire=True),
                     Tier.JUDGE, max_tokens=output_limit)
             except SchemaViolation as exc:
                 result = quarantined_independent_result(exc)
@@ -554,7 +568,7 @@ def verify_material_grounding(
                 targets=targets, source_treatments=source_treatments,
                 source_disagreements=observed_disagreements
                 if source_disagreements is not None else None,
-                source_references=source_references)
+                source_references=source_references, wire=True)
         except (ProviderUnavailable, ContextOverflow, OutputTruncated,
                 ContentRefused, RateLimited) as exc:
             if not attempt or not (requested_coverage and coverage is not None):
