@@ -264,6 +264,20 @@
         "nm/brain/execution_contracts.py",
         "tests/test_brain_execution_contracts.py"
       ]
+    },
+    {
+      "slice": "independent-account-coverage-contract-prerequisite",
+      "owners": [
+        "LB-177",
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Define independent original-account coverage states complete, partial and unassessed with substantive reason and selected missing original-source IDs. Verify exact source ownership and complete-plus-missing contradictions. Normalize only exact duplicate source selectors and outer reason whitespace. Partial or unassessed with no localizable missing span remains legitimate; no-new-rows proves neither completeness nor omission. Existing source-purpose prompt unchanged. This prepares verifier activation, not yet end-to-end omission checking.",
+      "validation": "13 coverage-contract and original source-treatment tests passed offline; Ruff passes. No model calls; meaning of coverage remains independent semantic review and deferred real-model qualification.",
+      "files": [
+        "nm/brain/record_review.py",
+        "tests/test_brain_account_coverage_contract.py"
+      ]
     }
   ]
 }

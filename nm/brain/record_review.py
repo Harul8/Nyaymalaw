@@ -8,12 +8,20 @@ from __future__ import annotations
 import json
 
 from nm.brain.checked import checked_read
-from nm.shared.model_port import ContextOverflow, Prompt, SchemaViolation, Tier, estimate_tokens
+from nm.shared.model_port import (
+    ContextOverflow,
+    Prompt,
+    SchemaViolation,
+    Tier,
+    estimate_tokens,
+    require_schema,
+)
 
 _ACCOUNT_CONTENT_ROLES = ("reported_matter_account", "reported_party_position", "mixed")
 _SOURCE_ROLES = (*_ACCOUNT_CONTENT_ROLES, "examination_material", "work_instruction",
                  "nm_interpretation", "uncertain")
 SOURCE_TREATMENT_CONTRACT = "independent_account_source_treatment_v1"
+ACCOUNT_COVERAGE_CONTRACT = "independent_account_coverage_v1"
 
 _SOURCE_SYSTEM = """Message: You receive the complete ordered conversation, including saved
 NM words as context, the latest advocate message, and owned advocate spans.
@@ -344,3 +352,33 @@ def admitted_record_decisions(decisions: dict[str, dict]) -> dict[str, dict]:
                            missing_peer_ids=list(dict.fromkeys(missing)))
                 changed = True
     return result
+
+
+
+def coverage_schema(source_ids) -> dict:
+    """Expose only owned source choices; completeness remains a judgment."""
+    choices = list(dict.fromkeys(source_ids))
+    return {
+        "type": "object", "additionalProperties": False,
+        "required": ["state", "reason", "missing_source_ids"],
+        "properties": {
+            "state": {"type": "string", "enum": ["complete", "partial", "unassessed"]},
+            "reason": {"type": "string", "minLength": 1},
+            "missing_source_ids": {
+                "type": "array", "items": {"type": "string", "enum": choices or [""]},
+                **({"maxItems": 0} if not choices else {}),
+            },
+        },
+    }
+
+
+def checked_coverage(row, source_ids) -> dict:
+    """Check consequential coverage contradictions without inventing meaning."""
+    require_schema(row, coverage_schema(source_ids))
+    reason = row["reason"].strip()
+    if not reason:
+        raise SchemaViolation("coverage.reason must explain the substantive judgment")
+    missing = list(dict.fromkeys(row["missing_source_ids"]))
+    if row["state"] == "complete" and missing:
+        raise SchemaViolation("coverage complete contradicts nonempty missing_source_ids")
+    return {"state": row["state"], "reason": reason, "missing_source_ids": missing}
