@@ -131,7 +131,25 @@ class AnthropicModelAdapter:
             if len(blocks) != 1 or blocks[0].name != "nm_result":
                 raise SchemaViolation("The provider did not return the requested structured read")
             data = blocks[0].input
-            require_schema(data, schema)
+            try:
+                require_schema(data, schema)
+            except SchemaViolation as exc:
+                # One completed forced result can be quarantined as untrusted
+                # proposals. Unsupported or ambiguous tool output cannot.
+                if (isinstance(data, dict)
+                        and all(b.type in {"text", "tool_use"} for b in response.content)):
+                    rejected = ModelResult(
+                        None, data, tier, self.provider, self.resolved_model(tier),
+                        usage, elapsed, retries=retries, completion=completion,
+                    )
+                    try:
+                        quarantined = SchemaViolation(str(exc), rejected_result=rejected)
+                    except (TypeError, ValueError):
+                        # A decoded SDK value without a valid JSON snapshot is
+                        # still a failure, with no recoverable object receipt.
+                        raise exc from None
+                    raise quarantined from exc
+                raise
             return ModelResult(
                 None,
                 data,
