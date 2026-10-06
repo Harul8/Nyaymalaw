@@ -327,3 +327,218 @@ def mutation_authority_mode(*, saved_contract, binding_present):
     if saved_contract != AUTHORITY_CONTRACT or not binding_present:
         raise SchemaViolation("Versioned mutation requires its saved authority binding")
     return "bound"
+
+
+def _record_value(record, name):
+    """Read fields from an in-memory candidate or its durable proposal."""
+    return record.get(name) if isinstance(record, dict) else getattr(record, name, None)
+
+
+def _record_target_ids(record):
+    field = ("related_dispute_ids" if _record_value(record, "kind") == "dispute"
+             else "related_material_ids")
+    return _ids(_record_value(record, field), field)
+
+
+def _record_current_reference(record, ledger):
+    recorded_turn = _record_value(record, "source_turn_id")
+    if recorded_turn is not None and recorded_turn != ledger["owner"]["turn_id"]:
+        raise SchemaViolation("Mutation proposal belongs to a different source turn")
+    return {"turn_id": ledger["owner"]["turn_id"], "role": "advocate",
+            "quoted": _record_value(record, "quoted")}
+
+
+def _record_context_ids(record, ledger):
+    references = _record_value(record, "prior_references")
+    if not isinstance(references, (list, tuple)):
+        raise SchemaViolation("Mutation proposal has unreadable original source references")
+    selected = set()
+    for reference in references:
+        role = _record_value(reference, "role")
+        # NM words can explain chronology, but never supply attributed account
+        # content or authority. Their existing transcript validation still applies.
+        if role == "nm":
+            continue
+        if role != "advocate":
+            raise SchemaViolation("Mutation context has an unknown original source role")
+        original = {name: _record_value(reference, name)
+                    for name in ("turn_id", "role", "quoted")}
+        matching = {identity for identity, source in ledger["source_catalogue"].items()
+                    if all(source.get(name) == value for name, value in original.items())}
+        if not matching:
+            raise SchemaViolation("Mutation context selects an unowned original advocate source")
+        selected.update(matching)
+    return sorted(selected)
+
+
+def scoped_record_decisions(decisions, candidates, review_scope, *, binding_sink=None):
+    """Apply independently declared scope before previews or record admission.
+
+    Absence of a scope ledger retains the explicit old verification contract.
+    An unreadable supplied ledger is an integrity failure, not a unit rejection.
+    Scope failures on otherwise accepted candidates withhold only those units;
+    the caller still applies its restoration-peer and final-coverage contracts.
+    Bindings retain the factual support selected by independent record review.
+    """
+    if not isinstance(review_scope, dict):
+        return decisions
+    contract = review_scope.get("mutation_authority_contract")
+    if contract is not None and contract != AUTHORITY_CONTRACT:
+        raise SchemaViolation("Mutation review scope has an unknown authority contract")
+    if "mutation_authorities" not in review_scope:
+        if contract is not None:
+            raise SchemaViolation("Versioned mutation review scope has no authority ledger")
+        return decisions
+    ledger = review_scope["mutation_authorities"]
+    _checked_ledger(ledger)
+    if _owner(review_scope.get("owner")) != ledger["owner"]:
+        raise SchemaViolation("Mutation review scope belongs to a different turn owner")
+    if not isinstance(decisions, dict) or not isinstance(candidates, dict):
+        raise SchemaViolation("Mutation admission requires keyed candidates and decisions")
+    if binding_sink is not None and not isinstance(binding_sink, dict):
+        raise SchemaViolation("Mutation binding sink must be owned by the verification caller")
+    admitted = {key: dict(row) for key, row in decisions.items()}
+    for identity, candidate in candidates.items():
+        decision = admitted.get(identity)
+        if (not isinstance(decision, dict) or decision.get("verdict") != "accept"
+                or _record_value(candidate, "relation") == "new"):
+            continue
+        try:
+            reference = _record_current_reference(candidate, ledger)
+            relation = _record_value(candidate, "relation")
+            targets = _record_target_ids(candidate)
+            authorities = candidate_authority_ids(
+                ledger=ledger, owner=ledger["owner"],
+                snapshot_version=ledger["expected_version"], relation=relation,
+                target_ids=targets, current_source_reference=reference)
+            account = decision.get("account_check")
+            support = account.get("source_ids") if isinstance(account, dict) else None
+            certificate = authorize_mutation(
+                ledger=ledger, owner=ledger["owner"],
+                snapshot_version=ledger["expected_version"], authority_ids=authorities,
+                relation=relation, target_ids=targets, current_source_reference=reference,
+                supporting_source_ids=support,
+                attached_context_source_ids=_record_context_ids(candidate, ledger))
+        except SchemaViolation as exc:
+            admitted[identity] = {
+                **decision, "verdict": "reject", "operation_supported": False,
+                "admission_issue": "mutation_scope", "model_decision": deepcopy(decision),
+                "reason": str(exc),
+            }
+            continue
+        decision["mutation_authority"] = certificate
+        if binding_sink is not None:
+            binding_sink[identity] = deepcopy(certificate)
+    return admitted
+
+
+def bind_record_mutation(proposal, ledger, *, binding=None, supporting_source_ids=None):
+    """Bind a durable linked proposal to its earlier admitted authority.
+
+    Callers should pass the actual admitted binding. Explicit support selections
+    are accepted for focused contract construction; they do not replace factual
+    review. This adapter never invents support from automatically attached prior
+    context, an extractor's intention or a positive reviewer verdict.
+    """
+    _checked_ledger(ledger)
+    if not isinstance(proposal, dict):
+        raise SchemaViolation("Saved mutation requires a readable proposal")
+    relation = proposal.get("relation")
+    if relation == "new":
+        if binding is not None or proposal.get("mutation_authority") is not None:
+            raise SchemaViolation("A new account has an unexpected revision authority binding")
+        return None
+    reference = _record_current_reference(proposal, ledger)
+    targets = _record_target_ids(proposal)
+    context = _record_context_ids(proposal, ledger)
+    certificate = binding if binding is not None else proposal.get("mutation_authority")
+    if certificate is not None:
+        support = (certificate.get("supporting_source_ids")
+                   if isinstance(certificate, dict) else None)
+        if supporting_source_ids is not None and _ids(
+                supporting_source_ids, "supporting_source_ids") != support:
+            raise SchemaViolation("Saved mutation changed its independently selected support")
+        return validate_saved_mutation_authority(
+            certificate=certificate, ledger=ledger, owner=ledger["owner"],
+            snapshot_version=ledger["expected_version"], relation=relation,
+            target_ids=targets, current_source_reference=reference,
+            supporting_source_ids=support, attached_context_source_ids=context)
+    if supporting_source_ids is None:
+        raise SchemaViolation("Saved mutation has no admitted independent support binding")
+    authorities = candidate_authority_ids(
+        ledger=ledger, owner=ledger["owner"], snapshot_version=ledger["expected_version"],
+        relation=relation, target_ids=targets, current_source_reference=reference)
+    return authorize_mutation(
+        ledger=ledger, owner=ledger["owner"], snapshot_version=ledger["expected_version"],
+        authority_ids=authorities, relation=relation, target_ids=targets,
+        current_source_reference=reference, supporting_source_ids=supporting_source_ids,
+        attached_context_source_ids=context)
+
+
+def validate_record_mutation(proposal, *, turn, execution, prior_words=None,
+                             source_catalogue=None, target_catalogue=None):
+    """Revalidate a durable proposal before it can retire any owned record.
+
+    Full snapshot/catalogue equality belongs to the turn replay owner. Typed
+    projections can supply their selected actual targets and original transcript
+    words here. Genuinely older, unstamped turns remain explicitly untracked;
+    removal of a mandatory binding from a stamped turn cannot downgrade it.
+    """
+    if not isinstance(proposal, dict) or not isinstance(turn, dict):
+        raise SchemaViolation("Mutation replay requires an owned turn and proposal")
+    if execution is not None and not isinstance(execution, dict):
+        raise SchemaViolation("Mutation replay execution evidence is unreadable")
+    execution = execution or {}
+    contract = execution.get("mutation_authority_contract")
+    ledger = execution.get("mutation_authorities")
+    binding = proposal.get("mutation_authority")
+    if contract is None:
+        if ledger is not None or binding is not None:
+            raise SchemaViolation("Unversioned mutation has unexpected authority evidence")
+        return "legacy_untracked"
+    if contract != AUTHORITY_CONTRACT:
+        raise SchemaViolation("Saved mutation has an unknown authority contract")
+    _checked_ledger(ledger)
+    owner = {"matter_id": turn.get("matter_id"), "advocate_id": turn.get("advocate_id"),
+             "turn_id": turn.get("turn_id"), "offer_digest": turn.get("offer_digest")}
+    if _owner(owner) != ledger["owner"] or _owner(execution.get("owner")) != ledger["owner"]:
+        raise SchemaViolation("Saved mutation authority disagrees with its actual turn owner")
+    if _version(execution.get("expected_version")) != ledger["expected_version"]:
+        raise SchemaViolation("Saved mutation authority disagrees with its execution snapshot")
+    message = turn.get("message")
+    if (not isinstance(message, str) or not isinstance(proposal.get("quoted"), str)
+            or not proposal["quoted"].strip() or proposal["quoted"] not in message
+            or proposal.get("source_turn_id") != turn.get("turn_id")):
+        raise SchemaViolation("Saved mutation does not match the original current advocate words")
+    if source_catalogue is not None:
+        if not isinstance(source_catalogue, dict) or source_catalogue != ledger["source_catalogue"]:
+            raise SchemaViolation("Saved mutation differs from its original source catalogue")
+    if prior_words is not None:
+        if not isinstance(prior_words, dict):
+            raise SchemaViolation("Mutation replay requires original transcript words")
+        words = {**prior_words, (turn["turn_id"], "advocate"): message}
+        for source in ledger["source_catalogue"].values():
+            original = words.get((source["turn_id"], source["role"]))
+            if not isinstance(original, str) or source["quoted"] not in original:
+                raise SchemaViolation("Saved mutation authority has no matching original source")
+    if target_catalogue is not None:
+        if not isinstance(target_catalogue, dict):
+            raise SchemaViolation("Mutation replay requires the actual prior target catalogue")
+        for identity in _record_target_ids(proposal):
+            supplied = target_catalogue.get(identity)
+            recorded = ledger["target_catalogue"].get(identity)
+            # Turn-owned catalogues carry a typed wrapper; projections already
+            # have the underlying attributed row. Neither changes its meaning.
+            if isinstance(recorded, dict) and isinstance(recorded.get("record"), dict):
+                recorded = recorded["record"]
+            if isinstance(supplied, dict) and isinstance(supplied.get("record"), dict):
+                supplied = supplied["record"]
+            if not isinstance(supplied, dict) or supplied != recorded:
+                raise SchemaViolation("Saved mutation target differs from the actual prior record")
+    if proposal.get("relation") == "new":
+        if binding is not None:
+            raise SchemaViolation("A new account has an unexpected revision authority binding")
+        return "new_account"
+    mutation_authority_mode(saved_contract=contract, binding_present=binding is not None)
+    bind_record_mutation(proposal, ledger, binding=binding)
+    return "bound"
