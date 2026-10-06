@@ -2076,13 +2076,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.472069,
-    "remaining_usd": 2.527931,
-    "new_ledger_attempts": 148,
+    "combined_measured_usd": 2.553883,
+    "remaining_usd": 2.446117,
+    "new_ledger_attempts": 172,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus 148 current measured attempts; cumulative authorization USD5 unchanged"
+    "basis": "166 frozen prior attempts plus172 current measured attempts; cumulative authorization USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2128,5 +2128,54 @@
   "scope_generation_live_evidence": {
     "path": "docs\\backlog\\evidence\\brain-scopes-generation-20261007-live.json.gz",
     "sha256": "b963ccc75567e6d5da26137e33bf531ddaa5c4ed01bc5eff9c8bc1fd164c76d5"
+  },
+  "current_support_live_acceptance": {
+    "commit": "394b327",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "matter_id": "mat_d2491b36368de7e40e70edf2dfc86555",
+    "saved_version": 2,
+    "saved_turns": 2,
+    "browser_observed": true,
+    "reopened_without_new_calls": true,
+    "slices": [
+      {
+        "label": "neutral",
+        "calls": 10,
+        "charge_usd": 0.027789,
+        "tokens_in": 54254,
+        "tokens_out": 3802,
+        "model_elapsed_s": 40.516
+      },
+      {
+        "label": "opposing",
+        "calls": 14,
+        "charge_usd": 0.054025,
+        "tokens_in": 101588,
+        "tokens_out": 8366,
+        "model_elapsed_s": 79.844
+      }
+    ],
+    "passed": [
+      "Ordinary client framing opens matter on first turn and continues it on the second.",
+      "Neutral event is not classified as a dispute; no legal retrieval on that turn.",
+      "Same-turn multi-passage original support is selected and retained for dispute C2.",
+      "Both original inputs and independent admitted effects persist; reopening adds no calls.",
+      "Wrong target/effect and instruction-as-factual-source mistakes do not certify completion."
+    ],
+    "failed": [
+      "Opposing positions on one underlying conflict remain two admitted disputes; evidence gaps bundled into party position.",
+      "Useful neutral recap rejected because status none carries inapplicable current-record metadata; block_id alone is permitted. Correction switches to another inapplicable status and sibling effects.",
+      "Represented coverage invents empty references or unrelated admitted references instead of matching actual support.",
+      "Material reviewer rejects otherwise supported content after citing instruction L4, rather than correcting its own unnecessary reference.",
+      "Compound explanation request becomes record_acknowledgement; wrong existing mutation targets remain proposed.",
+      "Legal reader repeats matter accounts as gathering findings with force none; mechanical finding contract rejects them.",
+      "Visible replies repeat records and unfinished status; requested explanation and legal gathering remain unavailable."
+    ],
+    "corrigendum": "Earlier 88af4ce openingfalse/scopenone observation used explicit SYNTHETIC RESPONSE TEST/no real client framing. Treat its opening expectation as uncertain, not a proven opening omission. Ordinary394b327 client framing opens and continues correctly. Earlier grouping/recap/coverage failures remain independently evidenced.",
+    "acceptance": "FAILED integrated semantic/useful-delivery acceptance; no production-readiness claim"
+  },
+  "current_support_live_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-current-support-20261007-live.json.gz",
+    "sha256": "e400b31a22fe1ba29e722b645835b7461c46c155e45063ef6af7536f737a26b6"
   }
 }
