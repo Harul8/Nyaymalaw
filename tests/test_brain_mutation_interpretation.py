@@ -9,6 +9,7 @@ import pytest
 from nm.brain import conversation as brain
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
+from tests.brain_continuation_fixture import prepare_interpretation
 
 
 class Model:
@@ -22,7 +23,7 @@ class Model:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
-        return ModelResult(text=None, data=deepcopy(next(self.responses)), tier=tier,
+        return ModelResult(text=None, data=prepare_interpretation(next(self.responses)), tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 

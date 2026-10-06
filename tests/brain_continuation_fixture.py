@@ -204,6 +204,23 @@ def no_record_requirement():
     }
 
 
+def prepare_interpretation(data):
+    """Migrate discarded interpreter drafts, preserving every live contract field.
+
+    This only prepares scripted transport. Writer attacks are separate outputs
+    and must never pass through this helper. Unknown fields and contradictory
+    record or authority selections remain unchanged for production validation.
+    """
+    result = deepcopy(data)
+    if not isinstance(result, dict) or not isinstance(result.get("items"), list):
+        return result
+    for item in result["items"]:
+        if isinstance(item, dict):
+            item.pop("reply", None)
+            item.pop("clarification", None)
+    return result
+
+
 def interpretation(data, *, record_requirements=None):
     """Carry only explicit fixture-owned outcomes, including declared no-effect work."""
     result = {**{key: value for key, value in data.items() if key != "active_work_after"},
@@ -222,7 +239,7 @@ def interpretation(data, *, record_requirements=None):
         if "record_requirement" in row and row["record_requirement"] != declared:
             raise ValueError("Two fixture owners declared different record requirements")
         row["record_requirement"] = deepcopy(declared)
-    return result
+    return prepare_interpretation(result)
 
 
 def continuation_reply(operation, payload, *, scripted_items=()):
@@ -244,20 +261,24 @@ def continuation_reply(operation, payload, *, scripted_items=()):
     fresh = payload.get("response_expression_contract") == "evidence_expression_v1"
     for item in payload["work_items"]:
         index = item["request_index"]
-        scripted = scripted_items[index]
+        # Fresh expressions do not use an interpreter's discarded prose.
+        # Historical writer fixtures retain their explicit scripted draft.
+        scripted = {} if fresh else scripted_items[index]
         questions = []
         record_ids = []
         legal_ids = []
         if item["next_step"] == "clarify":
-            kind, text, status = "question", scripted["clarification"], "needs_input"
+            kind, status = "question", "needs_input"
+            text = "" if fresh else scripted["clarification"]
             questions = [{"id": f"question:{index}", "block_id": f"block:{index}",
                           "purpose": "Resolve the distinction needed to proceed.",
                           "target_ids": [], "existing_id": ""}]
         elif item["next_step"] == "answer":
-            kind, text, status = "completion", scripted["reply"], "complete"
+            kind, status = "completion", "complete"
+            text = "" if fresh else scripted["reply"]
         else:
             kind, status = "limitation", "not_completed"
-            text = (scripted["reply"] if item["next_step"] == "legal_work"
+            text = ("" if fresh else scripted["reply"] if item["next_step"] == "legal_work"
                     else "This part requires checked support before a substantive answer.")
             if requirements:
                 text = "\n".join(

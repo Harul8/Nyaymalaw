@@ -299,8 +299,6 @@ class GoldenModel:
                     "matter_scope": "proposed",
                     "priority": "ordinary",
                     "next_step": "answer",
-                    "reply": self.reply,
-                    "clarification": "",
                     "response_basis": "conversation_record",
                     "research_question": "",
                     "material_purposes": ["account_contribution", "interpretation_review"],

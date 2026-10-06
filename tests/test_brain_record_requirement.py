@@ -23,7 +23,8 @@ class Model:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
-        return ModelResult(text=None, data=next(self.responses), tier=tier,
+        return ModelResult(text=None, data=brain_continuation_fixture.prepare_interpretation(
+            next(self.responses)), tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 

@@ -1,0 +1,36 @@
+{
+  "workbook": "docs/Nyaymalaw_Implementation_Plan.xlsx",
+  "source_sha256": "f8dfc693e5913e41c5aa15539c5feb4874b0e7e9321c4be10d6ddac5d497c620",
+  "output_sha256": "bb3d81a794c347b2bc8d7f1f540bbf0f6266c35ac342af7f154a2170d51a475b",
+  "dry_run": false,
+  "created_owners": [],
+  "touched_owners": [
+    "LB-194",
+    "LB-197"
+  ],
+  "changed_cells": [
+    "Before Build!J386",
+    "Before Build!J389",
+    "Implementation Plan!AD547",
+    "Implementation Plan!AD550",
+    "Implementation Plan!AF547",
+    "Implementation Plan!AF550",
+    "Implementation Plan!AO547",
+    "Implementation Plan!AO550",
+    "Implementation Plan!AP547",
+    "Implementation Plan!AP550",
+    "Implementation Plan!AR547",
+    "Implementation Plan!AR550"
+  ],
+  "unrelated_cells_changed": 0,
+  "existing_styles_comments_links_changed": 0,
+  "native_controls_changed": 0,
+  "normal_last_modified_timestamp_excluded_from_control_comparison": true,
+  "existing_row_dimensions_changed": 0,
+  "executable_feature_population": 93,
+  "baseline_mirror_problems": [],
+  "remaining_mirror_problems": [],
+  "new_mirror_problems": [],
+  "max_cell_characters": 31732,
+  "no_completion_or_live_semantic_acceptance_asserted": true
+}

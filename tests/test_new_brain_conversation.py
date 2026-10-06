@@ -65,7 +65,9 @@ def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
 
     plan = interpret(model, Conversation(()), "Hello")
 
-    assert plan.items[0].reply == "Hello. What would you like help with?"
+    assert plan.items[0].request == "Hello"
+    assert plan.items[0].next_step == "answer"
+    assert plan.items[0].reply == plan.items[0].clarification == ""
     assert plan.opening.ready is False
     assert plan.active_work_after == ""
     assert len(model.calls) == 1
@@ -95,7 +97,9 @@ def test_adapter_schema_rejection_gets_one_contextual_correction():
              reply="Hello. What would you like help with?")]))
     plan = interpret(model, Conversation(()), "Hello")
 
-    assert plan.items[0].reply.startswith("Hello")
+    assert plan.items[0].request == "Hello"
+    assert plan.items[0].next_step == "answer"
+    assert plan.items[0].reply == plan.items[0].clarification == ""
     assert len(model.calls) == 2
     assert [call[2] for call in model.calls] == [Tier.JUDGE, Tier.JUDGE]
     correction = json.loads(model.calls[1][0].user)
@@ -114,7 +118,8 @@ def test_first_general_legal_question_does_not_propose_a_matter():
     plan = interpret(model, Conversation(()), "Explain anticipatory bail")
 
     assert plan.items[0].next_step == "legal_work"
-    assert "applicable law and authorities" in plan.items[0].reply
+    assert plan.items[0].request == "Explain anticipatory bail"
+    assert plan.items[0].reply == plan.items[0].clarification == ""
     assert plan.opening.ready is False
     assert len(model.calls) == 1
     prompt = model.calls[0][0].system
@@ -158,7 +163,9 @@ def test_first_concrete_account_can_propose_a_grounded_opening():
     assert plan.material_review is True
     assert plan.opening.summary == opening["summary"]
     assert plan.items[0].matter_scope == "proposed"
-    assert "You say the deposit was kept" in plan.items[0].reply
+    assert plan.items[0].request == latest
+    assert plan.items[0].material_purposes == ("account_contribution",)
+    assert plan.items[0].reply == plan.items[0].clarification == ""
     assert len(model.calls) == 1
 
 
@@ -230,12 +237,14 @@ def test_open_matter_requires_an_empty_opening_decision_on_followup():
     assert plan.material_review is True
 
 
-def test_legal_work_needs_a_specific_interim_reply():
+def test_legal_work_uses_source_contract_without_an_interim_draft():
     latest = "Please compare these two clauses."
-    invalid = Model(interpretation([
-        item(latest, relation="new", scope="none", reply="")]))
+    missing_requirement = interpretation([
+        item(latest, relation="new", scope="none", reply="")])
+    missing_requirement["items"][0].pop("record_requirement")
+    invalid = Model(missing_requirement)
 
-    with pytest.raises(SchemaViolation):
+    with pytest.raises(SchemaViolation, match="record_requirement"):
         interpret(invalid, Conversation(()), latest)
     assert len(invalid.calls) == 2
 
@@ -244,8 +253,10 @@ def test_legal_work_needs_a_specific_interim_reply():
              reply="I can compare the clauses once I have their full text and context.")]))
     plan = interpret(model, Conversation(()), latest)
     assert plan.items[0].next_step == "legal_work"
-    assert plan.items[0].reply == (
-        "I can compare the clauses once I have their full text and context.")
+    assert plan.items[0].request == latest
+    assert plan.items[0].record_requirement == no_record_requirement()
+    assert plan.items[0].reply == plan.items[0].clarification == ""
+    assert len(model.calls) == 1
 
 
 @pytest.mark.parametrize("relation,scope", [
@@ -310,7 +321,9 @@ def test_mixed_message_keeps_each_request_and_the_entire_earlier_exchange():
 
     assert len(plan.items) == 2
     assert len(model.calls) == 1
-    assert plan.items[1].reply == "Paris."
+    assert plan.items[1].request == "tell me the capital of France"
+    assert plan.items[1].next_step == "answer"
+    assert plan.items[1].reply == plan.items[1].clarification == ""
     assert [row.relation for row in plan.items] == ["continues", "aside"]
     payload = json.loads(model.calls[0][0].user)
     assert payload["earlier_conversation"] == [
@@ -363,7 +376,7 @@ def test_an_unreleased_response_cannot_enter_context_as_an_answer():
     lambda row: {**row, "quoted": "unrequested duplicate citation"},
     lambda row: {**row, "anchor_turn_ids": ["missing"]},
     lambda row: {**row, "next_step": "invented"},
-    lambda row: {**row, "next_step": "clarify", "clarification": ""},
+    lambda row: {**row, "request": ""},
 ])
 def test_unattributed_or_invalid_interpretation_is_refused(invalid):
     conversation = Conversation((Message("one", "advocate", "Earlier words"),))

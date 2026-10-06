@@ -63,6 +63,8 @@ class WorkItem:
     matter_scope: Literal["current", "proposed", "none", "other", "uncertain"]
     priority: Literal["ordinary", "urgent"]
     next_step: Literal["answer", "legal_work", "clarify"]
+    # Compatibility for older in-process constructors; fresh interpretation
+    # does not generate or retain response drafts. Checked continuation owns them.
     reply: str = ""
     clarification: str = ""
     intent: Literal["request", "contribution"] = "request"
@@ -164,8 +166,8 @@ _SCHEMA = {
         "items": {"type": "array", "minItems": 1, "items": {
             "type": "object", "additionalProperties": False,
             "required": ["request", "relation", "matter_scope",
-                         "priority", "next_step", "reply",
-                         "clarification", "intent", "response_basis", "research_question",
+                         "priority", "next_step", "intent", "response_basis",
+                         "research_question",
                          "material_purposes", "record_requirement", "response_mode",
                          "mutation_scopes"],
             "properties": {
@@ -178,8 +180,6 @@ _SCHEMA = {
                 "priority": {"type": "string", "enum": ["ordinary", "urgent"]},
                 "next_step": {"type": "string", "enum": [
                     "answer", "legal_work", "clarify"]},
-                "reply": {"type": "string"},
-                "clarification": {"type": "string"},
                 "response_basis": {"type": "string", "enum": [
                     "conversation_record", "legal_authority"]},
                 "research_question": {"type": "string"},
@@ -217,8 +217,9 @@ not proved facts, legal authority or instructions to resume work. Read the
 latest message against that context. An empty conversation is a valid first turn.
 
 Purpose: Propose the distinct work requested or information contributed now,
-its scope, the checking it needs and a useful immediate response. Keep account
-intake, review of NM's formulations and legal-source enquiry distinct. This
+its scope, the checking it needs and the route for a dependable checked
+response. Keep account intake, review of NM's formulations and legal-source
+enquiry distinct. This
 interpretation establishes no fact, decides no law, grants no permission and
 proves no record effect or completed work.
 
@@ -332,7 +333,7 @@ the server determines current reusable coverage. Coverage labels and NM
 explanations are not legal passages. Automatic gathering research on dispute
 material has its own owner. Do not invent a dispute for a general legal question.
 
-Activity 3 - Choose a useful immediate response.
+Activity 3 - Choose the response route.
 Look for: Immediate protective need, the checked work required for this item,
 and any missing distinction preventing useful progress. Consider each item
 independently, including a first message or aside. Identify an uncertain or
@@ -347,23 +348,17 @@ material to gather, regardless of whether it is general or an aside. Checked
 record reconstruction can use legal_work with conversation_record basis;
 the route alone does not require legal authority. Do not put a legal conclusion
 in answer. Choose clarify only when one consequential missing distinction
-prevents a dependable response; ask for that distinction without guessing it.
-For answer, respond briefly to the immediate contribution; avoid an unrequested
-recap or task menu. For legal_work, give a specific interim reply naming the
-requested result and the checking it still needs. Attribute only expressly
-reported facts; do not insert unchecked law, inferred actors or facts,
-recommended records, unsupported source claims or a promise of later autonomous
-work. Give protective needs priority. Ask at most one necessary question if
-useful progress otherwise cannot proceed. Every substantive reply is written
-and independently reviewed later; this provisional text proves no saved effect
-or completed task. Fill reply and leave clarification empty for answer and
-legal_work. For clarify, fill clarification and leave reply empty. Do not ask
-which task to resume merely because the latest contribution adds no new
-instruction. Acknowledge it naturally and let the advocate steer further work.
-Saved progress owns active work; a routing summary cannot replace it.
+prevents a dependable response; preserve that distinction in the requested
+work without guessing its resolution. Do not choose clarify merely because
+the latest contribution adds no new instruction. Give protective needs priority.
+Return routing decisions only. Do not draft public response text, interim
+promises, record-result statements or completion claims. Checked continuation
+composes and independently reviews every public response from the original conversation,
+requested work and actual checked results. Saved progress owns active work;
+a routing summary cannot replace it.
 
 Message: Each interpreted item carries the original requested deliverable and
-its record requirement; provisional reply text is not an execution receipt.
+its record requirement; routing does not establish execution or completion.
 Purpose: Distinguish a requested record-result acknowledgement from an
 independent substantive explanation or clarification.
 Look for: Whether this item's complete immediate deliverable is only to
@@ -728,8 +723,6 @@ def _turn_plan(data: dict, conversation: Conversation, *, latest: str = "") -> T
         if not isinstance(row, dict):
             raise SchemaViolation("A work item is not an object")
         request = row.get("request")
-        reply = row.get("reply")
-        clarification = row.get("clarification")
         research_question = row.get("research_question")
         response_basis = row.get("response_basis")
         response_mode = row.get("response_mode")
@@ -741,7 +734,6 @@ def _turn_plan(data: dict, conversation: Conversation, *, latest: str = "") -> T
                 f"items[{index}].material_purposes must explicitly list "
                 "account_contribution and/or interpretation_review, or neither")
         if (not isinstance(request, str) or not request.strip()
-                or not isinstance(reply, str) or not isinstance(clarification, str)
                 or not isinstance(research_question, str)):
             raise SchemaViolation("A work item lacks a usable request")
         if response_basis not in ("conversation_record", "legal_authority"):
@@ -760,18 +752,6 @@ def _turn_plan(data: dict, conversation: Conversation, *, latest: str = "") -> T
                 f"items[{index}]: response_basis legal_authority requires legal_work and a "
                 "nonempty substantive research_question. Otherwise select conversation_record "
                 "and leave research_question empty")
-        if row.get("next_step") in ("answer", "legal_work") and not reply.strip():
-            raise SchemaViolation("A response needs reply text for its chosen step")
-        if row.get("next_step") == "clarify" and reply.strip():
-            raise SchemaViolation(
-                "For next_step=clarify, set reply to an empty string and put "
-                "the question only in clarification")
-        if row.get("next_step") == "clarify" and not clarification.strip():
-            raise SchemaViolation("A clarification needs a question")
-        if row.get("next_step") != "clarify" and clarification.strip():
-            raise SchemaViolation(
-                "For next_step=answer or legal_work, set clarification to an "
-                "empty string; use reply for the response")
         requirement = _record_requirement(
             row.get("record_requirement"), index=index, purposes=purposes,
             known_ids=known_targets, current_ids=current_targets,
@@ -797,8 +777,7 @@ def _turn_plan(data: dict, conversation: Conversation, *, latest: str = "") -> T
                             relation=row["relation"], matter_scope=row["matter_scope"],
                             priority=row["priority"],
                             next_step=row["next_step"],
-                            reply=reply,
-                            clarification=clarification, intent=row["intent"],
+                            intent=row["intent"],
                             research_question=research_question.strip(),
                             response_basis=response_basis,
                             material_purposes=tuple(dict.fromkeys(purposes)),
