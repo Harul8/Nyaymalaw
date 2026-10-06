@@ -15,7 +15,7 @@ from nm.brain.execution_contracts import effect_catalogue
 from nm.brain.turn import BrainRefused, BrainService, BrainTurn, _CountedModel, chat_matter_id
 from nm.shared.model_port import ContextOverflow, Prompt, ProviderUnavailable, Tier
 from nm.shared.store_file_store import FileMatterStore
-from tests.test_brain_material import Model, material, plan
+from tests.test_brain_material import Model, material, mutation_scope, plan
 
 REVIEW = {"kind": "review", "target_ids": [], "operation": "none",
           "success_condition": "Check that the existing attributed record is faithful."}
@@ -292,12 +292,18 @@ def test_original_result_replays_after_later_source_bound_supersession(tmp_path)
     model = ConsumerModel([
         plan(original, candidates=[first], opening=True,
              material_purposes=("account_contribution",)),
-        plan(corrected, candidates=[revision], material_purposes=("account_contribution",))])
+        plan(corrected, candidates=[revision], material_purposes=("account_contribution",),
+             mutation_scopes=[mutation_scope("first:material:1")])])
     brain = BrainService(store, model)
     initial_request = BrainTurn("adv", original, "first")
     initial = brain.run(initial_request).as_dict()
     brain.run(BrainTurn("adv", corrected, "second", matter_id=initial["matter_id"],
                         chat_id=initial["chat_id"]))
+    saved = store.load(initial["matter_id"])
+    current, _, _ = boundary._current_records(store, saved)
+    assert [(row["id"], row["statement"]) for row in current.open_material] == [
+        ("second:material:1", "The records arrived on Wednesday.")]
+    assert [row["message"] for row in saved.brain_chat] == [original, corrected]
     calls = len(model.seen)
     replay = brain.run(initial_request).as_dict()
     assert replay["replayed"] is True and len(model.seen) == calls

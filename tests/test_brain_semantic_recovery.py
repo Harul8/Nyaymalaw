@@ -16,8 +16,8 @@ from nm.brain.execution_contracts import effect_catalogue
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Tier, Usage
 from tests.brain_pressure_support import record_case
-from tests.brain_reader_fixture import reader_operations, reader_repairs
-from tests.test_brain_material import _with_source_ids, material, send
+from tests.brain_reader_fixture import reader_operations, reader_repairs, source_portion_reply
+from tests.test_brain_material import _with_source_ids, material, mutation_scope, send
 from tests.test_brain_pressure_release import PassageModel, answer_plan
 
 FIRST = "The cedar samples reached the west laboratory on 8 June."
@@ -32,7 +32,7 @@ class RecoveryModel(PassageModel):
                  gap_state="complete", gap_ids=(), partial_reader=False,
                  judge_failure=False, reject_addition=False, extra_rows=(), gap_area="detail",
                  review_requested=False, review_outcome="unresolved", wrong_owner_tier=False,
-                 opening=True):
+                 opening=True, mutation_scopes=None):
         requirement = ({"kind": "review", "target_ids": [], "operation": "none",
                         "success_condition": "Check the entire supplied original account."}
                        if review_requested else None)
@@ -42,6 +42,8 @@ class RecoveryModel(PassageModel):
             purposes=("interpretation_review",) if review_requested else (
                 ("account_contribution",) if not opening else ()),
             reply="The supplied account distinguishes these contributions.")
+        if mutation_scopes is not None:
+            proposed["items"][0]["mutation_scopes"] = deepcopy(mutation_scopes)
         if opening:
             proposed["opening"].update(subject="Supplied sample account", summary=MESSAGE)
         super().__init__([proposed], [{"status": review_outcome}] if review_requested else [])
@@ -70,6 +72,7 @@ class RecoveryModel(PassageModel):
                     identity, "reported_matter_account")),
                 "reason": "The independent fixture rereads the complete original framing.",
             } for identity in original["source_ids"]}}
+            data = source_portion_reply(payload, data)
             self.seen.append({"operation": operation, "tier": tier.value,
                               "input": deepcopy(payload)})
             self.outputs.append({"operation": operation, "output": deepcopy(data)})
@@ -115,7 +118,16 @@ class RecoveryModel(PassageModel):
             data = deepcopy(result.data)
         if operation == "classify_account_sources":
             for identity, role in self.roles.items():
-                data["source_treatments"][identity]["content_role"] = role
+                row = data["source_treatments"][identity]
+                row["content_role"] = role
+                # This explicit alternate role is also its independently
+                # authored full-passage/empty portion decision. No malformed
+                # range supplied by an attack is rewritten by this transport.
+                authored = source_portion_reply(payload, {"source_treatments": {
+                    identity: {"content_role": role, "reason": row["reason"]},
+                }})["source_treatments"][identity]
+                if "substantive_spans" in authored:
+                    row["substantive_spans"] = authored["substantive_spans"]
         if (operation == {"detail": "verify_material_grounding",
                          "dispute": "verify_disputes"}[self.gap_area]
                 and "coverage_source_ids" in original):
@@ -508,6 +520,7 @@ def test_source_rereview_replacement_holds_stale_assignment_and_keeps_checked_di
     assigned_detail = material("event", SECOND, SECOND, scope="current",
                                placement="dispute", dispute_ids=[original_id])
     model = RecoveryModel(candidates=[replaced_dispute, assigned_detail], opening=False,
+                          mutation_scopes=[mutation_scope(original_id)],
                           roles={"L1": "examination_material"},
                           reconsidered={"L1": "reported_matter_account"})
     wire(wired, monkeypatch, model)

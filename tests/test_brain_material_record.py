@@ -8,7 +8,7 @@ from nm.brain.dispute_state import proposed_disputes
 from nm.brain.material_state import material_record
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_brain_board_proposals import dispute, saved_turn
-from tests.test_brain_material import Model, material, plan, send
+from tests.test_brain_material import Model, material, mutation_scope, plan, send
 
 
 def _record(candidate, turn_id, index):
@@ -241,7 +241,12 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     model = Model([plan(first, candidates=first_rows, opening=True,
                         material_purposes=("account_contribution",)),
                    plan(next_message, candidates=next_rows,
-                        material_purposes=("account_contribution",))])
+                        material_purposes=("account_contribution",),
+                        mutation_scopes=[
+                            mutation_scope("original:material:2"),
+                            mutation_scope("original:material:3", relations=("withdraws",),
+                                           source_ids=("L2",)),
+                        ])])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, first, "original")
@@ -295,7 +300,8 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
             super().__init__([plan(first, candidates=original, opening=True,
                                    material_purposes=("account_contribution",)),
                               plan(latest, candidates=[revised],
-                                   material_purposes=("account_contribution",))])
+                                   material_purposes=("account_contribution",),
+                                   mutation_scopes=[mutation_scope("original:material:2")])])
             self.check_inputs = []
 
         def structured(self, prompt, schema, tier, *, max_tokens=None):

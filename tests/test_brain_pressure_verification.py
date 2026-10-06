@@ -10,6 +10,8 @@ import json
 from copy import deepcopy
 from dataclasses import asdict
 
+import pytest
+
 from nm.brain.conversation import OpeningCandidate
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.material_verification import verify_material_grounding
@@ -226,7 +228,7 @@ def run_case(
         user_passage=latest,
         model_outputs=[{"extractor_proposals": [asdict(c) for c in candidates]}, *model.emitted],
         expected=expectation,
-        observed=observed_summary(result, sink, model),
+        observed={key: observed_summary(result, sink, model)[key] for key in expectation},
         calls=model.calls,
         scenario=scenario,
         claim_scope=claim_scope,
@@ -686,7 +688,11 @@ def test_fabricated_wrong_date_is_rejected_when_semantic_judge_rejects_it():
     )
 
 
-def test_mechanical_contract_cannot_detect_wrong_date_if_semantic_judge_falsely_accepts():
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError,
+    reason="B-177: a wrong grounding ACCEPT still admits a false dated proposition",
+)
+def test_wrong_date_is_not_admitted_even_if_semantic_judge_falsely_accepts():
     latest = "The handover took place on 8 June, and I have never said it took place on 18 June."
     candidate = proposed(latest, statement="The handover took place on 18 June.")
     run_case(
@@ -694,12 +700,12 @@ def test_mechanical_contract_cannot_detect_wrong_date_if_semantic_judge_falsely_
         latest,
         (candidate,),
         [envelope],
-        expected(accepted=1),
+        {"accepted": 0},
         claim_scope="semantic_dependency",
-        status="gap_demonstrated",
+        status="open_semantic_defect",
         notes=(
-            "A structurally consistent but semantically wrong positive review admits the"
-            " false statement at this boundary. This is an observed semantic dependency,"
-            " not a prevented error or a measured model error rate."
+            "Desired rule: the false 18 June proposition is not admitted. The scripted"
+            " positive Judge currently defeats that rule; strict xfail keeps the defect"
+            " open and expires if the admission changes. This measures no live error rate."
         ),
     )

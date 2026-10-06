@@ -7,7 +7,7 @@ import pytest
 
 from nm.brain.material import PriorReference, resolve_sources
 from nm.shared.model_port import SchemaViolation
-from tests.test_brain_material import Model, material, plan, send
+from tests.test_brain_material import Model, material, mutation_scope, plan, send
 
 
 def test_selection_normalizes_exact_durable_references_after_validating_all_ids():
@@ -96,7 +96,8 @@ def _public_model(*, invalid=None):
     return RepeatedSelectionModel([
         plan(FIRST, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
-        plan(CORRECTION, candidates=[correction], material_purposes=("account_contribution",)),
+        plan(CORRECTION, candidates=[correction], material_purposes=("account_contribution",),
+             mutation_scopes=[mutation_scope("original:material:1")]),
     ], invalid=invalid)
 
 

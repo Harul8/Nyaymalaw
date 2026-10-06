@@ -1,14 +1,24 @@
 # Golden passage and fabricated-output pressure test
 
-The two originally exposed bypasses are prevented in the exercised public flow:
-a false completion block cannot claim an unsaved correction, and a positive
-reviewer cannot expand an independently declared record-mutation scope.
+Historical result for the exercised declared-outcome fixtures: the original
+completion and wrong-target cases were prevented. This did **not** establish
+that every false completion route was closed. The subsequent read-only review
+of `611b1e8` reproduced linked-completion and interpreter-`none` escapes, and
+identified scope fixtures whose authority was derived from reader proposals.
+Current repair evidence is tracked in
+[the semantic-hardening queue](nm-brain-semantic-hardening-20261006.md).
+A positive reviewer cannot expand an independently declared record-mutation scope
+in the cases where that declaration was genuinely authored independently.
 The date and unrelated custody records remain active after the wrong-target
 proposal. The pending correction releases a code-rendered unfinished result,
 with no false completion prose and no record change.
 
-The assembled offline suite passed **2,382 tests**, with no failures, errors or
-skips. **205 paired pressure cases ran in forward, reverse and shuffled order:
+The assembled **128-module offline subset** passed **2,382 tests**, with no
+failures, errors or skips. This was a subset of the repository collection; it
+excluded the defect-register and fixture-migration guards. The original shell
+command was not retained. The source-hash manifest permits a reconstruction,
+recorded in `evidence/brain-offline-subset-611b1e8.txt`; it is not a recovered
+original command. **205 paired pressure cases ran in forward, reverse and shuffled order:
 615 passing executions**. Their exact user passages, literal fabricated model
 outputs, expectations and observations matched across orders. Pressure head:
 `1be2d6f`. The earlier broad-suite head was `dd0107d`; production is identical.
@@ -46,6 +56,12 @@ the queue and status owner.
   scopes return a controlled refusal without model calls or storage changes.
   Real inherited aliases can share indices. Genuine pre-scope receipts replay
   their original untracked evidence without invented new requirements.
+
+Cost correction: compared with `ea1253e`, routine greeting calls increased from
+one interpreter call to interpreter, writer and reviewer (three); a normal
+correction increased from seven calls to eight. The earlier statement that no
+routine stage was added was inaccurate for that baseline. Current offline
+counts test dispatch, not real-provider tokens, latency or semantic quality.
 
 These are generic contracts. No date, case, phrase list or legal-scenario branch
 was added to production. The standing rules in `AGENTS.md` also distinguish

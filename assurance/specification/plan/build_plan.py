@@ -918,7 +918,7 @@ d("B-016", "2026-08-30", "retrieval",
   "An Act NAMED in the question beats every keyword score; longest title wins.",
   "Yes — matched against every manifest entry's own name, so a new Act is "
   "covered without touching the rule.",
-  "nm/legal_brain/retrieve/manifest_sources.py `_named_in`")
+  "nm/Archives/legal_brain/retrieve/manifest_sources.py `_named_in`")
 
 d("B-017", "2026-08-30", "core",
   "`_fold` did not normalise `vs` to `v`, so a retrieved authority whose ref "
@@ -943,7 +943,7 @@ d("B-018", "2026-08-30", "core",
   "The browser, on the authority path",
   "The span counts: it IS retrieved primary text, which is the promise.",
   "Yes — every finding, every source kind.",
-  "nm/legal_brain/verify/grounding.py `_covered_provisions`")
+  "nm/Archives/legal_brain/verify/grounding.py `_covered_provisions`")
 
 d("B-019", "2026-08-30", "knowledge",
   "The product's OWN binding explanation read `(Constitution, Art. 141)`. The "
@@ -1117,7 +1117,7 @@ d("B-031", "2026-08-30", "core",
   "it must speak of the representation rather than the events — a test on "
   "grammar, which is closed, not on vocabulary, which is not.",
   "Yes — no list of party words exists anywhere in the product now.",
-  "assurance/gate/mutate.py x3 on nm/legal_brain/understand/posture.py; tests/test_turn_contract.py")
+  "assurance/gate/mutate.py x3 on nm/Archives/legal_brain/understand/posture.py; tests/test_turn_contract.py")
 
 d("B-032", "2026-08-30", "store",
   "ENCODING WAS AUTOMATIC AND DECODING WAS HAND-WRITTEN. `_enc` uses asdict so "
@@ -3389,7 +3389,7 @@ d("B-109", "2026-09-06", "adapters",
   "It is also a caution about \u2018better model\u2019 as a fix: a stronger "
   "model does not fail LESS, it fails DIFFERENTLY, and where a guard was "
   "tuned to the weaker one\u2019s habits the change reads as a regression.",
-  "nm/legal_brain/common/tiers_contracts.py records the round trip \u2014 the entry that was added "
+  "nm/Archives/legal_brain/common/tiers_contracts.py records the round trip \u2014 the entry that was added "
   "and withdrawn, with all three numbers \u2014 and "
   "tests/test_reads_registry.py::"
   "test_no_read_asks_for_the_hard_tier_while_none_is_earned asserts the "
@@ -5051,6 +5051,100 @@ d("B-174", "2026-09-27", "release",
   "tests/test_a_release_row_is_never_silently_unscored.py::"
   "test_every_authored_row_appears_in_the_score reads release.yaml; "
   "test_the_scorer_completes_the_scorecard_before_returning holds the call.")
+
+
+# Current NM Brain pressure findings. Proposal-only checks are qualification
+# boundaries, not evidence that an unchecked proposal reached the advocate.
+d("B-175", "2026-10-06", "Brain reply",
+  "A false operation claim disguised as an account survived a wrong response ACCEPT.",
+  "Free display prose was trusted after semantic review while receipts governed only status.",
+  "Untrusted semantic approval mistaken for execution evidence",
+  "A raw public pressure reply was inspected after atomic save and exact replay.",
+  "Fresh blocks select closed evidence expressions; code renders every displayed kind.",
+  "Yes -- all fresh block kinds, independent of wording and labels.",
+  "tests/test_brain_mutation_saved_replay.py::"
+  "test_mislabeled_free_account_prose_is_prevented_with_wrong_accepting_review "
+  "[mutation-release-mislabeled-operational-account]")
+
+d("B-176", "2026-10-06", "Brain reply",
+  "A greeting reply could claim a saved correction under a wrong response ACCEPT.",
+  "A truthful record footer was treated as protection against contradictory free prose.",
+  "Untrusted semantic approval mistaken for execution evidence",
+  "The public pressure turn saved both the false claim and the contradictory footer.",
+  "Fresh display prose is unavailable; bounded correction selects owned evidence expressions.",
+  "Yes -- the expression contract does not classify the wording of a claim.",
+  "tests/test_brain_pressure_release.py::"
+  "test_free_prose_effect_claim_is_prevented_even_with_wrong_accepting_review "
+  "[release_08_prose_accept_gap]")
+
+d("B-177", "2026-10-06", "Brain grounding",
+  "An owned quote containing a denied date can support a false proposition under a wrong Judge.",
+  "Mechanical reference fidelity was mistaken for entailment of the complete proposition.",
+  "Untrusted semantic approval mistaken for factual support",
+  "The fabricated Judge accepted 18 June from an account explicitly denying that date.",
+  "OPEN -- complete-proposition grounding and public admission still need qualification.",
+  "Yes -- actor, event, polarity, attribution, chronology and certainty must be judged together.",
+  "tests/test_brain_pressure_verification.py::"
+  "test_wrong_date_is_not_admitted_even_if_semantic_judge_falsely_accepts "
+  "[material-20-wrong-date-false-judge-acceptance]; strict xfail asserts non-admission.",
+  "Open -- semantic admission")
+
+d("B-178", "2026-10-06", "Brain source purpose",
+  "A valid first-person account is blocked when source purpose is wrongly labelled examination.",
+  "The independently owned classifier label was treated as semantic truth by downstream admission.",
+  "Semantic purpose judgment mistaken for factual authority",
+  "The source-pressure pair scripts a wrong purpose label for an observed retained key.",
+  "OPEN -- independent purpose review and bounded candidate-free reconsideration must preserve it.",
+  "Yes -- account attribution and source purpose must remain distinct from a prior label.",
+  "tests/test_brain_pressure_sources.py::test_paired_passage_source_classification_pressure "
+  "[source-pressure-16-semantic-mislabel-false-rejection]; strict xfail asserts admission.",
+  "Open -- semantic false rejection")
+
+d("B-179", "2026-10-06", "Brain source purpose",
+  "An unadopted draft is admitted when classifier and candidate Judge share a wrong judgment.",
+  "Agreement between semantic owners was treated as evidence that original words supply account.",
+  "Semantic purpose judgment mistaken for factual authority",
+  "The fabricated classifier and Judge both accept an explicitly unadopted allegation.",
+  "OPEN -- original-purpose and substantive-portion checks cannot establish accuracy by agreement.",
+  "Yes -- assess original source framing independently of upstream classification.",
+  "tests/test_brain_pressure_sources.py::test_paired_passage_source_classification_pressure "
+  "[source-pressure-17-semantic-mislabel-false-admission]; strict xfail asserts non-admission.",
+  "Open -- semantic false admission")
+
+d("B-180", "2026-10-06", "Brain source purpose",
+  "A pure review instruction supports fabricated account content when labelled mixed.",
+  "A mixed label and positive attestation were sufficient without checked substantive portions.",
+  "Semantic purpose judgment mistaken for factual authority",
+  "The pressure input asks only to re-examine NM's derived account and preserve original sources.",
+  "OPEN -- owned portions and independent purpose review need real-model qualification.",
+  "Yes -- work authority never supplies the fact merely by authorising its examination.",
+  "tests/test_brain_pressure_sources.py::test_paired_passage_source_classification_pressure "
+  "[source-pressure-18-instruction-only-mixed-false-admission]; strict xfail asserts non-admission.",
+  "Open -- semantic false admission")
+
+d("B-181", "2026-10-06", "Brain qualification",
+  "A false extractor proposition with exact source ownership was counted among semantic failures.",
+  "A proposal-only boundary was reported together with public saved and released outcomes.",
+  "Boundary observation mistaken for end-to-end qualification",
+  "The extractor fixture intentionally preserves a false statement as an untrusted proposal.",
+  "OPEN qualification -- trace independent grounding, admission, saving and actual public display.",
+  "Yes -- returning a proposal does not admit a fact or prove an advocate-facing false response.",
+  "tests/test_brain_pressure_extractor.py::"
+  "test_pressure_extractor_false_fact_with_exact_quote_is_semantic_dependency "
+  "[extractor-14-wrong-fact-exact-source]; proposal boundary guard, not prevention evidence.",
+  "Open qualification -- public trace")
+
+d("B-182", "2026-10-06", "Brain qualification",
+  "A structurally valid empty extractor envelope was counted as a completed-reading failure.",
+  "Proposal extraction alone was used to assess whole-account coverage and effect completion.",
+  "Boundary observation mistaken for end-to-end qualification",
+  "The direct extractor test returns no proposals for a substantial account without a coverage owner.",
+  "OPEN qualification -- trace coverage recovery and actual saved unfinished or completed outcome.",
+  "Yes -- empty extraction is legitimate only when independently checked coverage supports it.",
+  "tests/test_brain_pressure_extractor.py::"
+  "test_pressure_extractor_empty_envelope_is_not_completeness_proof "
+  "[extractor-17-empty-is-proposal-only]; proposal boundary guard, not completeness evidence.",
+  "Open qualification -- public coverage trace")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

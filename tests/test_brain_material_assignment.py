@@ -7,7 +7,7 @@ import pytest
 from nm.brain.material import extract_details, resolve_assignment
 from nm.shared.model_port import SchemaViolation
 from tests.test_brain_material import Model as ServiceModel
-from tests.test_brain_material import material, plan, send
+from tests.test_brain_material import material, mutation_scope, plan, send
 from tests.test_brain_material_specialist import Model, candidate
 
 
@@ -86,7 +86,8 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                             "priority": "ordinary", "next_step": "legal_work",
                             "reply": "I will review the corrected account.", "clarification": "",
                             "record_requirement": {"kind": "none", "target_ids": [],
-                                                   "operation": "none", "success_condition": ""}},
+                                                   "operation": "none", "success_condition": ""},
+                            "mutation_scopes": [mutation_scope("assignment-first:material:3")]},
                            {"request": "Hello", "relation": "aside", "matter_scope": "none",
                             "priority": "ordinary", "next_step": "answer",
                             "reply": "Hello.", "clarification": "",

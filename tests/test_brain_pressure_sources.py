@@ -1,8 +1,8 @@
 """Unfamiliar passage/output pairs exercise the real source-purpose boundary.
 
 These are fabricated routine/Judge outputs, not semantic-model evaluations.
-Three cases deliberately show consequences of schema-valid mistaken
-source roles: passing a characterization does not mean that gap is prevented.
+Three desired-rule cases remain strict expected failures under schema-valid
+mistaken source roles. They name open defects, not successful prevention.
 """
 
 import json
@@ -17,6 +17,7 @@ from nm.brain.record_review import classify_account_sources, validate_record_che
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
 from tests.brain_pressure_support import record_case
+from tests.brain_reader_fixture import source_portion_reply
 
 
 class PassageModel:
@@ -34,7 +35,7 @@ class PassageModel:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         index = len(self.calls)
         assert index < len(self.outputs), "Unexpected additional source-classification call"
-        output = deepcopy(self.outputs[index])
+        output = source_portion_reply(json.loads(prompt.user), self.outputs[index])
         self.calls.append(
             {
                 "operation": prompt.operation,
@@ -116,6 +117,7 @@ def case(
     claim_scope="mechanical",
     strict=False,
     notes="",
+    defect_id=None,
 ):
     return {
         "id": identity,
@@ -132,6 +134,7 @@ def case(
         "claim_scope": claim_scope,
         "strict": strict,
         "notes": notes,
+        "defect_id": defect_id,
     }
 
 
@@ -401,9 +404,10 @@ def passage_cases():
                 "source-pressure-16-semantic-mislabel-false-rejection",
                 "I personally saw the caretaker retain our key after the final inspection.",
                 {"L1": "examination_material"},
-                expected_grounding=False,
+                expected_grounding=True,
                 scenario="faulty",
-                status="gap_demonstrated",
+                status="open_semantic_defect",
+                defect_id="B-178",
                 claim_scope="semantic_dependency",
                 notes=(
                     "Known substantive account is mislabeled by a schema-valid source read: "
@@ -417,9 +421,10 @@ def passage_cases():
                 "Review this unadopted draft alleging an undocumented cash payment "
                 "without treating its allegation as my account.",
                 {"L1": "reported_matter_account"},
-                expected_grounding=True,
+                expected_grounding=False,
                 scenario="faulty",
-                status="gap_demonstrated",
+                status="open_semantic_defect",
+                defect_id="B-179",
                 claim_scope="semantic_dependency",
                 notes=(
                     "Source classifier and fabricated candidate Judge both make the same "
@@ -432,9 +437,10 @@ def passage_cases():
                 "Re-examine whether your derived account implies a missing inventory "
                 "and preserve the original sources.",
                 {"L1": "mixed"},
-                expected_grounding=True,
+                expected_grounding=False,
                 scenario="faulty",
-                status="gap_demonstrated",
+                status="open_semantic_defect",
+                defect_id="B-180",
                 claim_scope="semantic_dependency",
                 notes=(
                     "A pure work instruction mislabeled mixed can support a false positive "
@@ -500,7 +506,16 @@ def passage_cases():
     return result
 
 
-@pytest.mark.parametrize("spec", passage_cases(), ids=lambda spec: spec["id"])
+@pytest.mark.parametrize(
+    "spec",
+    [pytest.param(
+        spec, id=spec["id"],
+        marks=(pytest.mark.xfail(
+            strict=True, raises=AssertionError,
+            reason=f'{spec["defect_id"]}: wrong semantic purpose judgments violate admission',
+        ) if spec["defect_id"] else ()),
+    ) for spec in passage_cases()],
+)
 def test_paired_passage_source_classification_pressure(spec):
     payload, _, _ = addressed_sources(spec["earlier"], spec["latest"])
     model = PassageModel(spec["outputs"], strict=spec["strict"])
@@ -536,7 +551,7 @@ def test_paired_passage_source_classification_pressure(spec):
     feedback_exact = all(
         entry["input"].get("original_input") == original_input
         and entry["input"].get("rejected_output")
-        == (None if spec["strict"] else spec["outputs"][0])
+        == (None if spec["strict"] else model.calls[0]["output"])
         and spec["feedback_fragment"] in entry["input"].get("validation_issue", "")
         for entry in corrections
     )

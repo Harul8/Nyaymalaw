@@ -11,7 +11,7 @@ from dataclasses import replace
 import pytest
 
 from tests.brain_continuation_fixture import no_record_requirement
-from tests.test_brain_material import Model, material, plan, send
+from tests.test_brain_material import Model, material, mutation_scope, plan, send
 
 
 def item(request, reply, *, purposes=(), intent="request", opening=False,
@@ -116,6 +116,7 @@ def test_answer_account_purpose_saves_correction_and_replays_without_duplicate_w
         item(correction, "Your corrected account reports delivery on 12 August.",
              purposes=("account_contribution",), intent="contribution"),
     ])
+    followup["items"][0]["mutation_scopes"] = [mutation_scope("custody-original:material:1")]
     model = PurposeModel([seed_plan(account), followup])
     opened = open_account(client, wired, monkeypatch, model, account)
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -208,6 +209,10 @@ def test_read_only_recap_preserves_record_without_unnecessary_extraction(
     account = "The freight is held at the depot."
     request = "Repeat the custody location in my saved account."
     recap = routed(request, items=[item(request, account)])
+    recap["_response_expressions"] = {0: {
+        "operator": "source_account", "source_ids": [],
+        "record_ids": ["custody-original:material:1"], "focus": "none",
+    }}
     model = PurposeModel([seed_plan(account), recap])
     opened = open_account(client, wired, monkeypatch, model, account)
     before = public_record(client, opened["matter_id"])
@@ -275,6 +280,14 @@ def test_mixed_requests_keep_independent_responses_and_one_material_pass(
         item(update, update, purposes=("account_contribution",), intent="contribution"),
         item(recap, account), clarification,
     ])
+    mixed["_response_expressions"] = {
+        0: {"operator": "source_account", "source_ids": ["L1"],
+            "record_ids": [], "focus": "none"},
+        1: {"operator": "source_account", "source_ids": [],
+            "record_ids": ["custody-original:material:1"], "focus": "none"},
+        2: {"operator": "question", "source_ids": ["L3"],
+            "record_ids": [], "focus": "meaning"},
+    }
     model = PurposeModel([seed_plan(account), mixed])
     opened = open_account(client, wired, monkeypatch, model, account)
 
@@ -289,7 +302,10 @@ def test_mixed_requests_keep_independent_responses_and_one_material_pass(
     assert [unit["sufficiency"]["status"] for unit in units] == [
         "complete", "complete", "needs_input"]
     text = "\n".join(row["text"] for row in result["elements"])
-    assert all(expected in text for expected in (update, account, clarification["clarification"]))
+    assert all(expected in text for expected in (update, account, ambiguity))
+    question, = [block for block in units[2]["blocks"] if block["kind"] == "question"]
+    assert units[2]["questions"][0]["block_id"] == question["id"]
+    assert question["evidence_expression"]["source_ids"] == ["L3"]
     record = public_record(client, opened["matter_id"])
     assert [row["statement"] for row in record["rows"]] == [account, update]
     saved = wired.store.load(opened["matter_id"])

@@ -13,7 +13,7 @@ from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
-from tests.test_brain_material import Model, material, plan, send
+from tests.test_brain_material import Model, material, mutation_scope, plan, send
 from tests.test_brain_material_verification import Model as CheckerModel
 
 verify_material_grounding = classified_verifier(verify_material_grounding)
@@ -200,7 +200,10 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
     model = OperationModel([
         plan(FIRST, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
-        plan(latest, candidates=candidates, material_purposes=("account_contribution",)),
+        plan(latest, candidates=candidates, material_purposes=("account_contribution",),
+             mutation_scopes=([mutation_scope(
+                 "original:material:1", source_ids=("L3",) if mode == "mixed" else ("L1",))]
+                 if mode in ("actual_correction", "mixed") else [])),
     ], rejected)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 

@@ -7,7 +7,7 @@ import pytest
 
 from tests.brain_reader_fixture import reviewed_record_verdicts
 from tests.test_brain_board_proposals import dispute
-from tests.test_brain_material import Model, plan, send
+from tests.test_brain_material import Model, mutation_scope, plan, send
 
 FIRST = "The operator retained our server. The operator withheld our deposit."
 REVIEW = "A reviewer wrote, 'These events form one established fraud dispute.'"
@@ -84,7 +84,11 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
     model = TransitionModel([plan(FIRST, candidates=originals, opening=True,
                                   material_purposes=("account_contribution",)),
                              plan(latest, candidates=candidates,
-                                  material_purposes=("account_contribution",))])
+                                  material_purposes=("account_contribution",),
+                                  mutation_scopes=([mutation_scope(
+                                      "original:material:2",
+                                      source_ids=("L3",) if mode == "mixed" else ("L1",))]
+                                      if mode in ("correction", "mixed") else []))])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, FIRST, "original")

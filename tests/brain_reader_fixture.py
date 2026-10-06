@@ -25,14 +25,49 @@ def reader_repairs(data, schema):
     return {"repairs": repaired}
 
 
+def source_portion_reply(payload, data):
+    """Transport explicitly scripted source roles through the fresh portion shape.
+
+    This fixture does not classify words. A scenario owner's positive role
+    declares its whole owned passage substantive; a declared non-account role
+    has no substantive portion. New semantic tests author narrower ranges
+    themselves. Explicit ranges, even malformed ones, are never improved.
+    """
+    original = payload.get("original_input", payload)
+    result = deepcopy(data)
+    if original.get("source_selection_contract") != "owned_substantive_spans_v2":
+        return result
+    if not isinstance(result, dict) or not isinstance(result.get("source_treatments"), dict):
+        return result
+    catalogue = original.get("original_source_catalogue", {})
+    positive = ("reported_matter_account", "reported_party_position", "mixed")
+    non_account = ("examination_material", "work_instruction", "nm_interpretation", "uncertain")
+    for identity, row in result["source_treatments"].items():
+        if not isinstance(row, dict) or "substantive_spans" in row:
+            continue
+        reference = catalogue.get(identity)
+        if (not isinstance(reference, dict) or not isinstance(reference.get("quoted"), str)
+                or not reference["quoted"].strip()):
+            # Keep foreign/missing owned references as raw invalid output;
+            # transport cannot grant provenance to an attack.
+            continue
+        role = row.get("content_role")
+        if role in positive:
+            row["substantive_spans"] = [{"start": 0, "end": len(reference["quoted"])}]
+        elif role in non_account:
+            row["substantive_spans"] = []
+    return result
+
+
 def source_treatment_reply(operation, payload):
     """Script the separately owned source treatment, without keyword inference."""
     if operation != "classify_account_sources":
         return None
-    return {"source_treatments": {identity: {
+    original = payload.get("original_input", payload)
+    return source_portion_reply(payload, {"source_treatments": {identity: {
         "content_role": "reported_matter_account",
         "reason": "The scripted source-treatment decision reports account content.",
-    } for identity in payload["source_ids"]}}
+    } for identity in original["source_ids"]}})
 
 
 def classified_verifier(function):

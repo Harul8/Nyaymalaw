@@ -10,7 +10,7 @@ from nm.brain.material import extract_details
 from nm.brain.material_state import material_record
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_brain_material import Model as ServiceModel
-from tests.test_brain_material import material, plan, send
+from tests.test_brain_material import material, mutation_scope, plan, send
 from tests.test_brain_material_specialist import Model, candidate
 
 
@@ -256,7 +256,8 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
     model = Repairing([plan(first, candidates=[original], opening=True,
                             material_purposes=("account_contribution",)),
                        plan(latest, candidates=[attempted],
-                            material_purposes=("account_contribution",))])
+                            material_purposes=("account_contribution",),
+                            mutation_scopes=[mutation_scope("ownership-first:material:1")])])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "ownership-first")
     assert opened.status_code == 200, opened.text

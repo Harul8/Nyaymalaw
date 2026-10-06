@@ -9,7 +9,7 @@ from tests import test_brain_material as material_fixture
 
 
 def transport(*, target="A", requirement=None, explicit=None, has_explicit=False,
-              candidates_present=True):
+              candidates_present=True, authored_scope=True):
     candidate = material_fixture.material(
         "evidence", "The dated account reports 2024.", "sorry, 2024",
         relation="corrects", scope="current", related_material_ids=[target],
@@ -24,6 +24,9 @@ def transport(*, target="A", requirement=None, explicit=None, has_explicit=False
     }
     if has_explicit:
         item["mutation_scopes"] = deepcopy(explicit)
+    elif authored_scope and requirement is None:
+        # This permission is authored independently of the reader's target.
+        item["mutation_scopes"] = [material_fixture.mutation_scope("A")]
     data = continuation.interpretation({"items": [item]})
     payload = {
         "earlier_conversation": [
@@ -36,8 +39,12 @@ def transport(*, target="A", requirement=None, explicit=None, has_explicit=False
             for identity in ("A", "B")
         ],
     }
-    return material_fixture.legacy_mutation_scope_transport(
-        data, payload, [candidate] if candidates_present else [], scripted_items=[item]
+    # Preserve the candidate variation as an attack on fixture independence.
+    # The permission owner never receives it, including when extraction is empty.
+    candidates = [candidate] if candidates_present else []
+    assert candidates == [] or candidates[0]["related_material_ids"] == [target]
+    return material_fixture.scripted_request_scope_transport(
+        data, payload, scripted_items=[item]
     )
 
 
@@ -45,7 +52,7 @@ def test_absent_scope_defaults_to_explicit_empty_in_normal_transport():
     assert continuation.interpretation({"items": [{}]})["items"][0]["mutation_scopes"] == []
 
 
-def test_legacy_implicit_correction_transports_exact_authored_scope():
+def test_independently_authored_correction_transports_exact_scope():
     scope, = transport()["items"][0]["mutation_scopes"]
     assert scope == {
         "authority_kind": "account_contribution",
@@ -95,3 +102,19 @@ def test_original_creation_request_does_not_authorize_an_unrelated_revision():
 def test_explicit_author_scope_including_empty_is_never_expanded(explicit):
     result = transport(explicit=explicit, has_explicit=True)
     assert result["items"][0]["mutation_scopes"] == explicit
+
+
+@pytest.mark.parametrize("target", ["A", "B", "foreign-matter-record"])
+@pytest.mark.parametrize("candidates_present", [False, True])
+def test_reader_proposals_cannot_create_permission_when_request_has_no_scope(
+    target, candidates_present
+):
+    assert transport(target=target, candidates_present=candidates_present,
+                     authored_scope=False)["items"][0]["mutation_scopes"] == []
+
+
+@pytest.mark.parametrize("target", ["A", "B", "foreign-matter-record"])
+def test_authored_permission_is_unchanged_by_the_reader_proposed_target(target):
+    scope, = transport(target=target)["items"][0]["mutation_scopes"]
+    assert scope["target_ids"] == ["A"]
+    assert scope["permitted_relations"] == ["corrects"]

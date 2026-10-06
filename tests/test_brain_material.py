@@ -1,5 +1,6 @@
 """Legal material is a sourced proposal from each served conversation turn."""
 import json
+from copy import deepcopy
 from dataclasses import replace
 
 import pytest
@@ -27,6 +28,7 @@ class Model:
         self.next_material = []
         self.current_items = []
         self.current_record_disposition = None
+        self.current_response_expressions = {}
 
     def context_budget(self, tier):
         assert tier in (Tier.ROUTINE, Tier.JUDGE)
@@ -37,6 +39,11 @@ class Model:
                                           scripted_items=self.current_items)
         if continuation is not None:
             data = continuation
+            if prompt.operation == "continue_conversation":
+                for unit in data["units"]:
+                    expression = self.current_response_expressions.get(unit["request_index"])
+                    if expression is not None:
+                        unit["blocks"][0]["evidence_expression"] = deepcopy(expression)
         elif prompt.operation in ("extract_disputes", "extract_legal_details"):
             self.material_calls.append(prompt)
             payload = json.loads(prompt.user)
@@ -68,13 +75,13 @@ class Model:
             planned = next(self.plans)
             self.next_material = planned["material"]
             self.current_record_disposition = planned.get("_record_disposition")
+            self.current_response_expressions = planned.get("_response_expressions", {})
             data = {key: value for key, value in planned.items()
-                    if key not in ("material", "_record_disposition")}
+                    if key not in ("material", "_record_disposition", "_response_expressions")}
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
-                data = legacy_mutation_scope_transport(
-                    data, json.loads(prompt.user), planned["material"],
-                    scripted_items=planned["items"])
+                data = scripted_request_scope_transport(
+                    data, json.loads(prompt.user), scripted_items=planned["items"])
                 self.current_items = data["items"]
         data = scripted_record_result(
             prompt.operation, json.loads(prompt.user), data, self.current_record_disposition)
@@ -84,15 +91,12 @@ class Model:
                            completion=Completion.COMPLETE)
 
 
-def legacy_mutation_scope_transport(data, payload, scripted_candidates, *, scripted_items):
-    """Explicit offline legacy scope declarations, transported before extraction.
+def scripted_request_scope_transport(data, payload, *, scripted_items):
+    """Transport only independently authored permission, never reader proposals.
 
-    Older test plans colocated meanings and reader proposals. For their migration
-    only, authored non-new candidates declare a prior-target contribution scope.
-    A typed request's independently specified targets and operation take
-    precedence, so a malformed candidate cannot grant itself wider permission.
-    New mutation regressions must declare item.mutation_scopes independently;
-    this legacy helper never rewrites an explicit declaration or decides meaning.
+    Explicit interpreter scopes pass through unchanged. An independently typed
+    change request can provide its own targets and relation. Reader proposals
+    are not an input to this transport boundary.
     """
     from copy import deepcopy
 
@@ -103,9 +107,7 @@ def legacy_mutation_scope_transport(data, payload, scripted_candidates, *, scrip
     payload = payload.get("original_input", payload)
     earlier = tuple(Message(row["turn_id"], row["role"], row["text"])
                     for row in payload["earlier_conversation"])
-    _, current, prior = addressed_sources(earlier, payload["latest_message"])
-    target_catalogue = {row["id"]: row["record"]
-                        for row in payload.get("target_catalogue", [])}
+    _, current, _ = addressed_sources(earlier, payload["latest_message"])
     for item, authored in zip(result["items"], scripted_items, strict=True):
         if "mutation_scopes" in authored:
             continue
@@ -130,58 +132,6 @@ def legacy_mutation_scope_transport(data, payload, scripted_candidates, *, scrip
                     "target_ids": list(requirement["target_ids"]),
                     "permitted_relations": [requirement["operation"]],
                 })
-        for candidate in scripted_candidates:
-            relation = candidate.get("relation", "new")
-            if relation == "new":
-                continue
-            if (len(result["items"]) > 1
-                    and candidate["quoted"] not in item["request"]):
-                continue
-            sources = [identity for identity, words in current.items()
-                       if candidate["quoted"] in words]
-            if len(sources) != 1:
-                # Preserve the invalid original reader fixture. Do not choose a
-                # convenient authority when its source is unsupported/ambiguous.
-                continue
-            selected_prior = {
-                identity for identity, reference in prior.items()
-                if any(reference.turn_id == selected["turn_id"]
-                       and reference.role == selected["role"]
-                       and selected["quoted"] in reference.quoted
-                       for selected in candidate.get("prior_references", []))
-            }
-            if requirement["kind"] == "change" or requirement["target_ids"]:
-                targets = list(requirement["target_ids"])
-                relations = ([requirement["operation"]]
-                             if requirement["operation"] != "none" else [relation])
-            else:
-                target_field = ("related_dispute_ids" if candidate.get("kind") == "dispute"
-                                else "related_material_ids")
-                targets = list(candidate.get(target_field, []))
-                if not targets:
-                    targets = [identity for identity, target in target_catalogue.items()
-                               if any(reference.turn_id == target.get("source_turn_id")
-                                      and reference.role == "advocate"
-                                      and (target.get("quoted", "") in reference.quoted
-                                           or reference.quoted in target.get("quoted", ""))
-                                      for identity, reference in prior.items()
-                                      if identity in selected_prior)]
-                relations = [relation]
-            if not targets:
-                continue
-            scope = {
-                "authority_kind": (
-                    "interpretation_review"
-                    if item.get("material_purposes") == ["interpretation_review"]
-                    else "account_contribution"
-                ),
-                "authority_source_ids": sources,
-                "target_scope": "exact",
-                "target_ids": sorted(set(targets)),
-                "permitted_relations": relations,
-            }
-            if scope not in scopes:
-                scopes.append(scope)
         item["mutation_scopes"] = scopes
     return result
 
@@ -277,7 +227,7 @@ def material(kind, statement, quoted, *, relation="new", references=(),
 
 def plan(message, *, candidates=(), items=None, opening=False,
          active_work="review the account", material_purposes=(), record_requirement=None,
-         record_disposition=None):
+         record_disposition=None, mutation_scopes=None, response_expressions=None):
     if items is None:
         items = [{"request": message, "relation": "new",
                   "matter_scope": "proposed" if opening else "current",
@@ -290,7 +240,12 @@ def plan(message, *, candidates=(), items=None, opening=False,
                                          else record_requirement)}]
     items = [{**item, "material_purposes": item.get(
         "material_purposes", list(material_purposes))} for item in items]
+    if mutation_scopes is not None:
+        assert len(items) == 1, "Author independent scopes on each item of a mixed plan"
+        items[0]["mutation_scopes"] = list(mutation_scopes)
     return {"items": items, "material": list(candidates),
+            **({"_response_expressions": deepcopy(response_expressions)}
+               if response_expressions is not None else {}),
             **({"_record_disposition": record_disposition}
                if record_disposition is not None else {}),
             "active_work_after": active_work,
@@ -300,6 +255,14 @@ def plan(message, *, candidates=(), items=None, opening=False,
                         "summary": "The advocate describes a dispute over stopped work."
                         if opening else "",
                         }}
+
+
+def mutation_scope(*targets, relations=("corrects",), source_ids=("L1",),
+                   authority_kind="account_contribution"):
+    """Copy scenario-authored authority; no reader output is consulted."""
+    return {"authority_kind": authority_kind, "authority_source_ids": list(source_ids),
+            "target_scope": "exact", "target_ids": list(targets),
+            "permitted_relations": list(relations)}
 
 
 def send(client, message, turn_id, *, opened=None):
@@ -404,7 +367,8 @@ def test_correction_and_diversion_keep_prior_words_and_proposals(
     model = Model([
         plan(first, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
-        plan(correction, candidates=[revised], material_purposes=("account_contribution",)),
+        plan(correction, candidates=[revised], material_purposes=("account_contribution",),
+             mutation_scopes=[mutation_scope("material-one:material:1")]),
         plan(aside, candidates=[], items=[aside_item]),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -448,7 +412,8 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
         "next_step": "legal_work", "reply": "I have noted the corrected date.",
         "intent": "contribution",
         "clarification": "",
-        "record_requirement": no_record_requirement()}],
+        "record_requirement": no_record_requirement(),
+        "mutation_scopes": [mutation_scope("first:material:1")]}],
                        material_purposes=("account_contribution",))
     second_plan["items"][0]["material_purposes"] = ["account_contribution"]
     model = Model([plan(first, candidates=[original], opening=True,
@@ -619,7 +584,7 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
 
 def test_answer_to_prior_nm_question_can_support_material(
         client, wired, monkeypatch):
-    first = "The contractor stopped work."
+    first = "The contractor may have stopped work on 12 June."
     question = "Did the stoppage occur on 12 June?"
     answer = "Yes."
     first_item = {"request": first, "relation": "new",
@@ -633,20 +598,39 @@ def test_answer_to_prior_nm_question_can_support_material(
         references=({"turn_id": "question-turn", "role": "nm",
                      "quoted": question},))
     model = Model([
-        plan(first, opening=True, items=[first_item], material_purposes=("account_contribution",)),
+        plan(first, opening=True, items=[first_item], material_purposes=("account_contribution",),
+             response_expressions={0: {
+                 "operator": "question", "source_ids": ["L1"],
+                 "record_ids": [], "focus": "certainty",
+             }}),
         plan(answer, candidates=[confirmed], material_purposes=("account_contribution",)),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, first, "question-turn").json()
+    # Quote the actually released question as context. The independently
+    # authored candidate/date is unchanged; display prose cannot supply it.
+    question = next(block["text"] for unit in opened["continuation"]["units"]
+                    for block in unit["blocks"] if block["kind"] == "question")
+    assert "12 June" in question and first in question
+    from nm.brain.conversation import Message
+    from nm.brain.material import addressed_sources
+
+    _, _, question_sources = addressed_sources(
+        (Message("question-turn", "nm", question),), answer)
+    contextual_references = [
+        {"turn_id": ref.turn_id, "role": ref.role, "quoted": ref.quoted}
+        for ref in question_sources.values()
+    ]
+    confirmed["prior_references"] = contextual_references
     served = send(client, answer, "answer-turn", opened=opened)
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == "Yes."
     assert served.json()["material"][0]["relation"] == "new"
     assert served.json()["material"][0]["related_material_ids"] == []
-    assert served.json()["material"][0]["prior_references"] == [
-        {"turn_id": "question-turn", "role": "nm", "quoted": question}]
+    assert served.json()["material"][0]["prior_references"] == contextual_references
+    assert " ".join(ref["quoted"] for ref in contextual_references) == question
     assert wired.store.load(opened["matter_id"]).facts == ()
     assert len(model.calls) == 2
     assert len(model.material_calls) == 4

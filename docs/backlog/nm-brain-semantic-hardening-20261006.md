@@ -17,8 +17,11 @@ semantic accuracy, population false-positive rate or universal correctness.
 The preceding qualified implementation is `611b1e8`, on `s0-foundations`.
 Its pressure report records 2,382 offline tests and 205 distinct pressure cases
 in three orders. These are earlier results, not verification of this new work.
-The two original typed-completion/wrong-scope bypasses are prevented in their
-exercised public flows. Eight later characterizations still expose limits:
+The original typed-completion/wrong-scope cases passed in their selected public
+fixtures. The independent review of `611b1e8` subsequently reproduced linked
+completion and interpreter-none escapes; the general closure claim was too
+broad. It also found reader-derived permission in 17 fixtures. Eight later
+characterizations expose different boundaries:
 
 | Case | Exercised boundary | Next verification |
 | --- | --- | --- |
