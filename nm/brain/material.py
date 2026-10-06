@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from nm.brain.checked import checked_read
+from nm.brain.checked import checked_unit_read
 from nm.brain.record_review import derived_record, owned_source_treatments
 from nm.shared.model_port import (
     ContextOverflow,
@@ -337,6 +337,13 @@ authorise repair without a new account fact; original advocate words supply
 its evidence. This call admits no fact, reformulates no dispute, decides no
 law, grants no permission and performs no action.
 
+When recovery_scope is supplied, its missing source IDs identify independently
+checked incomplete coverage to examine against the complete original account.
+It is investigation context, not evidence or a completion decision. Propose
+only supported missing contributions or repairs, preserving the source's original
+purpose and relevant review authority. Do not repeat retained_proposals; they
+are NM interpretations supplied to preserve work, not factual authority.
+
 Activity 1 - Establish substantive evidence and review authority.
 Look for: The full original advocate account and the framing around supplied
 material. Separate reported matter content and actual party positions, including supplied
@@ -509,15 +516,58 @@ def parse_material(rows: object, *, latest: str,
     return tuple(candidates)
 
 
+def extraction_recovery_scope(scope: dict, latest: dict[str, str],
+                              prior: dict[str, PriorReference]) -> dict:
+    """Validate owned recovery anchors; derived context supplies no new evidence."""
+    fields = {"review_scope", "missing_source_ids", "retained_proposals", "reason"}
+    if not isinstance(scope, dict) or set(scope) != fields:
+        raise SchemaViolation("Extraction recovery requires its declared context fields")
+    selected = scope["missing_source_ids"]
+    owned = set(latest) | {identity for identity, ref in prior.items()
+                          if ref.role == "advocate"}
+    if (not isinstance(selected, (list, tuple)) or not selected
+            or any(not isinstance(identity, str) or identity not in owned
+                   for identity in selected)):
+        raise SchemaViolation("Recovery must select owned original advocate source IDs")
+    if not isinstance(scope["review_scope"], dict):
+        raise SchemaViolation("Recovery requires the original code-owned review scope")
+    if not isinstance(scope["reason"], str) or not scope["reason"].strip():
+        raise SchemaViolation("Recovery requires the checked coverage explanation")
+    retained = scope["retained_proposals"]
+    if not isinstance(retained, (list, tuple)):
+        raise SchemaViolation("Retained recovery proposals must be an array")
+    originals = set(prior.values())
+    for proposal in retained:
+        if (not isinstance(proposal, dict)
+                or not isinstance(proposal.get("quoted"), str)
+                or proposal["quoted"] not in latest.values()):
+            raise SchemaViolation("Retained recovery context requires exact current source words")
+        references = proposal.get("prior_references", [])
+        if (not isinstance(references, (list, tuple))
+                or any(not isinstance(ref, dict) or set(ref) != {"turn_id", "role", "quoted"}
+                       or any(not isinstance(value, str) for value in ref.values())
+                       or PriorReference(ref["turn_id"], ref["role"], ref["quoted"])
+                       not in originals for ref in references)):
+            raise SchemaViolation("Retained recovery context requires owned earlier references")
+    return {"review_scope": deepcopy(scope["review_scope"]),
+            "missing_source_ids": list(dict.fromkeys(selected)),
+            "retained_proposals": [derived_record(deepcopy(row)) for row in retained],
+            "reason": scope["reason"]}
+
+
 def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                     latest: str, current_matter_id: str | None,
                     disputes: tuple[dict, ...] = (),
-                    prior_material: tuple[dict, ...] = (), source_treatments=None
+                    prior_material: tuple[dict, ...] = (), source_treatments=None,
+                    diagnostics: dict | None = None, recovery_scope: dict | None = None
                     ) -> tuple[MaterialCandidate, ...]:
     """Make one complete, sourced legal-detail read of the latest message."""
     if not latest.strip():
         raise ValueError("The latest message is empty")
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
+    if recovery_scope is not None:
+        payload["recovery_scope"] = extraction_recovery_scope(
+            recovery_scope, latest_sources, prior_sources)
     if source_treatments is not None:
         payload["source_treatments"] = owned_source_treatments(
             source_treatments, latest_sources, prior_sources)
@@ -601,4 +651,6 @@ def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
                 related_material_ids=tuple(material_ids)))
         return tuple(accepted)
 
-    return checked_read(model, prompt, schema, output_limit, accept)
+    return checked_unit_read(
+        model, prompt, schema, output_limit, accept,
+        unit_fields=("new_items", "changes"), diagnostics=diagnostics)

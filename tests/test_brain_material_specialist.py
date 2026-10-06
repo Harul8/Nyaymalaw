@@ -14,7 +14,7 @@ from nm.shared.model_port import (
     Usage,
     on_the_wire,
 )
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reader_repairs
 
 
 class Model:
@@ -36,6 +36,7 @@ class Model:
             else self.data
         result = reader_operations(data["details"], json.loads(prompt.user),
                                    link_field="related_material_ids", infer_targets=False)
+        result = reader_repairs(result, schema)
         return ModelResult(text=None, data=result, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
@@ -126,14 +127,14 @@ def test_invalid_source_selection_gets_one_feedback_guided_correction():
     repair_prompt = model.calls[1][0]
     feedback = json.loads(repair_prompt.user)
     assert feedback["original_input"] == json.loads(model.calls[0][0].user)
-    assert feedback["rejected_output"] == reader_operations(
+    assert feedback["failed_units"][0]["proposal"] == reader_operations(
         [rejected], feedback["original_input"], link_field="related_material_ids",
-        infer_targets=False)
+        infer_targets=False)["new_items"][0]
     assert feedback["validation_issue"]
-    assert "source" in feedback["how_to_correct"].lower()
-    assert "input" in feedback["how_to_correct"].lower()
+    assert feedback["failed_units"][0]["unit_id"] == "new_items:1"
+    assert feedback["retained_proposal_context"] == []
     assert repair_prompt.operation == "extract_legal_details"
-    assert model.calls[0][1] == model.calls[1][1]
+    assert set(model.calls[1][1]["properties"]) == {"repairs"}
 
 
 def test_changed_detail_adds_its_saved_source_without_replacing_selected_context():
@@ -200,8 +201,8 @@ def test_withdrawal_needs_an_exact_active_detail_link_and_gets_one_correction():
     assert result[0].relation == "withdraws"
     assert result[0].related_material_ids == ("receipt",)
     feedback = json.loads(model.calls[1][0].user)
-    assert "related_material_ids" in feedback["validation_issue"]
-    assert "changes" in feedback["validation_issue"]
+    assert "related_material_ids" in feedback["failed_units"][0]["validation_issue"]
+    assert feedback["failed_units"][0]["field"] == "changes"
 
     persistent = Model({"details": [unlinked]})
     with pytest.raises(SchemaViolation, match="related_material_ids"):

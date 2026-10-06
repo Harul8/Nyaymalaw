@@ -5,6 +5,26 @@ from copy import deepcopy
 from functools import wraps
 
 
+def reader_repairs(data, schema):
+    """Express scripted operation rows under the selected correction schema.
+
+    This is fixture transport only: it does not validate sources or improve
+    the supplied proposals. The scripted row order owns each failed field.
+    """
+    if "repairs" not in schema.get("properties", {}):
+        return data
+    units = schema["properties"]["repairs"]["properties"]
+    cursors = {}
+    repaired = {}
+    for identity in units:
+        field = identity.split(":", 1)[0]
+        index = cursors.get(field, 0)
+        cursors[field] = index + 1
+        rows = data.get(field, [])
+        repaired[identity] = {"proposals": rows[index:index + 1]}
+    return {"repairs": repaired}
+
+
 def source_treatment_reply(operation, payload):
     """Script the separately owned source treatment, without keyword inference."""
     if operation != "classify_account_sources":
