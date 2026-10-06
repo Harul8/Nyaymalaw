@@ -54,9 +54,11 @@ def resolve_assignment(row: dict, targets: dict[str, dict]) -> dict:
     selected = row.get("assignment_ids")
     if (not isinstance(selected, list) or not selected
             or any(not isinstance(identity, str) or identity not in targets
-                   for identity in selected)
-            or len(selected) != len(set(selected))):
-        raise SchemaViolation("A detail must select known unique assignment IDs")
+                   for identity in selected)):
+        raise SchemaViolation("A detail must select known assignment IDs")
+    # Assignment is a set of owned targets. Repeating the same exact target
+    # adds no meaning; validate ownership before this lossless normalization.
+    selected = list(dict.fromkeys(selected))
     values = [targets[identity] for identity in selected]
     if len(values) > 1 and any(value["kind"] != "dispute" for value in values):
         raise SchemaViolation(

@@ -4,11 +4,22 @@ from dataclasses import replace
 
 import pytest
 
-from nm.brain.material import extract_details
+from nm.brain.material import extract_details, resolve_assignment
 from nm.shared.model_port import SchemaViolation
 from tests.test_brain_material import Model as ServiceModel
 from tests.test_brain_material import material, plan, send
 from tests.test_brain_material_specialist import Model, candidate
+
+
+def test_exact_duplicate_owned_disputes_are_normalized_without_changing_assignment():
+    targets = {key: dict(id=key, kind="dispute", matter_scope="current",
+                         placement="disputes") for key in ("issue-a", "issue-b")}
+    row = {"statement": "A reported shared event.",
+           "assignment_ids": ["issue-a", "issue-b", "issue-a"]}
+    assert resolve_assignment(row, targets) == {
+        "statement": row["statement"], "matter_scope": "current",
+        "placement": "disputes", "dispute_ids": ["issue-a", "issue-b"]}
+    assert row["assignment_ids"] == ["issue-a", "issue-b", "issue-a"]
 
 
 @pytest.mark.parametrize("targets", [["foreign"], ["matter:other", "matter:discussion"],

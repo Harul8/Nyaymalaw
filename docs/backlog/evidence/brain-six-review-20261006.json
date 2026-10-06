@@ -22,6 +22,20 @@
       "decision": "Owner authorizes all six current served activities: attributed account; applicable law; party argument and court treatment; application to both sides; opposing argument and response; justified position and next steps. Shared writer/reviewer owners serve activities 4–6. Review all 13 stable prompts and 19 live modules, one production file/prompt per verified slice. Preserve coherent call responsibilities. Make routine choices autonomously. No browser, paid model or actual-model API calls; deferred qualification must remain visible. Before Build remains status owner and Implementation Plan mirrors it.",
       "validation": "Inventory completed at 3b30cfb. Current source contracts and workbook owners identified; no claim of semantic acceptance.",
       "files": []
+    },
+    {
+      "slice": "material-owned-assignment-normalization",
+      "owners": [
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Assignment is a set: validate every exact ID against owned targets before deduplicating identical IDs in first-seen order. Preserve caller input, scope, placement and all distinct dispute targets. Unknown/foreign IDs and mixed matter/dispute choices still fail; semantic assignment review remains mandatory.",
+      "validation": "Focused material specialist, assignment and scope suites passed (33 cases); valid duplicate has one reader call, unknown/mixed targets remain bounded two-call refusal. No live model/browser calls.",
+      "files": [
+        "nm/brain/material.py",
+        "tests/test_brain_material_specialist.py",
+        "tests/test_brain_material_assignment.py"
+      ]
     }
   ]
 }

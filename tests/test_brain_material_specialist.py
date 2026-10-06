@@ -336,6 +336,9 @@ def test_no_current_matter_excludes_current_scope_even_with_prior_conversation()
                         earlier=earlier, latest=latest, current_matter_id=None)
 
     repeated = {**row, "assignment_ids": ["matter:discussion", "matter:discussion"]}
-    with pytest.raises(SchemaViolation, match="unique assignment IDs"):
-        extract_details(Model({"details": [repeated]}),
-                        earlier=earlier, latest=latest, current_matter_id=None)
+    repeated_model = Model({"details": [repeated]})
+    result = extract_details(repeated_model, earlier=earlier, latest=latest,
+                             current_matter_id=None)
+    assert result[0].placement == "matter"
+    assert result[0].dispute_ids == ()
+    assert len(repeated_model.calls) == 1
