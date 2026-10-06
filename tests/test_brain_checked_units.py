@@ -16,10 +16,13 @@ from nm.shared.model_port import (
     ModelResult,
     OutputTruncated,
     Prompt,
+    ProviderUnavailable,
+    RateLimited,
     SchemaViolation,
     Tier,
     TierUnavailable,
     Usage,
+    estimate_tokens,
     require_schema,
 )
 
@@ -290,11 +293,14 @@ def test_unavailable_independent_tier_cannot_be_repaired_into_local_acceptance()
     assert len(model.calls) == 1
 
 
-def test_context_overflow_preserves_complete_original_input_and_stops_before_repair_call():
-    model, sink = Model([envelope([row(), row(" ")])], budget=1050), {}
-    with pytest.raises(ContextOverflow):
-        read(model, sink=sink)
-    assert len(model.calls) == 1
+def test_context_overflow_preserves_complete_original_input_and_sound_peer_without_dispatch():
+    budget = estimate_tokens(PROMPT.user + PROMPT.system) + 1020
+    model, sink = Model([envelope([row(), row(" ")])], budget=budget), {}
+    assert len(read(model, sink=sink)) == 1
+    assert len(model.calls) == 1 and sink["state"] == "partial"
+    assert sink["attempts"] == 1 and sink["conditional_failure"]["kind"] == "ContextOverflow"
+    assert not sink["conditional_failure"]["dispatch_attempted"]
+    assert sink["unread_units"][0]["unit_id"] == "observations:2"
     assert model.calls[0]["input"] == json.loads(PROMPT.user)
 
 
@@ -417,3 +423,121 @@ def test_shared_budget_hook_must_return_an_explicit_boolean():
     with pytest.raises(TypeError, match="boolean decision"):
         read(model, sink={})
     assert len(model.calls) == 1
+
+
+_CONDITIONAL_FAILURES = (
+    ContextOverflow, ProviderUnavailable, OutputTruncated, ContentRefused, RateLimited)
+
+
+@pytest.mark.parametrize("error_type", _CONDITIONAL_FAILURES)
+def test_conditional_provider_failure_retains_sound_peer_and_explicit_unread(error_type):
+    error = error_type("The conditional attempt did not complete")
+    model, sink = Model([envelope([row(), row(" ")]), error]), {}
+    assert len(read(model, sink=sink)) == 1
+    assert len(model.calls) == 2 and sink["state"] == "partial"
+    assert sink["attempts"] == 2
+    assert sink["unread_units"][0]["unit_id"] == "observations:2"
+    assert sink["conditional_failure"] == {
+        "kind": error_type.__name__, "phase": "candidate_unit_read:correction",
+        "dispatch_attempted": True}
+    assert sink["repaired_unit_ids"] == [] and sink["omitted_unit_ids"] == []
+
+
+@pytest.mark.parametrize("error_type", _CONDITIONAL_FAILURES)
+def test_initial_provider_failure_still_raises_before_recovery_admission(error_type):
+    ledger = RecoveryLedger(1)
+    model, sink = BudgetModel([error_type("The original read did not complete")], ledger), {}
+    with pytest.raises(error_type):
+        read(model, sink=sink)
+    assert len(model.calls) == 1 and ledger.phases == [] and sink == {}
+
+
+@pytest.mark.parametrize("error_type", _CONDITIONAL_FAILURES)
+def test_conditional_failure_with_no_sound_proposals_never_returns_successful_empty(error_type):
+    model, sink = Model([envelope([row(" ")]), error_type("No correction result")]), {}
+    with pytest.raises(SchemaViolation, match="conditional correction did not finish"):
+        read(model, sink=sink)
+    assert sink["state"] == "partial" and sink["proposal_count"] == 0
+    assert len(model.calls) == 2
+
+
+@pytest.mark.parametrize("error_type", [TierUnavailable, ValueError, TypeError])
+def test_conditional_independence_or_integrity_failure_is_not_masked_by_peer_retention(error_type):
+    model = Model([envelope([row(), row(" ")]), error_type("The boundary is untrusted")])
+    with pytest.raises(error_type):
+        read(model, sink={})
+    assert len(model.calls) == 2
+
+
+def test_conditional_incomplete_bytes_never_enter_retained_proposals():
+    error = OutputTruncated("The conditional response stopped early")
+    error.rejected_result = ModelResult(
+        None, envelope([row("UNFINISHED-WIRE-CONTENT", source="S2")]), Tier.ROUTINE,
+        "offline", "unfinished-reader", Usage(2, 3, 0), 0,
+        completion=Completion.LENGTH_LIMITED)
+    model, sink = Model([envelope([row(), row(" ")]), error]), {}
+    values = read(model, sink=sink)
+    assert len(values) == 1 and values[0].text == row()["text"]
+    assert "UNFINISHED-WIRE-CONTENT" not in json.dumps(sink)
+    assert sink["state"] == "partial"
+
+
+def test_conditional_failure_without_diagnostics_owner_is_not_silent_partial_success():
+    model = Model([envelope([row(), row(" ")]), ProviderUnavailable("Correction unavailable")])
+    with pytest.raises(SchemaViolation):
+        read(model)
+    assert len(model.calls) == 2
+
+
+class PermitModel(BudgetModel):
+    def __init__(self, outputs, ledger, *, budget):
+        super().__init__(outputs, ledger)
+        self.budget, self.pending = budget, None
+        self.abandoned, self.dispatch_phases = [], []
+
+    def claim_recovery(self, phase):
+        reserved = super().claim_recovery(phase)
+        if reserved:
+            self.pending = phase
+        return reserved
+
+    def abandon_recovery(self, phase):
+        assert self.pending == phase
+        self.abandoned.append(phase)
+        self.pending = None
+
+    def structured(self, *args, **kwargs):
+        self.dispatch_phases.append(self.pending)
+        self.pending = None
+        return super().structured(*args, **kwargs)
+
+
+def test_predispatch_context_failure_abandons_phase_without_refunding_reservation():
+    budget = estimate_tokens(PROMPT.user + PROMPT.system) + 1020
+    ledger = RecoveryLedger(1)
+    model, sink = PermitModel([envelope([row(), row(" ")]), envelope()], ledger,
+                              budget=budget), {}
+    assert len(read(model, sink=sink)) == 1
+    assert ledger.remaining == 0 and ledger.phases == ["candidate_unit_read:correction"]
+    assert model.abandoned == ["candidate_unit_read:correction"] and model.pending is None
+    model.structured(PROMPT, SCHEMA, Tier.ROUTINE, max_tokens=1000)
+    assert model.dispatch_phases == [None, None]
+    assert not sink["conditional_failure"]["dispatch_attempted"]
+
+
+def test_budget_denial_precedes_feedback_context_work_and_preserves_peer():
+    ledger = RecoveryLedger(0)
+    model, sink = PermitModel([envelope([row(), row(" ")])], ledger, budget=1), {}
+    assert len(read(model, sink=sink)) == 1
+    assert sink["recovery_exhausted"] and sink["conditional_failure"] is None
+    assert model.abandoned == [] and len(model.calls) == 1
+
+
+def test_atomic_reader_predispatch_failure_keeps_reserved_not_dispatched_accounting():
+    budget = estimate_tokens(PROMPT.user + PROMPT.system) + 1020
+    ledger = RecoveryLedger(1)
+    model = PermitModel([envelope([row(" ")])], ledger, budget=budget)
+    with pytest.raises(ContextOverflow):
+        _full_helpers.checked_read(model, PROMPT, SCHEMA, 1000, accept)
+    assert ledger.remaining == 0 and model.abandoned == ["candidate_unit_read:correction"]
+    assert len(model.calls) == 1 and model.pending is None

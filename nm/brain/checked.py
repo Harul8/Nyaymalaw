@@ -6,10 +6,14 @@ from copy import deepcopy
 from typing import Callable, TypeVar
 
 from nm.shared.model_port import (
+    ContentRefused,
     ContextOverflow,
     ModelPort,
     ModelResult,
+    OutputTruncated,
     Prompt,
+    ProviderUnavailable,
+    RateLimited,
     SchemaViolation,
     Tier,
     TierUnavailable,
@@ -44,6 +48,10 @@ def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
         except SchemaViolation as exc:
             if attempt:
                 raise
+            phase = f"{prompt.operation or 'structured_read'}:correction"
+            if not claim_recovery(model, phase):
+                raise SchemaViolation(
+                    f"The shared recovery budget is exhausted for {phase}: {exc}") from exc
             correction = {
                 "original_input": json.loads(prompt.user),
                 "validation_issue": str(exc),
@@ -75,12 +83,9 @@ def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
                                          separators=(",", ":"))
             if (estimate_tokens(repair_system + repair_user) + output_limit
                     > model.context_budget(tier)):
+                abandon_recovery(model, phase)
                 raise ContextOverflow(
                     "The full conversation exceeds the correction context budget") from exc
-            phase = f"{prompt.operation or 'structured_read'}:correction"
-            if not claim_recovery(model, phase):
-                raise SchemaViolation(
-                    f"The shared recovery budget is exhausted for {phase}: {exc}") from exc
             current = Prompt(system=repair_system, user=repair_user,
                              operation=prompt.operation)
     raise AssertionError("The correction loop did not return or raise")
@@ -101,6 +106,19 @@ def claim_recovery(model: ModelPort, phase: str) -> bool:
     if not isinstance(result, bool):
         raise TypeError("The owning recovery ledger must return a boolean decision")
     return result
+
+
+def abandon_recovery(model: ModelPort, phase: str) -> None:
+    """Clear a reservation's pending dispatch association without refunding it."""
+    owner = getattr(model, "abandon_recovery", None)
+    if owner is not None:
+        owner(phase)
+
+
+def _unread_recovery_units(failed: list[dict], issue: str) -> list[dict]:
+    return [{"unit_id": unit["unit_id"], "field": unit["field"],
+             "validation_issue": unit["validation_issue"] + "; " + issue}
+            for unit in failed]
 
 
 def _unit_specs(schema: dict, unit_fields: tuple[str, ...]) -> dict[str, dict]:
@@ -313,48 +331,60 @@ def checked_unit_read(model: ModelPort, prompt: Prompt, schema: dict,
     final_shell_issue = shell_issue
     final_data = original
     recovery_exhausted = False
+    conditional_failure = None
     if failed or shell_issue or first_rejection:
         keyed = not shell_issue and original is not None and bool(failed)
         correction_schema = _repair_schema(failed, specs) if keyed else schema
-        repair_prompt = _repair_prompt(
-            model, prompt, output_limit, tier, retained, failed,
-            shell_issue or first_rejection or "Independent proposal units failed validation",
-            keyed=keyed)
         phase = f"{prompt.operation or 'structured_read'}:correction"
         if not claim_recovery(model, phase):
             recovery_exhausted = True
-            unread = [{"unit_id": unit["unit_id"], "field": unit["field"],
-                       "validation_issue": unit["validation_issue"]
-                       + "; the shared recovery budget is exhausted"}
-                      for unit in failed]
+            unread = _unread_recovery_units(failed, "the shared recovery budget is exhausted")
             if not unread:
                 final_shell_issue = (shell_issue or first_rejection
                                      or "The shared recovery budget is exhausted")
         else:
-            attempts = 2
-            corrected, correction_rejection = _completed_object(
-                model, repair_prompt, correction_schema, output_limit, tier)
-            if keyed and not (allow_complete_replacement and isinstance(corrected, dict)
-                              and "repairs" not in corrected
-                              and all(field in corrected for field in unit_fields)):
-                repaired, omitted, unread, final_shell_issue = _repair_units(
-                    corrected, original, schema, unit_fields, failed, accept,
-                    correction_schema)
+            dispatch_attempted = False
+            try:
+                repair_prompt = _repair_prompt(
+                    model, prompt, output_limit, tier, retained, failed,
+                    shell_issue or first_rejection
+                    or "Independent proposal units failed validation", keyed=keyed)
+                attempts = 2
+                dispatch_attempted = True
+                corrected, correction_rejection = _completed_object(
+                    model, repair_prompt, correction_schema, output_limit, tier)
+            except (ContextOverflow, ProviderUnavailable, OutputTruncated,
+                    ContentRefused, RateLimited) as exc:
+                if not dispatch_attempted:
+                    abandon_recovery(model, phase)
+                conditional_failure = {"kind": type(exc).__name__, "phase": phase,
+                                       "dispatch_attempted": dispatch_attempted}
+                issue = "The conditional correction did not finish: " + str(exc)
+                unread = _unread_recovery_units(failed, issue)
+                if not unread:
+                    final_shell_issue = shell_issue or first_rejection or issue
             else:
-                final_data = corrected
-                repaired, correction_failed, final_shell_issue = _read_units(
-                    corrected, schema, unit_fields, accept, prefix="correction:")
-                # A complete replacement has no correspondence to prior failed IDs.
-                # Preserve its checked proposals without pretending absent original
-                # identities were corrected or explicitly omitted.
-                unread = [{"unit_id": unit["unit_id"], "field": unit["field"],
-                           "validation_issue": "Replacement did not identify this failed unit"}
-                          for unit in failed]
-                unread.extend({key: value for key, value in unit.items()
-                               if key not in ("proposal", "accepted")}
-                              for unit in correction_failed)
-            if correction_rejection and corrected is None:
-                final_shell_issue = correction_rejection
+                if keyed and not (allow_complete_replacement and isinstance(corrected, dict)
+                                  and "repairs" not in corrected
+                                  and all(field in corrected for field in unit_fields)):
+                    repaired, omitted, unread, final_shell_issue = _repair_units(
+                        corrected, original, schema, unit_fields, failed, accept,
+                        correction_schema)
+                else:
+                    final_data = corrected
+                    repaired, correction_failed, final_shell_issue = _read_units(
+                        corrected, schema, unit_fields, accept, prefix="correction:")
+                    # A complete replacement has no correspondence to prior failed IDs.
+                    # Preserve its checked proposals without pretending absent original
+                    # identities were corrected or explicitly omitted.
+                    unread = [{"unit_id": unit["unit_id"], "field": unit["field"],
+                               "validation_issue": "Replacement did not identify this failed unit"}
+                              for unit in failed]
+                    unread.extend({key: value for key, value in unit.items()
+                                   if key not in ("proposal", "accepted")}
+                                  for unit in correction_failed)
+                if correction_rejection and corrected is None:
+                    final_shell_issue = correction_rejection
     values, kept = [], []
     for unit in [*retained, *repaired]:
         if not any(unit["accepted"] == previous for previous in values):
@@ -376,6 +406,7 @@ def checked_unit_read(model: ModelPort, prompt: Prompt, schema: dict,
         diagnostics.update({
             "state": "partial" if partial else "returned", "attempts": attempts,
             "recovery_exhausted": recovery_exhausted,
+            "conditional_failure": conditional_failure,
             "proposal_count": len(values),
             "retained_unit_ids": [unit["unit_id"] for unit in retained],
             "repaired_unit_ids": [unit["unit_id"] for unit in repaired],

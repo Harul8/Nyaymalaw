@@ -1,9 +1,10 @@
 """Unfamiliar passages and fabricated replies through the shipped detail reader.
 
 These cases exercise mechanical admission and bounded correction, without a
-provider. An admitted false statement is recorded as a semantic dependency;
-an omitted valid sibling is recorded as an unprotected extraction repair gap.
-Neither is presented as a successful protection merely because pytest passes.
+provider. An admitted false statement is recorded as a semantic dependency.
+Sound siblings must survive correction and strict completed-object quarantine;
+nonconforming repairs remain unread rather than becoming complete extractions.
+Proposal admission is never presented as proof of saving or semantic truth.
 """
 
 import json
@@ -80,16 +81,21 @@ class ScriptedExtractor:
             "schema_boundary": "strict_adapter_then_brain" if self.strict
             else "permissive_transport_then_brain",
         })
+        result = ModelResult(text=None, data=data, tier=tier, provider="offline",
+                             model="fabricated-pressure-extractor",
+                             usage=Usage(0, 0, 0), latency_ms=0,
+                             completion=self.completion)
         if self.strict:
             try:
                 require_schema(data, schema)
             except SchemaViolation as exc:
                 self.calls[-1]["adapter_schema_error"] = str(exc)
+                # A completed rejected object remains untrusted. The owning
+                # helper still validates each row before retaining a proposal.
+                if result.usable and isinstance(data, dict):
+                    raise SchemaViolation(str(exc), rejected_result=result) from exc
                 raise
-        return ModelResult(text=None, data=data, tier=tier, provider="offline",
-                           model="fabricated-pressure-extractor",
-                           usage=Usage(0, 0, 0), latency_ms=0,
-                           completion=self.completion)
+        return result
 
 
 def row(source="L1", statement=None, *, assignment="matter:discussion",
@@ -110,6 +116,11 @@ def output(*new_rows, changes=()):
     return {"new_items": list(new_rows), "changes": list(changes)}
 
 
+def repair(unit_id, *proposals):
+    """Declare exact fabricated keyed wire output, without fixture inference."""
+    return {"repairs": {unit_id: {"proposals": list(proposals)}}}
+
+
 def change(**overrides):
     return {**row(), "relation": "corrects",
             "related_material_ids": [SAVED["id"]], **overrides}
@@ -118,11 +129,12 @@ def change(**overrides):
 def run(outputs, *, latest=LATEST, earlier=EARLIER, saved=(SAVED,),
         disputes=(DISPUTE,), completion=Completion.COMPLETE, strict=False):
     model = ScriptedExtractor(outputs, completion=completion, strict=strict)
+    model.read_diagnostics = {}
     try:
         candidates = extract_details(
             model, earlier=earlier, latest=latest,
             current_matter_id="pressure-packing", disputes=disputes,
-            prior_material=saved)
+            prior_material=saved, diagnostics=model.read_diagnostics)
         return model, candidates, None
     except SchemaViolation as exc:
         return model, (), exc
@@ -132,7 +144,7 @@ def evidence(case_id, passage, outputs, model, expected, observed, *,
              scenario="faulty", claim_scope="mechanical",
              protection_status="blocked", notes=""):
     return record_case(
-        case_id, boundary="nm.brain.material.extract_details / checked_read",
+        case_id, boundary="nm.brain.material.extract_details / checked_unit_read",
         user_passage=passage, model_outputs=outputs,
         expected=expected, observed=observed, calls=model.calls,
         scenario=scenario, claim_scope=claim_scope,
@@ -230,18 +242,18 @@ def test_pressure_extractor_precise_fault_then_valid_neighbour_recovers(
     good = row()
     bad = deepcopy(good)
     mutate(bad)
-    outputs = [output(bad), output(good)]
+    outputs = [output(bad), repair("new_items:1", good)]
     model, candidates, exc = run(outputs)
-    repair = model.calls[1]["input"]
+    feedback = model.calls[1]["input"]
     evidence(case_id, LATEST, outputs, model,
              {"admitted": True, "calls": 2, "corrected_statement": good["statement"],
-              "precise_issue": True, "rejected_output_preserved": True,
+              "precise_issue": True, "failed_proposal_preserved": True,
               "original_input_preserved": True},
              {"admitted": exc is None, "calls": len(model.calls),
               "corrected_statement": candidates[0].statement,
-              "precise_issue": issue_fragment in repair["validation_issue"],
-              "rejected_output_preserved": repair["rejected_output"] == outputs[0],
-              "original_input_preserved": repair["original_input"]
+              "precise_issue": issue_fragment in feedback["failed_units"][0]["validation_issue"],
+              "failed_proposal_preserved": feedback["failed_units"][0]["proposal"] == bad,
+              "original_input_preserved": feedback["original_input"]
               == model.calls[0]["input"]}, protection_status="recovered")
 
 
@@ -258,7 +270,7 @@ def test_pressure_extractor_foreign_reference_or_redundant_assignment_never_admi
         case_id, mutate):
     bad = row()
     mutate(bad)
-    outputs = [output(bad), output(bad)]
+    outputs = [output(bad), repair("new_items:1", bad)]
     model, candidates, exc = run(outputs)
     evidence(case_id, LATEST, outputs, model,
              {"blocked": True, "calls": 2, "admitted_count": 0,
@@ -275,7 +287,7 @@ def test_pressure_extractor_foreign_reference_or_redundant_assignment_never_admi
 def test_pressure_extractor_new_cannot_masquerade_as_change():
     bad = change(relation="new")
     good = change()
-    outputs = [output(changes=[bad]), output(changes=[good])]
+    outputs = [output(changes=[bad]), repair("changes:1", good)]
     model, candidates, exc = run(outputs)
     evidence("extractor-12-new-in-change-recovered", LATEST, outputs, model,
              {"admitted": True, "calls": 2, "relation": "corrects",
@@ -323,37 +335,44 @@ def test_pressure_extractor_false_fact_with_exact_quote_is_semantic_dependency()
              "grounding review must reject it. This is not a released reply.")
 
 
-def test_pressure_extractor_whole_repair_can_drop_previous_valid_sibling():
+def test_pressure_extractor_nonconforming_whole_repair_preserves_sound_peer_as_partial():
     good = row("L2", "Warehouse delivery may have occurred on 21 November; "
                "the register remains unchecked.", basis="uncertain")
     faulty = row("L3", "The letter is disputed.")
     faulty["why_material"] = ""
     repaired = {**faulty, "why_material": "The disputed offered test date "
                 "bears on performance chronology."}
+    # Deliberately violate the declared keyed correction shape. The new raw
+    # envelope cannot erase the sound first-attempt proposal or prove a repair.
     outputs = [output(good, faulty), output(repaired)]
     model, candidates, exc = run(outputs)
-    evidence("extractor-15-repair-drops-valid-sibling", LATEST, outputs, model,
-             {"admitted": True, "calls": 2, "count": 1,
-              "previous_valid_sibling_retained": False,
-              "previous_valid_sibling_in_repair_context": True},
-             {"admitted": exc is None, "calls": len(model.calls),
+    context = model.calls[1]["input"]["retained_proposal_context"]
+    evidence("extractor-15-nonconforming-repair-retains-peer", LATEST, outputs, model,
+             {"proposals_returned": True, "calls": 2, "count": 1,
+              "previous_valid_sibling_retained": True,
+              "previous_valid_sibling_in_repair_context": True,
+              "reading_state": "partial", "failed_unit_unread": True},
+             {"proposals_returned": exc is None, "calls": len(model.calls),
               "count": len(candidates),
               "previous_valid_sibling_retained": any(
                   c.statement == good["statement"] for c in candidates),
-              "previous_valid_sibling_in_repair_context": good in
-              model.calls[1]["input"]["rejected_output"]["new_items"]},
-             scenario="mixed", claim_scope="known_gap",
-             protection_status="gap_demonstrated",
-             notes="Extractor correction replaces the full batch. The prior "
-             "valid proposal is supplied in correction context but is not "
-             "mechanically retained. Later coverage can report the omission; "
-             "this boundary does not restore it.")
+              "previous_valid_sibling_in_repair_context": any(
+                  unit["proposal"] == good for unit in context),
+              "reading_state": model.read_diagnostics["state"],
+              "failed_unit_unread": [unit["unit_id"] for unit in
+                                     model.read_diagnostics["unread_units"]]
+              == ["new_items:2"]},
+             scenario="mixed", protection_status="partial_preserved",
+             notes="The original sound proposal survives. The unowned replacement "
+             "envelope is not accepted as a keyed repair; the failed unit remains "
+             "unread. Neither partial proposal return nor retention proves complete "
+             "account coverage, semantic truth or a saved effect.")
 
 
 def test_pressure_extractor_repeat_bad_reason_stops_after_one_correction():
     bad = row()
     bad["why_material"] = ""
-    outputs = [output(bad), output(bad)]
+    outputs = [output(bad), repair("new_items:1", bad)]
     model, candidates, exc = run(outputs)
     evidence("extractor-16-repeat-bad-bounded", LATEST, outputs, model,
              {"blocked": True, "calls": 2, "count": 0,
@@ -383,7 +402,7 @@ def test_pressure_extractor_correction_preserves_complete_input_and_provenance()
     bad = row()
     bad["why_material"] = ""
     good = row()
-    outputs = [output(bad), output(good)]
+    outputs = [output(bad), repair("new_items:1", good)]
     model, candidates, exc = run(outputs)
     original = model.calls[1]["input"]["original_input"]
     active = original["active_material"][0]
@@ -408,60 +427,62 @@ def test_pressure_extractor_correction_preserves_complete_input_and_provenance()
              observed, scenario="mixed", protection_status="recovered")
 
 
-def test_pressure_extractor_strict_adapter_rejection_preserves_original_not_output():
+def test_pressure_extractor_strict_rejection_exposes_only_completed_quarantine_for_repair():
     bad = row(source="L999")
     good = row()
-    outputs = [output(bad), output(good)]
+    outputs = [output(bad), repair("new_items:1", good)]
     model, candidates, exc = run(outputs, strict=True)
-    repair = model.calls[1]["input"]
-    evidence("extractor-19-strict-source-rejection-recovered", LATEST, outputs,
+    feedback = model.calls[1]["input"]
+    evidence("extractor-19-strict-source-quarantine-recovered", LATEST, outputs,
              model,
-             {"admitted": True, "calls": 2, "adapter_rejected_first_output": True,
-              "rejected_output_unavailable_to_brain": True,
+             {"proposal_admitted": True, "calls": 2, "adapter_rejected_first_output": True,
+              "failed_proposal_preserved": True,
               "complete_original_input_preserved": True,
-              "corrected_statement": good["statement"]},
-             {"admitted": exc is None, "calls": len(model.calls),
-              "adapter_rejected_first_output": "adapter_schema_error"
-              in model.calls[0],
-              "rejected_output_unavailable_to_brain": repair["rejected_output"] is None,
-              "complete_original_input_preserved": repair["original_input"]
+              "corrected_statement": good["statement"], "reading_state": "returned"},
+             {"proposal_admitted": exc is None, "calls": len(model.calls),
+              "adapter_rejected_first_output": "adapter_schema_error" in model.calls[0],
+              "failed_proposal_preserved": feedback["failed_units"][0]["proposal"] == bad,
+              "complete_original_input_preserved": feedback["original_input"]
               == model.calls[0]["input"],
-              "corrected_statement": candidates[0].statement},
+              "corrected_statement": candidates[0].statement,
+              "reading_state": model.read_diagnostics["state"]},
              protection_status="recovered",
-             notes="The strict transport invokes actual require_schema before "
-             "returning ModelResult. Brain correction receives the adapter "
-             "issue and original input, but no rejected structured object. "
-             "Earlier permissive-transport cases explicitly exercise schema "
-             "validation at the Brain owning boundary instead.")
+             notes="The strict transport rejects the original envelope and exposes "
+             "its complete object as quarantine. It is not a usable model result. "
+             "The owning helper validates the keyed replacement independently "
+             "against the original source and assignment contract.")
 
 
-def test_pressure_extractor_strict_envelope_hides_valid_sibling_before_correction():
+def test_pressure_extractor_strict_quarantine_retains_sound_peer_during_keyed_repair():
     good = row("L2", "Warehouse delivery may have occurred on 21 November; "
                "the register remains unchecked.", basis="uncertain")
     bad = row("L999", "The supplier's letter is disputed.", kind="evidence")
     repaired = {**bad, "source_id": "L3"}
-    outputs = [output(good, bad), output(repaired)]
+    outputs = [output(good, bad), repair("new_items:2", repaired)]
     model, candidates, exc = run(outputs, strict=True)
-    repair = model.calls[1]["input"]
-    evidence("extractor-20-strict-hidden-sibling-gap", LATEST, outputs, model,
-             {"admitted": True, "calls": 2, "count": 1,
+    feedback = model.calls[1]["input"]
+    evidence("extractor-20-strict-quarantine-sibling-retained", LATEST, outputs, model,
+             {"proposals_returned": True, "calls": 2, "count": 2,
               "adapter_rejected_first_envelope": True,
-              "previous_valid_sibling_retained": False,
-              "first_envelope_available_in_repair_context": False,
-              "complete_original_input_preserved": True},
-             {"admitted": exc is None, "calls": len(model.calls),
+              "previous_valid_sibling_retained": True,
+              "only_failed_unit_repaired": True,
+              "retained_and_failed_context_available": True,
+              "complete_original_input_preserved": True, "reading_state": "returned"},
+             {"proposals_returned": exc is None, "calls": len(model.calls),
               "count": len(candidates),
-              "adapter_rejected_first_envelope": "adapter_schema_error"
-              in model.calls[0],
+              "adapter_rejected_first_envelope": "adapter_schema_error" in model.calls[0],
               "previous_valid_sibling_retained": any(
                   c.statement == good["statement"] for c in candidates),
-              "first_envelope_available_in_repair_context":
-              repair["rejected_output"] is not None,
-              "complete_original_input_preserved": repair["original_input"]
-              == model.calls[0]["input"]},
-             scenario="mixed", claim_scope="known_gap",
-             protection_status="gap_demonstrated",
-             notes="Whole-envelope adapter rejection happens before Brain sees "
-             "either sibling. The accepted correction omits the sound first "
-             "proposal. This characterizes hidden-peer loss, not proof of "
-             "first-attempt retention or extraction completeness.")
+              "only_failed_unit_repaired": list(model.calls[1]["fabricated_output"]["repairs"])
+              == ["new_items:2"],
+              "retained_and_failed_context_available":
+              feedback["retained_proposal_context"][0]["proposal"] == good
+              and feedback["failed_units"][0]["proposal"] == bad,
+              "complete_original_input_preserved": feedback["original_input"]
+              == model.calls[0]["input"],
+              "reading_state": model.read_diagnostics["state"]},
+             scenario="mixed", protection_status="recovered",
+             notes="Schema rejection remains enforced. Each original row is "
+             "checked locally before proposal retention; only the failed server "
+             "unit is repaired. Both resulting proposals still require independent "
+             "grounding and actual persistence before effect claims.")
