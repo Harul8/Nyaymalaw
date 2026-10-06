@@ -18,7 +18,7 @@ from tests.test_brain_source_support_verifiers import (
 FIRST = "The tenant returned the key at the station."
 SECOND = "The witness reports the parcel arrived sealed."
 MESSAGE = FIRST + "\n" + SECOND
-pytestmark = pytest.mark.parametrize("kind", ["material"])
+pytestmark = pytest.mark.parametrize("kind", ["material", "dispute"])
 
 
 def test_other_source_cannot_borrow_a_candidate_and_repairs_only_coverage(kind):

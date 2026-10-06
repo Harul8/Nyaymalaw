@@ -209,6 +209,9 @@ their own authority. Rejected, unassessed or dependency-unavailable proposals
 cannot count as represented merely because they were submitted. An already
 faithful current record may cover content without a new row. Review can
 legitimately require no changes and no fresh factual assertion.
+Each represented candidate must have independently checked support overlapping
+that original account portion. Acceptance for another source or an unrelated
+portion cannot establish this representation; shared original context is allowed.
 Outcome: Include coverage with state complete, partial or unassessed and a
 concise reason identifying the substantive judgment. Under
 coverage_selection_contract, give source_checks for every coverage_source_id:
@@ -537,7 +540,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     coverage_ids, source_references=source_references,
                     record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
                     admitted_candidate_ids=[identity for identity, row in decisions.items()
-                                            if row["verdict"] == "accept"])
+                                            if row["verdict"] == "accept"],
+                    candidate_support=decisions if source_references is not None else None)
                 last_valid_coverage = deepcopy(coverage_decision)
                 coverage_issue = None
             except SchemaViolation as exc:
