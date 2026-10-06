@@ -45,6 +45,59 @@
         "Activity 1 - Establish the supported client and subject.",
         "Activity 2 - Return the corrected opening proposal."
       ]
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "constant": "_SOURCE_SYSTEM",
+      "old_sha256": "c73f34470f32b6f059a9f365aaf14019ca453139b739e28d7800aaa1ca73c1c4",
+      "new_sha256": "058974683a8b15db756a0ea2c1cf8eefa6a0ed88be9b12a4cde53bafcb5448b0",
+      "old_words": 364,
+      "new_words": 382,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": "record_review.1",
+          "old_line": 18,
+          "new_sections": [
+            "Message"
+          ]
+        },
+        {
+          "old_paragraph": "record_review.2",
+          "old_line": 24,
+          "new_sections": [
+            "Purpose"
+          ]
+        },
+        {
+          "old_paragraph": "record_review.3",
+          "old_line": 29,
+          "new_sections": [
+            "Activity 1",
+            "Activity 2"
+          ]
+        },
+        {
+          "old_paragraph": "record_review.4",
+          "old_line": 40,
+          "new_sections": [
+            "Activity 1",
+            "Activity 2"
+          ]
+        },
+        {
+          "old_paragraph": "record_review.5",
+          "old_line": 48,
+          "new_sections": [
+            "Activity 2",
+            "Outcome"
+          ]
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Read the original source framing.",
+        "Activity 2 - Keep substantive content separate from work authority."
+      ]
     }
   ]
 }

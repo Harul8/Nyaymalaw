@@ -104,6 +104,19 @@
       "files": [
         "nm/brain/conversation.py"
       ]
+    },
+    {
+      "slice": "Order source-purpose prompt by original framing and work authority",
+      "owners": [
+        "LB-176",
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Read each original advocate source framing before classifying its purpose, without candidate formulations. Separate substantive account from review/work authority and preserve original role across later instructions. All exact owned spans require reasons; source IDs and exact words remain server-owned. Same schema, call owner and bound.",
+      "validation": "12 passed in 4.55s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/record_review.py"
+      ]
     }
   ]
 }
