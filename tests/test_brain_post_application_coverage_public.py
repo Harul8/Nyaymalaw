@@ -13,6 +13,7 @@ import pytest
 from nm.brain import turn as owner
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage, require_schema
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_material import material, mutation_scope, send
 from tests.test_brain_material_purpose import PurposeModel, item, open_account, routed, seed_plan
 from tests.test_brain_source_support_verifiers import coverage, disposition, verdict
@@ -24,7 +25,7 @@ TARGET = "application-original:material:1"
 
 
 class RawApplicationModel(PurposeModel):
-    """The consequential update review is final raw wire output, with no adapter."""
+    """Keep authored update judgments; transport only redundant selections."""
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
@@ -75,6 +76,7 @@ class RawApplicationModel(PurposeModel):
                 ],
             ),
         }
+        data = fresh_review_reply(payload, data)
         require_schema(data, schema)
         return ModelResult(
             text=None,

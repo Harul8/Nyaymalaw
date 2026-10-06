@@ -17,6 +17,7 @@ from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
 from tests.brain_pressure_support import record_case
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_evidence_rendering_public import RawExpressionModel, raw_unit
 from tests.test_brain_source_support_verifiers import (
     SCOPE,
@@ -33,7 +34,7 @@ PEER = "The east parcel remained undelivered."
 
 
 class RawSourceRecoveryModel(RawExpressionModel):
-    """Author final source and grounding wire objects without conversion helpers."""
+    """Author source/grounding judgments; transport only redundant selections."""
 
     def __init__(self, latest, *, actual_ids, initial_roles, reconsidered_roles,
                  initial_details=(), unchanged=False):
@@ -147,7 +148,7 @@ class RawSourceRecoveryModel(RawExpressionModel):
             elif prompt.operation == "extract_legal_details":
                 data = self._detail_reply(payload)
             else:
-                data = self._review_reply(prompt.operation, payload)
+                data = fresh_review_reply(payload, self._review_reply(prompt.operation, payload))
             require_schema(data, schema)
             result = ModelResult(
                 text=None, data=data, tier=tier, provider="offline-raw",

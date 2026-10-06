@@ -1503,6 +1503,21 @@
       "verification": "76 focused scope, dependency and bounded recovery tests pass; Ruff and diff check pass. Semantic source-purpose decisions are scripted, not live classification evidence.",
       "call_impact": "Zero added calls or stages. Clear decision dependency order replaces repeated domain instructions within existing Judge call.",
       "remaining": "Integrated fresh neutral-to-opposing browser test is required. Requested recap and mutation-target interpretation remain independently open."
+    },
+    {
+      "piece": "Public regression fixture transport migration",
+      "base": "b914ed6",
+      "production_changes": 0,
+      "test_files": [
+        "tests/test_brain_coverage_source_recovery_public.py",
+        "tests/test_brain_post_application_coverage_public.py"
+      ],
+      "invariant": "Fresh tests must supply checked_source_selection_v1; canonical derived source_ids cannot be supplied as fresh model output.",
+      "causal_baseline": "13 failed /23 passed; both adapters returned redundant canonical account_check.source_ids before schema validation, preventing intended admission paths. Earlier reader-prompt replacement reproduced the same failures.",
+      "change": "Existing faithful selection transport only at two provider-return boundaries. It removes only matching unique owned redundant source_ids. No purpose/support/offset/target/role/coverage/assertion change. Canonical helper and malformed diagnostic/save-proof injections unchanged.",
+      "verification": "Same36 public cases all pass after migration; Ruff clean. Admitted effects, bounded correction and exact replay assertions retained.",
+      "call_impact": "No production/model-flow change or live calls. Existing asserted call counts unchanged.",
+      "remaining": "Pinned-model semantics and useful browser delivery remain independently open. These fixture failures are explained causally, not waived as a blanket baseline."
     }
   ],
   "additional_reviewer_input": {
