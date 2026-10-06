@@ -234,6 +234,21 @@
       "files": [
         "nm/brain/continuation.py"
       ]
+    },
+    {
+      "slice": "Order response review by requested outcome and independent evidence",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-185",
+        "LB-187",
+        "LB-188"
+      ],
+      "decision": "Independent response review now follows actual request/original account; relevant execution/result; exact checked legal use including adverse coverage; visible proposal purpose/identity; justified sufficiency and attributed progress. Every rejection must name consequential mismatch, not style. Ordinary factual answers, already-correct state and justified no-change remain valid. Retention fields are empty on acceptance until verdict-specific wire shapes land separately.",
+      "validation": "38 passed in 2.24s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/continuation_verification.py"
+      ]
     }
   ]
 }

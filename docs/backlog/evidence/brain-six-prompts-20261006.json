@@ -540,6 +540,66 @@
         "Activity 5 - Propose useful work and preserve identities.",
         "Activity 6 - Decide sufficiency and attributed progress."
       ]
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "c220d80cd24cd2d417f8c0417a35ac870008e78266c829ef5094ca4a809502f9",
+      "new_sha256": "92909acc576565229f9021f132361de92e597d781f74c8a3530a5f72ddeaeacf",
+      "old_words": 1244,
+      "new_words": 1638,
+      "paragraph_mapping": [
+        {
+          "old": 1,
+          "new": 1,
+          "preserves": "Full attributed data, source purpose, earlier NM/source-role limitations.",
+          "adds": "Receipt observations do not certify fulfillment or persistence."
+        },
+        {
+          "old": 2,
+          "new": 2,
+          "preserves": "Independent whole-unit review, useful supported delivery, valid peers, no advice or authority.",
+          "adds": "Actual request/original evidence first; precise consequential failure, no style gate."
+        },
+        {
+          "old": 3,
+          "new": [
+            3,
+            4,
+            5
+          ],
+          "preserves": "Every claim/embedded premise, attribution and reference integrity, checked legal use with exact owner and conditions, required-law checks.",
+          "adds": "Any block kind can contain an effect claim; material opposing/adverse content and requested coverage cannot be omitted."
+        },
+        {
+          "old": 4,
+          "new": 6,
+          "preserves": "Useful professional engagement, visibly expressed proposals, saved identity, exact owner, no false duplication by paragraph layout."
+        },
+        {
+          "old": 5,
+          "new": [
+            4,
+            7
+          ],
+          "preserves": "Separate immediate/task sufficiency, full task scope, exact progress/check owners and omitted question transitions.",
+          "adds": "Result_supported judges actual relevant result, requested effects and unresolved coverage, never intention."
+        },
+        {
+          "old": 6,
+          "new": 8,
+          "preserves": "Exactly one verdict per supplied unit, all checks mandatory, supported factual retention only.",
+          "adds": "Accepted units explicitly return empty retention fields under the existing schema."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Establish the request and the attributed account.",
+        "Activity 2 - Check actual execution and claimed results.",
+        "Activity 3 - Check the selected legal use and coverage.",
+        "Activity 4 - Check useful engagement and proposal identities.",
+        "Activity 5 - Check sufficiency, task scope and attributed progress."
+      ]
     }
   ]
 }
