@@ -117,10 +117,22 @@ def test_narrowed_pure_ack_is_canonicalized_before_its_independent_review():
                                        'verify_continuation']
     reviewed = model.calls[-1][1]
     assert reviewed['input']['material_coverage']['execution']['requests'][0][
-        'acknowledgement_delivery'] == 'code_only'
-    assert all(block['text'] == 'The requested record work remains unfinished.'
-               for block in reviewed['units'][0]['blocks'])
-    assert [block['id'] for block in result.units[0]['blocks']] == ['account-0', 'limit-0']
+        'acknowledgement_delivery'] == 'substantive_followup'
+    account, limitation, status = reviewed['units'][0]['blocks']
+    assert account['id'] == 'account-0'
+    assert account['text'] == 'Your message includes: “The handover was on 4 May.”'
+    assert account['evidence_expression']['operator'] == 'source_account'
+    assert limitation['id'] == 'limit-0'
+    assert limitation['text'] == (
+        'The requested conclusion remains unresolved on the supplied support.')
+    assert limitation['evidence_expression']['operator'] == 'limitation'
+    assert status['id'] == reviewed['units'][0]['record_outcome']['block_id']
+    assert status['text'] == 'The requested record work remains unfinished.'
+    assert status['evidence_expression']['operator'] == 'record_result'
+    assert [block['id'] for block in result.units[0]['blocks']] == [
+        'account-0', 'limit-0', status['id']]
+    assert [block['text'] for block in result.units[0]['blocks']] == [
+        account['text'], limitation['text'], status['text']]
     assert result.coverage[0]['state'] == 'partial'
 
 

@@ -13,6 +13,7 @@ import nm.brain.turn as brain_turn
 from nm.brain.execution_contracts import RECORD_ACKNOWLEDGEMENT_CONTRACT
 from nm.brain.mutation_contracts import model_mutation_context
 from nm.shared.store_port import StaleWrite
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_material import material, mutation_scope, send
 from tests.test_brain_material_purpose import (
     PurposeModel,
@@ -332,6 +333,13 @@ def test_readonly_and_completed_empty_review_receipts_distinguish_evidence_and_f
 
 def test_authorised_repair_receipt_retains_original_account_and_instruction_provenance(
         client, wired, monkeypatch):
+    class CurrentReviewWireModel(PurposeModel):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            # PurposeModel adds its original-account selections after the base
+            # fixture's transport. Keep those same checks in the fresh wire shape.
+            return replace(result, data=fresh_review_reply(self.seen[-1][1], result.data))
+
     account = "The freight is held at the depot by someone whose identity I do not know."
     request = "Repair your custodian description against my original account."
     initial = material("circumstance", "The freight is held at the depot.", account,
@@ -352,7 +360,7 @@ def test_authorised_repair_receipt_retains_original_account_and_instruction_prov
                  "target_ids": ["receipt-original:material:1"],
                  "success_condition": restored["statement"]}),
     ])
-    model = PurposeModel([seed, follow], review_authority_only=True)
+    model = CurrentReviewWireModel([seed, follow], review_authority_only=True)
     opened = open_account(client, wired, monkeypatch, model, account,
                           turn_id="receipt-original")
     before = wired.store.load(opened["matter_id"])

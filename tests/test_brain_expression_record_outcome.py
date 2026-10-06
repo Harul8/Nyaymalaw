@@ -13,12 +13,13 @@ from tests.test_brain_execution_contracts import receipt
 pytestmark = pytest.mark.class_a
 
 
-def fixture(kind="account"):
+def fixture(kind="account", *, operator="source_account"):
     source = {"L1": {"id": "L1", "role": "advocate", "turn_id": "turn",
                       "text": "The date is not confirmed."}}
     block = rendered_block({"id": "account", "kind": kind, "uncertainty": "reported",
                             "evidence_expression": {
-                                "operator": "source_account", "source_ids": ["L1"],
+                                "operator": operator,
+                                "source_ids": [] if operator == "record_result" else ["L1"],
                                 "record_ids": [], "focus": "none"}},
                            spans=source, records={}, sources={})
     evidence = receipt(activated=())
@@ -47,7 +48,7 @@ def test_added_status_has_its_own_expression_and_preserves_substantive_owner(kin
 
 
 def test_completion_owner_is_rendered_from_unfinished_receipt_not_its_expression_quote():
-    continuation, evidence = fixture("completion")
+    continuation, evidence = fixture("completion", operator="record_result")
     result = canonical_record_acknowledgements(continuation, evidence, record_catalogue={})
     block, = result["units"][0]["blocks"]
     assert block["text"] == "The requested record work remains unfinished."
@@ -55,7 +56,7 @@ def test_completion_owner_is_rendered_from_unfinished_receipt_not_its_expression
 
 
 def test_unknown_expression_contract_is_not_silently_repaired_by_status_rendering():
-    continuation, evidence = fixture("completion")
+    continuation, evidence = fixture("completion", operator="record_result")
     continuation["units"][0]["blocks"][0]["expression_contract"] = "unknown"
     with pytest.raises(ExecutionEvidenceInvalid):
         canonical_record_acknowledgements(continuation, evidence, record_catalogue={})

@@ -71,7 +71,7 @@ def test_existing_v3_replay_does_not_rewrite_its_historical_linked_completion():
     evidence["record_changes"] = []
     evidence["requests"][0].update(
         record_requirement={"kind": "change"},
-        acknowledgement_contract=contracts.RECORD_ACKNOWLEDGEMENT_CONTRACT)
+        acknowledgement_contract="record_acknowledgement_v3")
     block = {"id": "old-linked", "kind": "completion", "text": LIE,
              "span_ids": [], "record_ids": [], "legal_source_ids": [],
              "inline_citations": [], "uncertainty": "none"}

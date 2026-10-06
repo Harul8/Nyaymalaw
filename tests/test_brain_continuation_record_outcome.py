@@ -277,7 +277,14 @@ def test_two_bad_effect_declarations_retain_reviewed_facts_with_specific_unresol
     assert result.coverage[0]["state"] == "partial"
     released = result.units[0]
     assert released["record_outcome"]["status"] == "unresolved"
-    assert released["record_outcome"]["block_id"] == "limit-0"
+    account, limitation, status = released["blocks"]
+    assert account["id"] == "account-0"
+    assert account["text"] == 'Your message includes: “The handover was on 4 May.”'
+    assert limitation["id"] == "limit-0"
+    assert limitation["evidence_expression"]["operator"] == "limitation"
+    assert released["record_outcome"]["block_id"] == status["id"] != "limit-0"
+    assert status["evidence_expression"]["operator"] == "record_result"
+    assert status["text"] == "The requested record work remains unfinished."
     assert released["questions"] == released["next_work"] == released["progress_updates"] == []
     assert released["sufficiency"]["status"] == "partial"
     assert released["record_outcome_contract"] == RECORD_OUTCOME_CONTRACT

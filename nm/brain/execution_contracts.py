@@ -18,7 +18,8 @@ from nm.shared.model_port import SchemaViolation, require_schema
 
 RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
 SCOPED_RECORD_OUTCOME_CONTRACT = "scoped_record_outcome_v2"
-RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v3"
+RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v4"
+_PREVIOUS_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v3"
 _LEGACY_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v2"
 RECORD_OUTCOME_SCHEMA = {
     "type": "object",
@@ -789,48 +790,62 @@ def _legacy_record_acknowledgements(
 def canonical_record_acknowledgements(
         continuation: dict, execution: dict, *, record_catalogue: dict,
         require_checked: bool = True, replay: bool = False) -> dict:
-    """Render declared record-result nodes in every delivery mode.
+    """Dispatch fresh status composition and exact historical rendering.
 
-    Fresh outcomes use a versioned renderer even when explanatory paragraphs or
-    follow-ups are present. Explicit completion/status nodes are application
-    text. Separately requested substantive work and linked follow-ups keep their
-    own independently reviewed blocks. If an outcome shares their owner, append
-    a separate code-owned status node rather than erase that deliverable.
-
-    This does not classify arbitrary prose: an operation claim disguised inside
-    account/assessment/question text remains an independent semantic judgment.
-    Historical unstamped and v2 receipts retain their original renderer. Unknown
-    contracts fail rather than silently reinterpreting historical responses.
+    Fresh v4 uses expression ownership, not mutable presentation labels. v3,
+    v2 and unstamped replay retain their original selection and rendering.
+    This supplies no semantic completion verdict and never upgrades saved proof.
     """
+    allowed = (None, _LEGACY_ACKNOWLEDGEMENT_CONTRACT,
+               _PREVIOUS_ACKNOWLEDGEMENT_CONTRACT, RECORD_ACKNOWLEDGEMENT_CONTRACT)
+    if any(request.get("acknowledgement_contract") not in allowed
+           for request in execution["requests"]):
+        raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
+    result = deepcopy(continuation)
+    for request in execution["requests"]:
+        version = request.get("acknowledgement_contract")
+        scoped_execution = {**execution, "requests": [request]}
+        if replay and version in (None, _LEGACY_ACKNOWLEDGEMENT_CONTRACT):
+            result = _legacy_record_acknowledgements(
+                result, scoped_execution, record_catalogue=record_catalogue,
+                require_checked=require_checked, replay=True)
+        else:
+            contract = version if replay else RECORD_ACKNOWLEDGEMENT_CONTRACT
+            result = _versioned_record_acknowledgements(
+                result, scoped_execution, record_catalogue=record_catalogue,
+                require_checked=require_checked, replay=replay,
+                contract=contract,
+                expression_owned=contract == RECORD_ACKNOWLEDGEMENT_CONTRACT)
+    return result
+
+
+def _versioned_record_acknowledgements(
+        continuation: dict, execution: dict, *, record_catalogue: dict,
+        require_checked: bool, replay: bool, contract: str,
+        expression_owned: bool) -> dict:
+    """Preserve the v3 algorithm; v4 changes only fresh display ownership."""
     result = deepcopy(continuation)
     units = {unit["request_index"]: unit for unit in result["units"]}
     effects = None
     changes = None
     for request in execution["requests"]:
         version = request.get("acknowledgement_contract")
-        if version not in (None, _LEGACY_ACKNOWLEDGEMENT_CONTRACT,
-                           RECORD_ACKNOWLEDGEMENT_CONTRACT):
-            raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
         scoped_contract = _scoped_outcome_contract(execution)
-        if replay and version != RECORD_ACKNOWLEDGEMENT_CONTRACT:
-            result = _legacy_record_acknowledgements(
-                result, {**execution, "requests": [request]},
-                record_catalogue=record_catalogue, require_checked=require_checked,
-                replay=True)
-            units = {unit["request_index"]: unit for unit in result["units"]}
-            continue
         index = request["request_index"]
         unit = units.get(index)
         if unit is None:
             if (request.get("response_mode") == "record_acknowledgement"
                     or isinstance(request.get("record_requirement"), dict)
                     and request["record_requirement"].get("kind") != "none"):
-                request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
+                request["acknowledgement_contract"] = contract
                 request["acknowledgement_delivery"] = "code_only"
             continue
         outcome = unit.get("record_outcome", {})
         if outcome.get("status", "none") == "none":
-            if not replay and any(block["kind"] == "completion" for block in unit["blocks"]):
+            if not replay and any(
+                    (block.get("evidence_expression", {}).get("operator") == "record_result"
+                     if expression_owned and "evidence_expression" in block
+                     else block["kind"] == "completion") for block in unit["blocks"]):
                 raise SchemaViolation(
                     "A completion block needs a confirmed record outcome; "
                     "use an ordinary evidence block for a non-record answer")
@@ -840,7 +855,7 @@ def canonical_record_acknowledgements(
                     "A scoped record result has no declared record outcome")
             # A non-record answer remains semantic work. This renderer cannot
             # infer an operation claim or repair a wrongly classified request.
-            if version == RECORD_ACKNOWLEDGEMENT_CONTRACT:
+            if version == contract:
                 raise ExecutionEvidenceInvalid(
                     "A code record result has no declared record outcome")
             continue
@@ -855,7 +870,7 @@ def canonical_record_acknowledgements(
             # Retained factual subsets use unresolved without inventing a
             # separate requested record task. Their actual limitation remains
             # independently checked substantive content.
-            if version == RECORD_ACKNOWLEDGEMENT_CONTRACT:
+            if version == contract:
                 raise ExecutionEvidenceInvalid(
                     "A code record result has no requested record scope")
             continue
@@ -872,11 +887,13 @@ def canonical_record_acknowledgements(
                   for link in unit[field]}
         pure = (request.get("response_mode") == "record_acknowledgement"
                 and not linked)
-        selected = [block for block in unit["blocks"]
-                    if pure or block["kind"] == "completion"
-                    and (not replay or scoped_contract or block["id"] not in linked)
-                    or block["id"] not in linked and block["id"] == owner["id"]
-                    and block["kind"] in ("acknowledgment", "limitation")]
+        selected = [block for block in unit["blocks"] if (
+            block.get("evidence_expression", {}).get("operator") == "record_result"
+            if expression_owned and "evidence_expression" in block else
+            pure or block["kind"] == "completion"
+            and (not replay or scoped_contract or block["id"] not in linked)
+            or block["id"] not in linked and block["id"] == owner["id"]
+            and block["kind"] in ("acknowledgment", "limitation"))]
         if owner not in selected:
             if selected:
                 outcome["block_id"] = selected[0]["id"]
@@ -919,7 +936,7 @@ def canonical_record_acknowledgements(
                 block.pop("inline_citations", None)
             else:
                 block["inline_citations"] = []
-        request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
+        request["acknowledgement_contract"] = contract
         request["acknowledgement_delivery"] = (
             "code_only" if len(selected) == len(unit["blocks"]) else "substantive_followup")
     return result

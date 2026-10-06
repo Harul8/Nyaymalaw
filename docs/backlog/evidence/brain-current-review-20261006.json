@@ -1112,6 +1112,32 @@
       "fixture_alignment": "Three receipt scenarios lacked their reported possession detail. Explicit independent details now satisfy original-source coverage; exact saved attribution assertions added. Hidden-question now corrects before Judge rather than forcing an inapplicable negative Judge.",
       "call_impact": "No routine stage or additional model call. Existing bounded writer correction handles only the faulty unit; this public malformed-link case uses one fewer Judge call. No paid calls.",
       "remaining": "Versioned status rendering, requested-delivery evidence, saved substantive completion and actual pinned-model acceptance remain pending. This prerequisite does not close the observed false completion."
+    },
+    {
+      "piece": "versioned expression-owned record status composition",
+      "owner": "nm/brain/execution_contracts.py",
+      "version": "105a4ff plus this one production file",
+      "invariant": "Fresh record status selects a record_result expression, never a redundant block kind or an interpreted delivery mode. Independent checked expressions survive preview/final/replay; repeated rendering preserves one status identity.",
+      "pass_condition": "Retain source accounts, comparisons, limits and typed follow-ups; append a separate status only when its owner is substantive; preview/final composition is idempotent; original v3/v2/unstamped historical dispatch remains exact and unknown versions fail.",
+      "verification": {
+        "new_status_cases": 32,
+        "new_baseline": "11 failed / 21 passed",
+        "focused_integrated_passed": 221,
+        "public_v3_replay_passed": 1,
+        "historical_source_commit": "105a4ff",
+        "historical_source_sha256": "4743522579b8da74e6ae39d8dba47b37b81250421cc87c0d965d1db4f32da437",
+        "public_witness": "Actual atomic seed/correction under frozen v3 renderer; unchanged reopened records, original dependencies/seals, zero-call idempotent replay, separate fresh v4 already-current turn, and wrong-version dispatch refuses with no write/release.",
+        "scripted_calls": {
+          "seed": 8,
+          "historical_correction": 8,
+          "fresh_current_state": 8,
+          "replay": 0
+        }
+      },
+      "historical_contract": "Fresh v4. Saved v3 retains kind-based algorithm; v2/unstamped retain prior renderer. Frozen parent bytes compressed only as a test generator, avoiding git-history availability in shallow CI; no historical receipt/seal rewritten.",
+      "fixture_alignment": "Status witnesses now select actual record_result instead of relabelling source_account; retained factual recovery expects independent original content plus one status. One prior repair fixture re-added obsolete source_ids after fresh transport; local transport fixed while all coverage/fulfilled/attribution assertions remain.",
+      "call_impact": "No model stage or conditional call added. Deterministic composition only; existing independent review still checks relevance, sufficiency and legal use. No paid calls.",
+      "remaining": "Actual browser acceptance of the combined typed-link/status feature is next. Delivered-outcome ledger and saved substantive completion still unprotected; semantic extraction/law/research delivery and UI gaps remain."
     }
   ],
   "additional_reviewer_input": {
@@ -1185,7 +1211,31 @@
       "inherited broad task versus narrow current answer",
       "mixed independent greeting/diversion/question outcome"
     ],
-    "status": "Plan only; not implemented or qualified."
+    "status": "Plan only; not implemented or qualified.",
+    "producer_plan": {
+      "owner": "conversation.py, one existing interpreter prompt",
+      "provider_fields": [
+        "request_source_ids",
+        "scope_source_ids",
+        "target_ids",
+        "required_result_types",
+        "legal_kinds",
+        "success_condition"
+      ],
+      "types": [
+        "conversation",
+        "dispute",
+        "material",
+        "checked_legal",
+        "fixed_response",
+        "record_result"
+      ],
+      "canonical": "Code owns requested_delivery_v1 and each outcome ID; no completion or applied-effect assertion at interpretation.",
+      "admission": "Requested outcomes link original current advocate request, exact earlier scoped context and owned targets. Prior NM words may be recalled/compared as context, never supply matter facts or mutation authority.",
+      "dependencies": "Typed source-bound results, independent completeness/sufficiency review, final expression preservation and versioned durable progress/receipt handoffs required before false completion is closed.",
+      "positive_neighbours": "General legal question without a dispute; faithful conversation recap; fixed courtesy; already-current state; completed no-change review; checked empty extraction; independent prior question; scoped partial results.",
+      "failure": "Related passage alone, unrelated admitted record, positive Judge or record_requirement none cannot certify source-backed gathering. Required legal use and actual scoped finding/coverage must match; missing work stays incomplete."
+    }
   },
   "repair_live_acceptance": {
     "date": "2026-10-06",
