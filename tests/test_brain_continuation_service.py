@@ -52,6 +52,9 @@ class PublicContinuationModel:
             data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
             data = {"new_items": [], "changes": []}
+        elif prompt.operation == "verify_disputes":
+            assert payload["candidates"] == [], "This fixture owns empty dispute review only"
+            data = {"verdicts": []}
         elif prompt.operation == "verify_material_grounding":
             data = {"verdicts": [
                 {"candidate_id": row["candidate_id"], "verdict": "accept",
@@ -71,8 +74,8 @@ class PublicContinuationModel:
             data = reviewed_verdicts(payload, data)
         else:
             raise AssertionError(f"Unexpected public model operation: {prompt.operation}")
-        if prompt.operation == "verify_material_grounding":
-            data = reviewed_record_verdicts(payload, data)
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            data = reviewed_record_verdicts(payload, data, scripted_full_scope=True)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,

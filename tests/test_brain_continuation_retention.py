@@ -416,7 +416,13 @@ def test_public_adverse_disclosure_retains_supported_response_context_and_pendin
     answer = send(client, DISCLOSURE, "retained-disclosure", opened=first)
     replay = send(client, DISCLOSURE, "retained-disclosure", opened=first)
 
-    assert answer["metrics"]["llm_calls"] == 8
+    assert answer["metrics"]["llm_calls"] == 10
+    assert [operation for operation, _ in model.calls][-10:] == [
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "verify_disputes", "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation",
+        "continue_conversation", "verify_continuation",
+    ]
     assert replay["metrics"]["llm_calls"] == 0
     assert answer["blocked"] is True
     assert answer["continuation"]["coverage"][0]["state"] == "partial"
@@ -469,8 +475,22 @@ def test_public_persistent_local_support_failure_releases_checked_partial_conten
     routed = plan(DISCLOSURE, scope="none", step="legal_work",
                   reply="I will examine the attributed correction.")
     proposed = mixed(structural=True)
-    model = PublicContinuationModel([routed],
-                                    [{"units": [proposed]}, {"units": [proposed]}])
+    def check_final_subset(payload):
+        checked = payload["units"][0]
+        assert checked["record_outcome"]["status"] == "unresolved"
+        assert checked["progress_updates"] == []
+        assert [row["id"] for row in checked["blocks"]] == ["ack", "facts", "limit"]
+        response = verdict(0)
+        response["verdicts"][0]["record_check"] = {
+            "outcome": "unfinished",
+            "reason": ("The independently checked factual subset leaves the broader "
+                       "requested assessment unfinished and certifies no completed result."),
+        }
+        return response
+
+    model = PublicContinuationModel(
+        [routed], [{"units": [proposed]}, {"units": [proposed]}],
+        checks=[check_final_subset])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     answer = send(client, DISCLOSURE, "retention-final-local-check")

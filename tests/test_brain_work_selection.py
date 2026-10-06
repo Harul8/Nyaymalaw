@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -27,6 +28,36 @@ def selection(proposed, value):
     result.pop("work")
     result["work_selector"] = value
     return result
+
+
+def _strict_review_transport(data):
+    """Move explicit scripted dispositions to the shipped transport only.
+
+    Inapplicable empty acceptance retention carries no meaning. Populated
+    retention, unknown fields and invalid verdicts remain visible to the
+    strict schema instead of being repaired or given a semantic default.
+    """
+    if (not isinstance(data, dict) or set(data) != {"verdicts"}
+            or not isinstance(data["verdicts"], list)):
+        return deepcopy(data)
+    accepted, rejected = [], []
+    for supplied in data["verdicts"]:
+        if (not isinstance(supplied, dict)
+                or supplied.get("verdict") not in ("accept", "reject")):
+            return deepcopy(data)
+        row = deepcopy(supplied)
+        disposition = row.pop("verdict")
+        if disposition == "accept":
+            retained = row.get("retained_block_ids")
+            if retained is None or retained == []:
+                row.pop("retained_block_ids", None)
+            reason = row.get("retained_reason")
+            if reason is None or (isinstance(reason, str) and not reason.strip()):
+                row.pop("retained_reason", None)
+            accepted.append(row)
+        else:
+            rejected.append(row)
+    return {"accepted_units": accepted, "rejected_units": rejected}
 
 
 def test_public_requested_clarification_creates_one_task_and_contribution_creates_none(
@@ -187,6 +218,8 @@ def test_public_saved_question_and_work_refs_have_distinct_port_schemas_and_iden
     class StrictPortModel(PublicContinuationModel):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            if prompt.operation == "verify_continuation":
+                result = replace(result, data=_strict_review_transport(result.data))
             require_schema(result.data, schema)
             return result
 

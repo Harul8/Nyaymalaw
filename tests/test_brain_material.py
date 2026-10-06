@@ -55,7 +55,8 @@ class Model:
                     if prompt.operation == "verify_disputes" else {}),
                  "verdict": "accept", "reason": "Attributable proposal"}
                 for row in payload["candidates"]]}
-            data = reviewed_record_verdicts(payload, data)
+            data = reviewed_record_verdicts(
+                payload, data, scripted_full_scope=True)
         else:
             self.calls.append(prompt)
             planned = next(self.plans)

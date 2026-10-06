@@ -56,7 +56,8 @@ class ScriptedBrain:
             answer = reader_operations(rows, sources,
                                        link_field="related_dispute_ids")
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
-            answer = reviewed_record_verdicts(payload, answer)
+            answer = reviewed_record_verdicts(
+                payload, answer, scripted_full_scope=True)
         return ModelResult(text=None, data=answer, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)

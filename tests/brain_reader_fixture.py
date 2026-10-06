@@ -43,11 +43,25 @@ def scripted_source_treatments(earlier, latest, *, roles=None, turn_id="current"
     return rows
 
 
-def reviewed_record_verdicts(payload, data):
-    """Express scripted semantic decisions through explicit shipped checks."""
+def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False):
+    """Carry explicit offline judgments through the shipped record checks.
+
+    Normal public provider fixtures explicitly opt into full authorised
+    coverage independently of candidate count or execution receipts. Direct
+    omission/correction fixtures do not opt in; every supplied coverage value,
+    including invalid values, is kept. This supplies a scripted judgment,
+    never an assessment by production code.
+    """
     result = deepcopy(data)
     if not isinstance(result, dict) or not isinstance(result.get("verdicts"), list):
         return result
+    if (scripted_full_scope and payload.get("review_scope") is not None
+            and "coverage_source_ids" in payload):
+        result.setdefault("coverage", {
+            "state": "complete", "missing_source_ids": [],
+            "reason": ("The normal offline fixture declares the complete authorised "
+                       "account scope represented by the supplied records and proposals."),
+        })
     candidates = {row["candidate_id"]: row for row in payload.get("candidates", [])}
     for row in result.get("verdicts", []):
         if not isinstance(row, dict) or not isinstance(row.get("candidate_id"), str):

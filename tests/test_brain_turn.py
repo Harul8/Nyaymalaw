@@ -52,6 +52,10 @@ class Model:
             data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
             data = {"new_items": [], "changes": []}
+        elif prompt.operation == "verify_disputes":
+            payload = json.loads(prompt.user)
+            assert payload["candidates"] == [], "This fixture owns empty dispute review only"
+            data = {"verdicts": []}
         elif prompt.operation == "verify_material_grounding":
             payload = json.loads(prompt.user)
             data = {"verdicts": [
@@ -65,8 +69,9 @@ class Model:
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
                 self.current_items = data["items"]
-        if prompt.operation == "verify_material_grounding":
-            data = reviewed_record_verdicts(json.loads(prompt.user), data)
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            data = reviewed_record_verdicts(
+                json.loads(prompt.user), data, scripted_full_scope=True)
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)

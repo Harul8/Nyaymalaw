@@ -9,6 +9,7 @@ from tests.test_brain_research_state import (
     PASSAGE,
     REVISION,
     append,
+    complete_read,
     matter,
     project,
     read,
@@ -116,7 +117,7 @@ def test_checked_empty_rejection_is_readable_but_cannot_masquerade_as_reusable_e
 @pytest.mark.parametrize("field", ["checked_items", "unread_items", "withheld_items"])
 def test_missing_counter_keeps_checked_sources_readable_without_inventing_reuse_evidence(field):
     selected = subject(matter())
-    saved_read = read(selected)
+    saved_read = complete_read(selected)
     del saved_read["coverage"][field]
     saved = append(matter(), [saved_read])
     original = deepcopy(saved.brain_chat)
@@ -139,7 +140,7 @@ def test_missing_counter_keeps_checked_sources_readable_without_inventing_reuse_
 )
 def test_unread_or_inconsistent_coverage_does_not_erase_exact_checked_rows_but_blocks_reuse(counts):
     selected = subject(matter())
-    saved_read = read(selected)
+    saved_read = complete_read(selected)
     saved_read["coverage"].update(counts)
 
     result = project(append(matter(), [saved_read]), selected)
@@ -155,7 +156,7 @@ def test_unread_or_inconsistent_coverage_does_not_erase_exact_checked_rows_but_b
 
 def test_semantically_rejected_proposals_do_not_make_independently_checked_work_unread():
     selected = subject(matter())
-    saved_read = read(selected)
+    saved_read = complete_read(selected)
     saved_read["coverage"].update(checked_items=2, unread_items=0, withheld_items=1)
 
     result = project(append(matter(), [saved_read]), selected)
@@ -173,7 +174,7 @@ def test_checked_counter_covers_retained_candidates_without_rewriting_readable_h
     row_count, checked_count, reusable
 ):
     selected = subject(matter())
-    saved_read = read(selected)
+    saved_read = complete_read(selected)
     if row_count == 2:
         peer = deepcopy(saved_read["rows"][0])
         peer["label"] = "Preserve the stated limitation"
@@ -215,9 +216,9 @@ def test_nonempty_findings_cannot_advertise_contradictory_zero_proposal_receipt(
     file = matter()
     selected = subject(file)
     peer = subject(file, identity="peer", question="Another independently supported enquiry")
-    contradictory = read(selected)
+    contradictory = complete_read(selected)
     contradictory["coverage"]["empty_reading"] = _receipt(selected, receipt_outcome)
-    saved = append(file, [contradictory, read(peer)])
+    saved = append(file, [contradictory, complete_read(peer)])
     original = deepcopy(saved.brain_chat)
 
     result = research_record(
@@ -248,7 +249,7 @@ def test_advertised_bad_empty_receipt_rejects_its_unit_while_preserving_sound_pe
         bad["coverage"]["empty_reading"]["subject_id"] = peer["id"]
     else:
         bad["coverage"]["empty_reading"]["source_checks"][0]["outcome"] = "supports_useful_finding"
-    saved = append(file, [bad, read(peer)])
+    saved = append(file, [bad, complete_read(peer)])
     original = deepcopy(saved.brain_chat)
 
     result = research_record(

@@ -649,6 +649,24 @@
         "nm/brain/continuation.py",
         "tests/test_brain_inherited_review_local_recovery.py"
       ]
+    },
+    {
+      "slice": "Explicit offline fixture scope and fresh transport migration",
+      "owners": [
+        "LB-185",
+        "LB-186",
+        "LB-192"
+      ],
+      "decision": "Keep old unknown research coverage readable/nonreusable and declare fresh complete test evidence only at intended positive reuse sites. Shared record fixtures default to no completeness judgment; known normal providers explicitly opt in, preserving omission/partial/unassessed/invalid negatives. Strict scripted port emits fresh accepted/rejected transport without silently dropping populated contradictory metadata. Certified retained partial content supplies an explicit unfinished verdict. Call expectations add only the two newly authorised empty record Judges with exact operation order, not avoidable retry inflation.",
+      "validation": "208 offline coverage controls, current/history reuse, source purpose, strict public work selection and partial-retention cases passed; Ruff passed. These are scripted mechanical checks; no real-model/browser semantic qualification.",
+      "files": [
+        "tests/brain_reader_fixture.py",
+        "tests/test_brain_fixture_scope.py",
+        "tests/test_brain_research_state.py",
+        "tests/test_brain_research_reuse_evidence.py",
+        "tests/test_brain_work_selection.py",
+        "tests/test_brain_continuation_retention.py"
+      ]
     }
   ]
 }

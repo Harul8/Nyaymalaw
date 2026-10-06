@@ -151,7 +151,8 @@ class Model:
         else:
             raise AssertionError(f"unexpected model call: {prompt.operation}")
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
-            data = reviewed_record_verdicts(payload, data)
+            data = reviewed_record_verdicts(
+                payload, data, scripted_full_scope=True)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,

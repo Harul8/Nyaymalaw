@@ -79,6 +79,31 @@ def read(selected, context=(), *, rows=None, state="ok", revision=REVISION,
                               unread_items=0 if state == "ok" else 1, withheld_items=0))
 
 
+def complete_read(selected, context=(), **kwargs):
+    """Fresh independently reviewed supplied-pool fixture; plain read stays historical."""
+    saved = read(selected, context, **kwargs)
+    if saved["verification"] != RESEARCH_VERIFICATION:
+        return saved
+    sources = {}
+    for row in saved["rows"]:
+        for original in row["sources"]:
+            source = {key: deepcopy(value) for key, value in original.items()
+                      if key != "verification"}
+            assert source["id"] not in sources or source == sources[source["id"]]
+            sources[source["id"]] = source
+    assert sources, "Use the separate zero-proposal receipt fixture for empty reads."
+    saved["coverage"].update(
+        semantic_state="complete", semantic_extent="supplied_retrieved_passages",
+        retrieved_coverage={
+            "contract": "retrieved_pool_review_v1", "subject_id": selected["id"],
+            "semantic_extent": "supplied_retrieved_passages", "outcome": "complete",
+            "source_ids": list(sources), "sources": list(sources.values()),
+            "missing_source_ids": [],
+            "reason": "The exact supplied source pool was independently assessed.",
+        })
+    return saved
+
+
 def append(file, reads, *, identity="turn-one", records=(), legacy=None):
     response = dict(turn_id=identity, elements=[], material=deepcopy(list(records)))
     if reads is not None:
@@ -118,7 +143,7 @@ def board_inputs():
 def test_pending_chat_general_question_is_readable_without_creating_board_or_duplicate_store():
     file = matter()
     selected = subject(file)
-    saved = append(file, [read(selected)])
+    saved = append(file, [complete_read(selected)])
     raw = deepcopy(saved.brain_chat)
 
     result = project(saved, selected)
@@ -161,7 +186,7 @@ def test_local_coverage_failure_retains_sound_peer_without_complete_search_claim
     first = subject(file)
     second = subject(file, identity="other-question", question="Explain another condition")
     bad_rows = [finding()] if state == "partial" else []
-    saved = append(file, [read(first, state=state, rows=bad_rows), read(second)])
+    saved = append(file, [read(first, state=state, rows=bad_rows), complete_read(second)])
     result = research_record(saved, subjects=(first, second),
                              material_by_subject={first["id"]: [], second["id"]: []},
                              corpus_revision=REVISION)
@@ -218,7 +243,7 @@ def test_checked_contract_change_keeps_old_checked_work_readable_without_reuse(c
 
 def test_equivalent_request_evidence_reuses_without_changing_saved_subject_or_task_identity():
     selected = subject(matter())
-    saved = append(matter(), [read(selected)])
+    saved = append(matter(), [complete_read(selected)])
     latest = {**selected, "id": "later-request-identity"}
     result = project(saved, latest)
     assert result["reuse_allowed"][latest["id"]] is True
@@ -284,7 +309,9 @@ def test_legacy_checked_gathering_is_exact_readable_unknown_freshness_and_not_as
     assert result["by_dispute"][dispute["id"]][0]["kind"] == "gathering"
     assert result["coverage_by_dispute"][dispute["id"]] == dict(
         state="ok", purpose="gathering", source_freshness="unknown", reuse_allowed=False,
-        legacy=True, verification_contract="source_support_v4", verification_current=False)
+        legacy=True, verification_contract="source_support_v4", verification_current=False,
+        semantic_state="unassessed", semantic_extent="cited_candidate_passages",
+        account_purpose_freshness="unknown", account_purpose_current=False)
     assert result["reuse_allowed"][dispute["id"]] is False
     assert saved.brain_chat == raw
 
@@ -326,7 +353,7 @@ def test_corrupt_saved_use_rejects_its_unit_and_preserves_sound_peer(damage):
         row["force"] = "required"
     else:
         bad["fingerprint"] = "invalid"
-    saved = append(file, [bad, read(second)])
+    saved = append(file, [bad, complete_read(second)])
     result = research_record(saved, subjects=(first, second),
                              material_by_subject={first["id"]: [], second["id"]: []},
                              corpus_revision=REVISION)
@@ -394,7 +421,7 @@ def test_advertised_current_source_contract_cannot_hide_invalid_role_or_treatmen
         verification["assertion_statement"] = ""
     else:
         verification["treatment_excerpt"] = ""
-    saved = append(file, [bad, read(second)])
+    saved = append(file, [bad, complete_read(second)])
     result = research_record(saved, subjects=(first, second),
                              material_by_subject={first["id"]: [], second["id"]: []},
                              corpus_revision=REVISION)
@@ -467,7 +494,7 @@ def test_historical_exact_readback_survives_new_review_without_status_upgrade_or
     assert result["coverage_by_subject"][selected["id"]]["verification_current"] is False
     assert source_snapshots([reference]) == exact_before
     assert saved.brain_chat == raw
-    reviewed = append(saved, [read(selected)], identity="turn-two")
+    reviewed = append(saved, [complete_read(selected)], identity="turn-two")
     current = project(reviewed, selected)
     assert current["reuse_allowed"][selected["id"]] is True
     assert current["coverage_by_subject"][selected["id"]]["verification_current"] is True
@@ -511,7 +538,7 @@ def test_current_finding_use_attestation_is_owned_complete_and_cannot_be_source_
         checks["force"]["source_ids"] = []
     else:
         row["sources"][0]["verification"]["scope_status"] = "established"
-    saved = append(file, [damaged, read(peer)])
+    saved = append(file, [damaged, complete_read(peer)])
     untouched = deepcopy(saved.brain_chat)
 
     result = research_record(saved, subjects=(first, peer),
@@ -642,7 +669,8 @@ def test_application_account_words_are_exact_on_readback_without_rewriting_sourc
                              material_by_subject={selected["id"]: []},
                              corpus_revision=REVISION, prior_conversation=prior)
 
-    assert result["state"] == "ok" and result["reuse_allowed"][selected["id"]] is True
+    assert result["state"] == "ok" and result["reuse_allowed"][selected["id"]] is False
+    assert result["coverage_by_subject"][selected["id"]]["account_purpose_freshness"] == "unknown"
     assert result["by_subject"][selected["id"]][0]["use_verification"][
         "application_premises"][0]["account_references"][0]["quoted"] == "attributed request"
     assert saved.brain_chat == untouched
@@ -669,7 +697,7 @@ def test_invalid_account_reference_rejects_its_read_and_preserves_valid_peer(dam
         reference["role"] = "nm"
     else:
         reference["quoted"] = []
-    saved = append(file, [bad, read(peer)])
+    saved = append(file, [bad, complete_read(peer)])
     if damage == "future_turn":
         saved = append(saved, [], identity="turn-two")
     raw = deepcopy(saved.brain_chat)

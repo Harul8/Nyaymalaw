@@ -101,7 +101,7 @@ class RecordResearchModel(ResearchModel):
                 "candidate_id": row["candidate_id"], "candidate_role": "independent_dispute",
                 "operation_supported": True, "verdict": "accept",
                 "reason": "The reported issue remains a distinct attributed account.",
-            } for row in payload["candidates"]]})
+            } for row in payload["candidates"]]}, scripted_full_scope=True)
         return ModelResult(text=None, data=data, tier=tier, provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
 
