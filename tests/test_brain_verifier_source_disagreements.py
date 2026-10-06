@@ -117,7 +117,12 @@ def test_original_role_disagreement_is_typed_and_operation_stays_rejected(kind, 
     }]
     assert len(model.calls) == 1
     payload = json.loads(model.calls[0][0].user)
-    assert payload["source_treatments"]["L1"]["content_role"] == role
+    if kind == "material":
+        assert payload["source_treatments"]["L1"] == {
+            key: before["L1"][key] for key in ("turn_id", "role", "quoted")}
+        assert role not in json.dumps(payload["source_treatments"])
+    else:
+        assert payload["source_treatments"]["L1"]["content_role"] == role
     assert "original-evidence judgment" in model.calls[0][0].system
 
 

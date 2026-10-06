@@ -47,7 +47,7 @@ from nm.shared.model_port import (
 )
 
 _SYSTEM = """Message: You receive the advocate's latest message, the complete earlier
-conversation with speakers and exact source spans, independent source_treatments,
+conversation with speakers and exact original source_treatments references,
 model-proposed material details and sometimes a matter-opening title and summary.
 Selected active disputes and revision targets are canonical records with exact
 attributed words; the current matter ID is supplied. Earlier NM words are context,
@@ -64,9 +64,10 @@ authorised work support the exact proposed operation. Check grounding, not legal
 merit, proof or source applicability.
 
 Activity 1 - Check original account support.
-Look for: source_treatments owns each advocate span's original content_role,
-classified before candidates were considered. Do not upgrade or replace it.
-Independently read selected exact spans in full context. A real party position
+Look for: source_treatments supplies only canonical turn, speaker and original
+words. Decide original source purpose from the complete conversation before
+comparing candidate wording; no earlier classification or reason is supplied
+to endorse. Independently read selected exact spans in full context. A real party position
 remains that speaker's position
 without proof or adoption; for mixed spans only the genuine reported portion
 supplies content. Examination material, work instructions and NM interpretations
@@ -78,25 +79,25 @@ create legal findings.
 Outcome: Give account_check with content_role reported_matter_account,
 examination_material, nm_analysis or uncertain; supported;
 introduces_legal_analysis; source_ids; source_checks; and reason.
-account_check.content_role describes the proposed account layer, not a
-reclassification of source_treatments. A faithfully attributed actual party
-position can be reported_matter_account without adding NM legal analysis.
+account_check.content_role describes the proposed account layer. A faithfully
+attributed actual party position can be reported_matter_account without adding NM legal analysis.
 Select exact source_ids only from this candidate's allowed_account_source_ids.
 Give exactly one source_checks entry for each selected ID, and no others:
 source_id, supplies_account_content, supports_proposal and concise reason without
 copied passages; do not repeat source content_role in those entries.
 supplies_account_content means substantive account is reported in the original
 context, not permission to review or agreement with the supplied source treatment.
-Keep that original-evidence judgment explicit when it disagrees with a supplied
-non-account role: retain the selected source_id and true supplies_account_content,
-and reject the proposed operation while that source-purpose conflict is unresolved.
-The server may ask the source owner to reconsider the original passage; this
-review cannot reclassify it or admit the operation itself. Do not hide a genuine
-disagreement by changing the source check to match the earlier classification.
+Keep that original-evidence judgment explicit for every selected source. The
+server compares it with the separately owned source-purpose decision and may
+request a candidate-free reconsideration. Neither agreement nor an exact
+quotation proves support; do not infer source purpose from candidate acceptance.
 supports_proposal means that substantive content supports an assertion
 in the proposed account. At least one selected source must substantively support
 an accepted proposal. supported certifies the WHOLE proposition against all
-selected evidence, not merely quoted words or an isolated fragment.
+selected evidence: actor, event, attribution, polarity, chronology, uncertainty
+and conditions together, including qualifications elsewhere in the original
+message. An exact matching fragment inside denial, hypothesis or another
+speaker's account does not establish the candidate's proposition.
 introduces_legal_analysis is true for new NM legal classifications/conclusions,
 not a faithfully attributed reported party position.
 
@@ -359,7 +360,9 @@ def verify_material_grounding(
         return GroundingResult((), True, 0)
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     source_treatments = owned_source_treatments(source_treatments, latest_sources, prior_sources)
-    payload["source_treatments"] = source_treatments
+    payload["source_treatments"] = {
+        identity: {field: row[field] for field in ("turn_id", "role", "quoted")}
+        for identity, row in source_treatments.items()}
     payload["current_matter_id"] = current_matter_id
     coverage_ids = tuple(source_treatments) if requested_coverage else None
     if requested_coverage:
