@@ -1207,6 +1207,26 @@
       },
       "call_impact": "No calls or stages added; provider activation is the next separate continuation.py slice. No paid calls.",
       "remaining": "This option is preparatory until provider wiring; no live acceptance claim. Requested delivery, semantics and hidden legal conditions remain open."
+    },
+    {
+      "piece": "activate fresh expression choices in writer provider contract",
+      "owner": "nm/brain/continuation.py",
+      "version": "5de5652 plus one production file",
+      "invariant": "Only provider generation uses operator-specific alternatives; canonical completed-object admission, rendering and durable replay retain v1 ownership and per-unit recovery.",
+      "verification": {
+        "focused_integrated_passed": 135,
+        "public": "Peer-preserving writer correction, legal-source scope, saved replay and frozen v3 public witness",
+        "fixture_change": "Historical source absence assertion now checks every generation branch, retaining the original no-upgrade test.",
+        "ruff": "passed",
+        "new_handoff_cases": 9,
+        "new_handoff_baseline": "4 failed /5 passed with only old provider wiring restored in memory",
+        "exact_scripted_calls": {
+          "valid": 2,
+          "mixed_scoped_repair": 4
+        }
+      },
+      "call_impact": "No stage or routine call added. Existing conditional writer correction remains bounded; real-model reduction unmeasured. No paid calls.",
+      "remaining": "Pinned browser material/status acceptance requires conflict and material review repairs first. Independent requested-delivery proof remains pending."
     }
   ],
   "additional_reviewer_input": {

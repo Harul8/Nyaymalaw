@@ -497,7 +497,9 @@ def test_historical_direct_source_is_not_upgraded_or_used_for_current_law(contra
     assert model.calls[0][1]["legal_sources"] == {}
     expression = model.schemas[0]["properties"]["units"]["items"][
         "properties"]["blocks"]["items"]["properties"]["evidence_expression"]
-    assert expression["properties"].get("legal_source_ids", {"maxItems": 0}).get("maxItems") == 0
+    assert all(branch["properties"].get(
+        "legal_source_ids", {"maxItems": 0}).get("maxItems") == 0
+        for branch in expression["anyOf"])
     assert source == original
     assert result.coverage[0]["state"] == "ok"
     assert _operation_names(model) == ["continue_conversation", "verify_continuation"]

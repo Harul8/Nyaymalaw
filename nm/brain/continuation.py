@@ -465,7 +465,8 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
         for choice in _work_choices((intents or {}).get(index, "request"), work)))
     unit["properties"]["request_index"]["enum"] = list(indexes)
     block = unit["properties"]["blocks"]["items"]["properties"]
-    block["evidence_expression"] = expression_schema(spans, records, sources)
+    block["evidence_expression"] = expression_schema(
+        spans, records, sources, generation=True)
     for field in ("questions", "next_work"):
         unit["properties"][field]["items"] = deepcopy(_LINK)
         link = unit["properties"][field]["items"]["properties"]
