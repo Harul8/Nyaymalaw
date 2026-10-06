@@ -91,6 +91,19 @@
         "nm/brain/conversation.py",
         "tests/test_new_brain_conversation.py"
       ]
+    },
+    {
+      "slice": "opening-repair-prompt-evidence-order",
+      "owners": [
+        "LB-175",
+        "LB-176",
+        "LB-179"
+      ],
+      "decision": "Opening repair now reads original client identity and overall subject before proposing corrected fields. Independent rejection is feedback, not fact; retain supported posture, one client-side name or legitimate subject-only title, and do not change other work decisions. Same narrow schema and conditional repair call.",
+      "validation": "63 material-verification, opening and conversation tests passed; 2 journey cases deselected by owner browser deferral.",
+      "files": [
+        "nm/brain/conversation.py"
+      ]
     }
   ]
 }

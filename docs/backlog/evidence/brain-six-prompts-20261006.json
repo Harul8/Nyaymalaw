@@ -26,6 +26,25 @@
         "Activity 3 - Choose a useful immediate response.",
         "Activity 4 - Decide whether the matter can be opened."
       ]
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "old_sha256": "0954d385d8be933ba70b69e9f095bacf6e56f482d2210632b8a77f1adf00b9d5",
+      "new_sha256": "e4a16f14bac3f62064a3f41e382e651e6fbb3d89fb92c1fd391d595f491e49de",
+      "old_words": 166,
+      "new_words": 207,
+      "paragraph_mapping": {
+        "old_1": "Message",
+        "old_2": "Purpose",
+        "old_3": "Activity 1",
+        "old_4": "Activity 2"
+      },
+      "decision": "Keeps opening-only recovery and independently checked proposal status explicit; no new stage or fields.",
+      "new_activities": [
+        "Activity 1 - Establish the supported client and subject.",
+        "Activity 2 - Return the corrected opening proposal."
+      ]
     }
   ]
 }
