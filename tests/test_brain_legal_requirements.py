@@ -451,7 +451,8 @@ def test_independent_read_prunes_unsupported_citations_and_items_in_one_call():
         {"turn_id": row.turn_id, "role": row.role, "text": row.text}
         for row in CONVERSATION]
     assert _candidate_rows(payload)[0]["sources"][0]["fragments"] == [{
-        "id": "f1", "text": "A person must give written notice."}]
+        "id": "f1", "start": 0, "end": len("A person must give written notice."),
+        "text": "A person must give written notice."}]
     assert [[row["subject"]["id"] for row in json.loads(call[0].user)["subjects"]]
             for call in verifier.calls] == [["d1", "d2"]]
 

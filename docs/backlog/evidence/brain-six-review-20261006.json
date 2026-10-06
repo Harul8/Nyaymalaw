@@ -822,6 +822,19 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_fragment_ranges.py"
       ]
+    },
+    {
+      "slice": "owned-range-fixture-offsets",
+      "owners": [
+        "LB-179",
+        "LB-181"
+      ],
+      "decision": "Existing single-window law and full-width fixture expectations now assert original start/end offsets as well as exact words. This commits the remaining test-only handoff changes for the owned contiguous range slice; no production change or weakening of source checks.",
+      "validation": "263 focused offline law controls passed with explicit canonical offset assertions; Ruff clean. All source text remains exact and single-fragment compatibility retained. Live semantics/browser deferred.",
+      "files": [
+        "tests/test_brain_legal_requirements.py",
+        "tests/test_brain_legal_substantive_widths.py"
+      ]
     }
   ]
 }

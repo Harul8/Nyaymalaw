@@ -394,7 +394,9 @@ def test_explicit_long_assertion_owner_and_entire_condition_pass_in_one_existing
     assert model.calls[0][2] is Tier.JUDGE
     payload = json.loads(model.calls[0][0].user)
     selected_source = payload["subjects"][0]["candidates"][0]["sources"][0]
-    assert selected_source["fragments"] == [{"id": "f1", "text": LIVE_PASSAGE}]
+    assert selected_source["fragments"] == [
+        {"id": "f1", "start": 0, "end": len(LIVE_PASSAGE), "text": LIVE_PASSAGE}
+    ]
 
 
 @pytest.mark.parametrize(
@@ -435,4 +437,6 @@ def test_context_budget_still_bounds_complete_long_unit_without_omission_or_call
     assert checked.rows[SUBJECT["id"]] == []
     assert checked.coverage[SUBJECT["id"]]["unread_items"] == 1
     assert not model.calls
-    assert _passage_fragments(LIVE_PASSAGE) == [{"id": "f1", "text": LIVE_PASSAGE}]
+    assert _passage_fragments(LIVE_PASSAGE) == [
+        {"id": "f1", "start": 0, "end": len(LIVE_PASSAGE), "text": LIVE_PASSAGE}
+    ]
