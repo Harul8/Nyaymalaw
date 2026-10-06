@@ -217,67 +217,70 @@ operation. The server owns exact saved passages: do not copy them, rewrite
 proposals, add facts or decide legal merit."""
 
 
-_COVERAGE_SYSTEM = """Message: review_scope states the code-owned authorised work to examine. The
-input contains the complete original advocate source catalogue in
-coverage_source_ids, original transcript and source_treatments, all active
-records, proposed operations and your candidate decisions. These are distinct
-from a candidate's selected citations. On correction, retained_candidate_context
-contains settled peer decisions; do not repeat or override them.
-Purpose: Check coverage of independently contestable issues and authorised
-repairs of dispute formulations. The material reader separately captures the
-significant details underlying those issues. This judgment does not establish
-whole-material completeness, legal discovery or requested-task fulfillment.
-Activity 5 - Independently assess dispute coverage.
-Look for: Read the complete original advocate evidence for reported adverse
-conduct or competing positions/rights needing an independent practical conclusion,
-and for authorised dispute repairs. Compare these with the current records,
-held or outside-owned proposals and operations that can actually be admitted.
-Existing records are NM interpretations to compare with that evidence, never
-their own authority. Rejected, unassessed or dependency-unavailable proposals
-cannot count as represented merely because they were submitted. An already
-faithful current dispute may cover the issue without a new row. Review can
-legitimately require no changes and no fresh factual assertion.
-Keep original source purpose separate from this stage's scope. A neutral event,
-party detail, supporting premise, record, risk or proof gap can be substantive
-account requiring material extraction without identifying another dispute.
-For such account portions, use outside_scope with a concise source-linked reason
-when they neither report an independently contestable issue nor support an
-authorised dispute repair. Do not mark genuine account as non_account or accept
-a non-dispute candidate merely to give that account a representation here.
-An existing issue's supporting details need no additional dispute; its reported
-independent conflict must still be represented. Missing proof or identity does
-not put genuinely reported adverse conduct or competing positions outside scope.
-Each represented candidate must have independently checked support overlapping
-that original account portion. Acceptance for another source or an unrelated
-portion cannot establish this representation; shared original context is allowed.
-Outcome: Include coverage with state complete, partial or unassessed and a
-concise reason identifying the substantive judgment. Under
-coverage_selection_contract, give source_checks for every coverage_source_id:
-source_id, content_purpose account/non_account/unresolved, substantive_spans as
-exact start/end offsets, and reason. Account has substantive portions; the other
-purposes have none. Give dispositions for every selected account portion,
-allowing overlapping context and several propositions per source: source_id,
-start, end, status, record_ids, candidate_ids and reason. represented selects
-faithful current records or accepted proposals; missing/unresolved/non_account/
-outside_scope selects no representation IDs. Decide outside_scope from the
-authorised stage's work, never from extraction failure. Explain uncertainty or
-a materially missing distinction even when some work is represented. Code
-resolves exact words and derives missing source IDs; do not return the derived
-missing_source_ids field under this marker. Without this version
-marker, return the historical missing_source_ids field selected only from
-coverage_source_ids; the list may be empty when a gap cannot be localized.
-Complete means no independently contestable issue or authorised dispute repair
-remains missing in this scope, including when no dispute is reported. It does
-not mean that all material details were extracted. Partial means an issue or
-dispute reconciliation remains missing;
-explain the original proposition or distinction. Unassessed means coverage could
-not be dependably decided. A source span may contain several propositions;
-selecting it is not proof that every proposition is represented. Do not require
-a new record or force complete. Return coverage even for verdicts=[] on an
-authorised empty or coverage-only review. On correction, return verdicts only
-for the listed pending candidates plus coverage; preserve settled peers and full
-source context. A valid partial or unassessed assessment is a legitimate result,
-not an error that must be repaired into complete."""
+_COVERAGE_SYSTEM = """Message: You receive the complete original transcript and
+exact sources in coverage_source_ids and source_treatments, the code-owned
+authorised review_scope, current disputes, proposed operations and candidate
+decisions. Original words, NM interpretations and proposals are separate data.
+On correction, retained_candidate_context contains settled same-turn decisions;
+use them for comparison without repeating or overriding them.
+
+Purpose: Decide whether every reported independent conflict and authorised
+dispute repair in this scope is covered. Significant material details are
+captured by a separate reader. This check does not certify material completeness,
+legal research, proof of the account or fulfillment of the advocate's requests.
+
+Activity 5 - Establish original purpose, then dispute scope and representation.
+Look for:
+1. Read the original words and their complete framing before examining NM's
+records or proposals. Identify genuine reported account separately from work
+instructions, examination material and unresolved source purpose. A passage can
+contain both account and instructions; select its substantive account portions.
+Whether that account identifies a dispute is a different decision. Neutral
+events, supporting details and uncertain positions can still be genuine account.
+No dispute record does not make the original account non_account.
+2. For each account portion, identify any reported adverse conduct or competing
+positions/rights requiring an independent practical conclusion, or original
+support for an authorised repair of NM's dispute formulation. Opposing accounts
+of the same conduct concern one underlying conflict; another contested act or
+right can need its own decision despite shared evidence. A supporting premise,
+record, risk or proof gap does not alone identify another dispute. Use outside_scope
+for genuine account that neither reports an independent conflict nor supports
+an authorised dispute repair, with a source-linked reason. Do not infer scope
+from what extraction returned. Missing proof or actor identity does not put an
+actually reported conflict outside scope.
+3. Compare each in-scope conflict or repair with the original support for current
+records and admitted proposals. These records are NM interpretations, not their
+own evidence. represented requires a faithful current dispute or an accepted
+proposal with checked support for this account portion. Select its owned record
+or candidate IDs. Rejected, held, unread or dependency-unavailable proposals and
+acceptance for another source or unrelated portion cannot represent it. If no
+supported representation exists, use missing or unresolved; an empty ID list
+cannot certify represented. Existing faithful records can suffice without a
+new row or fresh factual assertion. Original context may be shared, but selecting
+a passage does not show that every proposition in it has been represented.
+
+Outcome: Return coverage even for verdicts=[] on an authorised empty or
+coverage-only review. Give state, reason and the source-linked assessment:
+- complete: no independent conflict or authorised dispute repair remains missing
+in this scope. No reported dispute can legitimately mean complete with genuine
+neutral account outside_scope. This does not certify the material reader's work.
+- partial: some in-scope conflict or dispute repair remains missing; explain it.
+- unassessed: coverage cannot be dependably decided; identify the unresolved work.
+These are legitimate decisions; do not force an incomplete assessment to complete.
+Under coverage_selection_contract, return source_checks for EVERY
+coverage_source_id: source_id, content_purpose account/non_account/unresolved,
+substantive_spans as exact start/end offsets, and reason. account selects actual
+substantive portions; non_account and unresolved select none. Keep original
+purpose independent from this stage's scope and from candidate acceptance.
+Give dispositions for every selected account portion, allowing overlapping
+context and several propositions per source: source_id, start, end, status,
+record_ids, candidate_ids and reason. represented selects supported owned IDs;
+missing, unresolved, non_account and outside_scope select no representation IDs.
+Code resolves original words and derives missing_source_ids; do not return that
+derived field with this marker. Without the marker, return historical
+missing_source_ids selected only from coverage_source_ids; the list may be empty
+when a gap cannot be localized. On correction, return verdicts only for pending
+candidates plus coverage, preserving settled decisions and complete originals."""
 
 
 _VERDICT = {

@@ -1491,6 +1491,18 @@
       "verification": "143 focused mechanics passed; Ruff passed. Scripted semantic roles test wiring only; pinned-model behavior pending.",
       "call_impact": "Zero added calls or stages; existing Judge and scoped correction.",
       "remaining": "Fresh reader and Judge grouping plus dispute coverage must be qualified together in browser. Neutral success from previous reader run does not qualify this prompt or the whole feature."
+    },
+    {
+      "piece": "Dispute coverage ordered by original purpose, stage scope, then representation",
+      "base": "80e4e2d",
+      "production_file": "nm/brain/dispute_verification.py",
+      "prompt": "_COVERAGE_SYSTEM only",
+      "invariant": "A genuine neutral account remains account while outside dispute scope; represented requires an actually admitted owned dispute with checked support for the selected source portion.",
+      "observed_counterexample": "Real coverage labelled neutral account represented without owned IDs and an original event non_account because no dispute was identified.",
+      "pass_condition": "Existing six scoped coverage cases admit account/outside_scope empty completion, reject unsupported representation, preserve admitted peers and expose genuine missing conflict. Full originals remain supplied.",
+      "verification": "76 focused scope, dependency and bounded recovery tests pass; Ruff and diff check pass. Semantic source-purpose decisions are scripted, not live classification evidence.",
+      "call_impact": "Zero added calls or stages. Clear decision dependency order replaces repeated domain instructions within existing Judge call.",
+      "remaining": "Integrated fresh neutral-to-opposing browser test is required. Requested recap and mutation-target interpretation remain independently open."
     }
   ],
   "additional_reviewer_input": {
