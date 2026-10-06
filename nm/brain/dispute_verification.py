@@ -289,12 +289,20 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     source_treatments: dict[str, dict] | None = None,
                     review_scope: dict | None = None,
                     coverage: dict | None = None,
+                    review_status: dict | None = None,
                     ) -> tuple[MaterialCandidate, ...]:
-    """Check proposed effects and, when requested, independent original coverage."""
+    """Check independent proposals, keeping unread units out of accepted effects."""
+    if review_status is not None:
+        review_status.clear()
     requested = review_scope is not None
     if requested and not isinstance(review_scope, dict):
         raise SchemaViolation("Independent account review needs a code-owned scope")
     if not candidates and not requested:
+        if review_status is not None:
+            review_status.update(state="not_requested", checked_items=0,
+                                 accepted_items=0, rejected_items=0,
+                                 withheld_items=0, unread_items=0,
+                                 unread_candidate_ids=[])
         if coverage is not None:
             coverage.clear()
             coverage.update(contract=ACCOUNT_COVERAGE_CONTRACT, state="unassessed",
@@ -304,7 +312,15 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     source_treatments = owned_source_treatments(source_treatments, latest_sources, prior_sources)
     payload["source_treatments"] = source_treatments
-    payload["active_disputes"] = [derived_record(row) for row in active_disputes]
+    # Candidate recovery requires a trustworthy canonical target catalogue.
+    active = {}
+    for record in active_disputes:
+        if (not isinstance(record, dict) or not isinstance(record.get("id"), str)
+                or not record["id"].strip()
+                or (record["id"] in active and active[record["id"]] != record)):
+            raise SchemaViolation("The dispute review catalogue has conflicting identities")
+        active[record["id"]] = record
+    payload["active_disputes"] = [derived_record(row) for row in active.values()]
     coverage_ids = tuple(source_treatments) if requested else None
     if requested:
         payload["review_scope"] = deepcopy(review_scope)
@@ -314,6 +330,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     account_ids = {key: candidate_account_ids(candidate, latest_sources, prior_sources)
                    for key, candidate in keyed.items()}
     targets = {key: set(candidate.related_dispute_ids) for key, candidate in keyed.items()}
+    if not set().union(*targets.values()) <= active.keys():
+        raise SchemaViolation("A dispute review proposal selects an unowned revision ID")
     payload["candidates"] = [
         {"candidate_id": key,
          "label": candidate.label,
@@ -401,19 +419,36 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 coverage_issue = review_contract_issue(exc)
         if not pending and coverage_issue is None:
             break
-    if pending:
+    unread = {
+        key: {"candidate_id": key, "verdict": "unassessed",
+              "admission_issue": "review_unavailable",
+              "reason": ("Independent dispute review did not provide a valid decision "
+                         "within its recovery bound."),
+              "validation_issues": list(issues[key])}
+        for key in pending
+    }
+    # A tuple-only caller cannot observe unread units without an explicit sink.
+    if unread and audit is None and review_status is None and not (
+            requested and coverage is not None):
         raise SchemaViolation(
             "Dispute verification remained incomplete for "
-            + ", ".join(pending) + ": " + review_issues_text(issues))
+            + ", ".join(unread) + ": " + review_issues_text(issues))
+    if requested and unread:
+        coverage_decision = None
+        coverage_issue = (
+            "Final dispute proposals " + ", ".join(unread)
+            + " remained unread after the review correction bound; coverage of the "
+            "final admitted record was not established. " + review_issues_text(issues))
     admitted = admitted_record_decisions(decisions)
     downgraded = [key for key in decisions
                   if decisions[key]["verdict"] == "accept" and admitted[key]["verdict"] != "accept"]
     if requested and downgraded:
         coverage_decision = None
-        coverage_issue = (
+        admission_issue = (
             "Final admission withheld restoration candidates " + ", ".join(downgraded)
             + " because required successors were unavailable; coverage of the final admitted "
             "record was not reassessed.")
+        coverage_issue = "; ".join(filter(None, (coverage_issue, admission_issue)))
     decisions = admitted
     if coverage is not None:
         coverage.clear()
@@ -431,8 +466,18 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             coverage["validation_issue"] = coverage_issue
         if coverage_decision is None and last_valid_coverage is not None:
             coverage["prior_assessment"] = last_valid_coverage
+    if review_status is not None:
+        review_status.update(
+            state="partial" if unread else "checked",
+            checked_items=len(decisions),
+            accepted_items=sum(row["verdict"] == "accept" for row in decisions.values()),
+            rejected_items=sum(row["verdict"] == "reject" and "admission_issue" not in row
+                               for row in decisions.values()),
+            withheld_items=sum("admission_issue" in row for row in decisions.values()),
+            unread_items=len(unread), unread_candidate_ids=list(unread))
     if audit is not None:
-        audit.extend({**decisions[key], "proposal": asdict(candidate)}
+        audit.extend({**(decisions[key] if key in decisions else unread[key]),
+                      "proposal": asdict(candidate)}
                      for key, candidate in keyed.items())
     return tuple(candidate for key, candidate in keyed.items()
-                 if decisions[key]["verdict"] == "accept")
+                 if decisions.get(key, {}).get("verdict") == "accept")

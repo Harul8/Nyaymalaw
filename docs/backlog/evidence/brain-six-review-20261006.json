@@ -405,6 +405,22 @@
         "tests/test_brain_record_requirement.py",
         "tests/brain_continuation_fixture.py"
       ]
+    },
+    {
+      "slice": "preserve-checked-dispute-peers",
+      "owners": [
+        "LB-176",
+        "LB-177",
+        "LB-191",
+        "LB-192"
+      ],
+      "decision": "Bounded unread dispute-review candidates no longer discard independently checked peers. Audit/status distinguishes genuine rejection, dependency withholding and unread review_unavailable; no third call, no fabricated verdict. Core source and target catalogue failures still block. Tuple-only callers without a diagnostic sink cannot silently lose unread work.",
+      "validation": "48 offline dispute candidate/review/coverage cases passed, including legitimate checked peers and consequential core faults; Ruff clean. No real-model/browser calls.",
+      "files": [
+        "nm/brain/dispute_verification.py",
+        "tests/test_brain_dispute_candidate_recovery.py",
+        "tests/test_brain_dispute_verification.py"
+      ]
     }
   ]
 }

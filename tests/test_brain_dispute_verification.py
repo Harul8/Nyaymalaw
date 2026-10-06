@@ -261,10 +261,12 @@ def test_dispatch_failure_does_not_recheck_retained_peer_or_add_third_attempt():
     model = Model([{"verdicts": [_verdict("C1", accept=True)]},
                    SchemaViolation("Adapter refused the missing replacement field")])
     audit = []
-    with pytest.raises(SchemaViolation, match="remained incomplete for C2"):
-        verify_disputes(model, candidates=candidates, earlier=(), latest=latest,
-                        active_disputes=(), audit=audit)
-    assert len(model.calls) == 2 and audit == []
+    assert verify_disputes(model, candidates=candidates, earlier=(), latest=latest,
+                           active_disputes=(), audit=audit) == candidates[:1]
+    assert len(model.calls) == 2
+    assert audit[0]["verdict"] == "accept"
+    assert audit[1]["verdict"] == "unassessed"
+    assert audit[1]["admission_issue"] == "review_unavailable"
     repair = json.loads(model.calls[1][0].user)
     assert [row["candidate_id"] for row in repair["candidates"]] == ["C2"]
     assert repair["retained_candidate_context"][0]["candidate_id"] == "C1"
