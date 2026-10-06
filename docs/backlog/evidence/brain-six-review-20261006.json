@@ -694,6 +694,21 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_reason_lengths.py"
       ]
+    },
+    {
+      "slice": "empty-legal-diagnostic-width",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-180",
+        "LB-181"
+      ],
+      "decision": "Removed arbitrary reason width restrictions from independent empty-law review schema and saved verification; preserved explicit no-supported-finding, useful omitted finding and uncertain outcomes. All exact source IDs, original supplied sources and derived-outcome checks remain mandatory.",
+      "validation": "188 focused offline legal controls passed, including 8 empty-reading short/600-character vsblank and corrupted saved-proof pairs; no retry added for meaningful long reason. Actual provider/browser semantics deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_empty_reason_lengths.py"
+      ]
     }
   ]
 }

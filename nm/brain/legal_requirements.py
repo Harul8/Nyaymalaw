@@ -1551,7 +1551,8 @@ owned enquiry. None of these decisions certifies absent law or search completene
 
 Outcome: Return only readings, exactly one object per supplied subject_id,
 with source_checks containing exactly one check per supplied source_id. Each
-check has source_id, outcome and a nonempty reason of at most 500 characters.
+check has source_id, outcome and a nonempty substantive reason explaining the
+source's usefulness or uncertainty; reason length alone does not change the outcome.
 Use only that subject's IDs. Return no law, facts, new findings or extra fields;
 the server derives the overall empty-reading outcome from these checks."""
 
@@ -1601,7 +1602,6 @@ def empty_reading_verification_valid(value: object, *, subject_id: str) -> bool:
             not in ("no_supported_finding", "supports_useful_finding", "uncertain")
             or not isinstance(check.get("reason"), str)
             or not check["reason"].strip()
-            or len(check["reason"]) > 500
         ):
             return False
     if not identities:
@@ -1631,7 +1631,7 @@ def _empty_reading_schema(subject_ids, source_ids):
                 "type": "string",
                 "enum": ["no_supported_finding", "supports_useful_finding", "uncertain"],
             },
-            "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+            "reason": {"type": "string", "minLength": 1},
         },
     }
     reading = {
