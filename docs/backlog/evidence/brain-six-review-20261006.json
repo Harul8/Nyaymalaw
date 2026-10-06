@@ -763,6 +763,20 @@
         "tests/test_brain_research_purpose.py",
         "tests/test_brain_board_proposals.py"
       ]
+    },
+    {
+      "slice": "saved-finding-label-width",
+      "owners": [
+        "LB-179",
+        "LB-181",
+        "LB-185"
+      ],
+      "decision": "Saved checked legal findings retain their complete meaningful label regardless of a 120-character display threshold. Exact owned source/material IDs, independent source/use/pool evidence and freshness still determine validity and reuse; UI wraps labels and no text is truncated.",
+      "validation": "84 focused offline saved-state/reuse and long-label controls passed; Ruff clean. Blank headings, foreign sources/material and missing independent proof remain invalid. Reader-side label restriction follows at its separate owner; actual model/browser deferred.",
+      "files": [
+        "nm/brain/requirements_state.py",
+        "tests/test_brain_saved_finding_label_width.py"
+      ]
     }
   ]
 }

@@ -104,7 +104,7 @@ def _valid_row(row: object, material_ids: set[str], verification_contract: str) 
            for key in ("label", "need", "why")):
         return False
     kind = row.get("kind")
-    if (len(row["label"]) > 120 or kind not in RESEARCH_KINDS
+    if (kind not in RESEARCH_KINDS
             or (row.get("force") not in ("required", "strengthening")
                 if kind == "gathering" else row.get("force") != "none")):
         return False
