@@ -941,6 +941,25 @@
       },
       "call_accounting": "Detail reader and independent grounding/coverage remain one call each. Genuine omissions use the existing conditional reader/check pair. Endpoint/schema correction remains at most one local retry within shared8/reserve2. No new routine stage.",
       "limits": "Mechanical ownership/domain checks do not establish semantic sufficiency. Opening-only retry still repeats material coverage and can lose a previously checked assessment on outage/malformed output; separately reproduced16failed9passed isolation slice queued. Material reader duplicate-owner clarification and connected pinned browser qualification remain open."
+    },
+    {
+      "piece": "material-opening-only-recovery-isolation",
+      "production_file": "nm/brain/material_verification.py",
+      "prompt_constants_changed": 0,
+      "invariant": "When complete material coverage and all detail verdicts are independently checked, pending opening-only correction cannot request or replace that assessment. Preserve its exact original metadata through opening refusal, truncation, overflow, provider/rate failure or malformed verdict. A pending detail, invalid assessment or unread whole envelope still requires coverage and remains unfinished.",
+      "baseline": "16of25 new isolation cases failed;9 consequential negative neighbours passed. Broader recovery fixture still explicitly used O1 stand-ins from the prior domain; migrated to actual independent D/current records.",
+      "verification": {
+        "new_cases_passed": 25,
+        "focused_checks_passed": 175,
+        "ruff": "passed",
+        "paid_calls": 0,
+        "routine_model_call_delta": 0,
+        "shared_recovery_bound": "unchanged8 with2protected reply reservations",
+        "original_assessment": "retained field-for-field; no manufactured complete coverage"
+      },
+      "fixture_changes": "22semantic recovery/public cases now select only actual detail/current records. Legitimate no-change case seeds and reopens real saved records, selects their owned associations and preserves original IDs with zero new effects/recovery. Localized omissions, unassessed coverage, rejections and exhausted/unread cases remain explicit.",
+      "call_accounting": "Initial combined material grounding/coverage remains1 Judge. At most1 existing conditional Judge; opening-only retry requests verdicts alone with complete original context/retained checked details. Relevant detail or envelope corrections still request coverage. No new routine stage; smaller opening-only output.",
+      "limits": "Scoped mechanical preservation qualifies wiring, not real semantic support or usefulness. Reader duplicate-owner clarification and connected pinned-model browser acceptance remain open."
     }
   ],
   "additional_reviewer_input": {

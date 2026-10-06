@@ -39,7 +39,8 @@ class RecoveryModel(PassageModel):
                  gap_state="complete", gap_ids=(), partial_reader=False,
                  judge_failure=False, reject_addition=False, extra_rows=(), gap_area="detail",
                  review_requested=False, review_outcome="unresolved", wrong_owner_tier=False,
-                 opening=True, mutation_scopes=None, dispute_sources=()):
+                 opening=True, mutation_scopes=None, dispute_sources=(),
+                 material_representations=None):
         requirement = ({"kind": "review", "target_ids": [], "operation": "none",
                         "success_condition": "Check the entire supplied original account."}
                        if review_requested else None)
@@ -70,6 +71,10 @@ class RecoveryModel(PassageModel):
         # Scenario-authored distinct-dispute obligations, selected before any
         # reader output. Arrival events otherwise belong to material review.
         self.dispute_sources = tuple(dispute_sources)
+        # Explicit scenario-owned current-record associations. Repeating an
+        # original account may refer to an already checked saved row, but a
+        # matching sentence alone does not decide that semantic relationship.
+        self.material_representations = deepcopy(material_representations or {})
 
     def coverage_judgment(self, operation, payload, reviewed):
         """Transport independently scripted gap decisions through the fresh wire.
@@ -86,6 +91,8 @@ class RecoveryModel(PassageModel):
         if scoped and self.reject_addition and self.recovery_read:
             state, gaps = "partial", {"L2"}
         choices = fixture_representation_choices(payload, reviewed)
+        if operation == "verify_material_grounding":
+            choices.update(deepcopy(self.material_representations))
         source_decisions, dispositions = {}, []
         for identity, reference in payload["source_treatments"].items():
             # Both exact laboratory reports are independently declared account,
@@ -102,13 +109,6 @@ class RecoveryModel(PassageModel):
                     payload, identity, status="unresolved" if state == "unassessed" else "missing"))
                 continue
             selected = choices.get(identity, {"record_ids": [], "candidate_ids": []})
-            # The owner declares the accepted opening's exact MESSAGE summary
-            # preserves both reports when it has found no localized gap. This
-            # does not add account support sources to the opening proposal.
-            opening = next((row for row in reviewed["verdicts"]
-                            if row["candidate_id"] == "O1" and row["verdict"] == "accept"), None)
-            if operation == "verify_material_grounding" and opening is not None:
-                selected = {**selected, "candidate_ids": [*selected["candidate_ids"], "O1"]}
             if selected["record_ids"] or selected["candidate_ids"]:
                 dispositions.append(fixture_disposition(
                     payload, identity, status="represented", **selected))
@@ -310,14 +310,19 @@ def test_localized_missing_account_gets_one_reader_and_owned_judge(client, wired
                                         ("unassessed", ["L2"])])
 def test_nonlocalized_or_unassessed_coverage_does_not_guess_recovery(
         client, wired, monkeypatch, state, ids):
-    model = RecoveryModel(candidates=[detail(FIRST)], additions=[detail(SECOND)],
+    # Complete and nonlocalized partial judgments have two actual checked
+    # detail owners. An unassessed source remains unresolved and unretried.
+    represented = [detail(FIRST)] if state == "unassessed" else [detail(FIRST), detail(SECOND)]
+    model = RecoveryModel(candidates=represented, additions=[detail(SECOND)],
                           gap_state=state, gap_ids=ids)
     data, saved, conversation = release(client, wired, monkeypatch, model,
                                         "no-target-" + state)
     observed = {"conditional_calls": data["metrics"]["recovery"]["dispatched_calls"],
                 "saved": [row["statement"] for row in conversation.open_material]}
     evidence("SEM-NO-TARGET-" + state, model, data, saved,
-             {"conditional_calls": 0, "saved": [FIRST]}, observed,
+             {"conditional_calls": 0,
+              "saved": [FIRST] if state == "unassessed" else [FIRST, SECOND]},
+             observed,
              scenario="known_good")
 
 
@@ -409,7 +414,7 @@ def test_recovery_judge_unavailable_retains_saved_checked_peer(client, wired, mo
 
 
 def test_partial_reader_retains_only_owned_checked_effects(client, wired, monkeypatch):
-    model = RecoveryModel(candidates=[detail(FIRST)], partial_reader=True)
+    model = RecoveryModel(candidates=[detail(FIRST), detail(SECOND)], partial_reader=True)
     data, saved, conversation = release(client, wired, monkeypatch, model, "partial-reader")
     receipt = data["material_coverage"]["execution"]
     reader = receipt["stages"]["detail_extraction"]
@@ -419,8 +424,8 @@ def test_partial_reader_retains_only_owned_checked_effects(client, wired, monkey
                 "performed": [row["performed"] for row in effect_catalogue(receipt).values()],
                 "reserved": data["metrics"]["recovery"]["reserved_calls"]}
     evidence("SEM-PARTIAL-READER-01", model, data, saved, {
-        "saved": [FIRST], "reader_state": "partial", "admitted": 1, "count": 1,
-        "performed": [True], "reserved": 1,
+        "saved": [FIRST, SECOND], "reader_state": "partial", "admitted": 2, "count": 2,
+        "performed": [True, True], "reserved": 1,
     }, observed)
 
 
@@ -491,7 +496,7 @@ def test_source_recheck_budget_never_reuses_old_negative_decision_as_approval(
 def test_dispute_omission_keeps_existing_material_id_and_rechecks_final_scope(
         client, wired, monkeypatch):
     addition = material("dispute", SECOND, SECOND)
-    model = RecoveryModel(candidates=[detail(FIRST)], additions=[addition],
+    model = RecoveryModel(candidates=[detail(FIRST), detail(SECOND)], additions=[addition],
                           gap_state="partial", gap_ids=["L2"], gap_area="dispute")
     data, saved, conversation = release(client, wired, monkeypatch, model, "dispute-omission")
     execution = data["material_coverage"]["execution"]
@@ -500,8 +505,8 @@ def test_dispute_omission_keeps_existing_material_id_and_rechecks_final_scope(
                 "phases": [row["phase"] for row in data["metrics"]["recovery"]["events"]],
                 "complete": execution["semantic_coverage"]}
     evidence("SEM-DISPUTE-OMISSION-01", model, data, saved, {
-        "detail_ids": ["dispute-omission:material:1"],
-        "dispute_ids": ["dispute-omission:material:2"],
+        "detail_ids": ["dispute-omission:material:1", "dispute-omission:material:2"],
+        "dispute_ids": ["dispute-omission:material:3"],
         "phases": ["omission_recovery:dispute_reader", "omission_recovery:dispute_review",
                    "omission_recovery:detail_review"], "complete": "complete",
     }, observed)
@@ -530,7 +535,8 @@ def test_partial_initial_reader_omission_aggregates_all_owned_effect_receipts(
 
 def test_requested_review_discloses_unread_reader_beside_independently_checked_effect(
         client, wired, monkeypatch):
-    model = RecoveryModel(candidates=[detail(FIRST)], partial_reader=True, review_requested=True)
+    model = RecoveryModel(candidates=[detail(FIRST), detail(SECOND)],
+                          partial_reader=True, review_requested=True)
     data, saved, conversation = release(client, wired, monkeypatch, model, "reader-review")
     execution = data["material_coverage"]["execution"]
     observed = {"saved": [row["statement"] for row in conversation.open_material],
@@ -544,22 +550,39 @@ def test_requested_review_discloses_unread_reader_beside_independently_checked_e
                                  if row.get("stage")],
                 "outcome": data["continuation"]["units"][0]["record_outcome"]["status"]}
     evidence("SEM-UNREAD-REVIEW-01", model, data, saved, {
-        "saved": [FIRST], "material_state": "partial", "semantic_coverage": "complete",
+        "saved": [FIRST, SECOND], "material_state": "partial", "semantic_coverage": "complete",
         "fulfillment": "unfinished", "disclosed": True,
         "reader_gates": [("G-MODEL", "detail_extraction")], "outcome": "unresolved",
     }, observed)
 
 
 def test_legitimate_no_change_review_needs_no_omission_retry(client, wired, monkeypatch):
-    model = RecoveryModel(candidates=[], review_requested=True, review_outcome="review_no_change")
-    data, saved, conversation = release(client, wired, monkeypatch, model, "no-change-recovery")
+    seed_model = RecoveryModel(candidates=[detail(FIRST), detail(SECOND)])
+    opened, _, _ = release(client, wired, monkeypatch, seed_model, "no-change-original")
+    model = RecoveryModel(
+        candidates=[], opening=False, review_requested=True, review_outcome="review_no_change",
+        material_representations={
+            "L1": {"record_ids": ["no-change-original:material:1"], "candidate_ids": []},
+            "L2": {"record_ids": ["no-change-original:material:2"], "candidate_ids": []},
+        })
+    wire(wired, monkeypatch, model)
+    response = send(client, MESSAGE, "no-change-recovery", opened=opened)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    saved = wired.store.load(data["matter_id"])
+    conversation, _, _ = boundary._current_records(wired.store, saved)
     execution = data["material_coverage"]["execution"]
     observed = {"saved": [row["statement"] for row in conversation.open_material],
+                "ids": [row["id"] for row in conversation.open_material],
                 "fulfillment": execution["requests"][0]["fulfillment"],
                 "conditional": data["metrics"]["recovery"]["dispatched_calls"],
                 "changes": execution["record_changes"]}
+    model.seen = [*seed_model.seen, *model.seen]
+    model.outputs = [*seed_model.outputs, *model.outputs]
     evidence("SEM-NOCHANGE-01", model, data, saved,
-             {"saved": [], "fulfillment": "no_change_justified", "conditional": 0,
+             {"saved": [FIRST, SECOND],
+              "ids": ["no-change-original:material:1", "no-change-original:material:2"],
+              "fulfillment": "no_change_justified", "conditional": 0,
               "changes": []}, observed, scenario="known_good")
 
 

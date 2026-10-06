@@ -484,7 +484,6 @@ def verify_material_grounding(
     assessed_coverage = None
     previous_assessment = None
     observed_disagreements: list[dict] = []
-    system = _SYSTEM + (_COVERAGE_SYSTEM if requested_coverage else "")
     recovery_phase = "verify_material_grounding:correction"
     for attempt in range(2 if pending or requested_coverage else 0):
         if attempt and not claim_recovery(model, recovery_phase):
@@ -493,9 +492,17 @@ def verify_material_grounding(
             break
         candidate_ids = tuple(identity for identity in pending
                               if identity not in {"$coverage", "$envelope"})
+        read_coverage = requested_coverage and (
+            assessed_coverage is None or "$coverage" in pending or "$envelope" in pending
+            or any(identity in coverage_candidate_ids for identity in candidate_ids))
+        system = _SYSTEM + (_COVERAGE_SYSTEM if read_coverage else "")
         current = {**payload,
                    "candidates": [row for row in proposed
                                   if row["candidate_id"] in candidate_ids]}
+        if not read_coverage:
+            for field in ("coverage_source_ids", "coverage_selection_contract",
+                          "coverage_record_ids", "coverage_candidate_ids"):
+                current.pop(field, None)
         if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
@@ -510,10 +517,10 @@ def verify_material_grounding(
                 + (" Return coverage under the same contract, assessing the original "
                    "account against this call's verdicts and retained decisions; a valid "
                    "partial or unassessed judgment need not be changed to complete."
-                   if requested_coverage else ""))
+                   if read_coverage else ""))
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(16384, 512 * len(pending)
-                           + (384 * len(source_treatments) if requested_coverage else 0)))
+                           + (384 * len(source_treatments) if read_coverage else 0)))
         try:
             if (estimate_tokens(system + user) + output_limit
                     > model.context_budget(Tier.JUDGE)):
@@ -528,7 +535,8 @@ def verify_material_grounding(
                             tuple(sorted(set().union(*targets.values()))),
                             tuple(sorted({peer for key in candidate_ids
                                           for peer in restoration_peer_ids(key, targets)})),
-                            coverage_ids=coverage_ids, source_references=source_references,
+                            coverage_ids=coverage_ids if read_coverage else None,
+                            source_references=source_references,
                             coverage_record_ids=coverage_record_ids,
                             coverage_candidate_ids=coverage_candidate_ids),
                     Tier.JUDGE, max_tokens=output_limit)
@@ -540,7 +548,7 @@ def verify_material_grounding(
             if not result.usable:
                 raise SchemaViolation("Material grounding verification did not finish")
             envelope_issue = verdict_envelope_issue(
-                result.data, candidate_ids, coverage=requested_coverage)
+                result.data, candidate_ids, coverage=read_coverage)
             checked, issues = _read_verdicts(
                 result.data, candidate_ids, account_ids=account_ids,
                 targets=targets, source_treatments=source_treatments,
@@ -553,15 +561,16 @@ def verify_material_grounding(
                 raise
             issue = "Conditional independent review unavailable (" + type(exc).__name__ + ")"
             issues = {key: (issue,) for key in pending}
-            issues["$coverage"] = (issue,)
-            if assessed_coverage is not None:
-                previous_assessment = assessed_coverage
-            assessed_coverage = None
+            if read_coverage:
+                issues["$coverage"] = (issue,)
+                if assessed_coverage is not None:
+                    previous_assessment = assessed_coverage
+                assessed_coverage = None
             pending = tuple(issues)
             break
         except SchemaViolation as exc:
             issues = {key: (review_contract_issue(exc),) for key in pending}
-            if requested_coverage:
+            if read_coverage:
                 issues["$coverage"] = (review_contract_issue(exc),)
                 if assessed_coverage is not None:
                     previous_assessment = assessed_coverage
@@ -571,7 +580,7 @@ def verify_material_grounding(
         decisions.update(checked)
         if envelope_issue:
             issues["$envelope"] = (envelope_issue,)
-        if requested_coverage:
+        if read_coverage:
             if assessed_coverage is not None:
                 previous_assessment = assessed_coverage
             try:

@@ -267,7 +267,10 @@ def test_unread_opening_does_not_invalidate_independent_material_coverage(repres
             row["candidate_id"] == "D1" for row in payload["candidates"]) else []
         selected = ("represented", ("material",), ()) if representation == "current" else (
             "represented", (), ("D1",))
-        return {"verdicts": verdicts, "coverage": coverage(payload, {"L1": selected})}
+        result = {"verdicts": verdicts}
+        if "coverage_source_ids" in payload:
+            result["coverage"] = coverage(payload, {"L1": selected})
+        return result
 
     port = Judge([reply, reply])
     result, sink = run(
