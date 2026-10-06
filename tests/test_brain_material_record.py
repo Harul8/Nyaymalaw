@@ -1,10 +1,15 @@
-"""The attributed detail record follows source-linked disputes across turns."""
+"""The attributed detail record follows source-linked disputes across turns.
+
+Scripted readers leave some heading-only conduct unextracted. Its bounded
+recovery must preserve checked details and report that missing account plainly.
+"""
 import json
 from dataclasses import replace
 
 import pytest
 
 from nm.brain.dispute_state import proposed_disputes
+from nm.brain.execution_contracts import effect_catalogue
 from nm.brain.material_state import material_record
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_brain_board_proposals import dispute, saved_turn
@@ -20,6 +25,46 @@ def _board(client, matter_id):
     response = client.get(f"/api/matters/{matter_id}")
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def _initial_detail_input(model, latest):
+    inputs = []
+    for call in model.material_calls:
+        if call.operation != "extract_legal_details":
+            continue
+        payload = json.loads(call.user)
+        if "recovery_scope" not in payload and "original_input" not in payload and (
+                "".join(row["text"] for row in payload["latest_message_spans"]).strip() == latest):
+            inputs.append(payload)
+    assert len(inputs) == 1
+    return inputs[0]
+
+
+def _assert_detail_omission(response, model, missing, *, extra_phases=()):
+    """An omitted account gets one bounded read; checked peers stay independent."""
+    execution = response["material_coverage"]["execution"]
+    coverage = execution["stages"]["detail_review"]["account_coverage"]
+    assert coverage["state"] == "partial"
+    assert {row["quoted"] for row in coverage["missing_sources"]} == set(missing)
+    phases = [row["phase"] for row in response["metrics"]["recovery"]["events"]]
+    assert phases == [*extra_phases, "omission_recovery:detail_reader",
+                      "omission_recovery:detail_review"]
+    ledger = response["metrics"]["recovery"]
+    assert ledger["reserved_calls"] == ledger["dispatched_calls"] == len(phases)
+    recovery_inputs = []
+    for call in model.material_calls:
+        if call.operation != "extract_legal_details":
+            continue
+        payload = json.loads(call.user)
+        scope = payload.get("recovery_scope", {})
+        if scope.get("review_scope", {}).get("owner", {}).get("turn_id") == response["turn_id"]:
+            recovery_inputs.append(scope)
+    assert len(recovery_inputs) == 1
+    assert recovery_inputs[0]["missing_source_ids"] == coverage["missing_source_ids"]
+    assert all(row["kind"] != "dispute" for row in recovery_inputs[0]["retained_proposals"])
+    event = execution["semantic_recovery"]["omission_recovery"]
+    assert event["detail"] == "reviewed"
+    assert event["source_ids"]["detail"] == coverage["missing_source_ids"]
 
 
 def test_first_turn_links_shared_details_and_preserves_other_placements(
@@ -46,10 +91,12 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
 
     assert answer.status_code == 200, answer.text
     result = answer.json()
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 10
+    _assert_detail_omission(result, model, (
+        "The supplier missed delivery.", "The buyer withheld payment."))
     assert [call.operation for call in model.material_calls] == [
-        "extract_disputes", "extract_legal_details"]
-    detail_input = json.loads(model.material_calls[1].user)
+        "extract_disputes", "extract_legal_details", "extract_legal_details"]
+    detail_input = _initial_detail_input(model, message)
     assert [row["id"] for row in detail_input["assignment_targets"]
             if row["kind"] == "dispute"] == [
         "first:material:1", "first:material:2"]
@@ -71,7 +118,7 @@ def test_first_turn_links_shared_details_and_preserves_other_placements(
     assert replay.status_code == 200, replay.text
     assert replay.json()["replayed"] is True
     assert replay.json()["metrics"]["llm_calls"] == 0
-    assert len(model.calls) == 1 and len(model.material_calls) == 2
+    assert len(model.calls) == 1 and len(model.material_calls) == 3
 
 
 def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record(
@@ -143,14 +190,14 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
 
     third = send(client, continuation, "continuation", opened=opened)
     assert third.status_code == 200, third.text
-    detail_inputs = [json.loads(call.user) for call in model.material_calls
-                     if call.operation == "extract_legal_details"]
-    assert [row["id"] for row in detail_inputs[2]["assignment_targets"]
+    _assert_detail_omission(third.json(), model, ("My client contests a delivery charge.",))
+    detail_input = _initial_detail_input(model, continuation)
+    assert [row["id"] for row in detail_input["assignment_targets"]
             if row["kind"] == "dispute"] == [
         "opening:material:1"]
-    assert [row["id"] for row in detail_inputs[2]["active_material"]] == [
+    assert [row["id"] for row in detail_input["active_material"]] == [
         "opening:material:2", "diversion:material:3"]
-    assert detail_inputs[2]["active_material"][1]["matter_scope"] == "uncertain"
+    assert detail_input["active_material"][1]["matter_scope"] == "uncertain"
     after = _board(client, opened["matter_id"])["material_record"]
     assert [row["id"] for row in after["by_dispute"]["opening:material:1"]] == [
         "opening:material:2", "continuation:material:1"]
@@ -245,6 +292,9 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     model = Model([plan(first, candidates=first_rows, opening=True,
                         material_purposes=("account_contribution",)),
                    plan(next_message, candidates=next_rows,
+                        # These exact checked edits need an explicit owned
+                        # outcome; unrelated missing conduct stays partial.
+                        record_disposition="performed",
                         material_purposes=("account_contribution",),
                         mutation_scopes=[
                             mutation_scope("original:material:2"),
@@ -258,7 +308,18 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     changed = send(client, next_message, "change", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 8
+    assert changed.json()["metrics"]["llm_calls"] == 10
+    _assert_detail_omission(changed.json(), model, ("The shipment was late.",))
+    assert changed.json()["continuation"]["coverage"][0]["state"] == "ok"
+    unit, = changed.json()["continuation"]["units"]
+    effects = effect_catalogue(changed.json()["material_coverage"]["execution"])
+    assert {(row["relation"], tuple(row["target_record_ids"])) for row in effects.values()} == {
+        ("corrects", ("original:material:2",)), ("withdraws", ("original:material:3",))}
+    assert all(row["performed"] for row in effects.values())
+    assert set(unit["record_outcome"]["effect_ids"]) == set(effects)
+    assert unit["record_outcome"]["status"] == "performed"
+    assert unit["blocks"][0]["evidence_expression"]["operator"] == "record_result"
+    assert unit["sufficiency"]["status"] == "not_completed"
     record = _board(client, opened.json()["matter_id"])["material_record"]
     assert record["state"] == "ok"
     assert [row["id"] for row in record["rows"]] == ["change:material:1"]
@@ -270,9 +331,8 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     assert record["matter"] == []
     assert record["history"][2]["prior_references"][0]["quoted"] == (
         "It arrived on 4 May.")
-    detail_inputs = [json.loads(call.user) for call in model.material_calls
-                     if call.operation == "extract_legal_details"]
-    assert [row["id"] for row in detail_inputs[1]["active_material"]] == [
+    detail_input = _initial_detail_input(model, next_message)
+    assert [row["id"] for row in detail_input["active_material"]] == [
         "original:material:2", "original:material:3"]
     assert wired.store.load(opened.json()["matter_id"]).facts == ()
 
@@ -340,9 +400,9 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
 
     assert corrected.status_code == 200, corrected.text
     metrics = corrected.json()["metrics"]
-    assert metrics["llm_calls"] == (8 if supported else 10)
-    assert [row["phase"] for row in metrics["recovery"]["events"]] == (
-        [] if supported else ["omission_recovery:detail_reader", "omission_recovery:detail_review"])
+    assert metrics["llm_calls"] == 10
+    _assert_detail_omission(corrected.json(), model,
+                            ("The work stopped.",) if supported else ("The work stopped.", latest))
     checked = [row for payload in model.check_inputs
                for row in payload["candidates"] if row.get("relation") == "corrects"]
     assert checked
@@ -395,7 +455,9 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
     response = send(client, message, "repaired")
 
     assert response.status_code == 200, response.text
-    assert response.json()["metrics"]["llm_calls"] == 9
+    assert response.json()["metrics"]["llm_calls"] == 11
+    _assert_detail_omission(response.json(), model, ("The tenant contests the charge.",),
+                            extra_phases=("extract_legal_details:correction",))
     repair_inputs = [json.loads(call.user) for call in model.material_calls
                      if "original_input" in json.loads(call.user)]
     assert len(repair_inputs) == 1
@@ -425,6 +487,7 @@ def test_twice_invalid_detail_link_refuses_turn_without_partial_write(
 
     opened = send(client, first, "valid")
     assert opened.status_code == 200, opened.text
+    _assert_detail_omission(opened.json(), model, (first,))
     refused = send(client, next_message, "invalid", opened=opened.json())
 
     assert refused.status_code == 503, refused.text
@@ -435,7 +498,7 @@ def test_twice_invalid_detail_link_refuses_turn_without_partial_write(
         "proposed_disputes"]["rows"]] == ["valid:material:1"]
     assert [row["id"] for row in _board(client, opened.json()["matter_id"])[
         "material_record"]["history"]] == []
-    assert len(model.material_calls) == 5
+    assert len(model.material_calls) == 6
 
 
 def test_legacy_detail_without_placement_stays_unresolved():
@@ -473,6 +536,7 @@ def test_damaged_saved_detail_is_visible_as_incomplete_and_blocks_next_read(
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, message, "first")
     assert opened.status_code == 200, opened.text
+    _assert_detail_omission(opened.json(), model, ("The shipment is disputed.",))
     matter_id = opened.json()["matter_id"]
 
     matter = wired.store.load(matter_id)
@@ -492,7 +556,7 @@ def test_damaged_saved_detail_is_visible_as_incomplete_and_blocks_next_read(
     continued = send(client, "The note was posted yesterday.", "second",
                      opened=opened.json())
     assert continued.status_code == 409, continued.text
-    assert len(model.calls) == 1 and len(model.material_calls) == 2
+    assert len(model.calls) == 1 and len(model.material_calls) == 3
     assert len(wired.store.load(matter_id).brain_chat) == 1
 
 

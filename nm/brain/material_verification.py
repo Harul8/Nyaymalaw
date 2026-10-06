@@ -211,9 +211,11 @@ Look for: First read the complete original advocate account within the current
 review_scope, separately from candidate-selected citations. coverage_source_ids
 is the full owned advocate catalogue. source_treatments supplies canonical
 turns, speakers and exact words. review_scope describes authorised work, not
-facts to restore. active_material and active_disputes supply the complete
-current/held interpretations; compare them with original words, never treat
-their NM formulations as their own evidence. Then assess what remains
+facts to restore. active_material supplies current/held material details;
+active_disputes and opening proposals give context and association, not separate
+material-detail records. Compare all interpretations with original words, never
+treat their NM formulations as their own evidence. Only coverage_record_ids
+and coverage_candidate_ids may represent material details. Then assess what remains
 represented after this call's verdicts and retained_candidate_context decisions.
 A rejected proposal does not represent an omitted account merely because it was
 submitted. A checked current record may already represent the account without
@@ -230,7 +232,9 @@ and reason. Account has substantive portions; the other purposes have none.
 Give dispositions for every selected account portion, allowing overlapping
 context and several propositions per source: source_id, start, end, status,
 record_ids, candidate_ids and reason. represented selects faithful current
-records or accepted proposals; missing/unresolved/non_account/outside_scope
+material records or accepted detail proposals from the supplied coverage choices;
+a dispute heading or opening summary cannot satisfy material-detail coverage.
+missing/unresolved/non_account/outside_scope
 selects no representation IDs. Decide outside_scope from the authorised stage's
 work, never from extraction failure. Explain uncertainty or a materially missing
 distinction even if some work is represented. Code resolves exact words and
@@ -451,9 +455,8 @@ def verify_material_grounding(
                          "title": opening.title, "party_name": party_name,
                          "subject": subject, "summary": opening.summary})
     payload["candidates"] = proposed
-    coverage_record_ids = tuple(dict.fromkeys(
-        row["id"] for row in (*active_material, *active_disputes)))
-    coverage_candidate_ids = tuple(row["candidate_id"] for row in proposed)
+    coverage_record_ids = tuple(dict.fromkeys(row["id"] for row in active_material))
+    coverage_candidate_ids = tuple(keyed)
     if requested_coverage and source_references is not None:
         payload.update(coverage_selection_contract=COVERAGE_SELECTION_CONTRACT,
                        coverage_record_ids=list(coverage_record_ids),
@@ -577,8 +580,11 @@ def verify_material_grounding(
                     coverage_ids, source_references=source_references,
                     record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
                     admitted_candidate_ids=[identity for identity, row in decisions.items()
-                                            if row["verdict"] == "accept"],
-                    candidate_support=decisions if source_references is not None else None)
+                                            if identity in coverage_candidate_ids
+                                            and row["verdict"] == "accept"],
+                    candidate_support={identity: row for identity, row in decisions.items()
+                                       if identity in coverage_candidate_ids}
+                    if source_references is not None else None)
             except SchemaViolation as exc:
                 assessed_coverage = None
                 issues["$coverage"] = (review_contract_issue(exc),)
@@ -639,7 +645,12 @@ def verify_material_grounding(
     decisions = admitted_record_decisions(scoped_decisions)
     downgraded = [identity for identity, row in reviewed_decisions.items()
                   if row["verdict"] == "accept" and decisions[identity]["verdict"] != "accept"]
-    if requested_coverage and (unresolved_candidates or downgraded or "$envelope" in pending):
+    unresolved_coverage = tuple(identity for identity in unresolved_candidates
+                                if identity in coverage_candidate_ids)
+    downgraded_coverage = tuple(identity for identity in downgraded
+                               if identity in coverage_candidate_ids)
+    if requested_coverage and (unresolved_coverage or downgraded_coverage
+                               or "$envelope" in pending):
         if assessed_coverage is not None:
             previous_assessment = assessed_coverage
         assessed_coverage = None
@@ -648,16 +659,16 @@ def verify_material_grounding(
             invalidated.append(
                 "The independent review envelope remained unread: "
                 + review_issues_text({"$envelope": issues["$envelope"]}))
-        if unresolved_candidates:
+        if unresolved_coverage:
             invalidated.append(
-                "Independent verdicts remained unread for " + ", ".join(unresolved_candidates)
+                "Independent verdicts remained unread for " + ", ".join(unresolved_coverage)
                 + "; coverage has not assessed this final admitted/unread set.")
-        if downgraded:
+        if downgraded_coverage:
             invalidated.append(
-                "Final admission withheld reviewed proposals " + ", ".join(downgraded)
+                "Final admission withheld reviewed proposals " + ", ".join(downgraded_coverage)
                 + ": " + "; ".join(
                     identity + " [" + decisions[identity].get("admission_issue", "admission")
-                    + "]: " + decisions[identity]["reason"] for identity in downgraded)
+                    + "]: " + decisions[identity]["reason"] for identity in downgraded_coverage)
                 + "; coverage has not assessed this final admitted set.")
         issues["$coverage"] = tuple(invalidated)
         if (source_references is not None and previous_assessment is not None
@@ -666,7 +677,7 @@ def verify_material_grounding(
             # only representation depending on that proposal, not every source.
             assessed_coverage = deepcopy(previous_assessment)
             admitted = {identity for identity, row in decisions.items()
-                        if row["verdict"] == "accept"}
+                        if identity in coverage_candidate_ids and row["verdict"] == "accept"}
             missing = set(assessed_coverage["missing_source_ids"])
             for item in assessed_coverage["dispositions"]:
                 item["candidate_ids"] = [identity for identity in item["candidate_ids"]
@@ -689,7 +700,7 @@ def verify_material_grounding(
                     "relation": keyed[identity].relation,
                     "target_ids": list(keyed[identity].related_material_ids),
                     "quoted": keyed[identity].quoted,
-                } for identity in (*downgraded, *unresolved_candidates) if identity in keyed])
+                } for identity in (*downgraded_coverage, *unresolved_coverage)])
     if requested_coverage and coverage is not None:
         assessment = assessed_coverage or {
             "state": "unassessed",

@@ -922,6 +922,25 @@
       ],
       "call_accounting": "One nonempty fitting legal group still uses planning, reading and independent checking:3routine stages. Initial empty reading over supplied passages is independent work, not recovery; genuinely empty corpus uses zero empty-review calls. Valid repeated sources may reuse checked law with zero new law calls. Malformed result permits one local correction only if shared allowance admits it. Coverage-only correction uses the same ledger.",
       "limits": "This closes the discovered legal retry bypass, not every semantic recovery problem. Conditional admission changes can expose existing omissions. Connected browser/model usefulness and actual token/latency totals remain to qualify."
+    },
+    {
+      "piece": "material-detail-coverage-owned-domain",
+      "production_file": "nm/brain/material_verification.py",
+      "prompt_changed": "_COVERAGE_SYSTEM",
+      "invariant": "Fresh material representation selects only actual active material records and detail candidates. Dispute headings and opening descriptions remain context and separately reviewed proposals, not independent captured details. Unread/downgraded openings cannot invalidate independently checked material coverage; unread details and whole-envelope integrity still hold it.",
+      "baseline": "Six of16 focused cases failed: heading/opening stand-in completeness, overbroad choices, unread opening invalidation and public saved O1 representation.",
+      "verification": {
+        "new_cases_passed": 16,
+        "focused_checks_passed": 201,
+        "ruff": "passed",
+        "public_boundary": "saved/reopened detail proof; exact request retry returns identical elements with zero model calls and unchanged original transcript",
+        "historical_scope": "post-application owner compatibility cases retain existing O1/dispute assessment metadata; no claim of a new full historical sealed receipt fixture",
+        "paid_calls": 0,
+        "routine_model_call_delta": 0,
+        "existing_fixture_changes": "Old association/record scripts that omitted heading conduct now assert honest partial coverage and exactly one targeted reader/check recovery pair. Current-state/effect outcomes explicitly select actual owned operations; unrelated gaps remain not_completed. Input selection follows message identity rather than shifted call position."
+      },
+      "call_accounting": "Detail reader and independent grounding/coverage remain one call each. Genuine omissions use the existing conditional reader/check pair. Endpoint/schema correction remains at most one local retry within shared8/reserve2. No new routine stage.",
+      "limits": "Mechanical ownership/domain checks do not establish semantic sufficiency. Opening-only retry still repeats material coverage and can lose a previously checked assessment on outage/malformed output; separately reproduced16failed9passed isolation slice queued. Material reader duplicate-owner clarification and connected pinned browser qualification remain open."
     }
   ],
   "additional_reviewer_input": {

@@ -7,10 +7,12 @@ Before Build is the status owner; Implementation Plan mirrors its requirements.
 New owners LB-194–197 hold these checkpoints because LB-193's history is already
 close to Excel's 32,767-character cell limit. Historical evidence remains intact.
 
-No real-model API or browser calls are authorized in this offline phase. The
-user explicitly deferred real-model/browser acceptance. Offline scripted
-reviewers exercise contracts and recovery; they cannot establish a real model's
-semantic accuracy, population false-positive rate or universal correctness.
+The initial cloud phase excluded real-model API and browser calls. On6 October
+2026 the user authorized end-to-end repair, focused offline checks and browser
+acceptance, with up to$5 in API credits. Current cumulative accounting and actual
+evidence are recorded in Before Build and the current forensic report. Offline
+scripted reviewers exercise contracts and recovery; they cannot establish a real
+model's semantic accuracy, population false-positive rate or universal correctness.
 
 ## Baseline and the eight characterizations
 
