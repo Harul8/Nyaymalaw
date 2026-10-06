@@ -1072,6 +1072,25 @@
       "call_impact": "No routine or conditional stage added; original bounded correction and source-owner recovery remain. No paid calls.",
       "test_transport": "Scripted legacy verdicts translated only after independent authored checks and only for explicit fresh contract. Raw malformed outputs remain unaltered. Golden packet hash/assertions unchanged.",
       "remaining": "Both reviewer consumers now migrated. Actual pinned browser qualification is next; semantic atomicity, assignment, contestability, legal qualification and useful delivery still require repair."
+    },
+    {
+      "piece": "align independent coverage regression fixtures",
+      "owner": "focused tests only; no production changes",
+      "version": "d7ad798 plus four test modules",
+      "general_invariant": "A heading is not a material-detail record. Scripted original and newly corrected account must be independently represented before an eight/nine-call no-omission expectation is legitimate. Unread opening O1 is independent of complete admitted detail coverage.",
+      "verification": {
+        "focused_passed": 34,
+        "fixed_baseline_cases": 7,
+        "preserved_call_counts": {
+          "singleton": 9,
+          "transition_modes": 8,
+          "mixed_assignment": 10
+        },
+        "preserved": "Original dispute IDs, source words, negative operation/ownership/rejection assertions and saved/replay checks; added exact owned detail preservation assertions.",
+        "ruff": "passed"
+      },
+      "call_impact": "Production call design unchanged. Old unrepresented fixtures correctly required two omission-recovery calls; corrected authored fixtures exercise their intended boundaries without that unrelated omission. No paid calls.",
+      "remaining": "Scripted reviewers do not establish actual source meaning, law applicability or useful completion. Delivery/result contract remains pending."
     }
   ],
   "additional_reviewer_input": {
@@ -1237,7 +1256,8 @@
       "Seven details saved, including uncertainty about screenshot. Distinct acts still grouped in one event; all details assigned matter-wide.",
       "No legal findings or gathering items delivered: reader force/subject schema failures exhausted bounded recovery before legal verification.",
       "Opening title remains Matter after unresolved source purpose; reply repetitive and duplicate record status.",
-      "No authored fresh source_ids or out-of-bounds support passage admitted. One repeated check was corrected; source-purpose reconsideration ran twice."
+      "No authored fresh source_ids or out-of-bounds support passage admitted. One repeated check was corrected; source-purpose reconsideration ran twice.",
+      "Saved canonical task/sufficiency and record_check still declare complete/fulfilled despite no source-backed gathering deliverable. The honest unfinished public footer does not close the durable false-completion gap."
     ],
     "browser": [
       "Start matter opened empty center chat with no board/form",

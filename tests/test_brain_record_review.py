@@ -213,6 +213,14 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     account = "The supplier withheld tools while the carrier charged for undelivered cargo."
     request = "Restore independently sourced issues from my saved account."
     original = material("dispute", "Supplier and carrier disagreement", account)
+    # The deliberately merged heading does not stand in for its independently
+    # reported acts. Each detail cites the complete original passage.
+    original_details = [
+        material("event", "The supplier withheld tools.", account,
+                 placement="disputes", dispute_ids=("merged:material:1",)),
+        material("event", "The carrier charged for undelivered cargo.", account,
+                 placement="disputes", dispute_ids=("merged:material:1",)),
+    ]
     successor = material("dispute", "Supplier withheld tools", request, relation="corrects",
                          references=({"turn_id": "merged", "role": "advocate", "quoted": account},),
                          scope="current")
@@ -249,7 +257,7 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
             return result
 
     model = DispatchModel([
-        plan(account, candidates=[original], opening=True,
+        plan(account, candidates=[original, *original_details], opening=True,
              material_purposes=("account_contribution",)),
         plan(request, candidates=[successor], record_disposition="unresolved",
              source_purposes={request: "non_account"},
@@ -271,10 +279,18 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     assert result["material"] == [] and result["metrics"]["llm_calls"] == 9
     saved = wired.store.load(opened["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
+    from nm.brain.material_state import material_record
 
     assert saved.brain_chat[0] == original_turn and saved.facts == ()
     assert [row["id"] for row in proposed_disputes(saved)["rows"]] == ["merged:material:1"]
     assert result["material_coverage"]["dispute_review"][0]["verdict"] == "reject"
+    preserved_details = material_record(saved, disputes=proposed_disputes(saved))["rows"]
+    assert [(row["id"], row["statement"]) for row in preserved_details] == [
+        ("merged:material:2", "The supplier withheld tools."),
+        ("merged:material:3", "The carrier charged for undelivered cargo."),
+    ]
+    assert all(row["quoted"] == account and row["dispute_ids"] == ["merged:material:1"]
+               for row in preserved_details)
 
 
 def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_sources_survive(

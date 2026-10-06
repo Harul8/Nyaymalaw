@@ -10,7 +10,7 @@ from tests.brain_reader_fixture import (
     reviewed_record_verdicts,
 )
 from tests.test_brain_board_proposals import dispute
-from tests.test_brain_material import Model, mutation_scope, plan, send
+from tests.test_brain_material import Model, material, mutation_scope, plan, send
 
 
 def fixture_scope_judgment(payload, reviewed):
@@ -97,6 +97,12 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
     originals = [
         dispute("Operator retained server", "The operator retained our server."),
         dispute("Operator withheld deposit", "The operator withheld our deposit."),
+        material("event", "The operator retained our server.",
+                 "The operator retained our server.", placement="disputes",
+                 dispute_ids=("original:material:1",)),
+        material("event", "The operator withheld our deposit.",
+                 "The operator withheld our deposit.", placement="disputes",
+                 dispute_ids=("original:material:2",)),
     ]
     pieces = []
     candidates = []
@@ -111,12 +117,25 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
                               ("original:material:2",))
         corrected["relation"] = "corrects"
         candidates.append(corrected)
+        candidates.append(material(
+            "event", "The administrator withheld the deposit, not the operator.",
+            CORRECTION, relation="corrects", scope="current", placement="disputes",
+            dispute_ids=("followup:material:1",),
+            related_material_ids=("original:material:4",), references=({
+                "turn_id": "original", "role": "advocate",
+                "quoted": "The operator withheld our deposit.",
+            },)))
     if mode in ("opposing", "mixed"):
         pieces.extend((POSITION, "That is their reported position; we dispute it."))
         opposing = dispute("Administrator denies ledger inspection", POSITION,
                            scope="current")
         opposing["basis"] = "attributed"
         candidates.append(opposing)
+        candidates.append(material(
+            "position", POSITION, POSITION, scope="current", basis="attributed",
+            placement="disputes",
+            dispute_ids=(("followup:material:2" if mode == "mixed"
+                          else "followup:material:1"),)))
     latest = " ".join(pieces)
     model = TransitionModel([plan(FIRST, candidates=originals, opening=True,
                                   material_purposes=("account_contribution",)),
@@ -125,7 +144,7 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
                                   record_disposition="performed" if mode in ("correction", "mixed")
                                   else None,
                                   mutation_scopes=([mutation_scope(
-                                      "original:material:2",
+                                      "original:material:2", "original:material:4",
                                       source_ids=("L3",) if mode == "mixed" else ("L1",))]
                                       if mode in ("correction", "mixed") else []))])
     if mode in ("correction", "mixed"):
@@ -180,8 +199,21 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
         assert rows["Administrator denies ledger inspection"]["relation"] == "new"
 
     saved = wired.store.load(answer["matter_id"])
+    from nm.brain.dispute_state import proposed_disputes
+    from nm.brain.material_state import material_record
+
     assert saved.brain_chat[0] == original_response
     assert [entry["message"] for entry in saved.brain_chat] == [FIRST, latest]
+    records = material_record(saved, disputes=proposed_disputes(saved))["rows"]
+    expected_accounts = {"The operator retained our server.",
+                         CORRECTION if mode in ("correction", "mixed")
+                         else "The operator withheld our deposit."}
+    if mode in ("opposing", "mixed"):
+        expected_accounts.add(POSITION)
+    assert {row["quoted"] for row in records} == expected_accounts
+    server_detail, = [row for row in records
+                      if row["quoted"] == "The operator retained our server."]
+    assert server_detail["id"] == "original:material:3"
     audit = saved.brain_chat[-1]["response"]["material_coverage"]["dispute_review"]
     held = [row for row in audit if not row["operation_supported"]]
     assert len(held) == (1 if mode in ("review", "mixed") else 0)

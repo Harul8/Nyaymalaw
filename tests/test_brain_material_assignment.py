@@ -41,7 +41,9 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
     initial = [material("dispute", "Delivery delay", "Delivery was delayed."),
                material("dispute", "Contested payment", "Payment was twenty units."),
                material("circumstance", "Payment was twenty units.", "Payment was twenty units.",
-                        dispute_ids=("assignment-first:material:2",))]
+                        dispute_ids=("assignment-first:material:2",)),
+               material("event", "Delivery was delayed.", "Delivery was delayed.",
+                        dispute_ids=("assignment-first:material:1",))]
     latest = "Correction: payment was ten units. A receipt is available. Hello."
     changed = material("circumstance", "Payment was ten units.",
                        "Correction: payment was ten units.", relation="corrects", scope="current",

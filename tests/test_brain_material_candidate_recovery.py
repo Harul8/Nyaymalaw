@@ -325,7 +325,7 @@ def test_unread_opening_never_defaults_to_accept_and_does_not_count_as_unread_de
     model = Stub(
         [
             lambda p: {"verdicts": [verdict(p, "D1")], "coverage": assessment()},
-            {"verdicts": [], "coverage": assessment()},
+            {"verdicts": []},
         ]
     )
     sink = {}
@@ -346,7 +346,7 @@ def test_unread_opening_never_defaults_to_accept_and_does_not_count_as_unread_de
     assert row["candidate_id"] == "O1" and row["candidate_type"] == "opening"
     assert row["proposal"]["title"] == "Return of records"
     assert "no usable independent verdict" in result.opening_reason
-    assert sink["state"] == "unassessed"
+    assert sink["state"] == "complete"
 
 
 def test_checked_opening_can_survive_unread_detail_without_certifying_material_coverage():
