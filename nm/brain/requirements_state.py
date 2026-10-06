@@ -10,6 +10,7 @@ from nm.brain.legal_requirements import (
     HISTORICAL_RESEARCH_VERIFICATIONS,
     RESEARCH_KINDS,
     RESEARCH_VERIFICATION,
+    empty_reading_verification_valid,
     finding_verification_valid,
     source_verification_valid,
 )
@@ -183,9 +184,33 @@ def _read_valid(read: dict, *, legacy: bool, owner: str) -> bool:
             or any(key in coverage and (type(coverage[key]) is not int or coverage[key] < 0)
                    for key in ("checked_items", "unread_items", "withheld_items"))):
         return False
+    if (not legacy and "empty_reading" in coverage
+            and (rows or not empty_reading_verification_valid(
+                coverage["empty_reading"], subject_id=subject["id"]))):
+        return False
     if len({(row["kind"], row["label"].casefold()) for row in rows}) != len(rows):
         return False
     return True
+
+
+def _reuse_evidence(read: dict) -> bool:
+    """Readable history is reusable only with explicit successful coverage."""
+    coverage = read.get("coverage")
+    if (not isinstance(coverage, dict)
+            or any(type(coverage.get(key)) is not int or coverage[key] < 0
+                   for key in ("checked_items", "unread_items", "withheld_items"))
+            or coverage["unread_items"] != 0
+            or coverage["withheld_items"] > coverage["checked_items"]):
+        return False
+    if read["rows"]:
+        return coverage["checked_items"] >= len(read["rows"])
+    # _read_valid already checked any advertised receipt against the saved
+    # subject and exact source pool. Older empty reads remain history only.
+    receipt = coverage.get("empty_reading")
+    return (isinstance(receipt, dict)
+            and (receipt["outcome"] == "no_supplied_passages"
+                 or (receipt["outcome"] == "no_supported_finding"
+                     and coverage["checked_items"] >= 1)))
 
 
 def _prior_account_words(matter: Matter,
@@ -354,7 +379,7 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                 verification_current = (not legacy and read.get("verification") == verification
                                         and verification == RESEARCH_VERIFICATION)
                 reusable = (not legacy and current and read["state"] == "ok"
-                            and verification_current)
+                            and verification_current and _reuse_evidence(read))
                 freshness = "current" if current else (
                     "unknown" if legacy or corpus_revision is None else "stale")
                 coverage = deepcopy(read.get("coverage") or {})

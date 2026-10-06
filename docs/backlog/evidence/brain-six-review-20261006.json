@@ -375,6 +375,20 @@
         "nm/brain/retrieval.py",
         "tests/test_brain_retrieval_read_gaps.py"
       ]
+    },
+    {
+      "slice": "require-coherent-saved-research-evidence",
+      "owners": [
+        "LB-179",
+        "LB-181",
+        "LB-193"
+      ],
+      "decision": "Saved research remains readable but is reusable only with explicit coherent nonnegative checking counters and zero unread work. Empty rows additionally need an owned justified bounded empty-reading receipt; semantically rejected proposals are checked rather than unread, so valid retained findings can still be reused.",
+      "validation": "103 offline research-state and reuse cases passed; missing evidence, inconsistent counts and legitimate checked rejection/empty-pool pairs; Ruff clean. Real-model/browser evaluation deferred.",
+      "files": [
+        "nm/brain/requirements_state.py",
+        "tests/test_brain_research_reuse_evidence.py"
+      ]
     }
   ]
 }
