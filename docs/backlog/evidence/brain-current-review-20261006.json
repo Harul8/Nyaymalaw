@@ -2128,13 +2128,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.553883,
-    "remaining_usd": 2.446117,
-    "new_ledger_attempts": 172,
+    "combined_measured_usd": 2.612253,
+    "remaining_usd": 2.387747,
+    "new_ledger_attempts": 192,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus172 current measured attempts; cumulative authorization USD5 unchanged"
+    "basis": "166 frozen prior attempts plus current measured attempts; cumulative authorization USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2229,5 +2229,51 @@
   "current_support_live_evidence": {
     "path": "docs\\backlog\\evidence\\brain-current-support-20261007-live.json.gz",
     "sha256": "e400b31a22fe1ba29e722b645835b7461c46c155e45063ef6af7536f737a26b6"
+  },
+  "applicable_outcomes_live_acceptance": {
+    "commit": "d7713f7",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "matter_id": "mat_453031d12a9eb2d46d9aa0bc3e469629",
+    "saved_version": 2,
+    "saved_turns": 2,
+    "browser_observed": true,
+    "reopened_without_new_calls": true,
+    "slices": [
+      {
+        "label": "neutral_record_and_recap",
+        "calls": 8,
+        "charge_usd": 0.022806,
+        "tokens_in": 44895,
+        "tokens_out": 3028,
+        "model_elapsed_s": 29.016
+      },
+      {
+        "label": "correct_and_recap",
+        "calls": 12,
+        "charge_usd": 0.035564,
+        "tokens_in": 67599,
+        "tokens_out": 5325,
+        "model_elapsed_s": 47.453
+      }
+    ],
+    "passed": [
+      "First turn preserves separate record and recap requests and delivers a checked factual recap in eight calls.",
+      "Neutral account identifies no dispute and triggers no legal retrieval.",
+      "Correction reader proposes the right targeted date change; extraction did run.",
+      "Existing completion gate rejects false already-current claims against unchanged original records.",
+      "Both original inputs persist; second turn accurately reports unfinished work and no record change, including after zero-call reopening."
+    ],
+    "failed": [
+      "Reviewer first accepts the correction, then incorrectly treats its factual assertion as pure instruction and the earlier date as proof against correction.",
+      "Candidate-free reconsideration twice returns nonempty substantive spans for work_instruction, violating the existing admission contract.",
+      "Dispute coverage confuses substantive source purpose with whether the account itself raises a conflict.",
+      "Compound correction and recap is reduced to one record-acknowledgement request; no useful current recap is delivered.",
+      "First reply repeats facts, work instructions and status; conversational quality remains inadequate."
+    ],
+    "acceptance": "FAILED correction and useful-delivery acceptance. Native outcome/coverage shapes improve first-turn mechanics; no production-readiness or semantic qualification."
+  },
+  "applicable_outcomes_live_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-applicable-outcomes-20261007-live.json.gz",
+    "sha256": "4603b79d369ebcb96e12ce2a6d33eb12bef73985aecaf7b2823b5bfb4816a277"
   }
 }
