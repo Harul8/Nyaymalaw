@@ -423,3 +423,32 @@ def test_plain_model_shaped_dictionary_cannot_impersonate_code_issued_review_cac
     state = {"cache": {"context": original, "source_treatments": sources, "decisions": decisions}}
     with pytest.raises(SchemaViolation):
         resume_cache(state, original, sources, accounts, targets)
+
+
+@pytest.mark.parametrize("field", ["linked_records", "active_disputes", "active_material"])
+def test_additional_owned_record_context_preserves_unchanged_checked_decisions(field):
+    state, original, sources, decisions, accounts, targets = review_cache()
+    original[field] = [{"id": "old", "statement": "Exact canonical original record."}]
+    candidate.remember_independent_review(
+        state, context=original, source_treatments=sources, decisions=decisions)
+    original[field].append({"id": "additional", "statement": "Additional owned canonical record."})
+    assert resume_cache(state, original, sources, accounts, targets) == decisions
+
+
+@pytest.mark.parametrize("field", ["linked_records", "active_disputes", "active_material"])
+@pytest.mark.parametrize("mutation", ["removed", "rewritten", "duplicate", "missing_identity"])
+def test_prior_owned_record_context_cannot_be_removed_rewritten_or_duplicated(field, mutation):
+    state, original, sources, decisions, accounts, targets = review_cache()
+    original[field] = [{"id": "old", "statement": "Exact canonical original record."}]
+    candidate.remember_independent_review(
+        state, context=original, source_treatments=sources, decisions=decisions)
+    if mutation == "removed":
+        original[field] = []
+    elif mutation == "rewritten":
+        original[field][0]["statement"] = "Rewritten evidence."
+    elif mutation == "duplicate":
+        original[field].append(deepcopy(original[field][0]))
+    else:
+        original[field].append({"statement": "Record without owner."})
+    with pytest.raises(SchemaViolation):
+        resume_cache(state, original, sources, accounts, targets)

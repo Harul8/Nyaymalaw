@@ -287,6 +287,32 @@ def retained_independent_review(state: dict | None, *, context: dict,
                      if key not in ("candidates", "source_treatments")}
     current_context = {key: value for key, value in context.items()
                        if key not in ("candidates", "source_treatments")}
+    for field in ("linked_records", "active_disputes", "active_material"):
+        old_records = prior_context.pop(field, None)
+        new_records = current_context.pop(field, None)
+        if old_records is None and new_records is None:
+            continue
+
+        def catalogue(rows):
+            if not isinstance(rows, list):
+                raise SchemaViolation("Independent review reuse has no owned record catalogue")
+            mapped = {}
+            for row in rows:
+                identity = row.get("id") if isinstance(row, dict) else None
+                if (not isinstance(identity, str) or not identity.strip()
+                        or identity in mapped):
+                    raise SchemaViolation(
+                        "Independent review reuse repeats or loses a record owner")
+                mapped[identity] = row
+            return mapped
+
+        old = catalogue(old_records)
+        new = catalogue(new_records)
+        if not old.keys() <= new.keys() or any(old[key] != new[key] for key in old):
+            raise SchemaViolation("Independent review reuse changed a prior owned record")
+        # The owning verifier validates every supplied assignment and revision
+        # record before this cache boundary. Additional owned records do not
+        # rewrite the unchanged records supporting retained decisions.
     if prior_context != current_context:
         raise SchemaViolation("Independent review reuse changed original context or owned targets")
 
