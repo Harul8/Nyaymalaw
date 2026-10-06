@@ -262,6 +262,51 @@ _KNOWN_ACCOUNT_PURPOSES = _SUBSTANTIVE_ACCOUNT_PURPOSES | {
     "examination_material", "work_instruction", "nm_interpretation", "uncertain"}
 
 
+def _negative_account_purpose_freshness(read, original_catalogue, current_catalogue):
+    """Bind an empty admitted result to the original classified account scope.
+
+    Rejected proposals can leave no admitted application premise while their
+    negative conclusion still depended on the original account purpose. In the
+    absence of a narrower owned dependency inventory, retain the original scope,
+    ignoring local span IDs, explanations and newly added unrelated references.
+    This affects reuse only; the exact checked history remains readable.
+    """
+    receipt = read.get("coverage", {}).get("empty_reading")
+    if (isinstance(receipt, dict)
+            and receipt.get("outcome") == "no_supplied_passages"):
+        return "not_required"
+    if original_catalogue is None and current_catalogue is None:
+        # Existing law-only/legacy reads with no classified account scope do
+        # not establish a new account purpose or a changed factual dependency.
+        return "not_required"
+    if not isinstance(original_catalogue, dict) or not isinstance(current_catalogue, dict):
+        return "unknown"
+    if not original_catalogue:
+        return "not_required"
+
+    def purposes(catalogue):
+        result = {}
+        for row in catalogue.values():
+            if not isinstance(row, dict):
+                return None
+            reference = tuple(row.get(field) for field in ("turn_id", "role", "quoted"))
+            role = row.get("content_role")
+            if (any(not isinstance(value, str) or not value.strip() for value in reference)
+                    or reference[1] != "advocate"
+                    or role not in _KNOWN_ACCOUNT_PURPOSES):
+                return None
+            if reference in result and result[reference] != role:
+                return None
+            result[reference] = role
+        return result
+
+    original, current = purposes(original_catalogue), purposes(current_catalogue)
+    if original is None or current is None or not set(original) <= set(current):
+        return "unknown"
+    return "changed" if any(current[reference] != role
+                            for reference, role in original.items()) else "current"
+
+
 def _application_purpose_freshness(read, original_catalogue, current_catalogue):
     """Compare only the original advocate spans actually used by checked premises."""
     if read.get("verification") != RESEARCH_VERIFICATION:
@@ -271,7 +316,9 @@ def _application_purpose_freshness(read, original_catalogue, current_catalogue):
                   for premise in finding.get("use_verification", {}).get("application_premises", [])
                   for ref in premise["account_references"]}
     if not references:
-        return "not_required"
+        return (_negative_account_purpose_freshness(
+            read, original_catalogue, current_catalogue)
+            if not read["rows"] else "not_required")
 
     def role(catalogue, reference):
         if not isinstance(catalogue, dict):
