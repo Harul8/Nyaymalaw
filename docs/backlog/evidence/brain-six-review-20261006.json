@@ -220,6 +220,20 @@
       "files": [
         "nm/brain/legal_requirements.py"
       ]
+    },
+    {
+      "slice": "response-writing-evidence-order",
+      "owners": [
+        "LB-176",
+        "LB-185",
+        "LB-187",
+        "LB-188"
+      ],
+      "decision": "Writer now establishes request/scope, original account, actual execution, selected legal use, useful distinct proposals, then justified sufficiency/progress. Preserve pending broader task, all prior questions, exact legal assertion/application limits, adverse evidence and uncertainty. Prepared receipt proves no acknowledged save; returned reader, unrelated edit, prose or reviewer acceptance proves no requested fulfillment. Keep independent useful content without asking advocate to restart accepted work.",
+      "validation": "112 continuation and retention tests passed offline. Prompt token impact, semantic quality and browser behavior require deferred owner qualification.",
+      "files": [
+        "nm/brain/continuation.py"
+      ]
     }
   ]
 }

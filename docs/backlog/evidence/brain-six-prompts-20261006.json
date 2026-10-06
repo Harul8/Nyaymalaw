@@ -470,6 +470,76 @@
       "new_activities": [
         "Activity 1 - Correct only the unresolved decision."
       ]
+    },
+    {
+      "file": "nm/brain/continuation.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "1725bb677a17d0435a60d939f922f6d75bcf84d5868f5fbbc36547afa5ec2690",
+      "new_sha256": "f0debc81761a710f7f1cf9badf6e622aebfa2d3b10e45a1ed5b9fb850ec4f0c0",
+      "old_words": 1638,
+      "new_words": 1913,
+      "paragraph_mapping": [
+        {
+          "old": 1,
+          "new": 1,
+          "preserves": "Complete attributed input, source-role treatment, untrusted data, earlier NM limitations, first-message validity.",
+          "adds": "Makes optional execution receipt distinct from fulfillment and saving."
+        },
+        {
+          "old": 2,
+          "new": 2,
+          "preserves": "Use existing work; no re-extraction, source-state change or action authority.",
+          "adds": "Evidence precedes delivered-result judgment."
+        },
+        {
+          "old": 3,
+          "new": [
+            3,
+            4
+          ],
+          "preserves": "Actual request, scope, diversion, ambiguity, chronology, attributed uncertainty, respectful useful response.",
+          "adds": "Explicit request-versus-execution distinction; original account is resolved before result claims."
+        },
+        {
+          "old": 4,
+          "new": [
+            4,
+            6
+          ],
+          "preserves": "Original derived-record support, checked legal use/owner, conditions, applicability, limited research, no mandatory barrier from unsupported doctrine.",
+          "adds": "Requested coverage and material opposing/adverse checked findings must be considered; no invented opponent."
+        },
+        {
+          "old": 5,
+          "new": 7,
+          "preserves": "Purposeful questions/work, sensitive relevance, unavailable-material alternatives, stable proposal identity.",
+          "adds": "Internal failure cannot manufacture missing advocate information or duplicate accepted instructions."
+        },
+        {
+          "old": 6,
+          "new": [
+            3,
+            5,
+            8
+          ],
+          "preserves": "Task selector, current sufficiency versus wider task completion, statuses, attributed question retirement and omitted-work preservation.",
+          "adds": "Explicit stage/effect/no-op/persistence boundaries and relevant result/coverage before completion."
+        },
+        {
+          "old": 7,
+          "new": 9,
+          "preserves": "All current JSON field ownership, unique identities, selected references, uncertainty, plain prose and exact citations."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Establish the request and its scope.",
+        "Activity 2 - Establish the attributed account.",
+        "Activity 3 - Establish what work actually occurred.",
+        "Activity 4 - Reason within the checked legal support.",
+        "Activity 5 - Propose useful work and preserve identities.",
+        "Activity 6 - Decide sufficiency and attributed progress."
+      ]
     }
   ]
 }
