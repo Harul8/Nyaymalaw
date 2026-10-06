@@ -121,6 +121,11 @@ metadata. Never silently repair facts, substantive contradictory fields,
 permissions, attribution, source status or ambiguous references. Optional
 metadata blocks only when its defect affects a required invariant. Do not use
 keyword matching or stylistic preference as proof of a false effect claim.
+Do not reject supported meaning solely for an arbitrary character count.
+Keep actual context, output-token and resource budgets explicit. Preserve full
+assertions, source attribution and limiting conditions; never shorten them to
+force a schema pass. When evidence crosses passage windows, offer an owned
+exact span that preserves the original words and validate its endpoints.
 
 For each new or changed blocking check, name the invariant, owner, affected
 scope, precise consequential mismatch and bounded recovery. Prove it rejects

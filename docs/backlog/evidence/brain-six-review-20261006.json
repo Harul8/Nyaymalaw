@@ -794,6 +794,18 @@
         "tests/test_brain_legal_substantive_widths.py",
         "tests/test_brain_legal_requirements.py"
       ]
+    },
+    {
+      "slice": "standing-width-and-evidence-rule",
+      "owners": [
+        "LB-176",
+        "LB-179"
+      ],
+      "decision": "Extended standing build rules from observed size-only false rejection: meaningful content must not fail solely at arbitrary character widths. Retain actual resource/token/context limits; preserve complete assertions, attribution and conditions, and select owned exact spans across passage windows rather than shortening evidence to force schema validity.",
+      "validation": "Standing policy change only. Mechanical width slices separately evidenced; passage-range integration and final broad regression remain tracked. Policy is an obligation, not proof of future implementation or semantic accuracy.",
+      "files": [
+        "AGENTS.md"
+      ]
     }
   ]
 }
