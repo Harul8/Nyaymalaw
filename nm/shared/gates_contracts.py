@@ -763,8 +763,9 @@ GATES: tuple[Gate, ...] = (
     ),
 
     # ---- NMBrain: code-owned evidence, checked results and saving ----------
-    # Declared here; set built=True only in the milestone that wires the
-    # owning paths. Ordinary formatting and optional metadata are not gates.
+    # Served writer and turn owners consult these rows (6 October 2026).
+    # Built records mechanical wiring, not measured semantic accuracy.
+    # Ordinary formatting and optional metadata are not gates.
     Gate(
         id="G-CORE",
         condition="NMBrain cannot trust its code-owned conversation history, "
@@ -779,7 +780,7 @@ GATES: tuple[Gate, ...] = (
         visible="NM could not safely finish this turn. No new successful save "
                 "is confirmed; a success reply is withheld.",
         feature="P5",
-        built=False,
+        built=True,
     ),
     Gate(
         id="G-EFFECT",
@@ -796,7 +797,7 @@ GATES: tuple[Gate, ...] = (
         visible="The unsupported result is withheld for this part of the work. "
                 "Supported parts remain available; this part is not marked completed.",
         feature="P5",
-        built=False,
+        built=True,
     ),
     Gate(
         id="G-INCOMPLETE",
@@ -813,7 +814,7 @@ GATES: tuple[Gate, ...] = (
         visible="The requested review remains incomplete. Checked changes and "
                 "supported work remain available; the review is not marked completed.",
         feature="P5",
-        built=False,
+        built=True,
     ),
     Gate(
         id="G-COMMIT",
@@ -829,7 +830,7 @@ GATES: tuple[Gate, ...] = (
         visible="NM could not confirm that this turn was saved. A success reply "
                 "is withheld until the exact saved turn can be verified.",
         feature="I1",
-        built=False,
+        built=True,
     ),
 
     # ---- infrastructure ---------------------------------------------------

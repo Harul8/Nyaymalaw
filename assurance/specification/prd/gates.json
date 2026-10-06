@@ -553,7 +553,7 @@
     "recovery": "system",
     "visible": "NM could not safely finish this turn. No new successful save is confirmed; a success reply is withheld.",
     "feature": "P5",
-    "built": false
+    "built": true
   },
   {
     "id": "G-EFFECT",
@@ -569,7 +569,7 @@
     "recovery": "system",
     "visible": "The unsupported result is withheld for this part of the work. Supported parts remain available; this part is not marked completed.",
     "feature": "P5",
-    "built": false
+    "built": true
   },
   {
     "id": "G-INCOMPLETE",
@@ -585,7 +585,7 @@
     "recovery": "system",
     "visible": "The requested review remains incomplete. Checked changes and supported work remain available; the review is not marked completed.",
     "feature": "P5",
-    "built": false
+    "built": true
   },
   {
     "id": "G-COMMIT",
@@ -601,7 +601,7 @@
     "recovery": "system",
     "visible": "NM could not confirm that this turn was saved. A success reply is withheld until the exact saved turn can be verified.",
     "feature": "I1",
-    "built": false
+    "built": true
   },
   {
     "id": "G-READ",

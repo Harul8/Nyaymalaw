@@ -1,4 +1,4 @@
-"""Pure gate declaration/diagnostic contracts; no current-owner wiring claim."""
+"""Gate declarations; served wiring is exercised by writer and turn controls."""
 import json
 import re
 
@@ -29,7 +29,7 @@ def test_diagnostic_response_scope_and_invariant_come_from_one_authoritative_row
     assert diagnostic == {'gate': gate_id, 'state': state, 'response': response,
                           'scope': scope, 'recovery': 'system',
                           'invariant': row.condition, 'reason': state}
-    assert row.built is False  # This external draft is not an owner consultation.
+    assert row.built is True  # Wiring proof lives in owning-path controls.
 
 
 @pytest.mark.parametrize('kwargs', [
@@ -63,5 +63,5 @@ def test_withholding_scope_inventory_preserves_need_isolation_and_separates_wiri
     assert turn_ids == {'G-GROUND', 'G-ATTRIB', 'G-QUOTE', 'G-STALE', 'G-CORE', 'G-COMMIT'}
     need_ids = {row.id for row in draft.withholding() if row.scope is draft.Scope.NEED}
     assert need_ids == {'G-DATE', 'G-INFORCE', 'G-BINDING', 'G-EFFECT'}
-    assert {row.id for row in draft.GATES if not row.built} == NEW_IDS
+    assert {row.id for row in draft.GATES if not row.built} == set()
     assert json.loads(json.dumps(draft.as_rows())) == draft.as_rows()

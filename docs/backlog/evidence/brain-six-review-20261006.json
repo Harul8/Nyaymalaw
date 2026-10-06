@@ -709,6 +709,24 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_empty_reason_lengths.py"
       ]
+    },
+    {
+      "slice": "served-gate-activation",
+      "owners": [
+        "LB-179",
+        "LB-182",
+        "LB-188"
+      ],
+      "decision": "Marked G-CORE, G-EFFECT, G-INCOMPLETE and G-COMMIT built after writer and served-turn activation. Registry/export metadata now reflects actual owning paths: core and unconfirmed save withhold turn, unsupported positive result withholds its need, incomplete coverage discloses and forbids full review completion while retaining narrow effects. Updated authored PRD and transactional generated matrix.",
+      "validation": "76 gate, typed writer, inherited-scope recovery and served-turn positive/negative offline controls passed. All six generated specification outputs current. Built means exercised mechanical wiring, not semantic accuracy or zero false positives.",
+      "files": [
+        "nm/shared/gates_contracts.py",
+        "tests/test_brain_gate_policy.py",
+        "tests/test_gate_matrix.py",
+        "assurance/specification/prd/part_c.js",
+        "assurance/specification/gates.yaml",
+        "assurance/specification/prd/gates.json"
+      ]
     }
   ]
 }

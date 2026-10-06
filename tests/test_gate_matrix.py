@@ -137,10 +137,12 @@ def test_unbuilt_gates_are_declared_unbuilt():
     a separate obligation. A whole-thread block would still be incorrect.
     """
     unbuilt = {g.id for g in GATES if not g.built}
-    # DG-02: dependency-sensitive enforcement now covers the last gate.
-    # This inventory is paired with served positive/negative controls in
-    # test_limitation_step_gate, not accepted as proof of semantic quality.
-    assert unbuilt == {"G-CORE", "G-EFFECT", "G-INCOMPLETE", "G-COMMIT"}, (
+    # DG-02 and the 6 October NMBrain writer/turn wiring cover this inventory.
+    # Paired controls in test_limitation_step_gate,
+    # test_brain_continuation_record_outcome and
+    # test_brain_turn_execution_consumer establish exercised enforcement.
+    # Neither this inventory nor those scripted tests certify semantic quality.
+    assert unbuilt == set(), (
         "the unbuilt set changed — either something landed, or something "
         "regressed, and both need a deliberate edit here")
 
