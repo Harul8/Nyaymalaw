@@ -159,7 +159,8 @@ def test_owned_held_reference_retains_uncertainty_without_admitting_matter_owner
 @pytest.mark.parametrize("declared,purposes,fragment", [
     (requirement(targets=("earlier:material:2",)), (), "kind none"),
     (requirement(operation="new"), (), "kind none"),
-    (requirement(condition="A substantive expected effect."), (), "kind none"),
+    (requirement(operation="corrects", condition="A substantive expected effect."),
+     (), "kind none"),
     (requirement("review", operation="corrects", condition="Review."),
      ("interpretation_review",), "review requires operation none"),
     (requirement("review"), ("interpretation_review",), "nonempty success_condition"),

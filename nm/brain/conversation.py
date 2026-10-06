@@ -280,6 +280,9 @@ whole-record review. State the condition a dependable review must establish.
 A completed review may find no change needed; the review instruction does not
 supply the facts or force a new row.
 Use kind=change for an expressed or clearly entailed requested record change.
+An implicit correction to an existing account is record work even when phrased
+as a contribution rather than an imperative. Preserve that conversational intent
+while declaring the record outcome; do not route a revision as ordinary intake.
 Select account_contribution and/or interpretation_review for the relevant
 reading. State the desired condition, not a claim that it already holds.
 Select new for a distinct new record and leave target_ids empty. For adds,
@@ -527,9 +530,13 @@ def _record_requirement(data: object, *, index: int, purposes: list[str],
     # Repeating the same selected reference changes neither target nor meaning.
     targets = tuple(dict.fromkeys(targets))
     if kind == "none":
-        if targets or operation != "none" or condition:
+        if targets or operation != "none":
             raise SchemaViolation(path + ": kind none requires empty target_ids and "
-                                  "success_condition and operation none")
+                                  "operation none")
+        # This field cannot describe a record outcome under kind=none. Drop
+        # only its unused wording after types and effect choices are checked.
+        # Targets or operations are consequential contradictions, not metadata.
+        condition = ""
     elif kind == "review":
         if operation != "none" or not condition:
             raise SchemaViolation(path + ": review requires operation none and a "
