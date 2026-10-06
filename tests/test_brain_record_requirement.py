@@ -42,6 +42,7 @@ def item(message, *, record_requirement=None, purposes=(), intent="request",
             "priority": "ordinary", "next_step": "answer", "reply": "The work is pending.",
             "clarification": "", "intent": intent,
             "response_basis": "conversation_record", "research_question": "",
+            "response_mode": "substantive",
             "material_purposes": list(purposes), "record_requirement": declared}
 
 

@@ -77,6 +77,10 @@ class WorkItem:
     # None retains genuinely untracked in-process plans; fresh output must
     # declare even a non-record requirement explicitly.
     record_requirement: dict | None = None
+    # Historical in-process plans retain substantive delivery. Fresh interpreter
+    # output must select the deliverable explicitly; record work alone is not
+    # proof that an acknowledgement is the only requested response.
+    response_mode: Literal["record_acknowledgement", "substantive"] = "substantive"
 
     def __post_init__(self) -> None:
         # Older in-process callers supplied the question without a separate
@@ -142,7 +146,7 @@ _SCHEMA = {
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
                          "clarification", "intent", "response_basis", "research_question",
-                         "material_purposes", "record_requirement"],
+                         "material_purposes", "record_requirement", "response_mode"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -158,6 +162,8 @@ _SCHEMA = {
                 "response_basis": {"type": "string", "enum": [
                     "conversation_record", "legal_authority"]},
                 "research_question": {"type": "string"},
+                "response_mode": {"type": "string", "enum": [
+                    "record_acknowledgement", "substantive"]},
                 "record_requirement": _RECORD_REQUIREMENT_SCHEMA,
                 "material_purposes": {"type": "array", "items": {
                     "type": "string", "enum": [
@@ -304,6 +310,22 @@ legal_work. For clarify, fill clarification and leave reply empty. Do not ask
 which task to resume merely because the latest contribution adds no new
 instruction. Acknowledge it naturally and let the advocate steer further work.
 Saved progress owns active work; a routing summary cannot replace it.
+
+Message: Each interpreted item carries the original requested deliverable and
+its record requirement; provisional reply text is not an execution receipt.
+Purpose: Distinguish a requested record-result acknowledgement from an
+independent substantive explanation or clarification.
+Look for: Whether this item's complete immediate deliverable is only to
+acknowledge the requested record review or change. Keep independent explanatory
+or legal work as separate items when its purpose can stand on its own. A record
+requirement does not itself make an explanation an acknowledgement; preserve
+mixed or consequentially ambiguous work as substantive.
+Outcome: Set response_mode=record_acknowledgement only with intent=request,
+next_step=answer, response_basis=conversation_record and a non-none
+record_requirement. Code renders this item's acknowledgement from its checked
+record outcome and actual record effects. Use response_mode=substantive for
+all other items, including explanations, legal work and necessary clarification.
+The selected mode neither establishes completion nor changes the record.
 
 Activity 4 - Decide whether the matter can be opened.
 Look for: An identifiable concrete matter supported by original advocate words
@@ -561,6 +583,7 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
         clarification = row.get("clarification")
         research_question = row.get("research_question")
         response_basis = row.get("response_basis")
+        response_mode = row.get("response_mode")
         purposes = row.get("material_purposes")
         if (not isinstance(purposes, list) or any(
                 purpose not in ("account_contribution", "interpretation_review")
@@ -604,6 +627,17 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
             row.get("record_requirement"), index=index, purposes=purposes,
             known_ids=known_targets, current_ids=current_targets,
             matter_scope=row.get("matter_scope"))
+        if response_mode not in ("record_acknowledgement", "substantive"):
+            raise SchemaViolation(
+                f"items[{index}].response_mode must explicitly select "
+                "record_acknowledgement or substantive")
+        if response_mode == "record_acknowledgement" and (
+                requirement["kind"] == "none" or row.get("intent") != "request"
+                or response_basis != "conversation_record" or row.get("next_step") != "answer"):
+            raise SchemaViolation(
+                f"items[{index}].response_mode record_acknowledgement requires a "
+                "requested record outcome, conversation_record basis and answer routing; "
+                "select substantive for explanations or necessary clarification")
         try:
             item = WorkItem(request=request,
                             relation=row["relation"], matter_scope=row["matter_scope"],
@@ -614,7 +648,7 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             research_question=research_question.strip(),
                             response_basis=response_basis,
                             material_purposes=tuple(dict.fromkeys(purposes)),
-                            record_requirement=requirement)
+                            record_requirement=requirement, response_mode=response_mode)
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")

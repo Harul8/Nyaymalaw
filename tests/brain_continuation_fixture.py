@@ -121,6 +121,7 @@ def interpretation(data, *, record_requirements=None):
                        "response_basis": item.get("response_basis", "legal_authority"
                                                   if item.get("research_question")
                                                   else "conversation_record"),
+                       "response_mode": item.get("response_mode", "substantive"),
                        "research_question": item.get("research_question", "")}
                       for item in data["items"]]}
     for index, declared in (record_requirements or {}).items():

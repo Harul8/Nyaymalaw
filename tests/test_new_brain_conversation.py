@@ -317,7 +317,7 @@ def test_mixed_message_keeps_each_request_and_the_entire_earlier_exchange():
         {"turn_id": message.turn_id, "role": message.role, "text": message.text}
         for message in earlier.messages]
     assert payload["latest_message"] == latest
-    assert model.calls[0][0].system.count("Message:") == 1
+    assert model.calls[0][0].system.count("Message:") == 2
     assert all(label in model.calls[0][0].system for label in
                ("Purpose:", "Look for:", "Outcome:"))
 
