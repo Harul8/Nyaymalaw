@@ -593,6 +593,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                                            for value in (party_name, subject,
                                                          summary))):
         raise SchemaViolation("The opening candidate is malformed")
+    party_name, subject, summary = (value.strip() for value in
+                                    (party_name, subject, summary))
     if ready:
         if (not subject.strip() or not summary.strip() or not any(
                     item.matter_scope == "proposed" for item in items)):

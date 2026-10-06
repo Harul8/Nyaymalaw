@@ -277,6 +277,19 @@ def test_opening_candidate_requires_a_complete_state(opening):
         interpret(model, Conversation(()), "Please help with this matter")
 
 
+@pytest.mark.parametrize("field", ["party_name", "subject", "summary"])
+def test_unready_opening_ignores_only_empty_formatting_without_retry(field):
+    opening = {"ready": False, "party_name": "", "subject": "", "summary": ""}
+    opening[field] = " \n\t "
+    model = Model(interpretation([
+        item("Hello", relation="new", scope="none", step="answer", reply="Hello.")],
+        opening=opening))
+    result = interpret(model, Conversation(()), "Hello")
+    assert result.opening.ready is False
+    assert result.opening.title == result.opening.summary == ""
+    assert len(model.calls) == 1
+
+
 def test_mixed_message_keeps_each_request_and_the_entire_earlier_exchange():
     earlier = Conversation((Message("first", "advocate", "I need a review."),
                             Message("first", "nm", "Which document?"),

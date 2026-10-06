@@ -36,6 +36,19 @@
         "tests/test_brain_material_specialist.py",
         "tests/test_brain_material_assignment.py"
       ]
+    },
+    {
+      "slice": "interpreter-empty-opening-formatting",
+      "owners": [
+        "LB-175",
+        "LB-179"
+      ],
+      "decision": "Strip surrounding whitespace from opening strings after type validation and before ready/unready checks. An unready empty field has no substantive content. Nonempty unready metadata and ungrounded ready openings remain errors. No parsing or factual repair.",
+      "validation": "48 focused conversation and material-purpose tests passed; three whitespace neighbours take one call and substantive incomplete/unready cases still fail.",
+      "files": [
+        "nm/brain/conversation.py",
+        "tests/test_new_brain_conversation.py"
+      ]
     }
   ]
 }
