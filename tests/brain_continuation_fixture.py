@@ -56,6 +56,13 @@ def reviewed_verdicts(payload, data):
         if not isinstance(row, dict) or row.get("request_index") not in units:
             continue
         unit = units[row["request_index"]]
+        # Scripted ordinary/no-effect legacy fixtures only. Effectful cases
+        # provide their own independent disposition; never derive it from receipts.
+        if unit.get("record_outcome", {}).get("status", "none") == "none":
+            row.setdefault("record_check", {
+                "outcome": "not_requested",
+                "reason": "The ordinary scripted fixture seeks no record result.",
+            })
         row.setdefault("retained_block_ids", [])
         row.setdefault("retained_reason", "")
         row.setdefault("block_checks", [{

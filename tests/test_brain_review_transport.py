@@ -1,8 +1,8 @@
-"""Draft review transport checks; no browser/provider/semantic evaluation.
+"""Offline review transport checks for mandatory fields and bounded local recovery.
 
-These checks were not run while drafting. The scripted reviewer judgments
-exercise ownership, mandatory checks, local recovery and applicable fields.
+Scripted judgments do not establish real-model semantic quality.
 """
+
 import json
 from copy import deepcopy
 
@@ -20,28 +20,62 @@ from nm.shared.model_port import ModelResult, SchemaViolation, Usage
 
 
 def unit(index):
-    return {"request_index": index, "blocks": [{
-        "id": f"block-{index}", "kind": "account", "text": "The attributed account.",
-        "span_ids": ["L1"], "record_ids": [], "legal_source_ids": []}],
-        "questions": [], "next_work": [], "work": {"existing_id": "", "create": False},
-        "progress_updates": []}
+    return {
+        "request_index": index,
+        "blocks": [
+            {
+                "id": f"block-{index}",
+                "kind": "account",
+                "text": "The attributed account.",
+                "span_ids": ["L1"],
+                "record_ids": [],
+                "legal_source_ids": [],
+            }
+        ],
+        "questions": [],
+        "next_work": [],
+        "work": {"existing_id": "", "create": False},
+        "progress_updates": [],
+    }
 
 
 def flat(index, verdict="accept"):
-    return {"request_index": index, "block_checks": [{
-        "block_id": f"block-{index}", "requires_legal_support": False,
-        "verdict": "accept", "reason": "The scripted account preserves attribution."}],
-        "proposal_checks": [], "work_check": {
-            "existing_id": "", "scope_preserved": True, "verdict": "accept",
-            "reason": "The scripted unit has no task scope."},
-        "progress_checks": [], "question_resolutions": [], "verdict": verdict,
+    return {
+        "request_index": index,
+        "block_checks": [
+            {
+                "block_id": f"block-{index}",
+                "requires_legal_support": False,
+                "verdict": "accept",
+                "reason": "The scripted account preserves attribution.",
+            }
+        ],
+        "proposal_checks": [],
+        "work_check": {
+            "existing_id": "",
+            "scope_preserved": True,
+            "verdict": "accept",
+            "reason": "The scripted unit has no task scope.",
+        },
+        "progress_checks": [],
+        "question_resolutions": [],
+        "record_check": {
+            "outcome": "not_requested",
+            "reason": "The scripted account seeks no record result.",
+        },
+        "verdict": verdict,
         "reason": "A scripted independent judgment.",
-        "retained_block_ids": [], "retained_reason": ""}
+        "retained_block_ids": [],
+        "retained_reason": "",
+    }
 
 
 def accepted(index):
-    return {key: value for key, value in flat(index).items()
-            if key not in ("verdict", "retained_block_ids", "retained_reason")}
+    return {
+        key: value
+        for key, value in flat(index).items()
+        if key not in ("verdict", "retained_block_ids", "retained_reason")
+    }
 
 
 def rejected(index):
@@ -61,13 +95,24 @@ class Model:
         self.calls.append(payload)
         reply = next(self.replies)
         data = reply(payload) if callable(reply) else deepcopy(reply)
-        return ModelResult(text=None, data=data, tier=tier, provider="offline", model="offline",
-                           usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
+        return ModelResult(
+            text=None,
+            data=data,
+            tier=tier,
+            provider="offline",
+            model="offline",
+            usage=Usage(0, 0, 0),
+            latency_ms=0,
+            completion=Completion.COMPLETE,
+        )
 
 
 def checked(model, *units):
-    return verify_continuation(model, input_payload={
-        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=units)
+    return verify_continuation(
+        model,
+        input_payload={"legal_sources": {}, "progress": {"state": "ok", "rows": []}},
+        units=units,
+    )
 
 
 def test_accepted_schema_cannot_offer_retention_or_a_redundant_verdict():
@@ -86,7 +131,8 @@ def test_valid_split_accept_and_explicit_flat_legacy_accept_have_equal_decisions
     decoded = _transport_row("accepted_units", accepted(0))
     historical = _transport_row("legacy", flat(0))
     assert _decision(decoded, proposed, {}, {"rows": []}) == _decision(
-        historical, proposed, {}, {"rows": []})
+        historical, proposed, {}, {"rows": []}
+    )
     assert decoded["retained_block_ids"] == [] and decoded["retained_reason"] == ""
 
 
@@ -155,7 +201,11 @@ def test_long_substantive_accept_reason_passes_once_but_empty_reason_remains_unr
     assert len(model.calls) == 1
     empty = accepted(0)
     empty["reason"] = ""
-    invalid = Model([{"accepted_units": [empty], "rejected_units": []},
-                     {"accepted_units": [empty], "rejected_units": []}])
+    invalid = Model(
+        [
+            {"accepted_units": [empty], "rejected_units": []},
+            {"accepted_units": [empty], "rejected_units": []},
+        ]
+    )
     refused = checked(invalid, unit(0))
     assert refused.decisions == {} and refused.unavailable == (0,)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nm.brain.checked import require_independent_result
 from nm.brain.work_state import PROGRESS_STATUSES
@@ -62,7 +62,13 @@ Look for: Every express or implicit claim that NM performed work, changed a
 record, saved a result or completed a requested outcome, in every block kind.
 Compare it with the actual relevant checked record and, when supplied,
 material_coverage.execution: stages, operations, selected targets, relation,
-result identity and original source references. A returned reader establishes
+result identity and original source references. Read the original request before
+record_requirement: a provisional none classification or writer wording does
+not establish that no record result was asked for. Compare the requirement's
+exact targets, operation and semantic success_condition with the writer's
+record_outcome, selected record_effect_catalogue and current owned records.
+Judge whether the actual admitted meaning fulfills the requested condition;
+evidence identifiers alone cannot make that semantic decision. A returned reader establishes
 execution of that stage, not fulfillment of the requested correction. An
 accepted proposal may leave active state unchanged. Held/rejected proposals,
 an unrelated operation, a positive verdict, delivered prose and intention are
@@ -84,6 +90,18 @@ lacks. Do not require a mutation for an ordinary supported answer or a genuinely
 already-correct state. Do not convert internal failure into missing advocate
 information or require a repeated accepted instruction. Preserve independent
 supported factual content without certifying the unfinished effect.
+Give record_check outcome fulfilled only for a relevant performed result or
+requested condition already current; no_change_justified only for an actual
+requested review whose supported finding requires no change; unfinished when
+the requested result remains unresolved; not_requested only when the original
+request seeks no record effect or review. Compare these with writer performed/
+already_current, review_no_change, unresolved and none respectively, allowing
+the pairing only when original evidence and checked results support it. If
+not, select the actual disposition, reject the consequential mismatch and name
+it. Explain relevance and outstanding meaning, not just labels. A truthful
+unfinished unit can be accepted as a limited reply, retaining actual checked
+narrower effect references alongside the expressed outstanding scope. Those
+effects neither disappear nor certify the unfinished whole goal.
 
 Activity 3 - Check the selected legal use and coverage.
 Look for: Each proposition's actual legal dependency, regardless of block kind.
@@ -159,8 +177,16 @@ attributed/result support. A promise is not delivery; inability to obtain is
 not absence. Deferred/cancelled work requires express advocate direction;
 diversion and silence preserve work. Task completion requires a relevant
 checked result within the whole task scope, including requested effects and
-material unresolved coverage. Questions, status and work records establish
-neither facts nor legal authority.
+material unresolved coverage. Check every completed saved task against its
+retained original record_requirement and full purpose even when this message
+asks for ordinary conversation. Current-request sufficiency cannot narrow or
+replace an inherited goal; legacy missing requirements remain untracked, not
+proof of fulfillment. An independently answered prior question can complete
+while a separate edit remains unfinished. Full requested review completion
+needs complete independent account_coverage of its whole authorised original
+scope and final represented records; partial/unassessed coverage preserves
+checked narrower effects and useful partial work without closing that review.
+Questions, status and work records establish neither facts nor legal authority.
 Outcome: Return work_check for the exact selected existing_id and its preserved
 scope. Return exactly one progress_check per proposed transition with exact
 target/status, scope_preserved and result_supported. Those booleans describe
@@ -177,7 +203,10 @@ Output contract.
 Outcome: Return accepted_units and rejected_units, placing each supplied
 request_index in exactly one collection exactly once. Both collections are
 present, even when empty. Every row carries all declared block, proposal,
-work, progress and question-resolution checks plus a nonempty reason.
+work, progress and question-resolution checks, record_check and a nonempty
+reason. record_check contains outcome fulfilled, no_change_justified,
+unfinished or not_requested and a substantive nonempty reason. Include it in
+both accepted and rejected rows; add no boolean checklist.
 Acceptance requires every check to pass; placing a row in accepted_units cannot
 override a failed subcheck. The collection determines the whole-unit decision:
 return no whole-unit verdict field. Accepted rows carry no retained_block_ids
@@ -191,6 +220,8 @@ Retain no proposal owner, legal advice, incorrect scope, unexpressed limit or
 mislinked work. Certify the remaining meaning in retained_reason; if no such
 subset exists, return an empty list and empty reason. Do not rewrite prose or
 add law. Return only the declared JSON object."""
+
+
 
 _CHECK = {
     "verdict": {"type": "string", "enum": ["accept", "reject"]},
@@ -245,10 +276,20 @@ _QUESTION_RESOLUTION = {
     },
 }
 
+_RECORD_CHECK = {
+    "type": "object", "additionalProperties": False,
+    "required": ["outcome", "reason"],
+    "properties": {
+        "outcome": {"type": "string", "enum": [
+            "fulfilled", "no_change_justified", "unfinished", "not_requested"]},
+        "reason": {"type": "string", "minLength": 1},
+    },
+}
+
 _VERDICT = {
     "type": "object", "additionalProperties": False,
     "required": ["request_index", "block_checks", "proposal_checks", "work_check",
-                 "progress_checks", "question_resolutions", "verdict", "reason",
+                 "progress_checks", "question_resolutions", "record_check", "verdict", "reason",
                  "retained_block_ids", "retained_reason"],
     "properties": {
         "request_index": {"type": "integer"},
@@ -257,6 +298,7 @@ _VERDICT = {
         "work_check": _WORK_CHECK,
         "progress_checks": {"type": "array", "items": _PROGRESS_CHECK},
         "question_resolutions": {"type": "array", "items": _QUESTION_RESOLUTION},
+        "record_check": _RECORD_CHECK,
         "retained_block_ids": {"type": "array", "items": {"type": "string"}},
         "retained_reason": {"type": "string"},
     },
@@ -268,6 +310,7 @@ class ContinuationVerification:
     decisions: dict[int, tuple[bool, str]]
     unavailable: tuple[int, ...]
     retained: dict[int, tuple[str, ...]]
+    reviewed: dict[int, dict] = field(default_factory=dict)
 
 
 def _transport_shapes(row: dict) -> tuple[dict, dict]:
@@ -350,8 +393,79 @@ def _schema(indexes: tuple[int, ...], proposed: dict[int, dict], progress: dict)
                 "rejected_units": {"type": "array", "items": rejected}}}
 
 
-def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict
-              ) -> tuple[tuple[bool, str], tuple[str, ...]]:
+def _record_check_rejections(check: dict, unit: dict, input_payload: dict) -> list[str]:
+    """Compare typed meaning disposition with checked evidence and task scope.
+
+    The reviewer determines semantic fulfillment. Code enforces exact declared
+    linkage; it neither classifies prose nor infers a requested change from
+    contribution/material-purpose labels. Mechanical source ownership was
+    already checked at the writer boundary.
+    """
+    reason = check["reason"].strip()
+    if not reason:
+        raise SchemaViolation("record_check needs a substantive nonempty reason")
+    declared = unit.get("record_outcome")
+    status = declared["status"] if isinstance(declared, dict) else "none"
+    expected = {"none": "not_requested", "performed": "fulfilled",
+                "already_current": "fulfilled", "review_no_change": "no_change_justified",
+                "unresolved": "unfinished"}.get(status)
+    rejected = []
+    if check["outcome"] != expected:
+        rejected.append("Record result differs from the writer's declared outcome: " + reason)
+    work_items = input_payload.get("work_items", [])
+    requests = [row for row in work_items if row.get("request_index") == unit["request_index"]]
+    requirements = ([("Current request", requests[0].get("record_requirement"), False)]
+                    if requests else [])
+    progress = {row["id"]: row for row in input_payload.get("progress", {}).get("rows", [])}
+    association = unit.get("work", {})
+    for update in unit.get("progress_updates", []):
+        if update["status"] != "complete":
+            continue
+        identity = (association.get("existing_id", "") if update["target_id"] == "$work"
+                    else update["target_id"])
+        row = progress.get(identity)
+        if row is not None and row.get("kind") == "task":
+            requirements.append(
+                (f"Completed task {identity!r}", row.get("record_requirement"), True))
+    catalogue = input_payload.get("record_effect_catalogue", {})
+    selected = ([catalogue[identity] for identity in declared.get("effect_ids", [])
+                 if identity in catalogue] if isinstance(declared, dict) else [])
+    for owner, requirement, completed in requirements:
+        # Explicit missing historical/in-process scope remains untracked. The
+        # original-request/full-task semantic checks still apply independently.
+        if not isinstance(requirement, dict) or requirement.get("kind") == "none":
+            continue
+        kind = requirement.get("kind")
+        if status == "none" or check["outcome"] == "not_requested":
+            rejected.append(owner + " asks for a record result but none is declared: " + reason)
+        if completed and check["outcome"] in ("unfinished", "not_requested"):
+            rejected.append(
+                owner + " cannot complete while its record result remains unresolved: " + reason)
+        if kind == "change" and status == "review_no_change":
+            rejected.append(owner + " asks for a change; a review-only no-change result "
+                            "does not establish it: " + reason)
+        if kind == "change" and status == "performed":
+            operation = requirement.get("operation")
+            targets = set(requirement.get("target_ids", []))
+            matching = [effect for effect in selected
+                        if effect.get("performed") is True
+                        and effect.get("relation") == operation
+                        and (not targets or set(effect.get("target_record_ids", [])) & targets)]
+            represented = {target for effect in matching
+                           for target in effect.get("target_record_ids", [])}
+            # All intended targets must have the requested actual operation.
+            # A change to an unrelated row contributes no coverage; unrelated
+            # target substitution is not equivalent to the requested target set.
+            # Extra independently checked collateral targets are reviewed for
+            # semantic authority; their presence alone is not a mechanical failure.
+            if not matching or not targets <= represented:
+                rejected.append(owner + " has no selected admitted effect for its exact target "
+                                "set and operation: " + reason)
+    return rejected
+
+
+def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict, *,
+              input_payload: dict | None = None) -> tuple[tuple[bool, str], tuple[str, ...]]:
     require_schema(row, _VERDICT)
     blocks = {block["id"]: block for block in unit["blocks"]}
     checks = row["block_checks"]
@@ -372,7 +486,8 @@ def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict
     if any(not check["reason"].strip()
            for check in (*checks, *links, work_check, *progress_checks, row)):
         raise SchemaViolation("Every check and whole-unit verdict needs a nonempty reason")
-    rejected = []
+    rejected = _record_check_rejections(
+        row["record_check"], unit, input_payload or {"progress": progress})
     for check in checks:
         block_id = check["block_id"]
         if (check["requires_legal_support"]
@@ -465,6 +580,7 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
     pending = tuple(proposed)
     decisions: dict[int, tuple[bool, str]] = {}
     retained: dict[int, tuple[str, ...]] = {}
+    reviewed: dict[int, dict] = {}
     issues = {}
     for attempt in range(2):
         if not pending:
@@ -475,7 +591,7 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
             payload["validation_issues"] = [
                 {"request_index": index, "issue": issues[index]} for index in pending]
         user = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-        checks = sum(2 + len(proposed[index]["blocks"]) + len(proposed[index]["questions"])
+        checks = sum(3 + len(proposed[index]["blocks"]) + len(proposed[index]["questions"])
                      + len(proposed[index]["next_work"])
                      + len(proposed[index]["progress_updates"]) for index in pending)
         output_limit = max(4096, min(8192, 256 * checks))
@@ -515,14 +631,16 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
                 continue
             try:
                 section, row = group[0]
+                normalized = _transport_row(section, row)
                 decision, selected = _decision(
-                    _transport_row(section, row), proposed[index], input_payload["legal_sources"],
-                    input_payload["progress"])
+                    normalized, proposed[index], input_payload["legal_sources"],
+                    input_payload["progress"], input_payload=input_payload)
                 decisions[index] = decision
+                reviewed[index] = normalized
                 if selected:
                     retained[index] = selected
             except SchemaViolation as exc:
                 issues[index] = str(exc)
                 continue
         pending = tuple(index for index in pending if index not in decisions)
-    return ContinuationVerification(decisions, pending, retained)
+    return ContinuationVerification(decisions, pending, retained, reviewed)

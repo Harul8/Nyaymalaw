@@ -527,6 +527,22 @@
       "files": [
         "nm/source_layout.json"
       ]
+    },
+    {
+      "slice": "Independent requested-result judgments",
+      "owners": [
+        "LB-189",
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Reviewer record_check judges original requested meaning and immutable completed task requirements alongside code-owned effects. Requested operation must cover every intended target; checked collateral targets are allowed, and useful unfinished replies are distinct from whole-task completion. Typed judgment is woven into source-first reviewer activities and normalized reviewed rows are exposed to persistence owner.",
+      "validation": "60 offline reviewer, accepted/rejected transport, retention and request/effect paired checks passed; Ruff passed. Real-model semantic accuracy and browser qualification deferred.",
+      "files": [
+        "nm/brain/continuation_verification.py",
+        "tests/test_brain_review_record_check.py",
+        "tests/test_brain_review_transport.py",
+        "tests/brain_continuation_fixture.py"
+      ]
     }
   ]
 }
