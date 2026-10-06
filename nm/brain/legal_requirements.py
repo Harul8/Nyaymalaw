@@ -24,20 +24,40 @@ from nm.shared.model_port import (
 RESEARCH_KINDS = ("gathering", "principle", "condition", "support", "adverse")
 RESEARCH_VERIFICATION = "research_support_v6"
 HISTORICAL_RESEARCH_VERIFICATIONS = (
-    "research_support_v1", "research_support_v2", "research_support_v3", "research_support_v4",
+    "research_support_v1",
+    "research_support_v2",
+    "research_support_v3",
+    "research_support_v4",
     "research_support_v5",
 )
 FINDING_USE_CHECKS = ("entailment", "application", "force")
-ENTAILMENT_BASES = ("source_rule", "necessary_application", "limited_analogy",
-                   "consistent_only", "topic_only", "unsupported", "uncertain")
+ENTAILMENT_BASES = (
+    "source_rule",
+    "necessary_application",
+    "limited_analogy",
+    "consistent_only",
+    "topic_only",
+    "unsupported",
+    "uncertain",
+)
 _SUPPORTED_BASES = ENTAILMENT_BASES[:3]
 SOURCE_ASSERTION_OWNERS = (
-    "legislative_text", "deciding_court", "quoted_authority", "party", "other", "unclear"
+    "legislative_text",
+    "deciding_court",
+    "quoted_authority",
+    "party",
+    "other",
+    "unclear",
 )
 SOURCE_TREATMENTS = ("adopted", "reported", "rejected", "unclear")
 SOURCE_ASSERTION_ROLES = (
-    "court_conclusion", "court_reasoning", "party_submission", "quoted_authority",
-    "case_background", "legislative_text", "unclear",
+    "court_conclusion",
+    "court_reasoning",
+    "party_submission",
+    "quoted_authority",
+    "case_background",
+    "legislative_text",
+    "unclear",
 )
 _OPERATIVE_ASSERTIONS = {
     "court_conclusion": ("judgment", "deciding_court"),
@@ -47,8 +67,14 @@ _OPERATIVE_ASSERTIONS = {
     "legislative_text": ("provision", "legislative_text"),
 }
 _STATEMENT_FIELDS = (
-    "assertion_owner", "assertion_role", "assertion_statement", "owner_label",
-    "source_treatment", "support_excerpt", "owner_excerpt", "treatment_excerpt",
+    "assertion_owner",
+    "assertion_role",
+    "assertion_statement",
+    "owner_label",
+    "source_treatment",
+    "support_excerpt",
+    "owner_excerpt",
+    "treatment_excerpt",
 )
 
 
@@ -60,30 +86,45 @@ def _statement_valid(statement: object, source: dict, *, operative: bool) -> boo
     if not isinstance(statement, dict):
         return False
     role, owner = statement.get("assertion_role"), statement.get("assertion_owner")
-    related_role = (source["kind"] == "judgment" and role in ("case_background", "unclear")
-                    and owner in SOURCE_ASSERTION_OWNERS and owner != "legislative_text")
-    return ((_operative_assertion(source["kind"], role, owner)
-             or (not operative and related_role))
-            and isinstance(statement.get("assertion_statement"), str)
-            and bool(statement["assertion_statement"].strip())
-            and len(statement["assertion_statement"]) <= 500
-            and isinstance(statement.get("owner_label"), str)
-            and bool(statement["owner_label"].strip())
-            and len(statement["owner_label"]) <= 160
-            and (statement.get("source_treatment") == "adopted" if operative
-                 else statement.get("source_treatment") in SOURCE_TREATMENTS)
-            and all(isinstance(statement.get(key), str)
-                    and bool(statement[key].strip())
-                    and len(statement[key]) <= 800 and statement[key] in source["text"]
-                    for key in ("support_excerpt", "owner_excerpt", "treatment_excerpt")))
+    related_role = (
+        source["kind"] == "judgment"
+        and role in ("case_background", "unclear")
+        and owner in SOURCE_ASSERTION_OWNERS
+        and owner != "legislative_text"
+    )
+    return (
+        (_operative_assertion(source["kind"], role, owner) or (not operative and related_role))
+        and isinstance(statement.get("assertion_statement"), str)
+        and bool(statement["assertion_statement"].strip())
+        and len(statement["assertion_statement"]) <= 500
+        and isinstance(statement.get("owner_label"), str)
+        and bool(statement["owner_label"].strip())
+        and len(statement["owner_label"]) <= 160
+        and (
+            statement.get("source_treatment") == "adopted"
+            if operative
+            else statement.get("source_treatment") in SOURCE_TREATMENTS
+        )
+        and all(
+            isinstance(statement.get(key), str)
+            and bool(statement[key].strip())
+            and len(statement[key]) <= 800
+            and statement[key] in source["text"]
+            for key in ("support_excerpt", "owner_excerpt", "treatment_excerpt")
+        )
+    )
 
 
 def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
     """Validate saved use attestations without upgrading historical source checks."""
-    if (not isinstance(source, dict)
-            or source.get("kind") not in ("provision", "judgment")
-            or any(not isinstance(source.get(key), str) or not source[key].strip()
-                   for key in ("id", "title", "locator", "text"))):
+    if (
+        not isinstance(source, dict)
+        or source.get("kind") not in ("provision", "judgment")
+        or any(
+            not isinstance(source.get(key), str) or not source[key].strip()
+            for key in ("id", "title", "locator", "text")
+        )
+    ):
         return False
     verification = source.get("verification")
     if not isinstance(verification, dict):
@@ -92,52 +133,77 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
     scope = verification.get("scope_excerpt")
     scope_status = verification.get("scope_status")
     reason = verification.get("reason")
-    if (not isinstance(support, str) or not support.strip()
-            or len(support) > 800 or support not in source["text"]
-            or not isinstance(scope, str) or len(scope) > 800
-            or (scope and (not scope.strip() or scope not in source["text"]))
-            or scope_status not in (
-                "established", "asked_to_establish", "no_special_condition", "conditional")
-            or (scope_status == "no_special_condition") != (not scope)
-            or not isinstance(reason, str) or not reason.strip() or len(reason) > 500):
+    if (
+        not isinstance(support, str)
+        or not support.strip()
+        or len(support) > 800
+        or support not in source["text"]
+        or not isinstance(scope, str)
+        or len(scope) > 800
+        or (scope and (not scope.strip() or scope not in source["text"]))
+        or scope_status
+        not in ("established", "asked_to_establish", "no_special_condition", "conditional")
+        or (scope_status == "no_special_condition") != (not scope)
+        or not isinstance(reason, str)
+        or not reason.strip()
+        or len(reason) > 500
+    ):
         return False
     if contract in ("research_support_v1", "source_support_v4"):
         return verification.get("contract") in (None, contract)
-    if (contract not in ("research_support_v2", "research_support_v3", "research_support_v4",
-                         "research_support_v5",
-                         RESEARCH_VERIFICATION)
-            or verification.get("contract") != contract):
+    if (
+        contract
+        not in (
+            "research_support_v2",
+            "research_support_v3",
+            "research_support_v4",
+            "research_support_v5",
+            RESEARCH_VERIFICATION,
+        )
+        or verification.get("contract") != contract
+    ):
         return False
-    checked = (verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
-            and verification["assertion_owner"] != "unclear"
-            and (source["kind"] != "provision"
-                 or verification["assertion_owner"] == "legislative_text")
-            and isinstance(verification.get("owner_label"), str)
-            and bool(verification["owner_label"].strip())
-            and len(verification["owner_label"]) <= 160
-            and verification.get("source_treatment") == "adopted"
-            and all(isinstance(verification.get(key), str)
-                    and bool(verification[key].strip())
-                    and len(verification[key]) <= 800
-                    and verification[key] in source["text"]
-                    for key in ("owner_excerpt", "treatment_excerpt")))
+    checked = (
+        verification.get("assertion_owner") in SOURCE_ASSERTION_OWNERS
+        and verification["assertion_owner"] != "unclear"
+        and (source["kind"] != "provision" or verification["assertion_owner"] == "legislative_text")
+        and isinstance(verification.get("owner_label"), str)
+        and bool(verification["owner_label"].strip())
+        and len(verification["owner_label"]) <= 160
+        and verification.get("source_treatment") == "adopted"
+        and all(
+            isinstance(verification.get(key), str)
+            and bool(verification[key].strip())
+            and len(verification[key]) <= 800
+            and verification[key] in source["text"]
+            for key in ("owner_excerpt", "treatment_excerpt")
+        )
+    )
     if not checked or contract == "research_support_v2":
         return checked
     contexts = verification.get("context_statements")
-    return (_statement_valid(verification, source, operative=True)
-            and isinstance(contexts, list)
-            and all(_statement_valid(row, source, operative=False) for row in contexts)
-            and len({tuple(row[key] for key in _STATEMENT_FIELDS)
-                     for row in contexts}) == len(contexts))
+    return (
+        _statement_valid(verification, source, operative=True)
+        and isinstance(contexts, list)
+        and all(_statement_valid(row, source, operative=False) for row in contexts)
+        and len({tuple(row[key] for key in _STATEMENT_FIELDS) for row in contexts}) == len(contexts)
+    )
 
 
 def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERIFICATION) -> bool:
     """Keep source attribution separate from the checked use of the whole finding."""
-    if contract in ("research_support_v1", "research_support_v2", "research_support_v3",
-                    "source_support_v4"):
+    if contract in (
+        "research_support_v1",
+        "research_support_v2",
+        "research_support_v3",
+        "source_support_v4",
+    ):
         return True
-    if (contract not in ("research_support_v4", "research_support_v5", RESEARCH_VERIFICATION)
-            or not isinstance(finding, dict)):
+    if contract not in (
+        "research_support_v4",
+        "research_support_v5",
+        RESEARCH_VERIFICATION,
+    ) or not isinstance(finding, dict):
         return False
     verification = finding.get("use_verification")
     fields = {"contract", "checks"}
@@ -145,82 +211,115 @@ def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERI
         fields.add("application_premises")
     if contract == RESEARCH_VERIFICATION:
         fields.add("entailment_basis")
-    if (not isinstance(verification, dict) or set(verification) != fields
-            or verification.get("contract") != contract
-            or not isinstance(verification.get("checks"), dict)
-            or set(verification["checks"]) != set(FINDING_USE_CHECKS)):
+    if (
+        not isinstance(verification, dict)
+        or set(verification) != fields
+        or verification.get("contract") != contract
+        or not isinstance(verification.get("checks"), dict)
+        or set(verification["checks"]) != set(FINDING_USE_CHECKS)
+    ):
         return False
     if contract == RESEARCH_VERIFICATION and (
-            verification.get("entailment_basis") not in _SUPPORTED_BASES
-            or (verification["entailment_basis"] == "limited_analogy"
-                and finding.get("force") == "required")):
+        verification.get("entailment_basis") not in _SUPPORTED_BASES
+        or (
+            verification["entailment_basis"] == "limited_analogy"
+            and finding.get("force") == "required"
+        )
+    ):
         return False
     sources, material = finding.get("source_ids"), finding.get("material_ids")
     source_rows = finding.get("sources")
-    if (not isinstance(sources, list) or not isinstance(material, list)
-            or any(not isinstance(key, str) or not key for key in (*sources, *material))
-            or len(sources) != len(set(sources)) or len(material) != len(set(material))
-            or not isinstance(source_rows, list)
-            or any(not isinstance(source, dict)
-                   or not source_verification_valid(source, contract=contract)
-                   for source in source_rows)
-            or [source.get("id") for source in source_rows] != sources):
+    if (
+        not isinstance(sources, list)
+        or not isinstance(material, list)
+        or any(not isinstance(key, str) or not key for key in (*sources, *material))
+        or len(sources) != len(set(sources))
+        or len(material) != len(set(material))
+        or not isinstance(source_rows, list)
+        or any(
+            not isinstance(source, dict) or not source_verification_valid(source, contract=contract)
+            for source in source_rows
+        )
+        or [source.get("id") for source in source_rows] != sources
+    ):
         return False
     for aspect, check in verification["checks"].items():
-        if (not isinstance(check, dict)
-                or set(check) != {"verdict", "reason", "source_ids", "material_ids"}
-                or check.get("verdict") != "supported"
-                or not isinstance(check.get("reason"), str) or not check["reason"].strip()
-                or len(check["reason"]) > 500):
+        if (
+            not isinstance(check, dict)
+            or set(check) != {"verdict", "reason", "source_ids", "material_ids"}
+            or check.get("verdict") != "supported"
+            or not isinstance(check.get("reason"), str)
+            or not check["reason"].strip()
+            or len(check["reason"]) > 500
+        ):
             return False
         for field, allowed in (("source_ids", sources), ("material_ids", material)):
             identities = check.get(field)
-            if (not isinstance(identities, list)
-                    or any(not isinstance(key, str) or not key for key in identities)
-                    or len(identities) != len(set(identities))
-                    or not set(identities) <= set(allowed)):
+            if (
+                not isinstance(identities, list)
+                or any(not isinstance(key, str) or not key for key in identities)
+                or len(identities) != len(set(identities))
+                or not set(identities) <= set(allowed)
+            ):
                 return False
         if aspect in ("entailment", "force") and not check["source_ids"]:
             return False
-    established = any(source["verification"].get("scope_status") == "established"
-                      for source in source_rows)
+    established = any(
+        source["verification"].get("scope_status") == "established" for source in source_rows
+    )
     if established and not verification["checks"]["application"]["material_ids"]:
         return False
-    return (contract == "research_support_v4"
-            or _application_premises_valid(finding))
+    return contract == "research_support_v4" or _application_premises_valid(finding)
 
 
 def _application_premises_valid(finding: dict) -> bool:
     """Require source conditions and their attributed application to travel together."""
     premises = finding["use_verification"].get("application_premises")
-    if (not isinstance(premises, list)
-            or any(not isinstance(finding.get(field), str) or not finding[field].strip()
-                   for field in ("need", "why"))):
+    if not isinstance(premises, list) or any(
+        not isinstance(finding.get(field), str) or not finding[field].strip()
+        for field in ("need", "why")
+    ):
         return False
     sources = {source["id"]: source for source in finding["sources"]}
     signatures = set()
     for row in premises:
-        if (not isinstance(row, dict) or set(row) != {
-                "source_id", "predicate_excerpt", "status", "account_references",
-                "preserved_condition", "reason"}
-                or row.get("source_id") not in sources
-                or row.get("status") not in (
-                    "reported_satisfied", "unresolved", "reported_contradicted")
-                or not isinstance(row.get("predicate_excerpt"), str)
-                or not row["predicate_excerpt"].strip()
-                or len(row["predicate_excerpt"]) > 800
-                or row["predicate_excerpt"] not in sources[row["source_id"]]["text"]
-                or not isinstance(row.get("reason"), str) or not row["reason"].strip()
-                or len(row["reason"]) > 500
-                or not isinstance(row.get("preserved_condition"), str)
-                or len(row["preserved_condition"]) > 1000
-                or not isinstance(row.get("account_references"), list)):
+        if (
+            not isinstance(row, dict)
+            or set(row)
+            != {
+                "source_id",
+                "predicate_excerpt",
+                "status",
+                "account_references",
+                "preserved_condition",
+                "reason",
+            }
+            or row.get("source_id") not in sources
+            or row.get("status")
+            not in ("reported_satisfied", "unresolved", "reported_contradicted")
+            or not isinstance(row.get("predicate_excerpt"), str)
+            or not row["predicate_excerpt"].strip()
+            or len(row["predicate_excerpt"]) > 800
+            or row["predicate_excerpt"] not in sources[row["source_id"]]["text"]
+            or not isinstance(row.get("reason"), str)
+            or not row["reason"].strip()
+            or len(row["reason"]) > 500
+            or not isinstance(row.get("preserved_condition"), str)
+            or len(row["preserved_condition"]) > 1000
+            or not isinstance(row.get("account_references"), list)
+        ):
             return False
         references = row["account_references"]
-        if any(not isinstance(ref, dict) or set(ref) != {"turn_id", "role", "quoted"}
-               or ref.get("role") != "advocate"
-               or any(not isinstance(ref.get(field), str) or not ref[field].strip()
-                      for field in ("turn_id", "quoted")) for ref in references):
+        if any(
+            not isinstance(ref, dict)
+            or set(ref) != {"turn_id", "role", "quoted"}
+            or ref.get("role") != "advocate"
+            or any(
+                not isinstance(ref.get(field), str) or not ref[field].strip()
+                for field in ("turn_id", "quoted")
+            )
+            for ref in references
+        ):
             return False
         if row["status"] in ("reported_satisfied", "reported_contradicted") and not references:
             return False
@@ -238,13 +337,20 @@ def _application_premises_valid(finding: dict) -> bool:
         if scope == "established" and row["status"] != "reported_satisfied":
             return False
         if row["status"] != "reported_satisfied" and scope not in (
-                "conditional", "asked_to_establish"):
+            "conditional",
+            "asked_to_establish",
+        ):
             return False
-    return all(source["verification"]["scope_status"] == "no_special_condition"
-               or any(row["source_id"] == identity
-                      and row["predicate_excerpt"] == source["verification"]["scope_excerpt"]
-                      for row in premises)
-               for identity, source in sources.items())
+    return all(
+        source["verification"]["scope_status"] == "no_special_condition"
+        or any(
+            row["source_id"] == identity
+            and row["predicate_excerpt"] == source["verification"]["scope_excerpt"]
+            for row in premises
+        )
+        for identity, source in sources.items()
+    )
+
 
 _DECOMPOSE_SYSTEM = """Message: You receive the complete ordered, attributed
 conversation and research subjects with their owner, scope, purpose, question
@@ -651,8 +757,10 @@ def _read_subject_groups(model, rows, prepare, *, field, accept):
                 issues = {key: str(exc) for key in pending}
                 continue
             except ContextOverflow:
-                issues = {key: "This complete research unit exceeds the model context budget"
-                          for key in pending}
+                issues = {
+                    key: "This complete research unit exceeds the model context budget"
+                    for key in pending
+                }
                 break
             except ModelError as exc:
                 outage = type(exc).__name__
@@ -889,9 +997,12 @@ def read_findings(
         for row in coverage.values():
             row["diagnostics"].append("An unowned search result was discarded")
     active = [
-        {**row, "candidates": list(hits[row["subject"]["id"]].values()),
-         "allowed_source_ids": list(hits[row["subject"]["id"]]),
-         "allowed_material_ids": sorted(material_ids[row["subject"]["id"]])}
+        {
+            **row,
+            "candidates": list(hits[row["subject"]["id"]].values()),
+            "allowed_source_ids": list(hits[row["subject"]["id"]]),
+            "allowed_material_ids": sorted(material_ids[row["subject"]["id"]]),
+        }
         for row in rows
         if hits[row["subject"]["id"]]
     ]
@@ -917,8 +1028,8 @@ def read_findings(
 
     def accept(identifier, row):
         values = [_finding(item, identifier, hits, material_ids) for item in row["findings"]]
-        if len({item["label"].casefold() for item in values}) != len(values):
-            raise SchemaViolation("A subject has duplicate finding labels")
+        if len({(item["kind"], item["label"].casefold()) for item in values}) != len(values):
+            raise SchemaViolation("A subject repeats the same finding kind and label")
         return values
 
     read = (
@@ -964,16 +1075,18 @@ def _verification_schema(
     account_ids: tuple[str, ...] = (),
 ) -> dict:
     use_check = {
-        "type": "object", "additionalProperties": False,
+        "type": "object",
+        "additionalProperties": False,
         "required": ["verdict", "reason", "source_ids", "material_ids"],
         "properties": {
             "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
             "reason": {"type": "string", "minLength": 1, "maxLength": 500},
-            "source_ids": {"type": "array", "items": {
-                "type": "string", "enum": list(source_ids)}},
-            "material_ids": {"type": "array", "items": {
-                "type": "string", "enum": list(material_ids) or [""]},
-                **({"maxItems": 0} if not material_ids else {})},
+            "source_ids": {"type": "array", "items": {"type": "string", "enum": list(source_ids)}},
+            "material_ids": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(material_ids) or [""]},
+                **({"maxItems": 0} if not material_ids else {}),
+            },
         },
     }
     source_check = {
@@ -1022,13 +1135,22 @@ def _verification_schema(
         },
     }
     context_fields = (
-        "assertion_owner", "assertion_role", "assertion_statement", "owner_label",
-        "source_treatment", "support_fragment_id", "owner_fragment_id", "treatment_fragment_id",
+        "assertion_owner",
+        "assertion_role",
+        "assertion_statement",
+        "owner_label",
+        "source_treatment",
+        "support_fragment_id",
+        "owner_fragment_id",
+        "treatment_fragment_id",
     )
     source_check["required"].append("context_statements")
     source_check["properties"]["context_statements"] = {
-        "type": "array", "items": {
-            "type": "object", "additionalProperties": False, "required": list(context_fields),
+        "type": "array",
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": list(context_fields),
             "properties": {key: source_check["properties"][key] for key in context_fields},
         },
     }
@@ -1070,23 +1192,36 @@ def _verification_schema(
             },
             "source_checks": {"type": "array", "items": source_check},
             "use_checks": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": list(FINDING_USE_CHECKS),
                 "properties": {aspect: deepcopy(use_check) for aspect in FINDING_USE_CHECKS},
             },
             "application_premises": {
-                "type": "array", "items": {
-                    "type": "object", "additionalProperties": False,
-                    "required": ["source_id", "predicate_fragment_id", "status",
-                                 "account_source_ids", "preserved_condition", "reason"],
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "source_id",
+                        "predicate_fragment_id",
+                        "status",
+                        "account_source_ids",
+                        "preserved_condition",
+                        "reason",
+                    ],
                     "properties": {
                         "source_id": {"type": "string", "enum": list(source_ids)},
                         "predicate_fragment_id": {"type": "string", "enum": list(fragment_ids)},
-                        "status": {"type": "string", "enum": [
-                            "reported_satisfied", "unresolved", "reported_contradicted"]},
-                        "account_source_ids": {"type": "array", "items": {
-                            "type": "string", "enum": list(account_ids) or [""]},
-                            **({"maxItems": 0} if not account_ids else {})},
+                        "status": {
+                            "type": "string",
+                            "enum": ["reported_satisfied", "unresolved", "reported_contradicted"],
+                        },
+                        "account_source_ids": {
+                            "type": "array",
+                            "items": {"type": "string", "enum": list(account_ids) or [""]},
+                            **({"maxItems": 0} if not account_ids else {}),
+                        },
                         "preserved_condition": {"type": "string", "maxLength": 1000},
                         "reason": {"type": "string", "minLength": 1, "maxLength": 500},
                     },
@@ -1104,25 +1239,31 @@ def _verification_schema(
     }
 
 
-def _resolve_statement(check: dict, source: dict, fragments: dict[str, str], *,
-                       operative: bool, label: str) -> dict:
+def _resolve_statement(
+    check: dict, source: dict, fragments: dict[str, str], *, operative: bool, label: str
+) -> dict:
     resolved = {key: check[key] for key in _STATEMENT_FIELDS if not key.endswith("_excerpt")}
     for field in ("support", "owner", "treatment"):
         identity = check[f"{field}_fragment_id"]
         if not identity or identity not in fragments:
             raise SchemaViolation(
-                f"{label}.{field}_fragment_id must select exact words from this source only")
+                f"{label}.{field}_fragment_id must select exact words from this source only"
+            )
         resolved[f"{field}_excerpt"] = fragments[identity]
     if not _statement_valid(resolved, source, operative=operative):
         raise SchemaViolation(
             f"{label} needs a faithful nonempty assertion_statement within 500 characters, "
             "a source/role/owner relationship, owner_label within 160 characters and exact "
-            "support, ownership and treatment words; contextual positions do not become law")
+            "support, ownership and treatment words; contextual positions do not become law"
+        )
     return resolved
 
 
 def _finding_verdict(
-    decision: dict, *, candidate_id: str, original: tuple[str, dict, dict[str, dict]],
+    decision: dict,
+    *,
+    candidate_id: str,
+    original: tuple[str, dict, dict[str, dict]],
     account_sources: dict,
 ) -> dict | None:
     _, item, sources = original
@@ -1134,8 +1275,11 @@ def _finding_verdict(
         )
     )
     schema = _verification_schema(
-        (candidate_id,), tuple(sources), fragments, tuple(item["material_ids"]),
-        tuple(account_sources)
+        (candidate_id,),
+        tuple(sources),
+        fragments,
+        tuple(item["material_ids"]),
+        tuple(account_sources),
     )
     require_schema(decision, schema["properties"]["decisions"]["items"])
     checks = decision["source_checks"]
@@ -1150,9 +1294,9 @@ def _finding_verdict(
         return None
     if any(check["verdict"] != "supported" for check in decision["use_checks"].values()):
         return None
-    if (decision["entailment_basis"] not in _SUPPORTED_BASES
-            or (decision["entailment_basis"] == "limited_analogy"
-                and item["force"] == "required")):
+    if decision["entailment_basis"] not in _SUPPORTED_BASES or (
+        decision["entailment_basis"] == "limited_analogy" and item["force"] == "required"
+    ):
         return None
     if len(checks) != len(sources):
         raise SchemaViolation("Check every cited passage exactly once for a supported item")
@@ -1195,9 +1339,9 @@ def _finding_verdict(
         scope_id = check["scope_fragment_id"]
         owner_id = check["owner_fragment_id"]
         treatment_id = check["treatment_fragment_id"]
-        if (
-            any(identity and identity not in fragments_by_id
-                for identity in (support_id, scope_id, owner_id, treatment_id))
+        if any(
+            identity and identity not in fragments_by_id
+            for identity in (support_id, scope_id, owner_id, treatment_id)
         ):
             raise SchemaViolation(
                 "Choose support, scope, ownership and treatment fragment IDs from this source only"
@@ -1210,8 +1354,10 @@ def _finding_verdict(
         verdict = check["verdict"]
         if verdict == "supported" and (
             check["assertion_owner"] == "unclear"
-            or (sources[source_id]["kind"] == "provision"
-                and check["assertion_owner"] != "legislative_text")
+            or (
+                sources[source_id]["kind"] == "provision"
+                and check["assertion_owner"] != "legislative_text"
+            )
             or not check["owner_label"].strip()
             or not owner.strip()
             or check["source_treatment"] != "adopted"
@@ -1224,14 +1370,16 @@ def _finding_verdict(
                 "are not adopted legal support"
             )
         if verdict == "supported" and not _operative_assertion(
-                sources[source_id]["kind"], check["assertion_role"], check["assertion_owner"]):
+            sources[source_id]["kind"], check["assertion_role"], check["assertion_owner"]
+        ):
             raise SchemaViolation(
                 f"Source {source_id!r} needs an operative assertion_role matching its kind "
                 f"{sources[source_id]['kind']!r} and assertion_owner "
                 f"{check['assertion_owner']!r}; case_background and unclear are not operative law"
             )
-        if verdict == "supported" and (not check["assertion_statement"].strip()
-                                       or len(check["assertion_statement"]) > 500):
+        if verdict == "supported" and (
+            not check["assertion_statement"].strip() or len(check["assertion_statement"]) > 500
+        ):
             raise SchemaViolation(
                 f"Source {source_id!r} needs a nonempty assertion_statement within 500 characters"
             )
@@ -1260,14 +1408,26 @@ def _finding_verdict(
                 "unsupported or uncertain passages need an empty support ID"
             )
         if verdict == "supported":
-            assertion = _resolve_statement(check, sources[source_id], fragments_by_id,
-                                           operative=True, label=f"Source {source_id!r}")
-            contexts = [_resolve_statement(row, sources[source_id], fragments_by_id,
-                                          operative=False,
-                                          label=f"Source {source_id!r}.context_statements[{index}]")
-                        for index, row in enumerate(check["context_statements"])]
-            if len({tuple(row[key] for key in _STATEMENT_FIELDS)
-                    for row in contexts}) != len(contexts):
+            assertion = _resolve_statement(
+                check,
+                sources[source_id],
+                fragments_by_id,
+                operative=True,
+                label=f"Source {source_id!r}",
+            )
+            contexts = [
+                _resolve_statement(
+                    row,
+                    sources[source_id],
+                    fragments_by_id,
+                    operative=False,
+                    label=f"Source {source_id!r}.context_statements[{index}]",
+                )
+                for index, row in enumerate(check["context_statements"])
+            ]
+            if len({tuple(row[key] for key in _STATEMENT_FIELDS) for row in contexts}) != len(
+                contexts
+            ):
                 raise SchemaViolation(f"Source {source_id!r} repeats a context statement")
             selected[source_id] = {
                 "contract": RESEARCH_VERIFICATION,
@@ -1288,29 +1448,38 @@ def _finding_verdict(
         source_id = premise["source_id"]
         if source_id not in selected:
             raise SchemaViolation(
-                f"{label}.source_id must select a retained source from this candidate")
-        fragments_by_id = {row["id"]: row["text"]
-                           for row in _passage_fragments(sources[source_id]["text"])}
+                f"{label}.source_id must select a retained source from this candidate"
+            )
+        fragments_by_id = {
+            row["id"]: row["text"] for row in _passage_fragments(sources[source_id]["text"])
+        }
         fragment = premise["predicate_fragment_id"]
         if fragment not in fragments_by_id:
             raise SchemaViolation(
-                f"{label}.predicate_fragment_id must select this source's exact words")
+                f"{label}.predicate_fragment_id must select this source's exact words"
+            )
         references, seen_references = [], set()
         for identity in premise["account_source_ids"]:
             reference = account_sources.get(identity)
             if reference is None or reference.role != "advocate":
                 raise SchemaViolation(
                     f"{label}.account_source_ids requires exact advocate words; "
-                    "NM's interpretation cannot establish factual application")
+                    "NM's interpretation cannot establish factual application"
+                )
             identity = (reference.turn_id, reference.role, reference.quoted)
             if identity not in seen_references:
                 references.append(vars(reference))
                 seen_references.add(identity)
-        premises.append({
-            "source_id": source_id, "predicate_excerpt": fragments_by_id[fragment],
-            "status": premise["status"], "account_references": references,
-            "preserved_condition": premise["preserved_condition"], "reason": premise["reason"],
-        })
+        premises.append(
+            {
+                "source_id": source_id,
+                "predicate_excerpt": fragments_by_id[fragment],
+                "status": premise["status"],
+                "account_references": references,
+                "preserved_condition": premise["preserved_condition"],
+                "reason": premise["reason"],
+            }
+        )
     finding = {
         **item,
         "source_ids": kept,
@@ -1319,10 +1488,12 @@ def _finding_verdict(
         "sources": [
             {**sources[source_id], "verification": selected[source_id]} for source_id in kept
         ],
-        "use_verification": {"contract": RESEARCH_VERIFICATION,
-                             "checks": deepcopy(decision["use_checks"]),
-                             "entailment_basis": decision["entailment_basis"],
-                             "application_premises": premises},
+        "use_verification": {
+            "contract": RESEARCH_VERIFICATION,
+            "checks": deepcopy(decision["use_checks"]),
+            "entailment_basis": decision["entailment_basis"],
+            "application_premises": premises,
+        },
     }
     for aspect, check in decision["use_checks"].items():
         for field, allowed in (("source_ids", kept), ("material_ids", linked)):
@@ -1330,17 +1501,20 @@ def _finding_verdict(
             if len(identities) != len(set(identities)) or not set(identities) <= set(allowed):
                 raise SchemaViolation(
                     f"use_checks.{aspect}.{field} must select unique retained references "
-                    "from this candidate only; rejected or unrelated references cannot support use")
+                    "from this candidate only; rejected or unrelated references cannot support use"
+                )
         if aspect in ("entailment", "force") and not check["source_ids"]:
             raise SchemaViolation(
-                f"use_checks.{aspect}.source_ids needs actual supporting passages")
+                f"use_checks.{aspect}.source_ids needs actual supporting passages"
+            )
     if not finding_verification_valid(finding):
         raise SchemaViolation(
             "Application premises must cover each retained source's limiting predicates, "
             "resolve exact advocate account words and preserve unresolved or contrary "
             "conditions in the existing need or why. An established scope needs reported "
             "satisfied premises and use_checks.application.material_ids; legal source words "
-            "or prior NM interpretations cannot establish factual application")
+            "or prior NM interpretations cannot establish factual application"
+        )
     return finding
 
 
@@ -1454,8 +1628,7 @@ def verify_findings(
         linked = tuple(
             dict.fromkeys(key for candidate in candidates for key in candidate["material_ids"])
         )
-        schema = _verification_schema(ids, source_ids, fragment_ids, linked,
-                                      tuple(account_sources))
+        schema = _verification_schema(ids, source_ids, fragment_ids, linked, tuple(account_sources))
         limit = min(
             12288,
             max(
@@ -1464,8 +1637,13 @@ def verify_findings(
             ),
         )
         payload = _repair_payload(
-            {"conversation": words, "subjects": list(grouped.values()),
-             "substantive_account_sources": classified}, issues, rejected
+            {
+                "conversation": words,
+                "subjects": list(grouped.values()),
+                "substantive_account_sources": classified,
+            },
+            issues,
+            rejected,
         )
         prompt = _prompt(
             _VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
@@ -1507,8 +1685,10 @@ def verify_findings(
                 issues = {key: str(exc) for key in pending}
                 continue
             except ContextOverflow:
-                issues = {key: "This complete source-checking unit exceeds the model context budget"
-                          for key in pending}
+                issues = {
+                    key: "This complete source-checking unit exceeds the model context budget"
+                    for key in pending
+                }
                 break
             except ModelError as exc:
                 outage = type(exc).__name__
@@ -1539,8 +1719,10 @@ def verify_findings(
                     continue
                 try:
                     value = _finding_verdict(
-                        group[0], candidate_id=candidate_id, original=originals[candidate_id],
-                        account_sources=account_sources
+                        group[0],
+                        candidate_id=candidate_id,
+                        original=originals[candidate_id],
+                        account_sources=account_sources,
                     )
                 except SchemaViolation as exc:
                     issues[candidate_id], rejected[candidate_id] = str(exc), group[0]
@@ -1551,17 +1733,26 @@ def verify_findings(
                     if value is None:
                         coverage[identifier]["withheld_items"] += 1
                         decision = group[0]
-                        failed = [check["reason"] for check in decision["use_checks"].values()
-                                  if check["verdict"] != "supported"]
-                        reason = (decision["label_reason"]
-                                  if decision["label_verdict"] != "faithful"
-                                  else failed[0] if failed else decision["reason"])
-                        coverage[identifier].setdefault("rejected_findings", []).append({
-                            "candidate_id": candidate_id,
-                            "label": originals[candidate_id][1]["label"],
-                            "reason": reason,
-                            "use_checks": deepcopy(decision["use_checks"]),
-                        })
+                        failed = [
+                            check["reason"]
+                            for check in decision["use_checks"].values()
+                            if check["verdict"] != "supported"
+                        ]
+                        reason = (
+                            decision["label_reason"]
+                            if decision["label_verdict"] != "faithful"
+                            else failed[0]
+                            if failed
+                            else decision["reason"]
+                        )
+                        coverage[identifier].setdefault("rejected_findings", []).append(
+                            {
+                                "candidate_id": candidate_id,
+                                "label": originals[candidate_id][1]["label"],
+                                "reason": reason,
+                                "use_checks": deepcopy(decision["use_checks"]),
+                            }
+                        )
                     else:
                         retained[candidate_id] = value
             pending = tuple(unresolved)

@@ -306,6 +306,19 @@
         "nm/brain/material_verification.py",
         "tests/test_brain_material_coverage.py"
       ]
+    },
+    {
+      "slice": "finding-kind-identity",
+      "owners": [
+        "LB-181",
+        "LB-179"
+      ],
+      "decision": "Reader duplicate identity now matches durable finding identity: finding kind plus case-folded heading. A useful rule and adverse exception may share a heading; a repeated same-kind heading still gets bounded correction without borrowing sources.",
+      "validation": "108 offline legal reader/reviewer cases passed; paired legitimate and repeated-heading tests; Ruff clean. Real-model and browser semantic testing remains deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_finding_headings.py"
+      ]
     }
   ]
 }
