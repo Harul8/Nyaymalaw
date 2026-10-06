@@ -95,7 +95,7 @@ def review(kind, model, *, words, proposals=None, treatments=None, sink=None,
     return result.details, result
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 @pytest.mark.parametrize("role", [
     "examination_material", "work_instruction", "nm_interpretation", "uncertain"])
 def test_original_role_disagreement_is_typed_and_operation_stays_rejected(kind, role):
@@ -121,7 +121,7 @@ def test_original_role_disagreement_is_typed_and_operation_stays_rejected(kind, 
     assert "original-evidence judgment" in model.calls[0][0].system
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_conflicting_acceptance_is_blocked_but_diagnostic_survives_correction(kind):
     words = "The supplier retained the signed original."
     sink = []
@@ -135,7 +135,7 @@ def test_conflicting_acceptance_is_blocked_but_diagnostic_survives_correction(ki
     assert len(sink) == 1 and sink[0]["source_id"] == "L1"
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_exhausted_conflicting_acceptance_never_admits_and_does_not_duplicate_diagnostic(kind):
     words = "The supplier retained the signed original."
     sink = []
@@ -149,7 +149,7 @@ def test_exhausted_conflicting_acceptance_never_admits_and_does_not_duplicate_di
         assert result.unread_details == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 @pytest.mark.parametrize("role", ["reported_matter_account", "reported_party_position", "mixed"])
 def test_supported_account_roles_pass_without_recovery_diagnostic(kind, role):
     words = "The supplier retained the signed original."
@@ -162,7 +162,7 @@ def test_supported_account_roles_pass_without_recovery_diagnostic(kind, role):
     assert retained == (candidate,) and sink == [] and len(model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_nonaccount_rejection_does_not_trigger_reconsideration_from_generic_verdict(kind):
     words = "Review the attached draft without adopting its account."
     sink = []
@@ -171,7 +171,7 @@ def test_nonaccount_rejection_does_not_trigger_reconsideration_from_generic_verd
     assert retained == () and sink == [] and len(model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 @pytest.mark.parametrize("mutation", [
     "foreign_source", "duplicate_check", "missing_check", "wrong_bool", "empty_reason",
     "missing_targets", "wrong_peer",
@@ -205,7 +205,7 @@ def test_malformed_or_unowned_review_row_cannot_trigger_semantic_source_recovery
     assert retained == () and sink == [] and len(model.calls) == 2
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_independent_sound_peer_survives_disagreement_and_diagnostic_owns_faulty_proposal(kind):
     first = "The supplier retained the signed original."
     second = "The courier delivered the duplicate copy."
@@ -226,7 +226,7 @@ def test_independent_sound_peer_survives_disagreement_and_diagnostic_owns_faulty
     assert sink[0]["candidate_id"] == prefix + "1" and len(model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_untrusted_catalogue_identity_stops_before_model_and_diagnostics(kind):
     words = "The supplier retained the signed original."
     treatments = catalogue(words)
@@ -253,7 +253,7 @@ def test_opening_disagreement_preserves_original_opening_proposal_without_accept
     assert len(model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_source_recheck_keeps_stable_ids_reuses_unchanged_peers_and_reassesses_whole_coverage(kind):
     first = "The supplier retained the signed original."
     second = "The courier delivered the duplicate copy."
@@ -290,7 +290,7 @@ def test_source_recheck_keeps_stable_ids_reuses_unchanged_peers_and_reassesses_w
     assert len(second_model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 def test_omission_addition_appends_original_catalogue_without_rechecking_sound_peer(kind):
     first = "The supplier retained the signed original."
     second = "The courier delivered the duplicate copy."
@@ -320,7 +320,7 @@ def test_omission_addition_appends_original_catalogue_without_rechecking_sound_p
     assert len(second_model.calls) == 1
 
 
-@pytest.mark.parametrize("kind", ["material"])
+@pytest.mark.parametrize("kind", ["material", "dispute"])
 @pytest.mark.parametrize("mutation", ["source_change_undeclared", "proposal_change", "scope_change",
                                        "cache_mutation", "fake_cache"])
 def test_cached_acceptance_cannot_survive_changed_owner_context_or_corrupt_proof(kind, mutation):

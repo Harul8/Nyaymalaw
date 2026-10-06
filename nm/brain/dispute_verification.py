@@ -5,7 +5,13 @@ import json
 from copy import deepcopy
 from dataclasses import asdict
 
-from nm.brain.checked import require_independent_result
+from nm.brain.checked import (
+    abandon_recovery,
+    claim_recovery,
+    quarantined_independent_result,
+    require_independent_result,
+    verdict_envelope_issue,
+)
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
@@ -15,16 +21,23 @@ from nm.brain.record_review import (
     coverage_schema,
     derived_record,
     owned_source_treatments,
+    remember_independent_review,
     restoration_peer_ids,
+    retained_independent_review,
     review_contract_issue,
     review_issues_text,
     review_properties,
+    source_role_disagreements,
     validate_record_checks,
 )
 from nm.shared.model_port import (
+    ContentRefused,
     ContextOverflow,
     ModelPort,
+    OutputTruncated,
     Prompt,
+    ProviderUnavailable,
+    RateLimited,
     SchemaViolation,
     Tier,
     estimate_tokens,
@@ -49,8 +62,9 @@ An exact source or known target ID is not operation support.
 
 Activity 1 - Check original account support.
 Look for: source_treatments owns each advocate span's original content_role,
-classified before any candidate was considered. Do not upgrade it. Read each
-selected exact span in its full context. A real reported party position remains
+classified before any candidate was considered. Do not upgrade or replace it.
+Independently read each selected exact span in its full context. A real reported
+party position remains
 that speaker's position without proof or adoption. For mixed spans, only the
 genuine reported portion supplies account content. Examination material, work
 instructions and NM interpretations can explain authorised work or context,
@@ -69,8 +83,15 @@ Select exact source_ids only from this proposal's allowed_account_source_ids.
 Give exactly one source_checks entry for each selected ID, and no others:
 source_id, supplies_account_content, supports_proposal and a concise reason
 without copied passages. Do not repeat source content_role in those entries.
-supplies_account_content means actual substantive account is reported, not
-that the source authorises review. supports_proposal means that substantive
+supplies_account_content means actual substantive account is reported in the
+original context, not that the source authorises review or agrees with the
+supplied treatment. Keep that original-evidence judgment explicit when it
+disagrees with a supplied non-account role: retain the selected source_id and
+true supplies_account_content, and reject the proposed operation while that
+source-purpose conflict is unresolved. The server may ask the source owner to
+reconsider the original passage; this review cannot reclassify it or admit the
+operation itself. Do not hide a genuine disagreement by changing the source
+check to match the earlier classification. supports_proposal means that substantive
 content supports an assertion in this proposal. At least one selected source
 must substantively support an accepted proposal; supported certifies its WHOLE
 formulation against all selected evidence, not just the existence of words or
@@ -231,7 +252,8 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
 
 def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate],
                    *, account_ids: dict[str, set[str]], targets: dict[str, set[str]],
-                   source_treatments: dict[str, dict]
+                   source_treatments: dict[str, dict],
+                   source_disagreements: list[dict] | None = None
                    ) -> tuple[dict[str, dict], dict[str, tuple[str, ...]]]:
     """Keep independently valid decisions; retry every absent or invalid ID."""
     rows = data.get("verdicts") if isinstance(data, dict) else None
@@ -253,18 +275,24 @@ def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate],
         row = group[0]
         conflicts = []
         try:
-            require_schema(row, {**_VERDICT, "required": [
+            schema = {**_VERDICT, "required": [
                 *_VERDICT["required"], "account_check", "target_checks"], "properties": {
                 **_VERDICT["properties"],
                 **review_properties(tuple(account_ids[candidate_id]),
                                     tuple(targets[candidate_id]),
                                     restoration_peer_ids(candidate_id, targets)),
                 "candidate_id": {"type": "string", "enum": [candidate_id]},
-            }})
+            }}
+            require_schema(row, schema)
             validate_record_checks(
                 row, source_ids=account_ids[candidate_id], target_ids=targets[candidate_id],
                 candidate_id=candidate_id, candidates=targets, issues=conflicts,
                 source_treatments=source_treatments)
+            if source_disagreements is not None:
+                source_disagreements.extend(
+                    {"candidate_id": candidate_id, **diagnostic}
+                    for diagnostic in source_role_disagreements(
+                        row, account_ids[candidate_id], source_treatments, schema=schema))
         except SchemaViolation as exc:
             issues[candidate_id] = (review_contract_issue(exc),)
             continue
@@ -290,6 +318,9 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     review_scope: dict | None = None,
                     coverage: dict | None = None,
                     review_status: dict | None = None,
+                    source_disagreements: list[dict] | None = None,
+                    review_state: dict | None = None,
+                    recheck_source_ids: tuple[str, ...] = (),
                     ) -> tuple[MaterialCandidate, ...]:
     """Check independent proposals, keeping unread units out of accepted effects."""
     if review_status is not None:
@@ -348,31 +379,51 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
         row["allowed_account_source_ids"] = sorted(account_ids[row["candidate_id"]])
         row["allowed_restoration_peer_ids"] = list(
             restoration_peer_ids(row["candidate_id"], targets))
-    decisions: dict[str, dict] = {}
-    pending = tuple(keyed)
+    retained = retained_independent_review(
+        review_state, context=payload, source_treatments=source_treatments,
+        account_ids=account_ids, targets=targets, recheck_source_ids=recheck_source_ids)
+    decisions, retained_issues = _read_verdicts(
+        {"verdicts": list(retained.values())}, {key: keyed[key] for key in retained},
+        account_ids=account_ids, targets=targets, source_treatments=source_treatments)
+    if retained_issues:
+        raise SchemaViolation("Retained independent dispute decisions are no longer admissible")
+    pending = tuple(key for key in keyed if key not in decisions)
     issues: dict[str, tuple[str, ...]] = {}
     coverage_decision = None
     last_valid_coverage = None
     coverage_issue = "coverage is absent" if requested else None
+    envelope_issue = ""
+    conditional_failure = ""
+    observed_disagreements: list[dict] = []
     system = _SYSTEM + "\n\n" + _COVERAGE_SYSTEM if requested else _SYSTEM
-    for attempt in range(2):
+    recovery_phase = "verify_disputes:correction"
+    for attempt in range(2 if pending or requested else 0):
+        if attempt and not claim_recovery(model, recovery_phase):
+            issues = {key: (*value, "The shared recovery budget is exhausted")
+                      for key, value in issues.items()}
+            if coverage_issue:
+                coverage_issue += "; the shared recovery budget is exhausted"
+            break
         current = {**payload,
                    "candidates": [row for row in payload["candidates"]
                                   if row["candidate_id"] in pending]}
-        if attempt:
+        if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
                 for row in payload["candidates"]
                 if row["candidate_id"] in decisions]
+        if attempt:
             current["validation_issue"] = (
-                review_issues_text(issues) + ". "
+                review_issues_text({**issues,
+                    **({"$envelope": (envelope_issue,)} if envelope_issue else {})}) + ". "
                 "Return one complete valid verdict per listed ID; acceptance "
                 "requires independent_dispute, reported matter account with no invented legal "
                 "analysis, operation_supported true and complete supported target checks. "
                 "Failed account or target checks cannot be overridden by overall acceptance.")
             if requested:
                 current["pending_review_keys"] = [
-                    *pending, *(["$coverage"] if coverage_issue else [])]
+                    *pending, *(["$coverage"] if coverage_issue else []),
+                    *(["$envelope"] if envelope_issue else [])]
                 current["coverage_validation_issue"] = coverage_issue or ""
                 current["validation_issue"] += (
                     " Return coverage for the complete authorised scope and original source "
@@ -380,24 +431,49 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     "retained candidate decisions.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 512 * len(pending)))
-        if (estimate_tokens(system + user) + output_limit
-                > model.context_budget(Tier.JUDGE)):
-            raise ContextOverflow("The full conversation exceeds the dispute verification budget")
         try:
-            result = model.structured(
-                Prompt(system=system, user=user, operation="verify_disputes"),
-                _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
-                        tuple(sorted(set().union(*targets.values()))),
-                        tuple(sorted({peer for key in pending
-                                      for peer in restoration_peer_ids(key, targets)})),
-                        coverage_ids=coverage_ids),
-                Tier.JUDGE, max_tokens=output_limit)
+            if (estimate_tokens(system + user) + output_limit
+                    > model.context_budget(Tier.JUDGE)):
+                if attempt:
+                    abandon_recovery(model, recovery_phase)
+                raise ContextOverflow(
+                    "The full conversation exceeds the dispute verification budget")
+            try:
+                result = model.structured(
+                    Prompt(system=system, user=user, operation="verify_disputes"),
+                    _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
+                            tuple(sorted(set().union(*targets.values()))),
+                            tuple(sorted({peer for key in pending
+                                          for peer in restoration_peer_ids(key, targets)})),
+                            coverage_ids=coverage_ids),
+                    Tier.JUDGE, max_tokens=output_limit)
+            except SchemaViolation as exc:
+                result = quarantined_independent_result(exc)
+                if result is None:
+                    raise
             require_independent_result(result)
             if not result.usable:
                 raise SchemaViolation("Dispute verification did not finish")
+            envelope_issue = verdict_envelope_issue(
+                result.data, pending, coverage=requested)
             checked, issues = _read_verdicts(
                 result.data, {key: keyed[key] for key in pending}, account_ids=account_ids,
-                targets=targets, source_treatments=source_treatments)
+                targets=targets, source_treatments=source_treatments,
+                source_disagreements=observed_disagreements
+                if source_disagreements is not None else None)
+        except (ProviderUnavailable, ContextOverflow, OutputTruncated,
+                ContentRefused, RateLimited) as exc:
+            observable = (review_status is not None or requested and coverage is not None
+                          or audit is not None and bool(pending))
+            if not attempt or not observable:
+                raise
+            conditional_failure = (
+                "Conditional independent review unavailable (" + type(exc).__name__ + ")")
+            issues = {key: (conditional_failure,) for key in pending}
+            if requested:
+                coverage_issue = conditional_failure
+                coverage_decision = None
+            break
         except SchemaViolation as exc:
             issue = review_contract_issue(exc)
             issues = {key: (issue,) for key in pending}
@@ -417,7 +493,7 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             except SchemaViolation as exc:
                 coverage_decision = None
                 coverage_issue = review_contract_issue(exc)
-        if not pending and coverage_issue is None:
+        if not pending and coverage_issue is None and not envelope_issue:
             break
     unread = {
         key: {"candidate_id": key, "verdict": "unassessed",
@@ -427,18 +503,35 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
               "validation_issues": list(issues[key])}
         for key in pending
     }
+    if source_disagreements is not None:
+        reported = set()
+        for diagnostic in observed_disagreements:
+            identity = diagnostic["candidate_id"]
+            key = (identity, diagnostic["source_id"])
+            if key in reported:
+                continue
+            reported.add(key)
+            source_disagreements.append({
+                **diagnostic, "candidate_type": "dispute", "proposal": asdict(keyed[identity]),
+            })
+    remember_independent_review(
+        review_state, context=payload, source_treatments=source_treatments, decisions=decisions)
     # A tuple-only caller cannot observe unread units without an explicit sink.
+    if envelope_issue and review_status is None and not (requested and coverage is not None):
+        raise SchemaViolation("Dispute review envelope remained unread: " + envelope_issue)
     if unread and audit is None and review_status is None and not (
             requested and coverage is not None):
         raise SchemaViolation(
             "Dispute verification remained incomplete for "
             + ", ".join(unread) + ": " + review_issues_text(issues))
-    if requested and unread:
+    if requested and (unread or envelope_issue):
         coverage_decision = None
         coverage_issue = (
             "Final dispute proposals " + ", ".join(unread)
             + " remained unread after the review correction bound; coverage of the "
-            "final admitted record was not established. " + review_issues_text(issues))
+            "final admitted record was not established. "
+            + review_issues_text({**issues,
+                **({"$envelope": (envelope_issue,)} if envelope_issue else {})}))
     admitted = admitted_record_decisions(decisions)
     downgraded = [key for key in decisions
                   if decisions[key]["verdict"] == "accept" and admitted[key]["verdict"] != "accept"]
@@ -468,13 +561,17 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             coverage["prior_assessment"] = last_valid_coverage
     if review_status is not None:
         review_status.update(
-            state="partial" if unread else "checked",
+            state="partial" if unread or envelope_issue or conditional_failure
+                  else "checked",
             checked_items=len(decisions),
             accepted_items=sum(row["verdict"] == "accept" for row in decisions.values()),
             rejected_items=sum(row["verdict"] == "reject" and "admission_issue" not in row
                                for row in decisions.values()),
             withheld_items=sum("admission_issue" in row for row in decisions.values()),
-            unread_items=len(unread), unread_candidate_ids=list(unread))
+            unread_items=len(unread) + bool(envelope_issue),
+            unread_candidate_ids=list(unread), envelope_unread=bool(envelope_issue),
+            envelope_validation_issue=envelope_issue,
+            conditional_review_failure=conditional_failure)
     if audit is not None:
         audit.extend({**(decisions[key] if key in decisions else unread[key]),
                       "proposal": asdict(candidate)}
