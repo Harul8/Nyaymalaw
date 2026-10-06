@@ -1138,6 +1138,45 @@
       "fixture_alignment": "Status witnesses now select actual record_result instead of relabelling source_account; retained factual recovery expects independent original content plus one status. One prior repair fixture re-added obsolete source_ids after fresh transport; local transport fixed while all coverage/fulfilled/attribution assertions remain.",
       "call_impact": "No model stage or conditional call added. Deterministic composition only; existing independent review still checks relevance, sufficiency and legal use. No paid calls.",
       "remaining": "Actual browser acceptance of the combined typed-link/status feature is next. Delivered-outcome ledger and saved substantive completion still unprotected; semantic extraction/law/research delivery and UI gaps remain."
+    },
+    {
+      "piece": "pinned browser acceptance after versioned status rendering",
+      "owner": "evidence only",
+      "version": "6ec3c2f",
+      "verdict": "FAILED",
+      "evidence": "docs/backlog/evidence/brain-current-review-20261007-status-live.json.gz",
+      "observed": [
+        "Neutral handover incorrectly identified/accepted/saved as independent dispute.",
+        "Attributed event detail not admitted after bogus empty target_check, a retry treating its own invalid review as a proposal defect, and truncated subsequent review.",
+        "Opening rejected; generic Matter heading persisted.",
+        "No legal gathering delivered; ordinary event triggered unnecessary automatic legal research.",
+        "Requested record unit withheld; independent recap survives, committed input reopens without new model calls.",
+        "Private legal-review/corpus diagnostics visible in dispute reading pane.",
+        "Mixed successful v4 status/account composition was not exercised: record unit unavailable. Overall browser acceptance FAILED."
+      ],
+      "call_impact": {
+        "interpret_conversation": 1,
+        "classify_account_sources": 1,
+        "extract_disputes": 1,
+        "verify_disputes": 2,
+        "extract_legal_details": 1,
+        "verify_material_grounding": 3,
+        "reconsider_account_sources": 1,
+        "decompose_disputes": 1,
+        "read_legal_requirements": 2,
+        "verify_legal_requirements": 2,
+        "continue_conversation": 2,
+        "verify_continuation": 1
+      },
+      "cost_usd": 0.059982,
+      "next_owners": [
+        "record_review.py fresh target choices and precise review feedback",
+        "evidence_rendering.py generation expression choices, then continuation.py provider wiring",
+        "dispute_verification.py existence of an actual conflict",
+        "material_verification.py atomicity and association",
+        "requested-delivery producer and checked saved completion",
+        "app.js private diagnostics presentation"
+      ]
     }
   ],
   "additional_reviewer_input": {
@@ -1185,8 +1224,9 @@
     "pinned_model": "gpt-4.1-mini-2025-04-14",
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
-    "cumulative_charge_usd": 2.089595,
-    "remaining_usd": 2.910405
+    "cumulative_charge_usd": 2.149577,
+    "remaining_usd": 2.850423,
+    "unknown_attempts": 0
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1340,5 +1380,83 @@
       "outputs/brain-repair-20261006/wire-reopened.png"
     ]
   },
-  "wire_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-wire-live.json.gz"
+  "wire_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-wire-live.json.gz",
+  "status_live_acceptance": {
+    "commit": "6ec3c2f",
+    "serving_tree": "4762d11399ac12d7",
+    "matter_id": "mat_0e02ee98f3d7ee3a742a810e446a20fb",
+    "turn_id": "turn_8f579dfa-6d1e-48c5-8068-27b5bc2c4598",
+    "version": 1,
+    "title": "Matter",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "calls": 18,
+    "calls_by_operation": {
+      "interpret_conversation": 1,
+      "classify_account_sources": 1,
+      "extract_disputes": 1,
+      "verify_disputes": 2,
+      "extract_legal_details": 1,
+      "verify_material_grounding": 3,
+      "reconsider_account_sources": 1,
+      "decompose_disputes": 1,
+      "read_legal_requirements": 2,
+      "verify_legal_requirements": 2,
+      "continue_conversation": 2,
+      "verify_continuation": 1
+    },
+    "model_seconds": 160.361,
+    "charged_usd": 0.059982,
+    "tokens_in": 102976,
+    "tokens_out": 11740,
+    "combined_charged_usd": 2.149577,
+    "remaining_usd": 2.850423,
+    "unknown_attempts": 0,
+    "disputes": [
+      [
+        "Our client handed the original inspection file to the appointed reviewer on 4 May 2026.",
+        "dispute"
+      ]
+    ],
+    "details": [],
+    "continuation_coverage": [
+      {
+        "request_index": 0,
+        "state": "unavailable",
+        "diagnostics": [
+          "blocks[0]: A fixed expression must not carry unrelated evidence selections"
+        ]
+      },
+      {
+        "request_index": 1,
+        "state": "ok",
+        "diagnostics": []
+      }
+    ],
+    "execution_requests": [
+      {
+        "index": 0,
+        "fulfillment": "unfinished",
+        "response_mode": "record_acknowledgement",
+        "acknowledgement_contract": "record_acknowledgement_v4",
+        "delivery": "code_only"
+      },
+      {
+        "index": 1,
+        "fulfillment": "not_requested",
+        "response_mode": "substantive",
+        "acknowledgement_contract": null,
+        "delivery": null
+      }
+    ],
+    "observations": [
+      "Neutral handover incorrectly identified/accepted/saved as independent dispute.",
+      "Attributed event detail not admitted after bogus empty target_check, a retry treating its own invalid review as a proposal defect, and truncated subsequent review.",
+      "Opening rejected; generic Matter heading persisted.",
+      "No legal gathering delivered; ordinary event triggered unnecessary automatic legal research.",
+      "Requested record unit withheld; independent recap survives, committed input reopens without new model calls.",
+      "Private legal-review/corpus diagnostics visible in dispute reading pane.",
+      "Mixed successful v4 status/account composition was not exercised: record unit unavailable. Overall browser acceptance FAILED."
+    ]
+  },
+  "status_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-status-live.json.gz"
 }
