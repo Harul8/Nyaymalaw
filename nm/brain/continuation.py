@@ -8,7 +8,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 
-from nm.brain.checked import require_independent_result
+from nm.brain.checked import claim_recovery, require_independent_result
 from nm.brain.continuation_verification import _record_check_rejections, verify_continuation
 from nm.brain.conversation import Conversation, IncompleteConversation, TurnPlan
 from nm.brain.execution_contracts import (
@@ -16,6 +16,7 @@ from nm.brain.execution_contracts import (
     RECORD_OUTCOME_SCHEMA,
     ExecutionEvidenceInvalid,
     ReviewCompletionIncomplete,
+    canonical_record_acknowledgements,
     effect_catalogue,
     validate_record_outcome,
     validate_review_completion,
@@ -113,6 +114,15 @@ a past NM operation. A review can legitimately conclude that no change is
 supported; that completes the review, not an edit that was refused. No
 candidates, no new rows, a skipped stage and an unavailable stage are different
 outcomes and do not by themselves establish a justified no-change decision.
+For provisional response_mode record_acknowledgement, select a non-none
+record_outcome from that item's record_outcome_statuses; unfinished work uses
+unresolved. Preserve the exact outcome owner, selected effects, work scope and
+progress support. With no questions or next_work, code renders each block from
+the owned selected changes or current entries before independent review and
+again against the final state for atomic saving. Independent review decides whether that
+result addresses the complete original request. When useful substantive
+follow-up is needed, retain its linked questions/next_work and supported prose
+for independent review rather than dropping part of the actual deliverable.
 Outcome: Describe the supported result and any unfinished requested work.
 Do not claim that NM updated, saved, extracted or completed something merely
 because it intended to, generated a reply, or accepted supporting words.
@@ -512,9 +522,13 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
             sources: dict, progress: dict | None = None,
             intents: dict[int, str] | None = None, *,
             effect_ids: tuple[str, ...] = (),
-            current_record_ids: tuple[str, ...] = ()) -> dict:
+            current_record_ids: tuple[str, ...] = (),
+            response_modes: dict[int, str] | None = None) -> dict:
     unit = deepcopy(_MODEL_UNIT)
     outcome = unit["properties"]["record_outcome"]["properties"]
+    if indexes and all((response_modes or {}).get(index) == "record_acknowledgement"
+                       for index in indexes):
+        outcome["status"]["enum"].remove("none")
     outcome["effect_ids"] = _identifier_array(effect_ids)
     outcome["current_record_ids"] = _identifier_array(current_record_ids)
     work = _progress_catalogue(progress)
@@ -755,6 +769,10 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     work = _progress_catalogue(payload["progress"])
     for item in payload["work_items"]:
         item["work_choices"] = list(_work_choices(item["intent"], work))
+        item["record_outcome_statuses"] = [
+            status for status in RECORD_OUTCOME_SCHEMA["properties"]["status"]["enum"]
+            if status != "none" or item.get("response_mode", "substantive")
+            != "record_acknowledgement"]
     return payload, spans, records, sources
 
 
@@ -965,6 +983,16 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                 f"progress_updates[{index}].block_id {update['block_id']!r} "
                 "needs a displayed source supporting the progress decision")
     try:
+        requests = (execution_receipt or {}).get("requests", [])
+        pure_acknowledgement = any(
+            request.get("request_index") == unit["request_index"]
+            and request.get("response_mode") == "record_acknowledgement"
+            for request in requests)
+        if (pure_acknowledgement and not unit["questions"] and not unit["next_work"]
+                and unit.get("record_outcome", {}).get("status") == "none"):
+            raise SchemaViolation(
+                "A requested record acknowledgement needs a record outcome; "
+                "use unresolved for unfinished work, not none")
         validate_record_outcome(unit, execution_receipt,
                                 (key for key, row in records.items()
                                  if row["type"] in ("dispute", "material")))
@@ -1142,6 +1170,22 @@ def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
     return result
 
 
+def _acknowledgement_review_units(units: dict[int, dict], payload: dict,
+                                  records: dict) -> tuple[dict[int, dict], dict]:
+    """Use the same fixed record rendering at every independent review route."""
+    receipt = deepcopy(payload["material_coverage"].get("execution"))
+    if receipt is None:
+        return units, payload
+    canonical = canonical_record_acknowledgements(
+        {"units": list(units.values())}, receipt,
+        record_catalogue={identity: row for identity, row in records.items()
+                          if row["type"] in ("dispute", "material")},
+        require_checked=False)
+    return ({unit["request_index"]: unit for unit in canonical["units"]},
+            {**payload, "material_coverage": {
+                **payload["material_coverage"], "execution": receipt}})
+
+
 def continue_conversation(
         model: ModelPort, *, conversation: Conversation, latest: str,
         plan: TurnPlan, disputes: dict | None = None,
@@ -1175,6 +1219,8 @@ def continue_conversation(
     intents = {row["request_index"]: row["intent"] for row in payload["work_items"]}
     needs_authority = {row["request_index"]: bool(row["research_question"])
                        for row in payload["work_items"]}
+    response_modes = {row["request_index"]: row.get("response_mode", "substantive")
+                      for row in payload["work_items"]}
     pending = expected
     issues: dict[int, str] = {}
     rejected = None
@@ -1224,12 +1270,17 @@ def continue_conversation(
         if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow("The full conversation exceeds the continuation budget")
+        if attempt and not claim_recovery(model, "continue_conversation:correction"):
+            issues.update((index, "The turn's bounded response recovery is exhausted")
+                          for index in pending)
+            break
         try:
             result = model.structured(
                 Prompt(system=system, user=user, operation="continue_conversation"),
                 _schema(pending, spans, records, sources, payload["progress"], intents,
                         effect_ids=tuple(payload["record_effect_catalogue"]),
-                        current_record_ids=tuple(payload["current_record_ids"])), Tier.JUDGE,
+                        current_record_ids=tuple(payload["current_record_ids"]),
+                        response_modes=response_modes), Tier.JUDGE,
                 max_tokens=output_limit)
             require_independent_result(result)
         except ContextOverflow:
@@ -1257,8 +1308,9 @@ def continue_conversation(
                                    gate_events=gate_events, attempt=attempt + 1)
         unread: set[int] = set()
         if valid:
+            valid, review_input = _acknowledgement_review_units(valid, payload, records)
             verdicts = verify_continuation(
-                model, input_payload=payload, units=tuple(valid.values()))
+                model, input_payload=review_input, units=tuple(valid.values()))
             unread.update(verdicts.unavailable)
             issues.update((index, "Independent response checking did not finish")
                           for index in unread)
@@ -1299,11 +1351,12 @@ def continue_conversation(
                            payload["progress"], intents[index], needs_authority[index],
                            execution_receipt=payload["material_coverage"].get("execution"))
             narrowed[index] = limited
-    if narrowed:
+    if narrowed and claim_recovery(model, "continue_conversation:limited_review"):
         review_input = {**payload, "partial_response_review": [
             {"request_index": index, "unreleased_unit": local_failures[index][0],
              "content_issues": local_failures[index][1]}
             for index in narrowed]}
+        narrowed, review_input = _acknowledgement_review_units(narrowed, review_input, records)
         checked = verify_continuation(
             model, input_payload=review_input, units=tuple(narrowed.values()))
         for index, unit in narrowed.items():
