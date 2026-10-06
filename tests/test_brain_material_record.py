@@ -249,7 +249,7 @@ def test_correction_and_withdrawal_retire_only_cited_details(
     changed = send(client, next_message, "change", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 7
+    assert changed.json()["metrics"]["llm_calls"] == 8
     record = _board(client, opened.json()["matter_id"])["material_record"]
     assert record["state"] == "ok"
     assert [row["id"] for row in record["rows"]] == ["change:material:1"]
@@ -313,7 +313,10 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
                          "reason": "A reported correction does not prove the event."}
                         if candidates[row["candidate_id"]].get("relation") == "corrects"
                         else row for row in result.data["verdicts"]]
-            return replace(result, data={"verdicts": rejected})
+            return replace(result, data={**result.data, "verdicts": rejected,
+                "coverage": {"state": "partial", "missing_source_ids": ["L1"],
+                             "reason": ("The false proof claim is rejected; the correction "
+                                        "remains unrepresented.")}})
 
     model = CheckingModel()
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -322,7 +325,7 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
     corrected = send(client, latest, "correction", opened=opened.json())
 
     assert corrected.status_code == 200, corrected.text
-    assert corrected.json()["metrics"]["llm_calls"] == 7
+    assert corrected.json()["metrics"]["llm_calls"] == 8
     checked = [row for payload in model.check_inputs
                for row in payload["candidates"] if row.get("relation") == "corrects"]
     assert checked
@@ -553,6 +556,8 @@ def test_transcript_exposes_legacy_detail_quote_without_old_model_assertion(
     proposal.pop("grounding")
     proposal["statement"] = "The other party admitted liability."
     response["material"] = [proposal]
+    response.pop("continuation")
+    response["material_coverage"].pop("execution")
     saved["response"] = response
     wired.store.commit(
         replace(matter, brain_chat=(saved,), version=matter.version + 1),

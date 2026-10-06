@@ -320,7 +320,8 @@ def test_public_distinct_proposals_share_paragraph_and_remain_individually_check
     assert len(entries) == 2 and entries[0]["id"] != entries[1]["id"]
     assert entries[0]["block_id"] == entries[1]["block_id"] == "question-0"
     assert entries[0]["purpose"] != entries[1]["purpose"]
-    assert len(answer["elements"]) == 2
+    assert len(answer["elements"]) == 3
+    assert answer["elements"][-1]["text"] == "No changes were made to the saved record."
     assert len(saved.brain_chat) == 1
 
 

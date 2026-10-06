@@ -162,12 +162,12 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
         "interpret_conversation", "continue_conversation", "verify_continuation",
         "interpret_conversation"]
     assert set(model.all_calls[4:]) == {
-        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert opened["metrics"]["llm_calls"] == 7
+    assert opened["metrics"]["llm_calls"] == 8
     assert [row["text"] for row in model.calls[1]["earlier_conversation"]] == [
-        "Hello", "Hello."]
+        "Hello", "Hello.\nNo changes were made to the saved record."]
     matter = store.load(opened["matter_id"])
     assert matter.brain_ready is True
     assert [row["message"] for row in matter.brain_chat] == ["Hello", text]
@@ -196,10 +196,10 @@ def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(t
     assert len(model.calls) == 1
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert model.all_calls.count("classify_account_sources") == 1
     assert first["elements"][0]["text"] == (
         "I will check the invoice and the underlying agreement "
@@ -224,7 +224,7 @@ def test_multi_party_opening_repairs_only_heading_then_checks_it(tmp_path):
 
     assert store.load(result["matter_id"]).title == "Mira Patel: Return of records"
     assert result["material_coverage"]["opening_fallback"] is False
-    assert result["metrics"]["llm_calls"] == 9
+    assert result["metrics"]["llm_calls"] == 10
     assert model.all_calls.count("verify_material_grounding") == 2
     assert model.all_calls.count("repair_opening") == 1
     repair = model.calls[1]
@@ -241,7 +241,9 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
         def structured(self, prompt, schema, tier, *, max_tokens=None):
             result = super().structured(prompt, schema, tier,
                                         max_tokens=max_tokens)
-            if prompt.operation == "verify_material_grounding":
+            if (prompt.operation == "verify_material_grounding"
+                    and any(row["candidate_id"] == "O1"
+                            for row in json.loads(prompt.user)["candidates"])):
                 self.grounding_checks += 1
                 if self.grounding_checks == 1:
                     rejected = {"verdicts": [
@@ -249,7 +251,7 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
                          "operation_supported": False,
                          "reason": "A clearly named client was omitted."}]}
                     return replace(result, data=reviewed_record_verdicts(
-                        json.loads(prompt.user), rejected))
+                        json.loads(prompt.user), rejected, scripted_full_scope=True))
             return result
 
     text = "Our client Mira Patel says a supplier retained her records."
@@ -318,14 +320,14 @@ def test_context_overflow_has_a_nonretryable_plain_recovery_path(tmp_path):
 
     assert failure.value.status == 413
     assert failure.value.retryable is False
-    assert "retrying this unchanged turn will not help" in failure.value.why
+    assert "Please contact the administrator to increase its context capacity" in failure.value.why
     assert model.calls == []
     assert store.list_for("adv").matters == ()
 
 
 @pytest.mark.parametrize(("failure", "said", "retryable"), [
     (ProviderUnavailable("private transport detail"),
-     "AI service could not be reached", True),
+     "AI analysis is temporarily unavailable", True),
     (ConfigurationError("private configuration detail"),
      "AI service is not configured", False),
     (SchemaViolation("private validation detail"),
@@ -385,7 +387,7 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert "I will check the delivery terms and record before assessing remedies." in visible
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 9
+    assert response["metrics"]["llm_calls"] == 10
     assert [row["request_index"] for row in response["continuation"]["units"]] == [1]
     assert [row["state"] for row in response["continuation"]["coverage"]] == [
         "unavailable", "ok"]
@@ -393,7 +395,7 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert model.all_calls.count("verify_continuation") == 2
     assert model.all_calls[0] == "interpret_conversation"
     assert set(model.all_calls[1:]) == {
-        "classify_account_sources", "extract_disputes", "extract_legal_details",
+        "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
 
@@ -451,8 +453,8 @@ def test_a_diversion_preserves_the_full_matter_conversation_and_current_work(tmp
     brain.run(BrainTurn("adv", return_to_work, "three", matter_id=first["matter_id"],
                        chat_id=first["chat_id"]))
     assert [row["text"] for row in model.calls[2]["earlier_conversation"]] == [
-        facts, first["elements"][0]["text"],
-        diversion, "Paris."]
+        facts, "\n".join(row["text"] for row in first["elements"]),
+        diversion, "Paris.\nNo changes were made to the saved record."]
     assert model.calls[2]["current_work"] == facts
 
 
@@ -493,7 +495,8 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
     reply = brain.run(BrainTurn("adv", mixed, "deposit-mixed",
                                 matter_id=opened["matter_id"],
                                 chat_id=opened["chat_id"])).as_dict()
-    assert [row["text"] for row in reply["elements"]] == [legal_reply, "Paris."]
+    assert [row["text"] for row in reply["elements"]] == [
+        legal_reply, "Paris.", "No changes were made to the saved record."]
     assert reply["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
     assert reply["metrics"]["llm_calls"] == 3
 
@@ -544,10 +547,11 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
 
     assert served.status_code == 200, served.text
     response = served.json()
-    assert [row["text"] for row in response["elements"]] == [urgent_reply, ordinary_reply]
+    assert [row["text"] for row in response["elements"]] == [
+        urgent_reply, ordinary_reply, "No changes were made to the saved record."]
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 8
 
 
 def test_served_factual_correction_keeps_its_direct_reply_and_source(
@@ -617,7 +621,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     assert response["material"][0]["quoted"] == correction
     assert response["material"][0]["prior_references"][0]["quoted"] == (
         "the hearing is on Tuesday.")
-    assert response["metrics"]["llm_calls"] == 7
+    assert response["metrics"]["llm_calls"] == 8
 
 
 def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired, monkeypatch):
@@ -700,7 +704,11 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                     {"candidate_id": "O1", "verdict": "reject",
                      "operation_supported": False,
                      "reason": "The opening adds an admission."},
-                ]}))
+                ], "coverage": {
+                    "state": "partial", "missing_source_ids": ["L2"],
+                    "reason": ("The supplier's reported retention of the drawings remains "
+                               "unrepresented after rejecting the invented admission."),
+                }}, scripted_full_scope=True))
             return result
 
     store = FileMatterStore(tmp_path, key="a-test-sealing-key")
@@ -708,18 +716,23 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     response = BrainService(store, model).run(
         BrainTurn("adv", latest, "grounding-turn")).as_dict()
 
-    assert response["metrics"]["llm_calls"] == 9
+    assert response["metrics"]["llm_calls"] == 10
     assert [row["statement"] for row in response["material"]] == [
         "We sent a notice."]
     assert {key: response["material_coverage"][key] for key in (
-        "state", "withheld_details", "opening_fallback")} == {
-        "state": "partial", "withheld_details": 1, "opening_fallback": True}
+        "state", "rejected_details", "withheld_details", "unread_details", "opening_fallback")} == {
+        "state": "partial", "rejected_details": 1, "withheld_details": 0,
+        "unread_details": 0, "opening_fallback": True}
     assert len(response["material_coverage"]["rejected_proposals"]) == 1
     saved = store.load(response["matter_id"])
     assert saved.title == "Matter"
     assert "admitted" not in saved.brain_opening_summary
-    assert "could not be confirmed" in "\n".join(
+    assert "The record reading remains unfinished." in "\n".join(
         row["text"] for row in response["elements"])
+    receipt = response["material_coverage"]["execution"]
+    assessment = receipt["stages"]["detail_review"]["account_coverage"]
+    assert assessment["state"] == "partial" and assessment["missing_source_ids"] == ["L2"]
+    assert receipt["record_changes"][0]["after_record"]["statement"] == "We sent a notice."
 
 
 def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):

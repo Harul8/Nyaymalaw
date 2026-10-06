@@ -115,7 +115,7 @@ def test_public_rejected_research_cannot_be_restored_by_citing_a_valid_peer_pass
     answer = send(client, QUESTION, "rejected-proposition-use-owner")
     replay = send(client, QUESTION, "rejected-proposition-use-owner")
 
-    assert answer["metrics"]["llm_calls"] == 8
+    assert answer["metrics"]["llm_calls"] == 9
     assert replay["metrics"]["llm_calls"] == 0
     assert unsupported not in "\n".join(row["text"] for row in answer["elements"])
     assert answer["continuation"]["coverage"][0]["state"] == "ok"

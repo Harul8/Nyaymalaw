@@ -12,7 +12,6 @@ import pytest
 from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
-from nm.shared.model_port import SchemaViolation
 from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
 from tests.test_brain_material import Model, material, plan, send
 from tests.test_brain_material_verification import Model as CheckerModel
@@ -95,13 +94,20 @@ def test_an_accept_without_supported_operation_never_releases(candidate_type):
         {"verdicts": [_decision(candidate_id, supported=False)]},
     ])
 
-    with pytest.raises(SchemaViolation, match="remained incomplete"):
-        verify_material_grounding(
-            checker, candidates=(_candidate(ORIGINAL, FIRST),)
-            if candidate_type == "detail" else (),
-            opening=OpeningCandidate(candidate_type == "opening", "Payment account", FIRST),
-            latest=FIRST, earlier=(), current_matter_id="synthetic-matter")
+    result = verify_material_grounding(
+        checker, candidates=(_candidate(ORIGINAL, FIRST),)
+        if candidate_type == "detail" else (),
+        opening=OpeningCandidate(candidate_type == "opening", "Payment account", FIRST),
+        latest=FIRST, earlier=(), current_matter_id="synthetic-matter")
     assert len(checker.calls) == 2
+    assert result.details == ()
+    assert result.opening_supported is (candidate_type != "opening")
+    assert len(result.unread_proposals) == 1
+    unread, = result.unread_proposals
+    assert unread["candidate_id"] == candidate_id
+    assert unread["verdict"] == "unassessed"
+    assert unread["admission_issue"] == "review_unavailable"
+    assert unread["validation_issues"] == ["accept conflicts with operation_supported=false"]
 
 
 def test_missing_operation_decision_is_not_treated_as_implicit_support():
@@ -138,7 +144,8 @@ class OperationModel(Model):
             supported = row.get("statement") not in self.rejected_statements
             verdicts.append(_decision(row["candidate_id"], supported=supported,
                                       accept=supported))
-        return replace(result, data=reviewed_record_verdicts(payload, {"verdicts": verdicts}))
+        return replace(result, data=reviewed_record_verdicts(
+            payload, {"verdicts": verdicts}, scripted_full_scope=True))
 
 
 def _change(statement, latest, *, basis="stated"):
@@ -203,9 +210,9 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
     response = send(client, latest, "followup", opened=opened.json())
     assert response.status_code == 200, response.text
     answer = response.json()
-    assert answer["metrics"]["llm_calls"] == 7
+    assert answer["metrics"]["llm_calls"] == 8
     assert [row["operation"] for row in answer["metrics"]["model_calls"]] == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
     assert len(model.material_checks) == 2

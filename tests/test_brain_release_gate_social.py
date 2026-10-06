@@ -90,7 +90,8 @@ def test_public_greeting_is_composed_and_reviewed_without_changing_pending_matte
     assert [row["request_index"] for row in calls[1][1]["work_items"]] == [0]
     assert [row["request_index"] for row in calls[2][1]["units"]] == [0]
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [0]
-    assert [row["text"] for row in answer["elements"]] == [delivered["blocks"][0]["text"]]
+    assert [row["text"] for row in answer["elements"]] == [
+        delivered["blocks"][0]["text"], "No changes were made to the saved record."]
     assert "UNREVIEWED_ROUTER_GREETING" not in json.dumps(answer["elements"])
     saved = wired.store.load(opened["matter_id"])
     assert project_work(saved) == before_work
@@ -140,7 +141,8 @@ def test_public_mixed_greeting_and_account_summary_are_both_composed_and_reviewe
     assert [row["request_index"] for row in calls[2][1]["units"]] == [0, 1]
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [0, 1]
     assert [row["text"] for row in answer["elements"]] == [
-        greeting["blocks"][0]["text"], summary["blocks"][0]["text"]]
+        greeting["blocks"][0]["text"], summary["blocks"][0]["text"],
+        "No changes were made to the saved record."]
     assert "UNREVIEWED_ROUTER" not in json.dumps(answer["elements"])
     saved = wired.store.load(opened["matter_id"])
     after_work = project_work(saved)

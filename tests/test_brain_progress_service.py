@@ -106,7 +106,7 @@ def test_public_answer_completes_question_once_and_preserves_the_requested_task(
     after = progress(wired, second)
     replay = send(client, answered, "progress-answer", opened=first)
 
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert second["metrics"]["llm_calls"] == 3
     assert replay["metrics"]["llm_calls"] == 0
     assert after == progress(wired, replay)
@@ -115,7 +115,7 @@ def test_public_answer_completes_question_once_and_preserves_the_requested_task(
     assert after["rows"][0] == before["rows"][0]
     assert after["rows"][1]["last_update_turn_id"] == "progress-answer"
     unit = second["continuation"]["units"][0]
-    assert unit["progress_version"] == 2
+    assert unit["progress_version"] == 3
     assert unit["progress_updates"][0]["target_id"] == before["rows"][1]["id"]
     assert unit["blocks"][0]["references"][0]["turn_id"] == "progress-answer"
     writer_input = [payload for operation, payload in model.calls
@@ -215,7 +215,7 @@ def test_public_complete_immediate_reply_leaves_new_requested_task_pending(
     saved = wired.store.load(result["matter_id"])
     projected = project_work(saved)
 
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert projected["rows"][0]["status"] == "pending"
     assert projected["active_work"] == FIRST
     unit = result["continuation"]["units"][0]
@@ -273,7 +273,7 @@ def test_public_mixed_completion_keeps_checked_task_and_withholds_rejected_peer(
     released = send(client, next_words, "mixed-progress-deliver", opened=first)
     after = progress(wired, released)
 
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert released["metrics"]["llm_calls"] == 5
     assert [(row["id"], row["status"]) for row in after["rows"]] == [
         (before["rows"][0]["id"], "pending"), (before["rows"][1]["id"], "complete")]
@@ -345,7 +345,7 @@ def test_public_redisplayed_completed_scope_is_checked_without_new_completion_ev
     repeated = send(client, requested, "idempotent-redisplay", opened=first)
     after = progress(wired, repeated)
 
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert repeated["metrics"]["llm_calls"] == 3
     assert after == before
     assert len(after["rows"]) == 1

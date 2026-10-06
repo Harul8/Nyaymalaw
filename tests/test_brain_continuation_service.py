@@ -195,13 +195,13 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     assert "What outcome would you like to achieve?" in visible
     assert "The record and applicable legal sources have not been checked." in visible
     assert "I will examine your request" not in visible
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert [operation for operation, _ in model.calls] == [
         "interpret_conversation", "classify_account_sources",
-        "extract_disputes", "extract_legal_details",
+        "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
-    assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE, Tier.ROUTINE,
-                           Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
+    assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE, Tier.JUDGE,
+                           Tier.ROUTINE, Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
     composition = next(payload for operation, payload in model.calls
                        if operation == "continue_conversation")
     assert all("reply" not in item and "clarification" not in item
@@ -220,7 +220,7 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
         client, wired, monkeypatch):
     from tests.brain_research_fixture import Corpus
     from tests.test_brain_material import Model as MaterialModel
-    from tests.test_brain_material import material
+    from tests.test_brain_material import material, scripted_record_result
     from tests.test_brain_material import plan as material_plan
 
     first_words = ("We act for Mira concerning use of her property. The use began in 2019. "
@@ -251,7 +251,8 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
                        "written permission and its unknown end date."
                    ),
                }}],
-                        material_purposes=("account_contribution",))
+                        material_purposes=("account_contribution",),
+                        record_disposition="performed")
     initial = unit(text="You report that the use began in 2019.", span_ids=("L2",))
     initial["blocks"] = [initial["blocks"][0]]
     initial.update(questions=[], sufficiency={"status": "complete", "block_id": "account-0"})
@@ -272,7 +273,10 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
             self.seen.append((prompt, json.loads(prompt.user), deepcopy(schema)))
             if prompt.operation != "continue_conversation":
                 return super().structured(prompt, schema, tier, max_tokens=max_tokens)
-            data = citation_units(json.loads(prompt.user), {"units": [next(self.replies)]})
+            payload = json.loads(prompt.user)
+            data = citation_units(payload, {"units": [next(self.replies)]})
+            data = scripted_record_result(
+                prompt.operation, payload, data, self.current_record_disposition)
             return ModelResult(text=None, data=data, tier=tier,
                                provider="offline", model="offline", usage=Usage(0, 0, 0),
                                latency_ms=0, completion=Completion.COMPLETE)
@@ -284,13 +288,13 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     second = send(client, latest, "contribution-later", opened=first)
     replay = send(client, latest, "contribution-later", opened=first)
 
-    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 8
     assert replay["metrics"]["llm_calls"] == 0
     assert corpus.calls == []
-    last_calls = model.seen[7:]
+    last_calls = model.seen[8:]
     assert [prompt.operation for prompt, _, _ in last_calls] == [
         "interpret_conversation", "classify_account_sources",
-        "extract_disputes", "extract_legal_details",
+        "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
     composition = next(payload for prompt, payload, _ in last_calls
                        if prompt.operation == "continue_conversation")
@@ -366,11 +370,11 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert after_aside == before_aside
     last = send(client, returned, "public-return", opened=aside)
 
-    assert second["metrics"]["llm_calls"] == 6
+    assert second["metrics"]["llm_calls"] == 8
     assert aside["metrics"]["llm_calls"] == 3
     assert aside["continuation"]["coverage"][0]["state"] == "ok"
     assert aside["elements"][0]["text"] == "Hello."
-    assert last["metrics"]["llm_calls"] == 6
+    assert last["metrics"]["llm_calls"] == 8
     continuation_payloads = [payload for operation, payload in model.calls
                              if operation == "continue_conversation"]
     earlier = continuation_payloads[-1]["earlier_conversation"]
@@ -396,7 +400,7 @@ def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired
 
     released = send(client, message, "public-mixed-block")
 
-    assert released["metrics"]["llm_calls"] == 7
+    assert released["metrics"]["llm_calls"] == 8
     assert released["continuation"]["units"][0]["blocks"][0]["kind"] == "limitation"
     assert released["elements"][0]["kind"] == "question"
     assert released["elements"][0]["section"] == "needed"
@@ -422,7 +426,7 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     assert "deliberately concealed" not in json.dumps(response["elements"])
     assert response["continuation"]["units"] == []
     assert response["continuation"]["coverage"][0]["state"] == "unavailable"
-    assert response["metrics"]["llm_calls"] == 9
+    assert response["metrics"]["llm_calls"] == 10
     saved = wired.store.load(response["matter_id"])
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["message"] == message
@@ -586,7 +590,8 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_th
         "interpret_conversation", "continue_conversation", "verify_continuation"]
     assert len(model.calls) == previous_calls + 3
     assert model.tiers[-3:] == [Tier.JUDGE] * 3
-    assert [row["text"] for row in reply["elements"]] == ["You're welcome."]
+    assert [row["text"] for row in reply["elements"]] == [
+        "You're welcome.", "No changes were made to the saved record."]
     saved = wired.store.load(first["matter_id"])
     assert project_work(saved) == before
     assert [row["message"] for row in saved.brain_chat] == [first_words, acknowledgment]
@@ -663,7 +668,8 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
             else:
                 return result
             if prompt.operation == "verify_material_grounding":
-                data = reviewed_record_verdicts(json.loads(prompt.user), data)
+                data = reviewed_record_verdicts(
+                    json.loads(prompt.user), data, scripted_full_scope=True)
             return replace(result, data=data)
 
     thanked = unit(text="Thank you.")
@@ -683,12 +689,14 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
     saved_id = chat_matter_id("adv_demo", first["chat_id"])
     first_saved = wired.store.load(saved_id)
 
-    assert first["metrics"]["llm_calls"] == 7
+    assert first["metrics"]["llm_calls"] == 8
     assert first["matter_id"] is None
     assert first["material"] == []
-    assert first["material_coverage"]["withheld_details"] == 1
+    assert first["material_coverage"]["rejected_details"] == 1
+    assert first["material_coverage"]["withheld_details"] == 0
+    assert first["material_coverage"]["unread_details"] == 0
     assert len(first["elements"]) == 2
-    assert "Your message is saved" in first["elements"][1]["text"]
+    assert first["elements"][1]["text"] == "No changes were made to the saved record."
     assert first_saved.brain_chat[0]["elements"] == first["elements"]
     assert first_saved.brain_chat[0]["response"]["elements"] == first["elements"]
 

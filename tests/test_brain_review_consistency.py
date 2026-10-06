@@ -90,7 +90,8 @@ def test_public_consistent_review_repairs_no_user_input_or_writer_and_replay_is_
         "verify_continuation"]
     assert answer["continuation"]["coverage"][0]["state"] == "ok"
     assert [block["text"] for block in answer["elements"]] == [
-        block["text"] for block in proposed["blocks"]]
+        *[block["text"] for block in proposed["blocks"]],
+        "No changes were made to the saved record."]
     assert "validation_issues" in model.calls[-1][1]
     saved = wired.store.load(chat_matter_id("adv_demo", answer["chat_id"]))
     assert len(saved.brain_chat) == 1 and saved.brain_chat[0]["message"] == words

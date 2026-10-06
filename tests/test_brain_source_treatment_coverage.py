@@ -183,7 +183,7 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
         return
     assert response.status_code == 200, response.text
     answer = response.json()
-    assert answer["metrics"]["llm_calls"] == 7
+    assert answer["metrics"]["llm_calls"] == 9
     assert [row["message"] for row in saved.brain_chat] == ["Hello.", message]
     catalogue = saved.brain_chat[-1]["response"]["material_coverage"]["source_treatments"]
     assert set(catalogue) == {"P1S1", "L1", "L2", "L3"}

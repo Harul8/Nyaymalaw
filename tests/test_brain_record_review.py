@@ -143,6 +143,7 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
     model = ReviewModel([plan(account, candidates=original, opening=True,
                               material_purposes=("account_contribution",)),
                          plan(request, candidates=candidates,
+                              record_disposition="unresolved" if reject_successor else "performed",
                               material_purposes=("interpretation_review",),
                               record_requirement={
                                   "kind": "change", "operation": "corrects",
@@ -172,7 +173,7 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
         audit = result["material_coverage"]["dispute_review"][0]
         assert audit["model_decision"]["verdict"] == "accept"
         assert audit["verdict"] == "reject" and audit["missing_peer_ids"] == ["C2"]
-        assert result["metrics"]["llm_calls"] == 7
+        assert result["metrics"]["llm_calls"] == 8
     else:
         assert {row["id"] for row in disputes["rows"]} == {
             "restore:material:1", "restore:material:2"}
@@ -226,7 +227,8 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     model = DispatchModel([
         plan(account, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
-        plan(request, candidates=[successor], material_purposes=("interpretation_review",),
+        plan(request, candidates=[successor], record_disposition="unresolved",
+             material_purposes=("interpretation_review",),
              record_requirement={
                  "kind": "change", "operation": "corrects",
                  "target_ids": ["merged:material:1"],
@@ -241,7 +243,7 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
     assert response.status_code == 200, response.text
     result = response.json()
     assert len(checks) == 2 and "required_peer_ids" in checks[1]["validation_issue"]
-    assert result["material"] == [] and result["metrics"]["llm_calls"] == 8
+    assert result["material"] == [] and result["metrics"]["llm_calls"] == 9
     saved = wired.store.load(opened["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
 
@@ -324,7 +326,8 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
     model = SourceReviewModel([
         plan(account, candidates=original, opening=True,
              material_purposes=("account_contribution",)),
-        plan(latest, candidates=[unsupported, party, courier, unsupported_detail,
+        plan(latest, record_disposition="unresolved",
+             candidates=[unsupported, party, courier, unsupported_detail,
                                  party_detail, courier_detail],
              material_purposes=("account_contribution", "interpretation_review"),
              record_requirement={

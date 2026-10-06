@@ -12,7 +12,8 @@ from tests.test_brain_material import Model, material, plan, send
 
 
 def answer_plan(message, *, reply, candidates=(), opening=False,
-                intent="request", material_purposes=(), record_requirement=None):
+                intent="request", material_purposes=(), record_requirement=None,
+                record_disposition=None):
     routed = plan(message, candidates=candidates, opening=opening, items=[{
         "request": message, "relation": "new" if opening else "continues",
         "matter_scope": "proposed" if opening else "current",
@@ -22,7 +23,8 @@ def answer_plan(message, *, reply, candidates=(), opening=False,
         "material_purposes": list(material_purposes),
         "record_requirement": (no_record_requirement() if record_requirement is None
                                else record_requirement),
-    }], material_purposes=("account_contribution",))
+    }], material_purposes=("account_contribution",),
+       record_disposition=record_disposition)
     if opening:
         routed["opening"].update(subject="Reported delivery", summary=message)
     return routed
@@ -69,10 +71,10 @@ def test_current_answer_runs_correction_saves_lineage_and_replays_without_work(
     assert result.status_code == 200, result.text
     response = result.json()
     assert operations(response) == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
-    assert response["metrics"]["llm_calls"] == 7
+    assert response["metrics"]["llm_calls"] == 8
     assert response["material"][0]["related_material_ids"] == [
         "delivery-original:material:1"]
     saved = wired.store.load(opened["matter_id"])
@@ -111,7 +113,7 @@ def test_proposed_matter_answer_opens_and_saves_checked_account(
     response = result.json()
     assert response["route"] == "matter"
     assert operations(response) == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
     assert [row["statement"] for row in current_record(
@@ -158,6 +160,7 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
     review = answer_plan(
         request, reply="The saved description matches your reported delivery date.",
                   material_purposes=("interpretation_review",),
+        record_disposition="review_no_change",
         record_requirement={
             "kind": "review",
             "target_ids": ["review-original:material:1"],
@@ -180,9 +183,10 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
     assert result.status_code == 200, result.text
     response = result.json()
     assert operations(response) == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
-        "extract_legal_details", "continue_conversation", "verify_continuation"]
-    assert response["metrics"]["llm_calls"] == 6
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
+        "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
+    assert response["metrics"]["llm_calls"] == 8
     assert response["material"] == []
     assert current_record(wired, opened["matter_id"]) == before
     assert "matches your reported delivery date" in "\n".join(

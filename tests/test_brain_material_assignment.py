@@ -63,7 +63,11 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
             if prompt.operation == "verify_material_grounding":
                 self.grounding_inputs.append(json.loads(prompt.user))
                 if len(self.grounding_inputs) == 2:
-                    result = replace(result, data={"verdicts": [
+                    result = replace(result, data={**result.data,
+                        "coverage": {"state": "partial", "missing_source_ids": ["L1"],
+                                     "reason": ("The receipt is retained; "
+                                                "the correction remains unrepresented.")},
+                        "verdicts": [
                         {**row, "verdict": "reject", "reason": (
                             "The payment correction does not bear on the delivery dispute.")}
                         if row["candidate_id"] == "D2" else row
@@ -96,7 +100,11 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
     assert len(response["material"]) == 1
     assert response["material"][0]["statement"] == "A receipt is reported."
     assert response["material_coverage"]["state"] == "partial"
-    assert response["material_coverage"]["withheld_details"] == 1
+    assert response["material_coverage"]["rejected_details"] == 1
+    assert response["material_coverage"]["execution"]["semantic_coverage"] == "partial"
+    assert response["material_coverage"]["execution"]["stages"]["detail_review"][
+        "account_coverage"]["missing_source_ids"] == ["L1"]
+    assert response["material_coverage"]["withheld_details"] == 0
     reviewed = model.grounding_inputs[1]
     linked = {row["id"]: row for row in reviewed["linked_records"]}
     assert linked["assignment-first:material:1"]["record"]["quoted"] == "Delivery was delayed."
@@ -107,4 +115,4 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
     assert [row["message"] for row in saved.brain_chat] == [first, latest]
     assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 2
     assert len(model.grounding_inputs) == 2
-    assert response["metrics"]["llm_calls"] == 7
+    assert response["metrics"]["llm_calls"] == 8

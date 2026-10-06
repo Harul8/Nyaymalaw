@@ -22,6 +22,7 @@ class Model:
         self.material_calls = []
         self.next_material = []
         self.current_items = []
+        self.current_record_disposition = None
 
     def context_budget(self, tier):
         assert tier in (Tier.ROUTINE, Tier.JUDGE)
@@ -61,15 +62,70 @@ class Model:
             self.calls.append(prompt)
             planned = next(self.plans)
             self.next_material = planned["material"]
-            data = {key: value for key, value in planned.items() if key != "material"}
+            self.current_record_disposition = planned.get("_record_disposition")
+            data = {key: value for key, value in planned.items()
+                    if key not in ("material", "_record_disposition")}
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
                 self.current_items = data["items"]
+        data = scripted_record_result(
+            prompt.operation, json.loads(prompt.user), data, self.current_record_disposition)
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
                            completion=Completion.COMPLETE)
 
+
+
+def scripted_record_result(operation, payload, data, disposition):
+    """An owner-declared offline result; effects provide IDs, never meaning.
+
+    Scenario owners explicitly select the disposition. The helper copies exact
+    code-owned anchors for that scripted outcome and never decides whether a
+    candidate, empty extraction or receipt fulfills a request.
+    """
+    if disposition is None or operation not in ("continue_conversation", "verify_continuation"):
+        return data
+    from copy import deepcopy
+
+    result = deepcopy(data)
+    status = disposition
+    reason = {
+        "performed": "The scripted independent judgment confirms the full requested record result.",
+        "review_no_change": ("The scripted independent judgment confirms the unchanged record "
+                             "meets the full review scope."),
+        "unresolved": ("The scripted independent judgment leaves the requested record "
+                       "result unfinished."),
+    }[status]
+    if operation == "continue_conversation":
+        requests = {row["request_index"]: row for row in payload["work_items"]}
+        for unit in result["units"]:
+            requirement = requests[unit["request_index"]]["record_requirement"]
+            if requirement["kind"] == "none":
+                continue
+            unit["record_outcome"] = {
+                "status": status, "block_id": unit["blocks"][0]["id"],
+                "effect_ids": [identity for identity, effect in
+                               payload["record_effect_catalogue"].items()
+                               if effect["performed"]] if status == "performed" else [],
+                "current_record_ids": list(requirement["target_ids"])
+                if status == "review_no_change" else [],
+                "reason": reason,
+            }
+            if status == "unresolved":
+                unit["sufficiency"]["status"] = "partial"
+                unit["progress_updates"] = []
+    else:
+        requests = {row["request_index"]: row for row in payload["input"]["work_items"]}
+        for row in result["verdicts"]:
+            if requests[row["request_index"]]["record_requirement"]["kind"] == "none":
+                continue
+            row["record_check"] = {
+                "outcome": {"performed": "fulfilled", "review_no_change": "no_change_justified",
+                            "unresolved": "unfinished"}[status],
+                "reason": reason,
+            }
+    return result
 
 def _with_source_ids(row, payload):
     """Script citations from the immutable spans supplied to the model."""
@@ -110,7 +166,8 @@ def material(kind, statement, quoted, *, relation="new", references=(),
 
 
 def plan(message, *, candidates=(), items=None, opening=False,
-         active_work="review the account", material_purposes=(), record_requirement=None):
+         active_work="review the account", material_purposes=(), record_requirement=None,
+         record_disposition=None):
     if items is None:
         items = [{"request": message, "relation": "new",
                   "matter_scope": "proposed" if opening else "current",
@@ -124,6 +181,8 @@ def plan(message, *, candidates=(), items=None, opening=False,
     items = [{**item, "material_purposes": item.get(
         "material_purposes", list(material_purposes))} for item in items]
     return {"items": items, "material": list(candidates),
+            **({"_record_disposition": record_disposition}
+               if record_disposition is not None else {}),
             "active_work_after": active_work,
             "opening": {"ready": opening,
                         "party_name": "",
@@ -206,7 +265,7 @@ def test_first_account_retains_distinct_sourced_material_without_admission(
     assert saved.facts == ()
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert response["metrics"]["llm_calls"] == 7
+    assert response["metrics"]["llm_calls"] == 8
     payload = json.loads(model.calls[0].user)
     assert payload["earlier_conversation"] == []
     assert payload["latest_message"] == message
@@ -291,7 +350,7 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
     changed = send(client, correction, "second", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 7
+    assert changed.json()["metrics"]["llm_calls"] == 8
     matter = wired.store.load(opened.json()["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -369,8 +428,14 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
                       request, relation="corrects", references=lineage, scope="current",
                       placement="disputes", dispute_ids=("review:material:1",),
                       related_material_ids=("original:material:2",))
-    review_plan = plan(request, candidates=[dispute, detail],
-                       material_purposes=("interpretation_review",))
+    review_plan = plan(
+        request, candidates=[dispute, detail], material_purposes=("interpretation_review",),
+        record_requirement={
+            "kind": "change", "target_ids": ["original:material:1", "original:material:2"],
+            "operation": "corrects", "success_condition": (
+                "The saved dispute and detail preserve the withheld packages and unknown actor "
+                "from the original account without adding facts."),
+        }, record_disposition="performed")
     model = Model([plan(account, candidates=[old_dispute, old_detail], opening=True,
                         material_purposes=("account_contribution",)), review_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -402,7 +467,8 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
                and row["prior_references"] == list(lineage) for row in result["material"])
     assert len(disputes["history"]) == len(records["history"]) == 2
     interpreter = model.calls[-1]
-    assert "without any new factual" in interpreter.system
+    assert "review can need original account reading without a new" in interpreter.system
+    assert "instruction authorises examination but does not supply the fact" in interpreter.system
     assert review_plan["items"][0]["material_purposes"] == ["interpretation_review"]
     assert json.loads(interpreter.user)["latest_message"] == request
     assert [row["text"] for row in json.loads(interpreter.user)["earlier_conversation"]
@@ -414,8 +480,13 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
     account = "A party disputes the handover and the responsible actor is unknown."
     request = "Check whether your saved description faithfully reflects my account."
     original = material("dispute", "Disputed handover; actor unknown", account)
-    review = plan(request)
-    review["items"][0]["material_purposes"] = ["interpretation_review"]
+    review = plan(request, material_purposes=("interpretation_review",),
+                  record_requirement={
+                      "kind": "review", "target_ids": ["original-review-empty:material:1"],
+                      "operation": "none", "success_condition": (
+                          "The saved handover description preserves the reported dispute "
+                          "and unknown actor."),
+                  }, record_disposition="review_no_change")
     model = Model([plan(account, candidates=[original], opening=True,
                         material_purposes=("account_contribution",)), review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -428,10 +499,10 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["material"] == []
-    assert result["metrics"]["llm_calls"] == 6
+    assert result["metrics"]["llm_calls"] == 8
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
-        "extract_legal_details",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
+        "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
     assert client.get(f"/api/matters/{matter_id}").json()["proposed_disputes"] == before
 
@@ -576,7 +647,7 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == message
-    assert served.json()["metrics"]["llm_calls"] == 8
+    assert served.json()["metrics"]["llm_calls"] == 9
     repair = [json.loads(prompt.user) for prompt in model.material_calls
               if "original_input" in json.loads(prompt.user)]
     assert len(repair) == 1

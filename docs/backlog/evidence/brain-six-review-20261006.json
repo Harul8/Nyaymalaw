@@ -865,6 +865,44 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_finding_label_width.py"
       ]
+    },
+    {
+      "slice": "integrated-public-fixture-contracts",
+      "owners": [
+        "LB-175",
+        "LB-177",
+        "LB-178",
+        "LB-179",
+        "LB-182",
+        "LB-183",
+        "LB-185",
+        "LB-188",
+        "LB-193"
+      ],
+      "decision": "Aligned twenty served conversation/material/dispute/progress fixtures with explicit independent scoped judgments, typed scenario-owned performed/no-change/unresolved dispositions and canonical record display. Preserves exact original evidence, unreleased false claims, partial omitted-account markers, genuine unread/rejected distinctions, legacy qualification, proof corruption, immutable goals and atomic recovery. Completion is never derived from merely having effects.",
+      "validation": "220 connected public offline controls passed in 37.13s; production Ruff and changed fixture Ruff clean. Intentional empty Judges counted exactly; avoidable metadata corrections removed; terminal bad accepts remain unread after two checks, exact loss-of-ack recovery and zero-call replay verified. Actual semantic/browser qualification deferred.",
+      "files": [
+        "tests/test_brain_continuation_service.py",
+        "tests/test_brain_continuation_use_scope.py",
+        "tests/test_brain_dispute_transitions.py",
+        "tests/test_brain_material.py",
+        "tests/test_brain_material_answer_routing.py",
+        "tests/test_brain_material_assignment.py",
+        "tests/test_brain_material_execution.py",
+        "tests/test_brain_material_operations.py",
+        "tests/test_brain_material_purpose.py",
+        "tests/test_brain_material_record.py",
+        "tests/test_brain_material_scope.py",
+        "tests/test_brain_progress_service.py",
+        "tests/test_brain_record_review.py",
+        "tests/test_brain_release_gate_social.py",
+        "tests/test_brain_review_consistency.py",
+        "tests/test_brain_source_selection.py",
+        "tests/test_brain_source_treatment_coverage.py",
+        "tests/test_brain_source_treatment_reuse.py",
+        "tests/test_brain_turn.py",
+        "tests/test_brain_work_identity_checks.py"
+      ]
     }
   ]
 }

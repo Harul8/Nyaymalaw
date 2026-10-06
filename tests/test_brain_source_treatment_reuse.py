@@ -43,7 +43,9 @@ def unfinished_legal_reply(payload):
 
 class ReuseModel(RecordResearchModel):
     def structured(self, prompt, schema, tier, *, max_tokens=None):
-        if prompt.operation == "verify_legal_requirements":
+        if (prompt.operation == "verify_legal_requirements"
+                and "application_premises" in schema["properties"]["decisions"]["items"].get(
+                    "properties", {})):
             self.account_choices = deepcopy(schema["properties"]["decisions"]["items"][
                 "properties"]["application_premises"]["items"]["properties"][
                     "account_source_ids"])
@@ -54,7 +56,8 @@ class ReuseModel(RecordResearchModel):
 def test_public_legal_followup_reuses_only_marked_prior_canonical_source_treatment(
         client, wired, monkeypatch, marked):
     model = ReuseModel([opening(), legal_route()],
-                       [{"units": [factual_unit()]}, unfinished_legal_reply],
+                       [{"units": [factual_unit(record_result="performed")]},
+                        unfinished_legal_reply],
                        dispute_reads=[disputes()])
     corpus = wire(wired, monkeypatch, model)
     first = send(client, ACCOUNT, f"treatment-opening-{marked}")
@@ -101,7 +104,7 @@ def test_public_invalid_saved_treatment_cannot_become_authority_before_model_dis
                   reply="I will restate the attributed account.")
     repeat["items"][0].update(response_basis="conversation_record", research_question="")
     model = RecordResearchModel([opening(), repeat, legal_route()],
-                                [{"units": [factual_unit()]},
+                                [{"units": [factual_unit(record_result="performed")]},
                                  {"units": [factual_unit(earlier=True)]}],
                                 dispute_reads=[disputes()])
     corpus = wire(wired, monkeypatch, model)

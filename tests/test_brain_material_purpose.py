@@ -28,8 +28,9 @@ def item(request, reply, *, purposes=(), intent="request", opening=False,
     }
 
 
-def routed(message, *, items, candidates=(), opening=False):
-    result = plan(message, items=items, candidates=candidates, opening=opening)
+def routed(message, *, items, candidates=(), opening=False, record_disposition=None):
+    result = plan(message, items=items, candidates=candidates, opening=opening,
+                  record_disposition=record_disposition)
     # These cases deliberately supply no independent turn-wide routing switch.
     result.pop("material_review", None)
     if opening:
@@ -124,10 +125,10 @@ def test_answer_account_purpose_saves_correction_and_replays_without_duplicate_w
     assert response.status_code == 200, response.text
     result = response.json()
     assert operations(result) == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     record = public_record(client, opened["matter_id"])
     assert [(row["id"], row["statement"]) for row in record["rows"]] == [
         ("custody-corrected:material:1", changed["statement"])]
@@ -164,7 +165,7 @@ def test_interpretation_review_repairs_from_prior_account_without_new_account_fa
         references=({"turn_id": "custody-original", "role": "advocate",
                      "quoted": account},),
         related_material_ids=("custody-original:material:1",))
-    repair = routed(request, candidates=[revised], items=[
+    repair = routed(request, candidates=[revised], record_disposition="performed", items=[
         item(request, revised["statement"], purposes=("interpretation_review",),
              record_requirement={
                  "kind": "change",
@@ -184,7 +185,7 @@ def test_interpretation_review_repairs_from_prior_account_without_new_account_fa
 
     assert response.status_code == 200, response.text
     result = response.json()
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert "extract_legal_details" in operations(result)
     reader = next(payload for operation, payload in reversed(model.seen)
                   if operation == "extract_legal_details")
@@ -229,7 +230,7 @@ def test_authorised_review_without_new_rows_preserves_existing_material(
         client, wired, monkeypatch):
     account = "The freight is held at the depot."
     request = "Check your custody description against my saved account."
-    review = routed(request, items=[
+    review = routed(request, record_disposition="review_no_change", items=[
         item(request, "The saved description reports custody at the depot.",
              purposes=("interpretation_review",),
              record_requirement={
@@ -251,9 +252,10 @@ def test_authorised_review_without_new_rows_preserves_existing_material(
     assert response.status_code == 200, response.text
     result = response.json()
     assert operations(result) == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes",
-        "extract_legal_details", "continue_conversation", "verify_continuation"]
-    assert result["metrics"]["llm_calls"] == 6
+        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
+        "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
+    assert result["metrics"]["llm_calls"] == 8
     assert result["material"] == []
     assert public_record(client, opened["matter_id"]) == before
     assert wired.store.load(opened["matter_id"]).brain_chat[-1]["message"] == request
@@ -280,7 +282,7 @@ def test_mixed_requests_keep_independent_responses_and_one_material_pass(
 
     assert response.status_code == 200, response.text
     result = response.json()
-    assert result["metrics"]["llm_calls"] == 7
+    assert result["metrics"]["llm_calls"] == 8
     assert operations(result).count("extract_legal_details") == 1
     units = result["continuation"]["units"]
     assert [unit["request_index"] for unit in units] == [0, 1, 2]

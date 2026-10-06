@@ -2,7 +2,7 @@
 
 Meaning and reviewer judgments are scripted. These checks establish observable
 execution, projection, ownership and persistence; semantic coverage and request
-fulfillment must remain explicitly unassessed.
+fulfillment come from separate, explicitly scripted independent judgments.
 """
 from copy import deepcopy
 from dataclasses import replace
@@ -38,7 +38,8 @@ def execution(response):
     return response["material_coverage"]["execution"]
 
 
-def assert_saved_execution(wired, response, *, before_version, turn_id, request, purposes):
+def assert_saved_execution(wired, response, *, before_version, turn_id, request, purposes,
+                           fulfillment="not_requested", requirement=None):
     receipt = execution(response)
     saved = wired.store.load(response["matter_id"])
     row = next(row for row in saved.brain_chat if row["turn_id"] == turn_id)
@@ -50,10 +51,24 @@ def assert_saved_execution(wired, response, *, before_version, turn_id, request,
     assert receipt["expected_version"] == before_version
     assert receipt["resulting_version"] == before_version + 1 == saved.version
     assert receipt["persistence"] == "committed"
-    assert receipt["semantic_coverage"] == "unassessed"
+    assert receipt["semantic_coverage"] == ("complete" if purposes else "unassessed")
+    unit, = row["response"]["continuation"]["units"]
+    declared = (requirement if requirement is not None else {
+        "kind": "none", "target_ids": [], "operation": "none", "success_condition": "",
+    })
+    check = unit["record_check"]
+    outcome = unit["record_outcome"]
+    assert check["outcome"] == fulfillment
     assert receipt["requests"] == [{
         "request_index": 0, "request": request, "material_purposes": list(purposes),
-        "fulfillment": "unassessed",
+        "relation": unit["work"]["relation"], "matter_scope": unit["work"]["matter_scope"],
+        "intent": unit["work"]["intent"], "record_requirement": declared,
+        "fulfillment": fulfillment,
+        "fulfillment_check": {
+            **check, "receipt_id": receipt["id"], "request_index": 0,
+            "block_id": outcome["block_id"], "effect_ids": outcome["effect_ids"],
+            "current_record_ids": outcome["current_record_ids"],
+        },
     }]
     assert row["response"]["material_coverage"]["execution"] == receipt
     return receipt
@@ -69,8 +84,13 @@ def assert_prepared_handoffs(model, start, committed):
         else:
             continue
         assert receipt["persistence"] == "prepared_for_commit"
-        expected = {**committed, "persistence": "prepared_for_commit"}
+        expected = deepcopy(committed)
+        expected["persistence"] = "prepared_for_commit"
+        for request in expected["requests"]:
+            request["fulfillment"] = "unassessed"
+            request.pop("fulfillment_check")
         assert receipt == expected
+        assert all(request["fulfillment"] == "unassessed" for request in receipt["requests"])
         seen.append(operation)
     assert seen == ["continue_conversation", "verify_continuation"]
 
@@ -94,7 +114,8 @@ def test_public_correction_receipt_matches_record_effects_and_replays_once(
         request=correction, purposes=("account_contribution",))
     assert receipt["stages"]["source_classification"]["state"] == "returned"
     assert receipt["stages"]["dispute_extraction"] == {"state": "returned", "proposals": 0}
-    assert receipt["stages"]["dispute_review"]["state"] == "no_candidates"
+    assert receipt["stages"]["dispute_review"]["state"] == "checked"
+    assert receipt["stages"]["dispute_review"]["account_coverage"]["state"] == "complete"
     assert receipt["stages"]["detail_extraction"] == {"state": "returned", "proposals": 1}
     assert receipt["stages"]["detail_review"]["state"] == "checked"
     effects = receipt["effects"]["details"]
@@ -154,7 +175,9 @@ def test_replay_rejects_corrupt_saved_execution_without_rerunning_or_mutating(
     replay = send(client, account, "receipt-original")
 
     assert replay.status_code == 409, replay.text
-    assert "material execution owner" in replay.json()["detail"]["why"]
+    assert replay.json()["detail"]["why"] == (
+        "The saved reply or its sources could not be verified")
+    assert replay.json()["detail"]["code"] == "brain_refused"
     assert replay.json()["detail"]["committed"] == "not_committed"
     assert len(model.seen) == calls
     assert wired.store.load(opened["matter_id"]) == before
@@ -171,6 +194,9 @@ def test_legacy_reply_without_execution_receipt_replays_without_fabricating_evid
     record = public_record(client, opened["matter_id"])
     changed = deepcopy(saved.brain_chat)
     changed[0]["response"]["material_coverage"].pop("execution")
+    # A genuine pre-continuation historical row has neither new proof; stripping
+    # only its receipt while retaining a fresh snapshot/seal is corruption.
+    changed[0]["response"].pop("continuation")
     wired.store.commit(replace(saved, brain_chat=changed, version=saved.version + 1),
                        expected_version=saved.version)
     before = deepcopy(wired.store.load(opened["matter_id"]))
@@ -182,6 +208,7 @@ def test_legacy_reply_without_execution_receipt_replays_without_fabricating_evid
     result = replay.json()
     assert result["replayed"] is True
     assert "execution" not in result["material_coverage"]
+    assert result["continuation"] == {}
     assert result["metrics"]["llm_calls"] == 0
     assert len(model.seen) == calls
     assert result["material"] == opened["material"]
@@ -219,7 +246,7 @@ def test_older_receipt_remains_valid_historical_evidence_after_its_row_is_supers
 
 
 @pytest.mark.parametrize("review", [False, True])
-def test_readonly_and_empty_review_receipts_distinguish_what_ran_without_completion_proof(
+def test_readonly_and_completed_empty_review_receipts_distinguish_evidence_and_fulfillment(
         client, wired, monkeypatch, review):
     account = "The freight is held at the depot."
     request = ("Check your description against my saved account." if review
@@ -231,7 +258,7 @@ def test_readonly_and_empty_review_receipts_distinguish_what_ran_without_complet
     } if review else {
         "kind": "none", "operation": "none", "target_ids": [], "success_condition": "",
     })
-    follow = routed(request, items=[
+    follow = routed(request, record_disposition="review_no_change" if review else None, items=[
         item(request, account, purposes=purposes, record_requirement=requirement),
     ])
     model = PurposeModel([seed_plan(account), follow], review_authority_only=review)
@@ -246,14 +273,19 @@ def test_readonly_and_empty_review_receipts_distinguish_what_ran_without_complet
     result = response.json()
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-no-effect",
-        request=request, purposes=purposes)
+        request=request, purposes=purposes, requirement=requirement,
+        fulfillment="no_change_justified" if review else "not_requested")
     expected = "returned" if review else "not_run"
     for stage in ("source_classification", "dispute_extraction", "detail_extraction"):
         assert receipt["stages"][stage]["state"] == expected
     for stage in ("dispute_review", "detail_review"):
-        assert receipt["stages"][stage]["state"] == ("no_candidates" if review else "not_run")
+        assert receipt["stages"][stage]["state"] == ("checked" if review else "not_run")
     for kind in ("disputes", "details"):
-        assert receipt["effects"][kind] == {
+        effects = receipt["effects"][kind]
+        before_ids = ["receipt-original:material:1"] if kind == "details" else []
+        assert effects == {
+            "before_record_ids": before_ids, "after_record_ids": before_ids,
+            "before_held_record_ids": [], "after_held_record_ids": [],
             "activated_record_ids": [], "retired_record_ids": [], "operations": [],
             "held_record_ids": [], "outside_owned_record_ids": [],
         }
@@ -275,7 +307,7 @@ def test_authorised_repair_receipt_retains_original_account_and_instruction_prov
         request, relation="corrects", scope="current", placement="matter",
         references=({"turn_id": "receipt-original", "role": "advocate", "quoted": account},),
         related_material_ids=("receipt-original:material:1",))
-    follow = routed(request, candidates=[restored], items=[
+    follow = routed(request, candidates=[restored], record_disposition="performed", items=[
         item(request, restored["statement"], purposes=("interpretation_review",),
              record_requirement={
                  "kind": "change", "operation": "corrects",
@@ -293,7 +325,8 @@ def test_authorised_repair_receipt_retains_original_account_and_instruction_prov
     result = response.json()
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-repair",
-        request=request, purposes=("interpretation_review",))
+        request=request, purposes=("interpretation_review",),
+        requirement=follow["items"][0]["record_requirement"], fulfillment="fulfilled")
     operation = receipt["effects"]["details"]["operations"][0]
     assert operation["source_references"] == [
         {"turn_id": "receipt-repair", "role": "advocate", "quoted": request},
@@ -440,7 +473,11 @@ def test_lost_commit_acknowledgement_returns_saved_receipt_without_duplicate_eff
     result = response.json()
     assert result["replayed"] is True
     operations = [operation for operation, _ in model.seen[call_start:]]
-    assert len(operations) == 7
+    assert len(operations) == 8
+    assert operations == [
+        "interpret_conversation", "classify_account_sources", "extract_disputes",
+        "verify_disputes", "extract_legal_details", "verify_material_grounding",
+        "continue_conversation", "verify_continuation"]
     assert result["metrics"]["llm_calls"] == len(operations)
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == operations
     receipt = assert_saved_execution(

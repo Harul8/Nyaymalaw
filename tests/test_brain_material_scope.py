@@ -71,7 +71,7 @@ def test_clear_opening_ownership_preserves_uncertain_basis_in_one_call():
 
     assert len(model.calls) == 1
     assert result[0].matter_scope == "proposed" and result[0].basis == "uncertain"
-    assert "not whether its facts are" in model.calls[0][0].system
+    assert "a described record is not proof of its contents" in model.calls[0][0].system
 
 
 def _saved(turn_id, words, proposals, *, route="matter"):
@@ -264,7 +264,7 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
 
     assert changed.status_code == 200, changed.text
     result = changed.json()
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 9
     assert result["material"][0]["relation"] == "new"
     assert result["material"][0]["matter_scope"] == "uncertain"
     record = client.get(f"/api/matters/{result['matter_id']}").json()["material_record"]

@@ -38,7 +38,8 @@ class TransitionModel(Model):
                 if supported else "The reviewer proposition is supplied for criticism, "
                 "not adoption; it cannot replace the underlying conduct disputes.",
             })
-        return replace(result, data=reviewed_record_verdicts(payload, {"verdicts": decisions}))
+        return replace(result, data=reviewed_record_verdicts(
+            payload, {"verdicts": decisions}, scripted_full_scope=True))
 
 
 def _revision(statement, quoted, targets):
@@ -92,7 +93,7 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
     response = send(client, latest, "followup", opened=opened.json())
     assert response.status_code == 200, response.text
     answer = response.json()
-    assert answer["metrics"]["llm_calls"] == 7
+    assert answer["metrics"]["llm_calls"] == 8
     assert len(model.dispute_checks) == 2
     checked = model.dispute_checks[-1]
     assert "".join(span["text"] for span in checked["latest_message_spans"]) == latest

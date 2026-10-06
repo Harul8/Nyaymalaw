@@ -101,7 +101,7 @@ def test_public_repeated_ids_and_aliases_reach_existing_judge_once_before_saving
     response = send(client, CORRECTION, "correction", opened=opened.json())
 
     assert response.status_code == 200, response.text
-    assert response.json()["metrics"]["llm_calls"] == 7
+    assert response.json()["metrics"]["llm_calls"] == 8
     assert len(model.raw_selections) == 1
     assert len(model.grounding_inputs) == 2
     checked = model.grounding_inputs[-1]
