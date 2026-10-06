@@ -14,6 +14,7 @@ import os
 import sqlite3
 import struct
 import threading
+from copy import deepcopy
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -57,6 +58,15 @@ def _rrf(lists: list[list[int]]) -> dict[int, float]:
 
 def _ordered(scores: dict[int, float]) -> list[int]:
     return sorted(scores, key=lambda position: (-scores[position], position))
+
+
+def _ranked_positions(ranked: object) -> tuple[list[int], int]:
+    """Keep usable store positions without treating unread ranks as no hits."""
+    if not isinstance(ranked, (list, tuple)):
+        return [], 1
+    positions = [position for position in ranked
+                 if type(position) is int and position >= 0]
+    return positions, len(ranked) - len(positions)
 
 
 class _Models:
@@ -266,7 +276,8 @@ class LocalCollection:
                         item = json.loads(blob)
                     except ValueError:
                         continue
-                    if (item.get("doc_type", self.doc_type) == self.doc_type
+                    if (isinstance(item, dict)
+                            and item.get("doc_type", self.doc_type) == self.doc_type
                             and item.get("chunk_id") == chunk_id
                             and isinstance(item.get("full_text"), str)
                             and item["full_text"].strip()):
@@ -303,18 +314,23 @@ def _candidate(kind: str, row: dict, score: float, source_path: str) -> dict:
         title = str(row.get("act_name") or row.get("act_id") or "")
         section = str(row.get("section_number") or "")
         locator = f"{title}, {section}" if section else title
-        court, held_date = "", str(row.get("year") or "")
+        court = ""
     else:
         title = str(row.get("case_name") or row.get("case_id") or "")
         cite = str(row.get("citation") or "")
         paragraph = str(row.get("paragraph_num") or "")
         locator = ", ".join(part for part in (
             title, cite, f"paragraph {paragraph}" if paragraph else "") if part)
-        court, held_date = str(row.get("court") or ""), str(row.get("year") or "")
+        court = str(row.get("court") or "")
+    held_date = row.get("date")
+    if not isinstance(held_date, str):
+        held_date = str(row.get("year") or "")
+    source_jurisdiction = deepcopy(row.get("jurisdiction", ""))
     return {
         "id": f"{kind}:{passage_id}", "kind": kind, "title": title,
         "locator": locator, "text": row["full_text"], "court": court,
-        "date": held_date, "score": round(float(score), 5),
+        "date": held_date, "jurisdiction": source_jurisdiction,
+        "score": round(float(score), 5),
         "source_path": source_path, "source_chunk_id": chunk_id,
     }
 
@@ -336,7 +352,7 @@ class HybridSearcher:
             if not isinstance(value, str) or not value.strip():
                 return None
             revisions[kind] = value
-        identity = {"collections": revisions, "contract": "hybrid_passage_v2",
+        identity = {"collections": revisions, "contract": "hybrid_passage_v3",
                     "embedding": EMBED_MODEL, "reranking": RERANK_MODEL,
                     "depth": LEG_DEPTH, "pool": PER_QUERY_POOL,
                     "per_kind": RESULTS_PER_KIND,
@@ -384,18 +400,21 @@ class HybridSearcher:
 
         ``subject`` names the owner of this search but does not itself add a
         query: the caller must supply independently formulated search routes.
-        ``jurisdiction`` is retained for downstream applicability analysis;
+        ``jurisdiction`` is retained as requested scope, separately from any
+        source-provided jurisdiction. Neither establishes applicability;
         keyword-based geographic exclusion here would erase possible law.
         """
-        del subject, jurisdiction
+        del subject
         clean = tuple(dict.fromkeys(" ".join(query.split()) for query in queries
                                         if isinstance(query, str) and query.strip()))[:4]
         if not clean:
             return {"state": "unavailable", "candidates": [],
+                    "requested_jurisdiction": jurisdiction,
                     "diagnostics": ["No legal search formulations were supplied."]}
         all_candidates: list[dict] = []
         diagnostics: list[str] = []
         searched = 0
+        read_gaps = False
         for kind in ("provision", "judgment"):
             collection = self.collections.get(kind)
             if collection is None:
@@ -404,6 +423,7 @@ class HybridSearcher:
             try:
                 per_query: list[list[int]] = []
                 query_by_position: dict[int, list[str]] = {}
+                invalid_positions = 0
                 semantic_many = getattr(collection, "semantic_many", None)
                 if callable(semantic_many):
                     semantic_lists = semantic_many(clean, LEG_DEPTH)
@@ -413,34 +433,54 @@ class HybridSearcher:
                 if len(semantic_lists) != len(clean):
                     raise SearchUnavailable(f"{kind} semantic search returned incomplete results")
                 for query, semantic in zip(clean, semantic_lists, strict=True):
-                    lexical = collection.lexical(query, LEG_DEPTH)
+                    lexical, invalid = _ranked_positions(collection.lexical(query, LEG_DEPTH))
+                    invalid_positions += invalid
+                    semantic, invalid = _ranked_positions(semantic)
+                    invalid_positions += invalid
                     shortlist = _ordered(_rrf([lexical, semantic]))[:PER_QUERY_POOL]
                     per_query.append(shortlist)
                     for position in shortlist:
                         query_by_position.setdefault(position, []).append(query)
                 pool = _ordered(_rrf(per_query))
                 rows = collection.read(pool)
-                allowed: list[tuple[int, dict]] = []
+                if not isinstance(rows, Mapping):
+                    raise SearchUnavailable(f"{kind} passage read returned no position mapping")
+                allowed: list[tuple[int, dict, dict]] = []
                 filtered = 0
+                unread: dict[int, str] = {}
                 for position in pool:
                     row = rows.get(position)
-                    if row is None:
-                        continue
-                    if (not isinstance(row.get("chunk_id"), str)
-                            or not isinstance(row.get("full_text"), str)
-                            or not row["full_text"].strip()):
+                    if not isinstance(row, dict):
+                        unread[position] = "missing or malformed passage row"
                         continue
                     if kind == "judgment":
-                        if row.get("paragraph_type") not in ATTRIBUTABLE_PARAGRAPHS:
+                        paragraph_type = row.get("paragraph_type")
+                        if not isinstance(paragraph_type, str) or not paragraph_type.strip():
+                            unread[position] = "missing or malformed paragraph role"
+                            continue
+                        if paragraph_type not in ATTRIBUTABLE_PARAGRAPHS:
                             filtered += 1
                             continue
                         year = str(row.get("year") or "")
                         if as_of is not None and year.isdigit() and int(year) > as_of.year:
                             filtered += 1
                             continue
-                    allowed.append((position, row))
+                    if (not isinstance(row.get("chunk_id"), str)
+                            or not row["chunk_id"].strip()):
+                        unread[position] = "missing or malformed source chunk ID"
+                        continue
+                    if (not isinstance(row.get("full_text"), str)
+                            or not row["full_text"].strip()):
+                        unread[position] = "missing or malformed exact passage text"
+                        continue
+                    candidate = _candidate(
+                        kind, row, 0.0, self.source_paths.get(kind, ""))
+                    if not candidate["title"].strip() or not candidate["locator"].strip():
+                        unread[position] = "missing attributable title or locator"
+                        continue
+                    allowed.append((position, row, candidate))
                 pairs = [(query, row["full_text"])
-                         for position, row in allowed
+                         for position, row, candidate in allowed
                          for query in query_by_position[position]]
                 scores = collection.rerank(pairs)
                 if (len(scores) != len(pairs)
@@ -448,20 +488,16 @@ class HybridSearcher:
                     raise SearchUnavailable(f"{kind} reranker returned invalid scores")
                 judged = []
                 offset = 0
-                for position, row in allowed:
+                for position, _row, candidate in allowed:
                     width = len(query_by_position[position])
-                    judged.append(((position, row), max(scores[offset:offset + width])))
+                    judged.append((candidate, max(scores[offset:offset + width])))
                     offset += width
                 ranked = sorted(judged, key=lambda item: -item[1])
                 seen: set[str] = set()
-                for (position, row), score in ranked:
-                    del position
-                    candidate = _candidate(
-                        kind, row, score, self.source_paths.get(kind, ""))
+                for candidate, score in ranked:
+                    candidate["score"] = round(float(score), 5)
                     key = candidate["id"]
                     if key in seen:
-                        continue
-                    if not candidate["title"].strip() or not candidate["locator"].strip():
                         continue
                     seen.add(key)
                     all_candidates.append(candidate)
@@ -470,6 +506,16 @@ class HybridSearcher:
                 if filtered:
                     diagnostics.append(
                         f"{kind} search excluded {filtered} non-attributable or later passages")
+                if invalid_positions:
+                    diagnostics.append(
+                        f"{kind} search returned {invalid_positions} malformed ranked positions")
+                if unread:
+                    issues = "; ".join(
+                        f"{position}: {reason}" for position, reason in unread.items())
+                    diagnostics.append(
+                        f"{kind} search could not read attributable passages "
+                        f"at positions {list(unread)} ({issues})")
+                read_gaps = read_gaps or bool(invalid_positions or unread)
                 if not seen:
                     diagnostics.append(f"{kind} search found no readable candidate passages")
                 searched += 1
@@ -480,9 +526,11 @@ class HybridSearcher:
             except Exception:  # noqa: BLE001 - external index boundary must fail closed
                 log.exception("%s search failed", kind)
                 diagnostics.append(f"{kind} search unavailable: local index failure")
-        state = "ok" if searched == 2 else "partial" if searched else "unavailable"
+        state = ("ok" if searched == 2 and not read_gaps
+                 else "partial" if searched else "unavailable")
         return {"state": state,
                 "candidates": all_candidates if searched else [],
+                "requested_jurisdiction": jurisdiction,
                 "diagnostics": diagnostics}
 
 

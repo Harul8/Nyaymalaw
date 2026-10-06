@@ -361,6 +361,20 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_empty_reading.py"
       ]
+    },
+    {
+      "slice": "preserve-readable-retrieval-peers",
+      "owners": [
+        "LB-179",
+        "LB-180",
+        "LB-185"
+      ],
+      "decision": "Malformed ranked positions or unread attributable passage rows now produce partial search coverage while retaining readable peers. Existing intentional role/date exclusions and legitimate empty pools remain valid. Exact optional source jurisdiction and date survive separately from requested jurisdiction.",
+      "validation": "61 offline local retrieval cases passed, including missing optional metadata, intentional filters, empty hits and malformed peers; Ruff clean. Native corpus models and real-model/browser checks deferred.",
+      "files": [
+        "nm/brain/retrieval.py",
+        "tests/test_brain_retrieval_read_gaps.py"
+      ]
     }
   ]
 }
