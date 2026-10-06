@@ -23,6 +23,12 @@ def citation_units(payload, data):
             unit["work_selector"] = (association["existing_id"] or
                                      ("$new_task" if association["create"] else "$no_task"))
             unit.pop("work")
+        # Explicit ordinary legacy-wire declaration only; typed effectful tests
+        # supply their own outcome and independent judgment.
+        unit.setdefault("record_outcome", {
+            "status": "none", "block_id": "", "effect_ids": [],
+            "current_record_ids": [], "reason": "",
+        })
         for block in unit["blocks"]:
             if not isinstance(block, dict) or "inline_citations" in block:
                 continue

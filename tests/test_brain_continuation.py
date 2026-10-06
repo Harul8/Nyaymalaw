@@ -97,7 +97,9 @@ def unit(index=0, *, text="You report holding a signed receipt.",
                            "target_ids": [], "existing_id": ""}],
             "next_work": [],
             "sufficiency": {"status": "needs_input", "block_id": f"limit-{index}"},
-            "work": {"existing_id": "", "create": True}, "progress_updates": []}
+            "work": {"existing_id": "", "create": True}, "progress_updates": [],
+            "record_outcome": {"status": "none", "block_id": "", "effect_ids": [],
+                               "current_record_ids": [], "reason": ""}}
 
 
 def verdict(*indexes, accept=True, reason="The complete unit preserves its support and limits."):
@@ -164,6 +166,8 @@ def mixed_purpose_unit():
                        "target_ids": [], "existing_id": ""}],
         "sufficiency": {"status": "needs_input", "block_id": "mixed"},
         "work": {"existing_id": "", "create": True}, "progress_updates": [],
+        "record_outcome": {"status": "none", "block_id": "", "effect_ids": [],
+                           "current_record_ids": [], "reason": ""},
     }
 
 
@@ -510,7 +514,13 @@ def test_authority_needed_units_cannot_release_using_only_user_words(complete):
             "id": "assessment", "kind": "assessment",
             "text": "The legal rule requires written notice.", "span_ids": ["L1"],
             "record_ids": [], "legal_source_ids": [], "uncertainty": "none"})
-    model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}, verdict(0)])
+    retained_review = verdict(0)
+    if not complete:
+        retained_review["verdicts"][0]["record_check"] = {
+            "outcome": "unfinished",
+            "reason": "The certified factual subset makes no completed legal or record claim.",
+        }
+    model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}, retained_review])
     result = _continue(model, plan=authority_plan(), checked_sources=supplied_law())
     assert _operation_names(model) == ["continue_conversation", "continue_conversation"] + (
         [] if complete else ["verify_continuation"])

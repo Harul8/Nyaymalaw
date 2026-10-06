@@ -6,9 +6,19 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 
-from nm.brain.continuation_verification import verify_continuation
+from nm.brain.checked import require_independent_result
+from nm.brain.continuation_verification import _record_check_rejections, verify_continuation
 from nm.brain.conversation import Conversation, IncompleteConversation, TurnPlan
+from nm.brain.execution_contracts import (
+    RECORD_OUTCOME_CONTRACT,
+    RECORD_OUTCOME_SCHEMA,
+    ExecutionEvidenceInvalid,
+    ReviewCompletionIncomplete,
+    effect_catalogue,
+    validate_record_outcome,
+)
 from nm.brain.legal_requirements import (
     RESEARCH_VERIFICATION,
     finding_verification_valid,
@@ -18,6 +28,7 @@ from nm.brain.material import PriorReference, addressed_sources
 from nm.brain.record_review import derived_record, substantive_source_treatments
 from nm.brain.source_snapshots import inline_source_links
 from nm.brain.work_state import PROGRESS_KINDS, PROGRESS_STATUSES
+from nm.shared.gates_contracts import gate_diagnostic
 from nm.shared.model_port import (
     ContextOverflow,
     ModelError,
@@ -26,7 +37,6 @@ from nm.shared.model_port import (
     Prompt,
     SchemaViolation,
     Tier,
-    TierUnavailable,
     estimate_tokens,
     require_schema,
 )
@@ -225,7 +235,35 @@ non-overlapping phrases occurring once in the block and meaningful for the
 selected passage. Every selected legal passage, including sources of checked
 findings, needs an anchor. Joint support must not imply that one passage proves
 the whole conclusion. Without selected legal passages inline_citations is
-empty. The interface supplies links; add no separate source list."""
+empty. The interface supplies links; add no separate source list.
+
+Record-outcome output.
+Outcome: Every fresh unit also returns record_outcome with status, block_id,
+effect_ids, current_record_ids and reason. Select one exact displayed block
+explaining this outcome. Use none for ordinary work requiring no record effect
+or review; leave both ID arrays empty. A meaningful record result needs a
+concise specific reason. performed selects only actual performed entries in
+record_effect_catalogue by their exact code-owned IDs, never an intended change
+or an unrelated successful operation. Each selected effect must fulfill this
+request's target, operation and success condition. already_current selects
+only current_record_ids that already support the requested current state,
+with effect_ids empty; it makes no claim that NM performed a prior edit.
+review_no_change requires actual requested record review and its execution,
+including a legitimate zero-candidate outcome; do not substitute a skipped
+stage, a refused edit or a failed read. unresolved preserves unfinished record
+work and cannot complete sufficiency or this selected task; an independently
+answered earlier question can still complete on its own attributed evidence.
+An unresolved whole review may still retain exact IDs of its actually checked
+narrower effects and current-state evidence, with a specific displayed limit;
+those results do not certify the whole requested condition.
+Use only supplied code effect IDs and active current record IDs. Put their
+identities in the declared fields, never in prose. Exact repeated selections
+are idempotent, but every selected identity must belong to the supplied
+catalogue. Do not return record_outcome_contract: the application owns that
+seal after independent review. A schema-valid declaration still needs evidence
+that it addresses the actual request and wider selected task scope.
+"""
+
 
 _KINDS = ("acknowledgment", "account", "assessment", "question", "next_step",
           "limitation", "completion")
@@ -285,6 +323,13 @@ _UNIT = {
         "questions": {"type": "array", "items": _LINK},
         "next_work": {"type": "array", "items": _LINK},
         "work": _WORK,
+        # Optional on the historical/internal contract; required for a fresh writer.
+        "record_outcome": RECORD_OUTCOME_SCHEMA,
+        "record_outcome_contract": {"type": "string", "enum": [RECORD_OUTCOME_CONTRACT]},
+        # Resolved metadata is supplied only by code after independent review.
+        "record_check": {"type": "object"},
+        "progress_checks": {"type": "array", "items": {"type": "object"}},
+        "reviewed_record_check": {"type": "object"},
         "progress_updates": {"type": "array", "items": _UPDATE},
         "sufficiency": {
             "type": "object", "additionalProperties": False,
@@ -301,8 +346,11 @@ _NEW_TASK = "$new_task"
 _NO_TASK = "$no_task"
 _MODEL_UNIT = {
     **_UNIT,
-    "required": [field if field != "work" else "work_selector" for field in _UNIT["required"]],
-    "properties": {**{key: value for key, value in _UNIT["properties"].items() if key != "work"},
+    "required": [field if field != "work" else "work_selector" for field in _UNIT["required"]]
+                + ["record_outcome"],
+    "properties": {**{key: value for key, value in _UNIT["properties"].items()
+                       if key not in ("work", "record_outcome_contract", "record_check",
+                                      "progress_checks", "reviewed_record_check")},
                    "work_selector": {"type": "string"}},
 }
 
@@ -311,17 +359,22 @@ _MODEL_UNIT = {
 class ContinuationResult:
     units: tuple[dict, ...]
     coverage: tuple[dict, ...]
+    gate_events: tuple[dict, ...] = dataclass_field(default_factory=tuple)
 
     def as_dict(self) -> dict:
-        return {"units": deepcopy(list(self.units)),
-                "coverage": deepcopy(list(self.coverage))}
+        result = {"units": deepcopy(list(self.units)),
+                  "coverage": deepcopy(list(self.coverage))}
+        if self.gate_events:
+            result["gate_events"] = deepcopy(list(self.gate_events))
+        return result
 
 
 class _ContentFailure(SchemaViolation):
     """Local content failures after the complete graph and sources are checked."""
 
-    def __init__(self, issues: dict[str, str]):
+    def __init__(self, issues: dict[str, str], *, gate_states: tuple[tuple[str, str], ...] = ()):
         self.issues = issues
+        self.gate_states = gate_states
         super().__init__("; ".join(issues.values()))
 
 
@@ -452,8 +505,13 @@ def _record_context(row: dict, words: dict[tuple[str, str], str]) -> list[dict]:
 
 def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
             sources: dict, progress: dict | None = None,
-            intents: dict[int, str] | None = None) -> dict:
+            intents: dict[int, str] | None = None, *,
+            effect_ids: tuple[str, ...] = (),
+            current_record_ids: tuple[str, ...] = ()) -> dict:
     unit = deepcopy(_MODEL_UNIT)
+    outcome = unit["properties"]["record_outcome"]["properties"]
+    outcome["effect_ids"] = _identifier_array(effect_ids)
+    outcome["current_record_ids"] = _identifier_array(current_record_ids)
     work = _progress_catalogue(progress)
     unit["properties"]["work_selector"]["enum"] = list(dict.fromkeys(
         choice for index in indexes
@@ -490,7 +548,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
            disputes: dict | None, material: dict | None,
            requirements: dict | None, progress: dict | None,
            checked_sources: tuple[dict, ...], latest_turn_id: str,
-           research: dict | None = None, source_treatments: dict | None = None
+           research: dict | None = None, source_treatments: dict | None = None, *,
+           execution_receipt: dict | None = None
            ) -> tuple[dict, dict, dict, dict]:
     if not conversation.complete:
         raise IncompleteConversation("The earlier conversation is incomplete")
@@ -528,6 +587,12 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     material_coverage = deepcopy((material or {}).get("coverage", {
         "state": "ok", "ambiguous_scope_items": 0,
         "legacy_unverified_items": 0, "diagnostics": []}))
+    if execution_receipt is not None:
+        existing_execution = material_coverage.get("execution")
+        if existing_execution is not None and existing_execution != execution_receipt:
+            raise IncompleteConversation(
+                "The explicit material execution evidence conflicts with its record handoff")
+        material_coverage["execution"] = deepcopy(execution_receipt)
     excluded_scope = deepcopy((material or {}).get("excluded_scope", []))
     if (not isinstance(material_coverage, dict)
             or material_coverage.get("state") not in ("ok", "partial", "unavailable")
@@ -651,7 +716,22 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
                 value = finding(row, identity, use_id)
                 value.update(subject=deepcopy(subject))
                 record(value, "research", use_id)
+    execution_receipt = material_coverage.get("execution")
+    try:
+        effects = effect_catalogue(execution_receipt)
+    except ExecutionEvidenceInvalid as exc:
+        raise IncompleteConversation(
+            "The material execution evidence is incomplete: " + str(exc)) from exc
+    if execution_receipt is not None and (
+            execution_receipt["owner"]["turn_id"] != latest_turn_id
+            or (conversation.current_matter_id is not None
+                and execution_receipt["owner"]["matter_id"] != conversation.current_matter_id)):
+        raise IncompleteConversation("The material execution evidence has another owner")
     payload.update(
+        record_outcome_contract=RECORD_OUTCOME_CONTRACT,
+        record_effect_catalogue=effects,
+        current_record_ids=[key for key, row in records.items()
+                            if row["type"] in ("dispute", "material")],
         current_matter_id=conversation.current_matter_id,
         current_work=conversation.current_work,
         work_items=[{"request_index": index, **{
@@ -703,7 +783,8 @@ def _inline_reference(block: dict, spans: dict, records: dict, sources: dict,
 def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                    records: dict, sources: dict,
                    progress: dict | None = None, intent: str = "request",
-                   needs_authority: bool = False) -> None:
+                   needs_authority: bool = False, *,
+                   execution_receipt: dict | None = None) -> None:
     require_schema(unit, _UNIT)
     work = _progress_catalogue(progress)
     if type(unit["request_index"]) is not int or unit["request_index"] not in expected:
@@ -741,6 +822,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         raise IncompleteConversation("The interpreted work intent is unreadable")
     checked_updates = _bind_progress_sources(unit, blocks, spans, work)
     content_issues = {}
+    gate_states = ()
     for block_index, block in enumerate(unit["blocks"]):
         block_path = f"blocks[{block_index}] (id {block['id']!r})"
         if not block["id"].strip() or not block["text"].strip():
@@ -877,8 +959,25 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
             raise SchemaViolation(
                 f"progress_updates[{index}].block_id {update['block_id']!r} "
                 "needs a displayed source supporting the progress decision")
+    try:
+        validate_record_outcome(unit, execution_receipt,
+                                (key for key, row in records.items()
+                                 if row["type"] in ("dispute", "material")))
+    except ExecutionEvidenceInvalid as exc:
+        # The model cannot repair corrupted execution ownership/projections.
+        problem = IncompleteConversation(
+            "The material execution evidence is incomplete: " + str(exc))
+        problem.gate_events = ({"request_index": unit["request_index"],
+                                **gate_diagnostic("G-CORE", "invalid")},)
+        raise problem from exc
+    except ReviewCompletionIncomplete as exc:
+        content_issues["$record_completion"] = str(exc)
+        gate_states = (("G-INCOMPLETE", exc.state),)
+    except SchemaViolation as exc:
+        content_issues["$record_outcome"] = str(exc)
+        gate_states = (("G-EFFECT", "unsupported"),)
     if content_issues:
-        raise _ContentFailure(content_issues)
+        raise _ContentFailure(content_issues, gate_states=gate_states)
 
 
 def _read_units(data: object, pending: tuple[int, ...], spans: dict,
@@ -886,7 +985,9 @@ def _read_units(data: object, pending: tuple[int, ...], spans: dict,
                 reserved_updates: frozenset[str] = frozenset(),
                 intents: dict[int, str] | None = None,
                 needs_authority: dict[int, bool] | None = None,
-                local_failures: dict[int, tuple[dict, dict[str, str]]] | None = None
+                local_failures: dict[int, tuple[dict, dict[str, str]]] | None = None, *,
+                execution_receipt: dict | None = None,
+                gate_events: list[dict] | None = None, attempt: int = 1
                 ) -> tuple[dict[int, dict], dict[int, str]]:
     rows = data.get("units") if isinstance(data, dict) else None
     grouped: dict[int, list[dict]] = {index: [] for index in pending}
@@ -901,12 +1002,26 @@ def _read_units(data: object, pending: tuple[int, ...], spans: dict,
             issues[index] = "Return exactly one complete unit for this request_index"
             continue
         try:
+            forged = sorted(set(grouped[index][0]) & {
+                "record_outcome_contract", "record_check", "progress_checks",
+                "reviewed_record_check"})
+            if forged:
+                raise SchemaViolation(
+                    f"Fresh unit cannot supply code-owned independent review fields {forged!r}")
+            if "record_outcome" not in grouped[index][0]:
+                raise SchemaViolation(
+                    "Fresh continuation unit needs record_outcome; historical absence is untracked")
             unit = _selected_work(grouped[index][0], (intents or {}).get(index, "request"),
                                   _progress_catalogue(progress))
             _validate_unit(unit, pending, spans, records, sources, progress,
                            (intents or {}).get(index, "request"),
-                           (needs_authority or {}).get(index, False))
+                           (needs_authority or {}).get(index, False),
+                           execution_receipt=execution_receipt)
         except _ContentFailure as exc:
+            if gate_events is not None:
+                gate_events.extend({"request_index": index, "attempt": attempt,
+                                    **gate_diagnostic(gate_id, state)}
+                                   for gate_id, state in exc.gate_states)
             issues[index] = str(exc)
             if local_failures is not None:
                 local_failures[index] = (unit, exc.issues)
@@ -944,11 +1059,16 @@ def _limited_unit(unit: dict, *, selected: tuple[str, ...] | None = None,
     result = deepcopy(unit)
     result.update(blocks=deepcopy(blocks), questions=[], next_work=[], progress_updates=[],
                   sufficiency={"status": "partial", "block_id": limits[-1]["id"]})
+    if "record_outcome" in result:
+        result["record_outcome"] = {
+            "status": "unresolved", "block_id": limits[-1]["id"],
+            "effect_ids": [], "current_record_ids": [],
+            "reason": "The retained account leaves the requested record result unresolved."}
     return result
 
 
 def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
-             words: dict[tuple[str, str], str]) -> dict:
+             words: dict[tuple[str, str], str], *, reviewed: dict | None = None) -> dict:
     result = deepcopy(unit)
     for block in result["blocks"]:
         block["references"] = [
@@ -973,6 +1093,36 @@ def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
                     block["references"].append(reference)
                     block["span_ids"].append(identity)
     result["verification"] = "source_aware_continuation_v1"
+    if "record_outcome" in result:
+        if not isinstance(reviewed, dict) or not isinstance(reviewed.get("record_check"), dict):
+            raise IncompleteConversation(
+                "A declared record result has no independently checked disposition")
+        original_check = deepcopy(reviewed["record_check"])
+        expected = {"none": "not_requested", "performed": "fulfilled",
+                    "already_current": "fulfilled", "review_no_change": "no_change_justified",
+                    "unresolved": "unfinished"}[result["record_outcome"]["status"]]
+        result["record_check"] = original_check
+        result["progress_checks"] = deepcopy(reviewed["progress_checks"])
+        if original_check["outcome"] != expected:
+            if (expected != "unfinished" or result["progress_updates"]
+                    or result["sufficiency"]["status"] == "complete"):
+                raise IncompleteConversation(
+                    "The released record result differs from its checked disposition")
+            # A certified factual subset releases no full-result certification.
+            # This is a code-owned restriction, not a new semantic judgment.
+            result["reviewed_record_check"] = original_check
+            result["record_check"] = {
+                "outcome": "unfinished",
+                "reason": ("Only independently certified factual content and its limitation are "
+                           "released; no completed record result is certified."),
+            }
+            result["progress_checks"] = []
+        elif not result["progress_updates"]:
+            # Retained subsets have no lifecycle transition even if the old
+            # whole-unit proposal contained an independently checked one.
+            result["progress_checks"] = []
+        # Added only after independent unit/subset review, never by the writer.
+        result["record_outcome_contract"] = RECORD_OUTCOME_CONTRACT
     return result
 
 
@@ -982,20 +1132,29 @@ def continue_conversation(
         material: dict | None = None, requirements: dict | None = None,
         progress: dict | None = None, checked_sources: tuple[dict, ...] = (),
         latest_turn_id: str = "latest", research: dict | None = None,
-        source_treatments: dict | None = None
+        source_treatments: dict | None = None, execution_receipt: dict | None = None
         ) -> ContinuationResult:
     """Compose and verify once, with one local feedback-guided replacement."""
     expected = continuation_indexes(plan)
     if not expected:
         return ContinuationResult((), ())
-    payload, spans, records, sources = _input(
-        conversation, latest, plan, disputes, material, requirements, progress,
-        checked_sources, latest_turn_id, research, source_treatments)
+    try:
+        payload, spans, records, sources = _input(
+            conversation, latest, plan, disputes, material, requirements, progress,
+            checked_sources, latest_turn_id, research, source_treatments,
+            execution_receipt=execution_receipt)
+    except IncompleteConversation as exc:
+        # Refuse corrupted code-owned context before dispatch; the turn owner
+        # may retain this content-free diagnostic on its failure audit path.
+        exc.gate_events = ({"attempt": 0, **gate_diagnostic("G-CORE", "invalid")},)
+        raise
     words = {(message.turn_id, message.role): message.text
              for message in conversation.messages}
     words[(latest_turn_id, "advocate")] = latest
     accepted: dict[int, dict] = {}
     retained: dict[int, dict] = {}
+    reviews: dict[int, dict] = {}
+    gate_events: list[dict] = []
     local_failures = {}
     intents = {row["request_index"]: row["intent"] for row in payload["work_items"]}
     needs_authority = {row["request_index"]: bool(row["research_question"])
@@ -1052,10 +1211,11 @@ def continue_conversation(
         try:
             result = model.structured(
                 Prompt(system=system, user=user, operation="continue_conversation"),
-                _schema(pending, spans, records, sources, payload["progress"], intents), Tier.JUDGE,
+                _schema(pending, spans, records, sources, payload["progress"], intents,
+                        effect_ids=tuple(payload["record_effect_catalogue"]),
+                        current_record_ids=tuple(payload["current_record_ids"])), Tier.JUDGE,
                 max_tokens=output_limit)
-            if result.was_downgraded:
-                raise TierUnavailable("The configured continuation writer was unavailable")
+            require_independent_result(result)
         except ContextOverflow:
             raise
         except (SchemaViolation, OutputTruncated) as exc:
@@ -1076,7 +1236,9 @@ def continue_conversation(
         local_failures = {}
         valid, issues = _read_units(rejected, pending, spans, records, sources,
                                    payload["progress"], reserved,
-                                   intents, needs_authority, local_failures)
+                                   intents, needs_authority, local_failures,
+                                   execution_receipt=payload["material_coverage"].get("execution"),
+                                   gate_events=gate_events, attempt=attempt + 1)
         unread: set[int] = set()
         if valid:
             verdicts = verify_continuation(
@@ -1088,8 +1250,13 @@ def continue_conversation(
                 if index in unread:
                     continue
                 supported, reason = verdicts.decisions[index]
+                checked_row = verdicts.reviewed[index]
+                if _record_check_rejections(checked_row["record_check"], unit, payload):
+                    gate_events.append({"request_index": index, "attempt": attempt + 1,
+                                        **gate_diagnostic("G-EFFECT", "unsupported")})
                 if supported:
                     accepted[index] = unit
+                    reviews[index] = verdicts.reviewed[index]
                     retained.pop(index, None)
                 else:
                     issues[index] = reason
@@ -1098,8 +1265,10 @@ def continue_conversation(
                         if limited is not None:
                             _validate_unit(limited, expected, spans, records, sources,
                                            payload["progress"], intents[index],
-                                           needs_authority[index])
+                                           needs_authority[index], execution_receipt=(
+                                               payload["material_coverage"].get("execution")))
                             retained[index] = limited
+                            reviews[index] = verdicts.reviewed[index]
         pending = tuple(index for index in pending
                         if index not in accepted and index not in unread)
         if not pending:
@@ -1111,7 +1280,8 @@ def continue_conversation(
         limited = _limited_unit(unit, excluded=frozenset(failed_blocks))
         if limited is not None:
             _validate_unit(limited, expected, spans, records, sources,
-                           payload["progress"], intents[index], needs_authority[index])
+                           payload["progress"], intents[index], needs_authority[index],
+                           execution_receipt=payload["material_coverage"].get("execution"))
             narrowed[index] = limited
     if narrowed:
         review_input = {**payload, "partial_response_review": [
@@ -1126,19 +1296,21 @@ def continue_conversation(
             supported, reason = checked.decisions[index]
             if supported:
                 retained[index] = unit
+                reviews[index] = checked.reviewed[index]
             elif index in checked.retained:
                 limited = _limited_unit(unit, selected=checked.retained[index])
                 if limited is not None:
                     retained[index] = limited
+                    reviews[index] = checked.reviewed[index]
             else:
                 issues[index] = reason
     released = {**retained, **accepted}
     return ContinuationResult(
-        tuple(_resolve(released[index], spans, records, sources, words)
+        tuple(_resolve(released[index], spans, records, sources, words, reviewed=reviews.get(index))
               for index in expected if index in released),
         tuple({"request_index": index,
                "state": ("ok" if index in accepted else
                          "partial" if index in retained else "unavailable"),
                "diagnostics": [] if index in accepted else [issues.get(
                    index, "A source-supported response could not be completed")]}
-              for index in expected))
+              for index in expected), tuple(gate_events))

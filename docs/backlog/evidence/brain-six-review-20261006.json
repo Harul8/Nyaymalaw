@@ -570,6 +570,24 @@
         "tests/test_brain_work_record_outcome.py",
         "tests/test_brain_work_state.py"
       ]
+    },
+    {
+      "slice": "Fresh typed response outcomes and local retention",
+      "owners": [
+        "LB-188",
+        "LB-189",
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Every fresh writer unit requires a selected typed record_outcome checked against explicit owned execution/current records and exact current review coverage. Code-owned independent review fields cannot be forged; actual Judge tier is required. Normalized semantic result/progress checks follow accepted units into persistence. Unsupported effects and incomplete wider reviews receive declared content-free gate events and bounded correction; independently checked factual subsets remain partial.",
+      "validation": "161 offline non-public writer, reviewer, transport, retention and typed effect/current-state paired checks passed; Ruff passed. Public turn consumer activation is the next separate slice; live-model/browser evaluation deferred.",
+      "files": [
+        "nm/brain/continuation.py",
+        "tests/brain_continuation_fixture.py",
+        "tests/test_brain_continuation.py",
+        "tests/test_brain_continuation_record_outcome.py",
+        "tests/test_brain_continuation_retention.py"
+      ]
     }
   ]
 }

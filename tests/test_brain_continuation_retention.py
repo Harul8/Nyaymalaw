@@ -114,7 +114,13 @@ def test_persistent_local_support_failure_gets_one_final_independent_narrowed_re
         held = payload["input"]["partial_response_review"][0]
         assert held["unreleased_unit"] == proposed
         assert "actual supporting checked passage" in held["content_issues"]["law"]
-        return verdict(0)
+        response = verdict(0)
+        response["verdicts"][0]["record_check"] = {
+            "outcome": "unfinished",
+            "reason": ("The checked factual subset leaves the broader requested "
+                       "assessment unfinished."),
+        }
+        return response
 
     model = ContinuationModel([{"units": [proposed]}, {"units": [proposed]}, check_subset])
     result = _continue(model, latest=DISCLOSURE)
