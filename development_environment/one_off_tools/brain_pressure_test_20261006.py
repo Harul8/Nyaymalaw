@@ -21,6 +21,48 @@ TESTS = [f"tests/test_brain_pressure_{name}.py" for name in
          ("sources", "extractor", "verification", "release")]
 
 
+
+# Loaded before test collection so each imported recorder keeps its owning node.
+# The report remains produced by the original fixture; this only records which
+# executed test produced it, rather than inferring ownership from case names.
+EVIDENCE_PLUGIN = r"""import json
+import os
+from pathlib import Path
+
+
+def pytest_configure(config):
+    from tests import brain_pressure_support as support
+    original = support.record_case
+
+    def owned_record_case(case_id, **kwargs):
+        report = original(case_id, **kwargs)
+        current = os.environ.get("PYTEST_CURRENT_TEST", "")
+        if not current.endswith(" (call)"):
+            raise ValueError("Paired evidence must belong to an executing test")
+        report["test_nodeid"] = current[:-len(" (call)")]
+        target = Path(os.environ["NM_PRESSURE_EVIDENCE_DIR"]) / (case_id + ".json")
+        persisted = json.loads(target.read_text())
+        persisted["test_nodeid"] = report["test_nodeid"]
+        target.write_text(json.dumps(persisted, ensure_ascii=False, indent=2) + "\n")
+        return report
+
+    support.record_case = owned_record_case
+"""
+
+
+def selected_test_files(additional_tests):
+    """Preserve the four defaults; add distinct existing repository modules."""
+    selected = []
+    for supplied in [*TESTS, *additional_tests]:
+        path = (ROOT / supplied).resolve()
+        if not path.is_relative_to(ROOT) or path.suffix != ".py" or not path.is_file():
+            raise ValueError("Pressure test files must be existing repository Python modules")
+        relative = path.relative_to(ROOT).as_posix()
+        if relative not in selected:
+            selected.append(relative)
+    return selected
+
+
 def source_hashes():
     paths = sorted((ROOT / "nm/brain").glob("*.py"))
     paths += sorted((ROOT / "nm/shared").glob("*.py"))
@@ -28,14 +70,14 @@ def source_hashes():
             for p in paths}
 
 
-def test_source_hashes():
-    paths = [ROOT / path for path in TESTS]
+def test_source_hashes(tests):
+    paths = [ROOT / path for path in tests]
     paths += [ROOT / "tests" / path for path in (
         "brain_pressure_support.py", "conftest.py", "test_brain_material.py",
         "brain_reader_fixture.py", "brain_continuation_fixture.py")]
     paths.append(Path(__file__).resolve())
-    return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in paths}
+    return {str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p):
+            hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 
 
 def run_command(command, env, log):
@@ -47,24 +89,29 @@ def run_command(command, env, log):
     return result.stdout
 
 
-def run(output, rounds):
+def run(output, rounds, additional_tests=()):
     if output.exists():
         raise ValueError("Use a fresh evidence directory; prior observations are preserved")
+    tests = selected_test_files(additional_tests)
     output.mkdir(parents=True)
     start = datetime.now(timezone.utc).isoformat()
     initial_hashes = source_hashes()
-    initial_test_hashes = test_source_hashes()
+    initial_test_hashes = test_source_hashes(tests)
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
                                    text=True).strip()
     env = dict(os.environ, NM_PARTIAL_RUN="1")
     python = str(ROOT / ".venv/bin/python")
     base = [python, "-m", "pytest", "-o", "addopts=", "--tb=short"]
-    collected = run_command(base + TESTS + ["--collect-only", "-q"], env,
+    collected = run_command(base + tests + ["--collect-only", "-q"], env,
                             output / "collection.log")
     nodes = [line for line in collected.splitlines()
-             if line.startswith("tests/test_brain_pressure_") and "::" in line]
+             if any(line.startswith(path + "::") for path in tests)]
     if not nodes or len(nodes) != len(set(nodes)):
         raise ValueError("A nonempty distinct test selection is required")
+    evidence_plugin = output / "nm_pressure_evidence_owner.py"
+    evidence_plugin.write_text(EVIDENCE_PLUGIN)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(output), str(ROOT), *([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])])
     results = []
     for index in range(rounds):
         label = f"round-{index + 1}"
@@ -80,7 +127,8 @@ def run(output, rounds):
         else:
             order = "forward"
         env["NM_PRESSURE_EVIDENCE_DIR"] = str(folder / "cases")
-        command = base + selected + ["-q", f"--junitxml={folder / 'results.xml'}"]
+        command = base + ["-p", "nm_pressure_evidence_owner"] + selected + [
+            "-q", f"--junitxml={folder / 'results.xml'}"]
         print(f"{label}: {len(selected)} tests, {order}", flush=True)
         run_command(command, env, folder / "pytest.log")
         suites = ET.parse(folder / "results.xml").getroot()
@@ -90,6 +138,9 @@ def run(output, rounds):
                 for tag in ("failure", "error", "skipped")):
             raise ValueError("Every selected test must execute and pass")
         cases = [json.loads(p.read_text()) for p in sorted((folder / "cases").glob("*.json"))]
+        owners = Counter(row.get("test_nodeid") for row in cases)
+        if set(owners) != set(nodes) or any(count != 1 for count in owners.values()):
+            raise ValueError("Every collected test must own exactly one paired evidence record")
         if len(cases) != len(nodes) or any(not row["expectation_met"] for row in cases):
             raise ValueError("Missing or failed case-level observations")
         if any(not row["user_passage"] or not row["fabricated_model_outputs"]
@@ -97,7 +148,7 @@ def run(output, rounds):
             raise ValueError("Every case needs both actual user words and fabricated outputs")
         if source_hashes() != initial_hashes:
             raise ValueError("Production source changed during pressure testing")
-        if test_source_hashes() != initial_test_hashes:
+        if test_source_hashes(tests) != initial_test_hashes:
             raise ValueError("Pressure test source changed during execution")
         results.append({"round": label, "order": order, "test_count": len(testcases),
                         "case_count": len(cases), "cases": cases})
@@ -107,8 +158,11 @@ def run(output, rounds):
     original = {row["case_id"]: row for row in results[0]["cases"]}
     for result in results[1:]:
         for row in result["cases"]:
-            if row["observed"] != original[row["case_id"]]["observed"]:
-                raise ValueError(f"Order-dependent observation for {row['case_id']}")
+            previous = original[row["case_id"]]
+            for field in ("test_nodeid", "user_passage", "fabricated_model_outputs",
+                          "expected", "observed"):
+                if row[field] != previous[field]:
+                    raise ValueError(f"Order-dependent {field} for {row['case_id']}")
     cases = list(original.values())
     round_summaries = []
     for result in results:
@@ -127,6 +181,8 @@ def run(output, rounds):
         "tested_head": head,
         "production_source_hashes": initial_hashes,
         "test_source_hashes": initial_test_hashes,
+        "selected_test_files": tests,
+        "evidence_owner_sha256": hashlib.sha256(evidence_plugin.read_bytes()).hexdigest(),
         "distinct_tests": len(nodes),
         "distinct_cases": len(cases),
         "total_test_executions": sum(r["test_count"] for r in results),
@@ -164,7 +220,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--test-file", type=Path, action="append", default=[],
+                        help=("Add a repository test module whose every test "
+                              "records paired evidence"))
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("rounds must be positive")
-    run(args.output.resolve(), args.rounds)
+    run(args.output.resolve(), args.rounds, args.test_file)

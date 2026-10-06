@@ -98,6 +98,11 @@ must agree with those outcomes: an accurate status line does not cure a false
 claim elsewhere. Do not promise mechanical certainty for unrestricted prose
 or legal interpretation.
 
+Declare effect-only acknowledgements explicitly; preserve independent requested
+substantive work and follow-ups. Compose their status from owned checked results,
+and version the rendering contract used by durable replay. An interpreted
+delivery mode never certifies semantic fulfillment.
+
 A tentative matter reply may be composed from checked proposed state. Commit
 the state, operation evidence and exact releasable matter reply together through
 the existing atomic, version-checked storage boundary, then release only after
@@ -187,6 +192,14 @@ boundary so the change applies to comparable matters and requests. Use the
 observed case as a regression example, not as a condition, keyword, prompt
 exception, or dispute-specific branch. Remove redundant paths rather than
 layering another special case on top.
+Use one turn-owned ledger for conditional corrections and semantic recovery;
+nested activities cannot reset its bound. Trigger recovery from typed owned
+failures and preserve the complete original sources for rechecking. A completed
+provider object rejected for shape may be quarantined only for explicit per-unit
+owner validation; it remains rejected until its required admission checks pass.
+Never salvage incomplete, refused or ambiguous output. Bind reusable positive
+and negative decisions to their actual evidence dependencies; harmless local
+IDs or reasons do not invalidate them.
 Check whether the owning logic and prompt are clear. Keep repairs logical,
 general and graceful across different matters and conversation patterns. No
 matter names, keyword lists or scenario-specific exceptions may enter production

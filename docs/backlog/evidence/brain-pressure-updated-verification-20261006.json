@@ -1,0 +1,34 @@
+{
+  "tested_production_head": "f021a5cb29c4ae1b9cd0663f5cfc40b5e40258f8",
+  "paired_report": "docs/backlog/evidence/brain-pressure-updated-20261006.json",
+  "paired_report_sha256": "0ff3e7d649b1c7f7fdf4c2bee96d3a09431b13b09d728c79f1dd9502ed23de8b",
+  "distinct_paired_cases": 101,
+  "paired_executions": 303,
+  "affected_regression_passes": 2134,
+  "journey_deselected": 3,
+  "live_model_calls": 0,
+  "browser_calls": 0,
+  "artifacts": {
+    "docs/backlog/evidence/brain-pressure-updated-round-1-20261006.xml": "ce7471522a0a2539c410b05b7f1734bd0f3d38c4b7fa6768357626304a93f292",
+    "docs/backlog/evidence/brain-pressure-updated-round-1-20261006.log": "8fcf6b2f528ee206f1968332c3796e37b1b25cf344a0d5d9ce59f2bd043b09be",
+    "docs/backlog/evidence/brain-pressure-updated-round-2-20261006.xml": "3b51523fce26e57f334fab502ccd36ba4c724b88457877600e82436c202fe0db",
+    "docs/backlog/evidence/brain-pressure-updated-round-2-20261006.log": "3e2979f5b85eb452616fb411f6fe397eae56daa2be034ba111aa6c47cf73c56d",
+    "docs/backlog/evidence/brain-pressure-updated-round-3-20261006.xml": "b8bdf266cb7f2eccf7a1ee7f57d142ea604a62b5d664311ea588e8eacfa61436",
+    "docs/backlog/evidence/brain-pressure-updated-round-3-20261006.log": "ede96c226cd709d3dd9e889b3f0986338e4cfc38cdff5a8344f5691fc1a49319"
+  },
+  "ruff": "passed affected production, changed tests and pressure runner",
+  "dependency_lint": {
+    "result": "failed baseline violation",
+    "module_count": 416,
+    "violation": "nm/brain/history.py:11 nm.core imports nm.edge (nm.open_matter.transcripts_api)",
+    "unchanged_from": "695c707",
+    "unchanged_sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801"
+  },
+  "remaining_qualification": [
+    "Seven pressure cases deliberately characterize semantic dependencies or unrestricted false prose under an incorrect fabricated acceptance; they are not protections proved successful.",
+    "Wholly unread required extraction with no admissible proposals aborts; positive partial admission is narrower than whole review completion.",
+    "Negative research cache conservatively binds original classified scope pending narrower evidence-dependency inventories.",
+    "Real pinned-model/browser quality and independently labelled false acceptance/rejection rates remain unverified by user instruction.",
+    "Earlier separate archived EvidencePort failures remain outside this affected-flow regression; see checkpoint07."
+  ]
+}
