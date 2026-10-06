@@ -382,7 +382,10 @@ def test_invalid_detail_link_gets_one_repair_before_an_atomic_commit(
     repair_inputs = [json.loads(call.user) for call in model.material_calls
                      if "original_input" in json.loads(call.user)]
     assert len(repair_inputs) == 1
-    assert "assignment" in repair_inputs[0]["validation_issue"].lower()
+    failed = repair_inputs[0]["failed_units"][0]
+    assert failed["unit_id"] == "new_items:1" and failed["field"] == "new_items"
+    assert "assignment" in failed["validation_issue"].lower()
+    assert failed["proposal"]["assignment_ids"] == ["missing-dispute"]
     assert _board(client, response.json()["matter_id"])[
         "material_record"]["by_dispute"]["repaired:material:1"][0]["id"] == (
         "repaired:material:2")

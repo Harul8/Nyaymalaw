@@ -5,6 +5,7 @@ import json
 from copy import deepcopy
 from typing import Callable, TypeVar
 
+from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContentRefused,
     ContextOverflow,
@@ -27,6 +28,31 @@ _T = TypeVar("_T")
 def require_independent_result(result) -> None:
     if result.was_downgraded or result.tier != Tier.JUDGE:
         raise TierUnavailable("The configured independent review was unavailable")
+
+
+def quarantined_independent_result(error: SchemaViolation) -> ModelResult | None:
+    """Expose only a completed independent object with the rejection's receipt."""
+    result = getattr(error, "rejected_result", None)
+    if (not isinstance(result, ModelResult) or result.completion is not Completion.COMPLETE
+            or result.text is not None or not isinstance(result.data, dict)
+            or (result.usage, result.latency_ms, result.retries)
+            != (error.usage, error.latency_ms, error.retries)):
+        return None
+    require_independent_result(result)
+    return result
+
+
+def verdict_envelope_issue(data: object, ids: tuple[str, ...], *, coverage: bool) -> str:
+    """Keep unknown shell content unread without discarding addressable peers."""
+    allowed = {"verdicts", "coverage"} if coverage else {"verdicts"}
+    if not isinstance(data, dict) or set(data) - allowed:
+        return "The review envelope has unknown or ambiguous fields"
+    rows = data.get("verdicts")
+    if not isinstance(rows, list):
+        return "verdicts must be an array"
+    if any(not isinstance(row, dict) or row.get("candidate_id") not in ids for row in rows):
+        return "The review envelope includes an unaddressable or unowned verdict"
+    return ""
 
 
 def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
@@ -223,9 +249,12 @@ def _repair_prompt(model: ModelPort, prompt: Prompt, output_limit: int,
                    tier: Tier, retained: list[dict], failed: list[dict],
                    issue: str, *, keyed: bool) -> Prompt:
     instruction = (
-        "Return repairs keyed by the exact supplied unit IDs. Each proposals "
-        "array contains one corrected proposal under that unit's declared row "
-        "schema, or is empty to explicitly omit an unsupported proposal. "
+        "Return repairs keyed by the exact supplied unit IDs. A proposals "
+        "array contains one corrected proposal, or is empty to explicitly omit "
+        "an unsupported proposal. Without a field selector, use the original "
+        "unit's declared operation and row schema. To change operation, select "
+        "an exact offered field and use that field's declared row schema. "
+        "Changing operation supplies no facts, source status or action authority. "
         "Do not restate, replace, or remove retained proposals."
         if keyed else
         "Repair the extraction envelope under the original schema. Independently "
@@ -260,13 +289,25 @@ def _repair_prompt(model: ModelPort, prompt: Prompt, output_limit: int,
     return Prompt(system=system, user=user, operation=prompt.operation)
 
 
-def _repair_schema(failed: list[dict], specs: dict[str, dict]) -> dict:
-    properties = {
-        unit["unit_id"]: {"type": "object", "additionalProperties": False,
-                          "required": ["proposals"], "properties": {
-                              "proposals": {"type": "array", "maxItems": 1,
-                                            "items": deepcopy(specs[unit["field"]])}}}
-        for unit in failed}
+def _repair_shape(spec: dict, maximum: int, *, field: str | None = None) -> dict:
+    properties = {"proposals": {"type": "array", "maxItems": min(maximum, 1),
+                                 "items": deepcopy(spec)}}
+    if field is not None:
+        properties["field"] = {"type": "string", "enum": [field]}
+    return {"type": "object", "additionalProperties": False,
+            "required": list(properties), "properties": properties}
+
+
+def _repair_schema(failed: list[dict], specs: dict[str, dict],
+                   arrays: dict[str, dict]) -> dict:
+    """Offer closed declared operation choices for each server-owned unit."""
+    properties = {}
+    for unit in failed:
+        field = unit["field"]
+        properties[unit["unit_id"]] = {"anyOf": [
+            _repair_shape(specs[field], arrays[field].get("maxItems", 1)),
+            *[_repair_shape(spec, arrays[selected].get("maxItems", 1), field=selected)
+              for selected, spec in specs.items()]]}
     return {"type": "object", "additionalProperties": False,
             "required": ["repairs"], "properties": {
                 "repairs": {"type": "object", "additionalProperties": False,
@@ -292,19 +333,34 @@ def _repair_units(data: dict | None, original: dict, schema: dict,
         try:
             if repaired is None:
                 raise SchemaViolation("The correction omitted a required unit ID")
-            require_schema(repaired, repair_schema["properties"]["repairs"]
-                           ["properties"][identity])
+            if not isinstance(repaired, dict):
+                raise SchemaViolation("A correction unit must be a declared JSON object")
+            selected = repaired.get("field", unit["field"])
+            if not isinstance(selected, str) or selected not in unit_fields:
+                raise SchemaViolation("A correction selects an unowned operation field")
+            choices = repair_schema["properties"]["repairs"]["properties"][identity]["anyOf"]
+            branch = next((choice for choice in choices
+                           if (("field" not in repaired
+                                and "field" not in choice["properties"])
+                               or ("field" in repaired
+                                   and choice["properties"].get("field", {}).get("enum")
+                                   == [selected]))), None)
+            if branch is None:
+                raise SchemaViolation("A correction has no applicable declared operation shape")
+            # Explicit branch validation remains the owning check even when
+            # the provider has already enforced the portable alternatives.
+            require_schema(repaired, branch)
             if not repaired["proposals"]:
                 omitted.append(identity)
                 continue
             row = repaired["proposals"][0]
             accepted = _accepted_row(
-                original, unit["field"], row, schema, unit_fields, accept)
+                original, selected, row, schema, unit_fields, accept)
         except SchemaViolation as exc:
             unread.append({"unit_id": identity, "field": unit["field"],
                            "validation_issue": str(exc)})
         else:
-            valid.append({"unit_id": identity, "field": unit["field"],
+            valid.append({"unit_id": identity, "field": selected,
                           "proposal": deepcopy(row), "accepted": accepted})
     return valid, omitted, unread, shell_issue
 
@@ -334,7 +390,8 @@ def checked_unit_read(model: ModelPort, prompt: Prompt, schema: dict,
     conditional_failure = None
     if failed or shell_issue or first_rejection:
         keyed = not shell_issue and original is not None and bool(failed)
-        correction_schema = _repair_schema(failed, specs) if keyed else schema
+        arrays = {field: schema["properties"][field] for field in unit_fields}
+        correction_schema = _repair_schema(failed, specs, arrays) if keyed else schema
         phase = f"{prompt.operation or 'structured_read'}:correction"
         if not claim_recovery(model, phase):
             recovery_exhausted = True

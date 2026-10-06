@@ -245,11 +245,12 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
             result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
             if prompt.operation == "extract_legal_details" and "validation_issue" in json.loads(
                     prompt.user):
-                changes = result.data["changes"]
-                result = replace(result, data={"new_items": [
-                    {key: value for key, value in row.items()
-                     if key not in ("relation", "related_material_ids")} for row in changes],
-                    "changes": []})
+                result = replace(result, data={"repairs": {
+                    identity: {"field": "new_items", "proposals": [
+                        {key: value for key, value in row.items()
+                         if key not in ("relation", "related_material_ids")}
+                        for row in unit["proposals"]]}
+                    for identity, unit in result.data["repairs"].items()}})
             return result
 
     model = Repairing([plan(first, candidates=[original], opening=True,
@@ -267,6 +268,14 @@ def test_public_ambiguous_revision_gets_feedback_and_cannot_withdraw_current_rec
     assert result["metrics"]["llm_calls"] == 9
     assert result["material"][0]["relation"] == "new"
     assert result["material"][0]["matter_scope"] == "uncertain"
+    retries = [json.loads(prompt.user) for prompt in model.material_calls
+               if prompt.operation == "extract_legal_details"
+               and "validation_issue" in json.loads(prompt.user)]
+    assert len(retries) == 1
+    failed = retries[0]["failed_units"][0]
+    assert failed["unit_id"] == "changes:1" and failed["field"] == "changes"
+    assert "ownership-ambiguous" in failed["validation_issue"]
+    assert failed["proposal"]["related_material_ids"] == ["ownership-first:material:1"]
     record = client.get(f"/api/matters/{result['matter_id']}").json()["material_record"]
     assert record["state"] == "ok" and record["coverage"]["state"] == "partial"
     assert [row["id"] for row in record["rows"]] == ["ownership-first:material:1"]

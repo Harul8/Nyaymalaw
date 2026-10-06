@@ -160,9 +160,9 @@ def test_each_repair_uses_its_original_declared_row_schema():
     ]), {}
     assert len(read(model, sink=sink)) == 2
     choices = model.calls[1]["schema"]["properties"]["repairs"]["properties"]
-    assert (choices["observations:1"]["properties"]["proposals"]["items"]
+    assert (choices["observations:1"]["anyOf"][0]["properties"]["proposals"]["items"]
             == SCHEMA["properties"]["observations"]["items"])
-    assert (choices["revisions:1"]["properties"]["proposals"]["items"]
+    assert (choices["revisions:1"]["anyOf"][0]["properties"]["proposals"]["items"]
             == SCHEMA["properties"]["revisions"]["items"])
 
 
@@ -541,3 +541,220 @@ def test_atomic_reader_predispatch_failure_keeps_reserved_not_dispatched_account
         _full_helpers.checked_read(model, PROMPT, SCHEMA, 1000, accept)
     assert ledger.remaining == 0 and model.abandoned == ["candidate_unit_read:correction"]
     assert len(model.calls) == 1 and model.pending is None
+
+
+def selected_repair(identity, field, *proposals):
+    return {"repairs": {identity: {"field": field, "proposals": list(proposals)}}}
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_owned_revision_can_be_corrected_to_unlinked_observation(strict):
+    original = row("A held account.", targets=["R2"])
+    fixed = row("A held account.")
+    model, sink = Model([envelope([row("A sound peer.", "S2")], [original]),
+                         selected_repair("revisions:1", "observations", fixed)],
+                        strict=strict), {}
+    values = read(model, sink=sink)
+    assert len(values) == 2 and values[1].targets == ()
+    assert sink["repaired_unit_ids"] == ["revisions:1"] and sink["state"] == "returned"
+    assert model.calls[1]["input"]["failed_units"][0]["proposal"] == original
+    assert model.calls[1]["input"]["original_input"] == json.loads(PROMPT.user)
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_observation_can_be_corrected_to_revision_only_with_owned_target(strict):
+    original = row("A linked account.", targets=["R1"])
+    fixed = row("A linked account.", targets=["R1"])
+    model, sink = Model([envelope([row("A sound peer.", "S2"), original]),
+                         selected_repair("observations:2", "revisions", fixed)],
+                        strict=strict), {}
+    values = read(model, sink=sink)
+    assert len(values) == 2 and values[1].targets == ("R1",)
+    assert sink["repaired_unit_ids"] == ["observations:2"] and sink["state"] == "returned"
+    assert model.calls[1]["input"]["failed_units"][0]["field"] == "observations"
+    assert model.calls[1]["input"]["retained_proposal_context"][0]["unit_id"] == "observations:1"
+
+
+def test_explicit_same_field_choice_is_harmless_and_accepted():
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", "observations",
+                                         row("A corrected original operation.", "S2"))]), {}
+    assert len(read(model, sink=sink)) == 2
+    assert sink["state"] == "returned" and len(model.calls) == 2
+
+
+@pytest.mark.parametrize("strict", [False, True])
+@pytest.mark.parametrize("selected", ["outside", "", None, True, 1, ["observations"]])
+def test_foreign_or_ambiguous_operation_selector_never_reclassifies_row(strict, selected):
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", selected,
+                                         row("A valid-looking repaired account.", "S2"))],
+                        strict=strict), {}
+    assert len(read(model, sink=sink)) == 1
+    assert sink["state"] == "partial" and sink["repaired_unit_ids"] == []
+    assert sink["unread_units"][0]["unit_id"] == "observations:2"
+    assert len(model.calls) == 2
+
+
+@pytest.mark.parametrize("strict", [False, True])
+@pytest.mark.parametrize("selected,fixed", [
+    ("revisions", row("Missing revision target.")),
+    ("observations", row("Unexpected observation target.", targets=["R1"])),
+    ("revisions", row("Wrong original source.", "S2", targets=["R1"])),
+])
+def test_operation_selection_binds_exact_row_schema_and_owned_target(strict, selected, fixed):
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", selected, fixed)],
+                        strict=strict), {}
+    assert len(read(model, sink=sink)) == 1
+    assert sink["state"] == "partial" and sink["repaired_unit_ids"] == []
+    assert sink["unread_units"][0]["unit_id"] == "observations:2"
+
+
+def test_cross_operation_shape_is_not_inferred_without_explicit_selector():
+    model, sink = Model([envelope([row(), row(" ")]),
+                         repairs(**{"observations:2": [row("A target is not a selector.",
+                                                        targets=["R1"])]})]), {}
+    assert len(read(model, sink=sink)) == 1
+    assert sink["state"] == "partial" and sink["unread_units"][0]["unit_id"] == "observations:2"
+
+
+def test_explicit_operation_choice_still_has_one_proposal_per_owned_unit():
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", "observations",
+                                         row("One correction.", "S2"),
+                                         row("An ambiguous second correction.", "S2"))]), {}
+    assert len(read(model, sink=sink)) == 1
+    assert sink["state"] == "partial" and sink["repaired_unit_ids"] == []
+
+
+def test_declared_disabled_operation_cannot_be_enabled_by_field_choice():
+    schema = deepcopy(SCHEMA)
+    schema["properties"]["revisions"]["maxItems"] = 0
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", "revisions",
+                                         row("No authority to enable this operation.",
+                                             targets=["R1"]))]), {}
+    assert len(read(model, sink=sink, schema=schema)) == 1
+    assert sink["state"] == "partial" and sink["unread_units"][0]["unit_id"] == "observations:2"
+
+
+def test_empty_operation_choice_is_an_explicit_omission_not_coverage_proof():
+    schema = deepcopy(SCHEMA)
+    schema["properties"]["revisions"]["maxItems"] = 0
+    model, sink = Model([envelope([row(), row(" ")]),
+                         selected_repair("observations:2", "revisions")]), {}
+    assert len(read(model, sink=sink, schema=schema)) == 1
+    assert sink["omitted_unit_ids"] == ["observations:2"]
+    assert sink["state"] == "returned" and "coverage" not in sink
+
+
+def test_operation_choice_cannot_modify_retained_unit_with_unowned_repair_id():
+    response = selected_repair("observations:2", "observations", row("A valid correction.", "S2"))
+    response["repairs"]["observations:1"] = {
+        "field": "revisions", "proposals": [row("A forged replacement.", targets=["R1"])]}
+    model, sink = Model([envelope([row(), row(" ")]), response]), {}
+    values = read(model, sink=sink)
+    assert len(values) == 2 and values[0].text == row()["text"]
+    assert all(value.text != "A forged replacement." for value in values)
+    assert sink["state"] == "partial" and "unowned" in sink["envelope_issue"]
+
+
+def test_choices_are_declared_schema_shapes_for_all_original_operations():
+    model = Model([envelope([row(" ")], [row(source="S1", targets=["R2"])]),
+                   {"repairs": {"observations:1": {"proposals": []},
+                                "revisions:1": {"proposals": []}}}])
+    assert read(model, sink={}) == ()
+    choices = model.calls[1]["schema"]["properties"]["repairs"]["properties"]
+    for identity, original in (("observations:1", "observations"), ("revisions:1", "revisions")):
+        branches = choices[identity]["anyOf"]
+        assert (branches[0]["properties"]["proposals"]["items"]
+                == SCHEMA["properties"][original]["items"])
+        assert "field" not in branches[0]["properties"]
+        for field, branch in zip(FIELDS, branches[1:], strict=True):
+            assert branch["properties"]["field"] == {"type": "string", "enum": [field]}
+            assert (branch["properties"]["proposals"]["items"]
+                    == SCHEMA["properties"][field]["items"])
+            assert branch["additionalProperties"] is False
+            assert branch["properties"]["proposals"]["maxItems"] == 1
+
+
+def independent_quarantine(**kwargs):
+    options = {"completion": Completion.COMPLETE, "tier": Tier.JUDGE,
+               "data": {"verdicts": [{"candidate_id": "C1", "decision": "accept"}]},
+               "text": None, "downgraded_from": None}
+    options.update(kwargs)
+    return ModelResult(options["text"], options["data"], options["tier"],
+                       "offline", "fabricated-independent-verifier", Usage(11, 7, 0), 2,
+                       retries=1, completion=options["completion"],
+                       downgraded_from=options["downgraded_from"])
+
+
+def test_shared_verifier_quarantine_preserves_completed_independent_error_receipt():
+    result = independent_quarantine()
+    error = SchemaViolation("Invalid review metadata", rejected_result=result)
+    exposed = _full_helpers.quarantined_independent_result(error)
+    assert exposed == result and exposed is error.rejected_result
+    assert ((error.usage, error.latency_ms, error.retries)
+            == (result.usage, result.latency_ms, result.retries))
+    assert isinstance(error, SchemaViolation)
+
+
+@pytest.mark.parametrize("attribute,value", [("usage", Usage(99, 7, 0)),
+                                             ("latency_ms", 99), ("retries", 99)])
+def test_shared_verifier_quarantine_rejects_mismatched_accounting(attribute, value):
+    error = SchemaViolation("Invalid review metadata", rejected_result=independent_quarantine())
+    setattr(error, attribute, value)
+    assert _full_helpers.quarantined_independent_result(error) is None
+
+
+@pytest.mark.parametrize("result", [
+    None, {"data": {"verdicts": []}},
+    independent_quarantine(completion=Completion.LENGTH_LIMITED),
+    independent_quarantine(completion=Completion.FILTERED),
+    independent_quarantine(completion=Completion.CANCELLED),
+    independent_quarantine(completion=Completion.NOT_ESTABLISHED),
+    independent_quarantine(data=[]), independent_quarantine(text="Ambiguous free text"),
+])
+def test_shared_verifier_quarantine_does_not_parse_unsafe_attachment(result):
+    # A deliberately malformed nonportable adapter attachment exercises the
+    # owning helper in addition to the strict constructor's own safeguards.
+    error = SchemaViolation("Unsafe attachment", usage=Usage(11, 7, 0), latency_ms=2, retries=1)
+    error.rejected_result = result
+    assert _full_helpers.quarantined_independent_result(error) is None
+
+
+@pytest.mark.parametrize("result", [
+    independent_quarantine(tier=Tier.ROUTINE),
+    independent_quarantine(tier=Tier.HARD),
+    independent_quarantine(downgraded_from=Tier.JUDGE),
+])
+def test_shared_verifier_quarantine_requires_actual_independent_result(result):
+    error = SchemaViolation("Invalid review metadata", rejected_result=result)
+    with pytest.raises(TierUnavailable):
+        _full_helpers.quarantined_independent_result(error)
+
+
+@pytest.mark.parametrize("coverage", [False, True])
+def test_shared_verdict_envelope_keeps_addressable_peers_and_owner_checks_separate(coverage):
+    rows = [{"candidate_id": "C1", "decision": "accept"},
+            {"candidate_id": "C1", "decision": "conflicting owner decision"}]
+    data = {"verdicts": rows}
+    if coverage:
+        data["coverage"] = {"status": "Owner validates this separately"}
+    assert _full_helpers.verdict_envelope_issue(data, ("C1",), coverage=coverage) == ""
+    assert data["verdicts"] == rows
+
+
+@pytest.mark.parametrize("data,coverage,issue", [
+    (None, False, "unknown or ambiguous"),
+    ({"verdicts": [], "extra": "uninterpreted"}, True, "unknown or ambiguous"),
+    ({"verdicts": [], "coverage": {}}, False, "unknown or ambiguous"),
+    ({}, False, "must be an array"),
+    ({"verdicts": None}, True, "must be an array"),
+    ({"verdicts": [None]}, False, "unaddressable or unowned"),
+    ({"verdicts": [{}]}, True, "unaddressable or unowned"),
+    ({"verdicts": [{"candidate_id": "outside"}]}, False, "unaddressable or unowned"),
+])
+def test_shared_verdict_envelope_keeps_unknown_shell_and_foreign_ids_unread(data, coverage, issue):
+    assert issue in _full_helpers.verdict_envelope_issue(data, ("C1",), coverage=coverage)

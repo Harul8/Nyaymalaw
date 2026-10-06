@@ -12,7 +12,11 @@ from tests.brain_continuation_fixture import (
     interpretation,
     no_record_requirement,
 )
-from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    reader_operations,
+    reader_repairs,
+    reviewed_record_verdicts,
+)
 
 
 class Model:
@@ -47,6 +51,7 @@ class Model:
                 data = reader_operations([row for row in rows
                                           if row["kind"] != "dispute"], sources,
                                          link_field="related_material_ids")
+            data = reader_repairs(data, schema)
         elif prompt.operation in ("verify_disputes", "verify_material_grounding"):
             payload = json.loads(prompt.user)
             data = {"verdicts": [
@@ -615,7 +620,12 @@ def test_unsupported_material_refuses_the_whole_turn_without_a_write(
                if "original_input" in json.loads(prompt.user)]
     assert len(retries) == 1
     assert retries[0]["validation_issue"]
-    assert "source references" in retries[0]["how_to_correct"]
+    failed = retries[0]["failed_units"][0]
+    field = "new_items" if invalid_candidate["relation"] == "new" else "changes"
+    assert failed["unit_id"] == f"{field}:1" and failed["field"] == field
+    assert "source" in failed["validation_issue"].lower()
+    assert failed["proposal"]["source_id"] == "unsupported_source" or (
+        "unsupported_prior_source" in failed["proposal"].get("prior_source_ids", []))
 
 
 def test_invalid_first_source_selection_is_repaired_once_before_commit(
@@ -651,7 +661,10 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
     repair = [json.loads(prompt.user) for prompt in model.material_calls
               if "original_input" in json.loads(prompt.user)]
     assert len(repair) == 1
-    assert repair[0]["validation_issue"]
+    failed = repair[0]["failed_units"][0]
+    assert failed["unit_id"] == "new_items:1" and failed["field"] == "new_items"
+    assert "source_id" in failed["validation_issue"]
+    assert failed["proposal"]["source_id"] == "unsupported_source"
     assert repair[0]["original_input"]["latest_message_spans"][0]["text"] == message
     saved = wired.store.load(served.json()["matter_id"])
     assert [row["turn_id"] for row in saved.brain_chat] == ["repaired-source"]

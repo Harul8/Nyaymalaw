@@ -271,7 +271,7 @@ def test_invalid_source_id_gets_one_feedback_guided_correction():
         "validation_issue"].lower()
     repairs = repair_schema["properties"]["repairs"]
     assert repairs["required"] == ["new_items:1"]
-    assert (repairs["properties"]["new_items:1"]["properties"]["proposals"]["items"]
+    assert (repairs["properties"]["new_items:1"]["anyOf"][0]["properties"]["proposals"]["items"]
             == model.calls[0][1]["properties"]["new_items"]["items"])
     assert repair_prompt.operation == "extract_disputes"
     assert all(label in repair_prompt.system for label in
