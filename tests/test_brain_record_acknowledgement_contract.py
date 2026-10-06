@@ -144,3 +144,121 @@ def test_discarded_law_prose_does_not_leave_false_inline_anchors_on_code_status(
     assert before_review["blocks"][0]["span_ids"] == ["L1"]
     after_review = render({"units": [before_review]}, receipt, catalogue)["units"][0]
     assert "inline_citations" not in after_review["blocks"][0]
+
+
+def test_fresh_rendering_stamps_its_explicit_contract():
+    continuation, receipt, catalogue = inputs()
+    render(continuation, receipt, catalogue)
+    assert receipt['requests'][0]['acknowledgement_contract'] == (
+        execution_contracts.RECORD_ACKNOWLEDGEMENT_CONTRACT)
+
+
+@pytest.mark.parametrize('version', ['unknown-renderer', '', 2])
+def test_unknown_saved_rendering_contract_is_refused(version):
+    continuation, receipt, catalogue = inputs()
+    receipt['requests'][0]['acknowledgement_contract'] = version
+    with pytest.raises(ExecutionEvidenceInvalid, match='contract is unsupported'):
+        render(continuation, receipt, catalogue, replay=True)
+
+
+def test_unstamped_legacy_replay_keeps_its_original_block_metadata():
+    continuation, receipt, catalogue = inputs()
+    receipt['requests'][0]['acknowledgement_delivery'] = 'code_only'
+    original = deepcopy(continuation['units'][0]['blocks'][0])
+    result = render(continuation, receipt, catalogue, replay=True)
+    block = result['units'][0]['blocks'][0]
+    assert block['kind'] == original['kind']
+    assert block['uncertainty'] == original['uncertainty']
+    assert block['legal_source_ids'] == original['legal_source_ids']
+    assert 'acknowledgement_contract' not in receipt['requests'][0]
+    assert 'inline_citations' not in block
+
+
+def test_substantive_receipt_cannot_carry_unowned_contract_version():
+    continuation, receipt, catalogue = inputs()
+    receipt['requests'][0]['response_mode'] = 'substantive'
+    receipt['requests'][0]['acknowledgement_contract'] = 'unknown-renderer'
+    with pytest.raises(ExecutionEvidenceInvalid, match='no declared delivery owner'):
+        render(continuation, receipt, catalogue, replay=True)
+
+
+def partial_reader_stage():
+    return {'state': 'partial', 'proposals': 1, 'admissible_proposals': 1,
+            'proposal_validation': 'owned_extraction_proposals_v1',
+            'read_status': {'state': 'partial', 'proposal_count': 1}}
+
+
+def partial_effects(stage, *, review='checked'):
+    receipt = evidence()
+    receipt['stages']['detail_extraction'] = stage
+    receipt['stages']['detail_review']['state'] = review
+    return execution_contracts.effect_catalogue(receipt)
+
+
+def test_partial_reader_admits_verified_positive_effect_without_certifying_coverage():
+    stage = partial_reader_stage()
+    assert execution_contracts.reader_admission_checked(stage)
+    effect = next(iter(partial_effects(stage).values()))
+    assert effect['performed'] is True
+    assert effect['reader_returned'] is False
+    assert effect['reader_admission_checked'] is True
+
+
+@pytest.mark.parametrize('fault', ['bare_partial', 'zero', 'boolean', 'count_mismatch',
+                                   'read_count_mismatch', 'declared_complete', 'wrong_contract'])
+def test_partial_reader_without_owned_matching_positive_admission_has_no_performed_effect(fault):
+    stage = partial_reader_stage()
+    if fault == 'bare_partial':
+        stage = {'state': 'partial'}
+    elif fault == 'zero':
+        stage.update(proposals=0, admissible_proposals=0)
+        stage['read_status']['proposal_count'] = 0
+    elif fault == 'boolean':
+        stage.update(proposals=True, admissible_proposals=True)
+        stage['read_status']['proposal_count'] = True
+    elif fault == 'count_mismatch':
+        stage['proposals'] = 2
+    elif fault == 'read_count_mismatch':
+        stage['read_status']['proposal_count'] = 2
+    elif fault == 'declared_complete':
+        stage['read_status']['state'] = 'complete'
+    else:
+        stage['proposal_validation'] = 'model_intention'
+    assert not execution_contracts.reader_admission_checked(stage)
+    assert next(iter(partial_effects(stage).values()))['performed'] is False
+
+
+def test_partial_reader_still_needs_independent_grounding():
+    effect = next(iter(partial_effects(partial_reader_stage(), review='partial').values()))
+    assert effect['performed'] is False
+
+
+def test_partial_reader_operations_cannot_exceed_its_owned_admission_count():
+    receipt = evidence()
+    receipt['stages']['detail_extraction'] = partial_reader_stage()
+    effect = receipt['effects']['details']
+    second = deepcopy(effect['operations'][0])
+    second['result_id'] = 'second-unowned-observation'
+    effect['operations'].append(second)
+    effect['activated_record_ids'].append(second['result_id'])
+    with pytest.raises(ExecutionEvidenceInvalid, match='exceed admitted reader proposals'):
+        execution_contracts.effect_catalogue(receipt)
+
+
+def test_partial_positive_effect_cannot_certify_complete_account_review():
+    continuation, receipt, catalogue = inputs()
+    receipt['stages']['detail_extraction'] = partial_reader_stage()
+    requirement = {'kind': 'review', 'target_ids': [], 'operation': 'none',
+                   'success_condition': 'Review the complete attributed account.'}
+    receipt['requests'][0]['record_requirement'] = requirement
+    receipt['stages']['dispute_review']['account_coverage'] = {
+        'contract': 'independent_account_coverage_v1', 'state': 'complete',
+        'reason': 'The independent fixture explicitly certifies the dispute scope.',
+        'missing_source_ids': [], 'review_scope': {'requests': [
+            {'request_index': 0, 'record_requirement': requirement}]}}
+    effect = next(iter(execution_contracts.effect_catalogue(receipt).values()))
+    assert effect['performed'] is True
+    with pytest.raises(execution_contracts.ReviewCompletionIncomplete,
+                       match='actual reading and review'):
+        execution_contracts.validate_review_completion(
+            continuation['units'][0], receipt, requirement=requirement)

@@ -15,6 +15,7 @@ from copy import deepcopy
 from nm.shared.model_port import SchemaViolation, require_schema
 
 RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
+RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v2"
 RECORD_OUTCOME_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -98,6 +99,28 @@ def _receipt(receipt: object) -> dict | None:
     return receipt
 
 
+def reader_admission_checked(stage: object) -> bool:
+    """Recognize validated reader output without inferring complete coverage.
+
+    Historical returned readers retain their original receipt contract. A
+    partial reader certifies only its positively admitted proposals when the
+    code-owned counts and read disposition agree. This does not certify that
+    every requested source or the complete account was read.
+    """
+    if not isinstance(stage, dict):
+        return False
+    if stage.get("state") == "returned":
+        return True
+    count = stage.get("admissible_proposals")
+    status = stage.get("read_status")
+    return (stage.get("state") == "partial"
+            and stage.get("proposal_validation") == "owned_extraction_proposals_v1"
+            and type(count) is int and count > 0
+            and type(stage.get("proposals")) is int and stage["proposals"] == count
+            and isinstance(status, dict) and status.get("state") == "partial"
+            and type(status.get("proposal_count")) is int and status["proposal_count"] == count)
+
+
 def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
     """Derive deterministic choices from actual owned projections and stages.
 
@@ -121,9 +144,13 @@ def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
         outside = set(_owned_ids(owned.get("outside_owned_record_ids"), f"{kind}.outside"))
         if activated & retired or activated & held or activated & outside:
             raise ExecutionEvidenceInvalid("Active/retired/held effect identities conflict")
-        stages_checked = (
-            _stage(receipt, reader_name) == "returned" and _stage(receipt, review_name) == "checked"
-        )
+        reader_state = _stage(receipt, reader_name)
+        reader_stage = receipt["stages"][reader_name]
+        admitted = reader_admission_checked(reader_stage)
+        if (reader_state == "partial" and admitted
+                and len(owned["operations"]) > reader_stage["admissible_proposals"]):
+            raise ExecutionEvidenceInvalid("Owned effects exceed admitted reader proposals")
+        stages_checked = admitted and _stage(receipt, review_name) == "checked"
         domain_fields = (
             "before_record_ids",
             "after_record_ids",
@@ -225,6 +252,8 @@ def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
                 "review_checked": _stage(receipt, review_name) == "checked",
                 "source_references": deepcopy(references),
             }
+            if reader_state == "partial":
+                result[effect_id]["reader_admission_checked"] = admitted
     return result
 
 
@@ -507,10 +536,13 @@ def record_change_lines(changes: list[dict]) -> list[str]:
 
 def canonical_record_acknowledgements(
         continuation: dict, execution: dict, *, record_catalogue: dict,
-        require_checked: bool = True) -> dict:
+        require_checked: bool = True, replay: bool = False) -> dict:
     """Render checked record-only outcomes before progress and commit sealing.
 
     The delivery mode is an interpreted proposal, not proof of completion.
+    Fresh receipts stamp the explicit rendering contract. Replay preserves
+    the earlier text-only rendering for unstamped saved acknowledgements;
+    unknown contracts are refused rather than rewriting historical replies.
     Before response review, require_checked=False permits only a mechanically
     admissible proposed outcome. Independent requested-result and progress
     review still runs. Final rendering and replay require its checked verdict.
@@ -521,7 +553,8 @@ def canonical_record_acknowledgements(
     result = deepcopy(continuation)
     units = {unit["request_index"]: unit for unit in result["units"]}
     if not any(request.get("response_mode", "substantive") == "record_acknowledgement"
-               or "acknowledgement_delivery" in request for request in execution["requests"]):
+               or "acknowledgement_delivery" in request or "acknowledgement_contract" in request
+               for request in execution["requests"]):
         return result
     effects = effect_catalogue(execution)
     changes = {change["effect_id"]: change for change in execution["record_changes"]}
@@ -529,10 +562,16 @@ def canonical_record_acknowledgements(
                       "review_no_change": "no_change_justified", "unresolved": "unfinished"}
     for request in execution["requests"]:
         if request.get("response_mode", "substantive") != "record_acknowledgement":
-            if "acknowledgement_delivery" in request:
+            if "acknowledgement_delivery" in request or "acknowledgement_contract" in request:
                 raise ExecutionEvidenceInvalid(
                     "A code acknowledgement has no declared delivery owner")
             continue
+        version = request.get("acknowledgement_contract")
+        if version is not None and version != RECORD_ACKNOWLEDGEMENT_CONTRACT:
+            raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
+        legacy = replay and version is None
+        if not replay:
+            request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
         index = request["request_index"]
         unit = units.get(index)
         if unit is None:
@@ -583,21 +622,24 @@ def canonical_record_acknowledgements(
             # These anchors described the replaced model prose. The fixed
             # acknowledgement contains no legal proposition; its retained
             # checked references remain available as context source controls.
-            block["kind"] = "limitation" if status == "unresolved" else "acknowledgment"
-            block["uncertainty"] = "none"
-            # Legal assertions and their anchors belonged to the discarded
-            # prose. Preserve attributable account context and lifecycle IDs,
-            # not citations suggesting the fixed acknowledgement states law.
-            block["legal_source_ids"] = []
-            block["record_ids"] = [identity for identity in block["record_ids"]
-                                   if identity in record_catalogue]
-            if "references" in block:
-                selected_references = set(block["span_ids"] + block["record_ids"])
-                block["references"] = [reference for reference in block["references"]
-                                       if reference["id"] in selected_references]
-            if require_checked:
+            if legacy:
                 block.pop("inline_citations", None)
             else:
-                block["inline_citations"] = []
+                block["kind"] = "limitation" if status == "unresolved" else "acknowledgment"
+                block["uncertainty"] = "none"
+                # Legal assertions and their anchors belonged to the discarded
+                # prose. Preserve attributable account context and lifecycle IDs,
+                # not citations suggesting the fixed acknowledgement states law.
+                block["legal_source_ids"] = []
+                block["record_ids"] = [identity for identity in block["record_ids"]
+                                       if identity in record_catalogue]
+                if "references" in block:
+                    selected_references = set(block["span_ids"] + block["record_ids"])
+                    block["references"] = [reference for reference in block["references"]
+                                           if reference["id"] in selected_references]
+                if require_checked:
+                    block.pop("inline_citations", None)
+                else:
+                    block["inline_citations"] = []
         request["acknowledgement_delivery"] = "code_only"
     return result
