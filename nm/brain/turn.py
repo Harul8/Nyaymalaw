@@ -490,6 +490,7 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
     if not isinstance(execution, dict):
         return
     _check_execution_owner(execution, matter, row["turn_id"], row["offer_digest"])
+    requests = _checked_execution_requests(execution)
     snapshot = response.get("continuation", {}).get("record_snapshot")
     if snapshot is None and "display" not in execution:
         if execution.get("mutation_authority_contract") is not None:
@@ -507,6 +508,12 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
                     version=execution["resulting_version"])
     before_disputes, before_details = _record_projections(before, prior_conversation)
     disputes, details = _record_projections(after, prior_conversation)
+    if "review_scope" in execution:
+        expected_scope = _execution_review_scope(
+            execution, project_work(before, prior_conversation=prior_conversation))
+        if execution["review_scope"] != expected_scope:
+            raise IncompleteConversation(
+                "The saved record review scope differs from its original requests and work")
     contract = execution.get("mutation_authority_contract")
     ledger = execution.get("mutation_authorities")
     if contract is not None or ledger is not None:
@@ -532,7 +539,7 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
             rebuilt = build_mutation_authorities(
                 owner=execution["owner"], expected_version=execution["expected_version"],
                 target_catalogue=targets, source_catalogue=sources, proposals=proposals,
-                request_indices=[request["request_index"] for request in execution["requests"]])
+                request_indices=[request["request_index"] for request in requests])
             if (rebuilt != ledger
                     or execution.get("review_scope", {}).get("mutation_authorities") != ledger
                     or execution.get("review_scope", {}).get("mutation_authority_contract")
@@ -585,6 +592,66 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
         raise IncompleteConversation("The execution receipt and displayed result disagree")
 
 
+def _checked_execution_requests(execution: dict) -> list[dict]:
+    """Read code-owned request identities before any saved evidence consumer.
+
+    The execution list owns contiguous identities. Review scope additionally
+    carries inherited task aliases, so its indices may legitimately repeat.
+    Missing legacy scope remains untracked; a present scope must be readable.
+    """
+    requests = execution.get("requests")
+    if not isinstance(requests, list):
+        raise IncompleteConversation("The saved execution requests could not be read")
+    scoped = any(field in execution for field in (
+        "mutation_authority_contract", "mutation_authorities", "review_scope"))
+    for index, request in enumerate(requests):
+        if (not isinstance(request, dict)
+                or type(request.get("request_index")) is not int
+                or request["request_index"] != index):
+            raise IncompleteConversation(
+                "The saved execution request identities are not the code-owned sequence")
+        if "record_requirement" not in request:
+            if scoped:
+                raise IncompleteConversation(
+                    "The saved execution record requirement is unreadable")
+            # Early material_execution_v1 receipts predate typed requirements
+            # and review scope. Preserve their original untracked evidence.
+            continue
+        requirement = request["record_requirement"]
+        if requirement is not None and (
+                not isinstance(requirement, dict)
+                or requirement.get("kind") not in ("none", "review", "change")):
+            raise IncompleteConversation("The saved execution record requirement is unreadable")
+        if isinstance(requirement, dict) and requirement["kind"] == "review" and any(
+                not isinstance(request.get(field), str)
+                for field in ("relation", "intent", "matter_scope")):
+            raise IncompleteConversation("The saved execution review association is unreadable")
+    scope = execution.get("review_scope")
+    if "review_scope" not in execution:
+        if any(field in execution for field in (
+                "mutation_authority_contract", "mutation_authorities")):
+            raise IncompleteConversation("A scoped execution has no saved record review scope")
+        return requests
+    if (not isinstance(scope, dict) or scope.get("owner") != execution.get("owner")
+            or not isinstance(scope.get("requests"), list)):
+        raise IncompleteConversation(
+            "The saved record review scope owner or requests are unreadable")
+    bases = [{"request_index": request["request_index"],
+              "record_requirement": deepcopy(request["record_requirement"])}
+             for request in requests]
+    if scope["requests"][:len(requests)] != bases:
+        raise IncompleteConversation(
+            "The saved record review scope differs from its owned requests")
+    for alias in scope["requests"][len(requests):]:
+        index = alias.get("request_index") if isinstance(alias, dict) else None
+        if (type(index) is not int or not 0 <= index < len(requests)
+                or any(not isinstance(alias.get(field), str) or not alias[field].strip()
+                       for field in ("task_id", "request", "matter_scope"))
+                or alias.get("record_requirement") != requests[index]["record_requirement"]):
+            raise IncompleteConversation("The saved inherited record review alias is unreadable")
+    return requests
+
+
 def _check_execution_owner(receipt: dict, matter: Matter, turn_id: str,
                            offer_digest: str) -> None:
     owner = {"matter_id": str(matter.id), "advocate_id": matter.advocate_id,
@@ -622,6 +689,10 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str, *,
         older = released_older_turns(store, matter)
         from_turns([*older, *matter.brain_chat], state="ok")
         older_context = from_turns(older, state="ok").messages
+        coverage = response.get("material_coverage")
+        execution = coverage.get("execution") if isinstance(coverage, dict) else None
+        if isinstance(execution, dict):
+            _checked_execution_requests(execution)
         project_work(matter, prior_conversation=older_context)
         _validate_execution_replay(matter, matches[0], prior_conversation=older_context)
     except (IncompleteConversation, ExecutionEvidenceInvalid, ValueError) as exc:
@@ -1696,7 +1767,7 @@ class BrainService:
                 execution["withheld_proposals"] = {
                     "disputes": [entry["candidate_id"] for entry in dispute_audit
                                  if entry.get("admission_issue")
-                                 == "required_restoration_peer_unavailable"],
+                                 in ("mutation_scope", "required_restoration_peer_unavailable")],
                     "details": [entry["candidate_id"] for entry in grounded.withheld_proposals]}
                 execution["unread_proposals"] = {
                     "disputes": [entry["candidate_id"] for entry in dispute_audit
