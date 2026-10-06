@@ -1467,17 +1467,11 @@ def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict
     return catalogue
 
 
-def _saved_record_support(matter: Matter, conversation: Conversation, *,
-                          prior_conversation=(), disputes=None, details=None) -> dict:
-    """Expose current record dependencies only after original-prefix validation."""
+def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
+                             prior_conversation=()) -> tuple[dict, dict]:
+    """Resolve exact admission dependencies under their original execution owners."""
     _saved_source_treatments(matter, conversation)
-    if disputes is None or details is None:
-        disputes, details = _record_projections(matter, prior_conversation)
-    if disputes.get("state") != "ok" or details.get("state") != "ok":
-        raise IncompleteConversation("The saved record support has no checked projection")
-    active = {"dispute_review": {row["id"] for row in disputes["rows"]},
-              "detail_review": {row["id"] for row in details["rows"]}}
-    result = {stage: {} for stage in active}
+    result, locators = {"dispute_review": {}, "detail_review": {}}, {}
     for saved in matter.brain_chat:
         coverage = saved["response"].get("material_coverage", {})
         execution = coverage.get("execution") if isinstance(coverage, dict) else None
@@ -1498,9 +1492,6 @@ def _saved_record_support(matter: Matter, conversation: Conversation, *,
                     for identity, row in coverage["source_treatments"].items()}
         for binding in execution["coverage_application"]["bindings"]:
             stage, identity = binding["stage"], binding["result_id"]
-            if identity not in active[stage]:
-                # Supersession/retirement has a separate historical-effect owner.
-                continue
             checks = binding["review"]["account_check"]["source_checks"]
             if any("support_spans" not in check for check in checks):
                 # A compatible older attestation did not certify exact portions.
@@ -1509,6 +1500,75 @@ def _saved_record_support(matter: Matter, conversation: Conversation, *,
                 raise IncompleteConversation("The saved record support repeats an owner")
             result[stage][identity] = {"review": deepcopy(binding["review"]),
                                        "source_references": deepcopy(original)}
+            locators[identity] = {"admission_turn_id": saved["turn_id"],
+                                  "admission_candidate_id": binding["candidate_id"]}
+    return result, locators
+
+
+def _saved_record_support(matter: Matter, conversation: Conversation, *,
+                          prior_conversation=(), disputes=None, details=None) -> dict:
+    """Expose current record dependencies only after original-prefix validation."""
+    admissions, _ = _saved_record_admissions(
+        matter, conversation, prior_conversation=prior_conversation)
+    if disputes is None or details is None:
+        disputes, details = _record_projections(matter, prior_conversation)
+    if disputes.get("state") != "ok" or details.get("state") != "ok":
+        raise IncompleteConversation("The saved record support has no checked projection")
+    return {stage: {row["id"]: admissions[stage][row["id"]]
+                    for row in projection["rows"] if row["id"] in admissions[stage]}
+            for stage, projection in (("dispute_review", disputes), ("detail_review", details))}
+
+
+def _saved_historical_support(matter: Matter, conversation: Conversation, *,
+                              prior_conversation=(), disputes=None, details=None) -> dict:
+    """Keep original admission support distinct from checked historical preservation."""
+    admissions, locators = _saved_record_admissions(
+        matter, conversation, prior_conversation=prior_conversation)
+    if disputes is None or details is None:
+        disputes, details = _record_projections(matter, prior_conversation)
+    if disputes.get("state") != "ok" or details.get("state") != "ok":
+        raise IncompleteConversation("The historical record support has no checked projection")
+    projections = {"dispute_review": disputes, "detail_review": details}
+    active = {row["id"] for projection in projections.values() for row in projection["rows"]}
+    archive = {stage: {row["id"]: row for row in projection["history"]}
+               for stage, projection in projections.items()}
+    result = {stage: {} for stage in projections}
+    for saved in matter.brain_chat:
+        coverage = saved["response"].get("material_coverage", {})
+        execution = coverage.get("execution") if isinstance(coverage, dict) else None
+        if (not isinstance(execution, dict)
+                or execution.get("coverage_application_contract")
+                != POST_APPLICATION_COVERAGE_CONTRACT):
+            continue
+        effects = {row["result_id"]: row for row in effect_catalogue(execution).values()}
+        for binding in execution["coverage_application"]["bindings"]:
+            stage, successor = binding["stage"], binding["result_id"]
+            effect = effects.get(successor)
+            if effect is None or effect["performed"] is not True:
+                continue
+            for identity in effect["retired_target_ids"]:
+                record = archive[stage].get(identity)
+                support = admissions[stage].get(identity)
+                if identity in active or record is None or support is None:
+                    continue
+                if identity in result[stage]:
+                    raise IncompleteConversation("The historical record repeats a retirement owner")
+                selector = {**locators[identity], "retirement_turn_id": saved["turn_id"],
+                            "retirement_result_id": successor}
+                retirement = {key: deepcopy(value) for key, value in (
+                    ("effect", effect), ("proposal", binding["proposal"]),
+                    ("review", binding["review"]))}
+                digest = _digest({"contract": "inherited_history_dependency_v1", "stage": stage,
+                                  "record_id": identity, "selector": selector,
+                                  "record": record, "record_support": support,
+                                  "retirement": retirement})
+                historical = {"record": deepcopy(record), "historical_record": deepcopy(record),
+                              **retirement, "review": {**deepcopy(binding["review"]),
+                                                       "proposal": deepcopy(binding["proposal"])},
+                              "original_record_support": deepcopy(support)}
+                result[stage][identity] = {"record_support": deepcopy(support),
+                                           "selector": {**selector, "proof_digest": digest},
+                                           "historical_result": historical}
     return result
 
 
