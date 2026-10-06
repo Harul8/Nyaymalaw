@@ -208,7 +208,12 @@ def test_replay_rejects_corrupt_saved_execution_without_rerunning_or_mutating(
     assert replay.json()["detail"]["committed"] == "not_committed"
     assert len(model.seen) == calls
     assert wired.store.load(opened["matter_id"]) == before
-    assert public_record(client, opened["matter_id"]) == record
+    projected = public_record(client, opened["matter_id"])
+    if corruption == "advocate":
+        # Fresh authority is no longer attributable to the original owner.
+        assert projected["state"] == "incomplete" and projected["rows"] == []
+    else:
+        assert projected == record
 
 
 def test_legacy_reply_without_execution_receipt_replays_without_fabricating_evidence(

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from nm.brain.dispute_state import belongs_to_current_matter
 from nm.brain.material import BASES, IMPORTANCE, KINDS, PLACEMENTS, RELATIONS, SCOPES
+from nm.brain.mutation_contracts import validate_record_mutation
+from nm.shared.model_port import SchemaViolation
 from nm.work_the_file.matter_contracts import Matter
 
 
@@ -149,6 +151,16 @@ def material_record(matter: Matter, *, disputes: dict,
             if dispute["relation"] != "withdraws":
                 active_at_turn.add(dispute["id"])
         previous_active = dict(active)
+        # Mutation scopes are selected from the source-backed projection,
+        # including exact-word displays of genuinely older unchecked readings.
+        # Reproduce that same snapshot rather than treating a stored legacy
+        # paraphrase as the interpretation the scope owner was shown.
+        prior_targets = {
+            identity: sourced_detail_for_display(
+                record, prior_words.get((record["source_turn_id"], "advocate"), ""))
+            for identity, record in previous_active.items()}
+        coverage = response.get("material_coverage")
+        execution = coverage.get("execution") if isinstance(coverage, dict) else None
         additions: list[dict] = []
         owned_additions: set[str] = set()
         retire: set[str] = set()
@@ -187,6 +199,14 @@ def material_record(matter: Matter, *, disputes: dict,
                     or (proposal.get("relation") == "withdraws"
                         and not proposal.get("related_material_ids"))):
                 problems.append("a material detail lacks a valid saved source or identity")
+                bad_turn = True
+                continue
+            try:
+                validate_record_mutation(
+                    proposal, turn=turn, execution=execution, prior_words=prior_words,
+                    target_catalogue=prior_targets)
+            except SchemaViolation as exc:
+                problems.append("a saved material mutation has invalid authority: " + str(exc))
                 bad_turn = True
                 continue
             scope, dispute_ids, related = placement
