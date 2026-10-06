@@ -24,7 +24,14 @@ def _ids(choices) -> dict:
         {"enum": values} if values else {})}, **({"maxItems": 0} if not values else {})}
 
 
-def expression_schema(spans: dict, records: dict, sources: dict | None = None) -> dict:
+def expression_schema(spans: dict, records: dict, sources: dict | None = None, *,
+                      generation: bool = False) -> dict:
+    """Offer applicable fresh choices without changing canonical v1 validation.
+
+    Rendering still checks ownership, distinct selections and complete evidence.
+    The generation branches prevent mechanically impossible combinations;
+    they certify neither source meaning nor requested sufficiency.
+    """
     schema = {"type": "object", "additionalProperties": False,
             "required": ["operator", "source_ids", "record_ids", "focus"],
             "properties": {
@@ -34,6 +41,27 @@ def expression_schema(spans: dict, records: dict, sources: dict | None = None) -
     if sources:
         schema["properties"]["legal_source_ids"] = _ids(sources)
         schema["required"].append("legal_source_ids")
+    if generation:
+        branches = []
+        for operator in OPERATORS:
+            branch = deepcopy(schema)
+            fields = branch["properties"]
+            fields["operator"]["enum"] = [operator]
+            fixed = operator in ("acknowledgment", "record_result")
+            fields["source_ids"] = _ids(
+                () if fixed else (identity for identity, row in spans.items()
+                                  if operator != "source_account" or row.get("role") == "advocate"))
+            record_types = ("requirement", "research") if operator == "checked_legal" else (
+                "material", "dispute")
+            fields["record_ids"] = _ids(
+                () if fixed else (identity for identity, row in records.items()
+                                  if row.get("type") in record_types))
+            if operator not in ("question", "next_work"):
+                fields["focus"]["enum"] = ["none"]
+            if sources and operator != "checked_legal":
+                fields["legal_source_ids"] = _ids(())
+            branches.append(branch)
+        return {"anyOf": branches}
     return schema
 
 

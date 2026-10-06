@@ -1193,6 +1193,20 @@
       },
       "call_impact": "No model stage or routine call added. Existing bounded correction only; no paid calls. Conditional reduction unmeasured.",
       "remaining": "Per-candidate provider choices with mixed new/revised proposals, semantic meaning/association, expression provider generation and real-model material acceptance remain open."
+    },
+    {
+      "piece": "generation-only operator-specific reply expression choices",
+      "owner": "nm/brain/evidence_rendering.py",
+      "version": "168839b plus one production file",
+      "invariant": "Fresh generation offers only mechanically applicable sources, record types and focus per operator; canonical v1 and historical replay remain unchanged.",
+      "verification": {
+        "new_cases": 52,
+        "baseline": "48 failed /4 passed before generation option",
+        "focused_integrated_passed": 184,
+        "ruff": "passed"
+      },
+      "call_impact": "No calls or stages added; provider activation is the next separate continuation.py slice. No paid calls.",
+      "remaining": "This option is preparatory until provider wiring; no live acceptance claim. Requested delivery, semantics and hidden legal conditions remain open."
     }
   ],
   "additional_reviewer_input": {
