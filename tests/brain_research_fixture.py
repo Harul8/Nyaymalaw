@@ -93,6 +93,25 @@ def supported(candidate, *, verdict="supported"):
                               for source in candidate["sources"]]}
 
 
+def reviewed_retrieved_pool(payload, data, *, scripted_full_pool=False):
+    """Add only an explicitly declared synthetic full-pool Judge decision.
+
+    Existing coverage, including missing/malformed rows supplied by a negative
+    test, stays authoritative. IDs bind the declared fixture judgment to the
+    supplied scope; candidate support and row counts do not imply completeness.
+    """
+    result = deepcopy(data)
+    if not scripted_full_pool or "subject_coverage" in result:
+        return result
+    if "coverage_subject_ids" in payload:
+        result["subject_coverage"] = [{
+            "subject_id": identity, "outcome": "complete", "missing_source_ids": [],
+            "reason": ("Explicit synthetic Judge decision: the full supplied passage pool "
+                       "supports no useful omitted finding for this subject."),
+        } for identity in payload["coverage_subject_ids"]]
+    return result
+
+
 class ResearchModel(PublicContinuationModel):
     def __init__(self, routes, continuations, *, plans=None, readings=None, checks=None,
                  continuation_checks=None):
@@ -130,8 +149,8 @@ class ResearchModel(PublicContinuationModel):
         elif self.research_checks is not None:
             data = self.research_checks(payload)
         else:
-            data = {"decisions": [supported(candidate)
-                                  for row in payload["subjects"]
-                                  for candidate in row["candidates"]]}
+            data = reviewed_retrieved_pool(payload, {
+                "decisions": [supported(candidate) for row in payload["subjects"]
+                              for candidate in row["candidates"]]}, scripted_full_pool=True)
         return ModelResult(text=None, data=data, tier=tier, provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)

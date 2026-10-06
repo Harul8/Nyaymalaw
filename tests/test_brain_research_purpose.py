@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
 from nm.brain.conversation import WorkItem
+from nm.brain.execution_contracts import effect_catalogue
 from nm.brain.work_state import project_work
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
@@ -27,6 +29,12 @@ SUMMARY = "You report that the equipment has not been returned and payment remai
 LEGAL_QUESTION = (
     "Which legal conditions govern recovery of the retained equipment and withheld payment?"
 )
+RECONCILIATION_REQUIREMENT = {
+    "kind": "review", "operation": "none", "target_ids": [],
+    "success_condition": (
+        "Check the recorded formulations against the saved account, preserving "
+        "uncertainty and leaving legal assessment unfinished."),
+}
 
 
 def opening():
@@ -43,7 +51,7 @@ def opening():
     return result
 
 
-def factual_unit(index=0, *, earlier=False, complete_task=False):
+def factual_unit(index=0, *, earlier=False, complete_task=False, record_result="none"):
     identifier = f"account-{index}"
     return {
         "request_index": index,
@@ -51,6 +59,11 @@ def factual_unit(index=0, *, earlier=False, complete_task=False):
                     "span_ids": ["P1S2", "P1S3"] if earlier else ["L2", "L3"],
                     "record_ids": [], "legal_source_ids": [], "uncertainty": "reported"}],
         "questions": [], "next_work": [], "work": {"existing_id": "", "create": True},
+        "record_outcome": {"status": record_result,
+                           "block_id": identifier if record_result != "none" else "",
+                           "effect_ids": [], "current_record_ids": [],
+                           "reason": "Explicit fixture declaration for this scoped record result."
+                           if record_result != "none" else ""},
         "sufficiency": {"status": "complete", "block_id": identifier},
         "progress_updates": [{"target_id": "$work", "status": "complete",
                               "block_id": identifier, "span_ids": [],
@@ -84,6 +97,35 @@ class RecordResearchModel(ResearchModel):
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.prompt_systems.append(prompt.system)
+        if prompt.operation in ("continue_conversation", "verify_continuation"):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            payload = json.loads(prompt.user)
+            data = deepcopy(result.data)
+            if prompt.operation == "continue_conversation":
+                for unit in data["units"]:
+                    if unit.get("record_outcome", {}).get("status") == "performed":
+                        # The opening fixture explicitly declares this result;
+                        # the catalogue only supplies its owned selector IDs.
+                        unit["record_outcome"]["effect_ids"] = [
+                            identity for identity, row in payload["record_effect_catalogue"].items()
+                            if row["kind"] == "disputes"]
+            else:
+                receipt = payload["input"]["material_coverage"]["execution"]
+                for row in data["verdicts"]:
+                    requirement = receipt["requests"][row["request_index"]]["record_requirement"]
+                    if requirement == opening()["items"][0]["record_requirement"]:
+                        row["record_check"] = {
+                            "outcome": "fulfilled",
+                            "reason": ("Explicit independent fixture judgment: both separately "
+                                       "reported issues were retained with attribution."),
+                        }
+                    elif requirement == RECONCILIATION_REQUIREMENT:
+                        row["record_check"] = {
+                            "outcome": "no_change_justified",
+                            "reason": ("Explicit independent fixture judgment: the retained "
+                                       "formulations preserve the account and its uncertainty."),
+                        }
+            return replace(result, data=data)
         if prompt.operation not in (
                 "classify_account_sources", "extract_disputes", "verify_disputes"):
             return super().structured(prompt, schema, tier, max_tokens=max_tokens)
@@ -134,19 +176,25 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
                      reply="I will reconcile the attributed record.")
     requested["items"][0].update(response_basis="conversation_record", research_question="")
     requested["items"][0]["material_purposes"] = ["interpretation_review"]
-    requested["items"][0]["record_requirement"] = {
-        "kind": "review", "operation": "none", "target_ids": [],
-        "success_condition": (
-            "Check the recorded formulations against the saved account, preserving "
-            "uncertainty and leaving legal assessment unfinished.")}
+    requested["items"][0]["record_requirement"] = deepcopy(RECONCILIATION_REQUIREMENT)
     model = RecordResearchModel(
         [opening(), requested],
-        [{"units": [factual_unit()]},
-         {"units": [factual_unit(earlier=True, complete_task=True)]}],
+        [{"units": [factual_unit(record_result="performed")]},
+         {"units": [factual_unit(earlier=True, complete_task=True,
+                                  record_result="review_no_change")]}],
         dispute_reads=[disputes(), []])
     corpus = wire(wired, monkeypatch, model)
     first = send(client, ACCOUNT, "factual-purpose-opening")
     prior = deepcopy(wired.store.load(first["matter_id"]).brain_chat[0])
+    opening_receipt = prior["response"]["material_coverage"]["execution"]
+    opening_continuation = prior["response"]["continuation"]
+    performed = {identity: row for identity, row in effect_catalogue(opening_receipt).items()
+                 if row["performed"]}
+    assert len(performed) == 2
+    assert set(opening_continuation["units"][0]["record_outcome"]["effect_ids"]) == set(performed)
+    assert opening_continuation["units"][0]["record_check"]["outcome"] == "fulfilled"
+    assert set(opening_continuation["record_snapshot"]["record_catalogue"]) == {
+        row["result_id"] for row in performed.values()}
     call_start = len(model.calls)
 
     answer = send(client, latest, "factual-purpose-reconciliation", opened=first)
@@ -154,10 +202,10 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
     replay = send(client, latest, "factual-purpose-reconciliation", opened=first)
 
     assert first["metrics"]["llm_calls"] == 9
-    assert answer["metrics"]["llm_calls"] == 7
+    assert answer["metrics"]["llm_calls"] == 9
     assert [operation for operation, _ in calls] == [
         "interpret_conversation", "classify_account_sources", "extract_disputes",
-        "extract_legal_details",
+        "verify_disputes", "extract_legal_details", "verify_material_grounding",
         "decompose_disputes", "continue_conversation", "verify_continuation"]
     assert len(corpus.calls) == 4
     assert all(subject["kind"] == "dispute" for subject, _, _ in corpus.calls)
@@ -179,6 +227,19 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
     assert SUMMARY in "\n".join(row["text"] for row in answer["elements"])
     saved = wired.store.load(first["matter_id"])
     assert saved.brain_chat[0] == prior
+    saved_receipt = saved.brain_chat[-1]["response"]["material_coverage"]["execution"]
+    assert saved_receipt["review_scope"]["requests"][0]["record_requirement"] == \
+        RECONCILIATION_REQUIREMENT
+    for stage in ("dispute_review", "detail_review"):
+        assessment = saved_receipt["stages"][stage]["account_coverage"]
+        assert assessment["state"] == "complete"
+        assert assessment["review_scope"] == saved_receipt["review_scope"]
+    saved_continuation = saved.brain_chat[-1]["response"]["continuation"]
+    assert saved_continuation["record_snapshot"]["record_catalogue"] == \
+        opening_continuation["record_snapshot"]["record_catalogue"]
+    assert released["record_outcome"]["status"] == "review_no_change"
+    assert released["record_outcome"]["effect_ids"] == []
+    assert released["record_check"]["outcome"] == "no_change_justified"
     assert [row["message"] for row in saved.brain_chat] == [ACCOUNT, latest]
     catalogue = saved.brain_chat[-1]["response"]["material_coverage"]["source_treatments"]
     assert all(payload["source_treatments"] == catalogue for operation, payload in calls
@@ -222,7 +283,7 @@ def test_public_mixed_factual_and_legal_results_preserve_independent_completion(
         assert "legal-authority enquiry" in payload["correction"]["validation_issues"][0]["issue"]
         return {"units": [legal_limit()]}
 
-    replies = [{"units": [factual_unit()]}, mixed_reply]
+    replies = [{"units": [factual_unit(record_result="performed")]}, mixed_reply]
     if falsely_complete:
         replies.append(repair_legal_only)
     model = RecordResearchModel([opening(), requested], replies, dispute_reads=[disputes()])
@@ -282,7 +343,8 @@ def test_public_record_basis_cannot_inherit_saved_legal_enquiry(
                    for row in payload["original_input"]["saved_research_coverage"])
         return corrected if repair else factual
 
-    replies = [{"units": [factual_unit()]}, {"units": [legal_limit(index=0)]}]
+    replies = [{"units": [factual_unit(record_result="performed")]},
+               {"units": [legal_limit(index=0)]}]
     if repair:
         replies.append({"units": [factual_unit(earlier=True, complete_task=True)]})
     model = RecordResearchModel([opening(), legal, factual, repair_interpretation], replies,

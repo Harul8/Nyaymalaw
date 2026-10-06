@@ -239,7 +239,7 @@ def test_board_exposes_sourced_proposals_separately_from_worked_threads(
     assert all(row["state"] == "proposed" for row in proposals["rows"])
     assert all(row["source_turn_id"] in ("turn-opening", "turn-correction")
                for row in proposals["rows"])
-    assert len(model.calls) == 15  # One source-treatment read for each material turn.
+    assert len(model.calls) == 16  # Includes independent review of an empty detail proposal set.
 
     # If the saved words no longer support a proposal, the board reports an
     # incomplete read rather than presenting a shorter list as complete.
@@ -436,7 +436,8 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
                                                "matter_id": matter_id,
                                                "chat_id": opened.json()["chat_id"]})
     assert continued.status_code == 200, continued.text
-    assert continued.json()["metrics"]["llm_calls"] == 7
+    # The authorised empty detail set still receives an independent review.
+    assert continued.json()["metrics"]["llm_calls"] == 8
     routing = [payload for payload in model.calls if "latest_message" in payload]
     assert len(routing) == 2
     assert routing[1]["open_disputes"] == [{

@@ -21,6 +21,7 @@ from tests.brain_continuation_fixture import (
     no_record_requirement,
 )
 from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
+from tests.brain_research_fixture import reviewed_retrieved_pool
 
 FIRST = ("The supplier retained our tools. "
          "The customer withheld payment for the tools.")
@@ -153,6 +154,8 @@ class Model:
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             data = reviewed_record_verdicts(
                 payload, data, scripted_full_scope=True)
+        elif prompt.operation == "verify_legal_requirements":
+            data = reviewed_retrieved_pool(payload, data, scripted_full_pool=True)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
@@ -289,7 +292,7 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
     assert len(plans["subjects"]) == 2
 
     second = _send(brain, DETAIL, "second", first)
-    assert second["metrics"]["llm_calls"] == 10
+    assert second["metrics"]["llm_calls"] == 11  # Empty dispute review also runs independently.
     assert len(search.calls) == 3
     assert search.calls[-1][0]["id"] == first_read[0]["subject"]["id"]
     assert len(second["research_reads"]) == 1
@@ -418,7 +421,8 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
                         "operation_supported": index != 0,
                         "verdict": "reject" if index == 0 else "accept",
                         "reason": "Independent attributed decision.",
-                    } for index, row in enumerate(payload["candidates"])]}),
+                    } for index, row in enumerate(payload["candidates"])]},
+                        scripted_full_scope=True),
                     tier=tier, provider="offline", model="offline",
                     usage=Usage(0, 0, 0), latency_ms=0,
                     completion=Completion.COMPLETE)

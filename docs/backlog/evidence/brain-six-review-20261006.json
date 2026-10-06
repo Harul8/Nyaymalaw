@@ -742,6 +742,27 @@
         "nm/brain/material.py",
         "tests/test_brain_material_dispute_label_width.py"
       ]
+    },
+    {
+      "slice": "public-law-fixture-scope",
+      "owners": [
+        "LB-179",
+        "LB-180",
+        "LB-181",
+        "LB-183",
+        "LB-185",
+        "LB-187"
+      ],
+      "decision": "Migrated known-positive public research fixtures to explicit independently declared exact supplied-pool coverage and typed scoped record outcomes. Helper defaults to no completeness and preserves intentional missing/partial/unassessed/malformed coverage. Positive reconciliation binds actual effects, active snapshots and full review scope; candidate acceptance never implies completeness.",
+      "validation": "61 assigned public research/automatic-law/board/source-purpose offline tests passed, including 6 fixture declaration controls; exact original A1/J1 sources, supplied passage extent, outcome IDs and snapshots asserted. Normal law path avoids needless scope-only correction; metrics include genuine empty account Judges. Actual models/browser deferred.",
+      "files": [
+        "tests/brain_research_fixture.py",
+        "tests/test_brain_research_fixture.py",
+        "tests/test_brain_research_service.py",
+        "tests/test_brain_automatic_requirements.py",
+        "tests/test_brain_research_purpose.py",
+        "tests/test_brain_board_proposals.py"
+      ]
     }
   ]
 }

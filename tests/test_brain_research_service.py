@@ -15,6 +15,7 @@ from tests.brain_research_fixture import (
     Corpus,
     ResearchModel,
     finding,
+    reviewed_retrieved_pool,
     supported,
 )
 from tests.test_brain_continuation_service import send
@@ -100,6 +101,13 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
     assert read["subject"]["purpose"] == "requested_work"
     assert read["subject"]["scope"] == "none"
     assert read["corpus_revision"] == corpus.revision()
+    pool = read["coverage"]["retrieved_coverage"]
+    assert pool["subject_id"] == read["subject"]["id"]
+    assert pool["semantic_extent"] == "supplied_retrieved_passages"
+    assert pool["outcome"] == "complete" and pool["missing_source_ids"] == []
+    assert pool["source_ids"] == ["A1", "J1"]
+    assert [(source["id"], source["text"]) for source in pool["sources"]] == [
+        ("A1", PROVISION), ("J1", JUDGMENT)]
     finding = read["rows"][0]
     assert finding["kind"] == "condition"
     assert finding["force"] == "none"
@@ -120,7 +128,8 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
     assert anchor["text"] == PROVISION
     assert anchor["source_id"] == reference["id"]
     assert answer["elements"][0]["sources"][anchor["source_index"]]["text"] == PROVISION
-    assert [row["text"] for row in answer["elements"]] == [PROVISION]
+    assert [row["text"] for row in answer["elements"]] == [
+        PROVISION, "No changes were made to the saved record."]
     assert saved.brain_ready is False
     assert "research_reads" not in answer
     assert "requirements_read" not in saved.brain_chat[0]["response"]
@@ -262,7 +271,8 @@ def test_public_mixed_research_withholds_unsupported_claim_and_retains_adverse_c
                     decision.update(verdict="unsupported", reason="The passage requires notice.",
                                     source_checks=[], material_checks=[])
                 decisions.append(decision)
-        return {"decisions": decisions}
+        return reviewed_retrieved_pool(
+            payload, {"decisions": decisions}, scripted_full_pool=True)
 
     corpus = Corpus()
     model = ResearchModel([planned], [research_record_reply], readings=readings, checks=checks)
@@ -286,7 +296,7 @@ def test_public_mixed_research_withholds_unsupported_claim_and_retains_adverse_c
 
     calls = len(model.calls)
     for index, element in enumerate(response["elements"]):
-        for source_index, source in enumerate(element["sources"]):
+        for source_index, source in enumerate(element.get("sources", [])):
             read = client.get(f"/api/chats/{response['chat_id']}/turns/research-mixed/"
                               f"brain-sources/{index}/{source_index}")
             assert read.status_code == 200, read.text
@@ -322,7 +332,8 @@ def test_public_supported_source_cannot_override_a_rejected_use_and_checked_peer
                     assert all(check["verdict"] == "supported"
                                for check in decision["source_checks"])
                 decisions.append(decision)
-        return {"decisions": decisions}
+        return reviewed_retrieved_pool(
+            payload, {"decisions": decisions}, scripted_full_pool=True)
 
     corpus = Corpus()
     model = ResearchModel([route(QUESTION, research_question=QUESTION)], [research_record_reply],
