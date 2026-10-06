@@ -249,6 +249,21 @@
       "files": [
         "nm/brain/continuation_verification.py"
       ]
+    },
+    {
+      "slice": "declared-record-outcome-contract-prerequisite",
+      "owners": [
+        "LB-179",
+        "LB-182",
+        "LB-185",
+        "LB-188"
+      ],
+      "decision": "Add one reusable pure-code contract for declared outcomes and deterministic effect IDs derived from actual receipt projections. Performed requires relevant executed/checked owned effects; already_current requires current owned state; review_no_change requires actual requested review; unresolved cannot complete its reply/task but can complete an independent answered question. Exact model selector duplicates normalize after ownership validation. Code receipt identity contradictions stay core errors. Kind-specific dispute successors and material contradiction/held ownership reconciliation remain valid. This is a sequential prerequisite; writer, saved validation and release activation follow before end-to-end feature acceptance.",
+      "validation": "15 paired execution-contract cases pass; Ruff passes. No model calls. Semantic request/effect matching, inherited task requirements and production handoffs are not yet activated at this checkpoint.",
+      "files": [
+        "nm/brain/execution_contracts.py",
+        "tests/test_brain_execution_contracts.py"
+      ]
     }
   ]
 }

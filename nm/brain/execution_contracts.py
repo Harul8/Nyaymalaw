@@ -1,0 +1,339 @@
+"""Code-owned record execution evidence, separate from semantic fulfillment.
+
+This module validates selected declared outcomes. It cannot infer an operation
+claim from prose, decide whether a result satisfies a legal/requested meaning,
+or certify a save from a prepared receipt. The caller owns those boundaries.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Iterable
+from copy import deepcopy
+
+from nm.shared.model_port import SchemaViolation, require_schema
+
+RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
+RECORD_OUTCOME_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["status", "block_id", "effect_ids", "current_record_ids", "reason"],
+    "properties": {
+        "status": {
+            "type": "string",
+            "enum": ["none", "performed", "already_current", "review_no_change", "unresolved"],
+        },
+        "block_id": {"type": "string"},
+        "effect_ids": {"type": "array", "items": {"type": "string"}},
+        "current_record_ids": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": "string"},
+    },
+}
+_RELATIONS = frozenset({"new", "adds", "corrects", "contradicts", "withdraws"})
+_KINDS = {
+    "disputes": ("dispute_extraction", "dispute_review"),
+    "details": ("detail_extraction", "detail_review"),
+}
+
+
+class ExecutionEvidenceInvalid(ValueError):
+    """Malformed code-owned evidence; a caller must refuse core integrity."""
+
+
+def _owned_ids(value: object, field: str) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or any(not isinstance(item, str) or not item.strip() for item in value)
+        or len(value) != len(set(value))
+    ):
+        raise ExecutionEvidenceInvalid(f"{field} needs unique nonempty owned IDs")
+    return value
+
+
+def _selected_ids(value: object, field: str) -> list[str]:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        raise SchemaViolation(f"record_outcome.{field} needs nonempty selected IDs")
+    return value
+
+
+def _stage(receipt: dict, name: str) -> str:
+    stages = receipt.get("stages")
+    row = stages.get(name) if isinstance(stages, dict) else None
+    if not isinstance(row, dict) or not isinstance(row.get("state"), str):
+        raise ExecutionEvidenceInvalid(f"The execution stage {name!r} is unreadable")
+    return row["state"]
+
+
+def _receipt(receipt: object) -> dict | None:
+    if receipt is None:
+        return None
+    if (
+        not isinstance(receipt, dict)
+        or receipt.get("contract") != "material_execution_v1"
+        or not isinstance(receipt.get("id"), str)
+        or not receipt["id"].strip()
+        or receipt.get("persistence") not in ("prepared_for_commit", "committed")
+        or not isinstance(receipt.get("effects"), dict)
+        or not isinstance(receipt.get("requests"), list)
+    ):
+        raise ExecutionEvidenceInvalid("The material execution receipt is unreadable")
+    owner = receipt.get("owner")
+    if (
+        not isinstance(owner, dict)
+        or any(
+            not isinstance(owner.get(field), str) or not owner[field].strip()
+            for field in ("matter_id", "advocate_id", "turn_id", "offer_digest")
+        )
+        or type(receipt.get("expected_version")) is not int
+        or receipt["expected_version"] < 0
+        or type(receipt.get("resulting_version")) is not int
+        or receipt["resulting_version"] != receipt["expected_version"] + 1
+    ):
+        raise ExecutionEvidenceInvalid("The material execution owner/version is unreadable")
+    # Equality with the real authenticated owner, original offer and store
+    # version belongs to the caller, which has those authoritative inputs.
+    return receipt
+
+
+def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
+    """Derive deterministic choices from actual owned projections and stages.
+
+    An operation in a receipt is not automatically a performed active effect.
+    Held, outside-owner, unchanged, unread and rejected outcomes are explicit.
+    Kind-specific owning projection behavior controls target retirement:
+    material contradictions preserve the target; a revised dispute formulation
+    can replace its active predecessor while preserving its attributed history.
+    """
+    receipt = _receipt(receipt)
+    if receipt is None:
+        return {}
+    result = {}
+    for kind, (reader_name, review_name) in _KINDS.items():
+        owned = receipt["effects"].get(kind)
+        if not isinstance(owned, dict) or not isinstance(owned.get("operations"), list):
+            raise ExecutionEvidenceInvalid(f"The owned {kind} effects are unreadable")
+        activated = set(_owned_ids(owned.get("activated_record_ids"), f"{kind}.activated"))
+        retired = set(_owned_ids(owned.get("retired_record_ids"), f"{kind}.retired"))
+        held = set(_owned_ids(owned.get("held_record_ids"), f"{kind}.held"))
+        outside = set(_owned_ids(owned.get("outside_owned_record_ids"), f"{kind}.outside"))
+        if activated & retired or activated & held or activated & outside:
+            raise ExecutionEvidenceInvalid("Active/retired/held effect identities conflict")
+        stages_checked = (
+            _stage(receipt, reader_name) == "returned" and _stage(receipt, review_name) == "checked"
+        )
+        domain_fields = (
+            "before_record_ids",
+            "after_record_ids",
+            "before_held_record_ids",
+            "after_held_record_ids",
+        )
+        domains = None
+        if any(field in owned for field in domain_fields):
+            if not all(field in owned for field in domain_fields):
+                raise ExecutionEvidenceInvalid("Before/after ownership domains are incomplete")
+            domains = {
+                field: set(_owned_ids(owned[field], f"{kind}.{field}")) for field in domain_fields
+            }
+            before, after = domains["before_record_ids"], domains["after_record_ids"]
+            before_held, after_held = (
+                domains["before_held_record_ids"],
+                domains["after_held_record_ids"],
+            )
+            if (
+                before & before_held
+                or after & after_held
+                or activated != after - before
+                or retired != before - after
+            ):
+                raise ExecutionEvidenceInvalid(
+                    "Effects disagree with before/after ownership domains"
+                )
+            removed_from_domain = (before - after) | (before_held - after_held)
+        else:
+            # Old evidence can certify an owned retirement. It cannot invent
+            # removal from an unrecorded held domain.
+            removed_from_domain = retired
+        seen = set()
+        for operation in owned["operations"]:
+            if not isinstance(operation, dict):
+                raise ExecutionEvidenceInvalid("An owned effect operation is unreadable")
+            record_id, relation = operation.get("result_id"), operation.get("relation")
+            if (
+                not isinstance(record_id, str)
+                or not record_id.strip()
+                or record_id in seen
+                or relation not in _RELATIONS
+            ):
+                raise ExecutionEvidenceInvalid("Owned effect operation identities conflict")
+            seen.add(record_id)
+            targets = _owned_ids(operation.get("target_record_ids"), "effect.targets")
+            retired_targets = _owned_ids(operation.get("retired_target_ids"), "effect.retired")
+            if (
+                not set(retired_targets) <= set(targets) & retired
+                or (relation == "new" and targets)
+                or (relation != "new" and not targets)
+            ):
+                raise ExecutionEvidenceInvalid("An effect's targets disagree with its projection")
+            removed_targets = set(targets) & removed_from_domain
+            references = operation.get("source_references")
+            if (
+                not isinstance(references, list)
+                or not references
+                or any(
+                    not isinstance(row, dict)
+                    or row.get("role") not in ("advocate", "nm")
+                    or any(
+                        not isinstance(row.get(field), str) or not row[field].strip()
+                        for field in ("turn_id", "quoted")
+                    )
+                    for row in references
+                )
+            ):
+                raise ExecutionEvidenceInvalid("An effect lacks attributable source references")
+            actual = record_id in activated
+            if relation == "withdraws":
+                actual = bool(removed_targets) and record_id not in activated
+            elif relation == "corrects":
+                actual = actual and bool(removed_targets)
+            elif relation == "contradicts" and kind == "details":
+                actual = actual and not removed_targets
+            # Dispute successor identity differs from material contradiction;
+            # a generic retirement expectation would falsely reject valid work.
+            performed = stages_checked and actual and record_id not in held | outside
+            identity = {"receipt_id": receipt["id"], "kind": kind, "result_id": record_id}
+            digest = hashlib.sha256(
+                json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+            effect_id = "rfx_" + digest[:32]
+            if effect_id in result:
+                raise ExecutionEvidenceInvalid("Code-owned effect identities conflict")
+            result[effect_id] = {
+                "id": effect_id,
+                "receipt_id": receipt["id"],
+                "kind": kind,
+                "result_id": record_id,
+                "relation": relation,
+                "target_record_ids": list(targets),
+                "retired_target_ids": list(retired_targets),
+                "removed_target_ids": sorted(removed_targets),
+                "activated": record_id in activated,
+                "performed": performed,
+                "reader_returned": _stage(receipt, reader_name) == "returned",
+                "review_checked": _stage(receipt, review_name) == "checked",
+                "source_references": deepcopy(references),
+            }
+    return result
+
+
+def validate_record_outcome(
+    unit: dict, receipt: dict | None, current_record_ids: Iterable[str]
+) -> None:
+    """Validate a declared outcome, normalizing only fully checked repetitions.
+
+    Fresh writer schema must require record_outcome. Its absence here is an
+    explicit historical/in-process compatibility path, not verified completion.
+    current_record_ids must describe the checked result at THIS turn's snapshot.
+    Replay of old performed work must not reconstruct it from today's state.
+    Requested-effect and inherited-task matching are separate required gates.
+    """
+    if "record_outcome" not in unit:
+        return
+    outcome = unit["record_outcome"]
+    require_schema(outcome, RECORD_OUTCOME_SCHEMA)
+    status = outcome["status"]
+    blocks = {block["id"]: block for block in unit["blocks"]}
+    if outcome["block_id"] not in blocks and (status != "none" or outcome["block_id"]):
+        raise SchemaViolation("record_outcome.block_id must select its exact displayed owner")
+    if status != "none" and not outcome["reason"].strip():
+        raise SchemaViolation("record_outcome.reason must explain this requested result")
+    selected = _selected_ids(outcome["effect_ids"], "effect_ids")
+    current = _selected_ids(outcome["current_record_ids"], "current_record_ids")
+    if isinstance(current_record_ids, (str, bytes)):
+        raise ExecutionEvidenceInvalid("Current record ownership is unreadable")
+    current_ids = set(current_record_ids)
+    if any(not isinstance(identity, str) or not identity.strip() for identity in current_ids):
+        raise ExecutionEvidenceInvalid("Current record ownership is unreadable")
+    if not set(current) <= current_ids:
+        raise SchemaViolation("record_outcome.current_record_ids must select active owned records")
+    catalogue = effect_catalogue(receipt)
+    if not set(selected) <= catalogue.keys():
+        raise SchemaViolation(
+            "record_outcome.effect_ids must select this turn's code-owned effects"
+        )
+    if any(not catalogue[identity]["performed"] for identity in selected):
+        raise SchemaViolation("record_outcome selects an unread, unchanged or unadmitted effect")
+    # Both complete selections were checked before normalizing repetitions.
+    # Owned receipt identities are never repaired; only model set-like choices
+    # can repeat without adding or changing their meaning.
+    selected = outcome["effect_ids"] = list(dict.fromkeys(selected))
+    current = outcome["current_record_ids"] = list(dict.fromkeys(current))
+    if status == "none":
+        if selected or current:
+            raise SchemaViolation("record_outcome none cannot carry operation/current-state claims")
+        return
+    if status == "performed":
+        if not selected or current:
+            raise SchemaViolation(
+                "record_outcome performed needs effects, not current-state substitutes"
+            )
+        for identity in selected:
+            effect = catalogue[identity]
+            if effect["activated"] and effect["result_id"] not in current_ids:
+                raise SchemaViolation(
+                    "The selected performed result is not in the checked active state"
+                )
+            if set(effect["removed_target_ids"]) & current_ids:
+                raise SchemaViolation(
+                    "The selected replacement/withdrawal did not retire its target"
+                )
+        return
+    if status == "already_current":
+        if selected or not current:
+            raise SchemaViolation(
+                "already_current needs current owned state, not a past operation claim"
+            )
+        return
+    if status == "review_no_change":
+        if selected:
+            raise SchemaViolation("review_no_change cannot also declare performed effects")
+        receipt = _receipt(receipt)
+        index = unit["request_index"]
+        requests = (
+            []
+            if receipt is None
+            else [
+                row
+                for row in receipt["requests"]
+                if isinstance(row, dict) and row.get("request_index") == index
+            ]
+        )
+        if len(requests) != 1:
+            raise SchemaViolation("review_no_change needs the exact requested review owner")
+        requested = requests[0]
+        requirement = requested.get("record_requirement")
+        review_requested = isinstance(requirement, dict) and requirement.get("kind") == "review"
+        if not review_requested or any(
+            _stage(receipt, reader) != "returned"
+            or _stage(receipt, review) not in ("checked", "no_candidates")
+            for reader, review in _KINDS.values()
+        ):
+            raise SchemaViolation("review_no_change needs actual requested reading and review")
+        if any(
+            effect["performed"]
+            and (effect["result_id"] in current or set(effect["removed_target_ids"]) & set(current))
+            for effect in catalogue.values()
+        ):
+            raise SchemaViolation("The selected reviewed records also have performed changes")
+        return
+    work = unit.get("work", {})
+    selected_task_ids = {"$work", work.get("existing_id"), work.get("progress_id")} - {None, ""}
+    if unit["sufficiency"]["status"] == "complete" or any(
+        update["status"] == "complete" and update["target_id"] in selected_task_ids
+        for update in unit["progress_updates"]
+    ):
+        raise SchemaViolation(
+            "An unresolved declared result cannot complete reply sufficiency or its task"
+        )
