@@ -17,7 +17,7 @@ from nm.shared.model_port import ModelResult, Tier, Usage, require_schema
 SCOPE = {"requests": [{"request_index": 0, "material_purposes": ["interpretation_review"]}]}
 
 
-@pytest.fixture(params=["material"])
+@pytest.fixture(params=["material", "dispute"])
 def kind(request):
     return request.param
 
@@ -129,13 +129,14 @@ def coverage(references, *, state="complete", purposes=None, dispositions=()):
 
 
 def review(kind, model, latest, *, candidates=(), earlier=(), treatments=None, records=(),
-           scope=SCOPE):
+           scope=SCOPE, review_state=None):
     _, treatments = source_catalogue(latest, earlier=earlier) if treatments is None else (
         None, treatments)
     checked_coverage, disagreements = {}, []
     arguments = dict(model=model, candidates=candidates, earlier=earlier, latest=latest,
                      source_treatments=treatments, review_scope=deepcopy(scope),
-                     coverage=checked_coverage, source_disagreements=disagreements)
+                     coverage=checked_coverage, source_disagreements=disagreements,
+                     review_state=review_state)
     if kind == "material":
         result = material_owner.verify_material_grounding(
             **arguments, opening=OpeningCandidate(False, "", ""),
@@ -401,3 +402,102 @@ def test_explicit_legacy_rows_keep_the_existing_schema_without_silent_version_up
     assert "source_support_contract" not in model.calls[0]["payload"]
     assert "coverage_selection_contract" not in model.calls[0]["payload"]
     require_schema(output, model.calls[0]["schema"])
+
+
+def test_fresh_cached_peer_survives_added_owned_candidate_choices(kind):
+    first = "The north parcel arrived late."
+    second = "The south parcel remained undelivered."
+    latest = first + " " + second
+    references, treatments = source_catalogue(latest)
+    proposed = (proposal(kind, first), proposal(kind, second))
+    first_id, second_id = candidate_id(kind), candidate_id(kind, 2)
+    state = {}
+    first_model = RawJudge([{
+        "verdicts": [verdict(kind, references["L1"])],
+        "coverage": coverage(references, state="partial", dispositions=[
+            disposition("L1", references["L1"], status="represented", candidate_ids=(first_id,)),
+            disposition("L2", references["L2"]),
+        ]),
+    }])
+    retained, assessed, _, _ = review(
+        kind, first_model, latest, candidates=proposed[:1], treatments=treatments,
+        review_state=state)
+    assert retained == proposed[:1] and assessed["state"] == "partial"
+    second_model = RawJudge([{
+        "verdicts": [verdict(kind, references["L2"], index=2, source_id="L2")],
+        "coverage": coverage(references, dispositions=[
+            disposition("L1", references["L1"], status="represented", candidate_ids=(first_id,)),
+            disposition("L2", references["L2"], status="represented", candidate_ids=(second_id,)),
+        ]),
+    }])
+    retained, assessed, _, _ = review(
+        kind, second_model, latest, candidates=proposed, treatments=treatments, review_state=state)
+    assert retained == proposed and assessed["state"] == "complete"
+    assert len(first_model.calls) == len(second_model.calls) == 1
+    assert [row["candidate_id"] for row in second_model.calls[0]["payload"]["candidates"]] == [
+        second_id]
+    retained_context = second_model.calls[0]["payload"]["retained_candidate_context"]
+    assert retained_context[0]["candidate_id"] == first_id
+
+
+@pytest.mark.parametrize("candidate_representation", [False, True])
+def test_fresh_scope_hold_preserves_source_reading_and_names_exact_held_target(
+    kind, candidate_representation
+):
+    from nm.brain.mutation_contracts import AUTHORITY_CONTRACT, build_mutation_authorities
+    from tests import test_brain_dispute_mutation_scope as fixture
+
+    latest = fixture.REVIEW + " " + fixture.NOTICE
+    references, treatments = source_catalogue(
+        latest, earlier=fixture.EARLIER, roles={"L1": "work_instruction"})
+    ledger = build_mutation_authorities(
+        owner=fixture.OWNER, expected_version=4,
+        target_catalogue={row["id"]: row for row in fixture.ACTIVE},
+        source_catalogue=treatments, proposals=[{
+            "request_index": 0, "authority_kind": "interpretation_review",
+            "authority_source_ids": ["L1"], "target_scope": "exact",
+            "target_ids": ["dispute-a"], "permitted_relations": ["corrects"],
+        }], request_indices=(0,))
+    scope = {"owner": fixture.OWNER, "mutation_authority_contract": AUTHORITY_CONTRACT,
+             "mutation_authorities": ledger, "requests": SCOPE["requests"]}
+    wrong = fixture.candidate(fixture.REVIEW, target="dispute-b")
+    if kind == "material":
+        wrong = replace(wrong, kind="event", placement="matter", related_dispute_ids=(),
+                        related_material_ids=("dispute-b",))
+    peer = proposal(kind, fixture.NOTICE)
+    wrong_id, peer_id = candidate_id(kind), candidate_id(kind, 2)
+    decisions = [fixture.verdict(wrong_id, target="dispute-b"),
+                 fixture.verdict(peer_id, support="L2")]
+    for row in decisions:
+        if kind == "material":
+            row.pop("candidate_role")
+        for check in row["account_check"]["source_checks"]:
+            check["support_spans"] = [{
+                "start": 0, "end": len(references[check["source_id"]]["quoted"])}]
+    original_representation = disposition(
+        "P1S1", references["P1S1"], status="represented",
+        candidate_ids=(wrong_id,) if candidate_representation else (),
+        record_ids=() if candidate_representation else ("dispute-a",))
+    output = {"verdicts": decisions, "coverage": coverage(
+        references, purposes={"L1": "non_account"}, dispositions=[
+            original_representation,
+            disposition("P1S2", references["P1S2"], status="represented",
+                        record_ids=("dispute-b",)),
+            disposition("L2", references["L2"], status="represented", candidate_ids=(peer_id,)),
+        ])}
+    model = RawJudge([output])
+    retained, assessed, _, _ = review(
+        kind, model, latest, candidates=(wrong, peer), earlier=fixture.EARLIER,
+        records=fixture.ACTIVE, treatments=treatments, scope=scope)
+    assert retained == (peer,) and len(model.calls) == 1
+    assert assessed["state"] == "partial" and "validation_issue" not in assessed
+    hold = assessed["admission_holds"][0]
+    assert hold["candidate_id"] == wrong_id and hold["target_ids"] == ["dispute-b"]
+    assert hold["relation"] == "corrects" and hold["quoted"] == fixture.REVIEW
+    assert hold["admission_issue"] == "mutation_scope"
+    assert len(assessed["source_checks"]) == len(references)
+    represented = next(row for row in assessed["dispositions"] if row["source_id"] == "L2")
+    assert represented["status"] == "represented" and represented["candidate_ids"] == [peer_id]
+    held = next(row for row in assessed["dispositions"] if row["source_id"] == "P1S1")
+    assert held["status"] == ("unresolved" if candidate_representation else "represented")
+    assert assessed["missing_source_ids"] == (["P1S1"] if candidate_representation else [])

@@ -16,6 +16,9 @@ from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.mutation_contracts import model_review_scope, scoped_record_decisions
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
+    COVERAGE_SELECTION_CONTRACT,
+    SOURCE_SELECTION_CONTRACT,
+    SOURCE_SUPPORT_CONTRACT,
     admitted_record_decisions,
     candidate_account_ids,
     checked_coverage,
@@ -85,6 +88,11 @@ Select exact source_ids only from this proposal's allowed_account_source_ids.
 Give exactly one source_checks entry for each selected ID, and no others:
 source_id, supplies_account_content, supports_proposal and a concise reason
 without copied passages. Do not repeat source content_role in those entries.
+When source_support_contract is supplied, also select support_spans as exact
+start/end offsets in that source's original quoted words. Select substantive
+portions only when supplies_account_content is true, otherwise an empty list.
+Retain necessary attribution, negation, uncertainty and contextual conditions;
+offsets identify original evidence, not entailment or permission to act.
 supplies_account_content means actual substantive account is reported in the
 original context, not that the source authorises review or agrees with the
 supplied treatment. Keep that original-evidence judgment explicit; code compares
@@ -201,21 +209,32 @@ their own authority. Rejected, unassessed or dependency-unavailable proposals
 cannot count as represented merely because they were submitted. An already
 faithful current record may cover content without a new row. Review can
 legitimately require no changes and no fresh factual assertion.
-Outcome: Include coverage with state complete, partial or unassessed; a concise
-reason identifying the substantive judgment; and missing_source_ids selected
-only from coverage_source_ids. Complete means no materially missing content or
-needed reconciliation was found in this scope and requires an empty missing list.
-Partial means relevant content or reconciliation remains missing: explain the
-missing proposition or distinction and select owned original source IDs when
-the gap can be localized. The missing list may be empty when it cannot. Unassessed means this
-coverage could not be dependably decided; missing IDs may be empty when no gap
-can be localized. A source span may contain several propositions; selecting it
-is not proof that every proposition is represented. Do not require a new record
-or force complete. Return coverage even for verdicts=[] on an authorised empty
-or coverage-only review. On correction, return verdicts only for the listed
-pending candidates plus coverage; preserve settled peers and full source context.
-A valid partial or unassessed assessment is a legitimate result, not an error
-that must be repaired into complete."""
+Outcome: Include coverage with state complete, partial or unassessed and a
+concise reason identifying the substantive judgment. Under
+coverage_selection_contract, give source_checks for every coverage_source_id:
+source_id, content_purpose account/non_account/unresolved, substantive_spans as
+exact start/end offsets, and reason. Account has substantive portions; the other
+purposes have none. Give dispositions for every selected account portion,
+allowing overlapping context and several propositions per source: source_id,
+start, end, status, record_ids, candidate_ids and reason. represented selects
+faithful current records or accepted proposals; missing/unresolved/non_account/
+outside_scope selects no representation IDs. Decide outside_scope from the
+authorised stage's work, never from extraction failure. Explain uncertainty or
+a materially missing distinction even when some work is represented. Code
+resolves exact words and derives missing source IDs; do not return the derived
+missing_source_ids field under this marker. Without this version
+marker, return the historical missing_source_ids field selected only from
+coverage_source_ids; the list may be empty when a gap cannot be localized.
+Complete means no materially missing content or needed reconciliation was found
+in this scope. Partial means relevant content or reconciliation remains missing;
+explain the original proposition or distinction. Unassessed means coverage could
+not be dependably decided. A source span may contain several propositions;
+selecting it is not proof that every proposition is represented. Do not require
+a new record or force complete. Return coverage even for verdicts=[] on an
+authorised empty or coverage-only review. On correction, return verdicts only
+for the listed pending candidates plus coverage; preserve settled peers and full
+source context. A valid partial or unassessed assessment is a legitimate result,
+not an error that must be repaired into complete."""
 
 
 _VERDICT = {
@@ -235,17 +254,21 @@ _VERDICT = {
 
 
 def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
-            coverage_ids=None) -> dict:
+            coverage_ids=None, source_references=None,
+            coverage_record_ids=(), coverage_candidate_ids=()) -> dict:
     item = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
-        **review_properties(source_ids, target_ids, peer_ids),
+        **review_properties(source_ids, target_ids, peer_ids,
+                            source_references=source_references),
         "candidate_id": {"type": "string", "enum": list(ids) or [""]},
     }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
     properties = {"verdicts": {"type": "array", "items": item,
                                **({"maxItems": 0} if not ids else {})}}
     required = ["verdicts"]
     if coverage_ids is not None:
-        properties["coverage"] = coverage_schema(coverage_ids)
+        properties["coverage"] = coverage_schema(
+            coverage_ids, source_references=source_references,
+            record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids)
         required.append("coverage")
     return {"type": "object", "additionalProperties": False,
             "required": required, "properties": properties}
@@ -255,7 +278,8 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
 def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate],
                    *, account_ids: dict[str, set[str]], targets: dict[str, set[str]],
                    source_treatments: dict[str, dict],
-                   source_disagreements: list[dict] | None = None
+                   source_disagreements: list[dict] | None = None,
+                   source_references=None,
                    ) -> tuple[dict[str, dict], dict[str, tuple[str, ...]]]:
     """Keep independently valid decisions; retry every absent or invalid ID."""
     rows = data.get("verdicts") if isinstance(data, dict) else None
@@ -282,7 +306,8 @@ def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate],
                 **_VERDICT["properties"],
                 **review_properties(tuple(account_ids[candidate_id]),
                                     tuple(targets[candidate_id]),
-                                    restoration_peer_ids(candidate_id, targets)),
+                                    restoration_peer_ids(candidate_id, targets),
+                                    source_references=source_references),
                 "candidate_id": {"type": "string", "enum": [candidate_id]},
             }}
             require_schema(row, schema)
@@ -347,6 +372,11 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     payload["source_treatments"] = {
         identity: {field: row[field] for field in ("turn_id", "role", "quoted")}
         for identity, row in source_treatments.items()}
+    source_references = (payload["source_treatments"] if all(
+        row.get("selection_contract") == SOURCE_SELECTION_CONTRACT
+        for row in source_treatments.values()) else None)
+    if source_references is not None:
+        payload["source_support_contract"] = SOURCE_SUPPORT_CONTRACT
     # Candidate recovery requires a trustworthy canonical target catalogue.
     active = {}
     for record in active_disputes:
@@ -379,16 +409,25 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
          "cited_earlier_passages": [vars(ref) for ref in candidate.prior_references],
          "related_dispute_ids": list(candidate.related_dispute_ids)}
         for key, candidate in keyed.items()]
+    coverage_record_ids = tuple(active)
+    coverage_candidate_ids = tuple(keyed)
+    if requested and source_references is not None:
+        payload.update(coverage_selection_contract=COVERAGE_SELECTION_CONTRACT,
+                       coverage_record_ids=list(coverage_record_ids),
+                       coverage_candidate_ids=list(coverage_candidate_ids))
     for row in payload["candidates"]:
         row["allowed_account_source_ids"] = sorted(account_ids[row["candidate_id"]])
         row["allowed_restoration_peer_ids"] = list(
             restoration_peer_ids(row["candidate_id"], targets))
+    cache_context = {key: value for key, value in payload.items()
+                     if key not in ("coverage_record_ids", "coverage_candidate_ids")}
     retained = retained_independent_review(
-        review_state, context=payload, source_treatments=source_treatments,
+        review_state, context=cache_context, source_treatments=source_treatments,
         account_ids=account_ids, targets=targets, recheck_source_ids=recheck_source_ids)
     decisions, retained_issues = _read_verdicts(
         {"verdicts": list(retained.values())}, {key: keyed[key] for key in retained},
-        account_ids=account_ids, targets=targets, source_treatments=source_treatments)
+        account_ids=account_ids, targets=targets, source_treatments=source_treatments,
+        source_references=source_references)
     if retained_issues:
         raise SchemaViolation("Retained independent dispute decisions are no longer admissible")
     pending = tuple(key for key in keyed if key not in decisions)
@@ -434,7 +473,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     "catalogue. With no pending candidates return verdicts=[]; do not repeat "
                     "retained candidate decisions.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
-        output_limit = max(4096, min(8192, 512 * len(pending)))
+        output_limit = max(4096, min(16384, 512 * len(pending)
+                           + (384 * len(source_treatments) if requested else 0)))
         try:
             if (estimate_tokens(system + user) + output_limit
                     > model.context_budget(Tier.JUDGE)):
@@ -449,7 +489,9 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                             tuple(sorted(set().union(*targets.values()))),
                             tuple(sorted({peer for key in pending
                                           for peer in restoration_peer_ids(key, targets)})),
-                            coverage_ids=coverage_ids),
+                            coverage_ids=coverage_ids, source_references=source_references,
+                            coverage_record_ids=coverage_record_ids,
+                            coverage_candidate_ids=coverage_candidate_ids),
                     Tier.JUDGE, max_tokens=output_limit)
             except SchemaViolation as exc:
                 result = quarantined_independent_result(exc)
@@ -464,7 +506,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 result.data, {key: keyed[key] for key in pending}, account_ids=account_ids,
                 targets=targets, source_treatments=source_treatments,
                 source_disagreements=observed_disagreements
-                if source_disagreements is not None else None)
+                if source_disagreements is not None else None,
+                source_references=source_references)
         except (ProviderUnavailable, ContextOverflow, OutputTruncated,
                 ContentRefused, RateLimited) as exc:
             observable = (review_status is not None or requested and coverage is not None
@@ -491,7 +534,10 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             try:
                 coverage_decision = checked_coverage(
                     result.data.get("coverage") if isinstance(result.data, dict) else None,
-                    coverage_ids)
+                    coverage_ids, source_references=source_references,
+                    record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
+                    admitted_candidate_ids=[identity for identity, row in decisions.items()
+                                            if row["verdict"] == "accept"])
                 last_valid_coverage = deepcopy(coverage_decision)
                 coverage_issue = None
             except SchemaViolation as exc:
@@ -518,8 +564,22 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             source_disagreements.append({
                 **diagnostic, "candidate_type": "dispute", "proposal": asdict(keyed[identity]),
             })
+        if coverage_decision and source_references is not None:
+            for check in coverage_decision["source_checks"]:
+                treatment = source_treatments[check["source_id"]]
+                supplies = check["content_purpose"] == "account"
+                owner_account = bool(treatment.get("substantive_spans"))
+                if check["content_purpose"] != "unresolved" and supplies != owner_account:
+                    source_disagreements.append({
+                        "diagnostic_kind": "coverage_source_purpose",
+                        "source_id": check["source_id"],
+                        "content_role": treatment["content_role"],
+                        "supplies_account_content": supplies,
+                        "coverage_source_check": deepcopy(check),
+                        "review_scope": deepcopy(review_scope)})
     remember_independent_review(
-        review_state, context=payload, source_treatments=source_treatments, decisions=decisions)
+        review_state, context=cache_context, source_treatments=source_treatments,
+        decisions=decisions)
     # A tuple-only caller cannot observe unread units without an explicit sink.
     if envelope_issue and review_status is None and not (requested and coverage is not None):
         raise SchemaViolation("Dispute review envelope remained unread: " + envelope_issue)
@@ -554,6 +614,36 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             + "; coverage of the final admitted record was not reassessed.")
         coverage_issue = "; ".join(filter(None, (coverage_issue, admission_issue)))
     decisions = admitted
+    if (requested and source_references is not None and last_valid_coverage is not None
+            and (unread or downgraded) and not envelope_issue):
+        # Preserve the original source reading and unaffected representation.
+        # Held proposals invalidate only portions depending on those proposals.
+        coverage_decision = deepcopy(last_valid_coverage)
+        accepted_ids = {identity for identity, row in decisions.items()
+                        if row["verdict"] == "accept"}
+        missing = set(coverage_decision["missing_source_ids"])
+        for item in coverage_decision["dispositions"]:
+            item["candidate_ids"] = [identity for identity in item["candidate_ids"]
+                                     if identity in accepted_ids]
+            if item["status"] == "represented" and not (
+                    item["candidate_ids"] or item["record_ids"]):
+                item.update(status="unresolved", reason=(
+                    "The proposed representation was held at final admission."))
+                missing.add(item["source_id"])
+        coverage_decision.update(
+            state="partial", missing_source_ids=[identity for identity in coverage_ids
+                                                  if identity in missing],
+            reason="Independent source reading retained; specific proposed work remains held.",
+            admission_holds=[{
+                "candidate_id": identity,
+                "admission_issue": decisions.get(identity, {}).get(
+                    "admission_issue", "review_unavailable"),
+                "reason": decisions.get(identity, {}).get("reason", "Review remains unfinished."),
+                "relation": keyed[identity].relation,
+                "target_ids": list(keyed[identity].related_dispute_ids),
+                "quoted": keyed[identity].quoted,
+            } for identity in (*downgraded, *unread)])
+        coverage_issue = None
     if coverage is not None:
         coverage.clear()
         assessment = coverage_decision or {
