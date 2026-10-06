@@ -92,7 +92,7 @@ def test_complete_attributed_conversation_and_sourced_change_use_one_call():
     assert prompt.operation == "extract_legal_details"
     assert all(label in prompt.system for label in
                ("Message:", "Purpose:", "Look for:", "Outcome:"))
-    assert "independently material details" in prompt.system
+    assert "independently material account details" in prompt.system
     payload = json.loads(prompt.user)
     assert payload["current_matter_id"] == "matter-1"
     assert [(entry["turn_id"], entry["role"],

@@ -129,6 +129,19 @@
       "files": [
         "nm/brain/disputes.py"
       ]
+    },
+    {
+      "slice": "material-prompt-evidence-order",
+      "owners": [
+        "LB-176",
+        "LB-178"
+      ],
+      "decision": "Read original substantive evidence and current review authority before identifying atomic material, choosing explicit creation or revision, then assigning owned targets and status. Preserve actor/time/source uncertainty, objectives versus NM work, exact original lineage and no-change legitimacy. Review instruction is not factual evidence; assignment IDs establish identity, not meaning. Same operation schema and calls.",
+      "validation": "30 specialist, material record and assignment cases passed offline; real-model semantic/browser qualification deferred.",
+      "files": [
+        "nm/brain/material.py",
+        "tests/test_brain_material_specialist.py"
+      ]
     }
   ]
 }

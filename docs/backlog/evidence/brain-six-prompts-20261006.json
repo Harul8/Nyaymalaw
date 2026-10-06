@@ -122,6 +122,29 @@
         "Activity 3 - Choose an owned creation or revision.",
         "Activity 4 - Preserve attribution, ownership and identification certainty."
       ]
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "64c7f429133fdda2bcc56acc37a2638680ea29ad683fa37496ca61e9739234de",
+      "new_sha256": "9b19a7529fdfc499b3903c6c2174f8ab929474340bf8d60df2b75b43c0e89f4c",
+      "old_words": 1126,
+      "new_words": 989,
+      "paragraph_mapping": {
+        "old_1": "Message",
+        "old_2": "Purpose",
+        "old_3": "Activity 2",
+        "old_4": "Activity 3",
+        "old_5": "Activities 1 and 4",
+        "old_6": "Final Outcome"
+      },
+      "decision": "Keeps material.py as the style reference; separates original-source authority from content and operation before assignment. Preserves single assignment owner, atomic account lineage and unchanged return schema.",
+      "new_activities": [
+        "Activity 1 - Establish substantive evidence and review authority.",
+        "Activity 2 - Identify each independently material detail.",
+        "Activity 3 - Choose an owned creation or explicit revision.",
+        "Activity 4 - Select assignment and preserve status."
+      ]
     }
   ]
 }
