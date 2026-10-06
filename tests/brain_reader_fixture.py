@@ -329,10 +329,14 @@ def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False,
             continue
         accepted = row.get("verdict") == "accept"
         sources = candidate.get("allowed_account_source_ids", [])
+        primary = [identity for identity in sources if
+                   payload.get("source_treatments", {}).get(identity, {}).get("quoted")
+                   == candidate.get("latest_message_passage",
+                                    candidate.get("latest_advocate_passage"))]
         row.setdefault("account_check", {
             "content_role": "reported_matter_account" if accepted else "uncertain",
             "supported": accepted, "introduces_legal_analysis": False,
-            "source_ids": sources[:1] if accepted else [],
+            "source_ids": (primary or sources)[:1] if accepted else [],
             "reason": "The scripted record decision checks the attributed account layer.",
         })
         account = row.get("account_check")

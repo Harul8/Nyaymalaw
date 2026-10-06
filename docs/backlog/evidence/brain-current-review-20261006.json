@@ -1609,6 +1609,19 @@
       "canonical_changes": "No fields, source words, disposition meanings, ownership, support checks, replay contract or seals changed. Only native alternatives match the existing mandatory checks.",
       "call_impact": "Zero new model stages. Invalid structural generation alternatives removed; admission remains mandatory. Conditional repair and false-positive reduction require subsequent browser measurement.",
       "remaining": "Real reviewer can still select an unrelated eligible record or wrong semantic disposition. Grouping, support completeness, useful delivery and legal material remain unqualified. Browser checkpoint follows coherent applicable-shape repairs."
+    },
+    {
+      "piece": "Fixture transport preserves primary original evidence",
+      "base": "ab72617",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Offered source catalogue is not a selected support decision, including in scripted tests.",
+      "observable_pass": "Scripted default support selects exact candidate primary passage rather than first available ID. Explicit malformed/negative/foreign decisions are never repaired.",
+      "baseline": "Three public tests failed on existing ab72617, with identical failures under caaf4aa coverage schema and before the continuation candidate. Source choice expansion exposes fixture sources[:1] assumption.",
+      "verification": "65 focused fixture/public/source-review tests pass; original 8-call, complete-history, saved/reopened and v3/v4 replay assertions retained.",
+      "canonical_changes": "Test helper only. No production semantics, status, proof, source classification or ownership altered. Larger continuation candidate preserved separately before prerequisite.",
+      "call_impact": "Zero production stages/calls. Explicit fixture judgments are not model accuracy evidence.",
+      "remaining": "Resume native continuation outcome generation; all semantic/browser acceptance gaps remain open."
     }
   ],
   "additional_reviewer_input": {
