@@ -25,12 +25,16 @@ leaves the turn standing; WITHHOLD on a TURN emits nothing at all.
 So §7.1's claim becomes precise and, as written before, it was wrong in one
 direction and right in the other:
 
-    THE TURN IS WITHHELD BY EXACTLY THREE GATES -- G-GROUND, G-ATTRIB and
-    G-QUOTE, the grounding family -- PLUS G-STALE, which is not a quality gate
-    at all but a concurrency re-derive.
+    The original primary-source grounding gates -- G-GROUND, G-ATTRIB and
+    G-QUOTE -- and the concurrency gate G-STALE withhold their TURN scope.
+    NMBrain also declares TURN withholding for untrusted code-owned evidence
+    (G-CORE) and an unconfirmed atomic save (G-COMMIT). A missing supported
+    result (G-EFFECT) withholds only its NEED; uncertain independent review
+    coverage (G-INCOMPLETE) discloses that NEED and cannot certify its review
+    completion. Each row's built flag records whether its owner is wired.
 
-Everything else blocks a step or discloses a limit, and which one it does is
-read from this table rather than decided where the condition is detected.
+Response, scope and recovery are read from this table. A unit-level mismatch
+cannot acquire TURN scope merely because it was detected inside a turn.
 
 THE SECOND COPY IS WHAT MAKES THIS DANGEROUS, SO THERE ISN'T ONE
 ----------------------------------------------------------------
@@ -302,7 +306,7 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
 
-    # ---- DERIVE: the grounding family. THE ONLY GATES THAT WITHHOLD -------
+    # ---- DERIVE: the primary-source grounding family ---------------------
     Gate(
         id="G-GROUND",
         condition="A proposition in the answer is not supported by the span of a "
@@ -628,7 +632,8 @@ GATES: tuple[Gate, ...] = (
         # cause, which is work here and not an action there.
         recovery=Recovery.SYSTEM,
         visible="D5's counterexample, and it ran for a whole slice: "
-                "`nm/Archives/legal_brain/reason/proof_contracts.py` refused an OBTAINABLE position with "
+                "`nm/Archives/legal_brain/reason/proof_contracts.py` refused an "
+                "OBTAINABLE position with "
                 "nothing named that would obtain it, refused an ABSENT one "
                 "with no dead end, and drew `uncovered` from the ELEMENTS so "
                 "the coverage gate could not certify itself \u2014 and "
@@ -757,6 +762,76 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
 
+    # ---- NMBrain: code-owned evidence, checked results and saving ----------
+    # Declared here; set built=True only in the milestone that wires the
+    # owning paths. Ordinary formatting and optional metadata are not gates.
+    Gate(
+        id="G-CORE",
+        condition="NMBrain cannot trust its code-owned conversation history, "
+                  "identity, attributed source catalogue, owned snapshot or "
+                  "execution receipt. A wrong model selector is a unit-level "
+                  "result defect, not evidence that the owned catalogue is corrupt.",
+        states=("trusted", "invalid", "unconfirmed"),
+        response=Response.WITHHOLD,
+        scope=Scope.TURN,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="NM could not safely finish this turn. No new successful save "
+                "is confirmed; a success reply is withheld.",
+        feature="P5",
+        built=False,
+    ),
+    Gate(
+        id="G-EFFECT",
+        condition="A positive typed result or requested completion is not "
+                  "supported by its independently checked unit, owned effects "
+                  "or verified current state. Empty changes alone are not a "
+                  "failure: checked no-change or already-current outcomes may "
+                  "legitimately establish the requested result.",
+        states=("established", "unsupported", "unassessed"),
+        response=Response.WITHHOLD,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="The unsupported result is withheld for this part of the work. "
+                "Supported parts remain available; this part is not marked completed.",
+        feature="P5",
+        built=False,
+    ),
+    Gate(
+        id="G-INCOMPLETE",
+        condition="Independent coverage of the authorised review is partial "
+                  "or unassessed. It cannot establish full completion of that "
+                  "review; independently checked narrower effects and truthful "
+                  "partial work remain available. This does not mean new rows "
+                  "are required or that a particular fact is false.",
+        states=("complete", "partial", "unassessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="The requested review remains incomplete. Checked changes and "
+                "supported work remain available; the review is not marked completed.",
+        feature="P5",
+        built=False,
+    ),
+    Gate(
+        id="G-COMMIT",
+        condition="The atomic save of the owned input, admitted effects and "
+                  "exact released reply is not confirmed. A lost acknowledgement "
+                  "may be cleared only by verifying the exact durable turn; "
+                  "intended work or a prepared receipt does not prove a save.",
+        states=("confirmed", "failed", "unconfirmed"),
+        response=Response.WITHHOLD,
+        scope=Scope.TURN,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="NM could not confirm that this turn was saved. A success reply "
+                "is withheld until the exact saved turn can be verified.",
+        feature="I1",
+        built=False,
+    ),
+
     # ---- infrastructure ---------------------------------------------------
     Gate(
         id="G-READ",
@@ -823,8 +898,7 @@ def gate(gate_id: str) -> Gate:
 
 
 def withholding() -> tuple[Gate, ...]:
-    """The gates that fail closed. There are four, and they are the answer to
-    "what does §7.1 actually mean"."""
+    """Declared fail-closed gates; each row owns its scope and wiring status."""
     return tuple(g for g in GATES if g.response.fails_closed)
 
 
@@ -845,3 +919,21 @@ def as_rows() -> list[dict]:
         }
         for g in GATES
     ]
+
+
+
+def gate_diagnostic(gate_id: str, state: str) -> dict[str, str]:
+    """Name the authoritative invariant with a declared, content-free reason.
+
+    This diagnostic carries no caller-provided prose or matter references.
+    It reports the row; the owning execution boundary must apply its scope.
+    """
+    if not isinstance(gate_id, str) or gate_id not in BY_ID:
+        raise KeyError("Diagnostic must name an authoritative gate")
+    row = gate(gate_id)
+    if not isinstance(state, str) or state not in row.states:
+        raise ValueError(f"{row.id}: diagnostic state is outside its declared vocabulary")
+    return {"gate": row.id, "state": state,
+            "response": row.response.value, "scope": row.scope.value,
+            "recovery": row.recovery.value,
+            "invariant": row.condition, "reason": state}

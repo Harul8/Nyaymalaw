@@ -31,21 +31,14 @@ from nm.shared.traceability_contracts import refuses
 pytestmark = pytest.mark.class_a
 
 
-def test_the_turn_is_withheld_by_the_grounding_family_and_nothing_else():
-    """THE ANSWER TO THE REVIEW'S STOP-SHIP #3, made checkable.
-
-    "Fails closed only on grounding" was wrong as written and right in spirit.
-    Precisely: exactly three gates withhold a TURN on quality grounds, and they
-    are the grounding family. G-STALE also withholds a turn and is not a
-    quality gate at all — it is a concurrency re-derive, and calling that
-    "failing closed" is what made the original sentence unfalsifiable.
-    """
+def test_turn_and_need_withholding_have_explicit_distinct_owners():
     turn_withholding = {g.id for g in withholding() if g.scope is Scope.TURN}
-    assert turn_withholding == {"G-GROUND", "G-ATTRIB", "G-QUOTE", "G-STALE"}
-
-    quality = turn_withholding - {"G-STALE"}
-    assert quality == {"G-GROUND", "G-ATTRIB", "G-QUOTE"}, (
-        "if this set grows, §7.1's claim has changed and the document must say so")
+    assert turn_withholding == {
+        "G-GROUND", "G-ATTRIB", "G-QUOTE", "G-STALE", "G-CORE", "G-COMMIT"}
+    assert gate("G-EFFECT").response is Response.WITHHOLD
+    assert gate("G-EFFECT").scope is Scope.NEED
+    assert gate("G-INCOMPLETE").response is Response.DISCLOSE
+    assert gate("G-INCOMPLETE").scope is Scope.NEED
 
 
 def test_a_gate_cleared_by_a_person_carries_a_could_not_evaluate_state():
@@ -147,7 +140,7 @@ def test_unbuilt_gates_are_declared_unbuilt():
     # DG-02: dependency-sensitive enforcement now covers the last gate.
     # This inventory is paired with served positive/negative controls in
     # test_limitation_step_gate, not accepted as proof of semantic quality.
-    assert unbuilt == set(), (
+    assert unbuilt == {"G-CORE", "G-EFFECT", "G-INCOMPLETE", "G-COMMIT"}, (
         "the unbuilt set changed — either something landed, or something "
         "regressed, and both need a deliberate edit here")
 

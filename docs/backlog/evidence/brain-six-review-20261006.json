@@ -469,6 +469,22 @@
         "nm/brain/checked.py",
         "tests/test_brain_independent_tier.py"
       ]
+    },
+    {
+      "slice": "declare-proportionate-brain-release-gates",
+      "owners": [
+        "LB-186",
+        "LB-187",
+        "LB-191",
+        "LB-192"
+      ],
+      "decision": "The authoritative gate matrix now declares owned-evidence and unconfirmed-save TURN withholding, unsupported positive result NEED withholding, and incomplete independent-review NEED disclosure. Optional metadata has no new gate. New rows remain declared unbuilt until actual owner paths consult them; existing model-unavailability NEED scope is preserved.",
+      "validation": "24 offline gate policy/matrix cases passed; declared states/scopes and content-free diagnostics checked. Earlier independent-tier slice actual count was 158, correcting the 159 bookkeeping typo. No real-model/browser calls.",
+      "files": [
+        "nm/shared/gates_contracts.py",
+        "tests/test_gate_matrix.py",
+        "tests/test_brain_gate_policy.py"
+      ]
     }
   ]
 }
