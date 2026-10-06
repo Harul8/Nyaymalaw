@@ -687,6 +687,23 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
         scopes["target_ids"]["maxItems"] = 0
     source_ids = tuple(_mutation_source_catalogue(conversation, latest))
     scopes["authority_source_ids"]["items"]["enum"] = list(source_ids)
+    scope_item = decisions["mutation_scopes"]["items"]
+    new_scope = deepcopy(scope_item)
+    new_scope["properties"]["target_scope"]["enum"] = ["exact"]
+    new_scope["properties"]["target_ids"]["maxItems"] = 0
+    new_scope["properties"]["permitted_relations"]["items"]["enum"] = ["new"]
+    scope_choices = [new_scope]
+    if target_ids:
+        targeted_scope = deepcopy(scope_item)
+        targeted_scope["properties"]["target_scope"]["enum"] = ["exact"]
+        targeted_scope["properties"]["target_ids"]["minItems"] = 1
+        scope_choices.append(targeted_scope)
+    whole_review = deepcopy(scope_item)
+    whole_review["properties"]["authority_kind"]["enum"] = ["interpretation_review"]
+    whole_review["properties"]["target_scope"]["enum"] = ["reviewed_whole"]
+    whole_review["properties"]["target_ids"]["maxItems"] = 0
+    scope_choices.append(whole_review)
+    decisions["mutation_scopes"]["items"] = {"anyOf": scope_choices}
     if not conversation.current_matter_id:
         decisions["matter_scope"]["enum"].remove("current")
     else:

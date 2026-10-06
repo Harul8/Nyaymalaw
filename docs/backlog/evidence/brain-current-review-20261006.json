@@ -1518,6 +1518,31 @@
       "verification": "Same36 public cases all pass after migration; Ruff clean. Admitted effects, bounded correction and exact replay assertions retained.",
       "call_impact": "No production/model-flow change or live calls. Existing asserted call counts unchanged.",
       "remaining": "Pinned-model semantics and useful browser delivery remain independently open. These fixture failures are explained causally, not waived as a blanket baseline."
+    },
+    {
+      "piece": "Applicable fresh mutation-scope generation",
+      "base": "9170c45",
+      "production_file": "nm/brain/conversation.py",
+      "prompt_changes": 0,
+      "invariant": "The provider receives applicable combinations: exact empty target permits only new; exact revision requires owned nonempty targets; reviewed_whole requires interpretation_review and empty targets. Canonical scope admission remains authoritative.",
+      "observed_baseline": "Two real interpreter calls rejected legitimate input before any source/dispute reader. First selected exact empty targets with new+adds, correction dropped required scope. No save occurred.",
+      "live_prerequisite_proof": {
+        "path": "docs\\backlog\\evidence\\brain-grouping-routing-prerequisite-20261007-live.json.gz",
+        "sha256": "2a304aab1435491ad71e916a9d3a856995ea52719e391f5e87ce2148913967de",
+        "calls": 2,
+        "charge_usd": 0.003553,
+        "acceptance": "BLOCKED before dispute activity, not dispute grouping failure"
+      },
+      "verification": {
+        "focused_generation_baseline": "5 failed/12 passed",
+        "focused_generation_after": "17 passed",
+        "integrated_synthetic_matrix": "190 passed",
+        "lint": "passed",
+        "meaning": "Scope and authority choices are authored; tests prove wire/admission and recovery, not semantic interpretation"
+      },
+      "canonical_changes": "None: _SCHEMA, _MUTATION_SCOPE_SCHEMA, _mutation_scopes, record requirement and saved execution ownership unchanged.",
+      "call_impact": "Zero added routine or conditional calls. Existing one interpreter plus bounded conditional correction; more applicable native shape branches can reduce invalid attempts but token/latency impact remains unmeasured.",
+      "remaining": "Resume same unsaved browser input then neutral-to-opposing dispute qualification; requested-delivery goals, material atomicity/association, legal gathering and wider semantic readiness remain open."
     }
   ],
   "additional_reviewer_input": {
@@ -1996,5 +2021,13 @@
   "grouping_live_evidence": {
     "path": "docs/backlog/evidence/brain-dispute-grouping-20261007-live.json.gz",
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
+  },
+  "current_budget": {
+    "combined_measured_usd": 2.401917,
+    "remaining_usd": 2.598083,
+    "new_ledger_attempts": 128,
+    "unknown_attempts": 0,
+    "inflight_attempts": 0,
+    "basis": "166 frozen prior attempts at1.877078 +128 measured current attempts at0.524839; cumulative authorization5 unchanged"
   }
 }

@@ -182,11 +182,19 @@ def test_consequential_requirement_conflicts_get_only_one_precise_correction(
     model = Model(bad, bad)
 
     with pytest.raises(SchemaViolation, match=fragment):
+        brain._turn_plan(brain_continuation_fixture.prepare_interpretation(bad),
+                         context(), latest=request)
+    generation_fragment = (
+        "matches no declared alternative"
+        if (declared["kind"] == "change" and declared["operation"] != "new"
+            and not declared["target_ids"] and purposes)
+        else fragment)
+    with pytest.raises(SchemaViolation, match=generation_fragment):
         brain.interpret(model, context(), request)
 
     assert len(model.calls) == 2
     feedback = json.loads(model.calls[1][0].user)
-    assert fragment in feedback["validation_issue"]
+    assert generation_fragment in feedback["validation_issue"]
     assert feedback["original_input"]["earlier_conversation"][0]["text"] == (
         context().messages[0].text)
 
