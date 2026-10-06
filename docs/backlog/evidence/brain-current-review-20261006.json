@@ -1091,6 +1091,27 @@
       },
       "call_impact": "Production call design unchanged. Old unrepresented fixtures correctly required two omission-recovery calls; corrected authored fixtures exercise their intended boundaries without that unrelated omission. No paid calls.",
       "remaining": "Scripted reviewers do not establish actual source meaning, law applicability or useful completion. Delivery/result contract remains pending."
+    },
+    {
+      "piece": "typed follow-up display ownership",
+      "owner": "nm/brain/continuation.py",
+      "version": "49065d2 plus one production file",
+      "general_invariant": "A question or proposed task must link to the matching owned question/next_work expression; an account or record-result expression cannot silently own it.",
+      "pass_condition": "Reject mismatched links before independent reply review, retain unrelated request units, preserve legitimate shared expressions and saved pending identities, and recover using the existing writer bound.",
+      "verification": {
+        "new_cases": 10,
+        "baseline": "6 failed / 4 passed",
+        "focused_passed": 190,
+        "public_module_passed": 16,
+        "paired_cases": "Wrong record_result/source_account links; matching links, harmless repeated target IDs, independent peers and prior pending identities.",
+        "public_correction_calls": 4,
+        "correct_complete_fixture_calls": 8,
+        "replay_calls": 0,
+        "integrated_passed": 103
+      },
+      "fixture_alignment": "Three receipt scenarios lacked their reported possession detail. Explicit independent details now satisfy original-source coverage; exact saved attribution assertions added. Hidden-question now corrects before Judge rather than forcing an inapplicable negative Judge.",
+      "call_impact": "No routine stage or additional model call. Existing bounded writer correction handles only the faulty unit; this public malformed-link case uses one fewer Judge call. No paid calls.",
+      "remaining": "Versioned status rendering, requested-delivery evidence, saved substantive completion and actual pinned-model acceptance remain pending. This prerequisite does not close the observed false completion."
     }
   ],
   "additional_reviewer_input": {

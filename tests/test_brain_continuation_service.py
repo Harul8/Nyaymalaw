@@ -28,6 +28,7 @@ from tests.test_brain_continuation import (
     unit,
     verdict,
 )
+from tests.test_brain_material import material
 from tests.test_brain_turn import plan
 
 FIXTURE_SOURCE_PURPOSES = {
@@ -164,6 +165,22 @@ def opening_route(text):
                 material_purposes=("account_contribution",))
 
 
+def reported_receipt():
+    """The scenario reports possession, without checking the document's contents."""
+    return material(
+        "evidence", "The advocate reports holding a signed receipt.",
+        "I have a signed receipt for the disputed transaction.",
+        basis="described_record", placement="matter")
+
+
+def assert_saved_receipt(saved, turn_id):
+    detail, = saved.brain_chat[0]["response"]["material"]
+    assert detail["statement"] == "The advocate reports holding a signed receipt."
+    assert detail["quoted"] == "I have a signed receipt for the disputed transaction."
+    assert detail["source_turn_id"] == turn_id
+    assert detail["grounding"] == "advocate_semantic_v1"
+
+
 def send(client, message, turn_id, *, opened=None):
     body = {"message": message, "turn_id": turn_id}
     if opened is not None:
@@ -231,32 +248,45 @@ def test_public_hidden_question_purpose_is_rewritten_into_an_actual_visible_ques
     repaired["blocks"][1] = expression_block("question-0", "question", operator="question",
                                             focus="event", uncertainty="none")
 
-    def unexpressed(payload):
-        result = reviewed_verdicts(payload, verdict(0))
-        result["verdicts"][0]["proposal_checks"][0].update(
-            purpose_expressed=False, reason="The recap does not ask for the event date.")
-        return result
+    def corrected_writer(payload):
+        correction = payload["correction"]
+        rejected, = correction["rejected_units"]
+        assert rejected["questions"][0]["id"] == "objective-0"
+        assert rejected["questions"][0]["block_id"] == "account-0"
+        assert "questions[0].block_id" in correction["validation_issues"][0]["issue"]
+        assert "account-0" in correction["validation_issues"][0]["issue"]
+        return {"units": [repaired]}
 
-    model = PublicContinuationModel([routing], [{"units": [hidden]}, {"units": [repaired]}],
-                                    checks=[unexpressed, verdict(0)])
+    def visible_question_review(payload):
+        reviewed, = payload["units"]
+        assert reviewed["questions"][0]["block_id"] == "question-0"
+        assert reviewed["blocks"][1]["kind"] == "question"
+        return verdict(0)
+
+    model = PublicContinuationModel([routing], [{"units": [hidden]}, corrected_writer],
+                                    checks=[visible_question_review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     answer = send(client, message, "structured-visible-question")
 
-    assert answer["metrics"]["llm_calls"] == 5
+    assert answer["metrics"]["llm_calls"] == 4
+    assert [operation for operation, _ in model.calls] == [
+        "interpret_conversation", "continue_conversation", "continue_conversation",
+        "verify_continuation"]
     visible = "\n".join(row["text"] for row in answer["elements"])
     assert "What needs clarification about the event of the following account?" in visible
     assert 'Your message includes: “I am unsure which date matters.”' in visible
     metadata = answer["continuation"]["units"][0]["questions"][0]
     assert metadata["block_id"] == "question-0"
-    correction = model.calls[3][1]["correction"]["validation_issues"][0]["issue"]
-    assert "objective-0" in correction and "account-0" in correction
+    correction = model.calls[2][1]["correction"]["validation_issues"][0]["issue"]
+    assert "questions[0].block_id" in correction and "account-0" in correction
 
 
 def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
         client, wired, monkeypatch):
     message = "I have a signed receipt for the disputed transaction. Please review it."
-    model = PublicContinuationModel([opening_route(message)], [{"units": [unit()]}])
+    model = PublicContinuationModel([opening_route(message)], [{"units": [unit()]}],
+                                    detail_reads=[[reported_receipt()]])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     first = send(client, message, "continuation-first")
@@ -287,6 +317,7 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["elements"] == first["elements"]
     assert saved.brain_chat[0]["response"]["continuation"] == first["continuation"]
+    assert_saved_receipt(saved, "continuation-first")
 
 
 def test_public_contributor_keeps_chronology_and_material_review_without_requested_law(
@@ -519,7 +550,8 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
 def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired, monkeypatch):
     message = "I have a signed receipt for the disputed transaction. Please review it."
     proposed = mixed_purpose_unit()
-    model = PublicContinuationModel([opening_route(message)], [{"units": [proposed]}])
+    model = PublicContinuationModel([opening_route(message)], [{"units": [proposed]}],
+                                    detail_reads=[[reported_receipt()]])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     released = send(client, message, "public-mixed-block")
@@ -536,6 +568,7 @@ def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired
     writer = next(payload for operation, payload in model.calls
                   if operation == "continue_conversation")
     assert checked["units"] == reviewed_units(writer, proposed)
+    assert_saved_receipt(wired.store.load(released["matter_id"]), "public-mixed-block")
 
 
 def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusation(
@@ -548,7 +581,8 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     model = PublicContinuationModel(
         [opening_route(message)], [{"units": [unsupported]}, {"units": [unsupported]}],
         checks=[verdict(0, accept=False, reason=reason),
-                verdict(0, accept=False, reason=reason)])
+                verdict(0, accept=False, reason=reason)],
+        detail_reads=[[reported_receipt()]])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     response = send(client, message, "public-rejected")
@@ -561,6 +595,7 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["message"] == message
     assert "deliberately concealed" not in json.dumps(saved.brain_chat[0]["elements"])
+    assert_saved_receipt(saved, "public-rejected")
 
 
 def test_public_foreign_chat_and_corrupt_history_stop_before_model_dispatch(

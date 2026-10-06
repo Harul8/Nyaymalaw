@@ -850,6 +850,15 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                 raise SchemaViolation(
                     f"{path}.block_id {row['block_id']!r} has no displayed owner; "
                     f"select the block actually expressing its purpose from {list(blocks)!r}")
+            expected_operator = "question" if field == "questions" else "next_work"
+            selected_operator = blocks[row["block_id"]].get(
+                "evidence_expression", {}).get("operator")
+            if selected_operator != expected_operator:
+                raise SchemaViolation(
+                    f"{path}.block_id {row['block_id']!r} selects "
+                    f"{selected_operator!r}; this proposal needs its displayed "
+                    f"{expected_operator!r} expression. Select or provide the "
+                    "matching expression without replacing independent supported work")
             unknown_targets = list(dict.fromkeys(
                 identity for identity in row["target_ids"] if identity not in records))
             if unknown_targets:
