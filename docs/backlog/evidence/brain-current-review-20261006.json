@@ -1040,6 +1040,21 @@
       "call_impact": "Zero additional routine stages or calls; existing correction ledger unchanged. No paid calls.",
       "test_transport": "Legacy scripted reviewer fixture output is translated only when the fresh contract marker is supplied and unique owned checks exactly match the legacy source selection. Contradictions, foreign IDs and malformed checks remain rejected. RawJudge can bypass fixture transport.",
       "remaining": "Material reviewer activation, exact per-source offered endpoint bounds, independent-contestability semantics and pinned browser acceptance remain open."
+    },
+    {
+      "piece": "fresh source-specific passage bounds",
+      "owner": "nm/brain/record_review.py",
+      "version": "c1ee267 plus this one production file",
+      "pass_condition": "Each fresh source-check alternative binds source_id to that owned source length; invalid endpoints get exact ID/start/end/length feedback, without modifying selected words or historical proof.",
+      "verification": {
+        "new_tests": 26,
+        "new_baseline": "11 failed /15 passed before implementation",
+        "focused_passed": 257,
+        "ruff": "passed",
+        "public_boundary": "Peer-preserving bounded correction, admitted support, saved correction and historical replay exercised with scripted providers."
+      },
+      "call_impact": "No routine or recovery stage added. Reduces offered range ambiguity; conditional call reduction and semantic accuracy not measured. No paid calls.",
+      "remaining": "Material wire consumer pending; coverage envelopes still have global schema bounds with exact owned admission checks. Source meaning, omission and browser readiness remain open."
     }
   ],
   "additional_reviewer_input": {

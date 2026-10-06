@@ -39,12 +39,26 @@ def owned_source_portions(reference: dict, selections: list[dict], *,
                    for key in ("turn_id", "quoted"))
             or not isinstance(selections, list)):
         raise SchemaViolation("Source portions require canonical original advocate words")
+    selected = _checked_source_endpoints(selections, len(reference["quoted"]), source_id)
+    result = []
+    for start, end in sorted(selected):
+        identity = [reference[key] for key in ("turn_id", "role", "quoted")]
+        digest = hashlib.sha256(json.dumps(
+            [SOURCE_SELECTION_CONTRACT, identity, start, end],
+            ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        result.append({"anchor_id": "asp_" + digest[:32], "start": start, "end": end,
+                       "quoted": reference["quoted"][start:end]})
+    return result
+
+
+def _checked_source_endpoints(selections: list[dict], length: int,
+                              source_id: str | None) -> set[tuple[int, int]]:
+    """Check offsets against one server-owned source length; never repair them."""
     selected = set()
     for row in selections:
         if not isinstance(row, dict) or set(row) != {"start", "end"}:
             raise SchemaViolation("Source portions require only start and end endpoints")
         start, end = row["start"], row["end"]
-        length = len(reference["quoted"])
         location = (f"source_id={source_id or 'unselected'} "
                     f"start={start!r} end={end!r} length={length}")
         if type(start) is not int or type(end) is not int:
@@ -55,15 +69,7 @@ def owned_source_portions(reference: dict, selections: list[dict], *,
             raise SchemaViolation(
                 f"Source portions {location}: endpoints are outside the owned source bounds")
         selected.add((start, end))
-    result = []
-    for start, end in sorted(selected):
-        identity = [reference[key] for key in ("turn_id", "role", "quoted")]
-        digest = hashlib.sha256(json.dumps(
-            [SOURCE_SELECTION_CONTRACT, identity, start, end],
-            ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
-        result.append({"anchor_id": "asp_" + digest[:32], "start": start, "end": end,
-                       "quoted": reference["quoted"][start:end]})
-    return result
+    return selected
 
 
 def source_dependency(row: dict) -> tuple:
@@ -654,6 +660,16 @@ def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
         account = properties["account_check"]
         account["required"].remove("source_ids")
         del account["properties"]["source_ids"]
+        if source_references is not None and source_ids:
+            checks = account["properties"]["source_checks"]
+            alternatives = []
+            for identity in source_ids:
+                check = deepcopy(checks["items"])
+                check["properties"]["source_id"]["enum"] = [identity]
+                check["properties"]["support_spans"]["items"] = _source_range_schema(
+                    {identity: references[identity]})
+                alternatives.append(check)
+            checks["items"] = {"anyOf": alternatives}
     return properties
 
 
@@ -671,6 +687,26 @@ def canonical_review_from_wire(row: dict, *, schema: dict,
         raise SchemaViolation(
             "Fresh account_check selects sources only through source_checks; "
             "source_ids is server-owned canonical proof")
+    # Give exact owned endpoint feedback before a nested anyOf produces a
+    # generic mismatch. Only the server's offered branch supplies the bound.
+    account = row.get("account_check") if isinstance(row, dict) else None
+    if isinstance(account, dict) and isinstance(account.get("source_checks"), list):
+        item = schema["properties"]["account_check"]["properties"]["source_checks"]["items"]
+        branches = item.get("anyOf", [item])
+        bounds = {}
+        for branch in branches:
+            fields = branch["properties"]
+            ranges = fields.get("support_spans", {}).get("items", {}).get("properties")
+            if ranges:
+                for identity in fields["source_id"]["enum"]:
+                    bounds[identity] = ranges["end"]["maximum"]
+        for check in account["source_checks"]:
+            if (isinstance(check, dict) and isinstance(check.get("source_id"), str)
+                    and check["source_id"] in source_ids
+                    and check["source_id"] in bounds
+                    and isinstance(check.get("support_spans"), list)):
+                _checked_source_endpoints(check["support_spans"],
+                                          bounds[check["source_id"]], check["source_id"])
     require_schema(row, schema)
     result = deepcopy(row)
     checks = result["account_check"]["source_checks"]

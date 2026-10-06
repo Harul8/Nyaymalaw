@@ -102,23 +102,28 @@ def test_default_canonical_properties_preserve_the_existing_complete_contract():
     assert properties == before
 
 
-def test_wire_properties_remove_only_the_redundant_source_selection():
+def test_wire_properties_remove_redundant_selection_and_offer_owned_range_bounds():
     canonical = _canonical_properties()
     before = deepcopy((canonical, REFERENCES))
     wire = record.review_properties(tuple(REFERENCES), (), (),
                                     source_references=REFERENCES, wire=True)
-    assert _schema(wire) == _independent_wire_schema()
+    expected = _independent_wire_schema()
+    expected["properties"]["account_check"]["properties"]["source_checks"]["items"] = (
+        wire["account_check"]["properties"]["source_checks"]["items"])
+    assert _schema(wire) == expected
     assert record.review_properties(tuple(REFERENCES), (), (),
                                     source_references=REFERENCES, wire=False) == canonical
     assert (canonical, REFERENCES) == before
     provider = on_the_wire(_schema(wire))
     _strict_objects(provider)
-    support = provider["properties"]["account_check"]["properties"][
-        "source_checks"]["items"]["properties"]["support_spans"]["items"]
-    assert support["properties"]["start"]["maximum"] == max(
-        len(row["quoted"]) for row in REFERENCES.values())
-    assert support["properties"]["end"]["maximum"] == max(
-        len(row["quoted"]) for row in REFERENCES.values())
+    branches = provider["properties"]["account_check"]["properties"][
+        "source_checks"]["items"]["anyOf"]
+    assert len(branches) == len(REFERENCES)
+    for branch in branches:
+        identity, = branch["properties"]["source_id"]["enum"]
+        support = branch["properties"]["support_spans"]["items"]
+        assert support["properties"]["start"]["maximum"] == len(REFERENCES[identity]["quoted"])
+        assert support["properties"]["end"]["maximum"] == len(REFERENCES[identity]["quoted"])
 
 
 def test_conversion_keeps_support_negative_and_context_checks_in_selected_order():
