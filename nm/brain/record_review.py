@@ -25,6 +25,39 @@ _SOURCE_ROLES = (*_ACCOUNT_CONTENT_ROLES, "examination_material", "work_instruct
                  "nm_interpretation", "uncertain")
 SOURCE_TREATMENT_CONTRACT = "independent_account_source_treatment_v1"
 ACCOUNT_COVERAGE_CONTRACT = "independent_account_coverage_v1"
+SOURCE_SELECTION_CONTRACT = "owned_substantive_spans_v2"
+
+
+def owned_source_portions(reference: dict, selections: list[dict]) -> list[dict]:
+    """Resolve exact offsets in an owned source; this does not certify meaning."""
+    if (not isinstance(reference, dict) or reference.get("role") != "advocate"
+            or any(not isinstance(reference.get(key), str) or not reference[key].strip()
+                   for key in ("turn_id", "quoted"))
+            or not isinstance(selections, list)):
+        raise SchemaViolation("Source portions require canonical original advocate words")
+    selected = set()
+    for row in selections:
+        if (not isinstance(row, dict) or set(row) != {"start", "end"}
+                or type(row["start"]) is not int or type(row["end"]) is not int
+                or not 0 <= row["start"] < row["end"] <= len(reference["quoted"])):
+            raise SchemaViolation("Source portions require exact owned integer endpoints")
+        selected.add((row["start"], row["end"]))
+    result = []
+    for start, end in sorted(selected):
+        identity = [reference[key] for key in ("turn_id", "role", "quoted")]
+        digest = hashlib.sha256(json.dumps(
+            [SOURCE_SELECTION_CONTRACT, identity, start, end],
+            ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        result.append({"anchor_id": "asp_" + digest[:32], "start": start, "end": end,
+                       "quoted": reference["quoted"][start:end]})
+    return result
+
+
+def source_dependency(row: dict) -> tuple:
+    """Purpose and selected evidence affect reuse; reasons and order do not."""
+    return (row["content_role"], row.get("selection_contract"), tuple(sorted(
+        (item["anchor_id"], item["start"], item["end"], item["quoted"])
+        for item in row.get("substantive_spans", []))))
 
 _SOURCE_SYSTEM = """Message: You receive the complete ordered conversation, including saved
 NM words as context, the latest advocate message, and owned advocate spans.
@@ -343,7 +376,7 @@ def retained_independent_review(state: dict | None, *, context: dict,
         if ({key: old[key] for key in ("turn_id", "role", "quoted")}
                 != {key: new[key] for key in ("turn_id", "role", "quoted")}):
             raise SchemaViolation("Independent review reuse changed canonical source identity")
-        if old["content_role"] != new["content_role"]:
+        if source_dependency(old) != source_dependency(new):
             changed.add(identity)
     if not changed <= selected:
         raise SchemaViolation("Independent review reuse omitted a changed source role")
@@ -372,12 +405,10 @@ def owned_source_treatments(catalogue, latest: dict, prior: dict) -> dict[str, d
     if not isinstance(catalogue, dict) or set(catalogue) != expected:
         raise SchemaViolation("Independent source treatment must cover every owned advocate span")
     for key, row in catalogue.items():
-        if (not isinstance(row, dict) or set(row) != {
-                "turn_id", "role", "quoted", "content_role", "reason"}
-                or row["role"] != "advocate" or row["content_role"] not in _SOURCE_ROLES
-                or not isinstance(row["turn_id"], str) or not row["turn_id"].strip()
-                or not isinstance(row["reason"], str) or not row["reason"].strip()
-                or row["quoted"] != (latest[key] if key in latest else prior[key].quoted)
+        canonical = {(row.get("turn_id"), "advocate",
+                      latest[key] if key in latest else prior[key].quoted)} if isinstance(
+                          row, dict) and isinstance(row.get("turn_id"), str) else set()
+        if (not source_treatment_reference_valid(row, canonical)
                 or (key in prior and row["turn_id"] != prior[key].turn_id)):
             raise SchemaViolation(f"Independent source treatment does not own source_id {key}")
     return catalogue
@@ -385,13 +416,32 @@ def owned_source_treatments(catalogue, latest: dict, prior: dict) -> dict[str, d
 
 def source_treatment_reference_valid(row, references: set[tuple[str, str, str]]) -> bool:
     """Read an audit only when its canonical attribution exists in owned history."""
-    return (isinstance(row, dict) and set(row) == {
-                "turn_id", "role", "quoted", "content_role", "reason"}
+    fields = {"turn_id", "role", "quoted", "content_role", "reason"}
+    if not (isinstance(row, dict) and set(row) in (
+                fields, fields | {"selection_contract", "substantive_spans"})
             and row.get("role") == "advocate" and row.get("content_role") in _SOURCE_ROLES
             and isinstance(row.get("reason"), str) and bool(row["reason"].strip())
             and all(isinstance(row.get(field), str) and bool(row[field].strip())
                     for field in ("turn_id", "quoted"))
-            and (row["turn_id"], row["role"], row["quoted"]) in references)
+            and (row["turn_id"], row["role"], row["quoted"]) in references):
+        return False
+    if set(row) == fields:
+        return True  # Explicit historical five-field contract, never upgraded.
+    if (row["selection_contract"] != SOURCE_SELECTION_CONTRACT
+            or not isinstance(row["substantive_spans"], list)
+            or bool(row["substantive_spans"]) != (row["content_role"] in _ACCOUNT_CONTENT_ROLES)):
+        return False
+    try:
+        if any(not isinstance(item, dict) or set(item) != {
+                "anchor_id", "start", "end", "quoted"} for item in row["substantive_spans"]):
+            return False
+        original = owned_source_portions(row, [{"start": item["start"], "end": item["end"]}
+                                               for item in row["substantive_spans"]])
+        return (len(original) == len(row["substantive_spans"])
+                and sorted(original, key=lambda item: (item["start"], item["end"]))
+                == sorted(row["substantive_spans"], key=lambda item: (item["start"], item["end"])))
+    except (SchemaViolation, TypeError, KeyError):
+        return False
 
 
 def substantive_source_treatments(catalogue: dict, references: dict, *,
@@ -407,7 +457,7 @@ def substantive_source_treatments(catalogue: dict, references: dict, *,
         matches = [row for row in catalogue.values() if isinstance(row, dict)
                    and (row.get("turn_id"), row.get("role"), row.get("quoted"))
                    == (ref.turn_id, ref.role, ref.quoted)]
-        if (matches and len({row.get("content_role") for row in matches}) == 1
+        if (matches and len({source_dependency(row) for row in matches}) == 1
                 and (not substantive_only or matches[0]["content_role"] in _ACCOUNT_CONTENT_ROLES)):
             selected[key] = matches[0]
     return selected
