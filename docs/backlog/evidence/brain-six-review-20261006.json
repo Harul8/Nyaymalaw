@@ -77,6 +77,20 @@
         "nm/brain/turn.py",
         "tests/test_brain_turn.py"
       ]
+    },
+    {
+      "slice": "intake-prompt-evidence-order",
+      "owners": [
+        "LB-175",
+        "LB-176",
+        "LB-178"
+      ],
+      "decision": "Rewrite conversation _SYSTEM paragraph by paragraph into Message, Purpose and four ordered activities: identify current items; decide account/review/authority evidence work; choose provisional route/response; propose opening. Preserve full attributed history, material purpose distinctions, authority basis, no unrelated resume, owned scope and bounded correction. Interpreter prose is provisional and proves no saved effect. Existing schema unchanged; no added calls.",
+      "validation": "48 conversation and material-purpose checks passed. Existing prompt wording assertions updated to the reorganized contracts; semantic extraction/routing quality remains unverified pending owner real-model test.",
+      "files": [
+        "nm/brain/conversation.py",
+        "tests/test_new_brain_conversation.py"
+      ]
     }
   ]
 }

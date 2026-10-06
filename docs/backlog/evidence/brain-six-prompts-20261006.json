@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-06",
+  "qualification": "Prompt contract review and offline checks only; semantic quality and false rejection require deferred real-model qualification.",
+  "prompts": [
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "11360a52b649dc853137bd2bb37d487fb2491a6ea62e1d5a00ee71a22caa17d2",
+      "new_sha256": "b661724f8ef48ccb96cb93ebbf944cae241154b6fdeac96905dbc2b1b880f05c",
+      "old_words": 2071,
+      "new_words": 1262,
+      "paragraph_mapping": {
+        "old_1": "Message",
+        "old_2": "Purpose",
+        "old_3": "Activity 1",
+        "old_4": "Activity 3",
+        "old_5": "Activity 4",
+        "old_6": "Activity 2 (material reading)",
+        "old_7": "Activity 2 (authority basis and enquiry)",
+        "old_8": "Final Outcome"
+      },
+      "decision": "Orders understanding before evidence-basis decisions, then response and opening; consolidates repeated route/authority warnings without changing fields. Interim wording names needed checking rather than implying factual work always needs new legal research.",
+      "new_activities": [
+        "Activity 1 - Identify each current request or contribution.",
+        "Activity 2 - Determine the required source work.",
+        "Activity 3 - Choose a useful immediate response.",
+        "Activity 4 - Decide whether the matter can be opened."
+      ]
+    }
+  ]
+}

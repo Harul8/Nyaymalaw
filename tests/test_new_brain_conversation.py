@@ -74,7 +74,7 @@ def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
     decisions = model.calls[0][1]["properties"]["items"]["items"]["properties"]
     assert "current" not in decisions["matter_scope"]["enum"]
     assert decisions["relation"]["enum"] == ["new", "uncertain"]
-    assert "empty earlier" in prompt.system
+    assert "empty conversation is a valid first turn" in prompt.system
     assert "opening" in prompt.system
 
 
@@ -115,8 +115,8 @@ def test_first_general_legal_question_does_not_propose_a_matter():
     assert plan.opening.ready is False
     assert len(model.calls) == 1
     prompt = model.calls[0][0].system
-    assert "Choose `answer` only for a conversational or other nonlegal reply" in prompt
-    assert "A general\nlegal question and a legal aside also need `legal_work`" in prompt
+    assert "answer for a conversational or other nonlegal reply" in prompt
+    assert "regardless of whether it is general or an aside" in prompt
 
 
 def test_legal_aside_remains_a_separate_source_dependent_work_item():
@@ -175,9 +175,9 @@ def test_one_named_client_and_subject_compose_opening_title():
     assert result.opening.title == "Mira Patel: Return of records"
     assert result.opening.party_name == "Mira Patel"
     assert result.opening.subject == "Return of records"
-    assert "one clearly representative name" in model.calls[0][0].system
-    assert "Do not include an opposing party name" in model.calls[0][0].system
-    assert "leave `party_name` empty" in model.calls[0][0].system
+    assert "one representative client-side name" in model.calls[0][0].system
+    assert "opposing party or vs in party_name" in model.calls[0][0].system
+    assert "leave it empty if identity or role is uncertain" in model.calls[0][0].system
 
 
 def test_later_clarification_can_complete_opening_from_prior_advocate_words():

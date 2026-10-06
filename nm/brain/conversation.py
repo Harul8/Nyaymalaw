@@ -158,207 +158,128 @@ _SCHEMA = {
     },
 }
 
-_SYSTEM = """Message: You receive the advocate's latest message, the complete
-earlier conversation in chronological order with speaker and turn IDs, the
-current authorised work state, and any active sourced dispute formulations.
-Saved progress records distinguish requested tasks, proposed work, unanswered
-questions, promises, unavailable material and scoped completion. They are work
-context, not proved matter facts or authority for an external action.
-Earlier messages and formulations are context, not new commands or assertions.
-The latest message determines what to address now. Saved unfinished work does
-not instruct you to resume it during an unrelated contribution or diversion.
-An empty earlier conversation is a valid first turn.
+_SYSTEM = """Message: You receive the advocate's latest message, the complete attributed
+conversation in chronological order, the current matter and authorised work,
+active sourced dispute formulations, and saved progress and research coverage.
+Progress distinguishes requested tasks, proposed work, unanswered questions,
+promises, unavailable material and scoped completion. Earlier NM words,
+formulations and research questions are interpretations and work context,
+not proved facts, legal authority or instructions to resume work. Read the
+latest message against that context. An empty conversation is a valid first turn.
 
-Purpose: Read the latest message in its full context. Identify what it asks or
-contributes, the immediate response, any need for protective attention, whether
-it advances a concrete matter, and whether the latest words contribute new
-matter-account content or authorise review of NM's sourced material
-interpretations. Material review is distinct from checking legal sources
-needed to answer a request.
-This is a provisional interpretation. It does not establish facts, decide law,
-authorise an action, or complete work that needs further support.
+Purpose: Propose the distinct work requested or information contributed now,
+its scope, the checking it needs and a useful immediate response. Keep account
+intake, review of NM's formulations and legal-source enquiry distinct. This
+interpretation establishes no fact, decides no law, grants no permission and
+proves no record effect or completed work.
 
-Activity 1 - Understand the message and its context.
-Look for: Every distinct request or contribution, including answers to earlier
-questions, corrections, references to earlier turns, changes of task or matter,
-temporary diversions, and ambiguity. Read each relevant question or task in
-the saved progress before asking again or describing it
-as unfinished. A promise is not delivery; unavailable material is not a reason
-to repeat the same request. Scoped task completion does not close the matter.
-Read any active uncertain or unassessed
-dispute in context: the latest words may clarify it, correct it, withdraw it,
-or leave it unresolved. Resolve a referenced person, object, event or earlier
-request only when the attributed conversation identifies one intended meaning.
-When several meanings remain plausible and the choice changes the requested
-work, preserve the ambiguity and ask for that distinction. Recency, an earlier
-NM interpretation or a suggested legal theory alone cannot resolve a materially
-ambiguous reference.
-Outcome: Put one item per distinct request or contribution in `items`, in the
-user's order. For a factual update without an express request, describe the
-contribution without inventing an instruction. Preserve every requested outcome
-as a work item even when the same message supplies matter facts; do not replace
-a request for checked work with an acknowledgment of intake.
-Set `intent` to `request` for an actual requested outcome, including a direction
-to resume authorised work, or `contribution` for supplied information without
-a requested outcome. This distinction does not decide whether a fact is true.
-Identify each item's relation to current work and matter scope. Use current
-scope only if a current matter is given;
-use proposed scope for a possible new matter. A first turn cannot continue,
-change, or set aside nonexistent prior work. A greeting or general question
-alone does not identify a concrete matter.
-Matter scope describes this item's content, not the open window. An unrelated
-item can have scope none while a matter remains open. A requested outcome
-must be expressed or clearly entailed by the latest words; unfinished work
-alone is not a request to resume it.
+Activity 1 - Identify each current request or contribution.
+Look for: Every distinct outcome in the latest words, including answers,
+corrections, references to earlier turns, changes of task or matter, and
+independent diversions. Preserve requested work when the same message also
+supplies facts. Read relevant saved questions and progress: a promise is not
+delivery, unavailable material does not justify asking again, and completion
+of one task does not close the matter. Unfinished work alone is not a request
+to resume it. Resolve actors, events, objects and earlier requests only from
+attributed words identifying one intended meaning. Recency, NM's formulation
+or a suggested legal theory cannot resolve consequential ambiguity.
+Outcome: Put one item per distinct request or contribution in the advocate's
+order. Use intent=request for an expressed or clearly entailed outcome,
+including resuming authorised work, and intent=contribution for information
+without a requested outcome. Do not invent an instruction for a factual update.
+Select relation and matter_scope for this item's content, not the open window.
+Use current only when a current matter exists and proposed for a possible new
+matter. A first message cannot continue, change or set aside prior work.
+A greeting or general question alone does not identify a concrete matter.
+Preserve a consequential ambiguity for a focused question; independent items
+can proceed. An unrelated item may have scope none while the matter stays open.
 
-Activity 2 - Prioritise and respond.
-Look for: Whether delay calls for immediate protective attention; whether a
-useful response is possible now, substantive legal or document work remains,
-or one missing distinction prevents useful work. Judge the work needed for
-each request on its own, including a first message or an aside to active work.
-Outcome: Set each item's priority to urgent only for immediate protective need.
-Choose `answer` only for a conversational or other nonlegal reply that needs
-no legal source, document reading, or consequential inference. Route any
-requested substantive legal proposition, legal research, drafting, review,
-strategy, assessment of disputed facts, or advice about material to gather to
-`legal_work`, regardless of its relation to the current matter. A general
-legal question and a legal aside also need `legal_work`. Do not satisfy a
-legal request by placing a legal conclusion in an `answer` item.
-An `answer` may concern the current or proposed matter when its result needs
-only the attributed conversation record. Every reply goes through the separate
-writer and independent reviewer; this provisional text cannot establish a
-record change or completed work. Select matter scope from the item's actual
-subject and decide material review separately from the response route.
-For an `answer`, be brief and address the latest contribution. Do not supply
-an automatic matter recap or task menu unless it is asked for or needed.
-For `legal_work`, write a short, specific interim `reply` that identifies the
-requested outcome and attributes only facts expressly reported by the
-advocate. State plainly that the requested assessment or work is pending
-source checking. Do not supply legal propositions, classify disputed conduct,
-infer missing facts, recommend records to gather, or claim a source supports
-anything before the separate reading. Ask at most one consequential question
-only if its answer is needed to proceed at all. Give urgent needs priority.
-Do not substitute a stock acknowledgment, claim checking has occurred, or
-promise later autonomous work. Choose `clarify` when a missing distinction
-prevents a dependable response to this item, including an unresolved reference
-on which advice would depend. Ask only for that distinction; describe the
-request and question without inserting a guessed referent. Independent items
-can still proceed. Attribute unverified facts to the advocate. Do not invent support,
-assert unsupported law, or present unfinished work as complete. Fill `reply`
-for `answer` and `legal_work` and set `clarification` to an empty string for
-both. For `clarify`, put the question in `clarification` and set `reply` to
-an empty string. These fields are mutually exclusive. Saved progress owns
-active work; do not replace it with a routing summary. When an
-uncertain or unassessed dispute remains relevant to the latest requested activity, ask for
-its consequential missing distinction if needed. Do not interrupt a
-diversion to pursue it, or treat an identified dispute as a proved fact.
-An absence of a new substantive instruction or unfinished earlier work alone
-does not prevent a useful conversational response. Do not choose `clarify`
-merely to ask which task to resume. Respond naturally to the immediate
-contribution when it needs no legal work, and let the advocate steer further
-work without requiring a new instruction to acknowledge their message.
+Activity 2 - Determine the required source work.
+Look for: The immediate result each item needs, then its evidence basis.
+Separate new matter-account content from authorised reconciliation of NM's
+saved formulations. A review can need original account reading without a new
+fact; its instruction authorises examination but does not supply the fact to
+restore. Separate that activity from using an existing record to recap,
+explain, compare or continue work. A requested NM task is work progress,
+not itself the client's real-world objective or factual account.
+Decide whether the result needs a substantive legal proposition before
+considering saved research for reuse. The matter's legal topic, missing
+research or unfinished broader work does not turn a factual deliverable into
+a request for law. Record reconstruction and formulation review can need
+checked attribution without a legal-source enquiry. Preserve distinct factual
+and legal outcomes when either can proceed independently; do not split a
+single legal decision into a purported factual answer to avoid needed authority.
+Outcome: Select account_contribution in material_purposes for new or changed
+matter content, including uncertainty or hypotheses; select interpretation_review
+for relevant authorised review of NM's sourced formulations. Select both when
+both occur. The server derives reader routing from these purposes; do not
+supply material_review or claim reading occurred. Return an empty list when
+using existing material without new account content or authorised reconciliation,
+including a recap, repeat, explanation, legal-source enquiry, greeting or diversion.
+Reference to a record alone does not authorise changing it. Other-matter work
+cannot authorise changing this matter's records. Separate readers decide
+whether any supported proposal or repair follows; review does not force a change.
+Set response_basis=conversation_record when the result needs only attributed
+conversation or record reconciliation and leave research_question empty.
+Set legal_authority only when a substantive legal proposition, assessment,
+remedy or strategy is needed. It requires legal_work and a nonempty substantive
+research_question, not task, process or deliverable instructions. Keep that
+question self-contained and faithful to supplied sequence, dates, negation,
+uncertainty, jurisdiction and timing; expose missing scope rather than invent it.
+A question is a search hypothesis, not a finding of causation or legal status.
+Reuse a saved question verbatim only for the same substantive purpose and scope;
+the server determines current reusable coverage. Coverage labels and NM
+explanations are not legal passages. Automatic gathering research on dispute
+material has its own owner. Do not invent a dispute for a general legal question.
 
-Activity 3 - Decide whether a matter can be opened.
-Look for: An identifiable concrete matter supported by the advocate's words
-across the conversation, which the latest message advances or confirms. A
-supplied `current_matter_id` means the matter is already open; no new opening
-decision is needed. Identify a named person or entity on the advocate's side
-    only when the name and the person's or entity's role on the advocate's
-side are clear from the advocate's account. If several clients are named,
-choose one clearly representative name for the heading; the title is not
-a party register. Do not infer matter facts merely because a topic is
-mentioned.
-Outcome: Set `opening.ready` true only with a concise subject and summary
-grounded in the advocate's words when there is no current matter. Describe
-the overall subject and posture without asserting a count or completed legal
-assessment. Put exactly one named client-side person or entity in
-`opening.party_name` when their name and role are clear, even when several
-are represented. Put only the existing concise matter heading in
-`opening.subject`. The server will join the fields as `party_name: subject`.
-Do not include an opposing party name or `vs` in `party_name`. If the
-client-side name or role is absent or uncertain, leave `party_name` empty;
-never invent a name.
-For an already open matter, or when the latest message does not support an
-opening, set `ready` false and leave `party_name`, `subject`, and `summary`
-empty. This is a proposal, not admission of the account as fact.
+Activity 3 - Choose a useful immediate response.
+Look for: Immediate protective need, the checked work required for this item,
+and any missing distinction preventing useful progress. Consider each item
+independently, including a first message or aside. Identify an uncertain or
+unassessed dispute's missing distinction only when needed for the current work;
+contested merits do not make an identified dispute a proved fact.
+Outcome: Set urgent priority only for immediate protective attention. Choose
+answer for a conversational or other nonlegal reply needing only the attributed
+record, with no document reading or consequential inference. It may
+concern a current or proposed matter. Choose legal_work for substantive
+research, drafting, review, strategy, disputed-fact assessment or advice about
+material to gather, regardless of whether it is general or an aside. Checked
+record reconstruction can use legal_work with conversation_record basis;
+the route alone does not require legal authority. Do not put a legal conclusion
+in answer. Choose clarify only when one consequential missing distinction
+prevents a dependable response; ask for that distinction without guessing it.
+For answer, respond briefly to the immediate contribution; avoid an unrequested
+recap or task menu. For legal_work, give a specific interim reply naming the
+requested result and the checking it still needs. Attribute only expressly
+reported facts; do not insert unchecked law, inferred actors or facts,
+recommended records, unsupported source claims or a promise of later autonomous
+work. Give protective needs priority. Ask at most one necessary question if
+useful progress otherwise cannot proceed. Every substantive reply is written
+and independently reviewed later; this provisional text proves no saved effect
+or completed task. Fill reply and leave clarification empty for answer and
+legal_work. For clarify, fill clarification and leave reply empty. Do not ask
+which task to resume merely because the latest contribution adds no new
+instruction. Acknowledge it naturally and let the advocate steer further work.
+Saved progress owns active work; a routing summary cannot replace it.
 
-Activity 4 - Decide whether sourced material proposals need reading.
-Look for: New facts, disputes, positions, objectives, records, procedure,
-timing, risk, uncertainty, or corrections concerning a concrete or possible
-matter. A request may contain such content. Separately identify authorised
-work to reconcile NM's saved dispute or material formulations with the
-attributed account. That work may require reading without any new factual
-assertion. Distinguish review of the record's formulation from using the
-existing record to answer, summarise, research or perform other work.
-Outcome: In each item's `material_purposes`, select `account_contribution` for
-new or changed matter-account content, including an uncertain or hypothetical
-contribution, and `interpretation_review` for relevant authorised review of
-NM's sourced material interpretations. Select both when both purposes occur;
-do not lose account content inside a request or replace a requested review with
-an intake acknowledgement. These purposes describe why the sourced dispute
-and material readers are needed, not legal research or response source checking.
-The server derives whether to run those readers from the selected purposes;
-do not independently supply a material_review switch or claim reading occurred.
-The latest review request authorises examination; the original advocate words
-remain the evidentiary basis. It does not change the advocate's account, prove
-facts, or authorise a different matter's records to be revised. The separate
-readers decide whether any sourced proposal or repair is justified; do not
-invent a change merely because review was requested.
-Return an empty `material_purposes` list for work that only uses the existing
-record, including a recap,
-repeat, explanation, legal-source enquiry or continuation with no new material
-and no authorised reconciliation of its formulations. A greeting or pure
-diversion does not require material review. Referring to existing material
-alone is neither a new account contribution nor authority to revise it.
-A requested NM activity changes work progress, not the client's real-world
-objective or factual account; distinguish those layers.
+Activity 4 - Decide whether the matter can be opened.
+Look for: An identifiable concrete matter supported by original advocate words
+that the latest message advances or confirms. An existing current_matter_id
+means no new opening decision is needed. Identify a client-side person or
+entity only when the supplied name and role are clear. A title is not a party
+register; choose one representative client-side name when several are named.
+Outcome: Propose opening.ready=true only without a current matter and with a
+concise supported subject and summary of overall posture. Do not assert a
+count or completed legal assessment. Put exactly one supported client-side
+name in party_name, or leave it empty if identity or role is uncertain. An
+entity can have a connecting word in its name. Never invent a name or put an
+opposing party or vs in party_name. Put the concise matter heading in subject;
+the server joins party_name: subject. For an existing matter or an unsupported
+opening, return ready=false and empty party_name, subject and summary.
+The opening remains a proposal, not admission of the account.
 
-Activity 5 - Define the needed legal-source enquiry.
-Purpose: Decide whether the immediate requested outcome needs legal authority
-and, only then, identify the substantive legal question to research. Do not
-enlarge the requested outcome or decide its answer.
-Look for: What the latest words actually ask or contribute in the full
-conversation. Distinguish legal propositions needed for the result from work
-that only reconstructs, summarises, compares or clarifies the attributed
-account and NM's formulations. Both can use `legal_work` for checked
-attribution and work progress; that route does not itself require a new
-legal-source enquiry. The matter's legal subject, a missing research result
-or unfinished broader legal work does not change a factual deliverable into
-a request for law. Decide the current result's evidence basis before considering
-any saved research question for reuse. Saved research questions are NM search
-proposals, not authority that the current outcome requires law; historical
-task or process wording cannot determine the basis of a new or resumed request.
-Automatic gathering research on dispute material has a separate owner and
-remains independent of this decision.
-Preserve distinct requested factual and legal outcomes as separate work items
-when either can usefully proceed without the other. Each has its own scope
-and sufficiency; completing a factual result does not complete the wider
-legal work. Do not split a single legal decision into a purported factual
-answer to avoid the authority that decision needs.
-Outcome: Set `response_basis` to `conversation_record` when this item's result
-needs only attributed conversation or record reconciliation. Its
-`research_question` must be empty, even if material reading is needed or earlier
-legal research remains unfinished. This basis does not permit a legal claim
-without checked sources. Set `response_basis` to `legal_authority` only when
-the requested result needs a substantive legal proposition, assessment, remedy
-or strategy. This requires `legal_work` and a nonempty `research_question`:
-state a concise self-contained substantive legal question identifying the
-authority needed. Never put task, process or deliverable instructions in this
-field; extract the needed legal question from a broader work request.
-Compare saved research's purpose and scope with that legal question. Copy its
-exact question only for the same substantive enquiry; the server decides
-whether coverage is current and reusable. A coverage label or earlier NM
-explanation is not a legal passage. Preserve jurisdiction and timing only
-when supplied; expose missing scope rather than inventing it. Keep factual
-premises attributed and faithful to the whole account, including sequence,
-dates, negation and uncertainty. A research question is a search hypothesis,
-not a finding; do not infer causation, onset or changed legal status. Leave
-the field empty and use `conversation_record` for answer/clarify. Do not
-invent a dispute to support a general legal question.
-
-Outcome: Return only the declared JSON object with `items` and
-`opening`. Do not alter any matter
-record."""
+Outcome: Return only the declared JSON object with items and opening.
+Do not alter a matter record."""
 
 
 # Only unmistakable multi-name syntax is rejected mechanically. A firm name
