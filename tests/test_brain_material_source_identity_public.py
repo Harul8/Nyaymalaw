@@ -3,7 +3,7 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 
-from tests.test_brain_material import Model, material, plan, send
+from tests.test_brain_material import Model, fixture_scope_judgment, material, plan, send
 
 ORIGINAL = "The event happened on Monday."
 CORRECTION = "Sorry, Tuesday. Sorry, Tuesday."
@@ -22,6 +22,23 @@ class SelectedSecondSpanModel(Model):
             }]
         elif prompt.operation == "extract_legal_details" and data["changes"]:
             data["changes"][0]["source_id"] = "L2"
+        elif prompt.operation == "verify_material_grounding" and any(
+                row.get("relation") == "corrects" for row in payload["candidates"]):
+            # The independent Judge checks the selected repeated correction
+            # and the earlier event it changes. Coverage separately declares
+            # that both identical current occurrences report that correction.
+            for row in data["verdicts"]:
+                selected = ["L2", "P1S1"]
+                row["account_check"].update(source_ids=selected, source_checks=[{
+                    "source_id": identity, "supplies_account_content": True,
+                    "supports_proposal": True,
+                    "support_spans": [{"start": 0, "end": len(
+                        payload["source_treatments"][identity]["quoted"])}],
+                    "reason": "The independent fixture Judge checks this original event account.",
+                } for identity in selected])
+            data["coverage"] = fixture_scope_judgment(
+                payload, data, source_purposes=self.source_purposes,
+                coverage_links=self.coverage_links)
         return replace(result, data=data)
 
 
@@ -36,7 +53,9 @@ def test_public_repeated_current_words_save_selected_span_correction_and_replay_
     model = SelectedSecondSpanModel([
         plan(ORIGINAL, candidates=[old], opening=True,
              material_purposes=("account_contribution",)),
-        plan(CORRECTION, candidates=[revised], material_purposes=("account_contribution",)),
+        plan(CORRECTION, candidates=[revised], material_purposes=("account_contribution",),
+             record_disposition="performed", coverage_links={
+                 "Sorry, Tuesday.": {"record_ids": [], "candidate_ids": ["D1"]}}),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, ORIGINAL, "source-seed")

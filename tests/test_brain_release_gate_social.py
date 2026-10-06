@@ -45,7 +45,7 @@ class SeededModel(PublicContinuationModel):
         return replace(result, data=data)
 
 
-def completed_reply(index, text, *, span_ids, kind="completion", create=False):
+def completed_reply(index, text, *, span_ids, kind="completion", create=False, operator=None):
     proposed = unit(index, text=text, span_ids=span_ids)
     proposed["blocks"] = [proposed["blocks"][0]]
     proposed["blocks"][0].update(kind=kind, uncertainty="none" if kind == "completion"
@@ -53,6 +53,12 @@ def completed_reply(index, text, *, span_ids, kind="completion", create=False):
     proposed.update(questions=[], next_work=[], progress_updates=[],
                     work={"existing_id": "", "create": create},
                     sufficiency={"status": "complete", "block_id": f"account-{index}"})
+    if operator is not None:
+        proposed["blocks"][0] = {
+            "id": f"account-{index}", "kind": kind, "uncertainty": "none",
+            "evidence_expression": {"operator": operator, "source_ids": [],
+                                    "record_ids": [], "focus": "none"},
+        }
     return proposed
 
 
@@ -78,7 +84,7 @@ def test_public_greeting_is_composed_and_reviewed_without_changing_pending_matte
                   reply="UNREVIEWED_ROUTER_GREETING")
     routed["items"][0]["intent"] = "contribution"
     delivered = completed_reply(0, "Hello. We can continue when you are ready.",
-                                span_ids=("L1",))
+                                span_ids=("L1",), operator="acknowledgment")
     model, opened, before_work, before_material, offset = starting_state(
         client, wired, monkeypatch, routed, {"units": [delivered]}, prefix="checked-greeting")
 
@@ -90,8 +96,7 @@ def test_public_greeting_is_composed_and_reviewed_without_changing_pending_matte
     assert [row["request_index"] for row in calls[1][1]["work_items"]] == [0]
     assert [row["request_index"] for row in calls[2][1]["units"]] == [0]
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [0]
-    assert [row["text"] for row in answer["elements"]] == [
-        delivered["blocks"][0]["text"], "No changes were made to the saved record."]
+    assert [row["text"] for row in answer["elements"]] == ["I have your message."]
     assert "UNREVIEWED_ROUTER_GREETING" not in json.dumps(answer["elements"])
     saved = wired.store.load(opened["matter_id"])
     assert project_work(saved) == before_work
@@ -113,7 +118,7 @@ def test_public_mixed_greeting_and_account_summary_are_both_composed_and_reviewe
         "material_purposes": [],
         "record_requirement": {"kind": "none", "target_ids": [],
                                "operation": "none", "success_condition": ""}})
-    greeting = completed_reply(0, "Hello.", span_ids=("L1",))
+    greeting = completed_reply(0, "Hello.", span_ids=("L1",), operator="acknowledgment")
     summary = completed_reply(
         1, "You report holding a signed receipt for the disputed transaction; "
         "its contents have not been examined.",
@@ -141,8 +146,9 @@ def test_public_mixed_greeting_and_account_summary_are_both_composed_and_reviewe
     assert [row["request_index"] for row in calls[2][1]["units"]] == [0, 1]
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [0, 1]
     assert [row["text"] for row in answer["elements"]] == [
-        greeting["blocks"][0]["text"], summary["blocks"][0]["text"],
-        "No changes were made to the saved record."]
+        "I have your message.",
+        f'Your message includes: “{RECEIPT}” '
+        'Your message includes: “Please summarize the reported account.”']
     assert "UNREVIEWED_ROUTER" not in json.dumps(answer["elements"])
     saved = wired.store.load(opened["matter_id"])
     after_work = project_work(saved)

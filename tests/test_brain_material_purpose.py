@@ -11,7 +11,15 @@ from dataclasses import replace
 import pytest
 
 from tests.brain_continuation_fixture import no_record_requirement
-from tests.test_brain_material import Model, material, mutation_scope, plan, send
+from tests.brain_reader_fixture import scripted_support_spans
+from tests.test_brain_material import (
+    Model,
+    fixture_scope_judgment,
+    material,
+    mutation_scope,
+    plan,
+    send,
+)
 
 
 def item(request, reply, *, purposes=(), intent="request", opening=False,
@@ -28,9 +36,10 @@ def item(request, reply, *, purposes=(), intent="request", opening=False,
     }
 
 
-def routed(message, *, items, candidates=(), opening=False, record_disposition=None):
+def routed(message, *, items, candidates=(), opening=False, record_disposition=None,
+           source_purposes=None):
     result = plan(message, items=items, candidates=candidates, opening=opening,
-                  record_disposition=record_disposition)
+                  record_disposition=record_disposition, source_purposes=source_purposes)
     # These cases deliberately supply no independent turn-wide routing switch.
     result.pop("material_review", None)
     if opening:
@@ -48,6 +57,17 @@ def seed_plan(account):
 
 class PurposeModel(Model):
     def __init__(self, plans, *, review_authority_only=False, malformed_purpose=None):
+        plans = list(plans)
+        if review_authority_only:
+            # These cases independently declare that follow-up review requests
+            # supply authority, while only the original account supplies facts.
+            from nm.brain.material import addressed_sources
+
+            for planned in plans[1:]:
+                for request in planned["items"]:
+                    _, spans, _ = addressed_sources((), request["request"])
+                    planned.setdefault("_source_purposes", {}).update(
+                        {words.strip(): "non_account" for words in spans.values()})
         super().__init__(plans)
         self.seen = []
         self.review_authority_only = review_authority_only
@@ -64,18 +84,7 @@ class PurposeModel(Model):
             elif self.malformed_purpose == "unknown":
                 data["items"][0]["material_purposes"] = ["unsupported_purpose"]
         if len(self.calls) > 1 and self.review_authority_only:
-            if prompt.operation == "classify_account_sources":
-                current_ids = {span["id"] for span in payload["latest_message_spans"]}
-                for identity, treatment in data["source_treatments"].items():
-                    treatment["content_role"] = (
-                        "work_instruction" if identity in current_ids
-                        else "reported_matter_account")
-                    if (payload.get("source_selection_contract") == "owned_substantive_spans_v2"
-                            and identity in current_ids):
-                        # The scenario explicitly supplies authority without
-                        # substantive account in the current review request.
-                        treatment["substantive_spans"] = []
-            elif prompt.operation == "verify_material_grounding":
+            if prompt.operation == "verify_material_grounding":
                 candidates = {row["candidate_id"]: row for row in payload["candidates"]}
                 for verdict in data["verdicts"]:
                     sources = [identity for identity in candidates[
@@ -87,6 +96,9 @@ class PurposeModel(Model):
                         "supports_proposal": True,
                         "reason": "The earlier advocate account supplies this content.",
                     } for identity in sources]
+                data = scripted_support_spans(payload, data, scripted_source_account=True)
+                data["coverage"] = fixture_scope_judgment(
+                    payload, data, source_purposes=self.source_purposes)
         return replace(result, data=data)
 
 
@@ -117,7 +129,7 @@ def test_answer_account_purpose_saves_correction_and_replays_without_duplicate_w
         references=({"turn_id": "custody-original", "role": "advocate",
                      "quoted": account},),
         related_material_ids=("custody-original:material:1",))
-    followup = routed(correction, candidates=[changed], items=[
+    followup = routed(correction, candidates=[changed], record_disposition="performed", items=[
         item(correction, "Your corrected account reports delivery on 12 August.",
              purposes=("account_contribution",), intent="contribution"),
     ])
@@ -281,7 +293,8 @@ def test_mixed_requests_keep_independent_responses_and_one_material_pass(
     candidate = material("circumstance", update, update, scope="current", placement="matter")
     clarification = item(ambiguity, "")
     clarification.update(next_step="clarify", clarification="Which earlier notice do you mean?")
-    mixed = routed(message, candidates=[candidate], items=[
+    mixed = routed(message, candidates=[candidate],
+                   source_purposes={recap: "non_account", ambiguity: "non_account"}, items=[
         item(update, update, purposes=("account_contribution",), intent="contribution"),
         item(recap, account), clarification,
     ])

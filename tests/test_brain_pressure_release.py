@@ -18,6 +18,7 @@ from nm.brain import turn as boundary
 from nm.brain.execution_contracts import effect_catalogue
 from nm.brain.turn import chat_matter_id
 from tests.brain_pressure_support import record_case
+from tests.brain_reader_fixture import fixture_coverage, fixture_disposition
 from tests.test_brain_material import Model, material, plan, send
 
 
@@ -48,18 +49,16 @@ class PassageModel(Model):
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             if self.control.get("missing_detail"):
                 data["verdicts"] = [row for row in data["verdicts"] if row["candidate_id"] != "D2"]
-            if "coverage_source_ids" in payload:
-                data["coverage"] = {
-                    "state": self.control.get("coverage", "complete"),
-                    "missing_source_ids": [],
-                    "reason": (
-                        "Fabricated independent examination: the full requested "
-                        "account is represented."
-                        if self.control.get("coverage", "complete") == "complete"
-                        else "Fabricated independent examination: one attributed "
-                        "distinction remains unresolved."
-                    ),
-                }
+            if ("coverage_source_ids" in payload
+                    and self.control.get("coverage", "complete") != "complete"):
+                identities = payload["coverage_source_ids"]
+                data["coverage"] = fixture_coverage(
+                    payload, state=self.control["coverage"],
+                    source_decisions={identity: "unresolved" for identity in identities},
+                    dispositions=[fixture_disposition(payload, identity, status="unresolved")
+                                  for identity in identities],
+                    reason="Fabricated independent examination: an attributed distinction "
+                    "remains unresolved.")
         elif prompt.operation == "continue_conversation":
             self.writer_count += 1
             receipt = payload["material_coverage"]["execution"]
@@ -67,6 +66,10 @@ class PassageModel(Model):
                 requirement = receipt["requests"][unit["request_index"]]["record_requirement"]
                 default = "none" if requirement["kind"] == "none" else "unresolved"
                 status = self.control.get("status", default)
+                if status != "none":
+                    unit["blocks"][0].update(kind="completion", evidence_expression={
+                        "operator": "record_result", "source_ids": [], "record_ids": [],
+                        "focus": "none"})
                 # The first proposal is the raw forbidden-text attack. A
                 # bounded correction returns the separately authored safe
                 # expression from the base fixture; it never quotes the lie.
@@ -115,7 +118,6 @@ class PassageModel(Model):
                     else "",
                 }
                 if status == "unresolved":
-                    unit["blocks"][0]["kind"] = "limitation"
                     unit["sufficiency"]["status"] = "partial"
                     unit["progress_updates"] = []
         elif prompt.operation == "verify_continuation":
@@ -193,6 +195,8 @@ def answer_plan(
     opening=False,
     requirement=None,
     purposes=(),
+    source_purposes=None,
+    coverage_links=None,
     reply="I can discuss this account with you.",
 ):
     proposed = plan(
@@ -201,6 +205,8 @@ def answer_plan(
         opening=opening,
         material_purposes=purposes,
         record_requirement=requirement,
+        source_purposes=source_purposes,
+        coverage_links=coverage_links,
     )
     proposed["items"][0].update(next_step="answer", reply=reply)
     if opening:
@@ -315,6 +321,7 @@ def test_actual_correction_and_repeated_effect_references(
     )
     correction = answer_plan(
         message,
+        source_purposes={"Leave the calibration-rig entry alone.": "non_account"},
         purposes=("account_contribution",),
         requirement=date_requirement(),
         candidates=[revision(NEW_DATE, message.split(" Leave", 1)[0], OLD_DATE, DATE_ID)],
@@ -376,6 +383,7 @@ def test_wrong_target_cannot_certify_requested_date_even_with_accepting_judge(
     )
     wrong = answer_plan(
         message,
+        source_purposes={"Correct the northern carton delivery to 19 April.": "non_account"},
         purposes=("account_contribution",),
         requirement=date_requirement(),
         candidates=[
@@ -450,6 +458,9 @@ def test_empty_extraction_cannot_support_dishonest_performed_claim(client, wired
     message = "Correct the northern carton date to 19 April; the courier sheet confirms it."
     empty = answer_plan(
         message,
+        source_purposes={"Correct the northern carton date to 19 April;": "non_account"},
+        coverage_links={"the courier sheet confirms it.": {
+            "record_ids": [DATE_ID], "candidate_ids": []}},
         purposes=("account_contribution",),
         requirement=date_requirement(),
         reply="I corrected the date and saved it.",
@@ -546,6 +557,7 @@ def test_already_current_state_is_not_rejected_for_absence_of_new_operation(
     requirement["success_condition"] = "The northern carton entry states 17 April."
     current = answer_plan(
         message,
+        source_purposes={message: "non_account"},
         requirement=requirement,
         purposes=("interpretation_review",),
         reply="The current carton entry already states 17 April.",
@@ -600,6 +612,10 @@ def test_legitimate_no_change_review_completes_with_empty_proposals(client, wire
     }
     reviewed = answer_plan(
         message,
+        source_purposes={
+            "Check the full attributed delivery account against my original two sentences.":
+                "non_account",
+            "If the account is faithful, leave it unchanged.": "non_account"},
         requirement=requirement,
         purposes=("interpretation_review",),
         reply="Both entries retain the delivery dates you reported.",
@@ -656,6 +672,7 @@ def test_truthful_partial_work_preserves_good_peer_and_unfinished_task(client, w
     }
     proposed = answer_plan(
         message,
+        source_purposes={"Please capture and check both attributed events.": "non_account"},
         opening=True,
         requirement=requirement,
         purposes=("account_contribution", "interpretation_review"),
@@ -669,7 +686,7 @@ def test_truthful_partial_work_preserves_good_peer_and_unfinished_task(client, w
         wired,
         monkeypatch,
         [proposed],
-        [{"status": "unresolved", "missing_detail": True, "coverage": "partial",
+        [{"status": "unresolved", "missing_detail": True,
           "separate_record_status": True, "expression_sources": ["L1", "L2"]}],
     )
     delivered = send(client, message, "tablet-partial")
@@ -738,7 +755,7 @@ def test_free_prose_effect_claim_is_prevented_even_with_wrong_accepting_review(
         "active": [],
         "changes": [],
         "lie_released": False,
-        "truthful_footer": True,
+        "no_irrelevant_record_footer": True,
         "saved_turns": 1,
         "saved_exact_reply": True,
         "writer_calls": 2,
@@ -749,8 +766,7 @@ def test_free_prose_effect_claim_is_prevented_even_with_wrong_accepting_review(
         "active": active,
         "changes": receipt["record_changes"],
         "lie_released": lie in json.dumps(result["elements"]),
-        "truthful_footer": receipt["display"]["element"]["text"]
-        == ("No changes were made to the saved record."),
+        "no_irrelevant_record_footer": receipt["display"] is None,
         "saved_turns": len(saved.brain_chat),
         "saved_exact_reply": saved.brain_chat[-1]["response"]["elements"] == result["elements"],
         "writer_calls": sum(call["operation"] == "continue_conversation" for call in model.seen),
@@ -991,6 +1007,7 @@ def test_pure_acknowledgement_replaces_false_prose_with_checked_unresolved_resul
     proposed = answer_plan(
         message,
         requirement=date_requirement(),
+        source_purposes={message: "non_account"},
         purposes=("account_contribution",),
         reply="The requested carton correction remains unfinished.",
     )

@@ -97,7 +97,12 @@ Untrusted drafts are attached after trusted-context presentation. A rejected
 model object that repeats a ledger contract tag cannot become evidence or
 interrupt its own bounded correction. Real corrupt server proof still stops
 before dispatch. Valid core public fixtures keep their eight-call baseline;
-exact replay uses zero. No routine model stage was added.
+exact replay uses zero. This pressure-hardening slice added no routine stage
+against its preceding eight-call implementation. It does not describe the
+earlier `ea1253e` comparison: that review measured greetings increasing from
+one to three calls and corrections from seven to eight. See
+`nm-brain-review-evidence-corrections-20261006.md` for the named baselines and
+deferred live cost measurements.
 
 Known-good neighbours and exact call assertions establish useful counterexamples
 to overblocking. Neither gate counts nor intentionally injected recovery rates

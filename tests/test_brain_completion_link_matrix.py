@@ -199,7 +199,10 @@ def test_interpreter_none_miss_without_readers_cannot_authorize_linked_false_com
     assert not any(operation in (
         "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding") for operation, _ in model.calls)
-    assert "No changes were made to the saved record." in visible(answer)
+    execution = answer["material_coverage"]["execution"]
+    assert execution["display"] is None
+    assert execution["record_changes"] == []
+    assert all(stage["state"] == "not_run" for stage in execution["stages"].values())
     unit, = answer["continuation"]["units"]
     assert unit["record_outcome"]["status"] == "none"
     assert unit["progress_updates"] == []

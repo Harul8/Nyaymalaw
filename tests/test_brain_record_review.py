@@ -6,7 +6,8 @@ from dataclasses import replace
 import pytest
 
 from nm.shared.model_port import require_schema
-from tests.test_brain_material import Model, material, plan, send
+from tests.brain_reader_fixture import scripted_support_spans
+from tests.test_brain_material import Model, fixture_scope_judgment, material, plan, send
 
 
 class ReviewModel(Model):
@@ -18,8 +19,29 @@ class ReviewModel(Model):
         result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
         if len(self.calls) > 1 and prompt.operation in (
                 "verify_disputes", "verify_material_grounding"):
-            result = replace(result, data=self.check(prompt.operation, json.loads(prompt.user),
-                                                     deepcopy(result.data)))
+            payload = json.loads(prompt.user)
+            data = deepcopy(result.data)
+            proposals = {row["candidate_id"]: row for row in payload["candidates"]}
+            for row in data["verdicts"]:
+                # Scenario-owned source purposes apply independently to the
+                # original evidence selected by an ordinary positive review.
+                # The adversarial hook below can still replace these checks.
+                selected = [identity for identity in proposals[row["candidate_id"]][
+                    "allowed_account_source_ids"] if self.source_purposes.get(
+                        payload["source_treatments"][identity]["quoted"].strip()) != "non_account"]
+                row["account_check"]["source_ids"] = selected
+                row["account_check"]["source_checks"] = [{
+                    "source_id": identity, "supplies_account_content": True,
+                    "supports_proposal": True,
+                    "reason": "The scenario independently checks this original account.",
+                } for identity in selected]
+            data = self.check(prompt.operation, payload, data)
+            data = scripted_support_spans(payload, data, scripted_source_account=True)
+            data["coverage"] = fixture_scope_judgment(
+                payload, data, source_purposes=self.source_purposes,
+                dispute_scope=self.dispute_scope if prompt.operation == "verify_disputes" else None,
+                coverage_links=self.coverage_links)
+            result = replace(result, data=data)
         return result
 
 
@@ -67,6 +89,7 @@ def test_public_review_cannot_replace_distinct_accounts_with_analysis_and_preser
     model = ReviewModel([plan(account, candidates=original, opening=True,
                               material_purposes=("account_contribution",)),
                          plan(request, candidates=[wrong_issue, issue, wrong_detail, detail],
+                              source_purposes={review_quote: "non_account"},
                               material_purposes=("account_contribution",))],
                         reject_analysis)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -143,6 +166,7 @@ def test_public_invalid_merged_interpretation_restores_atomic_successors_without
     model = ReviewModel([plan(account, candidates=original, opening=True,
                               material_purposes=("account_contribution",)),
                          plan(request, candidates=candidates,
+                              source_purposes={request: "non_account"},
                               record_disposition="unresolved" if reject_successor else "performed",
                               material_purposes=("interpretation_review",),
                               record_requirement={
@@ -228,6 +252,7 @@ def test_public_singleton_self_dependency_is_corrected_without_retiring_uncovere
         plan(account, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
         plan(request, candidates=[successor], record_disposition="unresolved",
+             source_purposes={request: "non_account"},
              material_purposes=("interpretation_review",),
              record_requirement={
                  "kind": "change", "operation": "corrects",
@@ -332,6 +357,7 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
         plan(account, candidates=original, opening=True,
              material_purposes=("account_contribution",)),
         plan(latest, record_disposition="unresolved",
+             source_purposes={request: "non_account", review: "non_account"},
              candidates=[unsupported, party, courier, unsupported_detail,
                                  party_detail, courier_detail],
              material_purposes=("account_contribution", "interpretation_review"),

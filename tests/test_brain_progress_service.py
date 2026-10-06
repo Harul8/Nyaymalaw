@@ -10,6 +10,7 @@ import pytest
 from nm.brain.work_state import project_work
 from nm.shared.model_port import Tier
 from tests.brain_continuation_fixture import citation_units
+from tests.brain_reader_fixture import fixture_scoped_coverage, reader_operations
 from tests.test_brain_continuation import verdict
 from tests.test_brain_continuation_service import PublicContinuationModel, send
 from tests.test_brain_release_gate_social import completed_reply
@@ -17,6 +18,51 @@ from tests.test_brain_turn import plan
 
 FIRST = "The transaction is disputed. Please review the reported account."
 QUESTION = "What scope would you like for this review?"
+REPORTED = "The transaction is disputed."
+SOURCE_PURPOSES = {
+    REPORTED: "account",
+    "Please review the reported account.": "non_account",
+    "Please assess the legal position and available legal responses.": "non_account",
+    "Please also prepare a neutral summary.": "non_account",
+    "Please give a neutral summary of that account.": "non_account",
+}
+
+
+class ProgressModel(PublicContinuationModel):
+    """Author actual reported material and independent scope reads for work tests."""
+
+    def structured(self, prompt, schema, tier, *, max_tokens=None):
+        result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+        payload = json.loads(prompt.user)
+        if prompt.operation == "classify_account_sources":
+            data = deepcopy(result.data)
+            for identity, row in data["source_treatments"].items():
+                reference = payload["original_source_catalogue"][identity]
+                if SOURCE_PURPOSES.get(reference["quoted"]) == "non_account":
+                    row.update(content_role="work_instruction", substantive_spans=[])
+            return replace(result, data=data)
+        if prompt.operation == "extract_legal_details":
+            rows = [{
+                "kind": "circumstance", "statement": REPORTED, "source_id": span["id"],
+                "matter_scope": "proposed", "basis": "stated", "importance": "relevant",
+                "why_material": "This reported circumstance is retained separately from work.",
+                "placement": "matter", "dispute_ids": [], "related_material_ids": [],
+            } for span in payload["latest_message_spans"] if span["text"] == REPORTED]
+            return replace(result, data=reader_operations(
+                rows, payload, link_field="related_material_ids"))
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            purposes = {identity: SOURCE_PURPOSES[reference["quoted"]]
+                        for identity, reference in payload["source_treatments"].items()}
+            if prompt.operation == "verify_disputes":
+                # A reported disputed circumstance is not a separately identified
+                # issue in these work-identity scenarios.
+                purposes = {identity: "outside_scope" if purpose == "account" else purpose
+                            for identity, purpose in purposes.items()}
+            data = deepcopy(result.data)
+            data["coverage"] = fixture_scoped_coverage(
+                payload, data, source_decisions=purposes)
+            return replace(result, data=data)
+        return result
 
 
 def route(message, *, intent="request", opening=False, aside=False):
@@ -84,7 +130,7 @@ def question_transition(status, text):
 
 
 def wire(wired, monkeypatch, routes, replies, *, checks=None):
-    model = PublicContinuationModel(routes, replies, checks=checks)
+    model = ProgressModel(routes, replies, checks=checks)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     return model
 
@@ -355,7 +401,8 @@ def test_public_redisplayed_completed_scope_is_checked_without_new_completion_ev
     assert unit["blocks"][0]["references"][0]["turn_id"] == "idempotent-complete"
     assert model.calls[-1][0] == "verify_continuation"
     checked = model.calls[-1][1]
-    assert checked["units"][0]["blocks"][0]["text"] == summary
+    assert checked["units"][0]["blocks"][0]["text"] == (
+        f'Your message includes: “{REPORTED}”')
     assert checked["input"]["latest_message_spans"][0]["text"] == requested
     saved = wired.store.load(first["matter_id"])
     assert len(saved.brain_chat) == 2

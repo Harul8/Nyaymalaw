@@ -85,8 +85,15 @@ a current record already satisfying the request, a completed review declining
 the proposed edit, and unfinished work are distinct outcomes. The declined edit
 was not applied; a completed reply or fallback does not complete its underlying
 task. Empty extraction is legitimate only when checked coverage supports that
-result; an empty envelope alone never proves the message was examined. A claim
-about the current value needs checked current state. A claim that NM previously
+result; an empty envelope alone never proves the message was examined.
+Independent coverage examines original source purpose and substantive ranges,
+not merely the classifier's labels, the proposed record text or candidate count.
+A represented range must bind its canonical source to an actually admitted owned
+record or candidate with checked support; rejected, held and unread proposals
+cannot fill the gap. Non-account, outside-scope and unresolved dispositions remain
+explicit reviewed judgments. Code certifies source identity and admitted support
+dependencies, not the semantic correctness of those labels. A claim about the
+current value needs checked current state. A claim that NM previously
 changed it additionally needs saved historical evidence that remains applicable.
 
 Every public reply route must use the same trusted release boundary, including
@@ -97,16 +104,30 @@ unsupported additions, omissions and contradictions. Fixed code-authored status
 notices require mechanical truth checks, not an additional model call.
 Code separately enforces ownership, references, relevant effect evidence and
 persistence; reviewer acceptance cannot bypass those controls.
-Generate effect and completion statements from checked structured outcomes in
-code, or validate their selected typed evidence before rendering. Free prose
-must agree with those outcomes: an accurate status line does not cure a false
-claim elsewhere. Do not promise mechanical certainty for unrestricted prose
-or legal interpretation.
+Every fresh public response block selects a closed evidence expression. The
+writer supplies owned selectors and applicable metadata, never response text,
+altered quotations, citation anchors, independent review fields or rendering
+seals. This applies equally to accounts, assessments, questions, next steps,
+limitations, acknowledgements and completion blocks; a different kind, linked
+follow-up or delivery mode cannot reopen authored prose. Reject forbidden fields
+within the existing bounded correction, preserving valid independent peers.
+
+Code renders complete selected original words with their speaker, checked legal
+propositions and passages with their conditions, and fixed questions, proposed
+work and status templates. Record effects and completion use the relevant owned
+checked outcome and confirmed persistence. Independent semantic review still
+checks relevance, omissions, framing, requested sufficiency and legal use against
+the complete original conversation. Literal rendering and a positive semantic
+label do not establish that a source classification or legal judgment is correct.
 
 Declare effect-only acknowledgements explicitly; preserve independent requested
 substantive work and follow-ups. Compose their status from owned checked results,
-and version the rendering contract used by durable replay. An interpreted
-delivery mode never certifies semantic fulfillment.
+and version the rendering contract used by durable replay. Preserve the saved
+contract and original dependency snapshot when replaying historical output;
+unknown versions fail rather than falling back or upgrading earlier replies.
+Fresh selectors, review proof and display fields cannot be supplied by replay
+metadata from another owner. An interpreted delivery mode never certifies
+semantic fulfillment.
 
 A tentative matter reply may be composed from checked proposed state. Commit
 the state, operation evidence and exact releasable matter reply together through

@@ -10,10 +10,15 @@ from nm.brain.record_review import classify_account_sources
 from nm.brain.turn import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Usage
-from tests.brain_reader_fixture import source_treatment_reply
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    source_portion_reply,
+    source_treatment_reply,
+)
 from tests.test_brain_account_source_treatment import SourceModel, reply
 from tests.test_brain_continuation import unit
 from tests.test_brain_continuation_service import PublicContinuationModel, send
+from tests.test_brain_material import material
 from tests.test_brain_release_gate_social import completed_reply
 from tests.test_brain_turn import plan
 
@@ -62,7 +67,8 @@ def test_source_correction_enforces_owned_keys_and_preserves_the_complete_input(
     correction = json.loads(model.calls[1][0].user)
     assert correction["original_input"] == json.loads(model.calls[0][0].user)
     assert correction["original_input"]["earlier_conversation"] == payload["earlier_conversation"]
-    assert correction["rejected_output"] == wrong
+    assert correction["rejected_output"] == source_portion_reply(
+        correction["original_input"], wrong)
     assert_keyed_feedback(correction, fault, "P1S1")
     schema = model.calls[0][1]["properties"]["source_treatments"]
     assert schema["required"] == list(roles) and set(schema["properties"]) == set(roles)
@@ -94,7 +100,8 @@ def test_unexpected_source_key_keeps_the_closed_schema_and_complete_rejected_out
     correction = json.loads(model.calls[1][0].user)
     assert "source_treatments" in correction["validation_issue"]
     assert "undeclared properties" in correction["validation_issue"]
-    assert correction["rejected_output"] == wrong
+    assert correction["rejected_output"] == source_portion_reply(
+        correction["original_input"], wrong)
     assert correction["original_input"] == json.loads(model.calls[0][0].user)
 
 
@@ -113,21 +120,44 @@ def test_source_coverage_failure_exhausts_only_the_existing_correction(fault):
 
 
 class CoverageModel(PublicContinuationModel):
-    def __init__(self, routes, continuations, *, fault, recover):
-        super().__init__(routes, continuations)
+    def __init__(self, routes, continuations, *, fault, recover, account_words, instruction):
+        super().__init__(routes, continuations, detail_reads=[[
+            material("event", words, words, placement="matter") for words in account_words]])
         self.fault = fault
         self.recover = recover
         self.source_calls = 0
+        self.purposes = {"Hello.": "non_account", instruction: "non_account",
+                         **{words: "account" for words in account_words}}
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         if prompt.operation != "classify_account_sources":
-            return super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            if prompt.operation in {"verify_disputes", "verify_material_grounding"}:
+                payload = json.loads(prompt.user)
+                data = deepcopy(result.data)
+                decisions = {
+                    identity: ("outside_scope" if purpose == "account"
+                               and prompt.operation == "verify_disputes" else purpose)
+                    for identity, reference in payload["source_treatments"].items()
+                    for purpose in [self.purposes[reference["quoted"]]]}
+                # This source-catalogue fixture explicitly checks material
+                # records; its separate dispute-stage scope is outside scope.
+                data["coverage"] = fixture_scoped_coverage(
+                    payload, data, source_decisions=decisions)
+                return ModelResult(
+                    text=None, data=data, tier=tier, provider="offline", model="offline",
+                    usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
+            return result
         payload = json.loads(prompt.user)
         self.calls.append((prompt.operation, payload))
         self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
         original = payload.get("original_input", payload)
         correct = source_treatment_reply(prompt.operation, original)
+        for identity, row in correct["source_treatments"].items():
+            reference = original["original_source_catalogue"][identity]
+            if self.purposes[reference["quoted"]] == "non_account":
+                row.update(content_role="work_instruction", substantive_spans=[])
         self.source_calls += 1
         data = (correct if self.recover and self.source_calls == 2 else
                 incomplete_catalogue(correct, self.fault))
@@ -135,14 +165,16 @@ class CoverageModel(PublicContinuationModel):
                            usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
 
 
-@pytest.mark.parametrize("message", [
-    "The inventory is unsigned. The receipt is dated. Review both records.",
-    "The dispatch date is disputed. The shipment arrived later. Record these reported details.",
+@pytest.mark.parametrize("account_words,instruction", [
+    (("The inventory is unsigned.", "The receipt is dated."), "Review both records."),
+    (("The dispatch date is disputed.", "The shipment arrived later."),
+     "Record these reported details."),
 ])
 @pytest.mark.parametrize("fault", ["missing", "wrong_envelope", "repeated_source_id"])
 @pytest.mark.parametrize("recover", [False, True])
 def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
-        client, wired, monkeypatch, message, fault, recover):
+        client, wired, monkeypatch, account_words, instruction, fault, recover):
+    message = " ".join((*account_words, instruction))
     route = plan(message, step="legal_work")
     route["items"][0]["material_purposes"] = ["account_contribution"]
     greeting = plan("Hello.")
@@ -150,7 +182,8 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
     model = CoverageModel([greeting, route], [
         {"units": [completed_reply(0, "Hello.", span_ids=("L1",))]},
         {"units": [unit()]}],
-                          fault=fault, recover=recover)
+                          fault=fault, recover=recover,
+                          account_words=account_words, instruction=instruction)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, "Hello.", "coverage-before")
     matter_id = chat_matter_id("adv_demo", opened["chat_id"])
@@ -184,6 +217,8 @@ def test_public_source_coverage_recovers_atomically_or_stops_before_saving(
     assert response.status_code == 200, response.text
     answer = response.json()
     assert answer["metrics"]["llm_calls"] == 9
+    assert answer["metrics"]["recovery"]["dispatched_calls"] == 1
+    assert [row["statement"] for row in answer["material"]] == list(account_words)
     assert [row["message"] for row in saved.brain_chat] == ["Hello.", message]
     catalogue = saved.brain_chat[-1]["response"]["material_coverage"]["source_treatments"]
     assert set(catalogue) == {"P1S1", "L1", "L2", "L3"}

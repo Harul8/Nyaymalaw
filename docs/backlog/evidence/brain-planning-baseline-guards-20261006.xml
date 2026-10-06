@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="23" skipped="0" tests="46" time="20.507" timestamp="2026-10-06T11:31:21.936628+00:00" hostname="7b97bad20186"><testcase classname="tests.test_current_plan_view" name="test_saved_current_plan_matches_authored_registry_and_snapshot_sources" time="0.726"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:42: in test_saved_current_plan_matches_authored_registry_and_snapshot_sources
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_media_policy_is_part_of_the_checked_reader_view" time="0.087"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:46: in test_saved_media_policy_is_part_of_the_checked_reader_view
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_autonomy_contract_is_checked_without_promoting_runtime" time="0.118"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:58: in test_saved_autonomy_contract_is_checked_without_promoting_runtime
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[drop_original_item-Work Items: exact ID population/order differs; missing=['BK-21']]" time="0.119"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[duplicate_item-Work Items: exact ID population/order differs]" time="0.091"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_status-Work Items/BK-31: Delivery status differs from source]" time="0.116"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_wave-Work Items/BK-21: Wave differs from source]" time="0.087"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_feature-Features/A1: Implementation differs from source]" time="0.199"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_step_basis-Journey Steps/STEP-A-01: Basis differs from source]" time="0.163"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_hash-Sources: stale or incorrect hash docs/backlog/status.yaml]" time="0.087"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[drop_source-Sources: exact authored snapshot-source population differs]" time="0.118"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[drop_acceptance-Acceptance: exact ID population/order differs]" time="0.090"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[change_instruction-Packet Guide: instruction population or content differs]" time="0.116"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[forge_scenario_pass-Evaluation Specs/EVAL-001: Execution differs from source]" time="0.118"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[forge_decision-Decisions/CHOICE-01: Current approval differs from source]" time="0.092"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[formula_error-Reconciliation: saved formula error #REF!]" time="0.119"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[missing_formula-Reconciliation!C4: formula or cached value differs]" time="0.087"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[wrong_formula_cache-Reconciliation!C4: formula or cached value differs]" time="0.112"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[forged_zero_reconciliation-Reconciliation/Items: Source count differs from source]" time="0.122"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[drop_control_row-Reconciliation: exact control-row population differs]" time="0.088"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_saved_plan_checker_rejects_real_cell_mutations[promote_captured_artifact-Sources: captured execution artifact must remain historical]" time="0.113"><failure message="AssertionError: assert ['Work Items/... source', ...] == []&#10;  &#10;  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'&#10;  Use -v to get more diff">tests/test_current_plan_view.py:92: in test_saved_plan_checker_rejects_real_cell_mutations
+    assert plan_view.check_view(saved_tables) == []
+E   AssertionError: assert ['Work Items/... source', ...] == []
+E
+E     Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_current_plan_view" name="test_snapshot_text_hash_normalises_line_endings_but_binary_hash_does_not" time="0.002" /><testcase classname="tests.test_current_plan_view" name="test_readable_excel_date_can_match_iso_but_an_unformatted_serial_cannot" time="0.000" /><testcase classname="tests.test_prebuild_plan_links" name="test_final_review_obligations_have_exact_delivery_and_packet_owners" time="0.865"><failure message="AssertionError: assert ['P06: missin...acts.py', ...] == []&#10;  &#10;  Left contains 89 more items, first extra item: 'P06: missing existing boundary nm/obs'&#10;  Use -v to get more diff">tests/test_prebuild_plan_links.py:16: in test_final_review_obligations_have_exact_delivery_and_packet_owners
+    assert blueprint.check_all(modules, registry, contracts) == []
+E   AssertionError: assert ['P06: missin...acts.py', ...] == []
+E
+E     Left contains 89 more items, first extra item: 'P06: missing existing boundary nm/obs'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_prebuild_plan_links" name="test_planning_delivery_exclusions_cannot_hide_product_work[drop]" time="0.094" /><testcase classname="tests.test_prebuild_plan_links" name="test_planning_delivery_exclusions_cannot_hide_product_work[duplicate]" time="0.125" /><testcase classname="tests.test_prebuild_plan_links" name="test_planning_delivery_exclusions_cannot_hide_product_work[replace_with_product]" time="0.164" /><testcase classname="tests.test_prebuild_plan_links" name="test_planning_delivery_exclusions_cannot_hide_product_work[blank_reason]" time="0.097" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_every_feature_file_is_exactly_what_the_sheet_says" time="0.212" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_requirement_rows_reconcile_both_sheets" time="0.291"><failure message="AssertionError: assert ['LB-183: col...e Build', ...] == []&#10;  &#10;  Left contains 19 more items, first extra item: 'LB-183: column 33 differs from Before Build'&#10;  Use -v to get more diff">tests/test_the_scenarios_come_from_the_plan.py:33: in test_requirement_rows_reconcile_both_sheets
+    assert plan_scenarios.requirement_problems() == []
+E   AssertionError: assert ['LB-183: col...e Build', ...] == []
+E
+E     Left contains 19 more items, first extra item: 'LB-183: column 33 differs from Before Build'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_active_sheet_does_not_choose_the_schema" time="0.202" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[missing_header]" time="0.855" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[duplicate_header]" time="0.872" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[bad_state]" time="0.932" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[empty_body]" time="0.935" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[planned_body]" time="0.924" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[missing_notes]" time="0.917" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[duplicate_id]" time="0.925" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[bad_id]" time="1.061" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[empty_features]" time="1.111" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[empty_executable]" time="1.133" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_scenario_schema_rejects_real_mutations[invalid_gherkin]" time="1.195" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_requirement_reconciliation_can_reject_drift[removed]" time="1.181" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_requirement_reconciliation_can_reject_drift[duplicate]" time="1.230" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_requirement_reconciliation_can_reject_drift[drift]" time="1.212" /><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_the_check_sees_an_edited_a_missing_and_an_orphan_file" time="0.268" /></testsuite></testsuites>

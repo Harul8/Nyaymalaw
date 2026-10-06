@@ -90,8 +90,12 @@ def test_public_consistent_review_repairs_no_user_input_or_writer_and_replay_is_
         "verify_continuation"]
     assert answer["continuation"]["coverage"][0]["state"] == "ok"
     assert [block["text"] for block in answer["elements"]] == [
-        *[block["text"] for block in proposed["blocks"]],
-        "No changes were made to the saved record."]
+        'Your message includes: “I report holding two dated records.”',
+        "The requested conclusion remains unresolved on the supplied support."]
+    execution = answer["material_coverage"]["execution"]
+    assert execution["display"] is None and execution["record_changes"] == []
+    assert answer["continuation"]["units"][0]["blocks"][0]["evidence_expression"] == {
+        "operator": "source_account", "source_ids": ["L1"], "record_ids": [], "focus": "none"}
     assert "validation_issues" in model.calls[-1][1]
     saved = wired.store.load(chat_matter_id("adv_demo", answer["chat_id"]))
     assert len(saved.brain_chat) == 1 and saved.brain_chat[0]["message"] == words

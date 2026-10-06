@@ -7,7 +7,7 @@ import pytest
 from nm.brain.material import extract_details, resolve_assignment
 from nm.shared.model_port import SchemaViolation
 from tests.test_brain_material import Model as ServiceModel
-from tests.test_brain_material import material, mutation_scope, plan, send
+from tests.test_brain_material import fixture_scope_judgment, material, mutation_scope, plan, send
 from tests.test_brain_material_specialist import Model, candidate
 
 
@@ -66,15 +66,15 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                 # gap on the initial review and on its coverage-only recheck.
                 # Empty fresh candidates do not erase retained rejected work.
                 if len(self.grounding_inputs) >= 2:
-                    result = replace(result, data={**result.data,
-                        "coverage": {"state": "partial", "missing_source_ids": ["L1"],
-                                     "reason": ("The receipt is retained; "
-                                                "the correction remains unrepresented.")},
+                    data = {**result.data,
                         "verdicts": [
                         {**row, "verdict": "reject", "reason": (
                             "The payment correction does not bear on the delivery dispute.")}
                         if row["candidate_id"] == "D2" else row
-                        for row in result.data["verdicts"]]})
+                        for row in result.data["verdicts"]]}
+                    data["coverage"] = fixture_scope_judgment(
+                        self.grounding_inputs[-1], data, source_purposes=self.source_purposes)
+                    result = replace(result, data=data)
             return result
 
     model = Reviewing([plan(first, candidates=initial, opening=True,
@@ -94,7 +94,9 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
                             "material_purposes": [],
                             "record_requirement": {"kind": "none", "target_ids": [],
                                                    "operation": "none", "success_condition": ""}}],
-                            material_purposes=("account_contribution",))])
+                            material_purposes=("account_contribution",),
+                            source_purposes={"Hello.": "non_account"},
+                            record_disposition="unresolved")])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "assignment-first")
     assert opened.status_code == 200, opened.text

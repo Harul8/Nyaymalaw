@@ -118,13 +118,21 @@ def test_unresolved_outcome_cannot_turn_into_completion_by_rendering():
 @pytest.mark.parametrize("field", ["questions", "next_work"])
 def test_substantive_followup_preserves_checked_content_instead_of_silently_dropping_it(field):
     continuation, receipt, catalogue = inputs("unresolved")
-    continuation["units"][0][field] = [{"id": "followup", "block_id": "owned-block"}]
+    followup = {**deepcopy(continuation["units"][0]["blocks"][0]),
+                "id": "independent-followup", "kind": "question" if field == "questions"
+                else "next_step", "text": "Which original account needs further examination?"}
+    continuation["units"][0]["blocks"].append(followup)
+    continuation["units"][0][field] = [
+        {"id": "mislinked-status", "block_id": "owned-block"},
+        {"id": "followup", "block_id": "independent-followup"}]
     original = deepcopy(continuation)
     result = render(continuation, receipt, catalogue)["units"][0]
-    assert result["blocks"][0] == original["units"][0]["blocks"][0]
+    assert result["blocks"][0]["text"] == "The requested record work remains unfinished."
+    assert result["blocks"][0]["id"] == "owned-block"
+    assert result["blocks"][1] == original["units"][0]["blocks"][1]
     assert result[field] == original["units"][0][field]
-    assert result["blocks"][-1]["text"] == "The requested record work remains unfinished."
-    assert result["record_outcome"]["block_id"] == result["blocks"][-1]["id"]
+    assert result["record_outcome"]["block_id"] == "owned-block"
+    assert "Fabricated prose." not in "\n".join(block["text"] for block in result["blocks"])
     assert receipt["requests"][0]["acknowledgement_delivery"] == "substantive_followup"
 
 

@@ -25,7 +25,7 @@ from tests.test_brain_research_service import QUESTION, route, sourced_reply, wi
 def direct_passage(payload):
     """Select the checked passage without manufacturing a finding reference."""
     result = sourced_reply(payload)
-    key = result["units"][0]["blocks"][0]["legal_source_ids"][0]
+    key = result["units"][0]["blocks"][0]["evidence_expression"]["legal_source_ids"][0]
     result["units"][0]["blocks"] = [{
         "id": "cited-condition", "kind": "assessment", "uncertainty": "conditional",
         "evidence_expression": {"operator": "checked_legal", "source_ids": [],
@@ -101,7 +101,7 @@ def test_public_rejected_research_cannot_be_restored_by_citing_a_valid_peer_pass
     def overreach(payload):
         result = sourced_reply(payload)
         block = result["units"][0]["blocks"][0]
-        key = block["legal_source_ids"][0]
+        key = block["evidence_expression"]["legal_source_ids"][0]
         block.clear()
         block.update(id="cited-condition", kind="assessment", uncertainty="conditional",
                      evidence_expression={"operator": "checked_legal", "source_ids": [],

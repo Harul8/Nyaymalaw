@@ -28,10 +28,16 @@ from tests.test_brain_pressure_release import (
 )
 
 
-def record_plan(message, *, candidates=(), mode="record_acknowledgement", requirement=None):
+def record_plan(message, *, candidates=(), mode="record_acknowledgement", requirement=None,
+                account=False):
+    from nm.brain.material import addressed_sources
+
+    _, spans, _ = addressed_sources((), message)
     value = answer_plan(
         message, purposes=("interpretation_review",), candidates=candidates,
         requirement=requirement or date_requirement(),
+        source_purposes={words.strip(): "account" if account else "non_account"
+                         for words in spans.values()},
         reply="The requested record result still needs its checked outcome.")
     value["items"][0]["response_mode"] = mode
     return value
@@ -71,14 +77,15 @@ def test_false_pure_acknowledgement_is_replaced_while_task_stays_pending(
     assert task["status"] == "pending"
     assert task["record_requirement"] == date_requirement()
     operations = [row["operation"] for row in model.seen[before:]]
-    assert operations.count("continue_conversation") == 1
+    assert operations.count("continue_conversation") == 2
     assert operations.count("verify_continuation") == 1
 
 
 def test_actual_change_acknowledgement_uses_saved_exact_entries(client, wired, monkeypatch):
     message = "The northern carton arrival was 19 April, correcting the earlier account."
     lie = "I deleted the entire delivery account."
-    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)])
+    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)],
+                         account=True)
     install(wired, monkeypatch, [initial_plan(), change],
             [{}, {"status": "performed", "prose": lie}])
     baseline = send(client, ORIGINAL, BASE_TURN).json()
@@ -139,10 +146,13 @@ class FollowupModel(PassageModel):
         data = deepcopy(result.data)
         payload = json.loads(prompt.user)
         for unit in data["units"]:
-            question = deepcopy(unit["blocks"][0])
-            question.update(id="necessary-distinction", kind="question",
-                            text="Which reported delivery account should this entry represent?")
-            question["span_ids"] = [payload["latest_message_spans"][0]["id"]]
+            question = {
+                "id": "necessary-distinction", "kind": "question", "uncertainty": "none",
+                "evidence_expression": {
+                    "operator": "question",
+                    "source_ids": [payload["latest_message_spans"][0]["id"]],
+                    "record_ids": [], "focus": "meaning"},
+            }
             unit["blocks"].append(question)
             unit["questions"] = [{"id": "account-distinction", "block_id": question["id"],
                                   "purpose": "Resolve the account identity required for this edit.",
@@ -170,7 +180,8 @@ def test_reviewed_substantive_followup_is_preserved_and_identified(client, wired
 
 def test_pure_acknowledgement_cannot_release_before_confirmed_save(client, wired, monkeypatch):
     message = "The northern carton arrival was 19 April, correcting the earlier account."
-    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)])
+    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)],
+                         account=True)
     install(wired, monkeypatch, [initial_plan(), change], [{}, {"status": "performed"}])
     baseline = send(client, ORIGINAL, BASE_TURN).json()
 
@@ -187,7 +198,8 @@ def test_pure_acknowledgement_cannot_release_before_confirmed_save(client, wired
 
 def test_pure_acknowledgement_lost_ack_and_replay_do_not_repeat_effect(client, wired, monkeypatch):
     message = "The northern carton arrival was 19 April, correcting the earlier account."
-    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)])
+    change = record_plan(message, candidates=[revision(NEW_DATE, message, OLD_DATE, DATE_ID)],
+                         account=True)
     model = install(wired, monkeypatch, [initial_plan(), change], [{}, {"status": "performed"}])
     baseline = send(client, ORIGINAL, BASE_TURN).json()
     commit = wired.store.commit
@@ -234,7 +246,10 @@ class MultipleBlockModel(PassageModel):
         data = deepcopy(result.data)
         for unit in data["units"]:
             extra = deepcopy(unit["blocks"][0])
-            extra.update(id="separate-account", kind="account", text=self.control["second_prose"])
+            extra.update(id="separate-account", kind="limitation", evidence_expression={
+                "operator": "limitation", "source_ids": [], "record_ids": [], "focus": "none"})
+            if self.writer_count == 1:
+                extra["text"] = self.control["second_prose"]
             unit["blocks"].append(extra)
             unit["sufficiency"]["block_id"] = extra["id"]
         return replace(result, data=data)
@@ -298,7 +313,8 @@ class ContentRejectingModel(PassageModel):
         return replace(result, data=data)
 
 
-def test_discarded_pure_prose_never_reaches_review_or_causes_retry(client, wired, monkeypatch):
+def test_discarded_pure_prose_needs_one_correction_and_never_reaches_review(
+        client, wired, monkeypatch):
     message = "Correct the northern carton record using the saved original account."
     lie = "I saved the correction and completed all record work."
     model = install(wired, monkeypatch, [initial_plan(), record_plan(message)],
@@ -313,7 +329,7 @@ def test_discarded_pure_prose_never_reaches_review_or_causes_retry(client, wired
     assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is False
     assert lie not in json.dumps(result["elements"])
     calls = model.seen[before:]
-    assert sum(row["operation"] == "continue_conversation" for row in calls) == 1
+    assert sum(row["operation"] == "continue_conversation" for row in calls) == 2
     assert sum(row["operation"] == "verify_continuation" for row in calls) == 1
     review = next(row["input"] for row in calls if row["operation"] == "verify_continuation")
     assert all(block["text"] != lie for unit in review["units"] for block in unit["blocks"])
@@ -322,7 +338,7 @@ def test_discarded_pure_prose_never_reaches_review_or_causes_retry(client, wired
     assert result["continuation"]["units"][0]["record_check"]["outcome"] == "unfinished"
 
 
-def test_substantive_completion_lie_is_replaced_without_unnecessary_retry(
+def test_substantive_completion_lie_is_replaced_with_one_bounded_correction(
         client, wired, monkeypatch):
     message = "Correct the carton entry and explain the broader account distinction."
     lie = "I saved the correction and completed all record work."
@@ -336,7 +352,7 @@ def test_substantive_completion_lie_is_replaced_without_unnecessary_retry(
     _, active = reopened(wired, result)
     assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is False
     assert lie not in json.dumps(result["elements"])
-    assert sum(row["operation"] == "continue_conversation" for row in model.seen[before:]) == 1
+    assert sum(row["operation"] == "continue_conversation" for row in model.seen[before:]) == 2
 
 
 def test_repeated_none_outcome_keeps_saved_input_and_truthful_unfinished_fallback(

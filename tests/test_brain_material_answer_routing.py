@@ -53,6 +53,7 @@ def test_current_answer_runs_correction_saves_lineage_and_replays_without_work(
     corrected = answer_plan(
         correction, reply="Your corrected account records delivery on 17 June.",
         candidates=[revised], intent="contribution",
+        record_disposition="performed",
                      material_purposes=("account_contribution",))
     corrected["items"][0]["mutation_scopes"] = [mutation_scope("delivery-original:material:1")]
     seed = plan(account, candidates=[original], opening=True,
@@ -175,6 +176,7 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
                 "June date."
             ),
         })
+    review["_source_purposes"] = {request: "non_account"}
     model = Model([plan(account, candidates=[original], opening=True,
                         material_purposes=("account_contribution",)), review, review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)

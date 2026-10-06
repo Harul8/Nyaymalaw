@@ -30,7 +30,7 @@ def correction_plan(account, correction, *, original_turn="receipt-original"):
         relation="corrects", scope="current", placement="matter",
         references=({"turn_id": original_turn, "role": "advocate", "quoted": account},),
         related_material_ids=(f"{original_turn}:material:1",))
-    return routed(correction, candidates=[revised], items=[
+    return routed(correction, candidates=[revised], record_disposition="performed", items=[
         {**item(correction, revised["statement"], purposes=("account_contribution",),
                 intent="contribution"),
          "mutation_scopes": [mutation_scope(f"{original_turn}:material:1")]},
@@ -69,7 +69,7 @@ def assert_saved_execution(wired, response, *, before_version, turn_id, request,
         "response_mode": "substantive",
         **({"acknowledgement_contract": RECORD_ACKNOWLEDGEMENT_CONTRACT,
             "acknowledgement_delivery": "code_only"}
-           if outcome["status"] != "none" and declared["kind"] != "none" else {}),
+           if outcome["status"] != "none" else {}),
         "fulfillment": fulfillment,
         "fulfillment_check": {
             **check, "receipt_id": receipt["id"], "request_index": 0,
@@ -138,7 +138,7 @@ def test_public_correction_receipt_matches_record_effects_and_replays_once(
     result = response.json()
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-correction",
-        request=correction, purposes=("account_contribution",))
+        request=correction, purposes=("account_contribution",), fulfillment="fulfilled")
     assert receipt["stages"]["source_classification"]["state"] == "returned"
     assert_complete_reader_stage(
         receipt["stages"]["dispute_extraction"], count=0, unit_ids=[])
@@ -381,7 +381,8 @@ def test_held_revision_and_other_matter_peer_never_become_current_record_effects
     supplied = f"{uncertain} {other}"
     held = material("evidence", uncertain, uncertain, scope="uncertain", basis="uncertain")
     foreign = material("circumstance", other, other, scope="other", placement="matter")
-    held_plan = routed(supplied, candidates=[held, foreign], items=[
+    held_plan = routed(supplied, candidates=[held, foreign],
+                       source_purposes={uncertain: "outside_scope", other: "outside_scope"}, items=[
         item(supplied, "The reported file association remains uncertain.",
              purposes=("account_contribution",), intent="contribution"),
     ])
@@ -390,7 +391,8 @@ def test_held_revision_and_other_matter_peer_never_become_current_record_effects
         "evidence", correction, correction, scope="uncertain", basis="uncertain",
         relation="corrects", related_material_ids=("receipt-held:material:1",),
         references=({"turn_id": "receipt-held", "role": "advocate", "quoted": uncertain},))
-    follow = routed(correction, candidates=[revised], items=[
+    follow = routed(correction, candidates=[revised], record_disposition="unresolved",
+                    source_purposes={correction: "outside_scope"}, items=[
         {**item(correction, "The corrected file association remains uncertain.",
                 purposes=("account_contribution",), intent="contribution"),
          "mutation_scopes": [mutation_scope("receipt-held:material:1")]},
@@ -411,7 +413,7 @@ def test_held_revision_and_other_matter_peer_never_become_current_record_effects
     result = response.json()
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-held-revision",
-        request=correction, purposes=("account_contribution",))
+        request=correction, purposes=("account_contribution",), fulfillment="unfinished")
     effects = receipt["effects"]["details"]
     assert effects["activated_record_ids"] == effects["retired_record_ids"] == []
     assert effects["operations"] == []
@@ -431,7 +433,7 @@ def test_withdrawal_receipt_records_retirement_without_an_activated_replacement(
         relation="withdraws", scope="current", placement="matter",
         references=({"turn_id": "receipt-original", "role": "advocate", "quoted": account},),
         related_material_ids=("receipt-original:material:1",))
-    follow = routed(request, candidates=[withdrawn], items=[
+    follow = routed(request, candidates=[withdrawn], record_disposition="performed", items=[
         {**item(request, withdrawn["statement"], purposes=("account_contribution",),
                 intent="contribution"),
          "mutation_scopes": [mutation_scope("receipt-original:material:1",
@@ -448,7 +450,7 @@ def test_withdrawal_receipt_records_retirement_without_an_activated_replacement(
     result = response.json()
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-withdrawal",
-        request=request, purposes=("account_contribution",))
+        request=request, purposes=("account_contribution",), fulfillment="fulfilled")
     effects = receipt["effects"]["details"]
     assert effects["activated_record_ids"] == []
     assert effects["retired_record_ids"] == ["receipt-original:material:1"]
@@ -519,7 +521,7 @@ def test_lost_commit_acknowledgement_returns_saved_receipt_without_duplicate_eff
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == operations
     receipt = assert_saved_execution(
         wired, result, before_version=before.version, turn_id="receipt-lost-ack",
-        request=correction, purposes=("account_contribution",))
+        request=correction, purposes=("account_contribution",), fulfillment="fulfilled")
     assert receipt["effects"]["details"]["activated_record_ids"] == [
         "receipt-lost-ack:material:1"]
     assert commits == [before.version + 1]

@@ -15,16 +15,26 @@ from nm.brain.execution_contracts import effect_catalogue
 from nm.brain.turn import BrainRefused, BrainService, BrainTurn, _CountedModel, chat_matter_id
 from nm.shared.model_port import ContextOverflow, Prompt, ProviderUnavailable, Tier
 from nm.shared.store_file_store import FileMatterStore
+from tests.brain_reader_fixture import fixture_coverage, fixture_disposition
 from tests.test_brain_material import Model, material, mutation_scope, plan
 
 REVIEW = {"kind": "review", "target_ids": [], "operation": "none",
           "success_condition": "Check that the existing attributed record is faithful."}
 
+INSTRUCTION_PURPOSES = {words: "non_account" for words in (
+    "Check the saved record and leave it unchanged if it is faithful.",
+    "Check the saved record and explain any unresolved distinction.",
+    "Please review the earlier account.",
+    "Check the saved record before confirming completion.",
+    "Check the empty saved record.", "State any unresolved scope.",
+    "Correct the records date to Wednesday.",
+)}
+
 
 class ConsumerModel(Model):
     def __init__(self, plans, *, unread_detail=False, unread_opening=False,
                  coverage_state="complete", record_goal_fulfilled=False):
-        super().__init__(plans)
+        super().__init__(plans, source_purposes=INSTRUCTION_PURPOSES)
         self.seen = []
         self.unread_detail = unread_detail
         self.unread_opening = unread_opening
@@ -43,12 +53,16 @@ class ConsumerModel(Model):
             if self.unread_opening:
                 data["verdicts"] = [row for row in data["verdicts"]
                                     if row["candidate_id"] != "O1"]
-            if "coverage_source_ids" in payload:
-                data["coverage"] = {
-                    "state": self.coverage_state, "missing_source_ids": [],
-                    "reason": ("Explicit fixture judgment: the authorised account is represented."
-                               if self.coverage_state == "complete" else
-                               "Explicit fixture judgment: a distinction remains unresolved.")}
+            if "coverage_source_ids" in payload and self.coverage_state != "complete":
+                # Deliberate independent uncertainty; this does not label an
+                # empty extractor response complete or alter candidate support.
+                identities = payload["coverage_source_ids"]
+                data["coverage"] = fixture_coverage(
+                    payload, state=self.coverage_state,
+                    source_decisions={identity: "unresolved" for identity in identities},
+                    dispositions=[fixture_disposition(payload, identity, status="unresolved")
+                                  for identity in identities],
+                    reason="Explicit fixture judgment: a distinction remains unresolved.")
         elif prompt.operation == "continue_conversation":
             receipt = payload["material_coverage"]["execution"]
             for unit in data["units"]:
@@ -56,6 +70,11 @@ class ConsumerModel(Model):
                 requirement = receipt["requests"][index]["record_requirement"]
                 review = requirement["kind"] == "review"
                 change = requirement["kind"] == "change"
+                if not review and not change:
+                    continue
+                unit["blocks"][0].update(kind="completion", evidence_expression={
+                    "operator": "record_result", "source_ids": [], "record_ids": [],
+                    "focus": "none"})
                 unit["record_outcome"] = {
                     "status": ("review_no_change" if review else
                                "performed" if change and self.record_goal_fulfilled else
@@ -71,6 +90,8 @@ class ConsumerModel(Model):
             receipt = payload["input"]["material_coverage"]["execution"]
             for verdict in data["verdicts"]:
                 requirement = receipt["requests"][verdict["request_index"]]["record_requirement"]
+                if requirement["kind"] == "none":
+                    continue
                 verdict["record_check"] = {
                     "outcome": "no_change_justified" if requirement["kind"] == "review"
                     else "fulfilled" if requirement["kind"] == "change"
@@ -293,7 +314,8 @@ def test_original_result_replays_after_later_source_bound_supersession(tmp_path)
         plan(original, candidates=[first], opening=True,
              material_purposes=("account_contribution",)),
         plan(corrected, candidates=[revision], material_purposes=("account_contribution",),
-             mutation_scopes=[mutation_scope("first:material:1")])])
+             mutation_scopes=[mutation_scope("first:material:1")],
+             record_disposition="performed")])
     brain = BrainService(store, model)
     initial_request = BrainTurn("adv", original, "first")
     initial = brain.run(initial_request).as_dict()
@@ -311,21 +333,20 @@ def test_original_result_replays_after_later_source_bound_supersession(tmp_path)
     assert replay["continuation"]["record_snapshot"] == initial["continuation"]["record_snapshot"]
 
 
-def test_greeting_has_code_owned_visible_no_changes_status_and_prepared_writer_context(tmp_path):
+def test_greeting_omits_irrelevant_record_status_and_keeps_prepared_writer_context(tmp_path):
     brain, _, model = make_service(tmp_path, plain_plan())
     result = brain.run(BrainTurn("adv", "Say hello.", "greeting")).as_dict()
     receipt = result["material_coverage"]["execution"]
-    footer = receipt["display"]["element"]
+    display = receipt["display"]
     assert receipt["material_selected"] is False and receipt["record_changes"] == []
-    assert footer["kind"] == "finding" and footer in result["elements"]
-    assert footer["text"] == "No changes were made to the saved record."
-    assert "unfinished" not in footer["text"] and receipt["gate_diagnostics"] == []
+    assert display is None and receipt["gate_diagnostics"] == []
+    assert all("saved record" not in element["text"] for element in result["elements"])
     writer = next(payload for operation, payload in model.seen
                   if operation == "continue_conversation")
-    assert writer["material_coverage"]["execution"]["display"]["element"] == footer
+    assert writer["material_coverage"]["execution"]["display"] is None
     reviewer = next(payload for operation, payload in model.seen
                     if operation == "verify_continuation")
-    assert reviewer["input"]["material_coverage"]["execution"]["display"]["element"] == footer
+    assert reviewer["input"]["material_coverage"]["execution"]["display"] is None
 
 
 @pytest.mark.parametrize("requested_change_performed", [False, True])
@@ -457,7 +478,7 @@ def test_review_guard_refuses_owned_dispute_when_verifier_returns_without_its_st
     message = "The contractor stopped work and disputes the amount payable."
     candidate = material("dispute", "Whether payment is due after work stopped.", message)
     planned = plan(message, candidates=[candidate], opening=True,
-                   material_purposes=("account_contribution",))
+                   material_purposes=("account_contribution",), dispute_scope={message: "account"})
     brain, store, model = make_service(tmp_path, planned)
 
     def unchecked_return(model, *, candidates, **kwargs):

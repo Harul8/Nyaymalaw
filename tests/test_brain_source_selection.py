@@ -7,6 +7,7 @@ import pytest
 
 from nm.brain.material import PriorReference, resolve_sources
 from nm.shared.model_port import SchemaViolation
+from tests.brain_reader_fixture import fixture_scoped_coverage
 from tests.test_brain_material import Model, material, mutation_scope, plan, send
 
 
@@ -61,6 +62,28 @@ class RepeatedSelectionModel(Model):
         payload = json.loads(prompt.user)
         if prompt.operation == "verify_material_grounding":
             self.grounding_inputs.append(payload)
+        if prompt.operation in {"verify_disputes", "verify_material_grounding"}:
+            data = deepcopy(result.data)
+            # Both identical original spans independently supply this fixture's
+            # reported advance. Transport every declared alias, without
+            # allowing a repeated selection to hide an invalid source ID.
+            for row in data["verdicts"]:
+                candidate = next(item for item in payload["candidates"]
+                                 if item["candidate_id"] == row["candidate_id"])
+                sources = candidate["allowed_account_source_ids"]
+                row["account_check"]["source_ids"] = list(sources)
+                row["account_check"]["source_checks"] = [{
+                    "source_id": identity, "supplies_account_content": True,
+                    "supports_proposal": True, "support_spans": [{
+                        "start": 0, "end": len(payload["source_treatments"][identity]["quoted"])}],
+                    "reason": "The reported original advance and correction supply this account.",
+                } for identity in sources]
+            data["coverage"] = fixture_scoped_coverage(
+                payload, data, source_decisions={
+                    identity: ("outside_scope" if prompt.operation == "verify_disputes"
+                               else "account")
+                    for identity in payload["coverage_source_ids"]})
+            return replace(result, data=data)
         if prompt.operation != "extract_legal_details":
             return result
         data = deepcopy(result.data)

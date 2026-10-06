@@ -444,10 +444,15 @@ def test_public_adverse_disclosure_retains_supported_response_context_and_pendin
     answer = send(client, DISCLOSURE, "retained-disclosure", opened=first)
     replay = send(client, DISCLOSURE, "retained-disclosure", opened=first)
 
-    assert answer["metrics"]["llm_calls"] == 10
-    assert [operation for operation, _ in model.calls][-10:] == [
+    # This fixture deliberately extracts no new disclosure records. Its
+    # independently missing account dispositions cause one bounded reader
+    # recovery in each domain before retaining the checked response subset.
+    assert answer["metrics"]["llm_calls"] == 14
+    assert [operation for operation, _ in model.calls][-14:] == [
         "interpret_conversation", "classify_account_sources", "extract_disputes",
         "verify_disputes", "extract_legal_details", "verify_material_grounding",
+        "extract_disputes", "verify_disputes", "extract_legal_details",
+        "verify_material_grounding",
         "continue_conversation", "verify_continuation",
         "continue_conversation", "verify_continuation",
     ]

@@ -270,6 +270,8 @@ def test_scope_held_dispute_is_in_receipt_without_losing_independent_material(
                     source_ids=[support], source_checks=[{
                         "source_id": support, "supplies_account_content": True,
                         "supports_proposal": True,
+                        "support_spans": [{"start": 0, "end": len(
+                            original["source_treatments"][support]["quoted"])}],
                         "reason": "The scripted original account supports this formulation.",
                     }])
                 verdict["target_checks"] = [{

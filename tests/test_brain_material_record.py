@@ -111,6 +111,10 @@ def test_later_possible_matter_and_uncertain_material_stay_out_of_current_record
         plan(opening, candidates=opening_rows, opening=True,
              material_purposes=("account_contribution",)),
         plan(diversion, candidates=diversion_rows, items=[proposed_item],
+             source_purposes={
+                 "A different client contests a wage deduction.": "outside_scope",
+                 "Their wage slip is held.": "outside_scope",
+                 "An unrelated issue may concern this file.": "outside_scope"},
              material_purposes=("account_contribution",)),
         plan(continuation, candidates=current_rows, material_purposes=("account_contribution",)),
     ])
@@ -298,8 +302,10 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
     class CheckingModel(Model):
         def __init__(self):
             super().__init__([plan(first, candidates=original, opening=True,
+                                   source_purposes={context: "non_account"},
                                    material_purposes=("account_contribution",)),
                               plan(latest, candidates=[revised],
+                                   record_disposition="performed" if supported else "unresolved",
                                    material_purposes=("account_contribution",),
                                    mutation_scopes=[mutation_scope("original:material:2")])])
             self.check_inputs = []
@@ -319,10 +325,12 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
                          "reason": "A reported correction does not prove the event."}
                         if candidates[row["candidate_id"]].get("relation") == "corrects"
                         else row for row in result.data["verdicts"]]
-            return replace(result, data={**result.data, "verdicts": rejected,
-                "coverage": {"state": "partial", "missing_source_ids": ["L1"],
-                             "reason": ("The false proof claim is rejected; the correction "
-                                        "remains unrepresented.")}})
+            from tests.test_brain_material import fixture_scope_judgment
+
+            data = {**result.data, "verdicts": rejected}
+            data["coverage"] = fixture_scope_judgment(
+                payload, data, source_purposes=self.source_purposes)
+            return replace(result, data=data)
 
     model = CheckingModel()
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)

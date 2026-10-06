@@ -6,10 +6,19 @@ from dataclasses import replace
 
 import pytest
 
+from nm.brain.continuation import _input
 from nm.brain.continuation_verification import verify_continuation
+from nm.brain.conversation import Conversation
 from nm.shared.model_port import Tier
 from tests.brain_continuation_fixture import reviewed_verdicts
-from tests.test_brain_continuation import ContinuationModel, mixed_purpose_unit, unit, verdict
+from tests.test_brain_continuation import (
+    ContinuationModel,
+    conversation_plan,
+    mixed_purpose_unit,
+    reviewed_units,
+    unit,
+    verdict,
+)
 
 
 def review(payload, *indexes):
@@ -17,6 +26,12 @@ def review(payload, *indexes):
 
 
 def checked(model, *units):
+    if any("evidence_expression" in block for unit in units for block in unit["blocks"]):
+        payload = _input(Conversation(()), "I have a signed receipt.", conversation_plan(),
+                         None, None, None, None, (), "latest")[0]
+        rendered = tuple(reviewed_units(payload, *units))
+        return verify_continuation(model, input_payload=payload, units=rendered)
+    # Explicit historical/internal review fixtures retain their old wire shape.
     return verify_continuation(model, input_payload={
         "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=units)
 
@@ -121,7 +136,7 @@ def test_incomplete_review_repairs_only_the_unread_peer_once(fault):
         return data
 
     def repaired(payload):
-        assert payload["units"] == [original]
+        assert payload["units"] == reviewed_units(payload["input"], original)
         assert payload["validation_issues"][0]["request_index"] == 1
         assert "checks" in payload["validation_issues"][0]["issue"]
         return review(payload, 1)

@@ -36,11 +36,13 @@ def route(words, *, research_question="", relation="new", aside=False):
 
 
 def sourced_reply(payload):
-    key, source = next(iter(payload["legal_sources"].items()))
+    key = next(iter(payload["legal_sources"]))
     return {"units": [{
         "request_index": 0,
-        "blocks": [{"id": "cited-condition", "kind": "assessment", "text": source["text"],
-                    "span_ids": [], "record_ids": [], "legal_source_ids": [key],
+        "blocks": [{"id": "cited-condition", "kind": "assessment",
+                    "evidence_expression": {"operator": "checked_legal", "source_ids": [],
+                                            "record_ids": [], "legal_source_ids": [key],
+                                            "focus": "none"},
                     "uncertainty": "conditional"}],
         "questions": [], "next_work": [], "work": {"existing_id": "", "create": True},
         "progress_updates": [], "sufficiency": {"status": "complete",
@@ -125,11 +127,12 @@ def test_public_first_general_legal_question_checks_sources_without_creating_a_d
     assert reference["text"] == PROVISION
     assert reference["verification"] == checked_use
     anchor = answer["elements"][0]["inline_citations"][0]
-    assert anchor["text"] == PROVISION
+    assert anchor["text"] == "Checked legal passage 1"
     assert anchor["source_id"] == reference["id"]
     assert answer["elements"][0]["sources"][anchor["source_index"]]["text"] == PROVISION
     assert [row["text"] for row in answer["elements"]] == [
-        PROVISION, "No changes were made to the saved record."]
+        "Application depends on the proposition's conditions and the attributed account. "
+        f'The checked legal passage includes: “{PROVISION}” Checked legal passage 1.']
     assert saved.brain_ready is False
     assert "research_reads" not in answer
     assert "requirements_read" not in saved.brain_chat[0]["response"]
@@ -384,11 +387,12 @@ def test_public_general_legal_question_preserves_unread_search_as_pending_withou
     assert response["metrics"]["llm_calls"] == 4
     writer_schema = next(schema for operation, schema in model.schemas
                          if operation == "continue_conversation")
-    assert "assessment" not in writer_schema["properties"]["units"]["items"][
-        "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
+    expressions = writer_schema["properties"]["units"]["items"][
+        "properties"]["blocks"]["items"]["properties"]["evidence_expression"]
+    assert "legal_source_ids" not in expressions["properties"]
     assert response["matter_id"] is None
     assert PROVISION not in json.dumps(response["elements"])
-    assert "remains pending" in response["elements"][0]["text"]
+    assert "remains unresolved" in response["elements"][0]["text"]
     saved = wired.store.load(chat_matter_id("adv_demo", response["chat_id"]))
     read = saved.brain_chat[0]["response"]["research_reads"][0]
     assert read["state"] == "unavailable"
@@ -502,6 +506,6 @@ def test_public_pure_conversation_attribution_needs_no_new_legal_enquiry(
     assert block["legal_source_ids"] == []
     assert [row["type"] for row in block["references"]] == ["conversation"]
     assert block["references"][0]["text"] == QUESTION
-    assert response["elements"][0]["text"] == f"You asked: {QUESTION}"
+    assert response["elements"][0]["text"] == f'Your message includes: “{QUESTION}”'
     saved = wired.store.load(chat_matter_id("adv_demo", first["chat_id"]))
     assert saved.brain_chat[-1]["response"]["research_reads"] == []

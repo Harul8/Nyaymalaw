@@ -6,6 +6,7 @@ from tests.test_brain_continuation import (
     ContinuationModel,
     _operation_names,
     conversation_plan,
+    expression_block,
     unit,
 )
 from tests.test_brain_continuation_record_outcome import (
@@ -79,7 +80,8 @@ def test_none_ack_gets_one_local_correction_and_keeps_independent_peer():
                                        'continue_conversation', 'verify_continuation']
     assert [row['state'] for row in result.coverage] == ['ok', 'ok']
     assert result.units[0]['record_outcome']['status'] == 'unresolved'
-    assert result.units[1]['blocks'][0]['text'] == ordinary['blocks'][0]['text']
+    assert result.units[1]['blocks'][0]['text'] == (
+        'Your message includes: “The handover was on 4 May.”')
     statuses = model.schemas[0]['properties']['units']['items']['properties'][
         'record_outcome']['properties']['status']['enum']
     assert 'none' in statuses  # This peer has a genuine non-record deliverable.
@@ -101,11 +103,8 @@ def narrowed_proposal():
     value['questions'] = []
     value['blocks'].pop(1)
     value['record_outcome'] = declaration('unresolved', owner='limit-0')
-    value['blocks'].insert(1, {
-        'id': 'unsupported-conclusion', 'kind': 'assessment',
-        'text': 'The disputed condition conclusively creates legal liability.',
-        'span_ids': [], 'record_ids': [], 'legal_source_ids': [],
-        'inline_citations': [], 'uncertainty': 'none'})
+    value['blocks'].insert(1, expression_block(
+        'unsupported-conclusion', 'assessment', operator='checked_legal', sources=()))
     return value
 
 

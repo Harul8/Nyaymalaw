@@ -5,8 +5,9 @@ from copy import deepcopy
 import pytest
 
 from nm.brain import continuation as owner
+from nm.brain.execution_contracts import ExecutionEvidenceInvalid
 from nm.brain.mutation_contracts import AUTHORITY_CONTRACT, model_mutation_context
-from nm.shared.model_port import OutputTruncated, SchemaViolation, estimate_tokens
+from nm.shared.model_port import OutputTruncated, estimate_tokens
 from tests.brain_mutation_dispatch_fixture import (
     check_backend,
     check_presentation,
@@ -28,6 +29,25 @@ def run(model, inputs):
     return owner.continue_conversation(model, **inputs)
 
 
+def pending_unit(index=0):
+    """The declared existing-record review has not achieved its requested result."""
+    proposed = unit(index)
+    proposed["record_outcome"].update(
+        status="unresolved", block_id=f"limit-{index}",
+        reason="The independently declared review of the original record remains unfinished.")
+    return proposed
+
+
+def pending_verdict(*indexes):
+    reviewed = verdict(*indexes)
+    for row in reviewed["verdicts"]:
+        row["record_check"] = {
+            "outcome": "unfinished",
+            "reason": "The explicit fixture judgment certifies no completed record review.",
+        }
+    return reviewed
+
+
 def test_writer_presents_once_and_preserves_full_backend_scope_and_exact_conversation(monkeypatch):
     inputs = context()
     raw = input_payload(owner, inputs)
@@ -47,7 +67,7 @@ def test_writer_presents_once_and_preserves_full_backend_scope_and_exact_convers
 
     monkeypatch.setattr(owner, "model_mutation_context", presentation)
     monkeypatch.setattr(owner, "verify_continuation", handoff)
-    model = ContinuationModel([{"units": [unit()]}, verdict(0)])
+    model = ContinuationModel([{"units": [pending_unit()]}, pending_verdict(0)])
     result = run(model, inputs)
     assert result.coverage[0]["state"] == "ok"
     assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
@@ -71,7 +91,7 @@ def test_writer_preflight_uses_lean_proof_but_keeps_the_entire_large_original_ac
         def context_budget(self, tier):
             return budget if not self.calls else 1_000_000
 
-    model = BudgetedModel([{"units": [unit()]}, verdict(0)])
+    model = BudgetedModel([{"units": [pending_unit()]}, pending_verdict(0)])
     result = run(model, inputs)
     assert result.coverage[0]["state"] == "ok"
     check_presentation(model.calls[0][1], raw)
@@ -93,7 +113,7 @@ def test_truncation_guidance_does_not_present_the_same_lean_ledger_twice(monkeyp
 
     monkeypatch.setattr(owner, "model_mutation_context", presentation)
     model = ContinuationModel([OutputTruncated("Scripted complete-budget exhaustion"),
-                               {"units": [unit()]}, verdict(0)])
+                               {"units": [pending_unit()]}, pending_verdict(0)])
     result = run(model, inputs)
     assert result.coverage[0]["state"] == "ok"
     assert _operation_names(model) == ["continue_conversation", "continue_conversation",
@@ -109,7 +129,7 @@ def test_corrupt_tagged_ledger_cannot_be_hidden_by_model_presentation():
     ledger = inputs["material"]["coverage"]["execution"]["mutation_authorities"]
     ledger["authorities"][0]["target_ids"].append("unowned-record")
     model = ContinuationModel([])
-    with pytest.raises(SchemaViolation, match="changed after scope admission"):
+    with pytest.raises(ExecutionEvidenceInvalid, match="changed after scope admission"):
         run(model, inputs)
     assert model.calls == []
 
@@ -121,7 +141,7 @@ def test_unadmitted_contract_tag_stays_verbatim_and_only_failed_draft_is_repaire
     receipt["requests"].append({"request_index": 1, "record_requirement": {
         "kind": "none", "target_ids": [], "operation": "none", "success_condition": "",
     }})
-    good, bad = unit(0), unit(1)
+    good, bad = pending_unit(0), pending_unit(1)
     bad["contract"] = AUTHORITY_CONTRACT
     presentations = []
     present = owner.model_mutation_context
@@ -136,10 +156,11 @@ def test_unadmitted_contract_tag_stays_verbatim_and_only_failed_draft_is_repaire
         assert [row["request_index"] for row in payload["work_items"]] == [1]
         assert [row["request_index"] for row in payload["correction"]["validation_issues"]] == [1]
         assert payload["correction"]["rejected_units"][0]["contract"] == AUTHORITY_CONTRACT
-        return {"units": [unit(1)]}
+        return {"units": [pending_unit(1)]}
 
     monkeypatch.setattr(owner, "model_mutation_context", presentation)
-    model = ContinuationModel([{"units": [good, bad]}, verdict(0), repair, verdict(1)])
+    model = ContinuationModel([{"units": [good, bad]}, pending_verdict(0), repair,
+                               pending_verdict(1)])
     result = run(model, inputs)
     assert [row["state"] for row in result.coverage] == ["ok", "ok"]
     assert _operation_names(model) == ["continue_conversation", "verify_continuation",

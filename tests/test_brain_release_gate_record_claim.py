@@ -9,12 +9,14 @@ from tests.test_brain_continuation import verdict
 from tests.test_brain_material import Model, material, plan, send
 
 
-def response_unit(text, *, completed):
+def response_unit(*, completed):
     return {
         "request_index": 0,
         "blocks": [{"id": "response", "kind": "completion" if completed else "limitation",
-                    "text": text, "span_ids": ["L1"] if completed else [],
-                    "record_ids": [], "legal_source_ids": [],
+                    "evidence_expression": {
+                        "operator": "source_account" if completed else "limitation",
+                        "source_ids": ["L1"] if completed else [],
+                        "record_ids": [], "focus": "none"},
                     "uncertainty": "none"}],
         "questions": [], "next_work": [],
         "sufficiency": {"status": "complete" if completed else "not_completed",
@@ -53,8 +55,6 @@ def test_public_false_record_completion_is_reviewed_and_repaired_before_saving(
     account = "The records are held by an unidentified custodian."
     request = "Review the saved entry and correct any wording unsupported by my account."
     false_claim = "I have corrected the matter record and saved the updated entry."
-    remaining_gap = ("The requested record revision remains unfinished; "
-                     "the saved entry is unchanged.")
     stored_item = material("circumstance", account, account, placement="matter")
     opening = plan(account, candidates=[stored_item], opening=True,
                    material_purposes=("account_contribution",))
@@ -66,29 +66,29 @@ def test_public_false_record_completion_is_reviewed_and_repaired_before_saving(
         "record_requirement": {"kind": "none", "target_ids": [],
                                "operation": "none", "success_condition": ""}}])
     assert mistaken_route["items"][0]["material_purposes"] == []
-    unsupported = response_unit(false_claim, completed=True)
-    corrected = response_unit(remaining_gap, completed=False)
+    unsupported = response_unit(completed=True)
+    # An explicit raw display-field attack must remain invalid; fixture
+    # transport must never replace fabricated false prose with safe evidence.
+    unsupported["blocks"][0]["text"] = false_claim
+    corrected = response_unit(completed=False)
 
-    def reject_unexecuted_change(payload):
-        assert payload["units"][0]["blocks"][0]["text"] == false_claim
+    def check_repaired_response(payload):
+        assert payload["units"][0]["blocks"][0]["text"] == (
+            "The requested conclusion remains unresolved on the supplied support.")
         records = payload["input"]["record_catalogue"]
         assert records["seed:material:1"]["record"]["source_turn_id"] == "seed"
-        reason = "The selected current record has no change supporting this completion claim."
-        data = reviewed_verdicts(payload, verdict(0, accept=False, reason=reason))
-        row = data["verdicts"][0]
-        row["block_checks"][0].update(verdict="reject", reason=reason)
-        row["progress_checks"][0].update(result_supported=False, verdict="reject", reason=reason)
-        return data
+        return verdict(0)
 
     def repair_response(payload):
         assert [item["request_index"] for item in payload["work_items"]] == [0]
         issues = payload["correction"]["validation_issues"]
-        assert "no change supporting this completion claim" in issues[0]["issue"]
+        assert "result.blocks[0]" in issues[0]["issue"]
+        assert "undeclared properties" in issues[0]["issue"]
         return {"units": [corrected]}
 
     model = ReleaseModel([opening, mistaken_route],
                          [{"units": [unsupported]}, repair_response],
-                         [reject_unexecuted_change, verdict(0)])
+                         [check_repaired_response])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     first_response = send(client, account, "seed")
     assert first_response.status_code == 200, first_response.text
@@ -102,11 +102,12 @@ def test_public_false_record_completion_is_reviewed_and_repaired_before_saving(
     assert response.status_code == 200, response.text
     answer = response.json()
     visible = "\n".join(row["text"] for row in answer["elements"])
-    assert false_claim not in visible and remaining_gap in visible
+    assert false_claim not in visible
+    assert "The requested conclusion remains unresolved on the supplied support." in visible
     operations = [operation for operation, _ in model.seen[call_start:]]
-    assert operations == ["interpret_conversation", "continue_conversation", "verify_continuation",
+    assert operations == ["interpret_conversation", "continue_conversation",
                           "continue_conversation", "verify_continuation"]
-    assert answer["metrics"]["llm_calls"] == 5
+    assert answer["metrics"]["llm_calls"] == 4
     assert answer["material"] == []
     after_record = client.get(f"/api/matters/{first['matter_id']}").json()["material_record"]
     assert after_record == before_record

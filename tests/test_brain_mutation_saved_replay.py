@@ -147,8 +147,9 @@ def test_saved_mutation_binding_tamper_refuses_public_replay_without_model_or_wr
         else "nm.brain.mutation_contracts.validate_record_mutation"
     )
     required_issue = (
-        "saved record result seal disagrees with its original owned evidence"
-        if earlier_ledger_fault else (
+        "Mutation authority ledger is absent or unreadable" if fault == "removed_ledger" else
+        "The selected effect does not match the owned mutation target and operation"
+        if fault == "rebuilt_permission_drift" else (
             "Versioned mutation requires its saved authority binding"
             if fault == "missing_certificate"
             else "Saved mutation differs from its source-linked authority binding"
@@ -192,7 +193,7 @@ def test_saved_mutation_binding_tamper_refuses_public_replay_without_model_or_wr
         notes="The original save contained an independently scoped date correction. "
         "Tampered fields are resealed where specified; no reinterpretation or retry "
         "may turn corruption into a fresh success reply. Ledger drift is rejected by "
-        "the earlier original-evidence result seal; certificate drift reaches the "
+        "the earlier saved-outcome evidence gate; certificate drift reaches the "
         "mutation binding gate. No unexecuted later gate is claimed as observed. "
         "GS-15/17/18 are curated repository conversations, not acquired judgment text.",
     )

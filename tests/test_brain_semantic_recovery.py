@@ -16,7 +16,14 @@ from nm.brain.execution_contracts import effect_catalogue
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Tier, Usage
 from tests.brain_pressure_support import record_case
-from tests.brain_reader_fixture import reader_operations, reader_repairs, source_portion_reply
+from tests.brain_reader_fixture import (
+    fixture_coverage,
+    fixture_disposition,
+    fixture_representation_choices,
+    reader_operations,
+    reader_repairs,
+    source_portion_reply,
+)
 from tests.test_brain_material import _with_source_ids, material, mutation_scope, send
 from tests.test_brain_pressure_release import PassageModel, answer_plan
 
@@ -32,7 +39,7 @@ class RecoveryModel(PassageModel):
                  gap_state="complete", gap_ids=(), partial_reader=False,
                  judge_failure=False, reject_addition=False, extra_rows=(), gap_area="detail",
                  review_requested=False, review_outcome="unresolved", wrong_owner_tier=False,
-                 opening=True, mutation_scopes=None):
+                 opening=True, mutation_scopes=None, dispute_sources=()):
         requirement = ({"kind": "review", "target_ids": [], "operation": "none",
                         "success_condition": "Check the entire supplied original account."}
                        if review_requested else None)
@@ -60,6 +67,60 @@ class RecoveryModel(PassageModel):
         self.recovery_read = False
         self.owner_reconsidered = False
         self.wrong_owner_tier = wrong_owner_tier
+        # Scenario-authored distinct-dispute obligations, selected before any
+        # reader output. Arrival events otherwise belong to material review.
+        self.dispute_sources = tuple(dispute_sources)
+
+    def coverage_judgment(self, operation, payload, reviewed):
+        """Transport independently scripted gap decisions through the fresh wire.
+
+        The original catalogue owns each source. The declared gap, disputed
+        portions and broad opening judgment own meaning; candidate statements
+        and execution receipts never decide purpose or permission.
+        """
+        remaining = not self.recovery_read and not self.owner_reconsidered
+        scoped = operation == {"detail": "verify_material_grounding",
+                               "dispute": "verify_disputes"}[self.gap_area]
+        state = self.gap_state if scoped and remaining else "complete"
+        gaps = set(self.gap_ids if scoped and remaining else ())
+        if scoped and self.reject_addition and self.recovery_read:
+            state, gaps = "partial", {"L2"}
+        choices = fixture_representation_choices(payload, reviewed)
+        source_decisions, dispositions = {}, []
+        for identity, reference in payload["source_treatments"].items():
+            # Both exact laboratory reports are independently declared account,
+            # even when the source classifier under test mislabels one.
+            assert reference["quoted"] in (FIRST, SECOND)
+            source_decisions[identity] = "account"
+            dispute_obligation = reference["quoted"] in self.dispute_sources or (
+                self.gap_area == "dispute" and reference["quoted"] == SECOND)
+            if operation == "verify_disputes" and not dispute_obligation:
+                dispositions.append(fixture_disposition(payload, identity, status="outside_scope"))
+                continue
+            if identity in gaps:
+                dispositions.append(fixture_disposition(
+                    payload, identity, status="unresolved" if state == "unassessed" else "missing"))
+                continue
+            selected = choices.get(identity, {"record_ids": [], "candidate_ids": []})
+            # The owner declares the accepted opening's exact MESSAGE summary
+            # preserves both reports when it has found no localized gap. This
+            # does not add account support sources to the opening proposal.
+            opening = next((row for row in reviewed["verdicts"]
+                            if row["candidate_id"] == "O1" and row["verdict"] == "accept"), None)
+            if operation == "verify_material_grounding" and opening is not None:
+                selected = {**selected, "candidate_ids": [*selected["candidate_ids"], "O1"]}
+            if selected["record_ids"] or selected["candidate_ids"]:
+                dispositions.append(fixture_disposition(
+                    payload, identity, status="represented", **selected))
+            else:
+                # An uncovered account is a gap; failed or missing proposals
+                # cannot silently move it outside the authorised scope.
+                dispositions.append(fixture_disposition(payload, identity, status="missing"))
+                if state != "unassessed":
+                    state = "partial"
+        return fixture_coverage(payload, state=state, source_decisions=source_decisions,
+                                dispositions=dispositions,
+                                reason="The scenario owner independently declares this scoped gap.")
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         payload = json.loads(prompt.user)
@@ -128,23 +189,27 @@ class RecoveryModel(PassageModel):
                 }})["source_treatments"][identity]
                 if "substantive_spans" in authored:
                     row["substantive_spans"] = authored["substantive_spans"]
-        if (operation == {"detail": "verify_material_grounding",
-                         "dispute": "verify_disputes"}[self.gap_area]
-                and "coverage_source_ids" in original):
-            remaining = not self.recovery_read and not self.owner_reconsidered
-            data["coverage"] = {
-                "state": self.gap_state if remaining else "complete",
-                "missing_source_ids": self.gap_ids if remaining else [],
-                "reason": "The independent fixture identifies this original contribution gap."
-                if remaining and self.gap_state != "complete" else
-                "The independent fixture confirms the full original account is represented.",
-            }
+        if operation in ("verify_material_grounding", "verify_disputes"):
+            for row in data["verdicts"]:
+                if row["candidate_id"] == "O1":
+                    # MESSAGE is independently authored as a two-report
+                    # opening. Its support depends on both original reports,
+                    # so reconsidering either must invalidate its old approval.
+                    selected = list(original["source_treatments"])
+                    row["account_check"]["source_ids"] = selected
+                    row["account_check"]["source_checks"] = [{
+                        "source_id": identity, "supplies_account_content": True,
+                        "supports_proposal": True,
+                        "support_spans": [{"start": 0, "end": len(reference["quoted"])}],
+                        "reason": "The opening summary independently preserves both reports.",
+                    } for identity, reference in original["source_treatments"].items()]
             if self.reject_addition and self.recovery_read:
                 for row in data["verdicts"]:
                     if row["candidate_id"] == "D2":
                         row.update(verdict="reject", operation_supported=False,
                                    reason="This added interpretation changes the reported meaning.")
                         row["account_check"].update(supported=False)
+            data["coverage"] = self.coverage_judgment(operation, original, data)
         # Preserve the actual post-fabrication object, replacing super's log entry.
         self.outputs[-1]["output"] = deepcopy(data)
         return replace(result, data=data)
@@ -156,6 +221,13 @@ def wire(wired, monkeypatch, model, *, recovery_limit=8):
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     monkeypatch.setattr(wired, "legal_search", None)
     if recovery_limit != 8:
+        class StageBudgetModel(boundary._CountedModel):
+            """This historical control allocates its exact limit to upstream work."""
+
+            def __init__(self, model, *, recovery_limit):
+                super().__init__(model, recovery_limit=recovery_limit, reply_recovery_reserve=0)
+
+        monkeypatch.setattr(boundary, "_CountedModel", StageBudgetModel)
         class LimitedService(boundary.BrainService):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs, recovery_limit=recovery_limit)

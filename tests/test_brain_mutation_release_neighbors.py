@@ -30,7 +30,9 @@ def correction_fixture(client, wired, monkeypatch, *, identity, declared_require
         if words not in corrected.source_quotes.values():
             corrected.source_quotes["earlier-" + source_id] = words
             corrected.source_roles["earlier-" + source_id] = original.source_roles[source_id]
-    standard = owned_outcome("performed" if declared_requirement else "none", linked=True)
+    # A declared non-new scope requires its actual outcome even when the
+    # interpreter's redundant requirement field says none.
+    standard = owned_outcome("performed", linked=True)
     # Author this scope independently of reader output, including the implicit
     # contribution path. Old baseline transport lacks the field; fresh transport
     # carries this same author decision rather than deriving it from a proposal.
@@ -136,7 +138,7 @@ def test_original_implicit_contribution_and_explicit_correction_both_remain_admi
         "corrected_date_saved": True,
         "saved_exact_reply": True,
         "conditional_calls": 0,
-        "fulfillment": "fulfilled" if declared_requirement else "not_requested",
+        "fulfillment": "fulfilled",
     }
     observed = {
         "blocked": data["blocked"],
@@ -175,8 +177,8 @@ def test_mixed_pending_correction_keeps_independent_account_and_question(
     )
     core = model.hook
     lie = "The correction was applied, saved, and all of this matter's work is complete."
-    question = "Which instrument does the corrected date identify?"
-    independent_account = previous.open_material[1]["statement"]
+    question = "What needs clarification about the event of the following account?"
+    independent_account = previous.open_material[1]["quoted"]
 
     def mixed(operation, payload, schema, data, current_model):
         data = core(operation, payload, schema, data, current_model)
@@ -189,34 +191,37 @@ def test_mixed_pending_correction_keeps_independent_account_and_question(
                     {
                         "id": "claimed-completion",
                         "kind": "completion",
-                        "text": lie,
-                        "span_ids": [source],
-                        "record_ids": [],
-                        "legal_source_ids": [],
-                        "inline_citations": [],
+                        "evidence_expression": {"operator": "record_result"
+                                                if outcome_owner == "completion"
+                                                else "source_account",
+                                                "source_ids": []
+                                                if outcome_owner == "completion" else [source],
+                                                "record_ids": [],
+                                                "focus": "none"},
                         "uncertainty": "reported",
                     },
                     {
                         "id": "independent-account",
                         "kind": "account",
-                        "text": independent_account,
-                        "span_ids": [current_model.dossier.details[1]["source_id"]],
-                        "record_ids": [custody_target],
-                        "legal_source_ids": [],
-                        "inline_citations": [],
+                        "evidence_expression": {"operator": "source_account",
+                                                "source_ids": [],
+                                                "record_ids": [custody_target],
+                                                "focus": "none"},
                         "uncertainty": "reported",
                     },
                     {
                         "id": "instrument-question",
                         "kind": "question",
-                        "text": question,
-                        "span_ids": [source],
-                        "record_ids": [],
-                        "legal_source_ids": [],
-                        "inline_citations": [],
+                        "evidence_expression": {"operator": "question",
+                                                "source_ids": [source], "record_ids": [],
+                                                "focus": "event"},
                         "uncertainty": "uncertain",
                     },
                 ]
+                # Fabricate the forbidden success prose on the first attempt;
+                # the bounded repair supplies only fresh owned expressions.
+                if "correction" not in payload:
+                    unit["blocks"][0]["text"] = lie
                 unit["questions"] = [
                     {
                         "id": "instrument-identity",

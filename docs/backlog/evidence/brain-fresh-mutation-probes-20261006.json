@@ -1,0 +1,129 @@
+{
+  "kind": "isolated_pure_mutation_probes",
+  "source": "/workspace/Nyaymalaw/nm/brain/evidence_rendering.py",
+  "source_sha256": "2689ecad98023c2f299dca93eed9f2293634025ba459da126aa3ddaebd1f1981",
+  "continuation_source": "/workspace/Nyaymalaw/nm/brain/continuation.py",
+  "continuation_source_sha256": "a9ffc19220e06e49130ea6d9529c657ee15d7d425a1b9eded367f2238925b64d",
+  "shared_production_modified": false,
+  "real_model_calls": 0,
+  "browser_calls": 0,
+  "historical_mutation_counts": "Earlier 19/37/13/4 populations were not rerun or combined.",
+  "qualification": "Six existing renderer tests and six direct fresh-unit schema probes, each with a passing baseline. Detection is guard coverage, not semantic accuracy, an integrated mutation score or proof that all semantic errors are excluded.",
+  "results": [
+    {
+      "probe": "fresh_display_field_guard_removed",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_fresh_writer_cannot_supply_display_fields_even_when_they_look_consistent",
+      "args": [
+        "text",
+        "I changed the record and saved the correction."
+      ],
+      "failure": "DID NOT RAISE SchemaViolation",
+      "mutant_source": "/tmp/nm-fresh-contract-fresh_display_field_guard_removed.py",
+      "mutant_sha256": "b21be429d61cb9939198adbd7e634c2b2d737e24b5a42fe288f578638aa0675e"
+    },
+    {
+      "probe": "original_words_shortened",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_account_keeps_complete_negation_attribution_and_uncertainty",
+      "args": [],
+      "failure": "",
+      "mutant_source": "/tmp/nm-fresh-contract-original_words_shortened.py",
+      "mutant_sha256": "af97dde07c6a4db017f9e81f5d2cf2004f77381e43aead1bbe0868cde496b318"
+    },
+    {
+      "probe": "nm_factual_account_guard_removed",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_prior_nm_words_cannot_be_rendered_as_factual_account",
+      "args": [],
+      "failure": "DID NOT RAISE SchemaViolation",
+      "mutant_source": "/tmp/nm-fresh-contract-nm_factual_account_guard_removed.py",
+      "mutant_sha256": "5d1a3f9635f3e680943dac76aa98746c3fc1dec80c51c02f150ce15cd6528e2f"
+    },
+    {
+      "probe": "unchecked_direct_legal_use_guard_removed",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_direct_passage_needs_an_owned_current_use_check",
+      "args": [
+        false
+      ],
+      "failure": "DID NOT RAISE SchemaViolation",
+      "mutant_source": "/tmp/nm-fresh-contract-unchecked_direct_legal_use_guard_removed.py",
+      "mutant_sha256": "8cda9b5d4e76bf876413fcd7693ec7dc57c784c0faff1d068a230e43de76ed28"
+    },
+    {
+      "probe": "citation_owner_substituted",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_standalone_checked_passage_preserves_its_complete_condition",
+      "args": [],
+      "failure": "",
+      "mutant_source": "/tmp/nm-fresh-contract-citation_owner_substituted.py",
+      "mutant_sha256": "a358a0d1e945f9edace4293af0bea5e28fd69be89452fd39e5b5d1ee3e76bd27"
+    },
+    {
+      "probe": "rendered_text_equality_guard_removed",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "test_deliberately_wrong_acceptance_or_block_kind_cannot_authorize_other_text",
+      "args": [
+        "completion"
+      ],
+      "failure": "DID NOT RAISE SchemaViolation",
+      "mutant_source": "/tmp/nm-fresh-contract-rendered_text_equality_guard_removed.py",
+      "mutant_sha256": "000c203f8a3b57564cc9880cbd10d98c301528fa87222738aa17237d716d54ea"
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:record_check",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:progress_checks",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:reviewed_record_check",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:record_outcome_contract",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:record_snapshot",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    },
+    {
+      "probe": "fresh_unit_context_guard_removed:source_catalogue",
+      "baseline": "passed",
+      "mutant": "detected",
+      "test": "_selected_work exact fresh schema probe",
+      "failure": "DID NOT RAISE SchemaViolation",
+      "qualification": "Pure owner probe; downstream redundant checks stay active."
+    }
+  ]
+}

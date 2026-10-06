@@ -9,7 +9,13 @@ from nm.brain.continuation_verification import verify_continuation
 from nm.brain.turn import chat_matter_id
 from nm.brain.work_state import project_work
 from tests.brain_continuation_fixture import reviewed_verdicts
-from tests.test_brain_continuation import ContinuationModel, _continue, unit, verdict
+from tests.test_brain_continuation import (
+    ContinuationModel,
+    _continue,
+    expression_block,
+    unit,
+    verdict,
+)
 from tests.test_brain_continuation_service import PublicContinuationModel, send
 from tests.test_brain_turn import plan
 
@@ -221,6 +227,8 @@ def test_public_answered_question_is_retired_and_different_need_gets_own_identit
     opening = plan(first_words, step="legal_work")
     later = plan(later_words, step="legal_work", relation="continues")
     initial = unit(text="You report two moved objects.", question="Who holds the objects now?")
+    initial["blocks"][1] = expression_block(
+        "question-0", "question", operator="question", sources=("L2",), focus="actor")
     initial["questions"][0]["purpose"] = "Identify current custody."
     identities = {}
 
@@ -230,6 +238,9 @@ def test_public_answered_question_is_retired_and_different_need_gets_own_identit
         identities["question"] = next(row["id"] for row in rows if row["kind"] == "question")
         response = unit(text="You report that the courier holds both objects.",
                         question="Which record describes the transfer?")
+        response["blocks"][1] = expression_block(
+            "question-0", "question", operator="question", sources=("L2",),
+            focus="availability")
         response["work"] = {"existing_id": identities["task"], "create": False}
         response["questions"][0].update(existing_id=identities["question"],
                                          purpose="Identify the transfer record.")
@@ -269,9 +280,15 @@ def test_public_answered_question_is_retired_and_different_need_gets_own_identit
     assert saved.brain_chat[0] == original and len(saved.brain_chat) == 2
     progress = project_work(saved)
     questions = [row for row in progress["rows"] if row["kind"] == "question"]
-    assert [(row["text"], row["status"]) for row in questions] == [
-        ("Who holds the objects now?", "complete"),
-        ("Which record describes the transfer?", "pending")]
+    assert [(row["purpose"], row["status"]) for row in questions] == [
+        ("Identify current custody.", "complete"),
+        ("Identify the transfer record.", "pending")]
+    assert questions[0]["text"] == (
+        "What needs clarification about the actor of the following account? "
+        'Your message includes: “Help clarify who holds them.”')
+    assert questions[1]["text"] == (
+        "What needs clarification about the availability of the referenced material "
+        'of the following account? Your message includes: “Which record describes the transfer?”')
     assert questions[0]["id"] != questions[1]["id"]
     assert next(row for row in progress["rows"] if row["kind"] == "task")["status"] == "pending"
     assert progress["events"][-1]["target_id"] == questions[0]["id"]
@@ -320,8 +337,10 @@ def test_public_distinct_proposals_share_paragraph_and_remain_individually_check
     assert len(entries) == 2 and entries[0]["id"] != entries[1]["id"]
     assert entries[0]["block_id"] == entries[1]["block_id"] == "question-0"
     assert entries[0]["purpose"] != entries[1]["purpose"]
-    assert len(answer["elements"]) == 3
-    assert answer["elements"][-1]["text"] == "No changes were made to the saved record."
+    assert len(answer["elements"]) == 2
+    execution = answer["material_coverage"]["execution"]
+    assert execution["display"] is None and execution["record_changes"] == []
+    assert words in answer["elements"][0]["text"]
     assert len(saved.brain_chat) == 1
 
 
