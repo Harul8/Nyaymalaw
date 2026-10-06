@@ -63,6 +63,7 @@ def assert_saved_execution(wired, response, *, before_version, turn_id, request,
         "request_index": 0, "request": request, "material_purposes": list(purposes),
         "relation": unit["work"]["relation"], "matter_scope": unit["work"]["matter_scope"],
         "intent": unit["work"]["intent"], "record_requirement": declared,
+        "response_mode": "substantive",
         "fulfillment": fulfillment,
         "fulfillment_check": {
             **check, "receipt_id": receipt["id"], "request_index": 0,

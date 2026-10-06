@@ -183,6 +183,7 @@ def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
                                             if item.material_purposes is not None else None),
                       "relation": item.relation, "matter_scope": item.matter_scope,
                       "intent": item.intent,
+                      "response_mode": getattr(item, "response_mode", "substantive"),
                       "record_requirement": deepcopy(item.record_requirement),
                       "fulfillment": "unassessed"}
                      for index, item in enumerate(plan.items)],
@@ -337,10 +338,10 @@ def _record_changes(before_disputes: dict, before_details: dict,
     return changes
 
 
-def _execution_display(execution: dict) -> dict:
-    """Render exact observed entry changes without claiming requested completion."""
+def _record_change_lines(changes: list[dict]) -> list[str]:
+    """Describe canonical entry deltas without interpreting requested success."""
     parts = []
-    for change in execution["record_changes"]:
+    for change in changes:
         before = [row["statement"] for row in change["before_records"]]
         after = change["after_record"]
         if change["relation"] == "withdraws":
@@ -353,6 +354,12 @@ def _execution_display(execution: dict) -> dict:
             parts.append("Revised entry: " + " ; ".join(before) + " → " + after["statement"])
         else:
             parts.append("New entry: " + after["statement"])
+    return parts
+
+
+def _execution_display(execution: dict) -> dict:
+    """Render exact observed entry changes without claiming requested completion."""
+    parts = _record_change_lines(execution["record_changes"])
     if not parts:
         parts.append("No changes were made to the saved record.")
     held = {identity for domain in execution["effects"].values()
@@ -372,6 +379,81 @@ def _execution_display(execution: dict) -> dict:
                "disclosure": bool(required), "material_execution_id": execution["id"]}
     return {"contract": "material_result_display_v1", "receipt_id": execution["id"],
             "element": element}
+
+
+def _canonical_record_acknowledgements(
+        continuation: dict, execution: dict, *, record_catalogue: dict) -> dict:
+    """Render checked record-only outcomes before progress and commit sealing.
+
+    The delivery mode is an interpreted proposal, not proof of completion.
+    Outcome, source, target, inherited-goal and persistence checks still own
+    their existing decisions. A reviewed substantive follow-up remains under
+    semantic review instead of being silently removed to force code-only text.
+    """
+    result = deepcopy(continuation)
+    units = {unit["request_index"]: unit for unit in result["units"]}
+    effects = effect_catalogue(execution)
+    changes = {change["effect_id"]: change for change in execution["record_changes"]}
+    expected_check = {"performed": "fulfilled", "already_current": "fulfilled",
+                      "review_no_change": "no_change_justified", "unresolved": "unfinished"}
+    for request in execution["requests"]:
+        if request.get("response_mode", "substantive") != "record_acknowledgement":
+            if "acknowledgement_delivery" in request:
+                raise IncompleteConversation(
+                    "A code acknowledgement has no declared delivery owner")
+            continue
+        index = request["request_index"]
+        unit = units.get(index)
+        if unit is None:
+            # The existing content-free unavailable notice is code-authored;
+            # it does not certify a requested effect or a completed task.
+            request["acknowledgement_delivery"] = "code_only"
+            continue
+        if unit["questions"] or unit["next_work"]:
+            request["acknowledgement_delivery"] = "substantive_followup"
+            continue
+        outcome = unit.get("record_outcome", {})
+        status = outcome.get("status")
+        if (status not in expected_check or unit.get("record_check", {}).get("outcome")
+                != expected_check[status]):
+            raise IncompleteConversation("The code acknowledgement has no checked record outcome")
+        selected = list(dict.fromkeys(outcome["effect_ids"]))
+        if any(identity not in effects or not effects[identity]["performed"]
+               or identity not in changes for identity in selected):
+            raise IncompleteConversation("The code acknowledgement selects an unperformed change")
+        current = list(dict.fromkeys(outcome["current_record_ids"]))
+        if any(identity not in record_catalogue for identity in current):
+            raise IncompleteConversation(
+                "The code acknowledgement selects an unowned current entry")
+        lines = _record_change_lines([changes[identity] for identity in selected])
+        entries = [record_catalogue[identity]["record"]["statement"] for identity in current]
+        if status == "performed":
+            if not lines:
+                raise IncompleteConversation("The code acknowledgement has no actual changed entry")
+            text = "Saved record changes:\n" + "\n".join(lines)
+        elif status == "already_current":
+            if not entries:
+                raise IncompleteConversation("The code acknowledgement has no current entry")
+            # Current state does not establish that NM changed it previously.
+            text = "Current record entries:\n" + "\n".join(entries)
+        elif status == "review_no_change":
+            text = "The requested record review completed without a selected change."
+            if entries:
+                text += "\nCurrent entries:\n" + "\n".join(entries)
+        else:
+            text = "The requested record work remains unfinished."
+            if lines:
+                text += "\nSaved record changes:\n" + "\n".join(lines)
+            if entries:
+                text += "\nCurrent entries:\n" + "\n".join(entries)
+        for block in unit["blocks"]:
+            block["text"] = text
+            # These anchors described the replaced model prose. The fixed
+            # acknowledgement contains no legal proposition; its retained
+            # checked references remain available as context source controls.
+            block.pop("inline_citations", None)
+        request["acknowledgement_delivery"] = "code_only"
+    return result
 
 
 def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation) -> None:
@@ -414,6 +496,13 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
                                     turn_id=row["turn_id"], committed=True)
     if snapshot != expected:
         raise IncompleteConversation("The saved record result disagrees with its original record")
+    checked_execution = deepcopy(execution)
+    canonical = _canonical_record_acknowledgements(
+        response["continuation"], checked_execution,
+        record_catalogue=snapshot["record_catalogue"])
+    if canonical != response["continuation"] or checked_execution != execution:
+        raise IncompleteConversation(
+            "The saved code acknowledgement differs from its checked result")
     if execution.get("gate_diagnostics") != _execution_diagnostics(execution):
         raise IncompleteConversation("The saved execution gates could not be verified")
     display = _execution_display(execution)
@@ -1146,6 +1235,8 @@ class BrainService:
                 snapshot = record_result_snapshot(
                     execution_receipt=execution,
                     record_catalogue=_record_catalogue(disputes, details))
+                continuation = _canonical_record_acknowledgements(
+                    continuation, execution, record_catalogue=snapshot["record_catalogue"])
                 continuation = seal_progress(
                     continuation, matter_id=str(matter.id), turn_id=turn.turn_id,
                     plan=plan, prior_progress=conversation.progress,

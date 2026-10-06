@@ -926,7 +926,7 @@ def test_conflicting_turn_id_cannot_replay_or_replace_another_input(client, wire
     note("release_15_turn_id_conflict", conflict, model, expected, observed)
 
 
-def test_truthful_typed_unresolved_does_not_mechanically_police_false_free_prose(
+def test_pure_acknowledgement_replaces_false_prose_with_checked_unresolved_result(
     client, wired, monkeypatch
 ):
     message = "Correct the northern carton date to 19 April, preserving the separate rig account."
@@ -937,6 +937,7 @@ def test_truthful_typed_unresolved_does_not_mechanically_police_false_free_prose
         purposes=("account_contribution",),
         reply="The requested carton correction remains unfinished.",
     )
+    proposed["items"][0]["response_mode"] = "record_acknowledgement"
     model = wire_model(
         wired, monkeypatch, [initial_plan(), proposed], [{}, {"status": "unresolved", "prose": lie}]
     )
@@ -951,7 +952,7 @@ def test_truthful_typed_unresolved_does_not_mechanically_police_false_free_prose
         "active": [OLD_DATE, OLD_RIG],
         "fulfillment": "unfinished",
         "typed_outcome": "unresolved",
-        "lie_released": True,
+        "lie_released": False,
         "changes": [],
         "saved_turns": 2,
     }
@@ -971,11 +972,11 @@ def test_truthful_typed_unresolved_does_not_mechanically_police_false_free_prose
         model,
         expected,
         observed,
-        scope="known_gap",
-        status="gap_demonstrated",
-        notes="The typed unfinished disposition and unchanged durable record are truthful, but a "
-        "fabricated incorrectly accepting block judgment releases false prose. No keyword policing "
-        "or blanket prose/effect guarantee exists.",
+        scope="mechanical",
+        status="admitted",
+        notes="An explicitly declared record-only acknowledgement uses the checked unresolved "
+        "outcome and saved effects. Incorrectly approved model prose is replaced before sealing. "
+        "Substantive prose remains a separate semantic-review dependency.",
     )
 
 
