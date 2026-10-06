@@ -13,6 +13,7 @@ from nm.brain.checked import (
     verdict_envelope_issue,
 )
 from nm.brain.material import MaterialCandidate, addressed_sources
+from nm.brain.mutation_contracts import scoped_record_decisions
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     admitted_record_decisions,
@@ -532,15 +533,22 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             "final admitted record was not established. "
             + review_issues_text({**issues,
                 **({"$envelope": (envelope_issue,)} if envelope_issue else {})}))
-    admitted = admitted_record_decisions(decisions)
+    scoped = scoped_record_decisions(decisions, keyed, review_scope)
+    admitted = admitted_record_decisions(scoped)
     downgraded = [key for key in decisions
                   if decisions[key]["verdict"] == "accept" and admitted[key]["verdict"] != "accept"]
     if requested and downgraded:
         coverage_decision = None
+        causes = {
+            "mutation_scope": "mutation scope was not authorised",
+            "required_restoration_peer_unavailable": "required successors were unavailable",
+        }
         admission_issue = (
-            "Final admission withheld restoration candidates " + ", ".join(downgraded)
-            + " because required successors were unavailable; coverage of the final admitted "
-            "record was not reassessed.")
+            "Final admission withheld candidates "
+            + ", ".join(key + ": " + causes.get(admitted[key]["admission_issue"],
+                                                 admitted[key]["admission_issue"])
+                         for key in downgraded)
+            + "; coverage of the final admitted record was not reassessed.")
         coverage_issue = "; ".join(filter(None, (coverage_issue, admission_issue)))
     decisions = admitted
     if coverage is not None:
