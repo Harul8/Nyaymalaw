@@ -481,8 +481,21 @@ def retained_independent_review(state: dict | None, *, context: dict,
             changed.add(identity)
     if not changed <= selected:
         raise SchemaViolation("Independent review reuse omitted a changed source role")
-    pending = {identity for identity, ids in account_ids.items()
-               if identity not in cache.decisions or ids.intersection(selected)}
+    dependencies = {}
+    for identity, row in cache.decisions.items():
+        account = row.get("account_check") if isinstance(row, dict) else None
+        sources = account.get("source_ids") if isinstance(account, dict) else None
+        if (not isinstance(sources, list)
+                or any(not isinstance(source, str) for source in sources)
+                or len(sources) != len(set(sources))
+                or not set(sources) <= set(source_treatments)):
+            raise SchemaViolation(
+                "Independent review reuse has no owned selected-source dependencies")
+        # Both positive and negative/context selections are decisions about
+        # evidence. Merely offering another owned source is not a dependency.
+        dependencies[identity] = set(sources)
+    pending = {identity for identity in account_ids
+               if identity not in cache.decisions or dependencies[identity].intersection(selected)}
     # A changed proposal or new successor can affect an atomic restoration.
     # Close over shared revision targets and explicit checked dependencies.
     while True:
@@ -584,10 +597,15 @@ def review_issues_text(issues: dict[str, tuple[str, ...]]) -> str:
 
 
 def candidate_account_ids(candidate, latest: dict, prior: dict) -> set[str]:
-    """Select only advocate spans already attributed to this proposal."""
+    """Offer the whole current account and explicitly attributed earlier context.
+
+    A candidate's primary passage is an anchor, not an exhaustive proof of a
+    proposition spanning several current passages. Independent source checks
+    select its actual dependencies; offering a source does not admit support.
+    """
     if candidate is None:
         return set(latest) | {key for key, ref in prior.items() if ref.role == "advocate"}
-    selected = {key for key, text in latest.items() if candidate.quoted in text}
+    selected = set(latest)
     selected.update(key for key, ref in prior.items() if ref.role == "advocate"
                     and any(ref.turn_id == linked.turn_id and ref.role == linked.role
                             and linked.quoted in ref.quoted

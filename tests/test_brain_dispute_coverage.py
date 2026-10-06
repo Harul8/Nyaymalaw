@@ -174,7 +174,7 @@ def test_omission_can_select_owned_original_span_not_selected_by_any_candidate()
     )
     assert retained == (candidate,) and sink["state"] == "partial"
     payload = json.loads(model.calls[0][0].user)
-    assert payload["candidates"][0]["allowed_account_source_ids"] == ["L1"]
+    assert payload["candidates"][0]["allowed_account_source_ids"] == ["L1", "L2"]
     assert payload["coverage_source_ids"] == ["L1", "L2"]
     assert sink["missing_sources"][0]["quoted"] == second
     assert len(model.calls) == 1

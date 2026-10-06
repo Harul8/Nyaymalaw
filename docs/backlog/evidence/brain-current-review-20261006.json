@@ -1577,6 +1577,25 @@
       },
       "call_impact": "No new model calls: verify the intact owned cache and inspect actual selected dependencies mechanically before terminal holding.",
       "remaining": "Original record_review.py source expansion candidate preserved at outputs/brain-repair-20261006/same-turn-support-owner.patch; must restore/verify it next. Added dispute association completeness and opening review holds need distinct owner repairs; broader semantic qualification remains failed."
+    },
+    {
+      "piece": "Complete current-turn original support choices",
+      "base": "aef0e2d",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "A primary current passage is an anchor, not an exhaustive support boundary for propositions using several current passages. Offered evidence is not admitted support or authority.",
+      "observable_pass": "One independently checked issue/event can select two original current spans; canonical support and coverage survive save/reopen/replay. Explicit earlier attribution remains required; foreign selectors still rejected. Actual selected positive/negative/context dependencies control review reuse.",
+      "baseline": "Initial5tests:3failed/2passed. Restoration first exposed a public partial-peer loss, fixed in preceding turn.py prerequisite rather than ignored.",
+      "verification": {
+        "new_focused": "7 passed, including public8calls/save/reopen/0callreplay",
+        "affected_matrix": "168 passed before two additional focused neighbors were added",
+        "lint": "passed",
+        "meaning": "Source/issue meanings and scope are explicitly authored fixtures. No claim of pinned-model semantic correctness."
+      },
+      "canonical_changes": "No record/source field, quote, historical rendering, source-purpose or permission alteration. Existing durable full source checks and original snapshot bind extra same-turn evidence.",
+      "fixture_update": "One allowed-source catalogue assertion changes fromL1 toL1+L2; actual omitted-source/partial-coverage and saved-output assertions retained.",
+      "call_impact": "Zero routine stages added. Source-dependent conditional review remains bounded and uses actual selections; unrelated offered sources do not invalidate checked peers. Public fixture8calls, replay0.",
+      "remaining": "Source pane displays primary quote while additional proof is durable; useful display of all supported positions needs browser review. Semantic grouping, ownership/opening, typed delivery and other audit gaps remain open."
     }
   ],
   "additional_reviewer_input": {
