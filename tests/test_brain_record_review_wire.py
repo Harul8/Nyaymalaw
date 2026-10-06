@@ -110,6 +110,7 @@ def test_wire_properties_remove_redundant_selection_and_offer_owned_range_bounds
     expected = _independent_wire_schema()
     expected["properties"]["account_check"]["properties"]["source_checks"]["items"] = (
         wire["account_check"]["properties"]["source_checks"]["items"])
+    expected["properties"]["target_checks"]["maxItems"] = 0
     assert _schema(wire) == expected
     assert record.review_properties(tuple(REFERENCES), (), (),
                                     source_references=REFERENCES, wire=False) == canonical

@@ -78,8 +78,10 @@ def test_exact_checked_account_support_remains_admissible_without_reclassificati
 
 @pytest.mark.parametrize("portions,supplies", [([], True), (ranges((0, 11)), False)])
 def test_neutral_feedback_does_not_weaken_exact_original_support_consistency(portions, supplies):
-    with pytest.raises(SchemaViolation, match="exact support portions"):
+    with pytest.raises(
+            SchemaViolation, match="Review output account_check.source_checks for L1") as raised:
         check_review(review_row(portions=portions, supplies=supplies), source())
+    assert "not a defect of the original account or proposal" in str(raised.value)
 
 
 @pytest.mark.parametrize("kind", ["material", "dispute"])

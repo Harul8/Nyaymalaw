@@ -1177,6 +1177,22 @@
         "requested-delivery producer and checked saved completion",
         "app.js private diagnostics presentation"
       ]
+    },
+    {
+      "piece": "fresh empty-target review contract and field-owned feedback",
+      "owner": "nm/brain/record_review.py",
+      "version": "86a8a2f plus one production file",
+      "invariant": "With no original record revision target, the fresh reviewer can select no target checks. Shape/support inconsistency describes review output, not a defect of the original account or proposal.",
+      "pass_condition": "Reject empty-string target inventions; preserve legitimate empty checks, owned replacements, independent peers and canonical historical shape.",
+      "verification": {
+        "new_cases": 13,
+        "baseline": "3 failed /10 passed with only the fresh array bound removed in memory",
+        "source_feedback_cases": 13,
+        "focused_public_modules": "record_review, material_execution, dispute_coverage",
+        "ruff": "passed"
+      },
+      "call_impact": "No model stage or routine call added. Existing bounded correction only; no paid calls. Conditional reduction unmeasured.",
+      "remaining": "Per-candidate provider choices with mixed new/revised proposals, semantic meaning/association, expression provider generation and real-model material acceptance remain open."
     }
   ],
   "additional_reviewer_input": {

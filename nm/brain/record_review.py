@@ -332,7 +332,12 @@ def _checked_support_portions(check, treatment) -> list[dict] | None:
         treatment, check["support_spans"], source_id=check["source_id"])
     if (type(check.get("supplies_account_content")) is not bool
             or check["supplies_account_content"] != bool(portions)):
-        raise SchemaViolation("Original source content conflicts with its exact support portions")
+        raise SchemaViolation(
+            f"Review output account_check.source_checks for {check['source_id']}: "
+            "supplies_account_content must agree with the selected support_spans. "
+            "Select the original substantive portions when true; otherwise select []. "
+            "Correct these review fields by re-examining the original words; "
+            "this mismatch is not a defect of the original account or proposal")
     return portions
 
 
@@ -657,6 +662,8 @@ def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
             "type": "array", "items": _source_range_schema(references),
             **({"maxItems": 0} if not source_ids else {})}
     if wire:
+        if not target_ids:
+            properties["target_checks"]["maxItems"] = 0
         account = properties["account_check"]
         account["required"].remove("source_ids")
         del account["properties"]["source_ids"]
@@ -707,7 +714,12 @@ def canonical_review_from_wire(row: dict, *, schema: dict,
                     and isinstance(check.get("support_spans"), list)):
                 _checked_source_endpoints(check["support_spans"],
                                           bounds[check["source_id"]], check["source_id"])
-    require_schema(row, schema)
+    try:
+        require_schema(row, schema)
+    except SchemaViolation as exc:
+        raise SchemaViolation(
+            "Review output contract mismatch, not an original proposal defect: "
+            + str(exc)) from exc
     result = deepcopy(row)
     checks = result["account_check"]["source_checks"]
     selected = [check["source_id"] for check in checks]
