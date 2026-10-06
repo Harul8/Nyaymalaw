@@ -1,0 +1,783 @@
+{
+  "review_date": "2026-10-06",
+  "tested_head": "16f9a90a5c7f99ff49a339256afcac984a3bd812",
+  "production_base": "a028ac5",
+  "production_edits": false,
+  "pinned_model": "gpt-4.1-mini-2025-04-14",
+  "live": {
+    "requested_optional_matters": "2-3",
+    "attempted_matters": 1,
+    "completed_saved_turns": 1,
+    "stopped_after_first": "Failed useful-delivery/material acceptance; critical repairs require discussion before implementation.",
+    "matter_id": "mat_dfa2292d4e43fbc27f8bde4dd0dd45ec",
+    "matter_version": 1,
+    "title": "Matter",
+    "material_rows": 4,
+    "independent_material_details": 0,
+    "accepted_legal_findings": 1,
+    "material_coverage": "partial",
+    "model_calls": 17,
+    "actual_conditional_corrections": 6,
+    "ledger_reserved_corrections": 4,
+    "model_seconds": 224.57,
+    "local_search_seconds": 136.091,
+    "usage_cost_usd": 0.11902560000000001,
+    "ledger_charge_delta_usd": 0.119032,
+    "budget_maximum_usd": 3,
+    "charged_to_date_usd": 1.877078,
+    "remaining_usd": 1.122922,
+    "saved_and_reopened_in_browser": true,
+    "draft_admission_not_saved": true,
+    "accepted_gathering_findings": 0,
+    "accepted_support_findings": 1,
+    "saved_support_semantically_incorrect": true,
+    "saved_support_displayed_in_reply": false,
+    "saved_support_contract_valid": true,
+    "public_reply_discloses_unfinished_work": true,
+    "canonical_task_false_completion_observed": true,
+    "canonical_task_status": "complete",
+    "canonical_active_work": "",
+    "canonical_work_diagnostics": [],
+    "original_request": "Identify the distinct disputes and important facts, including weaknesses, and the source-backed material to gather.",
+    "tokens_in": 199692,
+    "tokens_out": 24468,
+    "exact_call_receipts": [
+      {
+        "operation": "interpret_conversation",
+        "latency_ms": 6228,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 3478,
+        "tokens_out": 283,
+        "usage_recorded": true,
+        "cost_usd": 0.001844
+      },
+      {
+        "operation": "interpret_conversation",
+        "latency_ms": 3163,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 3954,
+        "tokens_out": 257,
+        "usage_recorded": true,
+        "cost_usd": 0.0019928000000000003,
+        "recovery_phase": "interpret_conversation:correction"
+      },
+      {
+        "operation": "classify_account_sources",
+        "latency_ms": 4827,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 2372,
+        "tokens_out": 510,
+        "usage_recorded": true,
+        "cost_usd": 0.0017648000000000002
+      },
+      {
+        "operation": "extract_disputes",
+        "latency_ms": 6646,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 3331,
+        "tokens_out": 458,
+        "usage_recorded": true,
+        "cost_usd": 0.0020652
+      },
+      {
+        "operation": "extract_disputes",
+        "latency_ms": 2926,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 4270,
+        "tokens_out": 139,
+        "usage_recorded": true,
+        "cost_usd": 0.0019304,
+        "recovery_phase": "extract_disputes:correction"
+      },
+      {
+        "operation": "verify_disputes",
+        "latency_ms": 18822,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 4846,
+        "tokens_out": 2340,
+        "usage_recorded": true,
+        "cost_usd": 0.0056824
+      },
+      {
+        "operation": "verify_disputes",
+        "latency_ms": 12457,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 5633,
+        "tokens_out": 1518,
+        "usage_recorded": true,
+        "cost_usd": 0.004682,
+        "recovery_phase": "verify_disputes:correction"
+      },
+      {
+        "operation": "extract_legal_details",
+        "latency_ms": 1471,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 4904,
+        "tokens_out": 8,
+        "usage_recorded": true,
+        "cost_usd": 0.0019744000000000003
+      },
+      {
+        "operation": "verify_material_grounding",
+        "latency_ms": 16796,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 5725,
+        "tokens_out": 1795,
+        "usage_recorded": true,
+        "cost_usd": 0.005162
+      },
+      {
+        "operation": "verify_material_grounding",
+        "latency_ms": 14960,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 5833,
+        "tokens_out": 1777,
+        "usage_recorded": true,
+        "cost_usd": 0.0051764,
+        "recovery_phase": "verify_material_grounding:correction"
+      },
+      {
+        "operation": "decompose_disputes",
+        "latency_ms": 4654,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 2107,
+        "tokens_out": 450,
+        "usage_recorded": true,
+        "cost_usd": 0.0015628000000000003
+      },
+      {
+        "operation": "read_legal_requirements",
+        "latency_ms": 26107,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 25502,
+        "tokens_out": 2863,
+        "usage_recorded": true,
+        "cost_usd": 0.014781600000000002
+      },
+      {
+        "operation": "read_legal_requirements",
+        "latency_ms": 16120,
+        "tier": "routine",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 15607,
+        "tokens_out": 1655,
+        "usage_recorded": true,
+        "cost_usd": 0.008890799999999999
+      },
+      {
+        "operation": "verify_legal_requirements",
+        "latency_ms": 62841,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 38686,
+        "tokens_out": 7842,
+        "usage_recorded": true,
+        "cost_usd": 0.0280216
+      },
+      {
+        "operation": "verify_legal_requirements",
+        "latency_ms": 14287,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 45413,
+        "tokens_out": 1488,
+        "usage_recorded": true,
+        "cost_usd": 0.020546
+      },
+      {
+        "operation": "continue_conversation",
+        "latency_ms": 5694,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 12725,
+        "tokens_out": 662,
+        "usage_recorded": true,
+        "cost_usd": 0.0061492
+      },
+      {
+        "operation": "verify_continuation",
+        "latency_ms": 6571,
+        "tier": "judge",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "ok",
+        "tokens_in": 15306,
+        "tokens_out": 423,
+        "usage_recorded": true,
+        "cost_usd": 0.006799200000000001
+      }
+    ],
+    "saved_recovery_ledger": {
+      "limit": 8,
+      "reserved_calls": 4,
+      "reply_reserve": 2,
+      "reply_reserved_calls": 0,
+      "dispatched_calls": 4,
+      "events": [
+        {
+          "phase": "interpret_conversation:correction",
+          "state": "completed",
+          "scope": "initial",
+          "reservation": 1,
+          "call": 2
+        },
+        {
+          "phase": "extract_disputes:correction",
+          "state": "completed",
+          "scope": "initial",
+          "reservation": 2,
+          "call": 5
+        },
+        {
+          "phase": "verify_disputes:correction",
+          "state": "completed",
+          "scope": "initial",
+          "reservation": 3,
+          "call": 7
+        },
+        {
+          "phase": "verify_material_grounding:correction",
+          "state": "completed",
+          "scope": "initial",
+          "reservation": 4,
+          "call": 10
+        }
+      ]
+    },
+    "saved_wrong_finding": {
+      "kind": "support",
+      "need": "Tenant may retain possession legitimately until eviction proceedings are duly completed under the relevant tenancy and property laws.",
+      "why": "Legal protections often restrict immediate dispossession; landlord’s claim to possession must be enforced by statutory procedures.",
+      "force": "none",
+      "source_titles": [
+        "Majati Subbarao vs P.K.K. Krishna Rao (Deceased) By Lrs",
+        "Nand Ram(D) Th. Lrs. . vs Jagdish Prasad(D)Th.Lrs"
+      ],
+      "premise_statuses": [
+        "reported_satisfied",
+        "reported_satisfied"
+      ],
+      "missing_reported_predicates": [
+        "Equipment as leased subject",
+        "Tenancy termination",
+        "Owner acquiescence",
+        "Relevant Rent Act applicability to retained equipment and relationship"
+      ]
+    }
+  },
+  "offline_limits": {
+    "strict_forced_semantic_failures": 4,
+    "public_current_escape_not_established_by_standalone_probes": true,
+    "population_false_acceptance_rejection_rates": "not established",
+    "cloud_real_model_calls": 0,
+    "cloud_browser_calls": 0,
+    "subset": {
+      "nodes": 3267,
+      "passed": 3241,
+      "strict_semantic_xfail": 4,
+      "baseline_planning_failures": 22
+    },
+    "pressure": {
+      "distinct": 232,
+      "orders": 3,
+      "passed_each": 228,
+      "xfail_each": 4,
+      "proposal_only_positive_cases": 2
+    },
+    "proof_limit": "Fabricated semantic verdicts prove wiring, not real reviewer detection or useful completion.",
+    "prompt_inventory": {
+      "words": 15189,
+      "baseline_611b1e8": 15746,
+      "reduction_percent": 3.54,
+      "excludes": "Schema, dynamic input and correction text; not live token reduction."
+    }
+  },
+  "first_proposed_piece": "Activity1 record_review.py exact endpoint feedback, no prompt or decision/schema changes",
+  "gaps": [
+    {
+      "id": "delivered-task-fulfillment",
+      "owners": [
+        "LB-175",
+        "LB-184",
+        "LB-187",
+        "LB-188",
+        "LB-194",
+        "LB-196",
+        "LB-197"
+      ],
+      "status": "Actual canonical false completion observed",
+      "files": [
+        "nm/brain/work_state.py::_matching_requirement",
+        "nm/brain/turn.py::_request_fulfillment",
+        "nm/brain/continuation_verification.py",
+        "nm/brain/conversation.py"
+      ],
+      "issue": "Requested substantive deliverable has record_requirement kindnone. Matching requirement skips coverage matching. Wrong positive progress/fulfilled Judge judgment is sealed; canonical task completes despite zero details/gathering and partial reads.",
+      "general_fix": "Separate delivered-product fulfillment from record mutation/review. Bind each requested outcome to checked delivered results and remaining scope; do not relabel all read-only work as record review.",
+      "pass_condition": "Missing necessary deliverable leaves original work pending/partial; legitimate fulfilled read-only/no-change work completes. Reply, saved task and reopening agree.",
+      "new_routine_calls": 0,
+      "dependencies": "Versioned interpreter/request, reviewer/result and progress/seal handoff; discuss before staged activation."
+    },
+    {
+      "id": "legal-application-and-search-assumptions",
+      "owners": [
+        "LB-14",
+        "LB-180",
+        "LB-181",
+        "LB-195",
+        "LB-197"
+      ],
+      "status": "Observed live and saved; structural finding validator returns true",
+      "files": [
+        "nm/brain/legal_requirements.py::decompose_subjects/verify_findings/_application_premises_valid"
+      ],
+      "issue": "Search hypotheses of equipment lease and lease termination become factual application. Premises possession sources certified directly applicable despite absent original predicates.",
+      "general_fix": "Keep search hypotheses unestablished; reconstruct each source predicate and compare original actor/object/relationship/time/support. Broad owned words are not predicate satisfaction. Calibrate existing independent reader/reviewer on unfamiliar pairs before adding stages.",
+      "pass_condition": "Same source with changed factual support produces correct supported/conditional/unsupported fit; missing predicates remain explicit; accurate neighbours usable.",
+      "new_routine_calls": "No routine stage added without measured need."
+    },
+    {
+      "id": "recovery-ledger",
+      "owners": [
+        "LB-179",
+        "LB-182",
+        "LB-183"
+      ],
+      "status": "observed live and confirmed in code",
+      "files": [
+        "nm/brain/legal_requirements.py::_read_subject_groups",
+        "nm/brain/legal_requirements.py::verify_findings"
+      ],
+      "issue": "Two research correction dispatches bypass claim_recovery. Seventeen calls include six conditional corrections but the saved shared ledger records only four.",
+      "general_fix": "Use the existing turn-owned recovery reservation and undispatched cancellation helpers in both legal-research correction loops. Preserve admitted peers and mark only pending units unread on exhaustion.",
+      "first_slice": "One production file, no prompt changes.",
+      "pass_condition": "Equivalent successful trace records all six corrections; exhausted allowance dispatches no correction and preserves two reply reservations and valid peers. Historical receipts and replay unchanged.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "source-selection",
+      "owners": [
+        "LB-178",
+        "LB-179",
+        "LB-195",
+        "LB-201",
+        "LB-202"
+      ],
+      "status": "observed live and confirmed in code",
+      "files": [
+        "nm/brain/record_review.py",
+        "nm/brain/material_verification.py",
+        "nm/brain/dispute_verification.py"
+      ],
+      "issue": "Model calculates numeric character offsets and repeats source selections/ranges. Invalid bounds and duplicated selections survive correction; current endpoint feedback omits the source and its exact bound.",
+      "general_fix": "First make private feedback identify the source, attempted range and true bounds. Separately migrate fresh wire to exact-word or server-owned boundary selections resolved mechanically to canonical offsets; do not clamp endpoints. Derive redundant source_ids from checked selections while preserving canonical audit/cache contracts.",
+      "first_slice": "Precise endpoint feedback in record_review.py; subsequent wire/canonical migration requires declared shared-owner/reviewer dependencies.",
+      "pass_condition": "Wrong range gets precise owned feedback; valid neighbours and independent peers survive. Fresh selections resolve unambiguously; saved v2 ranges and replay remain intact.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "material-and-issue-identity",
+      "owners": [
+        "LB-177",
+        "LB-178",
+        "LB-195",
+        "LB-196"
+      ],
+      "status": "observed live",
+      "files": [
+        "nm/brain/material.py",
+        "nm/brain/material_verification.py",
+        "nm/brain/disputes.py",
+        "nm/brain/dispute_verification.py"
+      ],
+      "issue": "Detail extraction returned empty despite significant original facts. A tenant defence was saved as a fourth independent dispute. Unapproved draft proposed as fifth dispute but remained unread and was not admitted.",
+      "general_fix": "After source-contract friction is reduced, independently measure original-account completeness and issue identity on unfamiliar paired conversations. Refine only the owning extraction or review prompt for the observed general invariant, retaining details independently from headings and defences linked to the dispute they address.",
+      "first_slice": "One owner prompt/file at a time after current source-contract prerequisites; no case-name or keyword production logic.",
+      "pass_condition": "Material acts, dates, reported documents, uncertain provenance, adverse positions and denials have proper attributed dispositions; no duplicate issue from a defence; no unadopted draft as factual admission.",
+      "new_routine_calls": "No additional routine stage proposed; any conditional changes require separate accounting."
+    },
+    {
+      "id": "useful-delivery",
+      "owners": [
+        "LB-165",
+        "LB-185",
+        "LB-187",
+        "LB-193",
+        "LB-194",
+        "LB-197"
+      ],
+      "status": "observed live plus structural capability limit",
+      "files": [
+        "nm/brain/evidence_rendering.py",
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py"
+      ],
+      "issue": "Closed expressions prevented arbitrary reply prose but delivered repeated full quotes and duplicated change acknowledgements, without requested weaknesses or gathering items. They lack a complete tailored reasoning/drafting contract.",
+      "general_fix": "Extend versioned evidence-bound presentation around complete checked results and requested outcome coverage. Keep code-owned effects and attributed premises; do not restore unrestricted unverified prose. Qualify one deliverable at a time.",
+      "pass_condition": "An unfamiliar requested result is useful, concise, nonduplicated and supported, with independent units either delivered or explicitly unfinished. Legacy replies replay under their original version.",
+      "new_routine_calls": "Reuse writer/reviewer where feasible; any additional semantic stage requires evidence and approval."
+    },
+    {
+      "id": "qualification-display",
+      "owners": [
+        "LB-181",
+        "LB-194"
+      ],
+      "status": "confirmed local handoff probe, not whole-turn witness",
+      "files": [
+        "nm/brain/legal_requirements.py::_application_premises_valid",
+        "nm/brain/evidence_rendering.py::render_expression",
+        "nm/brain/source_snapshots.py::source_snapshots"
+      ],
+      "issue": "A preserved condition may appear only in why; reply and finding pane show need only. The condition contract accepts it while both displayed texts omit it.",
+      "general_fix": "Version complete checked-finding presentation, carrying consequential conditions and checked reasoning into reply and pane. Do not invalidate historical findings globally.",
+      "first_slice": "Prepare rendering compatibility in one file; activation has inseparable continuation/verifier/work/replay/pane dependencies to discuss first.",
+      "pass_condition": "A consequential condition placed only in why remains visible downstream; saved historical wording remains unchanged.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "precedent-context-and-authority",
+      "owners": [
+        "LB-14",
+        "LB-180",
+        "LB-181"
+      ],
+      "status": "confirmed static gaps; current public semantic consequence unmeasured",
+      "files": [
+        "nm/brain/retrieval.py::search_subject",
+        "nm/brain/turn.py::_legal_reads",
+        "nm/brain/legal_requirements.py",
+        "nm/brain/requirements_state.py"
+      ],
+      "issue": "Judgment search excludes paragraphs outside ratio/reasoning/order before reading. Retrieved-pool independent review exists, but cannot inspect context never supplied. Dependency freshness is not law-in-force or binding-status evidence; requested time/jurisdiction are not passed by _legal_reads.",
+      "general_fix": "Preserve relevant submissions/background/treatment as examination material tied to operative holdings. Keep court roles and adoption/rejection visible. Separately bind currency/jurisdiction/binding conclusions to owned authority/version evidence.",
+      "pass_condition": "Relevant party argument and court treatment arrive together without treating reported/rejected submissions as law; temporal or binding conclusions require their own checked support.",
+      "new_routine_calls": "Context retrieval requires no new generative stage; new authority research must be separately accounted."
+    },
+    {
+      "id": "request-routing-coverage",
+      "owners": [
+        "LB-175",
+        "LB-178",
+        "LB-188",
+        "LB-197"
+      ],
+      "status": "static handoff gap, not exercised as a live escape in this run",
+      "files": [
+        "nm/brain/conversation.py::_turn_plan",
+        "nm/brain/turn.py::BrainService",
+        "nm/brain/continuation.py::continuation_indexes"
+      ],
+      "issue": "Erroneous empty material_purposes can skip account readers; an independent request omitted by interpretation lacks a structured work unit/backedge. Response correction does not repair dispatch plan.",
+      "general_fix": "Add typed original-request/material-work omission to existing independent review and conditionally reconsider only affected routing under the same allowance. Establish public paired failing witnesses before new blocking logic.",
+      "pass_condition": "Mixed requests and record contributions retain all outcomes; true diversions make no record changes; only genuinely missing stages rerun.",
+      "new_routine_calls": "No proposed routine stage; conditional reinterpretation and missing-stage calls need explicit design/accounting."
+    },
+    {
+      "id": "search-latency",
+      "owners": [
+        "LB-35",
+        "LB-69",
+        "LB-183"
+      ],
+      "status": "observed cold-harness latency plus static lack of elapsed bounds",
+      "files": [
+        "nm/app/main.py::main",
+        "nm/brain/retrieval.py::_Models",
+        "nm/brain/retrieval.py::search_subject",
+        "nm/brain/turn.py::_legal_reads"
+      ],
+      "issue": "Four serial searches took 136.091 seconds; first114.192 then7.980/7.092/6.827. Normal main starts background warm-up; review harness uses create_app and did not. Neither publishes warm completion. Work-size limits do not bound elapsed search time.",
+      "general_fix": "Measure cold/warm initialization, lock waiting, embedding/search/reranking separately. Add one owned elapsed deadline/readiness/cancellation contract that retains explicit unfinished subject coverage and safe persistence; do not shorten evidence silently.",
+      "pass_condition": "Warm versus cold costs are distinguishable; a stalled independent search cannot hold a whole turn indefinitely or masquerade as complete.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "closure",
+      "owners": [
+        "LB-188"
+      ],
+      "status": "confirmed static handoff gap, no destructive closure performed",
+      "files": [
+        "nm/app/api.py::close_matter",
+        "nm/close/closure_contracts.py::refuse_closure"
+      ],
+      "issue": "Closure checks only caller-supplied continuing_obligations, not canonical Brain pending work/questions/promises. Closure exists but its Brain lifecycle continuity is incomplete.",
+      "general_fix": "Define which canonical owed work blocks closure, then reconcile resolution/transfer at the authenticated closure owner.",
+      "pass_condition": "Omitting live owned obligations cannot close a matter; resolved/transferred work can; reopen preserves history.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "deferred-recovery",
+      "owners": [
+        "LB-198",
+        "LB-199",
+        "LB-200",
+        "LB-201",
+        "LB-202"
+      ],
+      "status": "planned, not implemented",
+      "files": [
+        "nm/app/app.js",
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py",
+        "nm/brain/record_review.py"
+      ],
+      "issue": "Five preserved local candidates remain deferred: status-only footer/presentation, missing proposal-link partial recovery, malformed optional-retention isolation, precise private diagnostics, single source selection.",
+      "general_fix": "Implement independently after reliability prerequisites, adapting to current closed expressions and replay contracts; do not paste the preserved older candidate.",
+      "pass_condition": "Existing per-item Before Build pass conditions; no fresh arbitrary prose, source/permission weakening or unbounded retry.",
+      "new_routine_calls": 0
+    },
+    {
+      "id": "planning-status",
+      "owners": [
+        "LB-175",
+        "LB-194",
+        "LB-195",
+        "LB-196",
+        "LB-197"
+      ],
+      "status": "stale current-position wording confirmed",
+      "files": [
+        "docs/Nyaymalaw_Implementation_Plan.xlsx"
+      ],
+      "issue": "LB194 says activation pending despite active expression wiring; older current positions mention eight arbitrary-prose cases despite current report four forced semantic failures. Live acceptance remains failed/unverified.",
+      "general_fix": "Reconcile current status to actual code and this failed live acceptance without overwriting earlier dated evidence or marking features complete.",
+      "pass_condition": "Canonical queue and mirror distinguish active mechanical controls, four forced semantic probes, this live failure and pending repairs.",
+      "new_routine_calls": 0
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "outputs/current-review-20261006/matter-a-saved.json",
+      "sha256": "a62d5c3aba842b9ebaf2fe4dd5176395adc1bfe725b8ae2142b0dc050a2fcf80",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "outputs/current-review-20261006/live-model-packets.jsonl",
+      "sha256": "b997cf469f66e2d59b6912f30779ce496a490833f297c1108b1d5b5265d79a25",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "outputs/current-review-20261006/live-call-log.txt",
+      "sha256": "516ac8f44291f6f61db19c6c32a518c4e47e72bc452fa98a551ec2172c0b6506",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "outputs/current-review-20261006/qualification-handoff-probe.json",
+      "sha256": "425b543c215f6ce446c465fada327c404661403aa63fa6451d7d7223599849ba",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "outputs/current-review-20261006/matter-a-reading-pane.png",
+      "sha256": "37300552c9983b4451dd0b3376688b463936aaa159b3c964811181383269e689",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "outputs/current-review-20261006/runtime.json",
+      "sha256": "f520de1df4214b911eb7c901ed73f5bfbbc996fe79def02d141593b54e19be4c",
+      "location": "local synthetic review artifact; not included in this report payload"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-current-review-20261006-live.json.gz",
+      "sha256": "0f9cdc2d1395b768bd280083e7aa43a8f771a4ac3b03a1f7462aa5ac6c224946",
+      "compressed_bytes": 118027,
+      "contents": "Exact synthetic saved matter, all17 model packets, runtime, condition probe and canonical work readback."
+    }
+  ],
+  "contract": "brain_current_forensic_review_v1",
+  "scope": {
+    "audit_window_utc": [
+      "2026-10-05T15:53:16Z",
+      "2026-10-06T15:53:16Z"
+    ],
+    "queue": "Before Build in docs/Nyaymalaw_Implementation_Plan.xlsx",
+    "method": "Original planning/checkpoint records, current code owners and their public handoffs, offline qualification provenance, one current-model browser baseline and exact reopened durable records. This is a flow forensic audit; per-file repair qualification is still pending.",
+    "cloud_production_freeze": "40c0a52ef4ba2f0959251843c10e89d468ba9615",
+    "next_activity": 1,
+    "next_file": "nm/brain/conversation.py review completed; material/source owner diagnostic repair starts in record_review.py.",
+    "next_prompt": "No prompt change in first repair."
+  },
+  "verdict": {
+    "production_ready": false,
+    "cloud_changes_active": true,
+    "mechanical_protection_improved": true,
+    "real_model_semantic_accuracy_qualified": false,
+    "useful_delivery_qualified": false,
+    "conclusion": "Cloud controls preserve owned evidence and confirmed effects, but still admit wrong semantic interpretation and falsely complete a task with undelivered work. Receipt integrity is not factual, legal or task correctness."
+  },
+  "positive_controls_observed": [
+    "Exact brief preserved once and reopened through browser.",
+    "Four valid dispute peers survive fifth unread proposal; unapproved draft admission not saved.",
+    "Foreign source IDs, reported-treatment promotion and incomplete predicate certificates withheld.",
+    "Unread supplied-pool work cannot become complete research.",
+    "Public execution footer discloses unfinished reading.",
+    "Aggregate metrics count all17 dispatches."
+  ],
+  "activities": [
+    {
+      "id": 1,
+      "name": "Original conversation, requests and attributed matter account",
+      "files": [
+        "conversation.py",
+        "history.py",
+        "record_review.py",
+        "disputes.py",
+        "dispute_verification.py",
+        "dispute_state.py",
+        "material.py",
+        "material_verification.py",
+        "material_state.py"
+      ],
+      "planned": "Whole exact context; all independent requests; matter scope; attribution; meaningful dispute identity; separate significant details and supported coverage.",
+      "built": "Typed routing/mutation scope, original-only independent purpose checks, owned exact portions, operation admission and coverage tied to actual applied records.",
+      "observed_gap": "Empty detail extraction; defence promoted to separate dispute; truncated support omits assertion; model arithmetic overruns prevent opening/coverage; duplicated source selectors repeat105 IDs.",
+      "quality": "Mechanical ownership works; live semantic completeness and useful capture fail."
+    },
+    {
+      "id": 2,
+      "name": "Find substantive and procedural law",
+      "files": [
+        "legal_requirements.py::decompose_subjects/read_findings",
+        "retrieval.py",
+        "requirements_state.py",
+        "turn.py::_legal_reads"
+      ],
+      "planned": "Multiple legally apt search formulations without invented factual premises; hybrid corpus search/reranking; independently checked pool; faithful reuse and bounded recovery.",
+      "built": "Automatic dispute research, owned Act/judgment pools, independent positive/empty/full-pool checks, source-purpose/revision reuse controls.",
+      "observed_gap": "Queries assume equipment lease and lease termination; corrections repeat invalid IDs; shared recovery bypass; no gathering finding delivered; cold search136.091s.",
+      "quality": "Retrieval runs; requested gathering and retry-bound acceptance fail."
+    },
+    {
+      "id": 3,
+      "name": "Court holding, submissions and treatment",
+      "files": [
+        "legal_requirements.py::source_verification_valid/verify_findings",
+        "retrieval.py",
+        "source_snapshots.py"
+      ],
+      "planned": "Current court versus quoted authority/party; adopted/rejected/reported treatment; necessary context and reliable metadata.",
+      "built": "Owned exact role/treatment fragments, independent whole-pool review, no adoption-to-binding promotion.",
+      "observed_gap": "Pre-reader role filter excludes context; headnote-like source labelled court reasoning and inconsistent case locator need complete-source qualification. A reported-setting certificate was correctly withheld.",
+      "quality": "Mechanical role guards help; unfamiliar semantic role and original-document fidelity unqualified."
+    },
+    {
+      "id": 4,
+      "name": "Apply law to the supported account",
+      "files": [
+        "legal_requirements.py::_application_premises_valid/verify_findings",
+        "continuation.py",
+        "continuation_verification.py",
+        "evidence_rendering.py"
+      ],
+      "planned": "Actor/object/relationship/chronology fit, every limiting predicate, original factual support, adverse conditions and explicit unresolved distinctions.",
+      "built": "Typed entailment/application/force, owned factual references and preservation contracts.",
+      "observed_gap": "Saved wrong premises-possession support for retained equipment; Judge certifies absent predicates from broad quote. Separate local handoff probe omits condition in reply/pane.",
+      "quality": "Critical saved semantic admission failure; not displayed legal advice in this turn."
+    },
+    {
+      "id": 5,
+      "name": "Opposing arguments and supported responses",
+      "files": [
+        "legal_requirements.py",
+        "continuation.py",
+        "continuation_verification.py"
+      ],
+      "planned": "Adverse facts/authority; credible opposing interpretation, response and residual uncertainty; respectful consequential challenge.",
+      "built": "Existing readers/writer/reviewer carry adverse-evidence duties.",
+      "observed_gap": "Defence repeats as separate dispute; useful strength/weakness and reply to adverse position absent.",
+      "quality": "Prompt duties built; demonstrated useful adverse reasoning not accepted."
+    },
+    {
+      "id": 6,
+      "name": "Useful position, next steps, delivered work and completion",
+      "files": [
+        "continuation.py",
+        "continuation_verification.py",
+        "evidence_rendering.py",
+        "execution_contracts.py",
+        "work_state.py",
+        "source_snapshots.py",
+        "turn.py"
+      ],
+      "planned": "Grounded articulation and actual requested deliverables; task-specific fulfillment; questions, continuity, save/replay and closure distinct.",
+      "built": "Closed fresh expressions, code-owned effects, typed outcomes/seals, atomic persistence and historical-version replay.",
+      "observed_gap": "Repeated full quotes/duplicate receipts; no gathering output; original full task falsely complete and active_work empty despite partial reads.",
+      "quality": "Critical canonical false completion; integrity preserves the accepted error."
+    }
+  ],
+  "additional_cross_activity_responsibilities": [
+    "Explicit original request, matter scope and permission ownership",
+    "Actual delivered-work fulfillment distinct from executed record effects",
+    "Durable context, recovery, task state and closure consistency"
+  ],
+  "roadmap": {
+    "order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "per_piece": [
+      "Audit owning file/prompt/logic and all consumers against Before Build.",
+      "Name baseline, failed general invariant, affected scope, precise mismatch and accurate counterexample.",
+      "Discuss critical proposal and inseparable dependencies before editing.",
+      "One prompt and at most one production file; synthetic fabricated-response checks without paid calls.",
+      "Preserve valid independent peers, original sources and explicit incomplete coverage.",
+      "Record call count, conditional reservations, quality and limits; commit/push coherent verified piece."
+    ],
+    "per_completed_behavior": [
+      "Connect the small pieces through shipped /api/turn.",
+      "Run unfamiliar synthetic matters from browser one matter at a time with pinned4.1mini.",
+      "Inspect actual reply, board, source panes, saved detail/law/work state, reopen and zero-call replay.",
+      "Judge useful delivery and false admission/rejection separately from gate counts.",
+      "Repair the owning general invariant; never scenario-specific logic.",
+      "Do not move to next activity until affected integrated behavior passes."
+    ],
+    "readiness": [
+      "No unresolved critical admission, legal applicability, false completion, ownership/permission or save-integrity defect in qualified release.",
+      "All requested outcomes delivered or accurately still owed; supported peers retained after partial failures.",
+      "Source role, conditions and application evidence agree in reply, panes and saved records; current/binding claims have owned evidence.",
+      "Sustained unfamiliar conversations cover corrections, ambiguity, diversions/return, mixed requests, adverse facts, documents/junior work and closure.",
+      "Wrong accepting judges, malformed/empty/skipped outputs, concurrent writes and lost acknowledgments exercise actual connected boundaries.",
+      "Shared retry allowance, reply reserve, full-context/resource limits, cold/warm latency and actual cost measured.",
+      "False acceptance/rejection and useful completion independently labelled on actual pinned model; no universal guarantee from counts.",
+      "Known baseline suite/planning failures resolved or explicitly scoped in release qualification."
+    ]
+  },
+  "planning_findings": [
+    "LB194 current activation-pending wording is stale; later checkpoints/served code show active closed rendering.",
+    "LB195/196 mechanically implemented and offline exercised; real semantic/browser acceptance remains open.",
+    "LB175-193 current positions contain superseded copied stages; dated history remains preserved.",
+    "LB198-202 preserved local candidates still deferred; no old code silently merged."
+  ]
+}
