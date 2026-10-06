@@ -496,7 +496,50 @@ def on_the_wire(schema) -> dict:
         if isinstance(value, list):
             return [strip(v) for v in value]
         return value
-    return strip(dict(schema))
+    wire = strip(dict(schema))
+
+    def check_objects(spec, path):
+        if not isinstance(spec, dict):
+            raise ConfigurationError(f"Structured wire schema {path} must be an object")
+        kinds = spec.get("type")
+        if kinds == "object" or isinstance(kinds, list) and "object" in kinds:
+            properties = spec.get("properties", {})
+            required = spec.get("required", [])
+            if spec.get("additionalProperties") is not False:
+                raise ConfigurationError(
+                    f"Structured wire schema {path} must close additional properties")
+            if (not isinstance(properties, dict) or not isinstance(required, list)
+                    or any(not isinstance(name, str) for name in required)
+                    or len(required) != len(set(required))
+                    or set(required) != set(properties)):
+                raise ConfigurationError(
+                    f"Structured wire schema {path} must require each declared property "
+                    "exactly once")
+            for name, child in properties.items():
+                check_objects(child, f"{path}.{name}")
+        if "items" in spec:
+            check_objects(spec["items"], f"{path}[]")
+        if "anyOf" in spec:
+            alternatives = spec["anyOf"]
+            if not isinstance(alternatives, list) or not alternatives:
+                raise ConfigurationError(
+                    f"Structured wire schema {path}.anyOf needs declared alternatives")
+            for index, child in enumerate(alternatives):
+                check_objects(child, f"{path}.anyOf[{index}]")
+        if "$defs" in spec:
+            if not isinstance(spec["$defs"], dict):
+                raise ConfigurationError(f"Structured wire schema {path}.$defs must be an object")
+            for name, child in spec["$defs"].items():
+                check_objects(child, f"{path}.$defs.{name}")
+
+    # Check only the known strict transport invariants here. Do not reuse the
+    # narrower executable-tool grammar or tighten historical data validation.
+    # An invalid NM-authored schema is configuration failure, not rejected model
+    # output; it must fail before transport authorization or spending reservation.
+    if wire.get("type") != "object" or "anyOf" in wire:
+        raise ConfigurationError("Structured wire schema root must be an object without anyOf")
+    check_objects(wire, "$")
+    return wire
 
 
 def canonical_schema_data(data: Any, schema: Mapping[str, Any]) -> Any:

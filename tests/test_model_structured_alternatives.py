@@ -65,7 +65,10 @@ def test_branch_declared_empty_metadata_is_harmless_and_input_is_preserved():
     assert data == before
     with pytest.raises(SchemaViolation):
         require_schema({**data, "unused": ["consequential"]}, schema)
-    assert "x-nm-empty-metadata" not in on_the_wire(schema)["anyOf"][0]
+    wire_schema = {"type": "object", "additionalProperties": False,
+                   "required": ["choice"], "properties": {"choice": schema}}
+    assert "x-nm-empty-metadata" not in on_the_wire(wire_schema)["properties"]["choice"][
+        "anyOf"][0]
 
 
 @pytest.mark.parametrize("alternatives", [[], None, {}, [True]])

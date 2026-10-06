@@ -34,7 +34,8 @@ pytestmark = pytest.mark.class_a
 
 SCHEMA = {
     "type": "object",
-    "required": ["side"],
+    "additionalProperties": False,
+    "required": ["side", "confidence"],
     "properties": {
         "side": {"type": "string", "enum": ["moving", "defending", "unknown"]},
         "confidence": {"type": "number"},
@@ -202,7 +203,7 @@ def test_a_schema_violation_is_never_best_effort_parsed(adapter):
     A test that skips the production path does not test less; it reports
     PASS about something it did not run.
     """
-    bad = json.dumps({"side": "aggrieved_party"})  # outside the vocabulary
+    bad = json.dumps({"side": "aggrieved_party", "confidence": 0.9})  # outside the vocabulary
     a = ScriptedModelAdapter(_config(), responses={"__default__": bad}) \
         if adapter.provider == "scripted" else openai_ok(bad)
     with pytest.raises(SchemaViolation) as exc:

@@ -410,7 +410,7 @@ def test_the_wire_scan_can_see_a_leak():
     satisfy the test above identically."""
     from nm.shared.model_port import on_the_wire
 
-    planted = {"x-nm-read": "probe", "type": "object",
+    planted = {"x-nm-read": "probe", "type": "object", "additionalProperties": False,
                "properties": {"a": {"type": "string"}}, "required": ["a"]}
     wire = on_the_wire(planted)
     assert "x-nm-read" not in wire, "our metadata reached the wire"

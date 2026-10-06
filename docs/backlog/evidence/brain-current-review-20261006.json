@@ -829,6 +829,55 @@
       "official_provider_contract": "https://developers.openai.com/api/docs/guides/structured-outputs",
       "limits": "Provider schema compatibility does not establish semantic applicability or useful legal delivery. Connected pinned-model browser acceptance remains open.",
       "test_environment_note": "Windows CRLF golden checkout was restored to exact already committed source bytes after matching Git blob/hash; tests run with Python UTF-8 mode. No fixture hash or original golden text was changed."
+    },
+    {
+      "piece": "strict-structured-wire-object-preflight",
+      "production_file": "nm/shared/model_port.py",
+      "prompt_changes": 0,
+      "invariant": "NM-authored invalid strict root/object closure or required-field shape fails as ConfigurationError before transport authorization, provider dispatch or spending. Returned invalid provider output retains receipted SchemaViolation and bounded response correction.",
+      "baseline": "Nine initial malformed schemas each dispatched, authorized and reserved once; seven accurate neighbours passed. Extended final suite covers27 cases.",
+      "verification": {
+        "focused_transport_tests_passed": 107,
+        "new_preflight_cases": 27,
+        "current_brain_schema_variants_accepted": 48,
+        "additional_metadata_leak_fixture_passed": 1,
+        "ruff": "passed",
+        "routine_model_call_delta": 0,
+        "paid_calls": 0,
+        "invalid_schema_provider_dispatches": 0,
+        "invalid_schema_spending_reservations": 0
+      },
+      "existing_fixture_updates": "Ordinary fake wire schemas are closed/complete, and root alternatives are nested under a closed root. Malformed response and historical validation assertions remain intact.",
+      "broader_check": {
+        "initial_passed": 237,
+        "initial_failed": 19,
+        "skipped": 2,
+        "new_fixture_failure_repaired": "test_the_wire_scan_can_see_a_leak",
+        "unrelated_failures_reproduced_with_committed_guard_free_owner": 18,
+        "identical_full_failure_messages": 18,
+        "failures": [
+          "tests.test_an_unfinished_answer_is_never_a_short_one.test_a_text_read_is_covered_by_the_same_check",
+          "tests.test_an_unfinished_answer_is_never_a_short_one.test_the_adapter_refuses_a_length_limited_response_that_parses",
+          "tests.test_an_unfinished_answer_is_never_a_short_one.test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise",
+          "tests.test_an_unfinished_answer_is_never_a_short_one.test_the_same_response_with_a_normal_stop_is_returned",
+          "tests.test_openai_text_permission.test_an_actor_id_alone_and_an_ended_session_cannot_send",
+          "tests.test_openai_text_permission.test_permission_never_admits_an_alternative_destination[http://api.openai.com/v1]",
+          "tests.test_openai_text_permission.test_permission_never_admits_an_alternative_destination[https://api.openai.com.evil.example/v1]",
+          "tests.test_openai_text_permission.test_permission_never_admits_an_alternative_destination[https://api.openai.com/v1?forward=1]",
+          "tests.test_openai_text_permission.test_permission_never_admits_an_alternative_destination[https://elsewhere.example/v1]",
+          "tests.test_openai_text_permission.test_revocation_is_checked_again_on_transport_retry",
+          "tests.test_openai_text_permission.test_revocation_stops_next_call_on_an_already_constructed_engine",
+          "tests.test_openai_text_permission.test_served_turn_refuses_before_provider_and_keeps_owned_file",
+          "tests.test_openai_text_permission.test_text_permission_never_enables_other_sinks_classes_or_embeddings",
+          "tests.test_provider_independence.test_every_schema_is_identified_by_an_exact_key_and_not_a_substring",
+          "tests.test_provider_independence.test_the_scripted_provider_answers_every_schema_the_core_declares",
+          "tests.test_tooling_bites.test_every_mutation_anchor_still_matches_the_source",
+          "tests.test_tooling_bites.test_every_tool_makes_its_console_survive_the_prose_it_prints",
+          "tests.test_tooling_bites.test_layercheck_passes_on_the_real_tree"
+        ]
+      },
+      "limits": "Guard certifies these mandatory object invariants, not the whole provider JSONSchema grammar, semantic quality or all unrelated baseline controls. Existing architecture, archived inventory, stale permission/mutation/tooling/price test failures remain recorded for separate owning repairs. Connected browser acceptance still open.",
+      "official_provider_contract": "https://developers.openai.com/api/docs/guides/structured-outputs"
     }
   ],
   "additional_reviewer_input": {
