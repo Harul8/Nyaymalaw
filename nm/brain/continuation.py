@@ -18,6 +18,7 @@ from nm.brain.execution_contracts import (
     ReviewCompletionIncomplete,
     effect_catalogue,
     validate_record_outcome,
+    validate_review_completion,
 )
 from nm.brain.legal_requirements import (
     RESEARCH_VERIFICATION,
@@ -250,7 +251,11 @@ only current_record_ids that already support the requested current state,
 with effect_ids empty; it makes no claim that NM performed a prior edit.
 review_no_change requires actual requested record review and its execution,
 including a legitimate zero-candidate outcome; do not substitute a skipped
-stage, a refused edit or a failed read. unresolved preserves unfinished record
+stage, a refused edit or a failed read. Any positive result for a requested
+review requires complete independent account coverage of its whole exact scope,
+even when reply sufficiency is partial. Use unresolved for narrower checked
+results when that review scope remains partial or unassessed.
+unresolved preserves unfinished record
 work and cannot complete sufficiency or this selected task; an independently
 answered earlier question can still complete on its own attributed evidence.
 An unresolved whole review may still retain exact IDs of its actually checked
@@ -963,6 +968,17 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         validate_record_outcome(unit, execution_receipt,
                                 (key for key, row in records.items()
                                  if row["type"] in ("dispute", "material")))
+        # Only an explicitly completed prior owned task can add an inherited
+        # review obligation. Fresh $work uses the current requirement above;
+        # missing historical requirements remain untracked semantic scope.
+        for _, update, target, _ in checked_updates:
+            target_id = _progress_target(unit, update["target_id"])
+            requirement = target.get("record_requirement")
+            if (update["status"] == "complete" and target["kind"] == "task"
+                    and target_id in work and isinstance(requirement, dict)
+                    and requirement.get("kind") == "review"):
+                validate_review_completion(
+                    unit, execution_receipt, requirement=requirement, task_id=target_id)
     except ExecutionEvidenceInvalid as exc:
         # The model cannot repair corrupted execution ownership/projections.
         problem = IncompleteConversation(

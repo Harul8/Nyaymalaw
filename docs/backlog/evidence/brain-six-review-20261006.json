@@ -635,6 +635,20 @@
         "nm/brain/turn.py",
         "tests/test_brain_turn_execution_consumer.py"
       ]
+    },
+    {
+      "slice": "Local original-review completion recovery",
+      "owners": [
+        "LB-188",
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Check every explicitly completed owned prior review goal at the fresh writer boundary against its immutable full requirement and exact independent coverage, so unsupported completion is corrected per unit before saved-state validation. Fresh current tasks use their current owner and legacy missing goals stay untracked; independent question answers remain usable. Writer prompt explicitly requires complete scope for every positive requested-review result, preserving narrower checked work as unresolved.",
+      "validation": "138 offline writer, original-goal/current-goal/question/legacy recovery and served commit/replay cases passed; Ruff passed. No extra model activity; actual-model/browser qualification deferred.",
+      "files": [
+        "nm/brain/continuation.py",
+        "tests/test_brain_inherited_review_local_recovery.py"
+      ]
     }
   ]
 }
