@@ -60,7 +60,10 @@ def candidate(*, target="date", quote="Sorry, Tuesday.", relation="corrects", ki
 
 def decision(*support, verdict="accept"):
     return {"candidate_id": "D1", "verdict": verdict, "reason": "Independent account check.",
-            "account_check": {"source_ids": list(support)}, "target_checks": []}
+            "account_check": {"source_ids": list(support), "source_checks": [
+                {"source_id": identity, "supplies_account_content": True,
+                 "supports_proposal": True, "reason": "Original substantive support."}
+                for identity in support]}, "target_checks": []}
 
 
 def scope(grant):

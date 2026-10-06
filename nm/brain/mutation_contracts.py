@@ -193,6 +193,35 @@ def _checked_ledger(ledger):
     return {row["id"]: row for row in ledger["authorities"]}
 
 
+def _current_source_ids(current_source_reference, ledger):
+    """Resolve only a code-owned identity whose exact original words still match."""
+    reference_fields = {"turn_id", "role", "quoted"}
+    if (not isinstance(current_source_reference, dict)
+            or set(current_source_reference) not in (
+                reference_fields, reference_fields | {"source_id"})
+            or current_source_reference["turn_id"] != ledger["owner"]["turn_id"]
+            or current_source_reference["role"] != "advocate"
+            or not isinstance(current_source_reference["quoted"], str)
+            or not current_source_reference["quoted"].strip()):
+        raise SchemaViolation("Mutation scope selection requires the exact current advocate source")
+    if "source_id" in current_source_reference:
+        source_id = _text(current_source_reference["source_id"], "current source_id")
+        source = ledger["source_catalogue"].get(source_id)
+        selected_sources = ({source_id} if isinstance(source, dict) and all(
+            source.get(key) == current_source_reference[key] for key in reference_fields)
+                            else set())
+    else:
+        selected_sources = {
+            identity for identity, source in ledger["source_catalogue"].items()
+            if all(source.get(key) == current_source_reference[key]
+                   for key in reference_fields)}
+    if not selected_sources:
+        raise SchemaViolation("Mutation scope selection has no owned current source")
+    if len(selected_sources) != 1:
+        raise SchemaViolation("Mutation operation has ambiguous current source identity")
+    return selected_sources
+
+
 def candidate_authority_ids(*, ledger, owner, snapshot_version, relation, target_ids,
                             current_source_reference):
     """Select the applicable scope union from a candidate's exact current source.
@@ -210,22 +239,10 @@ def candidate_authority_ids(*, ledger, owner, snapshot_version, relation, target
         raise SchemaViolation("Mutation authority belongs to a different turn owner")
     if _version(snapshot_version) != ledger["expected_version"]:
         raise SchemaViolation("Mutation authority belongs to a different record snapshot")
-    if (not isinstance(current_source_reference, dict)
-            or set(current_source_reference) != {"turn_id", "role", "quoted"}
-            or current_source_reference["turn_id"] != ledger["owner"]["turn_id"]
-            or current_source_reference["role"] != "advocate"
-            or not isinstance(current_source_reference["quoted"], str)
-            or not current_source_reference["quoted"].strip()):
-        raise SchemaViolation("Mutation scope selection requires the exact current advocate source")
-    selected_sources = {
-        identity for identity, source in ledger["source_catalogue"].items()
-        if all(source.get(key) == value for key, value in current_source_reference.items())}
-    if not selected_sources:
-        raise SchemaViolation("Mutation scope selection has no owned current source")
-    if len(selected_sources) != 1:
-        raise SchemaViolation("Mutation operation has ambiguous current source identity")
+    selected_sources = _current_source_ids(current_source_reference, ledger)
     targets = _ids(target_ids, "target_ids")
-    if (relation not in RELATIONS or (relation == "new" and targets)
+    if (not isinstance(relation, str) or relation not in RELATIONS
+            or (relation == "new" and targets)
             or (relation != "new" and not targets)
             or not set(targets) <= ledger["target_catalogue"].keys()):
         raise SchemaViolation("Mutation operation has incompatible or unowned record targets")
@@ -262,7 +279,7 @@ def authorize_mutation(*, ledger, owner, snapshot_version, authority_ids, relati
         target_ids=target_ids, current_source_reference=current_source_reference)
     if not set(selected) <= set(applicable_ids):
         raise SchemaViolation("Mutation authority does not apply to its selected current source")
-    if relation not in RELATIONS:
+    if not isinstance(relation, str) or relation not in RELATIONS:
         raise SchemaViolation("Mutation selects an unknown record operation")
     targets = _ids(target_ids, "target_ids")
     if ((relation == "new" and targets) or (relation != "new" and not targets)
@@ -344,8 +361,12 @@ def _record_current_reference(record, ledger):
     recorded_turn = _record_value(record, "source_turn_id")
     if recorded_turn is not None and recorded_turn != ledger["owner"]["turn_id"]:
         raise SchemaViolation("Mutation proposal belongs to a different source turn")
-    return {"turn_id": ledger["owner"]["turn_id"], "role": "advocate",
-            "quoted": _record_value(record, "quoted")}
+    reference = {"turn_id": ledger["owner"]["turn_id"], "role": "advocate",
+                 "quoted": _record_value(record, "quoted")}
+    source_id = _record_value(record, "source_id")
+    if source_id is not None or isinstance(record, dict) and "source_id" in record:
+        reference["source_id"] = source_id
+    return reference
 
 
 def _record_context_ids(record, ledger):
@@ -369,6 +390,33 @@ def _record_context_ids(record, ledger):
             raise SchemaViolation("Mutation context selects an unowned original advocate source")
         selected.update(matching)
     return sorted(selected)
+
+
+def _record_support_ids(decision):
+    """Retain only independently checked substantive supporting references.
+
+    Selecting a source for review does not establish its support. Negative or
+    instruction-only checks must not become factual support in the certificate.
+    The verification owner validates meaning; this boundary preserves its
+    explicit per-source result rather than relabelling all reviewed references.
+    """
+    account = decision.get("account_check")
+    if not isinstance(account, dict) or not isinstance(account.get("source_checks"), list):
+        raise SchemaViolation("Mutation support requires independent account source checks")
+    selected = _ids(account.get("source_ids"), "account_check.source_ids")
+    checked, support = set(), []
+    for check in account["source_checks"]:
+        if (not isinstance(check, dict) or not isinstance(check.get("source_id"), str)
+                or check["source_id"] not in selected or check["source_id"] in checked
+                or not isinstance(check.get("supplies_account_content"), bool)
+                or not isinstance(check.get("supports_proposal"), bool)):
+            raise SchemaViolation("Mutation support has an unreadable or conflicting source check")
+        checked.add(check["source_id"])
+        if check["supplies_account_content"] and check["supports_proposal"]:
+            support.append(check["source_id"])
+    if checked != set(selected):
+        raise SchemaViolation("Mutation support checks do not cover their selected sources")
+    return sorted(support)
 
 
 def scoped_record_decisions(decisions, candidates, review_scope, *, binding_sink=None):
@@ -411,8 +459,7 @@ def scoped_record_decisions(decisions, candidates, review_scope, *, binding_sink
                 ledger=ledger, owner=ledger["owner"],
                 snapshot_version=ledger["expected_version"], relation=relation,
                 target_ids=targets, current_source_reference=reference)
-            account = decision.get("account_check")
-            support = account.get("source_ids") if isinstance(account, dict) else None
+            support = _record_support_ids(decision)
             certificate = authorize_mutation(
                 ledger=ledger, owner=ledger["owner"],
                 snapshot_version=ledger["expected_version"], authority_ids=authorities,
@@ -444,11 +491,13 @@ def bind_record_mutation(proposal, ledger, *, binding=None, supporting_source_id
     if not isinstance(proposal, dict):
         raise SchemaViolation("Saved mutation requires a readable proposal")
     relation = proposal.get("relation")
+    reference = _record_current_reference(proposal, ledger)
+    if "source_id" in reference:
+        _current_source_ids(reference, ledger)
     if relation == "new":
         if binding is not None or proposal.get("mutation_authority") is not None:
             raise SchemaViolation("A new account has an unexpected revision authority binding")
         return None
-    reference = _record_current_reference(proposal, ledger)
     targets = _record_target_ids(proposal)
     context = _record_context_ids(proposal, ledger)
     certificate = binding if binding is not None else proposal.get("mutation_authority")
@@ -510,6 +559,9 @@ def validate_record_mutation(proposal, *, turn, execution, prior_words=None,
             or not proposal["quoted"].strip() or proposal["quoted"] not in message
             or proposal.get("source_turn_id") != turn.get("turn_id")):
         raise SchemaViolation("Saved mutation does not match the original current advocate words")
+    reference = _record_current_reference(proposal, ledger)
+    if "source_id" in reference:
+        _current_source_ids(reference, ledger)
     if source_catalogue is not None:
         if not isinstance(source_catalogue, dict) or source_catalogue != ledger["source_catalogue"]:
             raise SchemaViolation("Saved mutation differs from its original source catalogue")
@@ -542,3 +594,59 @@ def validate_record_mutation(proposal, *, turn, execution, prior_words=None,
     mutation_authority_mode(saved_contract=contract, binding_present=binding is not None)
     bind_record_mutation(proposal, ledger, binding=binding)
     return "bound"
+
+
+def model_review_scope(review_scope):
+    """Present authorised choices without duplicating durable dependency data.
+
+    Original transcripts, source treatments and current/linked records remain
+    separate complete reviewer inputs. Only storage catalogues, hashes and seals
+    are removed here; every scope permission and other meaningful scope field
+    is retained. This is presentation for the model, never an admission ledger.
+    The full code-owned scope remains the owner of coverage binding and replay.
+    """
+    if review_scope is None:
+        return None
+    if not isinstance(review_scope, dict):
+        raise SchemaViolation("Independent account review needs a code-owned scope")
+    contract = review_scope.get("mutation_authority_contract")
+    if contract is not None and contract != AUTHORITY_CONTRACT:
+        raise SchemaViolation("Mutation review scope has an unknown authority contract")
+    if "mutation_authorities" not in review_scope:
+        if contract is not None:
+            raise SchemaViolation("Versioned mutation review scope has no authority ledger")
+        return deepcopy(review_scope)
+    ledger = review_scope["mutation_authorities"]
+    _checked_ledger(ledger)
+    if _owner(review_scope.get("owner")) != ledger["owner"]:
+        raise SchemaViolation("Mutation review scope belongs to a different turn owner")
+    if "mutation_scopes" in review_scope:
+        raise SchemaViolation("Mutation review scope repeats its permission presentation")
+    return {
+        **{name: deepcopy(value) for name, value in review_scope.items()
+           if name != "mutation_authorities"},
+        "mutation_scopes": deepcopy(ledger["authorities"]),
+    }
+
+
+def model_mutation_context(value):
+    """Clone model input while omitting only redundant mutation proof data.
+
+    Complete original words and semantic data are preserved at every level.
+    A typed mutation ledger must first pass its storage integrity contract; its
+    presentation then retains the owner, snapshot version and exact permitted
+    choices. This presentation is not an admission ledger and must not replace
+    the full server context used for coverage, persistence or replay. Call once
+    at a dispatch owner from that full context, not on an already lean ledger.
+    """
+    if isinstance(value, dict):
+        if value.get("contract") == AUTHORITY_CONTRACT:
+            _checked_ledger(value)
+            return {name: deepcopy(value[name]) for name in (
+                "contract", "owner", "expected_version", "authorities")}
+        return {name: model_mutation_context(item) for name, item in value.items()}
+    if isinstance(value, list):
+        return [model_mutation_context(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(model_mutation_context(item) for item in value)
+    return deepcopy(value)
