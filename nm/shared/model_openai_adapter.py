@@ -77,6 +77,21 @@ def _completion_of(reason) -> Completion:
                                Completion.NOT_ESTABLISHED)
 
 
+def _json_object(pairs):
+    """Preserve identical duplicate metadata; reject conflicting object keys."""
+    result = {}
+    for key, value in pairs:
+        if key in result and json.dumps(result[key], sort_keys=True) != json.dumps(
+                value, sort_keys=True):
+            raise ValueError("response JSON repeated a conflicting object key")
+        result[key] = value
+    return result
+
+
+def _invalid_json_constant(value):
+    raise ValueError(f"response JSON used a non-finite numeric constant: {value}")
+
+
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None,
                  call_budget: CallBudget | SessionCallBudget | None = None) -> None:
@@ -359,8 +374,11 @@ class OpenAIModelAdapter:
         text: str | None = raw
         if schema is not None:
             try:
-                data = json.loads(raw)
-            except json.JSONDecodeError as exc:
+                data = json.loads(
+                    raw, object_pairs_hook=_json_object,
+                    parse_constant=_invalid_json_constant,
+                )
+            except (TypeError, ValueError) as exc:
                 raise fail(SchemaViolation(f"response was not valid JSON: {exc}")) from exc
             # THE DECLARED SCHEMA IS ENFORCED HERE, not by the provider.
             # Provider strict output is defence in depth, not a substitute
@@ -372,6 +390,20 @@ class OpenAIModelAdapter:
                 # to meet the original closed contract here, for every read.
                 require_schema(data, schema)
             except SchemaViolation as exc:
+                # This remains a failed structured call. Complete, uniquely
+                # decoded object bytes are available only to an independently
+                # checking owner, never as an accepted provider result.
+                if (completion is Completion.COMPLETE and isinstance(data, dict)
+                        and len(resp.choices) == 1
+                        and not getattr(choice.message, "tool_calls", None)
+                        and not getattr(choice.message, "refusal", None)):
+                    rejected = ModelResult(
+                        text=None, data=data, tier=tier, provider=self.provider,
+                        model=cfg.model, usage=receipt,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        retries=retries, completion=completion,
+                    )
+                    raise SchemaViolation(str(exc), rejected_result=rejected) from exc
                 fail(exc)
                 raise
             text = None
