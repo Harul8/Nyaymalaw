@@ -6,6 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from nm.brain.checked import claim_recovery, require_independent_result
+from nm.brain.evidence_rendering import EVIDENCE_EXPRESSION_CONTRACT, render_expression
 from nm.brain.mutation_contracts import model_mutation_context
 from nm.brain.work_state import PROGRESS_STATUSES
 from nm.shared.model_port import (
@@ -29,6 +30,10 @@ establish neither advocate facts nor legal authority. source_classifications
 label how exact advocate spans were supplied, not proof; untreated spans remain
 unknown. material_coverage may contain execution: code-owned stage/result
 observations, separate from semantic fulfillment and confirmed persistence.
+Fresh evidence_expression_v1 blocks contain code-rendered expressions selecting
+original passages, checked findings or owned record results. Their text is not
+a writer-authored assertion. Historical unstamped blocks retain their earlier
+review contract; never infer the new guarantee merely from their wording.
 
 Purpose: Independently decide whether each proposed request unit is grounded,
 useful and accurately describes delivered work. Start with the actual request
@@ -37,6 +42,12 @@ Check meaning, scope, identities, sufficiency and progress together. Write no
 advice, supply no missing law and authorise no action. Units are independent;
 preserve valid peers and identify a precise consequential mismatch for any
 rejection. Style differences alone are not unsupported content.
+For a rendered expression, independently judge selection, relevance, complete
+context, attribution and requested usefulness. Exact quotation certifies the
+selected words, not their adoption as fact or the legal meaning inferred from
+them. A checked finding preserves an admitted proposition; it does not prove
+its application. Do not demand arbitrary rewording of a fixed expression, or
+reject a reported denial because a date inside it matches a disputed value.
 
 Activity 1 - Establish the request and the attributed account.
 Look for: The advocate's requested outcome and authorised scope in the full
@@ -596,10 +607,39 @@ def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict, *,
     return decision, retained
 
 
+def _check_expressions(input_payload: dict, units: tuple[dict, ...]) -> None:
+    spans = {span["id"]: {**span, "role": message["role"]}
+             for message in input_payload.get("earlier_conversation", [])
+             for span in message["source_spans"]}
+    spans.update({span["id"]: {**span, "role": "advocate"}
+                  for span in input_payload.get("latest_message_spans", [])})
+    for unit in units:
+        for block in unit["blocks"]:
+            if "evidence_expression" not in block and "expression_contract" not in block:
+                continue  # Historical/internal review is deliberately compatible.
+            if block.get("expression_contract") != EVIDENCE_EXPRESSION_CONTRACT:
+                raise SchemaViolation(
+                    "Independent review received an unsupported expression version")
+            expected = render_expression(
+                block.get("evidence_expression"), spans=spans,
+                records=input_payload.get("record_catalogue", {}),
+                sources=input_payload.get("legal_sources", {}))
+            if block["evidence_expression"]["operator"] == "record_result":
+                # Receipt rendering owns this text and the record-result check.
+                continue
+            if (block["text"] != expected["text"]
+                    or block["record_ids"] != expected["record_ids"]
+                    or block["legal_source_ids"] != expected["legal_source_ids"]
+                    or block["inline_citations"] != expected["inline_citations"]
+                    or not set(expected["span_ids"]) <= set(block["span_ids"])):
+                raise SchemaViolation("Independent review received an altered rendered expression")
+
+
 def verify_continuation(model: ModelPort, *, input_payload: dict,
                         units: tuple[dict, ...]
                         ) -> ContinuationVerification:
     """Keep valid verdicts and retry only unread verdicts, at most once."""
+    _check_expressions(input_payload, units)
     proposed = {unit["request_index"]: unit for unit in units}
     pending = tuple(proposed)
     decisions: dict[int, tuple[bool, str]] = {}
