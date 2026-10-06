@@ -13,7 +13,7 @@ from nm.brain.checked import (
     verdict_envelope_issue,
 )
 from nm.brain.material import MaterialCandidate, addressed_sources
-from nm.brain.mutation_contracts import scoped_record_decisions
+from nm.brain.mutation_contracts import model_review_scope, scoped_record_decisions
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     admitted_record_decisions,
@@ -355,7 +355,7 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     payload["active_disputes"] = [derived_record(row) for row in active.values()]
     coverage_ids = tuple(source_treatments) if requested else None
     if requested:
-        payload["review_scope"] = deepcopy(review_scope)
+        payload["review_scope"] = model_review_scope(review_scope)
         payload["coverage_source_ids"] = list(coverage_ids)
     keyed = {f"C{index}": candidate
              for index, candidate in enumerate(candidates, start=1)}
