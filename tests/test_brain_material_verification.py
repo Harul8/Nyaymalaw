@@ -317,7 +317,7 @@ def test_an_accepted_verdict_cannot_admit_two_people_in_opening_prefix():
 
     assert result.opening_supported is False
     assert len(model.calls) == 1
-    assert "exactly one person or entity" in model.calls[0][0].system
+    assert "exactly one client-side person/entity" in model.calls[0][0].system
 
 
 def test_a_single_entity_name_containing_and_is_not_split_mechanically():

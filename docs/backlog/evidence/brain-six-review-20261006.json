@@ -167,6 +167,20 @@
       "files": [
         "nm/brain/legal_requirements.py"
       ]
+    },
+    {
+      "slice": "material-review-evidence-order",
+      "owners": [
+        "LB-176",
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Reorder independent material review: original substantive account; whole proposition and assignment; exact authorized operation; preservation through atomic replacement; opening description. Preserve full linked records, distinct attribution/uncertainty/ownership, factual versus interpretative repair and all same-target successor dependencies. Acceptance cannot override failed checks or manufacture missing evidence.",
+      "validation": "41 material-verification, assignment and saved-record cases passed. Actual-model legal/semantic quality and browser qualification deferred.",
+      "files": [
+        "nm/brain/material_verification.py",
+        "tests/test_brain_material_verification.py"
+      ]
     }
   ]
 }
