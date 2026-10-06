@@ -87,7 +87,7 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
     item = {"type": "object", "additionalProperties": False,
             "required": ["content_role", "reason"], "properties": {
                 "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
-                "reason": {"type": "string", "minLength": 1, "maxLength": 300}}}
+                "reason": {"type": "string", "minLength": 1}}}
     schema = {"type": "object", "additionalProperties": False,
               "required": ["source_treatments"], "properties": {
                   "source_treatments": {
@@ -106,7 +106,7 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
     def accept(data):
         rows = data["source_treatments"]
         if any(not row["reason"].strip() for row in rows.values()):
-            raise SchemaViolation("Each source treatment needs a substantive short reason")
+            raise SchemaViolation("Each source treatment needs a substantive nonempty reason")
         return {key: {**references[key], **row} for key, row in rows.items()}
 
     return checked_read(model, prompt, schema, output_limit, accept)
@@ -222,12 +222,12 @@ def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
                             "source_id": {"type": "string", "enum": list(source_ids) or [""]},
                             "supplies_account_content": {"type": "boolean"},
                             "supports_proposal": {"type": "boolean"},
-                            "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                            "reason": {"type": "string", "minLength": 1},
                         },
                     },
                     **({"maxItems": 0} if not source_ids else {}),
                 },
-                "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                "reason": {"type": "string", "minLength": 1},
             },
         },
         "target_checks": {
@@ -242,7 +242,7 @@ def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
                         "different", "uncertain"]},
                     "account_preserved": {"type": "boolean"},
                     "required_peer_ids": ids(candidate_ids),
-                    "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "reason": {"type": "string", "minLength": 1},
                 },
             },
         },

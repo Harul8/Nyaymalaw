@@ -667,6 +667,19 @@
         "tests/test_brain_work_selection.py",
         "tests/test_brain_continuation_retention.py"
       ]
+    },
+    {
+      "slice": "diagnostic-reason-width",
+      "owners": [
+        "LB-176",
+        "LB-179"
+      ],
+      "decision": "Removed arbitrary provider-schema caps on classifier and account/source/target diagnostic explanations. Kept substantive nonempty reasoning, provenance, ownership, authority, bounded correction and token budgets. Long explanations are not consequential errors merely because of character count.",
+      "validation": "56 focused offline controls passed; Ruff clean. Paired >600-character meaningful explanations pass on first call, blank explanations fail within one correction. Broader public fixture migration remains tracked separately; provider semantic behavior unverified.",
+      "files": [
+        "nm/brain/record_review.py",
+        "tests/test_brain_record_diagnostic_reason_lengths.py"
+      ]
     }
   ]
 }
