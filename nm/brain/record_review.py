@@ -1065,10 +1065,47 @@ def _coverage_candidate_support(decisions, references, choices, admitted) -> dic
     return result
 
 
+def _coverage_record_support(decisions, references, choices) -> dict:
+    """Remap checked saved dependencies, never infer them from a record's wording."""
+    if not isinstance(decisions, dict) or not set(decisions) <= set(choices):
+        raise SchemaViolation("Coverage record support needs owned saved decisions")
+    result = {}
+    for identity, entry in decisions.items():
+        if (not isinstance(entry, dict)
+                or set(entry) != {"review", "source_references"}):
+            raise SchemaViolation("Coverage record support needs a closed saved proof")
+        decision = entry["review"]
+        original = entry["source_references"]
+        candidate = decision.get("candidate_id") if isinstance(decision, dict) else None
+        if (not isinstance(candidate, str) or not candidate.strip()
+                or not isinstance(original, dict)):
+            raise SchemaViolation("Coverage record support needs its original review and sources")
+        catalogue = _checked_source_references(tuple(original), original, exact=True)
+        supported = _coverage_candidate_support(
+            {candidate: decision}, catalogue, (candidate,), (candidate,))[candidate]
+        mapped = {}
+        for source, portions in supported.items():
+            for alias, reference in references.items():
+                if reference == catalogue[source]:
+                    mapped.setdefault(alias, []).extend(portions)
+        result[identity] = mapped
+    return result
+
+
+def _coverage_supports_portion(support, identity, source, portion, selected) -> bool:
+    return any(
+        max(portion["start"], original["start"], account["start"])
+        < min(portion["end"], original["end"], account["end"])
+        for original in support.get(identity, {}).get(source, [])
+        for account in selected)
+
+
 def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
                      candidate_ids=(), admitted_candidate_ids=None,
-                     candidate_support=None) -> dict:
+                     candidate_support=None, record_support=None) -> dict:
     """Check observable dispositions; semantic sufficiency remains independently judged."""
+    if source_references is None and record_support is not None:
+        raise SchemaViolation("Coverage record support requires original source references")
     schema = coverage_schema(source_ids, source_references=source_references,
                              record_ids=record_ids, candidate_ids=candidate_ids)
     require_schema(row, schema)
@@ -1094,6 +1131,8 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
     support = (_coverage_candidate_support(
         candidate_support, references, candidate_ids, admitted)
         if candidate_support is not None else None)
+    saved_support = (_coverage_record_support(record_support, references, record_ids)
+                     if record_support is not None else None)
     checks = {}
     missing = set()
     for check in row["source_checks"]:
@@ -1131,14 +1170,19 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
             if not set(candidates) <= admitted:
                 raise SchemaViolation(
                     "Represented coverage selects a candidate not actually admitted")
-            if support is not None and any(not any(
-                    max(portion["start"], original["start"], selected["start"])
-                    < min(portion["end"], original["end"], selected["end"])
-                    for original in support.get(candidate, {}).get(identity, [])
-                    for selected in checks[identity]["substantive_spans"])
+            if support is not None and any(not _coverage_supports_portion(
+                    support, candidate, identity, portion,
+                    checks[identity]["substantive_spans"])
                     for candidate in candidates):
                 raise SchemaViolation(
                     "Represented coverage selects a candidate without independently checked "
+                    "support for this original source portion")
+            if saved_support is not None and any(not _coverage_supports_portion(
+                    saved_support, record, identity, portion,
+                    checks[identity]["substantive_spans"])
+                    for record in records):
+                raise SchemaViolation(
+                    "Represented coverage selects a record without independently checked "
                     "support for this original source portion")
         elif records or candidates:
             raise SchemaViolation(

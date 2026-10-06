@@ -1,0 +1,25 @@
+{
+  "milestone": {
+    "piece": "Saved-record original-support admission API",
+    "base": "b9ae3bd",
+    "production_file": "nm/brain/record_review.py",
+    "prompt_changes": 0,
+    "invariant": "When certified record support is supplied, every represented saved record must have an accepted independent account decision with positive exact original portions overlapping the selected coverage account portion. Record presence, wording and an unrelated supported peer cannot substitute for that dependency.",
+    "observable_pass": "Wrong-source, disjoint, contextual-only, missing and malformed record proof fails; already-correct records, exact original aliases, independent partial peers and supported candidate-plus-record neighbours pass without a fresh extraction requirement.",
+    "baseline": "46 new cases:44 fail for the absent record_support API;2 unsupplied compatibility cases pass.",
+    "verification": "175 focused cases pass:46 new saved-record support,61 source-specific native options,29 candidate dependency,6 support activation,27 public source recovery and6 public source-span cases. Ruff passes. No live calls in this prerequisite; no live producer supplies record_support yet.",
+    "canonical_changes": "None. The optional closed proof map reuses existing positive candidate-support validation and remaps only equal turn_id/role/quoted original references. New certified support is rejected under the legacy three-field coverage contract; None and unsupplied historical/fresh callers retain their prior contract. Execution and persistence validation remain turn-owned prerequisites.",
+    "call_impact": "0 additional routine or conditional calls. Mechanical owned-dependency validation only. Existing correction bounds and saved canonical proof/replay remain unchanged.",
+    "remaining": "Build the turn-owned adapter that validates each supplying saved execution against its original prefix and source ownership; wire both verifier producers and ordinary/recovery handoffs, preserving current versus superseded representation. Then qualify actual browser coverage and false rejection. Source semantic purpose/ranges, dispute existence/identity, requested delivery, legal force/applicability, recovery/UI and six-activity qualification remain open."
+  },
+  "owners": ["LB-195", "LB-196", "LB-197", "LB-183"],
+  "proof_name": "coverage-record-support-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 saved-record support admission API:baseline44fail/2pass;175 focused checks/Ruff pass. Supplied certified record proof requires positive original exact support for each represented record; missing/context-only/unrelated IDs fail. Already-correct records, exact aliases, partial peers and historical neighbours pass.0 prompt/0 added calls. API prerequisite only; NOT live-wired or full coverage acceptance.",
+    "current_position": "Generation choices and saved-record support admission APIs verified separately. Turn-owned durable proof adapter and producer handoffs still required.",
+    "evidence": ["docs/backlog/evidence/brain-coverage-record-support-20261007.json"],
+    "tested_version": "b9ae3bd plus single-file candidate",
+    "test_environment": "Offline exact original dependencies and scripted public recovery/save/replay checks.0 live calls; both tiers remain pinned GPT-4.1 mini.",
+    "remaining": "Validate saved execution/source catalogues against original prefixes before offering record_support; wire ordinary/recovery material and dispute reviewers; distinguish active and superseded records; qualify live coverage and remaining semantic/delivery/legal/UI safeguards."
+  }
+}

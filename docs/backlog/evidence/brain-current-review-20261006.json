@@ -1722,6 +1722,19 @@
       "canonical_changes": "None. New optional generation-only argument validates complete closed source keys and owned ID pools; per-source branches bind exact source bounds. Unsupplied and explicit None callers and historical proof/replay keep their prior contract.",
       "call_impact": "0 added routine or conditional model calls. This API constrains existing schemas only. Original candidate_account_ids must retain whole current account and cited earlier sources; positive support may narrow settled corrections, with exact immutable alias closure.",
       "remaining": "Turn-owned saved execution proof adapter and verifier argument handoffs are required before certifying existing/historical record choices. Active row primary quote or prior references are context, not substantive checked support. Existing-record coverage currently lacks admitted source dependency enforcement; historical supersession must remain distinct from current state. Candidate retry choices, purpose/ranges/recovery, dispute existence/identity and remaining six-activity qualifications remain open."
+    },
+    {
+      "piece": "Saved-record original-support admission API",
+      "base": "b9ae3bd",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "When certified record support is supplied, every represented saved record must have an accepted independent account decision with positive exact original portions overlapping the selected coverage account portion. Record presence, wording and an unrelated supported peer cannot substitute for that dependency.",
+      "observable_pass": "Wrong-source, disjoint, contextual-only, missing and malformed record proof fails; already-correct records, exact original aliases, independent partial peers and supported candidate-plus-record neighbours pass without a fresh extraction requirement.",
+      "baseline": "46 new cases:44 fail for the absent record_support API;2 unsupplied compatibility cases pass.",
+      "verification": "175 focused cases pass:46 new saved-record support,61 source-specific native options,29 candidate dependency,6 support activation,27 public source recovery and6 public source-span cases. Ruff passes. No live calls in this prerequisite; no live producer supplies record_support yet.",
+      "canonical_changes": "None. The optional closed proof map reuses existing positive candidate-support validation and remaps only equal turn_id/role/quoted original references. New certified support is rejected under the legacy three-field coverage contract; None and unsupplied historical/fresh callers retain their prior contract. Execution and persistence validation remain turn-owned prerequisites.",
+      "call_impact": "0 additional routine or conditional calls. Mechanical owned-dependency validation only. Existing correction bounds and saved canonical proof/replay remain unchanged.",
+      "remaining": "Build the turn-owned adapter that validates each supplying saved execution against its original prefix and source ownership; wire both verifier producers and ordinary/recovery handoffs, preserving current versus superseded representation. Then qualify actual browser coverage and false rejection. Source semantic purpose/ranges, dispute existence/identity, requested delivery, legal force/applicability, recovery/UI and six-activity qualification remain open."
     }
   ],
   "additional_reviewer_input": {
