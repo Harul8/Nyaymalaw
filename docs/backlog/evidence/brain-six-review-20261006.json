@@ -543,6 +543,19 @@
         "tests/test_brain_review_transport.py",
         "tests/brain_continuation_fixture.py"
       ]
+    },
+    {
+      "slice": "Coverage-specific completion diagnostics",
+      "owners": [
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Separate incomplete independent review coverage from invalid owned execution evidence using a typed failure state. Full current-request completion must have its own exact coverage owner; an inherited task alias alone cannot certify a new current review. Current-plus-inherited coverage remains valid without prose classification.",
+      "validation": "41 offline execution, full-review completion and current/inherited coverage paired checks passed; Ruff passed. Model/browser semantic qualification remains deferred.",
+      "files": [
+        "nm/brain/execution_contracts.py",
+        "tests/test_brain_review_completion_diagnostics.py"
+      ]
     }
   ]
 }

@@ -228,6 +228,14 @@ def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
     return result
 
 
+class ReviewCompletionIncomplete(SchemaViolation):
+    """Unsupported full-review completion, distinct from a false owned effect."""
+
+    def __init__(self, reason: str, *, state: str = "unassessed") -> None:
+        self.state = state
+        super().__init__(reason)
+
+
 def _owned_inherited_review_scope(unit: dict, receipt: dict | None) -> list[tuple[dict, str]]:
     """Only explicitly completed owned goals can supply inherited review evidence."""
     if receipt is None:
@@ -296,7 +304,7 @@ def validate_review_completion(
         return
     receipt = _receipt(receipt)
     if receipt is None:
-        raise SchemaViolation(
+        raise ReviewCompletionIncomplete(
             "Full requested review completion needs owned independent account coverage"
         )
     for reader, review in _KINDS.values():
@@ -304,13 +312,13 @@ def validate_review_completion(
             "checked",
             "no_candidates",
         ):
-            raise SchemaViolation(
+            raise ReviewCompletionIncomplete(
                 "Full requested review completion needs actual reading and review"
             )
         stage = receipt["stages"][review]
         assessment = stage.get("account_coverage")
         if assessment is None:
-            raise SchemaViolation(
+            raise ReviewCompletionIncomplete(
                 "Full requested review completion lacks independent account coverage"
             )
         if (
@@ -320,8 +328,9 @@ def validate_review_completion(
         ):
             raise ExecutionEvidenceInvalid("Independent account coverage is unreadable")
         if assessment["state"] != "complete":
-            raise SchemaViolation(
-                "Full requested review completion has partial/unassessed account coverage"
+            raise ReviewCompletionIncomplete(
+                "Full requested review completion has partial/unassessed account coverage",
+                state=assessment["state"],
             )
         missing = assessment.get("missing_source_ids")
         if (
@@ -342,13 +351,13 @@ def validate_review_completion(
                 if isinstance(row, dict)
                 and row.get("request_index") == unit["request_index"]
                 and row.get("record_requirement") == requirement
-                and (task_id is None or row.get("task_id") == task_id)
+                and ((not row.get("task_id")) if task_id is None else row.get("task_id") == task_id)
             ]
             if isinstance(requests, list)
             else []
         )
         if not covered:
-            raise SchemaViolation(
+            raise ReviewCompletionIncomplete(
                 "Full requested review completion lacks the exact requested account scope"
             )
 
