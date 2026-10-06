@@ -500,6 +500,21 @@
         "nm/brain/execution_contracts.py",
         "tests/test_brain_inherited_review_completion.py"
       ]
+    },
+    {
+      "slice": "independently-review-supplied-law-pool",
+      "owners": [
+        "LB-179",
+        "LB-180",
+        "LB-181",
+        "LB-185"
+      ],
+      "decision": "The existing independent law check now also examines every supplied retrieved passage for useful omitted work, preserving exact original proposed/checked context. Candidate validity and bounded pool coverage are separate. Valid findings survive coverage-only correction or uncertainty; legitimate rejected-all findings can have complete pool coverage. Long substantive diagnostic reasons are accepted without arbitrary caps.",
+      "validation": "155 offline legal/pool cases passed; unused adverse source baseline fails then passes with candidate, legitimate all-rejected neighbor passes, bounded peer recovery and wrong-tier checks; Ruff clean. Supplied passages only, no corpus completeness or real-model/browser qualification.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_supplied_coverage.py"
+      ]
     }
   ]
 }

@@ -1564,69 +1564,102 @@ the server derives the overall empty-reading outcome from these checks."""
 
 def empty_reading_verification_valid(value: object, *, subject_id: str) -> bool:
     """Validate an owned bounded-empty attestation without promoting it to law."""
-    if (not isinstance(value, dict) or set(value) != {
-            "contract", "subject_id", "semantic_extent", "outcome", "source_ids",
-            "sources", "source_checks"}
-            or value.get("contract") != EMPTY_READING_VERIFICATION
-            or value.get("subject_id") != subject_id
-            or not isinstance(value.get("source_ids"), list)
-            or not isinstance(value.get("sources"), list)
-            or not isinstance(value.get("source_checks"), list)):
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != {
+            "contract",
+            "subject_id",
+            "semantic_extent",
+            "outcome",
+            "source_ids",
+            "sources",
+            "source_checks",
+        }
+        or value.get("contract") != EMPTY_READING_VERIFICATION
+        or value.get("subject_id") != subject_id
+        or not isinstance(value.get("source_ids"), list)
+        or not isinstance(value.get("sources"), list)
+        or not isinstance(value.get("source_checks"), list)
+    ):
         return False
     identities, sources, checks = value["source_ids"], value["sources"], value["source_checks"]
-    if (any(not isinstance(identity, str) or not identity.strip() for identity in identities)
-            or len(identities) != len(set(identities))
-            or len(sources) != len(identities) or len(checks) != len(identities)):
+    if (
+        any(not isinstance(identity, str) or not identity.strip() for identity in identities)
+        or len(identities) != len(set(identities))
+        or len(sources) != len(identities)
+        or len(checks) != len(identities)
+    ):
         return False
     for identity, source, check in zip(identities, sources, checks, strict=True):
-        if (not isinstance(source, dict) or source.get("id") != identity
-                or source.get("kind") not in ("provision", "judgment")
-                or any(not isinstance(source.get(field), str) or not source[field].strip()
-                       for field in ("title", "locator", "text"))
-                or not isinstance(check, dict) or set(check) != {
-                    "source_id", "outcome", "reason"}
-                or check.get("source_id") != identity
-                or check.get("outcome") not in (
-                    "no_supported_finding", "supports_useful_finding", "uncertain")
-                or not isinstance(check.get("reason"), str) or not check["reason"].strip()
-                or len(check["reason"]) > 500):
+        if (
+            not isinstance(source, dict)
+            or source.get("id") != identity
+            or source.get("kind") not in ("provision", "judgment")
+            or any(
+                not isinstance(source.get(field), str) or not source[field].strip()
+                for field in ("title", "locator", "text")
+            )
+            or not isinstance(check, dict)
+            or set(check) != {"source_id", "outcome", "reason"}
+            or check.get("source_id") != identity
+            or check.get("outcome")
+            not in ("no_supported_finding", "supports_useful_finding", "uncertain")
+            or not isinstance(check.get("reason"), str)
+            or not check["reason"].strip()
+            or len(check["reason"]) > 500
+        ):
             return False
     if not identities:
-        return (value["semantic_extent"] == "no_supplied_passages"
-                and value["outcome"] == "no_supplied_passages")
+        return (
+            value["semantic_extent"] == "no_supplied_passages"
+            and value["outcome"] == "no_supplied_passages"
+        )
     outcomes = {check["outcome"] for check in checks}
-    derived = ("findings_omitted" if "supports_useful_finding" in outcomes
-               else "uncertain" if "uncertain" in outcomes else "no_supported_finding")
-    return (value["semantic_extent"] == "supplied_retrieved_passages"
-            and value["outcome"] == derived)
+    derived = (
+        "findings_omitted"
+        if "supports_useful_finding" in outcomes
+        else "uncertain"
+        if "uncertain" in outcomes
+        else "no_supported_finding"
+    )
+    return value["semantic_extent"] == "supplied_retrieved_passages" and value["outcome"] == derived
 
 
 def _empty_reading_schema(subject_ids, source_ids):
     check = {
-        "type": "object", "additionalProperties": False,
+        "type": "object",
+        "additionalProperties": False,
         "required": ["source_id", "outcome", "reason"],
         "properties": {
             "source_id": {"type": "string", "enum": list(source_ids)},
-            "outcome": {"type": "string", "enum": [
-                "no_supported_finding", "supports_useful_finding", "uncertain"]},
+            "outcome": {
+                "type": "string",
+                "enum": ["no_supported_finding", "supports_useful_finding", "uncertain"],
+            },
             "reason": {"type": "string", "minLength": 1, "maxLength": 500},
         },
     }
     reading = {
-        "type": "object", "additionalProperties": False,
+        "type": "object",
+        "additionalProperties": False,
         "required": ["subject_id", "source_checks"],
         "properties": {
             "subject_id": {"type": "string", "enum": list(subject_ids)},
             "source_checks": {"type": "array", "items": check},
         },
     }
-    return {"type": "object", "additionalProperties": False,
-            "required": ["readings"], "properties": {
-                "readings": {"type": "array", "items": reading}}}
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["readings"],
+        "properties": {"readings": {"type": "array", "items": reading}},
+    }
 
 
-def _verify_empty_readings(model, rows, *, conversation, account_sources,
-                           search_results, outage=None):
+def _verify_empty_readings(
+    model, rows, *, conversation, account_sources, search_results, outage=None
+):
     """Check zero-proposal units only over their exact supplied passage pool."""
     by_id = {row["subject"]["id"]: row for row in rows}
     coverage, hits, active = _coverage(by_id), {}, []
@@ -1635,33 +1668,35 @@ def _verify_empty_readings(model, rows, *, conversation, account_sources,
     for identifier, row in by_id.items():
         current = coverage[identifier]
         if search_results is None or identifier not in search_results:
-            current.update(state="partial", unread_items=1,
-                           semantic_extent="unconfirmed")
+            current.update(state="partial", unread_items=1, semantic_extent="unconfirmed")
             current["diagnostics"].append(
-                "No supplied-passage evidence confirms this empty reading")
+                "No supplied-passage evidence confirms this empty reading"
+            )
             continue
         try:
             hits.update(_search_hits((identifier,), {identifier: search_results[identifier]}))
         except SchemaViolation as exc:
-            current.update(state="partial", unread_items=1,
-                           semantic_extent="unconfirmed")
+            current.update(state="partial", unread_items=1, semantic_extent="unconfirmed")
             current["diagnostics"].append(str(exc))
             continue
         state = search_results[identifier]["state"]
         current["search_state"] = state
         if state == "unavailable":
-            current.update(state="unavailable", unread_items=1,
-                           semantic_extent="unconfirmed")
+            current.update(state="unavailable", unread_items=1, semantic_extent="unconfirmed")
             current["diagnostics"].append("The search supplied no readable passage evidence")
             continue
         if not hits[identifier]:
-            current.update(state="ok" if state == "ok" else "partial",
-                           semantic_extent="no_supplied_passages")
+            current.update(
+                state="ok" if state == "ok" else "partial", semantic_extent="no_supplied_passages"
+            )
             current["empty_reading"] = {
-                "contract": EMPTY_READING_VERIFICATION, "subject_id": identifier,
+                "contract": EMPTY_READING_VERIFICATION,
+                "subject_id": identifier,
                 "semantic_extent": "no_supplied_passages",
-                "outcome": "no_supplied_passages", "source_ids": [],
-                "sources": [], "source_checks": [],
+                "outcome": "no_supplied_passages",
+                "source_ids": [],
+                "sources": [],
+                "source_checks": [],
             }
             continue
         current["semantic_extent"] = "supplied_retrieved_passages"
@@ -1669,23 +1704,41 @@ def _verify_empty_readings(model, rows, *, conversation, account_sources,
             current.update(state="unavailable", unread_items=1)
             current["diagnostics"].append("Independent empty-reading checking was unavailable")
             continue
-        active.append({**row, "candidates": list(hits[identifier].values()),
-                       "allowed_source_ids": list(hits[identifier])})
+        active.append(
+            {
+                **row,
+                "candidates": list(hits[identifier].values()),
+                "allowed_source_ids": list(hits[identifier]),
+            }
+        )
     if not active:
         return ResearchResult({}, coverage, outage)
 
     def prepare(group, issues=None, rejected=None):
         identities = tuple(row["subject"]["id"] for row in group)
-        source_ids = tuple(dict.fromkeys(
-            identity for identifier in identities for identity in hits[identifier]))
+        source_ids = tuple(
+            dict.fromkeys(identity for identifier in identities for identity in hits[identifier])
+        )
         schema = _empty_reading_schema(identities, source_ids)
         limit = min(16384, max(2048, sum(len(hits[key]) for key in identities) * 384))
-        payload = _repair_payload({"conversation": conversation, "subjects": group,
-                                  "substantive_account_sources": account_sources},
-                                 issues, rejected)
-        prompt = _prompt(_EMPTY_VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
-                         "verify_empty_legal_reading", payload, model, limit, schema,
-                         Tier.JUDGE)
+        payload = _repair_payload(
+            {
+                "conversation": conversation,
+                "subjects": group,
+                "substantive_account_sources": account_sources,
+            },
+            issues,
+            rejected,
+        )
+        prompt = _prompt(
+            _EMPTY_VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
+            "verify_empty_legal_reading",
+            payload,
+            model,
+            limit,
+            schema,
+            Tier.JUDGE,
+        )
         return identities, prompt, schema, limit
 
     def accept(identifier, reading):
@@ -1695,7 +1748,8 @@ def _verify_empty_readings(model, rows, *, conversation, account_sources,
             identity = check["source_id"]
             if identity not in hits[identifier] or not check["reason"].strip():
                 raise SchemaViolation(
-                    "Empty-reading checks must name owned sources with substantive reasons")
+                    "Empty-reading checks must name owned sources with substantive reasons"
+                )
             if identity in by_source:
                 if by_source[identity] == check:
                     continue
@@ -1705,18 +1759,26 @@ def _verify_empty_readings(model, rows, *, conversation, account_sources,
             raise SchemaViolation("Check every supplied source exactly once for this subject")
         ordered = [deepcopy(by_source[identity]) for identity in hits[identifier]]
         outcomes = {check["outcome"] for check in ordered}
-        outcome = ("findings_omitted" if "supports_useful_finding" in outcomes
-                   else "uncertain" if "uncertain" in outcomes else "no_supported_finding")
+        outcome = (
+            "findings_omitted"
+            if "supports_useful_finding" in outcomes
+            else "uncertain"
+            if "uncertain" in outcomes
+            else "no_supported_finding"
+        )
         return {
-            "contract": EMPTY_READING_VERIFICATION, "subject_id": identifier,
-            "semantic_extent": "supplied_retrieved_passages", "outcome": outcome,
+            "contract": EMPTY_READING_VERIFICATION,
+            "subject_id": identifier,
+            "semantic_extent": "supplied_retrieved_passages",
+            "outcome": outcome,
             "source_ids": list(hits[identifier]),
             "sources": [deepcopy(source) for source in hits[identifier].values()],
             "source_checks": ordered,
         }
 
-    checked = _read_subject_groups(model, active, prepare, field="readings",
-                                   accept=accept, tier=Tier.JUDGE)
+    checked = _read_subject_groups(
+        model, active, prepare, field="readings", accept=accept, tier=Tier.JUDGE
+    )
     for identifier, reviewed in checked.coverage.items():
         original = coverage[identifier]
         original.update(reviewed)
@@ -1729,13 +1791,162 @@ def _verify_empty_readings(model, rows, *, conversation, account_sources,
                 original["diagnostics"].append(
                     "The empty reading omitted useful supplied support"
                     if receipt["outcome"] == "findings_omitted"
-                    else "The supplied passages leave the empty reading uncertain")
+                    else "The supplied passages leave the empty reading uncertain"
+                )
         if search_results[identifier]["state"] == "partial":
             if original["state"] != "unavailable":
                 original["state"] = "partial"
             original["diagnostics"].append("Search coverage is incomplete beyond supplied passages")
     return ResearchResult({}, coverage, checked.outage or outage)
 
+
+RETRIEVED_COVERAGE_VERIFICATION = "retrieved_pool_review_v1"
+
+_POOL_VERIFY_APPENDIX = """
+
+Message: For subjects named in coverage_subject_ids, the input also supplies
+retrieved_sources: every exact retrieved passage in that owned subject's pool,
+all_proposed_findings, and any checked_candidate_context from this same review.
+The candidate decision boundary remains each candidate's cited passages.
+The separate subject coverage boundary is the complete supplied retrieved pool.
+Prior proposals and checked verdicts are context, not proof of adequate coverage.
+
+Purpose: Independently assess whether useful passage-supported work was omitted
+from the proposed findings that your checks permit using. Assess this alongside
+candidate decisions in this existing review, without a separate model activity.
+Coverage means only this subject's supplied retrieved passages. It cannot certify
+the corpus, search completeness, absent adverse law, current law or the whole
+requested outcome beyond those passages.
+
+Activity 5 - Compare useful work with the full supplied passage pool.
+Look for: Supported general or conditional law, competing routes, exceptions,
+adverse limits and strengthening enquiries relevant to the subject's purpose.
+Read unused as well as cited sources in their original speaker, role, adoption,
+conditions and period. A rejected or uncertain proposal does not account for
+useful omitted law merely because it mentions a source. Equally, a legitimate
+rejection is not itself an omission: complete is possible when all proposed
+findings are rejected and the full pool supports no useful replacement.
+Do not require a finding in each kind, a mandate, settled factual applicability
+or optional currency metadata before faithful bounded work may be useful.
+Outcome: For each coverage_subject_id give complete when this supplied pool
+supports no useful omission; partial when supported work is omitted or the
+pool permits only a bounded coverage assessment; unassessed when you cannot
+independently assess coverage. missing_source_ids select only this subject's
+retrieved_sources supplying localized useful omissions. They may be [] for
+unlocalized partial coverage or uncertainty. Complete has no missing sources.
+Give one substantive reason. Do not create findings
+or silently fix a rejected proposal to make coverage complete.
+
+Outcome: When coverage_subject_ids is present, return decisions and
+subject_coverage under the schema. Return candidate decisions only for the
+supplied pending candidate IDs and coverage only for coverage_subject_ids.
+A correction preserves checked peers. Use original full proposed context,
+exact retrieved passages and checked_candidate_context to assess unresolved
+coverage; do not repeat accepted candidate decisions. These separate decisions
+cannot override each other or turn legal support into complete research."""
+
+
+def retrieved_coverage_verification_valid(value: object, *, subject_id: str) -> bool:
+    """Validate an owned supplied-pool review without expanding its semantic scope."""
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != {
+            "contract",
+            "subject_id",
+            "semantic_extent",
+            "outcome",
+            "source_ids",
+            "sources",
+            "missing_source_ids",
+            "reason",
+        }
+        or value.get("contract") != RETRIEVED_COVERAGE_VERIFICATION
+        or value.get("subject_id") != subject_id
+        or value.get("semantic_extent") != "supplied_retrieved_passages"
+        or value.get("outcome") not in ("complete", "partial", "unassessed")
+        or not isinstance(value.get("source_ids"), list)
+        or not value["source_ids"]
+        or not isinstance(value.get("sources"), list)
+        or not isinstance(value.get("missing_source_ids"), list)
+        or not isinstance(value.get("reason"), str)
+        or not value["reason"].strip()
+    ):
+        return False
+    ids, sources, missing = value["source_ids"], value["sources"], value["missing_source_ids"]
+    if (
+        any(not isinstance(key, str) or not key.strip() for key in ids)
+        or len(ids) != len(set(ids))
+        or len(sources) != len(ids)
+        or any(not isinstance(key, str) or key not in ids for key in missing)
+        or len(missing) != len(set(missing))
+        or (value["outcome"] == "complete" and missing)
+    ):
+        return False
+    return all(
+        isinstance(source, dict)
+        and source.get("id") == key
+        and source.get("kind") in ("provision", "judgment")
+        and all(
+            isinstance(source.get(field), str) and source[field].strip()
+            for field in ("title", "locator", "text")
+        )
+        for key, source in zip(ids, sources, strict=True)
+    )
+
+
+def _pool_coverage_schema(schema, subject_ids, source_ids):
+    schema = deepcopy(schema)
+    schema["required"].append("subject_coverage")
+    schema["properties"]["subject_coverage"] = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["subject_id", "outcome", "missing_source_ids", "reason"],
+            "properties": {
+                "subject_id": {"type": "string", "enum": list(subject_ids)},
+                "outcome": {"type": "string", "enum": ["complete", "partial", "unassessed"]},
+                "missing_source_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": list(source_ids)},
+                },
+                "reason": {"type": "string", "minLength": 1},
+            },
+        },
+    }
+    return schema
+
+
+def _pool_coverage_receipt(decision, identifier, hits):
+    if (
+        not isinstance(decision, dict)
+        or set(decision) != {"subject_id", "outcome", "missing_source_ids", "reason"}
+        or decision.get("subject_id") != identifier
+        or decision.get("outcome") not in ("complete", "partial", "unassessed")
+        or not isinstance(decision.get("missing_source_ids"), list)
+        or any(
+            not isinstance(key, str) or key not in hits for key in decision["missing_source_ids"]
+        )
+        or not isinstance(decision.get("reason"), str)
+        or not decision["reason"].strip()
+    ):
+        raise SchemaViolation(
+            "Coverage needs an owned subject, passage references and substantive reason"
+        )
+    missing = [key for key in hits if key in decision["missing_source_ids"]]
+    if decision["outcome"] == "complete" and missing:
+        raise SchemaViolation("Complete supplied-passage coverage cannot name a useful omission")
+    return {
+        "contract": RETRIEVED_COVERAGE_VERIFICATION,
+        "subject_id": identifier,
+        "semantic_extent": "supplied_retrieved_passages",
+        "outcome": decision["outcome"],
+        "source_ids": list(hits),
+        "sources": [deepcopy(source) for source in hits.values()],
+        "missing_source_ids": missing,
+        "reason": decision["reason"],
+    }
 
 
 def verify_findings(
@@ -1752,7 +1963,8 @@ def verify_findings(
     if set(proposed) != set(material_ids):
         raise SchemaViolation("Verification needs every supplied research subject")
     if search_results is not None and (
-            not isinstance(search_results, dict) or set(search_results) - set(material_ids)):
+        not isinstance(search_results, dict) or set(search_results) - set(material_ids)
+    ):
         raise SchemaViolation("Verification search results must have owned subject IDs")
     _conversation_rows(conversation)
     attributed, _, account_sources = addressed_sources(conversation, "")
@@ -1817,8 +2029,11 @@ def verify_findings(
                 "sources": [
                     {
                         **{key: source[key] for key in ("id", "kind", "title", "locator")},
-                        **{key: deepcopy(source[key]) for key in ("court", "date", "jurisdiction")
-                           if key in source},
+                        **{
+                            key: deepcopy(source[key])
+                            for key in ("court", "date", "jurisdiction")
+                            if key in source
+                        },
                         "fragments": _passage_fragments(source["text"]),
                     }
                     for source in item["sources"]
@@ -1828,21 +2043,92 @@ def verify_findings(
     empty_rows = [row for row in rows if not proposed[row["subject"]["id"]]]
     if not atoms:
         empty_review = _verify_empty_readings(
-            model, empty_rows, conversation=words, account_sources=classified,
-            search_results=search_results)
+            model,
+            empty_rows,
+            conversation=words,
+            account_sources=classified,
+            search_results=search_results,
+        )
         coverage.update(empty_review.coverage)
         return ResearchResult(result, coverage, empty_review.outage)
 
-    def prepare(group, issues=None, rejected=None):
-        grouped = {}
-        for atom in group:
-            context = atom["context"]
-            identifier = context["subject"]["id"]
-            grouped.setdefault(identifier, {**context, "candidates": []})["candidates"].append(
-                atom["candidate"]
+    atoms_by_subject = {identifier: [] for identifier in material_ids}
+    for atom in atoms:
+        atoms_by_subject[atom["context"]["subject"]["id"]].append(atom)
+    pool_hits = {}
+    for identifier, values in atoms_by_subject.items():
+        if not values:
+            continue
+        coverage[identifier].update(
+            semantic_extent="cited_candidate_passages", semantic_state="unassessed"
+        )
+        if search_results is None:
+            continue
+        try:
+            found = _search_hits((identifier,), {identifier: search_results.get(identifier)})
+            search_state = search_results[identifier]["state"]
+            coverage[identifier]["search_state"] = search_state
+            if search_state == "unavailable" or not found[identifier]:
+                raise SchemaViolation(
+                    "No readable supplied passage pool confirms nonempty coverage"
+                )
+            pool_hits[identifier] = found[identifier]
+            coverage[identifier]["semantic_extent"] = "supplied_retrieved_passages"
+            if search_state == "partial":
+                coverage[identifier]["state"] = "partial"
+                coverage[identifier]["diagnostics"].append(
+                    "Search coverage is incomplete beyond supplied passages"
+                )
+        except SchemaViolation as exc:
+            coverage[identifier]["state"] = "partial"
+            coverage[identifier]["diagnostics"].append(str(exc))
+
+    by_id = {atom["candidate"]["candidate_id"]: atom for atom in atoms}
+    contexts = {row["subject"]["id"]: row for row in rows}
+    units = [
+        {"subject_id": identifier, "atoms": values}
+        for identifier, values in atoms_by_subject.items()
+        if values
+    ]
+    checked_context, retained, outage = {}, {}, None
+
+    def prepare(
+        group, issues=None, rejected=None, *, candidate_ids=None, scope_ids=None, include_scope=True
+    ):
+        if candidate_ids is not None:
+            needed = {originals[key][0] for key in candidate_ids} | set(scope_ids or ())
+            group = [unit for unit in group if unit["subject_id"] in needed]
+        owners = tuple(unit["subject_id"] for unit in group)
+        all_atoms = [atom for unit in group for atom in unit["atoms"]]
+        selected = all_atoms if candidate_ids is None else [by_id[key] for key in candidate_ids]
+        ids = tuple(atom["candidate"]["candidate_id"] for atom in selected)
+        scopes = (
+            tuple(key for key in owners if key in pool_hits)
+            if scope_ids is None and include_scope
+            else tuple(scope_ids or ())
+        )
+        grouped = {key: {**deepcopy(contexts[key]), "candidates": []} for key in owners}
+        for atom in selected:
+            grouped[atom["context"]["subject"]["id"]]["candidates"].append(
+                deepcopy(atom["candidate"])
             )
-        candidates = [atom["candidate"] for atom in group]
-        ids = tuple(candidate["candidate_id"] for candidate in candidates)
+        for key in scopes:
+            grouped[key].update(
+                retrieved_sources=[deepcopy(source) for source in pool_hits[key].values()],
+                all_proposed_findings=[
+                    {
+                        "candidate_id": atom["candidate"]["candidate_id"],
+                        **deepcopy(originals[atom["candidate"]["candidate_id"]][1]),
+                    }
+                    for atom in atoms_by_subject[key]
+                ],
+                checked_candidate_context=[
+                    deepcopy(checked_context[atom["candidate"]["candidate_id"]])
+                    for atom in atoms_by_subject[key]
+                    if atom["candidate"]["candidate_id"] in checked_context
+                ],
+            )
+        candidates = [atom["candidate"] for atom in selected]
         source_ids = tuple(
             dict.fromkeys(
                 source["id"] for candidate in candidates for source in candidate["sources"]
@@ -1859,27 +2145,55 @@ def verify_findings(
         linked = tuple(
             dict.fromkeys(key for candidate in candidates for key in candidate["material_ids"])
         )
-        schema = _verification_schema(ids, source_ids, fragment_ids, linked, tuple(account_sources))
+        schema = (
+            _verification_schema(ids, source_ids, fragment_ids, linked, tuple(account_sources))
+            if ids
+            else {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["decisions"],
+                "properties": {
+                    "decisions": {
+                        "type": "array",
+                        "maxItems": 0,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": [],
+                            "properties": {},
+                        },
+                    }
+                },
+            }
+        )
+        if scopes:
+            schema = _pool_coverage_schema(
+                schema,
+                scopes,
+                tuple(dict.fromkeys(key for owner in scopes for key in pool_hits[owner])),
+            )
         limit = min(
             12288,
             max(
                 4096,
-                len(ids) * 256 + sum(len(candidate["sources"]) for candidate in candidates) * 640,
+                len(ids) * 256
+                + sum(len(candidate["sources"]) for candidate in candidates) * 640
+                + len(scopes) * 640,
             ),
         )
-        payload = _repair_payload(
-            {
-                "conversation": words,
-                "subjects": list(grouped.values()),
-                "substantive_account_sources": classified,
-            },
-            issues,
-            rejected,
-        )
+        payload = {
+            "conversation": words,
+            "subjects": list(grouped.values()),
+            "substantive_account_sources": classified,
+        }
+        if scopes:
+            payload["coverage_subject_ids"] = list(scopes)
         prompt = _prompt(
-            _VERIFY_SYSTEM + (_REPAIR_SYSTEM if issues else ""),
+            _VERIFY_SYSTEM
+            + (_POOL_VERIFY_APPENDIX if scopes else "")
+            + (_REPAIR_SYSTEM if issues else ""),
             "verify_legal_requirements",
-            payload,
+            _repair_payload(payload, issues, rejected),
             model,
             limit,
             schema,
@@ -1887,25 +2201,53 @@ def verify_findings(
         )
         return ids, prompt, schema, limit
 
-    by_id = {atom["candidate"]["candidate_id"]: atom for atom in atoms}
-    retained, outage = {}, None
-    batches, oversized = _ordered_batches(atoms, prepare)
-    for atom in oversized:
-        identifier = atom["context"]["subject"]["id"]
+    batches, oversized = _ordered_batches(units, prepare)
+    # A large whole-pool scope cannot erase candidates that fit their cited-source check.
+    candidate_oversized = []
+    for unit in oversized:
+        identifier = unit["subject_id"]
         coverage[identifier]["state"] = "partial"
+        coverage[identifier]["semantic_extent"] = "cited_candidate_passages"
+        coverage[identifier]["diagnostics"].append(
+            "The complete supplied-passage scope exceeds context; "
+            "cited finding checks remain useful"
+        )
+        fallback, unread = _ordered_batches(
+            unit["atoms"],
+            lambda group, identifier=identifier: prepare(
+                [{"subject_id": identifier, "atoms": group}], include_scope=False
+            ),
+        )
+        batches.extend(fallback)
+        candidate_oversized.extend(unread)
+    for atom in candidate_oversized:
+        identifier = atom["context"]["subject"]["id"]
         coverage[identifier]["unread_items"] += 1
         coverage[identifier]["diagnostics"].append(
             "A source-checking candidate exceeds its model context budget; no context was omitted"
         )
     for ids, prompt, schema, limit in batches:
         pending, issues, rejected = ids, {}, {}
+        scope_property = schema["properties"].get("subject_coverage")
+        pending_scopes = (
+            tuple(scope_property["items"]["properties"]["subject_id"]["enum"])
+            if scope_property
+            else ()
+        )
+        batch_owners = tuple(dict.fromkeys(originals[key][0] for key in ids))
+        batch_units = [{"subject_id": key, "atoms": atoms_by_subject[key]} for key in batch_owners]
         for attempt in range(2):
-            if outage or not pending:
+            if outage or not (pending or pending_scopes):
                 break
             if attempt:
                 try:
                     _, prompt, schema, limit = prepare(
-                        [by_id[key] for key in pending], issues, rejected
+                        batch_units,
+                        issues,
+                        rejected,
+                        candidate_ids=pending,
+                        scope_ids=pending_scopes,
+                        include_scope=False,
                     )
                 except ContextOverflow:
                     break
@@ -1914,21 +2256,31 @@ def verify_findings(
                 require_independent_result(read)
             except (SchemaViolation, OutputTruncated) as exc:
                 issues = {key: str(exc) for key in pending}
+                issues.update({f"coverage:{key}": str(exc) for key in pending_scopes})
                 continue
             except ContextOverflow:
                 issues = {
-                    key: "This complete source-checking unit exceeds the model context budget"
-                    for key in pending
+                    key: "This complete checking unit exceeds context"
+                    for key in (*pending, *(f"coverage:{key}" for key in pending_scopes))
                 }
                 break
             except ModelError as exc:
                 outage = type(exc).__name__
-                issues = {key: "Independent source checking was unavailable" for key in pending}
+                issues = {
+                    key: "Independent source checking was unavailable"
+                    for key in (*pending, *(f"coverage:{key}" for key in pending_scopes))
+                }
                 break
             data = read.data if read.usable and isinstance(read.data, dict) else None
-            values = (
-                data.get("decisions") if data is not None and set(data) == {"decisions"} else None
+            allowed_fields = {"decisions", "subject_coverage"} if pending_scopes else {"decisions"}
+            valid_envelope = data is not None and all(
+                key in allowed_fields
+                or value is None
+                or value == ""
+                or (isinstance(value, (list, dict)) and not value)
+                for key, value in data.items()
             )
+            values = data.get("decisions") if valid_envelope else None
             groups = {key: [] for key in pending}
             if isinstance(values, list):
                 for decision in values:
@@ -1961,32 +2313,75 @@ def verify_findings(
                 else:
                     identifier = originals[candidate_id][0]
                     coverage[identifier]["checked_items"] += 1
+                    checked_context[candidate_id] = {
+                        "candidate_id": candidate_id,
+                        "outcome": "retained" if value else "rejected",
+                        "decision": deepcopy(group[0]),
+                    }
                     if value is None:
                         coverage[identifier]["withheld_items"] += 1
-                        decision = group[0]
                         failed = [
                             check["reason"]
-                            for check in decision["use_checks"].values()
+                            for check in group[0]["use_checks"].values()
                             if check["verdict"] != "supported"
                         ]
                         reason = (
-                            decision["label_reason"]
-                            if decision["label_verdict"] != "faithful"
+                            group[0]["label_reason"]
+                            if group[0]["label_verdict"] != "faithful"
                             else failed[0]
                             if failed
-                            else decision["reason"]
+                            else group[0]["reason"]
                         )
                         coverage[identifier].setdefault("rejected_findings", []).append(
                             {
                                 "candidate_id": candidate_id,
                                 "label": originals[candidate_id][1]["label"],
                                 "reason": reason,
-                                "use_checks": deepcopy(decision["use_checks"]),
+                                "use_checks": deepcopy(group[0]["use_checks"]),
                             }
                         )
                     else:
                         retained[candidate_id] = value
-            pending = tuple(unresolved)
+            scope_groups = {key: [] for key in pending_scopes}
+            scope_values = data.get("subject_coverage") if valid_envelope else None
+            if isinstance(scope_values, list):
+                for decision in scope_values:
+                    if (
+                        isinstance(decision, dict)
+                        and isinstance(decision.get("subject_id"), str)
+                        and decision["subject_id"] in scope_groups
+                    ):
+                        if decision not in scope_groups[decision["subject_id"]]:
+                            scope_groups[decision["subject_id"]].append(decision)
+            unresolved_scopes = []
+            for identifier in pending_scopes:
+                key, group = f"coverage:{identifier}", scope_groups[identifier]
+                try:
+                    if len(group) != 1:
+                        raise SchemaViolation(
+                            "Return one independent coverage decision for this owned subject"
+                        )
+                    receipt = _pool_coverage_receipt(group[0], identifier, pool_hits[identifier])
+                    if receipt["outcome"] == "complete" and any(
+                        originals[candidate_id][0] == identifier for candidate_id in unresolved
+                    ):
+                        raise SchemaViolation(
+                            "Complete coverage depends on unresolved candidate decisions"
+                        )
+                except SchemaViolation as exc:
+                    issues[key], rejected[key] = str(exc), group
+                    unresolved_scopes.append(identifier)
+                else:
+                    current = coverage[identifier]
+                    current.update(
+                        retrieved_coverage=receipt,
+                        semantic_state=receipt["outcome"],
+                        semantic_extent="supplied_retrieved_passages",
+                    )
+                    if receipt["outcome"] != "complete":
+                        current["state"] = "partial"
+                        current["diagnostics"].append(receipt["reason"])
+            pending, pending_scopes = tuple(unresolved), tuple(unresolved_scopes)
         for candidate_id in pending:
             identifier = originals[candidate_id][0]
             coverage[identifier]["state"] = (
@@ -1996,12 +2391,28 @@ def verify_findings(
             coverage[identifier]["diagnostics"].append(
                 issues.get(candidate_id, "Source checking did not finish")
             )
+        for identifier in pending_scopes:
+            coverage[identifier]["state"] = (
+                "unavailable" if outage and not coverage[identifier]["checked_items"] else "partial"
+            )
+            coverage[identifier]["unread_items"] += 1
+            coverage[identifier]["diagnostics"].append(
+                issues.get(
+                    f"coverage:{identifier}",
+                    "Supplied-passage coverage was not independently assessed",
+                )
+            )
     for candidate_id, (identifier, _, _) in originals.items():
         if candidate_id in retained:
             result[identifier].append(retained[candidate_id])
     empty_review = _verify_empty_readings(
-        model, empty_rows, conversation=words, account_sources=classified,
-        search_results=search_results, outage=outage)
+        model,
+        empty_rows,
+        conversation=words,
+        account_sources=classified,
+        search_results=search_results,
+        outage=outage,
+    )
     coverage.update(empty_review.coverage)
     return ResearchResult(result, coverage, outage or empty_review.outage)
 
