@@ -63,6 +63,20 @@
         "nm/brain/work_state.py",
         "tests/test_brain_work_state.py"
       ]
+    },
+    {
+      "slice": "replay-saved-response-integrity",
+      "owners": [
+        "LB-175",
+        "LB-182",
+        "LB-188"
+      ],
+      "decision": "Before releasing any saved replay, recover the authorized older transcript and check complete released history plus project_work ownership, response/display equality, checked block identities, source snapshots and inline anchors. Reuse original durable reply and receipt; do not fabricate new historical operations. Both pre-analysis replay and lost-ack lookup pass the same mechanical checks. No model calls are added.",
+      "validation": "44 turn and material-execution tests passed. Seven damaged replay variants refuse with 409 before any new model calls. Legitimate historical receipt absence, superseded receipts, ordinary zero-call replay and lost-ack recovery remain valid.",
+      "files": [
+        "nm/brain/turn.py",
+        "tests/test_brain_turn.py"
+      ]
     }
   ]
 }

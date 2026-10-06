@@ -223,7 +223,8 @@ def chat_matter_id(advocate_id: str, chat_id: str) -> MatterId:
     return MatterId("mat_" + _digest({"advocate": advocate_id, "chat": chat_id})[:32])
 
 
-def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None:
+def _saved_reply(matter: Matter, turn_id: str, offer_digest: str, *,
+                 store: StorePort) -> dict | None:
     matches = [row for row in matter.brain_chat if row.get("turn_id") == turn_id]
     if not matches:
         return None
@@ -232,6 +233,14 @@ def _saved_reply(matter: Matter, turn_id: str, offer_digest: str) -> dict | None
     response = matches[0].get("response")
     if not isinstance(response, dict) or response.get("turn_id") != turn_id:
         raise BrainRefused(409, "The saved reply could not be verified")
+    # Replay releases saved user-visible content. It must pass the same
+    # ownership, transcript and displayed-work checks as a newly saved reply.
+    try:
+        older = released_older_turns(store, matter)
+        from_turns([*older, *matter.brain_chat], state="ok")
+        project_work(matter, prior_conversation=from_turns(older, state="ok").messages)
+    except IncompleteConversation as exc:
+        raise BrainRefused(409, "The saved reply or its sources could not be verified") from exc
     coverage = response.get("material_coverage")
     if isinstance(coverage, dict) and "execution" in coverage:
         _check_execution_owner(coverage["execution"], matter, turn_id, offer_digest)
@@ -582,7 +591,7 @@ class BrainService:
             matter = Matter(id=matter_id, advocate_id=turn.advocate_id,
                             title="Pending conversation", brain_ready=False)
         else:
-            prior = _saved_reply(matter, turn.turn_id, offer_digest)
+            prior = _saved_reply(matter, turn.turn_id, offer_digest, store=self.store)
             if prior is not None:
                 return BrainOutput(prior)
         if (turn.expected_version is not None and matter.brain_ready
@@ -887,7 +896,7 @@ class BrainService:
         except StaleWrite:
             current = self.store.load(matter_id)
             if current is not None and current.advocate_id == turn.advocate_id:
-                prior = _saved_reply(current, turn.turn_id, offer_digest)
+                prior = _saved_reply(current, turn.turn_id, offer_digest, store=self.store)
                 if prior is not None:
                     # Delivery reuses the saved reply, but this attempt already
                     # ran its models. A replay found before analysis runs none.

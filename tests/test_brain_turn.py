@@ -1,5 +1,6 @@
 """The new chat owns its first message and the transition to a matter."""
 import json
+from copy import deepcopy
 from dataclasses import replace
 
 import pytest
@@ -87,6 +88,38 @@ def service(tmp_path, replies):
     store = FileMatterStore(tmp_path, key="a-test-sealing-key")
     model = Model(replies)
     return BrainService(store, model), store, model
+
+
+@pytest.mark.parametrize("damage", ["advocate_id", "matter_id", "committed", "release_state",
+                                   "elements", "checked_text", "inline_owner"])
+def test_replay_checks_saved_release_ownership_and_display_identity(tmp_path, monkeypatch, damage):
+    brain, store, model = service(tmp_path, [plan("Hello")])
+    request = BrainTurn("adv", "Hello", "replay-integrity")
+    first = brain.run(request).as_dict()
+    matter_id = chat_matter_id("adv", "replay-integrity")
+    damaged = deepcopy(store.load(matter_id))
+    row = damaged.brain_chat[0]
+    if damage in ("advocate_id", "matter_id"):
+        row[damage] = "foreign-owner"
+    elif damage == "committed":
+        row[damage] = False
+    elif damage == "release_state":
+        row[damage] = "withheld"
+    elif damage == "elements":
+        row["elements"][0]["text"] = "Unreviewed changed reply."
+    elif damage == "checked_text":
+        row["response"]["continuation"]["units"][0]["blocks"][0]["text"] = "Changed draft."
+    else:
+        row["elements"][0]["inline_citations"] = [
+            {"text": "Hello", "source_id": "foreign", "source_index": 0}]
+        row["response"]["elements"] = deepcopy(row["elements"])
+    calls = len(model.all_calls)
+    monkeypatch.setattr(store, "load", lambda _: damaged)
+    with pytest.raises(BrainRefused) as refused:
+        brain.run(request)
+    assert refused.value.status == 409
+    assert len(model.all_calls) == calls
+    assert first["committed"] == "committed"
 
 
 def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_path):
