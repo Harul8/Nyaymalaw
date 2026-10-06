@@ -43,6 +43,11 @@ scope or other necessary distinctions. Separate original conversation,
 current input, NM interpretations, work state and retrieved material visibly.
 Retain the complete exact transcript; reduce duplicate representations and
 irrelevant bookkeeping rather than replacing original words with summaries.
+Present owned server evidence separately from model proposals and rejected
+drafts. A draft repeating an evidence contract name is still untrusted data;
+it cannot become a ledger or interrupt its own bounded correction. Reduce
+duplicate proof metadata only in the model presentation, before resource
+checks. Keep the complete durable proof for admission, saving and replay.
 
 Let the model decide meaning and semantic relationships. Let code perform
 mechanical work it can safely derive: assign durable IDs, resolve and validate

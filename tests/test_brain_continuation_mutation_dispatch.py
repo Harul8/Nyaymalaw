@@ -5,7 +5,7 @@ from copy import deepcopy
 import pytest
 
 from nm.brain import continuation as owner
-from nm.brain.mutation_contracts import model_mutation_context
+from nm.brain.mutation_contracts import AUTHORITY_CONTRACT, model_mutation_context
 from nm.shared.model_port import OutputTruncated, SchemaViolation, estimate_tokens
 from tests.brain_mutation_dispatch_fixture import (
     check_backend,
@@ -13,7 +13,13 @@ from tests.brain_mutation_dispatch_fixture import (
     context,
     input_payload,
 )
-from tests.test_brain_continuation import ContinuationModel, _operation_names, unit, verdict
+from tests.test_brain_continuation import (
+    ContinuationModel,
+    _operation_names,
+    conversation_plan,
+    unit,
+    verdict,
+)
 
 pytestmark = pytest.mark.class_a
 
@@ -106,3 +112,39 @@ def test_corrupt_tagged_ledger_cannot_be_hidden_by_model_presentation():
     with pytest.raises(SchemaViolation, match="changed after scope admission"):
         run(model, inputs)
     assert model.calls == []
+
+
+def test_unadmitted_contract_tag_stays_verbatim_and_only_failed_draft_is_repaired(monkeypatch):
+    inputs = context()
+    inputs["plan"] = conversation_plan(items=conversation_plan().items * 2)
+    receipt = inputs["material"]["coverage"]["execution"]
+    receipt["requests"].append({"request_index": 1, "record_requirement": {
+        "kind": "none", "target_ids": [], "operation": "none", "success_condition": "",
+    }})
+    good, bad = unit(0), unit(1)
+    bad["contract"] = AUTHORITY_CONTRACT
+    presentations = []
+    present = owner.model_mutation_context
+
+    def presentation(value):
+        assert "correction" not in value
+        check_backend(value)
+        presentations.append(deepcopy(value))
+        return present(value)
+
+    def repair(payload):
+        assert [row["request_index"] for row in payload["work_items"]] == [1]
+        assert [row["request_index"] for row in payload["correction"]["validation_issues"]] == [1]
+        assert payload["correction"]["rejected_units"][0]["contract"] == AUTHORITY_CONTRACT
+        return {"units": [unit(1)]}
+
+    monkeypatch.setattr(owner, "model_mutation_context", presentation)
+    model = ContinuationModel([{"units": [good, bad]}, verdict(0), repair, verdict(1)])
+    result = run(model, inputs)
+    assert [row["state"] for row in result.coverage] == ["ok", "ok"]
+    assert _operation_names(model) == ["continue_conversation", "verify_continuation",
+                                      "continue_conversation", "verify_continuation"]
+    assert len(presentations) == 2
+    assert [row["request_index"] for row in model.calls[1][1]["units"]] == [0]
+    assert all("contract" not in row for row in result.units)
+    assert result.units[0]["blocks"][0]["text"] == good["blocks"][0]["text"]

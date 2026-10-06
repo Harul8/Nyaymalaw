@@ -1256,6 +1256,7 @@ def continue_conversation(
         system = _SYSTEM
         current = {**payload, "work_items": [row for row in payload["work_items"]
                                             if row["request_index"] in pending]}
+        correction = None
         if attempt:
             system += (
                 "\n\nMessage: This is a correction of rejected units from the "
@@ -1272,7 +1273,7 @@ def continue_conversation(
                 "requests under the same schema. Correct every stated issue; "
                 "if support is unavailable, clearly limit the response rather "
                 "than repeat unsupported content.")
-            current["correction"] = {
+            correction = {
                 "validation_issues": [{"request_index": index,
                                        "issue": issues[index]} for index in pending],
                 "rejected_units": (
@@ -1292,8 +1293,12 @@ def continue_conversation(
                 "The previous output exhausted its budget before completing the contract. "
                 "Return concise complete units. Combine compatible claims, avoid repeating "
                 "the same account or limitations, and retain all essential source references.")
-        user = json.dumps(model_mutation_context(current),
-                          ensure_ascii=False, separators=(",", ":"))
+        presented = model_mutation_context(current)
+        if correction is not None:
+            # Failed model drafts are unadmitted data, not server-owned proof.
+            # Preserve them verbatim after presenting the trusted full context.
+            presented["correction"] = deepcopy(correction)
+        user = json.dumps(presented, ensure_ascii=False, separators=(",", ":"))
         if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow("The full conversation exceeds the continuation budget")
