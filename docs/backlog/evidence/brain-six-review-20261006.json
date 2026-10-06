@@ -485,6 +485,21 @@
         "tests/test_gate_matrix.py",
         "tests/test_brain_gate_policy.py"
       ]
+    },
+    {
+      "slice": "preserve-owned-inherited-no-change-review",
+      "owners": [
+        "LB-186",
+        "LB-187",
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "A no-change review can complete an explicitly owned inherited review goal even when the current item asks for no new record result. It needs that original requirement, task identity, actual review and complete exact-scope coverage. Unrelated question completion does not manufacture a review; untracked or narrower goals stay unfinished.",
+      "validation": "29 offline execution/current/inherited review contract cases passed; legitimate inherited no-change and wrong-owner/unassessed/narrowed peers; Ruff clean. No API/browser/model calls.",
+      "files": [
+        "nm/brain/execution_contracts.py",
+        "tests/test_brain_inherited_review_completion.py"
+      ]
     }
   ]
 }

@@ -228,6 +228,37 @@ def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
     return result
 
 
+def _owned_inherited_review_scope(unit: dict, receipt: dict | None) -> list[tuple[dict, str]]:
+    """Only explicitly completed owned goals can supply inherited review evidence."""
+    if receipt is None:
+        return []
+    scope = receipt.get("review_scope")
+    if scope is None:
+        return []
+    if not isinstance(scope, dict) or not isinstance(scope.get("requests"), list):
+        raise ExecutionEvidenceInvalid("The owned inherited review scope is unreadable")
+    work = unit.get("work", {})
+    completed = set()
+    for update in unit.get("progress_updates", []):
+        if update.get("status") != "complete":
+            continue
+        target = update.get("target_id")
+        if target == "$work":
+            target = work.get("existing_id") or work.get("progress_id")
+        if isinstance(target, str) and target:
+            completed.add(target)
+    inherited = []
+    for request in scope["requests"]:
+        if not isinstance(request, dict):
+            raise ExecutionEvidenceInvalid("An owned inherited review request is unreadable")
+        requirement = request.get("record_requirement")
+        task_id = request.get("task_id")
+        if (request.get("request_index") == unit["request_index"] and task_id in completed
+                and isinstance(requirement, dict) and requirement.get("kind") == "review"):
+            inherited.append((requirement, task_id))
+    return inherited
+
+
 def validate_review_completion(
     unit: dict, receipt: dict | None, *, requirement: dict | None = None, task_id: str | None = None
 ) -> None:
@@ -360,6 +391,9 @@ def validate_record_outcome(
     if any(not catalogue[identity]["performed"] for identity in selected):
         raise SchemaViolation("record_outcome selects an unread, unchanged or unadmitted effect")
     validate_review_completion(unit, receipt)
+    inherited_reviews = _owned_inherited_review_scope(unit, receipt)
+    for requirement, task_id in inherited_reviews:
+        validate_review_completion(unit, receipt, requirement=requirement, task_id=task_id)
     # Both complete selections were checked before normalizing repetitions.
     # Owned receipt identities are never repaired; only model set-like choices
     # can repeat without adding or changing their meaning.
@@ -409,7 +443,9 @@ def validate_record_outcome(
             raise SchemaViolation("review_no_change needs the exact requested review owner")
         requested = requests[0]
         requirement = requested.get("record_requirement")
-        review_requested = isinstance(requirement, dict) and requirement.get("kind") == "review"
+        review_requested = (
+            isinstance(requirement, dict) and requirement.get("kind") == "review"
+        ) or bool(inherited_reviews)
         if not review_requested or any(
             _stage(receipt, reader) != "returned"
             or _stage(receipt, review) not in ("checked", "no_candidates")
