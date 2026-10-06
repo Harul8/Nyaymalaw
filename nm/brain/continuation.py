@@ -27,6 +27,7 @@ from nm.brain.legal_requirements import (
     source_verification_valid,
 )
 from nm.brain.material import PriorReference, addressed_sources
+from nm.brain.mutation_contracts import model_mutation_context
 from nm.brain.record_review import derived_record, substantive_source_treatments
 from nm.brain.source_snapshots import inline_source_links
 from nm.brain.work_state import PROGRESS_KINDS, PROGRESS_STATUSES
@@ -1284,7 +1285,6 @@ def continue_conversation(
                     "Correct the stated issue using supplied references; make "
                     "unsupported or unfinished work explicitly limited. "
                     "Already checked peer requests are retained.")}
-        user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 1536 * len(pending)))
         if truncated:
             output_limit = min(16384, output_limit * 2)
@@ -1292,7 +1292,8 @@ def continue_conversation(
                 "The previous output exhausted its budget before completing the contract. "
                 "Return concise complete units. Combine compatible claims, avoid repeating "
                 "the same account or limitations, and retain all essential source references.")
-            user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
+        user = json.dumps(model_mutation_context(current),
+                          ensure_ascii=False, separators=(",", ":"))
         if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow("The full conversation exceeds the continuation budget")
