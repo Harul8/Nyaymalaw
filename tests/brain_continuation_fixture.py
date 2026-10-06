@@ -83,8 +83,8 @@ def expression_units(payload, data):
                 continue
             expression = {"operator": operator, "source_ids": source_ids,
                           "record_ids": record_ids, "focus": focus}
-            if operator == "checked_legal" and legal_ids:
-                expression["legal_source_ids"] = legal_ids
+            if payload.get("legal_sources"):
+                expression["legal_source_ids"] = legal_ids if operator == "checked_legal" else []
             unit["blocks"][index] = {
                 "id": block["id"], "kind": kind, "uncertainty": block["uncertainty"],
                 "evidence_expression": expression,

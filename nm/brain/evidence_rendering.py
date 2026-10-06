@@ -77,6 +77,12 @@ def render_expression(expression: dict, *, spans: dict, records: dict, sources: 
     validation_expression = deepcopy(expression)
     if sources and isinstance(validation_expression, dict):
         validation_expression.setdefault("legal_source_ids", [])
+    elif isinstance(validation_expression, dict) and (
+            validation_expression.get("legal_source_ids") == []):
+        # A saved block may come from a larger generation catalogue than its
+        # selected replay dependencies. This known empty selector names no
+        # passage. Preserve the saved expression; reject populated/unknown data.
+        validation_expression.pop("legal_source_ids")
     require_schema(validation_expression, expression_schema(spans, records, sources))
     operator, focus = expression["operator"], expression["focus"]
     selected_sources = _selection(expression["source_ids"], spans, "source_ids")

@@ -878,6 +878,24 @@
       },
       "limits": "Guard certifies these mandatory object invariants, not the whole provider JSONSchema grammar, semantic quality or all unrelated baseline controls. Existing architecture, archived inventory, stale permission/mutation/tooling/price test failures remain recorded for separate owning repairs. Connected browser acceptance still open.",
       "official_provider_contract": "https://developers.openai.com/api/docs/guides/structured-outputs"
+    },
+    {
+      "piece": "empty-direct-selector-durable-replay",
+      "production_file": "nm/brain/evidence_rendering.py",
+      "prompt_changes": 0,
+      "invariant": "A known empty direct legal selection retains identical rendering when replay reconstructs only actually selected dependencies. Populated lost-owner references, malformed selectors and unknown fields remain rejected; durable expressions, dependency snapshots, versions and seals are not rewritten.",
+      "baseline": "One new paired replay case failed; four malformed/populated neighbours plus seven strict-schema controls passed. The shipped research follow-up refused saved account context because its empty selector came from a larger generation catalogue.",
+      "verification": {
+        "rendering_strict_replay_and_public_research_passed": 153,
+        "new_cases_added": 5,
+        "affected_public_followup_with_historical_legal_ledger_mechanics": "passed; isolated process-only claim stub, no production source changed",
+        "ruff": "passed",
+        "routine_model_call_delta": 0,
+        "paid_calls": 0,
+        "canonical_contract": "evidence_expression_v1 unchanged",
+        "existing_fixture_migration": "Generated ordinary legacy fixtures explicitly declare empty direct legal selection; explicit fresh adversarial expressions remain untouched."
+      },
+      "limits": "This repairs replay normalization, not semantic meaning or useful delivery. The separately preserved legal-recovery candidate is not completed by this checkpoint."
     }
   ],
   "additional_reviewer_input": {

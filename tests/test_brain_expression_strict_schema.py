@@ -92,6 +92,31 @@ def test_saved_v1_legal_expression_without_the_new_required_field_renders_identi
     assert "legal_source_ids" not in saved["evidence_expression"]
 
 
+def test_empty_direct_selector_replays_without_unused_legal_catalogue(evidence):
+    expression_without_selector = expression()
+    selected = {**deepcopy(expression_without_selector), "legal_source_ids": []}
+    original = deepcopy(selected), deepcopy(evidence)
+    expected = rendering.render_expression(expression_without_selector,
+                                           **{**evidence, "sources": {}})
+    # Fresh generation used a larger pool; the durable block retains only its
+    # actual source dependencies. An empty direct selection names no passage.
+    assert rendering.render_expression(selected, **evidence) == expected
+    assert rendering.render_expression(selected, **{**evidence, "sources": {}}) == expected
+    assert (selected, evidence) == original
+    with pytest.raises(SchemaViolation):
+        require_schema(selected, rendering.expression_schema(
+            evidence["spans"], evidence["records"], {}))
+
+
+@pytest.mark.parametrize("selection", [None, "", ["foreign"], ["legal:1"]])
+def test_replay_does_not_ignore_populated_or_malformed_direct_selector(evidence, selection):
+    selected = {**expression(), "legal_source_ids": selection}
+    before = deepcopy(selected)
+    with pytest.raises(SchemaViolation):
+        rendering.render_expression(selected, **{**evidence, "sources": {}})
+    assert selected == before
+
+
 def legal_state():
     source = checked_law({
         "id": "A1", "kind": "provision", "title": "Synthetic inspection provision",
