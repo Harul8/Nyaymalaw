@@ -1,0 +1,246 @@
+{
+  "audit": "nm-brain-response-audit-20261006",
+  "scope": {
+    "mode": "read-only source and prompt audit",
+    "repo": "/workspace/Nyaymalaw",
+    "head": "3b30cfb6507183e16506452b082101c31d213c10",
+    "repo_edits": false,
+    "tests_run": false,
+    "browser_or_live_model_calls": false,
+    "verification_status": "UNVERIFIED: implementation behavior and prompt semantics were not exercised"
+  },
+  "source_hashes": {
+    "nm/brain/continuation.py": "dd2ee1a385209e62b2ca95b0eff64b801f9a2f9ee06579d7595e6d2acaf767a8",
+    "nm/brain/continuation_verification.py": "116a6817049750c05c4f1697c8f07909552b64b5891b748811a2d8532abffa60",
+    "nm/brain/work_state.py": "f9e0ef91b2530f2f654d11dc77cbe13c5218aeed90b90df0025d6858678d28d1",
+    "nm/brain/turn.py": "65ababc413ab701b4971da80c5b43cdde7039b0bfad57d82978536db42f745a4",
+    "nm/brain/history.py": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+    "nm/brain/source_snapshots.py": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2"
+  },
+  "summary": "Existing code records material-stage execution and actual owned projections and commits the exact final reply atomically. The missing link is request-specific fulfillment evidence: arbitrary conversation support or a model result_supported boolean can still stand in for actual requested record effects. Reviewer transport also offers irrelevant retention fields on accepted units, and saved replay has a weaker integrity boundary than normal release.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "high",
+      "kind": "completion/effect evidence",
+      "owners": [
+        "nm/brain/continuation.py:_SYSTEM Activity 4; _BLOCK/_UPDATE/_UNIT; _input; _validate_unit",
+        "nm/brain/continuation_verification.py:_SYSTEM Activities 1 and 3; _decision",
+        "nm/brain/turn.py:_material_execution; _material_effects; commit boundary"
+      ],
+      "observation": "turn.py prepares code-owned material_execution_v1 with stages and actual owned operations, but requests[].fulfillment remains unassessed. continuation.py passes this inside material_coverage yet accepts completion blocks with any span, record, or legal reference. Task complete likewise needs any referenced block, while reviewer result_supported is model-authored. No structured reference connects a specific requested edit to its relevant effect.",
+      "correction": "Expose a separate code-owned effect/result catalogue derived from execution receipts and checked active records. Require typed selected evidence for effect claims and effectful task completion; validate IDs, operation kind, request/task ownership, actual targets, and canonical result mechanically. Independently judge whether that evidence fulfills the real request. Do not use keyword matching on prose or treat source spans, positive review, any changed record, or successful extraction as completion evidence. Writer/reviewer must inspect claims in every block kind, including acknowledgments.",
+      "required_dependency": "A genuine mechanical requirement for effectful tasks needs explicit requested-effect classification at interpretation/task ownership, not inference from broad material_purposes. conversation.py may need a coordinated typed contract if this is absent. Do not add a universal effect requirement to ordinary answers.",
+      "boundary": "A selected owned saved effect can be established mechanically; semantic relevance and correctness remain model-judged and unverified. No new routine model stage is needed if existing writer/reviewer own these decisions."
+    },
+    {
+      "id": "R2",
+      "severity": "medium",
+      "kind": "verdict transport false rejection",
+      "owners": [
+        "nm/brain/continuation_verification.py:_VERDICT; _schema; _decision; verify_continuation"
+      ],
+      "observation": "Every review row requires retained_block_ids and retained_reason even for accept. _decision raises when accepted rows carry retention selections, and when empty selections carry a reason. The wire contract invites metadata combinations that cannot be meaningful under acceptance.",
+      "correction": "Use provider-portable disjoint result collections, such as accepted_units and rejected_units, with retention fields only on rejected rows. Translate to the existing internal verdict representation in code, preserving exactly-one-unit and every subcheck requirement. This follows material.operation_schema/operation_rows rather than unsupported anyOf/oneOf unions. Never let accept override failed subchecks, nonempty contradictory retention, wrong identity, or missing evidence. Only demonstrably content-free legacy fields are candidates for harmless normalization.",
+      "required_dependency": "This can be one production-code/one-prompt slice entirely in continuation_verification.py; stored continuation shapes do not need to change.",
+      "boundary": "Avoids an impossible metadata combination mechanically; whether existing pinned models obey the new schema is unverified."
+    },
+    {
+      "id": "R3",
+      "severity": "high",
+      "kind": "weaker replay release boundary",
+      "owners": [
+        "nm/brain/turn.py:_saved_reply; BrainService.run replay paths",
+        "nm/brain/work_state.py:_read_words; _blocks; _displayed"
+      ],
+      "observation": "_saved_reply is reached before _current_records/project_work. It validates offer digest, response turn_id, optional execution owner, and material sources, but does not require selected row advocate_id/matter_id/committed/release_state, row.elements == response.elements, or the continuation/display/source integrity checks used for a normal save.",
+      "correction": "Require the same core saved-owner, released-state, exact visible payload and source/continuation consistency before replay. Factor or call deterministic existing validators rather than invent a second model review or treating the response flag as authority. Preserve exact historical content; do not reconstruct earlier proof from current projections or infer missing legacy execution receipts.",
+      "required_dependency": "turn.py owns replay; work_state.py owns reusable progress/display validation. A cross-file helper may be inseparable if validation must avoid unrelated current-state checks. Historical receipt confirmation must not become a fresh semantic review.",
+      "boundary": "Protects persisted/replayed integrity; does not prove original prose was semantically correct."
+    },
+    {
+      "id": "R4",
+      "severity": "medium",
+      "kind": "saved citation consistency",
+      "owners": [
+        "nm/brain/work_state.py:_blocks; _displayed",
+        "nm/brain/source_snapshots.py:inline_source_links"
+      ],
+      "observation": "_displayed compares block text, source snapshots, primary source, and refs, but does not compare visible inline_citations with inline_source_links(block, sources). A saved block may have an invalid or diverging citation projection that normal continuation validation would reject.",
+      "correction": "Validate saved declared anchors using inline_source_links and compare the rendered inline_citations with that exact projection. Preserve the explicit legacy case where the field never existed; do not invent anchors for historical prose. A repeated or overlapping anchor is a consequential link ambiguity, not automatically harmless formatting.",
+      "required_dependency": "work_state.py can reuse the existing source_snapshots helper without changing source_snapshots.py unless a shared strict input validator is factored.",
+      "boundary": "Guarantees exact selected source/anchor correspondence, not entailment or legal applicability."
+    },
+    {
+      "id": "R5",
+      "severity": "medium",
+      "kind": "release fallback and accepted-work recovery",
+      "owners": [
+        "nm/brain/turn.py:_continuation_elements; _reply; BrainService.run"
+      ],
+      "observation": "_continuation_elements tells the advocate to ask NM to continue after an internal response failure. This conflicts with AGENTS.md: do not make the advocate resend an instruction merely to recover accepted work. It also retains an interpreter-reply else branch even though continuation_indexes currently includes every request.",
+      "correction": "After existing bounded recovery, issue a concise service/task status that states only confirmed admission and unfinished requested work without soliciting a repeated instruction or claiming automatic future retry. Remove the latent raw interpreter prose fallback; every displayed request must use checked units or a code-composed status. Assemble status before commit but release it only after confirmed commit. Delivery of a fallback must not mark the task complete.",
+      "required_dependency": "turn.py-only change if recovery bounds remain unchanged. Autonomous background recovery would require durable scheduling and is a separate architecture change; do not imply it exists.",
+      "boundary": "The current atomic store release already makes saved-message wording conditionally truthful on successful commit. Corrupt ownership/history or uncertain commit cannot release a saved-message fallback."
+    },
+    {
+      "id": "R6",
+      "severity": "medium",
+      "kind": "no-op and historical outcome false rejection",
+      "owners": [
+        "nm/brain/continuation.py:_SYSTEM Activity 4; completion evidence validation",
+        "nm/brain/continuation_verification.py:_SYSTEM Activity 3; completion checks",
+        "nm/brain/turn.py:execution outcome catalogue"
+      ],
+      "observation": "Returned readers and empty effects do not by themselves distinguish already-correct state, justified no-change review, rejected requested change, skipped extraction, failed execution, or unresolved meaning.",
+      "correction": "Represent these outcomes distinctly. Current verified target state can support the wording the record already shows this value without a historical receipt. Claiming NM previously performed a correction needs its operation evidence, and current-state completion needs the outcome still to hold. An independent no-change review is a completed review, not a completed edit. Never equate no candidates with no change needed.",
+      "required_dependency": "Typed outcome production and selection must be coordinated; reviewer booleans alone cannot manufacture mechanical no-op evidence.",
+      "boundary": "Prevents broad no-new-rows blocking without pretending no-op semantics are derivable from counts."
+    }
+  ],
+  "file_reviews": [
+    {
+      "file": "nm/brain/continuation.py",
+      "preserve": [
+        "All displayed request indexes enter checked continuation.",
+        "Server derives work association from one supplied selector.",
+        "References are owned, exact and attributed; retry preserves accepted peers.",
+        "Harmless repeated target_ids are normalized only after every ID is checked."
+      ],
+      "refine": [
+        "Message paragraph should make execution evidence and proposed-vs-committed state explicit.",
+        "Activity 1 should prohibit deriving operation completion from intention, labels, receipts of different work or response delivery.",
+        "Activity 4 should distinguish checked answer delivery from recorded effects, already-correct state, reviewed no-change, refusal and failure.",
+        "Output should keep operation/effect evidence distinct from advocate/legal source citations.",
+        "Avoid a source anywhere in the unit serving as evidence for complete relevant work."
+      ],
+      "mechanical_limit": "Semantic relevance of a selected source or operation is not established by its ID existing."
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "preserve": [
+        "Independent original-evidence review.",
+        "One check for every block/proposal/progress owner; accept cannot override rejected subchecks.",
+        "Per-unit unavailable verdict recovery preserves valid peers.",
+        "Retained factual subset cannot contain legal/proposal owners and needs an explicit limitation."
+      ],
+      "refine": [
+        "Split applicable transport verdict fields.",
+        "Check requested effects against typed results, including implicit claims under any kind.",
+        "Make immediate sufficiency a check separate from task scope and progress, rather than relying only on the general whole-unit verdict.",
+        "Return a precise consequential mismatch; do not block for style or purely meaningless empty metadata."
+      ],
+      "mechanical_limit": "result_supported and scope_preserved are judgments, not execution receipts."
+    },
+    {
+      "file": "nm/brain/work_state.py",
+      "preserve": [
+        "Deterministic durable IDs and source-linked transitions.",
+        "Question completion differs from proving an account.",
+        "Advocate words required for promises, unavailability, deferral and cancellation.",
+        "Historical displayed text and sources are checked against owners; omitted progress remains unchanged."
+      ],
+      "refine": [
+        "Add saved inline-citation projection consistency.",
+        "For a versioned structured effect-evidence contract, validate same evidence both at seal and replay; explicit legacy versions remain unassessed rather than backfilled.",
+        "Do not allow task completion to be certified only by a source-containing block when the task requires an effect."
+      ],
+      "mechanical_limit": "Do not assume a unit verification tag is independent proof of actual fulfillment."
+    },
+    {
+      "file": "nm/brain/turn.py",
+      "preserve": [
+        "Code-owned stage receipts and actual owned effect projection.",
+        "Receipt explicitly keeps semantic fulfillment unassessed.",
+        "One final visible snapshot is validated and atomically saved under expected version.",
+        "Authentication checked before save and no reply returned after failed save."
+      ],
+      "refine": [
+        "Require equal release-integrity validation on exact replay.",
+        "Remove latent raw reply fallback and user-reinstruction fallback.",
+        "Receipt catalogue must bind particular requests/results without equating all accepted proposals to effects.",
+        "Save acknowledgement uncertainty must reconcile exact durable turn identity before repeating operations."
+      ],
+      "mechanical_limit": "Writing a committed marker into the proposed object is not proof by itself; only durable commit/lookup supports release. Stage-return and record-count checks cannot prove the requested correction succeeded."
+    },
+    {
+      "file": "nm/brain/history.py",
+      "preserve": [
+        "Complete exact chronological transcript, attributed roles, and release statuses.",
+        "Withheld drafts cannot enter context; explicit visible service explanation can.",
+        "Nonempty readable replies required for each actual saved turn."
+      ],
+      "refine": [
+        "No obvious independent defect in the inspected history.py contract requires a prompt change.",
+        "If shared saved-row consistency validation is extracted for replay, history.from_turns can consume that checked projection without creating a competing owner.",
+        "Keep explicit service status distinct from an NM evidence statement."
+      ],
+      "mechanical_limit": "History is context, never authority to establish facts, operation success or law."
+    },
+    {
+      "file": "nm/brain/source_snapshots.py",
+      "preserve": [
+        "Exact immutable reading snapshots with text digest and source-kind qualification.",
+        "Nonoverlapping unique exact anchors must select actual passages and cover all selected legal passages.",
+        "Legacy absent inline_citations has an explicit no-reconstruction path."
+      ],
+      "refine": [
+        "No source snapshot should portray an execution receipt as legal/advocate evidence; keep effect status in a separate catalogue.",
+        "Shared strict snapshot input validation can convert malformed source IDs/kinds to domain ValueError consistently if new callers need it.",
+        "Use existing inline_source_links during saved display/replay validation instead of duplicating link rules."
+      ],
+      "mechanical_limit": "Snapshot digests and citation identity verify correspondence, not source truth, applicability, currency or complete retrieval."
+    }
+  ],
+  "implementation_slices": [
+    {
+      "name": "verdict-specific review transport",
+      "files": [
+        "nm/brain/continuation_verification.py"
+      ],
+      "pass_condition": "Accept shape cannot carry retention metadata, exact coverage/subchecks remain mandatory; malformed one-unit review does not erase valid peers."
+    },
+    {
+      "name": "saved citation projection",
+      "files": [
+        "nm/brain/work_state.py"
+      ],
+      "pass_condition": "A saved visible anchor mismatch refuses integrity validation; a legacy absent anchor field remains historical and readable."
+    },
+    {
+      "name": "same saved release integrity on replay",
+      "files": [
+        "nm/brain/turn.py",
+        "nm/brain/work_state.py if factoring is needed"
+      ],
+      "pass_condition": "Exact replay releases only the original authorised, consistent, checked visible payload and never re-runs models or changes records."
+    },
+    {
+      "name": "truthful bounded-recovery status",
+      "files": [
+        "nm/brain/turn.py"
+      ],
+      "pass_condition": "Exhausted per-unit response recovery preserves supported peers and admitted input; status cannot claim task completion or require a duplicate instruction."
+    },
+    {
+      "name": "request-specific effect completion",
+      "files": [
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py",
+        "nm/brain/work_state.py",
+        "nm/brain/turn.py",
+        "nm/brain/conversation.py if requested-effect typing is absent"
+      ],
+      "pass_condition": "Skipped extraction, rejected change and failed commit cannot yield relevant effect success; already-correct state and supported no-change review remain legitimate distinct outcomes.",
+      "cross_file_notice": "Inseparable typed-contract dependency; source-only completion claims remain unverified until all producers, consumers, saved validation and release agree."
+    }
+  ],
+  "validation_plan_not_run": [
+    "Offline schema/checker probes: accepted verdict transport, rejected retained subset, missing and contradictory subchecks, independent unit preservation.",
+    "Offline boundary probes: skipped extraction, accepted proposal with no owned effect, unrelated effect, valid correction, already-correct target, reviewed no-change, rejected edit, superseded prior outcome.",
+    "Persistence/replay probes: fail before save, fail acknowledgement after durable save, stale version, different reused offer, selected row foreign owner, response/elements divergence, invalid saved inline links.",
+    "No browser or live-model work was performed. Static reasoning cannot establish prompt quality, false-rejection rate, integrated usefulness, or end-to-end semantic accuracy."
+  ],
+  "model_call_impact": "The recommended mechanical and schema changes add no routine model stage. Existing writer/reviewer loops can carry effect support and immediate sufficiency checks. Any new durable background recovery or extra review stage needs separate call accounting. The actual changed-flow call count remains unverified without offline service-boundary accounting.",
+  "metrics": "Gate counts alone are not false-rejection rates. Capture precise gate+scope, labelled correct/incorrect candidate status, useful delivered work, retries, terminal failures, latency and cost; distinguish content rejection, malformed transport, integrity refusal and uncertain save. New uncertain semantic checks can run in shadow while established integrity gates remain mandatory."
+}

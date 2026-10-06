@@ -1,0 +1,885 @@
+{
+  "contract": "nm_brain_current_prompt_module_inventory_v1",
+  "date": "2026-10-06",
+  "head_at_write": "b6821328ca3c9a29d6014f310e388d0634212d5c",
+  "worktree_status_at_write": [],
+  "scope": "Read-only source/AST inventory while root edits continue; only /tmp artifacts written. No tests, models, APIs, browser or doc publication. Helper presence is not treated as served activation.",
+  "counts": {
+    "python_modules_including_init": 20,
+    "baseline_python_modules_including_init": 19,
+    "new_module": "execution_contracts.py",
+    "baseline_stable_prompt_constants": 13,
+    "new_empty_reading_prompt_constants": 1,
+    "conditional_account_coverage_appendices": 2,
+    "total_named_prompt_constants_and_appendices": 17,
+    "note": "The baseline research _REPAIR_SYSTEM is itself an appended correction fragment, not an independent routine model call.",
+    "conditional_retrieved_pool_coverage_appendices": 1
+  },
+  "six_activities": [
+    {
+      "activity": 1,
+      "name": "Understand this message in the saved conversation.",
+      "input": "Complete original transcript, latest message, current scoped work/record and research state.",
+      "output": "Independent requested outcomes, contribution/review purposes, owned scope, any research question and proposed opening.",
+      "models": [
+        "conversation._SYSTEM"
+      ],
+      "mechanical_owners": [
+        "history",
+        "work_state",
+        "conversation"
+      ],
+      "refs": [
+        "nm/brain/history.py:9",
+        "nm/brain/conversation.py:514",
+        "nm/brain/conversation.py:652"
+      ]
+    },
+    {
+      "activity": 2,
+      "name": "Read the original purpose of each advocate source.",
+      "input": "Candidate-free complete original conversation and every owned advocate span.",
+      "output": "Canonical account/party-position/examination/instruction/mixed/uncertain source treatment with original exact attribution.",
+      "models": [
+        "record_review._SOURCE_SYSTEM"
+      ],
+      "mechanical_owners": [
+        "record_review",
+        "material"
+      ],
+      "refs": [
+        "nm/brain/record_review.py:26",
+        "nm/brain/record_review.py:69",
+        "nm/brain/turn.py:622"
+      ]
+    },
+    {
+      "activity": 3,
+      "name": "Identify and check independent disputes.",
+      "input": "Original account, purpose catalogue and existing dispute formulations/lineage.",
+      "output": "Checked independently contestable issue proposals, supported corrections/restorations, and precise rejected/withheld/unread audit.",
+      "models": [
+        "disputes._SYSTEM",
+        "dispute_verification._SYSTEM",
+        "dispute_verification._COVERAGE_SYSTEM"
+      ],
+      "mechanical_owners": [
+        "dispute_state",
+        "record_review"
+      ],
+      "refs": [
+        "nm/brain/disputes.py:145",
+        "nm/brain/dispute_verification.py:285",
+        "nm/brain/turn.py:444"
+      ]
+    },
+    {
+      "activity": 4,
+      "name": "Extract, assign and check significant material.",
+      "input": "Whole original conversation, independently treated sources, checked disputes, existing material and code-owned assignment choices.",
+      "output": "Checked important details/relationships and opening; scope held distinctly; changed records preserve original sources and lineage.",
+      "models": [
+        "material._SYSTEM",
+        "material_verification._SYSTEM",
+        "material_verification._COVERAGE_SYSTEM",
+        "conversation._REPAIR_OPENING_SYSTEM"
+      ],
+      "mechanical_owners": [
+        "material",
+        "material_state",
+        "record_review"
+      ],
+      "refs": [
+        "nm/brain/material.py:324",
+        "nm/brain/material.py:513",
+        "nm/brain/material_verification.py:315",
+        "nm/brain/turn.py:475"
+      ]
+    },
+    {
+      "activity": 5,
+      "name": "Research only the legal work that is due.",
+      "input": "Owned immediate research question/purpose/scope and reported record, actual current retrieved legal passages.",
+      "output": "Passage-supported checked uses, source treatment/adoption/force and application limits, or explicit scoped absent/unread/omitted support; reusable only under matching evidence.",
+      "models": [
+        "legal_requirements._DECOMPOSE_SYSTEM",
+        "legal_requirements._REQUIREMENTS_SYSTEM",
+        "legal_requirements._VERIFY_SYSTEM",
+        "legal_requirements._EMPTY_VERIFY_SYSTEM",
+        "legal_requirements._REPAIR_SYSTEM",
+        "legal_requirements._POOL_VERIFY_APPENDIX"
+      ],
+      "mechanical_owners": [
+        "retrieval",
+        "requirements_state"
+      ],
+      "refs": [
+        "nm/brain/turn.py:484",
+        "nm/brain/legal_requirements.py:838",
+        "nm/brain/legal_requirements.py:974",
+        "nm/brain/legal_requirements.py:1952",
+        "nm/brain/requirements_state.py:196"
+      ]
+    },
+    {
+      "activity": 6,
+      "name": "Answer, check each requested outcome, save and release.",
+      "input": "Whole original conversation, checked material and actual effect observations, checked legal uses, pending work and remaining coverage.",
+      "output": "Independently checked response units and scoped work updates; exact response committed atomically with owned input/effects, then released or replayed.",
+      "models": [
+        "continuation._SYSTEM",
+        "continuation_verification._SYSTEM"
+      ],
+      "mechanical_owners": [
+        "continuation",
+        "continuation_verification",
+        "work_state",
+        "source_snapshots",
+        "execution_contracts",
+        "turn"
+      ],
+      "refs": [
+        "nm/brain/continuation.py:328",
+        "nm/brain/continuation.py:979",
+        "nm/brain/continuation_verification.py:460",
+        "nm/brain/turn.py:833",
+        "nm/brain/turn.py:891"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module": "__init__.py",
+      "purpose": "Package identity.",
+      "ref": "nm/brain/__init__.py:1",
+      "sha256": "bbbaeddb5f2489ff94dd9c963907c10c55f25f8a40fda18d18dc3e4177d342f8"
+    },
+    {
+      "module": "checked.py",
+      "purpose": "Generic full-contract read with one schema correction; Judge callers must receive a real non-downgraded Judge result.",
+      "ref": "nm/brain/checked.py:26",
+      "sha256": "367e7cc5bd3c081acc3909994df245f9da0bef4d7dce88878fa032e8231073e9"
+    },
+    {
+      "module": "continuation.py",
+      "purpose": "Write complete response units from whole conversation, checked record, law and progress; preserve accepted peers and check every public route.",
+      "ref": "nm/brain/continuation.py:328",
+      "sha256": "e11a5caeda919101ad5b2be9fb412ab2653890fbe741e288dc043678423936e9"
+    },
+    {
+      "module": "continuation_verification.py",
+      "purpose": "Independently check each response unit, its blocks/proposals, selected law and work transitions; retain valid decisions during local correction.",
+      "ref": "nm/brain/continuation_verification.py:460",
+      "sha256": "0b660098d3cd221168bb8f52532aed4d66547286ce1a31cd5ac1f308a0ce861c"
+    },
+    {
+      "module": "conversation.py",
+      "purpose": "Interpret current independent requests, record/research need, scope and opening; separately repair a rejected opening proposal.",
+      "ref": "nm/brain/conversation.py:514",
+      "sha256": "8fbd1e55dd2268ddb96af686d030bd95fbb1a37f74755835e1ff9e6c4cb1948a"
+    },
+    {
+      "module": "dispute_state.py",
+      "purpose": "Project active dispute formulations and correction lineage from attributable saved history.",
+      "ref": "nm/brain/dispute_state.py:59",
+      "sha256": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839"
+    },
+    {
+      "module": "dispute_verification.py",
+      "purpose": "Judge independent disputes, original account, requested restoration and targets; optional full-source coverage and explicit unread recovery.",
+      "ref": "nm/brain/dispute_verification.py:285",
+      "sha256": "bb6ca52681a6f7b81cfe98351955e1ffd57ad90f905169c6f33e0e8f1fc69f88"
+    },
+    {
+      "module": "disputes.py",
+      "purpose": "Propose independently contestable issues with owned exact account references and saved-record links.",
+      "ref": "nm/brain/disputes.py:145",
+      "sha256": "7864ebf0faaf21b6d1d08d72faf989b27445245012e124d82ac25c8e5a852194"
+    },
+    {
+      "module": "execution_contracts.py",
+      "purpose": "Validate code-owned effect catalogues and selected typed record outcomes; validate exact requested-review completion separately from narrower results.",
+      "ref": "nm/brain/execution_contracts.py:101",
+      "sha256": "faf127bb5164559e8092453a33e2e0061398ed0a8fc656272a94c78b914fba6c"
+    },
+    {
+      "module": "history.py",
+      "purpose": "Reconstruct the complete chronological user-visible transcript and refuse unreadable history.",
+      "ref": "nm/brain/history.py:9",
+      "sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801"
+    },
+    {
+      "module": "legal_requirements.py",
+      "purpose": "Plan queries, read exact passages, Judge complete proposed uses with optional whole-supplied-pool coverage in the same call, and conditionally Judge empty readings over their supplied pool.",
+      "ref": "nm/brain/legal_requirements.py:838",
+      "sha256": "057b0a18cf18673b13723d77491c6d0b629faacebc7d51428770d8ca22e58756"
+    },
+    {
+      "module": "material.py",
+      "purpose": "Resolve exact attributed sources and code-owned assignment choices; propose significant details and their corrections/relationships.",
+      "ref": "nm/brain/material.py:513",
+      "sha256": "a31d7ddd7847779db2f869ee51a665bc1c2604b20991f068602cfeb07fa2e12a"
+    },
+    {
+      "module": "material_state.py",
+      "purpose": "Project source-checked details, unresolved/held scope, changes and preserved contradiction history.",
+      "ref": "nm/brain/material_state.py:96",
+      "sha256": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711"
+    },
+    {
+      "module": "material_verification.py",
+      "purpose": "Judge details and opening against original account and selected canonical targets; optional independent full-source coverage, checked-peer recovery and unread audits.",
+      "ref": "nm/brain/material_verification.py:315",
+      "sha256": "d5ae5d3cb88339df66ed2970021113a46e99e55a60a53ed5129d7813c6717f76"
+    },
+    {
+      "module": "record_review.py",
+      "purpose": "Candidate-free source-purpose read plus common attribution, restoration/dependency and raw coverage contracts.",
+      "ref": "nm/brain/record_review.py:69",
+      "sha256": "91cf206591c941de8b80f1d73a621c19bda193b097b8aa99175c28caa278e452"
+    },
+    {
+      "module": "requirements_state.py",
+      "purpose": "Project owned research and gathering board view; reuse only matching current evidence, including an explicit valid empty-reading receipt.",
+      "ref": "nm/brain/requirements_state.py:196",
+      "sha256": "e80a142983f4d3219c5f8f9243b03029dd7136f981af6ed95e9f2a36bb38e2f0"
+    },
+    {
+      "module": "retrieval.py",
+      "purpose": "Local hybrid corpus retrieval, reranking, exact passage and index-freshness ownership; no generative response calls.",
+      "ref": "nm/brain/retrieval.py:338",
+      "sha256": "02ca34e6d3570518c98b61862ba5f798fa02ffca11ccbb7135cdd2fb7d8044ae"
+    },
+    {
+      "module": "source_snapshots.py",
+      "purpose": "Resolve exact response references and inline source links into durable readback snapshots.",
+      "ref": "nm/brain/source_snapshots.py:7",
+      "sha256": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2"
+    },
+    {
+      "module": "turn.py",
+      "purpose": "Orchestrate owned stages, model-call receipts, actual projection effects, research, checked responses and one version-checked atomic commit/replay.",
+      "ref": "nm/brain/turn.py:570",
+      "sha256": "0144739aae14d42123df9d8cb4a00aef2b052286c0048138e0abe558b1f21aad"
+    },
+    {
+      "module": "work_state.py",
+      "purpose": "Seal/project durable scoped tasks and questions from released units; promises, completion, cancellation and untracked historical work stay distinct.",
+      "ref": "nm/brain/work_state.py:136",
+      "sha256": "65173f6d4e87adaf8b55af2afec1545470d57401cfb20dbab07ac8758c746ec9"
+    }
+  ],
+  "prompts": [
+    {
+      "module": "continuation.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/continuation.py:34",
+      "end_line": 228,
+      "classification": "baseline_constant",
+      "purpose": "Compose scoped complete response units and proposed progress.",
+      "source_purpose": "Address each actual request with useful grounded progress using the existing attributed record and checked research. Do not re-extract material, change evidence status, open matters or authorise external actions. Establish the requested outcome and its evidence before deciding what was delivered.",
+      "activities": [
+        "Activity 1 - Establish the request and its scope.",
+        "Activity 2 - Establish the attributed account.",
+        "Activity 3 - Establish what work actually occurred.",
+        "Activity 4 - Reason within the checked legal support.",
+        "Activity 5 - Propose useful work and preserve identities.",
+        "Activity 6 - Decide sufficiency and attributed progress."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "continue_conversation",
+      "tier": "judge",
+      "owner_ref": "nm/brain/continuation.py:979",
+      "when": "every displayed plan item"
+    },
+    {
+      "module": "continuation_verification.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/continuation_verification.py:20",
+      "end_line": 193,
+      "classification": "baseline_constant",
+      "purpose": "Independently judge whole units, each block and linked progress proposal.",
+      "source_purpose": "Independently decide whether each proposed request unit is grounded, useful and accurately describes delivered work. Start with the actual request and original evidence; do not endorse the writer's explanation as proof. Check meaning, scope, identities, sufficiency and progress together. Write no advice, supply no missing law and authorise no action. Units are independent; preserve valid peers and identify a precise consequential mismatch for any rejection. Style differences alone are not unsupported content.",
+      "activities": [
+        "Activity 1 - Establish the request and the attributed account.",
+        "Activity 2 - Check actual execution and claimed results.",
+        "Activity 3 - Check the selected legal use and coverage.",
+        "Activity 4 - Check useful engagement and proposal identities.",
+        "Activity 5 - Check sufficiency, task scope and attributed progress."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_continuation",
+      "tier": "judge",
+      "owner_ref": "nm/brain/continuation_verification.py:460",
+      "when": "when valid complete response units exist"
+    },
+    {
+      "module": "conversation.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/conversation.py:180",
+      "end_line": 325,
+      "classification": "baseline_constant",
+      "purpose": "Interpret current requests and plan.",
+      "source_purpose": "Propose the distinct work requested or information contributed now, its scope, the checking it needs and a useful immediate response. Keep account intake, review of NM's formulations and legal-source enquiry distinct. This interpretation establishes no fact, decides no law, grants no permission and proves no record effect or completed work.",
+      "activities": [
+        "Activity 1 - Identify each current request or contribution.",
+        "Activity 2 - Determine the required source work.",
+        "Activity 3 - Choose a useful immediate response.",
+        "Activity 4 - Decide whether the matter can be opened."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "interpret_conversation",
+      "tier": "judge",
+      "owner_ref": "nm/brain/conversation.py:514",
+      "when": "normal"
+    },
+    {
+      "module": "conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "ref": "nm/brain/conversation.py:354",
+      "end_line": 376,
+      "classification": "baseline_constant",
+      "purpose": "Repair a rejected opening proposal for a fresh independent check.",
+      "source_purpose": "Repair only the matter-opening description against original advocate evidence. Preserve the supported subject and other work decisions.",
+      "activities": [
+        "Activity 1 - Establish the supported client and subject.",
+        "Activity 2 - Return the corrected opening proposal."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "repair_opening",
+      "tier": "routine",
+      "owner_ref": "nm/brain/conversation.py:387",
+      "when": "conditional opening repair"
+    },
+    {
+      "module": "dispute_verification.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/dispute_verification.py:34",
+      "end_line": 161,
+      "classification": "baseline_constant",
+      "purpose": "Independently judge dispute proposals.",
+      "source_purpose": "Independently decide for each proposal whether it is a distinct dispute and whether current authorised work and the attributed account support its exact record operation. Its heading and statement must stay within that account. Check identification, attribution and transition, not legal merit or proof. An exact source or known target ID is not operation support.",
+      "activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Identify the issue and preserve its formulation.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_disputes",
+      "tier": "judge",
+      "owner_ref": "nm/brain/dispute_verification.py:285",
+      "when": "nonempty disputes or explicit review_scope"
+    },
+    {
+      "module": "dispute_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "ref": "nm/brain/dispute_verification.py:164",
+      "end_line": 195,
+      "classification": "coverage_appendix",
+      "purpose": "Judge omitted independent disputes across full original advocate catalogue and requested scope.",
+      "source_purpose": "Check whether materially relevant account content or needed reconciliation in this stage's authorised scope remains unrepresented. This judgment does not prove facts, completeness of legal discovery or task fulfillment.",
+      "activities": [
+        "Activity 5 - Independently assess represented account coverage."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": null,
+      "tier": "judge",
+      "owner_ref": "nm/brain/dispute_verification.py:357",
+      "when": "conditional appendix; part of existing dispute Judge call"
+    },
+    {
+      "module": "disputes.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/disputes.py:28",
+      "end_line": 118,
+      "classification": "baseline_constant",
+      "purpose": "Propose contestable issues.",
+      "source_purpose": "Propose independently contestable issues contributed now, or justified repairs of sourced formulations during relevant authorised review. Review can authorise repair without a new factual assertion; original advocate words supply its evidence. This call admits no fact, law, permission, action or completed assessment.",
+      "activities": [
+        "Activity 1 - Establish the original account and review authority.",
+        "Activity 2 - Identify the independently contested issue.",
+        "Activity 3 - Choose an owned creation or revision.",
+        "Activity 4 - Preserve attribution, ownership and identification certainty."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "extract_disputes",
+      "tier": "routine",
+      "owner_ref": "nm/brain/disputes.py:145",
+      "when": "material/opening read"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_DECOMPOSE_SYSTEM",
+      "ref": "nm/brain/legal_requirements.py:355",
+      "end_line": 382,
+      "classification": "baseline_constant",
+      "purpose": "Form grounded complementary retrieval queries.",
+      "source_purpose": "Form complementary retrieval queries for candidate bare-Act sections and judgment passages addressing each subject's question, without deciding applicable law, factual satisfaction or the answer.",
+      "activities": [
+        "Activity 1 - Establish the enquiry and its boundaries.",
+        "Activity 2 - Form distinct grounded search routes."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "decompose_disputes",
+      "tier": "routine",
+      "owner_ref": "nm/brain/legal_requirements.py:838",
+      "when": "context-fitting due research batch"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_REQUIREMENTS_SYSTEM",
+      "ref": "nm/brain/legal_requirements.py:384",
+      "end_line": 451,
+      "classification": "baseline_constant",
+      "purpose": "Read actual supplied passages into useful bounded findings.",
+      "source_purpose": "Propose passage-supported findings addressing each subject's purpose and question. Gathering work identifies things to establish, obtain or check. Requested legal work needs supported principles, conditions, helpful reasoning and adverse limits for a useful answer. Model legal memory cannot replace supplied support, and proposing findings does not complete the requested work.",
+      "activities": [
+        "Activity 1 - Identify separately usable source propositions.",
+        "Activity 2 - Compare legal predicates with the original account.",
+        "Activity 3 - Check usefulness, adverse limits and remaining support."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "read_legal_requirements",
+      "tier": "routine",
+      "owner_ref": "nm/brain/legal_requirements.py:974",
+      "when": "context-fitting subjects with actual candidate passages"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_VERIFY_SYSTEM",
+      "ref": "nm/brain/legal_requirements.py:453",
+      "end_line": 576,
+      "classification": "baseline_constant",
+      "purpose": "Independently judge proposed whole legal uses and original account application.",
+      "source_purpose": "Independently decide whether each complete finding may enter the research record. Check source provenance, entailment, factual application and claimed force separately against original evidence, including unsupported additions and consequential omissions. Do not repair wording, supply missing law or facts, decide merits beyond supplied passages or certify proof, currency or binding status. Supported findings establish bounded usable work, not complete research or completion of the subject's whole requested outcome.",
+      "activities": [
+        "Activity 1 - Identify the operative source proposition.",
+        "Activity 2 - Check the complete finding's meaning.",
+        "Activity 3 - Compare each legal predicate with the attributed account.",
+        "Activity 4 - Check force and the supported use."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_legal_requirements",
+      "tier": "judge",
+      "owner_ref": "nm/brain/legal_requirements.py:1952",
+      "when": "context-fitting nonempty proposed finding batch"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_REPAIR_SYSTEM",
+      "ref": "nm/brain/legal_requirements.py:578",
+      "end_line": 592,
+      "classification": "baseline_constant",
+      "purpose": "Repair only unresolved research units, preserving valid peers.",
+      "source_purpose": "Repair only these failures under the original decision/output contract.",
+      "activities": [
+        "Activity 1 - Correct only the unresolved decision."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": null,
+      "tier": "inherits owning stage",
+      "owner_ref": "nm/brain/legal_requirements.py:731",
+      "when": "conditional appended recovery fragment; no separate call"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_EMPTY_VERIFY_SYSTEM",
+      "ref": "nm/brain/legal_requirements.py:1525",
+      "end_line": 1562,
+      "classification": "new_empty_reading_prompt",
+      "purpose": "Judge whether an empty reading omitted useful supported findings from the exact supplied passage pool.",
+      "source_purpose": "Independently decide whether the empty reading omitted a useful, passage-supported finding for each subject. This checks only the supplied retrieved passages, not the corpus, every possible source or complete research. Do not generate findings, invent support, repair the account or decide merits.",
+      "activities": [
+        "Activity 1 - Examine each supplied source in its original role.",
+        "Activity 2 - Check useful bounded work and legitimate absence."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_empty_legal_reading",
+      "tier": "judge",
+      "owner_ref": "nm/brain/legal_requirements.py:1660",
+      "when": "new conditional separate call only for empty readings with nonempty owned search_results"
+    },
+    {
+      "module": "material.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/material.py:324",
+      "end_line": 424,
+      "classification": "baseline_constant",
+      "purpose": "Propose significant attributed details and select owned assignment.",
+      "source_purpose": "Propose independently material account details and justified repairs of identifiable saved details during relevant authorised review. Review can authorise repair without a new account fact; original advocate words supply its evidence. This call admits no fact, reformulates no dispute, decides no law, grants no permission and performs no action.",
+      "activities": [
+        "Activity 1 - Establish substantive evidence and review authority.",
+        "Activity 2 - Identify each independently material detail.",
+        "Activity 3 - Choose an owned creation or explicit revision.",
+        "Activity 4 - Select assignment and preserve status."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "extract_legal_details",
+      "tier": "routine",
+      "owner_ref": "nm/brain/material.py:513",
+      "when": "material/opening read"
+    },
+    {
+      "module": "material_verification.py",
+      "constant": "_SYSTEM",
+      "ref": "nm/brain/material_verification.py:35",
+      "end_line": 164,
+      "classification": "baseline_constant",
+      "purpose": "Independently judge details/opening.",
+      "source_purpose": "Independently decide whether each detail and opening description faithfully represents the attributed advocate account and whether that account and current authorised work support the exact proposed operation. Check grounding, not legal merit, proof or source applicability.",
+      "activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Check the complete detail and its assignment.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement.",
+        "Activity 5 - Check the opening description when supplied."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_material_grounding",
+      "tier": "judge",
+      "owner_ref": "nm/brain/material_verification.py:315",
+      "when": "nonempty details/opening or explicit review_scope"
+    },
+    {
+      "module": "material_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "ref": "nm/brain/material_verification.py:167",
+      "end_line": 210,
+      "classification": "coverage_appendix",
+      "purpose": "Judge omitted significant material across full original advocate catalogue, all active/held context and requested scope.",
+      "source_purpose": "Independently assess materially missing content or needed reconciliation in this material stage's authorised scope against original evidence and represented state, separately from checking individual proposals.",
+      "activities": [
+        "Activity 6 - Independently check material coverage when review_scope is supplied."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": null,
+      "tier": "judge",
+      "owner_ref": "nm/brain/material_verification.py:397",
+      "when": "conditional appendix; part of existing material Judge call"
+    },
+    {
+      "module": "record_review.py",
+      "constant": "_SOURCE_SYSTEM",
+      "ref": "nm/brain/record_review.py:26",
+      "end_line": 66,
+      "classification": "baseline_constant",
+      "purpose": "Classify original source purpose without candidates.",
+      "source_purpose": "Classify how each exact advocate span was supplied in its original context, independently of downstream interpretations. These are source-purpose proposals, not proof or adoption of an assertion. You decide source purpose; the server attaches canonical turn, speaker and exact words.",
+      "activities": [
+        "Activity 1 - Read the original source framing.",
+        "Activity 2 - Keep substantive content separate from work authority."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "classify_account_sources",
+      "tier": "routine",
+      "owner_ref": "nm/brain/record_review.py:69",
+      "when": "when material/opening read is requested"
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_POOL_VERIFY_APPENDIX",
+      "ref": "nm/brain/legal_requirements.py:1805",
+      "end_line": 1846,
+      "classification": "retrieved_pool_coverage_appendix",
+      "purpose": "Independently assess omissions using the full supplied retrieved pool alongside candidate decisions in the existing Judge call.",
+      "source_purpose": "Independently assess whether useful passage-supported work was omitted from the proposed findings that your checks permit using. Assess this alongside candidate decisions in this existing review, without a separate model activity. Coverage means only this subject's supplied retrieved passages. It cannot certify the corpus, search completeness, absent adverse law, current law or the whole requested outcome beyond those passages.",
+      "activities": [
+        "Activity 5 - Compare useful work with the full supplied passage pool."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": null,
+      "tier": "judge",
+      "owner_ref": "nm/brain/legal_requirements.py:1952",
+      "when": "conditional appendix when the exact owned search_results pool is supplied; no separate model activity"
+    }
+  ],
+  "current_vs_pending": [
+    {
+      "id": "P1",
+      "area": "All public response routes",
+      "current": "continuation_indexes returns every item, including answer/greeting. Writer and independent reviewer cover each displayed model reply. Code notices are assembled before the final atomic save.",
+      "pending": "Live semantic quality/false rejection remains unmeasured by this audit. Universal routing alone is not a guarantee of every semantic effect claim.",
+      "refs": [
+        "nm/brain/continuation.py:328",
+        "nm/brain/turn.py:833",
+        "nm/brain/turn.py:868"
+      ]
+    },
+    {
+      "id": "P2",
+      "area": "Independent account omission coverage",
+      "current": "Both record Judges support review_scope and full original advocate catalogue, including empty candidates, with coverage-only bounded repair and checked peers retained.",
+      "pending": "Current turn._read_material and run do not pass review_scope/coverage sinks. Thus zero-proposal served reads still skip these Judges; optional helper coverage is not yet activated or saved in the turn.",
+      "refs": [
+        "nm/brain/dispute_verification.py:297",
+        "nm/brain/dispute_verification.py:324",
+        "nm/brain/material_verification.py:326",
+        "nm/brain/turn.py:455",
+        "nm/brain/turn.py:638"
+      ]
+    },
+    {
+      "id": "P3",
+      "area": "Unread versus semantic rejection",
+      "current": "Verifier helpers preserve valid peers after their two-attempt bound and expose unassessed/review_unavailable audit rows. Material result separates rejected_proposals, withheld_proposals and unread_proposals; unread O1 is not accepted.",
+      "pending": "Current turn still counts dispute proposed-minus-accepted as rejected and ignores material unread/withheld fields when setting coverage. It also retries any unsupported opening through a fresh repair path without checking opening_unread. Turn status and opening bound need integration.",
+      "refs": [
+        "nm/brain/dispute_verification.py:422",
+        "nm/brain/dispute_verification.py:469",
+        "nm/brain/material_verification.py:214",
+        "nm/brain/material_verification.py:522",
+        "nm/brain/turn.py:461",
+        "nm/brain/turn.py:646",
+        "nm/brain/turn.py:699",
+        "nm/brain/turn.py:750"
+      ]
+    },
+    {
+      "id": "P4",
+      "area": "Typed actual-effect and review-completion evidence",
+      "current": "Turn owns stage observations, request IDs and actual projection diffs. execution_contracts validates effect catalogues and typed performed/already_current/review_no_change/unresolved outcomes plus exact full review coverage.",
+      "pending": "Current continuation unit schema and validation do not import/call those execution helpers or carry record_outcome; turn receipts currently omit record_requirement and full coverage evidence needed by these helpers. This helper existence does not establish end-to-end completion enforcement.",
+      "refs": [
+        "nm/brain/turn.py:155",
+        "nm/brain/turn.py:176",
+        "nm/brain/execution_contracts.py:17",
+        "nm/brain/execution_contracts.py:262",
+        "nm/brain/execution_contracts.py:356",
+        "nm/brain/continuation.py:278",
+        "nm/brain/continuation.py:703"
+      ]
+    },
+    {
+      "id": "P5",
+      "area": "Independent empty and nonempty retrieved-pool coverage",
+      "current": "New empty Judge examines every source in an owned supplied search_results pool; zero supplied passages need no semantic model call. The new _POOL_VERIFY_APPENDIX assesses nonempty omissions, including unused sources, in the existing candidate Judge call when the owned full pool is supplied. Both scopes concern supplied retrieved passages only; neither certifies the corpus or search completeness. Valid candidates survive unread coverage or an oversized whole-pool scope through narrower cited-source fallback. requirements_state denies reuse of unconfirmed historical empty reads.",
+      "pending": "Current turn._legal_reads does not supply search_results to verify_findings. Served empty findings therefore remain unconfirmed/partial, and nonempty review remains limited to cited candidate passages without activating the supplied-pool appendix. These helper contracts need exact owned search-pool handoff and durable projection integration.",
+      "refs": [
+        "nm/brain/legal_requirements.py:1525",
+        "nm/brain/legal_requirements.py:1660",
+        "nm/brain/legal_requirements.py:1805",
+        "nm/brain/legal_requirements.py:1952",
+        "nm/brain/legal_requirements.py:2065",
+        "nm/brain/legal_requirements.py:2193",
+        "nm/brain/legal_requirements.py:2204",
+        "nm/brain/requirements_state.py:196",
+        "nm/brain/turn.py:523"
+      ]
+    },
+    {
+      "id": "P6",
+      "area": "Save/replay and gate ownership",
+      "current": "A returned BrainOutput follows the version-checked atomic commit, or an exact saved replay. Prepared receipt is not released as saved before commit. Replay before analysis reports zero calls.",
+      "pending": "Lost acknowledgement and generic commit-error handling are not comprehensively implemented by the new gate declaration alone; current durable recheck is on StaleWrite. New G-CORE/G-EFFECT/G-INCOMPLETE/G-COMMIT rows are declared but current brain contains no call-site literals; wiring and honest built status remain separate work.",
+      "refs": [
+        "nm/brain/turn.py:226",
+        "nm/brain/turn.py:594",
+        "nm/brain/turn.py:891",
+        "nm/brain/turn.py:896",
+        "nm/shared/gates_contracts.py:769"
+      ]
+    },
+    {
+      "id": "P7",
+      "area": "Current source-purpose propagation into retained legal evidence",
+      "current": "The source-treatment catalogue is independently read and reused across the current turn; historical legal uses retain original sources and qualifications.",
+      "pending": "Parent assigned latest source_treatments propagation and reuse ownership to /root/material_prompt_history. This report does not assert that current requirements projection already revalidates all retained application premises against the latest independent source-purpose catalogue.",
+      "refs": [
+        "nm/brain/turn.py:358",
+        "nm/brain/requirements_state.py:247"
+      ],
+      "provenance": "Parent task steering; source-owner integration is underway."
+    }
+  ],
+  "call_accounting": {
+    "normal_formula": "N = 3 + 3*m + d + t + Bq + Br + Bv + Be, before contract corrections, opening repairs or extra narrowed-response review.",
+    "definitions": {
+      "3": "One interpretation + one response writer + one independent response check for a normal successful message; greetings also use all three.",
+      "m": "1 when plan.material_review or opening.ready, otherwise 0. Its three calls are candidate-free source treatment, dispute extraction and detail extraction.",
+      "d": "1 for a nonempty dispute proposal set in current served turn; activated requested coverage would also run it for empty proposals.",
+      "t": "1 for nonempty details or a ready opening in current served turn; activated requested coverage would also run it for empty proposals.",
+      "Bq": "Number of context-fitting due query-planning batches; 0 for absent or reusable research.",
+      "Br": "Number of context-fitting reading batches with actual retrieved passages; no passages => no reader call.",
+      "Bv": "Number of context-fitting nonempty finding-verification batches.",
+      "Be": "Number of context-fitting empty-reading review batches with actual owned supplied passages. In current served turn this is 0 because search_results is not passed; helper callers supplying it can incur these calls."
+    },
+    "normal_examples": [
+      {
+        "case": "Greeting/diversion; unchanged material and no due research",
+        "calls": 3
+      },
+      {
+        "case": "Material read with no dispute/detail/opening candidates; current unactivated omission Judges",
+        "calls": 6
+      },
+      {
+        "case": "Material read with both dispute and detail/opening Judge calls",
+        "calls": 8
+      },
+      {
+        "case": "Previous full material path + one useful due research batch",
+        "calls": 11
+      },
+      {
+        "case": "First general legal question + useful findings, no material read, one fitting research batch",
+        "calls": 6
+      },
+      {
+        "case": "General legal question + retrieved passages but empty proposed findings; current missing search_results wiring",
+        "calls": 5
+      },
+      {
+        "case": "Same empty proposed finding with supplied-pool Judge correctly activated",
+        "calls": 6
+      },
+      {
+        "case": "General legal question with genuinely zero supplied corpus passages",
+        "calls": 4
+      },
+      {
+        "case": "Exact saved replay before analysis",
+        "calls": 0
+      }
+    ],
+    "important_limits": [
+      "These are normal repair-free, context-fitting successful examples, not a fixed per-message charge or global maximum.",
+      "Coverage appendices share existing record Judge calls and add no call when nonempty candidates already needed review. They add at most the previously skipped empty record Judge invocation in a requested zero-candidate review.",
+      "The research empty Judge is a new conditional stage; it cannot guarantee full corpus/search coverage.",
+      "Every checked_read and each record Judge invocation has at most two attempts. Research corrections are local per batch; provider outages stop cascades and preserve prior valid work.",
+      "The response writer has two generation attempts. Each verify_continuation invocation has its own two-attempt bound; a final narrowed-content review may additionally run. Do not state a global one-review or two-call maximum for all response recovery.",
+      "A separately rejected opening can trigger repair_opening (itself checked_read) and fresh checks of repair/fallback alternatives; this current turn path has not yet respected opening_unread as the exhausted local recovery boundary.",
+      "Mechanical projection, IDs, source snapshots, typed evidence checks, local corpus search/rerank, durable work and atomic save add no generative model call.",
+      "Separate prompts/roles are not model diversity. Actual configured model and latency/tokens come from content-free service-call receipts; provider_retries is separate from llm_calls.",
+      "The nonempty retrieved-pool appendix shares the existing finding Judge call; larger full-pool input can change batching, and unread/oversized scope cannot erase independently valid cited-source findings."
+    ],
+    "refs": [
+      "nm/brain/turn.py:90",
+      "nm/brain/turn.py:444",
+      "nm/brain/turn.py:484",
+      "nm/brain/turn.py:622",
+      "nm/brain/continuation.py:1007",
+      "nm/brain/continuation.py:1116",
+      "nm/brain/continuation_verification.py:469"
+    ]
+  },
+  "readme_corrections": [
+    {
+      "ref": "nm/brain/README.md:90",
+      "fix": "Dispute check can run for explicit requested full-account coverage even with zero candidates, but distinguish helper support from served activation."
+    },
+    {
+      "ref": "nm/brain/README.md:92",
+      "fix": "Detail/opening check likewise has conditional independent account coverage, not merely presence of proposals."
+    },
+    {
+      "ref": "nm/brain/README.md:96",
+      "fix": "Describe separate optional empty-reading Judge over the exact supplied passage pool; no blanket corpus coverage claim."
+    },
+    {
+      "ref": "nm/brain/README.md:100",
+      "fix": "Greeting is now normally three calls because answer/greeting units go through writer and independent reviewer."
+    },
+    {
+      "ref": "nm/brain/README.md:102",
+      "fix": "Eight-call full material example already includes source-treatment; do not add one again in the next paragraph."
+    },
+    {
+      "ref": "nm/brain/README.md:111",
+      "fix": "No passages skips reader and empty Judge. Empty findings after actual passages may require independent supplied-pool review when search_results is wired; zero proposals do not alone establish successful coverage."
+    },
+    {
+      "ref": "nm/brain/README.md:118",
+      "fix": "Distinguish writer replacement bound from the reviewer per-invocation bound and possible separate narrowed-content check."
+    },
+    {
+      "ref": "nm/brain/README.md:96",
+      "fix": "Nonempty supplied-pool coverage is now an optional appendix in the existing source Judge, including uncited retrieved sources. Its activation requires exact search_results handoff; it is not a corpus-wide review or an added routine model stage."
+    }
+  ]
+}

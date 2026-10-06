@@ -1,0 +1,828 @@
+{
+  "audit": {
+    "kind": "static_current_code_recovery_inventory",
+    "date_utc": "2026-10-06",
+    "head": "3b30cfb6507183e16506452b082101c31d213c10",
+    "repository": "/workspace/Nyaymalaw",
+    "scope": [
+      "nm/brain/legal_requirements.py",
+      "nm/brain/continuation.py",
+      "nm/brain/continuation_verification.py",
+      "nm/brain/checked.py"
+    ],
+    "activity": "Read-only code and AGENTS.md inspection. No repository edits, test execution, provider/model/API/browser calls.",
+    "call_count_definition": "Calls to ModelPort.structured made by these brain modules; provider-adapter retries/degrades are outside these bounds.",
+    "limits": "Static inventory is not execution evidence, semantic-quality evaluation, persistence confirmation or completion proof."
+  },
+  "snapshot": {
+    "nm/brain/legal_requirements.py": {
+      "sha256": "40f756d58c8626e9fdf1deb6bc6f1aa14600290cc1592f4c1f9c6075e574c122",
+      "line_count": 1593,
+      "system_prompts": [
+        {
+          "name": "_DECOMPOSE_SYSTEM",
+          "lines": [
+            249,
+            269
+          ],
+          "characters": 1271
+        },
+        {
+          "name": "_REQUIREMENTS_SYSTEM",
+          "lines": [
+            271,
+            320
+          ],
+          "characters": 3415
+        },
+        {
+          "name": "_VERIFY_SYSTEM",
+          "lines": [
+            322,
+            434
+          ],
+          "characters": 7975
+        },
+        {
+          "name": "_REPAIR_SYSTEM",
+          "lines": [
+            436,
+            442
+          ],
+          "characters": 449
+        }
+      ]
+    },
+    "nm/brain/continuation.py": {
+      "sha256": "dd2ee1a385209e62b2ca95b0eff64b801f9a2f9ee06579d7595e6d2acaf767a8",
+      "line_count": 1113,
+      "system_prompts": [
+        {
+          "name": "_SYSTEM",
+          "lines": [
+            34,
+            197
+          ],
+          "characters": 11554
+        }
+      ]
+    },
+    "nm/brain/continuation_verification.py": {
+      "sha256": "116a6817049750c05c4f1697c8f07909552b64b5891b748811a2d8532abffa60",
+      "line_count": 438,
+      "system_prompts": [
+        {
+          "name": "_SYSTEM",
+          "lines": [
+            20,
+            150
+          ],
+          "characters": 9082
+        }
+      ]
+    },
+    "nm/brain/checked.py": {
+      "sha256": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb",
+      "line_count": 80,
+      "system_prompts": []
+    }
+  },
+  "operations": [
+    {
+      "operation": "decompose_disputes",
+      "owner": "decompose_subjects -> _read_subject_groups",
+      "tier": "routine",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            684,
+            719
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            581,
+            653
+          ]
+        }
+      ],
+      "system": "_DECOMPOSE_SYSTEM [249,269]",
+      "responsibility": "Owned research subject -> 1-4 grounded, concise, distinct retrieval hypotheses; no finding/advice.",
+      "output_tokens": "min(12288,max(3072,subject_count*1024)) per batch",
+      "healthy_calls": "1 per fitting nonempty subject batch; 0 for no subjects",
+      "recovery_bound": "At most 2 calls per batch, with second restricted to unread subject IDs. SchemaViolation/OutputTruncated retry; ContextOverflow stops unit; other ModelError stops remaining batches as outage.",
+      "dynamic_additions": [
+        "research_repair"
+      ],
+      "input": "Complete attributed conversation; each subject with owner/scope/purpose/question/record IDs and attributed material.",
+      "output": "ResearchResult.rows[subject_id]=tuple(query text); per-subject coverage plus optional outage."
+    },
+    {
+      "operation": "read_legal_requirements",
+      "owner": "read_findings -> _read_subject_groups",
+      "tier": "routine",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            820,
+            899
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            581,
+            653
+          ]
+        }
+      ],
+      "system": "_REQUIREMENTS_SYSTEM [271,320]",
+      "responsibility": "Supplied exact legal passages -> candidate findings; no model-memory law.",
+      "output_tokens": "min(16384,max(4096,distinct_source_ids_in_batch*384))",
+      "healthy_calls": "1 per active passage-bearing subject batch; 0 for subjects with no hits, unavailable search, or no active subjects.",
+      "recovery_bound": "At most 2 calls per batch, only unread subject IDs; same error handling as decompose_disputes.",
+      "dynamic_additions": [
+        "research_repair"
+      ],
+      "input": "Full conversation; subjects; exact candidate passages; exclusive per-subject allowed_source_ids and allowed_material_ids.",
+      "output": "Proposal rows include copied exact selected source objects and mentioned/not_mentioned status. Search partial/unavailable remains visible."
+    },
+    {
+      "operation": "verify_legal_requirements",
+      "owner": "verify_findings -> _finding_verdict",
+      "tier": "judge",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1303,
+            1536
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1080,
+            1300
+          ]
+        }
+      ],
+      "system": "_VERIFY_SYSTEM [322,434]",
+      "responsibility": "Independently admit each complete candidate only after provenance/entailment/application/force checks.",
+      "output_tokens": "min(12288,max(4096,candidate_count*256 + total_candidate_source_uses*640))",
+      "healthy_calls": "1 per fitting nonempty candidate batch; 0 when no candidate atoms.",
+      "recovery_bound": "At most 2 calls per batch, only unread candidate IDs. Malformed review/OutputTruncated retry; substantive unsupported/uncertain verdict is final withholding, not a retry request; ContextOverflow stops unit; ModelError/downgrade becomes outage.",
+      "dynamic_additions": [
+        "research_repair"
+      ],
+      "input": "Full attributed source-spanned conversation; per-candidate subject/material; exact legal fragments; independently classified substantive advocate account catalogue.",
+      "output": "Retained original findings with exact code-resolved source/use verification research_support_v6 and application references; rejected_findings and coverage diagnostics separately."
+    },
+    {
+      "operation": "continue_conversation",
+      "owner": "continue_conversation -> _read_units -> _validate_unit",
+      "tier": "judge",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            948,
+            1113
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            853,
+            899
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            672,
+            850
+          ]
+        }
+      ],
+      "system": "_SYSTEM [34,197]",
+      "responsibility": "Compose one source-linked request unit with proposals/sufficiency/work selection/progress.",
+      "output_tokens": "max(4096,min(8192,1536*pending_request_count)); after first OutputTruncated only, min(16384,second_base_cap*2).",
+      "healthy_calls": "1 writer plus 1 independent verify_continuation call for nonempty mechanically valid result.",
+      "recovery_bound": "At most 2 writer calls. One complete replacement for mechanically invalid or semantically rejected units; accepted peers excluded. Independent unread units removed from writer retry. SchemaViolation/OutputTruncated use replacement; ContextOverflow propagates; other ModelError/downgrade stops writing.",
+      "dynamic_additions": [
+        "continuation_writer_repair",
+        "continuation_output_budget_guidance",
+        "continuation_narrow_review"
+      ],
+      "input": "Full exact attributed transcript/latest message; provisional work; owned current derived record; checked current legal uses/coverage; saved tasks/questions; material execution evidence preserved inside coverage.",
+      "output": "Resolved admitted/limited units with source_aware_continuation_v1 marker; per-request ok/partial/unavailable coverage. No persistence in this module."
+    },
+    {
+      "operation": "verify_continuation",
+      "owner": "verify_continuation -> _decision",
+      "tier": "judge",
+      "refs": [
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            373,
+            438
+          ]
+        },
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            266,
+            370
+          ]
+        }
+      ],
+      "system": "_SYSTEM [20,150]",
+      "responsibility": "Independently judge every exact displayed block, proposal identity, selected work, progress and affected question; certify useful factual subset where safe.",
+      "output_tokens": "max(4096,min(8192,256*checks)); checks=sum(2+blocks+questions+next_work+progress_updates) for pending units. question_resolutions are not included in this cap formula.",
+      "healthy_calls": "1 per invocation with proposed units.",
+      "recovery_bound": "At most 2 calls per invocation, only unread/malformed verdict units. Semantic reject is a completed verdict. SchemaViolation retries; OutputTruncated falls through ModelError and stops without retry. ContextOverflow propagates; other ModelError/downgrade stops.",
+      "dynamic_additions": [
+        "continuation_reviewer_correction",
+        "continuation_narrow_review"
+      ],
+      "input": "Entire continuation input payload under input; only pending proposed units; second call adds validation_issues.",
+      "output": "Decisions bool/reason, unavailable request IDs, certified retained block IDs. No rewritten prose or updates are generated."
+    },
+    {
+      "operation": "caller_prompt.operation (unchanged during repair)",
+      "owner": "checked_read",
+      "tier": "caller supplied; default routine; judge explicitly forbids downgrade",
+      "refs": [
+        {
+          "file": "nm/brain/checked.py",
+          "lines": [
+            26,
+            80
+          ]
+        }
+      ],
+      "system": "Caller system plus generic repair suffix on attempt 2 only",
+      "responsibility": "Generic complete schema/accept-function validation with one correction.",
+      "output_tokens": "Caller output_limit, unchanged on repair.",
+      "healthy_calls": "1 per invocation.",
+      "recovery_bound": "At most 2 structured calls. Only SchemaViolation, including accept callback violations, triggers correction. OutputTruncated/ContextOverflow/TierUnavailable/other ModelError propagate.",
+      "dynamic_additions": [
+        "checked_read_repair"
+      ],
+      "callsite_index": [
+        "conversation.py:451 opening repair",
+        "conversation.py:502 interpretation",
+        "record_review.py:100 source treatment",
+        "disputes.py:231 dispute extraction",
+        "material.py:615 detail extraction"
+      ],
+      "input": "Caller exact prompt/schema; correction original_input is decoded original JSON.",
+      "output": "Only callback-accepted typed value. No storage."
+    }
+  ],
+  "dynamic_prompt_additions": [
+    {
+      "id": "research_repair",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            436,
+            442
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            575,
+            578
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            597,
+            601
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            700,
+            703
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            863,
+            866
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1422,
+            1428
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1452,
+            1456
+          ]
+        }
+      ],
+      "trigger": "Second per-batch attempt with unread subject/candidate IDs and precise issues.",
+      "system_addition": "Message: same research activity; valid peers retained. Purpose: repair only supplied failures under same contract. Look for: issues/original attributed input/selected exact words; rejected output not evidence. Outcome: complete replacements only unresolved IDs, no peer repeat or invented support.",
+      "user_additions": [
+        "validation_issues: ID -> issue",
+        "rejected_units: ID -> rejected unit/group"
+      ],
+      "context_projection": "Only unresolved atomic units are rebundled; full attributed conversation and their complete material/passages retained. No original conversation trim.",
+      "removal_or_terminal": "No rejected-output removal here. If correction no longer fits full context, stop unresolved units as partial."
+    },
+    {
+      "id": "checked_read_repair",
+      "refs": [
+        {
+          "file": "nm/brain/checked.py",
+          "lines": [
+            45,
+            79
+          ]
+        }
+      ],
+      "trigger": "First SchemaViolation from call usability/schema/accept callback.",
+      "system_addition": "Four explicit Message/Purpose/Look for/Outcome sections: prior read rejected and unsaved; repair issue; use original attributed source words; complete supported replacement under same schema.",
+      "user_additions": [
+        "original_input",
+        "validation_issue",
+        "how_to_correct",
+        "rejected_output"
+      ],
+      "how_to_correct": "Full same-schema object; allowed source refs/classifications only; omit unsupported proposals; named saved-item links require intended target with required source IDs or removal/correction.",
+      "context_projection": "First preserves original input plus rejected data; if too large, removes only rejected_output. Second overflow raises ContextOverflow; original input is never trimmed.",
+      "preflight": "estimate_tokens(repair_system+repair_user)+output_limit <= model.context_budget(tier); encoded schema not included in this helper preflight."
+    },
+    {
+      "id": "continuation_writer_repair",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            978,
+            1008
+          ]
+        }
+      ],
+      "trigger": "Second writer attempt for pending malformed or semantically rejected request units.",
+      "system_addition": "Four explicit sections: rejected units unreleased; resolve issue without reassessing accepted peers; compare rejection with claims/questions/references/full conversation and discard mistaken premise; complete replacements, truthful specific limits if unsupported.",
+      "user_additions": [
+        "correction.validation_issues list",
+        "correction.rejected_units filtered to pending requests when available",
+        "correction.intended_outcome"
+      ],
+      "context_projection": "work_items reduced to pending request indexes; all remaining original input and catalogues preserved. Accepted peer progress targets reserved in code.",
+      "operation_tier_change": "None: continue_conversation remains judge."
+    },
+    {
+      "id": "continuation_output_budget_guidance",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1010,
+            1017
+          ]
+        }
+      ],
+      "trigger": "Previous writer call raised OutputTruncated.",
+      "system_addition": "None.",
+      "user_additions": [
+        "output_budget_guidance: concise complete units; combine compatible claims, avoid repeated account/limitations, retain essential source references."
+      ],
+      "effect": "Double pending-unit base output cap, bounded at 16384; no third writer call and no conversation trim."
+    },
+    {
+      "id": "continuation_reviewer_correction",
+      "refs": [
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            382,
+            403
+          ]
+        }
+      ],
+      "trigger": "Second review attempt for unread/malformed verdicts only.",
+      "system_addition": "None: static reviewer prompt reused.",
+      "user_additions": [
+        "validation_issues list of request_index and issue"
+      ],
+      "context_projection": "All input_payload stays under input; units only unresolved request indexes. Rejected review output itself is not supplied.",
+      "budget_change": "Recomputed from pending units, no truncation-specific expansion."
+    },
+    {
+      "id": "continuation_narrow_review",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            902,
+            916
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1076,
+            1103
+          ]
+        }
+      ],
+      "trigger": "After bounded writer loop, last writer result has local _ContentFailure on otherwise checked identities/references/graph, no already accepted/certified retained unit, and a factual subset plus displayed limitation survives.",
+      "system_addition": "None: ordinary verify_continuation static prompt reused.",
+      "user_additions": [
+        "input.partial_response_review: original unreleased unit and content issues per narrowed request"
+      ],
+      "unit_projection": "Remove excluded failed blocks, proposal-owned blocks, legal/advice/question/completion blocks; retain only acknowledgment/account/limitation with at least one factual block and specific limitation. Clear questions,next_work,progress_updates; sufficiency partial; preserve exact surviving text and work association.",
+      "handoff": "Mechanical _validate_unit first, then independently review complete narrowed meaning; only positive verdict or certified further subset enters retained output.",
+      "extra_call_bound": "Up to 2 judge calls beyond writer-loop reviews; zero new writer calls."
+    }
+  ],
+  "gate_ownership_and_projections": [
+    {
+      "owner": "checked.require_independent_result",
+      "refs": [
+        {
+          "file": "nm/brain/checked.py",
+          "lines": [
+            21,
+            23
+          ]
+        }
+      ],
+      "gate": "Downgraded judge result raises TierUnavailable; no silent promotion to independent acceptance.",
+      "handoffs": [
+        "checked_read judge",
+        "verify_findings",
+        "verify_continuation"
+      ]
+    },
+    {
+      "owner": "legal_requirements._subject_input/_conversation_rows",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            456,
+            513
+          ]
+        }
+      ],
+      "gate": "Unique subject owner/scope/question and record IDs; no conflicting attributed record identity; subject references available; general scope none cannot import matter material; original turn/role/text must be attributable.",
+      "semantic_owner": "Models decide question/material relevance and law meaning; code enforces supplied ownership."
+    },
+    {
+      "owner": "legal_requirements._prompt/_ordered_batches",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            529,
+            572
+          ]
+        }
+      ],
+      "gate": "Full system+JSON input+encoded schema+output cap must fit tier budget.",
+      "projection": "Fewest consecutive fitting complete atomic units; oversized units partial/unread; no original transcript/source truncation."
+    },
+    {
+      "owner": "legal_requirements._finding",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            791,
+            817
+          ]
+        }
+      ],
+      "gate": "Nonempty short label/need/why; force compatible with finding kind; unique source IDs strictly within this subject; unique material IDs within same attributed record.",
+      "handoff": "Copies actual selected retrieved source objects into proposals; model source labels never create passages."
+    },
+    {
+      "owner": "legal_requirements.verify_findings input preparation",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1312,
+            1385
+          ]
+        }
+      ],
+      "gate": "All research subjects present; valid complete candidate meaning; exact source-ID/object ownership/kind/locator/text; only independently classified substantive advocate spans eligible for factual application.",
+      "projection": "Server temporary candidate IDs r1...; exact source passages split into complete 700-character fragments with 140 overlap [902,912]; separately numbered per source."
+    },
+    {
+      "owner": "legal_requirements._finding_verdict + saved verification validators",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1080,
+            1300
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            55,
+            247
+          ]
+        }
+      ],
+      "gate": "Accepted finding needs faithful label, supported entailment/application/force, supported basis; exact complete checks of cited sources/material; adopted operative owner/role/treatment; same-source fragments; at least one retained source; use checks only retained refs; exact qualified account-supported premises.",
+      "projection": "Drop material links checked does_not_address/uncertain and sources checked unsupported/uncertain; preserve candidate text and required existing conditions; resolve original selected fragments and advocate references in code.",
+      "false_positive_boundary": "Semantic rejection can omit unused source/material/premise checks; conditional/general findings may have no material links; required force forbidden for limited analogy; fully empty candidate set invokes no semantic reviewer."
+    },
+    {
+      "owner": "continuation._input",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            458,
+            642
+          ]
+        }
+      ],
+      "gate": "Complete conversation, attributed latest turn, reliable saved work/records/context, current verified legal uses and exact owner mappings.",
+      "projection": "Full exact source catalogue; derived disputes/material marked nm_interpretation; held uncertain material kept outside active fact catalogue; current verified requirement/research uses remapped to owner-bound hashed legal IDs; historical/stale legal uses not promoted; source classifications retained separately; work choices supplied per intent.",
+      "handoff": "Writer and reviewer receive same full input; material_coverage (including code receipt if supplied) copied unchanged."
+    },
+    {
+      "owner": "continuation._schema/_selected_work",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            313,
+            351
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            422,
+            455
+          ]
+        }
+      ],
+      "gate": "One server-supplied work_selector derives existing/create fields; request cannot omit its task association, contribution cannot invent requested task; dynamic owned ID enums and empty inapplicable arrays.",
+      "false_positive_reduction": "Avoid redundant model work fields; no legal sources means no assessment kind; enum union is narrowed again by per-request code check."
+    },
+    {
+      "owner": "continuation._validate_unit/_read_units",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            360,
+            396
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            645,
+            899
+          ]
+        }
+      ],
+      "gate": "Exact unique block/proposal identity, owned references, inline anchors, exact displayed purpose owners, supported attributed progress, one target owner across units and accepted peers; task/full-scope vs reply sufficiency separate.",
+      "mechanical_normalization": [
+        "Validate every proposal target first, then deduplicate idempotent target_ids [799,801].",
+        "Bind already selected advocate progress spans to exact owner block [383,395].",
+        "Selecting an owned checked finding adds its existing legal-source mapping [744,754].",
+        "Opaque catalogue IDs in prose exempt only when literal in selected advocate words [656,669]."
+      ],
+      "recovery_units": "Identity/reference/graph ambiguity cannot be narrowed; _ContentFailure marks local content blocks only after graph checks. Unit peers independently preserved."
+    },
+    {
+      "owner": "continuation_verification._decision",
+      "refs": [
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            266,
+            370
+          ]
+        }
+      ],
+      "gate": "Every block/proposal/progress checked exactly once; exact selected task and target status; all semantic subchecks dominate overall acceptance; law-dependent accepted block requires actual selected checked passage; question resolution cannot fabricate missing writer update.",
+      "partial_contract": "Retained subset must have rejection, no wrong selected scope, no proposal owners/legal dependencies, accepted factual+limitation blocks and nonempty certification reason. Empty subset needs empty reason; flat verdict schema exposes partial metadata on accept, but code rejects contradictory populated metadata."
+    },
+    {
+      "owner": "continuation._resolve/result assembly",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            919,
+            945
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1104,
+            1113
+          ]
+        }
+      ],
+      "gate": "Only mechanically validated + semantically accepted/certified units resolve exact stored references.",
+      "projection": "Original prior record references are added without copy-edited quotes; accepted units ok, retained partial, absent unavailable. Verification marker certifies this flow, not saved effects or request fulfillment.",
+      "outside_scope": "Atomic persistence/release confirmation belongs to caller turn/store, not these modules."
+    }
+  ],
+  "call_accounting": {
+    "research": "Per fitting batch: healthy 1 planning + 1 reading + 1 independent finding review where applicable. At most 2*(planning_batches+reading_batches+review_batches) brain dispatches; empty/inactive stages call zero. This is not a per-turn fixed ceiling because batching depends on atomic units/context.",
+    "continuation_healthy": "2 judge dispatches = 1 continue_conversation + 1 verify_continuation.",
+    "continuation_multiunit_ceiling": "8 = 2 writers + up to 2 reviews for each writer + up to 2 final narrow reviews. This requires different valid/local-failed units; not every path can hit all branches.",
+    "continuation_one_unit_ceiling": "6 = first mechanically valid writer + up to 2 reviewer calls + second local-content-failed writer + up to 2 narrowed reviewer calls. No reviewer runs on a mechanically invalid writer unit.",
+    "provider_attempts": "Not counted here. ModelPort adapter retries/degrades and configured pinned model IDs belong to parent global inventory."
+  },
+  "static_findings": [
+    {
+      "finding": "Recovery policy differs for truncation by module.",
+      "refs": [
+        {
+          "file": "nm/brain/checked.py",
+          "lines": [
+            42,
+            44
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            606,
+            608
+          ]
+        },
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1462,
+            1464
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1030,
+            1034
+          ]
+        },
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            407,
+            412
+          ]
+        }
+      ],
+      "detail": "Generic checked read has no OutputTruncated correction; research does; continuation writer corrects with doubled cap; continuation reviewer treats truncation as terminal ModelError."
+    },
+    {
+      "finding": "Context preflight accounting differs.",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            535,
+            538
+          ]
+        },
+        {
+          "file": "nm/brain/checked.py",
+          "lines": [
+            69,
+            75
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1018,
+            1020
+          ]
+        },
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            395,
+            398
+          ]
+        }
+      ],
+      "detail": "Research preflight counts encoded schema. Generic repair and continuation writer/reviewer local preflights count system/user/output cap, excluding schema; provider-port accounting is outside this scope."
+    },
+    {
+      "finding": "Empty finding verification is a structural no-op, not independent omission coverage.",
+      "refs": [
+        {
+          "file": "nm/brain/legal_requirements.py",
+          "lines": [
+            1384,
+            1385
+          ]
+        }
+      ],
+      "detail": "No atoms returns default per-subject state ok/checked_items 0 with no judge call; this must not be read as checked completeness of research or material."
+    },
+    {
+      "finding": "Semantic verdict acceptance is not mechanical effect/completion proof.",
+      "refs": [
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            819,
+            824
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1059,
+            1062
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1104,
+            1113
+          ]
+        },
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            123,
+            141
+          ]
+        }
+      ],
+      "detail": "Prompt/reviewer reason about delivered scope; legal-enquiry complete-with-no-law has a concrete code check. These four files do not validate typed requested-effect fulfillment or confirm persistence."
+    },
+    {
+      "finding": "Partial verdict metadata is still a single flat output shape.",
+      "refs": [
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            205,
+            219
+          ]
+        },
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            350,
+            368
+          ]
+        }
+      ],
+      "detail": "Fully accepted units must leave retention fields empty; nonempty retained metadata on accepted unit or an empty subset with populated retained_reason costs a review correction, then unread if repeated. No silent substantive metadata repair."
+    },
+    {
+      "finding": "Reviewer correction and final narrowed review do not append recovery-specific system sections.",
+      "refs": [
+        {
+          "file": "nm/brain/continuation_verification.py",
+          "lines": [
+            385,
+            389
+          ]
+        },
+        {
+          "file": "nm/brain/continuation.py",
+          "lines": [
+            1085,
+            1091
+          ]
+        }
+      ],
+      "detail": "Both preserve the fixed verifier prompt and add clearly named variable input; operation and tier remain unchanged."
+    }
+  ]
+}

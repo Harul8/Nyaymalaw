@@ -1,0 +1,3089 @@
+{
+  "date": "2026-10-06",
+  "scope": "Current served /api/turn -> BrainService -> nm/brain; archives excluded",
+  "snapshot": {
+    "head": "3b30cfb6507183e16506452b082101c31d213c10",
+    "branch": "work",
+    "status": ""
+  },
+  "authorization": {
+    "user_override": "No real model/API/browser calls; live and browser qualification expressly deferred",
+    "review_only": true,
+    "repository_edits": false,
+    "test_execution": false,
+    "artifact_written_only_under_tmp": true
+  },
+  "standing_instructions": {
+    "source": "AGENTS.md",
+    "required_scope": "Complete transcript; one decision owner; separate provenance, authority, factual certainty, matter ownership and actual effects; precise source/target validation, narrow blocking guards with valid neighbours, independent semantic review, atomic save/replay, measured conditional call bounds",
+    "milestones": "Before Build is queue; one prompt and one production file per slice; offline check and explicit deferred semantic/browser status, commit/push before next slice",
+    "qualification": "User deferral overrides AGENTS browser-first workflow for this task; offline pass is not semantic or browser qualification"
+  },
+  "map_source": {
+    "document": "docs/backlog/nm-brain-forensic-review-20261004.md",
+    "line": 29,
+    "currentness": "Historical findings are not automatically current; six activity names/owner map retained, implementations inventoried at current source hashes",
+    "workbook": "docs/Nyaymalaw_Implementation_Plan.xlsx",
+    "sheet": "Before Build",
+    "rows": {
+      "LB-175": 367,
+      "LB-176": 368,
+      "LB-177": 369,
+      "LB-178": 370,
+      "LB-179": 371,
+      "LB-180": 372,
+      "LB-181": 373,
+      "LB-182": 374,
+      "LB-183": 375,
+      "LB-184": 376,
+      "LB-185": 377,
+      "LB-186": 378,
+      "LB-187": 379,
+      "LB-188": 380,
+      "LB-193": 385
+    }
+  },
+  "activities": [
+    {
+      "number": 1,
+      "name": "Attributed account, corrections and omissions",
+      "files": [
+        "nm/brain/conversation.py",
+        "nm/brain/history.py",
+        "nm/brain/record_review.py",
+        "nm/brain/disputes.py",
+        "nm/brain/dispute_verification.py",
+        "nm/brain/material.py",
+        "nm/brain/material_verification.py",
+        "nm/brain/dispute_state.py",
+        "nm/brain/material_state.py"
+      ],
+      "requirement_owners": [
+        "LB-175",
+        "LB-177",
+        "LB-178",
+        "LB-179"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Substantive and procedural law",
+      "files": [
+        "nm/brain/retrieval.py",
+        "nm/brain/legal_requirements.py",
+        "nm/brain/requirements_state.py",
+        "nm/brain/turn.py"
+      ],
+      "requirement_owners": [
+        "LB-180",
+        "LB-13",
+        "LB-14",
+        "LB-156",
+        "LB-122",
+        "LB-170"
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Party argument versus court treatment",
+      "files": [
+        "nm/brain/retrieval.py",
+        "nm/brain/legal_requirements.py",
+        "nm/brain/source_snapshots.py",
+        "nm/brain/continuation.py"
+      ],
+      "requirement_owners": [
+        "LB-180",
+        "LB-181",
+        "LB-191"
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Apply law to evidence for both sides",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "nm/brain/requirements_state.py",
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py"
+      ],
+      "requirement_owners": [
+        "LB-181",
+        "LB-185",
+        "LB-187"
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Strong opposing arguments and supported responses",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py"
+      ],
+      "requirement_owners": [
+        "LB-187",
+        "LB-65",
+        "LB-165"
+      ]
+    },
+    {
+      "number": 6,
+      "name": "Justified position, uncertainty and next steps",
+      "files": [
+        "nm/brain/continuation.py",
+        "nm/brain/continuation_verification.py",
+        "nm/brain/work_state.py",
+        "nm/brain/turn.py"
+      ],
+      "requirement_owners": [
+        "LB-188",
+        "LB-186",
+        "LB-193"
+      ]
+    }
+  ],
+  "stable_prompt_inventory": [
+    {
+      "file": "nm/brain/continuation.py",
+      "constant": "_SYSTEM",
+      "line": 34,
+      "end_line": 197,
+      "operation": "continue_conversation",
+      "activities": [
+        1,
+        4,
+        5,
+        6
+      ],
+      "tier": "judge",
+      "words": 1638,
+      "sha256": "1725bb677a17d0435a60d939f922f6d75bcf84d5868f5fbbc36547afa5ec2690",
+      "input": "whole transcript, every interpreted item, material/dispute/research projections, checked legal uses, execution receipt and progress",
+      "output": "request-owned displayed blocks/proposals, work selection, sufficiency and progress transitions",
+      "trigger": "every parsed answer, clarify or legal_work item",
+      "bound": "up to 2 writer calls; independently reviewed recovery/narrowing remains separate",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 34,
+          "words": 103,
+          "opening": "Message: The input contains the complete attributed conversation, latest message, provisional work interpretation, source-linked dispute and material records, unresolved matter-sco",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 46,
+          "words": 29,
+          "opening": "Purpose: Address each actual request with useful grounded conversational progress. Use the existing records and research; do not re-extract disputes, change evidence status, open m",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 50,
+          "words": 182,
+          "opening": "Activity 1 - Understand and respond. Look for: The latest requested outcome, authorised scope, expressed concern, urgency, corrections and the whole attributed conversation. Interp",
+          "headings": [
+            "Activity 1 - Understand and respond.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 69,
+          "words": 430,
+          "opening": "Activity 2 - Reason within the checked support. Look for: Every consequential proposition you intend to state, its selected support, and the distinction between factual account, fa",
+          "headings": [
+            "Activity 2 - Reason within the checked support.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 111,
+          "words": 245,
+          "opening": "Activity 3 - Ask or propose only what advances the work. Look for: An unanswered distinction that materially changes a supported next decision. Read prior questions, answers, promi",
+          "headings": [
+            "Activity 3 - Ask or propose only what advances the work.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 136,
+          "words": 370,
+          "opening": "Activity 4 - Preserve scope, identity and progress. Look for: What this immediate reply actually delivers, the full scope of its associated saved task, every earlier question affec",
+          "headings": [
+            "Activity 4 - Preserve scope, identity and progress.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 171,
+          "words": 279,
+          "opening": "Output contract. Outcome: Return only the declared JSON units. Every block needs a nonempty id unique across all blocks of that request unit, regardless of kind. All block_id field",
+          "headings": [
+            "Output contract.",
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Understand and respond.",
+          "Activity 2 - Reason within the checked support.",
+          "Activity 3 - Ask or propose only what advances the work.",
+          "Activity 4 - Preserve scope, identity and progress."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "constant": "_SYSTEM",
+      "line": 20,
+      "end_line": 150,
+      "operation": "verify_continuation",
+      "activities": [
+        1,
+        4,
+        5,
+        6
+      ],
+      "tier": "judge",
+      "words": 1244,
+      "sha256": "c220d80cd24cd2d417f8c0417a35ac870008e78266c829ef5094ca4a809502f9",
+      "input": "writer original input including prepared execution receipt plus complete request units and actual sources/progress",
+      "output": "per-unit/block/proposal/progress release and partial-retention checks",
+      "trigger": "each writer result and any final narrowed result",
+      "bound": "at most 2 review calls per invocation",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 20,
+          "words": 86,
+          "opening": "Message: The input contains the complete attributed conversation, latest message, provisional requests, source-linked records, checked legal uses and coverage, the complete task/qu",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 30,
+          "words": 40,
+          "opening": "Purpose: Decide whether each complete request unit is safe, grounded and useful to release. Check its displayed meaning, proposal identities, sufficiency and progress together. Do ",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 35,
+          "words": 434,
+          "opening": "Activity 1 - Check each displayed proposition. Look for: Every consequential statement, embedded premise, recommendation and inference, including words outside an inline citation. ",
+          "headings": [
+            "Activity 1 - Check each displayed proposition.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 81,
+          "words": 233,
+          "opening": "Activity 2 - Check useful professional engagement and proposals. Look for: The requested outcome, authorised scope, expressed urgency/concern, respectful concrete challenge and act",
+          "headings": [
+            "Activity 2 - Check useful professional engagement and proposals.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 105,
+          "words": 328,
+          "opening": "Activity 3 - Check scope, identity and attributed progress. Look for: The selected saved task's complete scope, what the reply actually delivers, the whole question catalogue and t",
+          "headings": [
+            "Activity 3 - Check scope, identity and attributed progress.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 138,
+          "words": 123,
+          "opening": "Output contract. Outcome: Return exactly one whole-unit verdict per supplied request_index, with all declared checks. Acceptance requires every check to pass; general acceptance ca",
+          "headings": [
+            "Output contract.",
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Check each displayed proposition.",
+          "Activity 2 - Check useful professional engagement and proposals.",
+          "Activity 3 - Check scope, identity and attributed progress."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "line": 161,
+      "end_line": 361,
+      "operation": "interpret_conversation",
+      "activities": [
+        1
+      ],
+      "tier": "judge",
+      "words": 2071,
+      "sha256": "11360a52b649dc853137bd2bb37d487fb2491a6ea62e1d5a00ee71a22caa17d2",
+      "input": "latest request, complete attributed transcript, work/progress, current matter and disputes",
+      "output": "typed request/contribution items, scope/priority/route, material_purposes, response_basis/research question and opening proposal",
+      "trigger": "every fresh turn",
+      "bound": "1 + at most 1 contract correction",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 161,
+          "words": 104,
+          "opening": "Message: You receive the advocate's latest message, the complete earlier conversation in chronological order with speaker and turn IDs, the current authorised work state, and any a",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 172,
+          "words": 81,
+          "opening": "Purpose: Read the latest message in its full context. Identify what it asks or contributes, the immediate response, any need for protective attention, whether it advances a concret",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 181,
+          "words": 346,
+          "opening": "Activity 1 - Understand the message and its context. Look for: Every distinct request or contribution, including answers to earlier questions, corrections, references to earlier tu",
+          "headings": [
+            "Activity 1 - Understand the message and its context.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 214,
+          "words": 525,
+          "opening": "Activity 2 - Prioritise and respond. Look for: Whether delay calls for immediate protective attention; whether a useful response is possible now, substantive legal or document work",
+          "headings": [
+            "Activity 2 - Prioritise and respond.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 261,
+          "words": 247,
+          "opening": "Activity 3 - Decide whether a matter can be opened. Look for: An identifiable concrete matter supported by the advocate's words across the conversation, which the latest message ad",
+          "headings": [
+            "Activity 3 - Decide whether a matter can be opened.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 285,
+          "words": 307,
+          "opening": "Activity 4 - Decide whether sourced material proposals need reading. Look for: New facts, disputes, positions, objectives, records, procedure, timing, risk, uncertainty, or correct",
+          "headings": [
+            "Activity 4 - Decide whether sourced material proposals need reading.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 316,
+          "words": 444,
+          "opening": "Activity 5 - Define the needed legal-source enquiry. Purpose: Decide whether the immediate requested outcome needs legal authority and, only then, identify the substantive legal qu",
+          "headings": [
+            "Activity 5 - Define the needed legal-source enquiry.",
+            "Purpose:",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 8,
+          "line": 359,
+          "words": 17,
+          "opening": "Outcome: Return only the declared JSON object with `items` and `opening`. Do not alter any matter record.",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Understand the message and its context.",
+          "Activity 2 - Prioritise and respond.",
+          "Activity 3 - Decide whether a matter can be opened.",
+          "Activity 4 - Decide whether sourced material proposals need reading.",
+          "Activity 5 - Define the needed legal-source enquiry."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "line": 390,
+      "end_line": 409,
+      "operation": "repair_opening",
+      "activities": [
+        1
+      ],
+      "tier": "routine",
+      "words": 166,
+      "sha256": "0954d385d8be933ba70b69e9f095bacf6e56f482d2210632b8a77f1adf00b9d5",
+      "input": "original complete context, rejected opening and exact failure",
+      "output": "replacement opening only",
+      "trigger": "failed opening grounding/title",
+      "bound": "1 + at most 1 contract correction; fresh independent opening check follows",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 390,
+          "words": 41,
+          "opening": "Message: The input contains the complete earlier conversation with speakers, the advocate's latest message, and a proposed matter-opening title and summary rejected by an independe",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 396,
+          "words": 21,
+          "opening": "Purpose: Correct only the matter-opening description. Preserve the current subject where it is supported; do not change the other work decisions.",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 399,
+          "words": 76,
+          "opening": "Look for: The advocate's named client-side person or entity, their role, and the overall matter subject. Use exactly one representative client-side name when a name and role are cl",
+          "headings": [
+            "Look for:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 407,
+          "words": 28,
+          "opening": "Outcome: Return only the declared JSON object containing `party_name`, a nonempty `subject`, and a nonempty `summary`, each grounded in the advocate's attributed account. The serve",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "constant": "_SYSTEM",
+      "line": 30,
+      "end_line": 171,
+      "operation": "verify_disputes",
+      "activities": [
+        1
+      ],
+      "tier": "judge",
+      "words": 1398,
+      "sha256": "8c1b918ee31f4e9baadc69c482a8ee10299c7bed38e325b11f630bc369d0dc8f",
+      "input": "original transcript, canonical source treatments, proposed issues and selected targets",
+      "output": "independent per-candidate identity, account/source, operation/target verdicts",
+      "trigger": "nonempty dispute candidates",
+      "bound": "at most 2 calls; retain valid verdicts, correct unread decisions only",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 30,
+          "words": 103,
+          "opening": "Message: This is an independent check of proposed dispute formulations. The input supplies the advocate's latest message, the complete earlier conversation with speakers and source",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 42,
+          "words": 57,
+          "opening": "Purpose: Decide separately for each proposal whether it is a distinct dispute and whether the latest advocate message supports the proposed record operation. Its heading and statem",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 48,
+          "words": 304,
+          "opening": "Activity 1 - Check issue identity and formulation. Look for: Classify the role of EACH proposal relative to all the others. An independent dispute centers on reported adverse condu",
+          "headings": [
+            "Activity 1 - Check issue identity and formulation.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 78,
+          "words": 277,
+          "opening": "Activity 2 - Check attribution and the proposed operation. Look for: Read the whole latest message, including framing before and after quoted passages. Identify whose assertion it ",
+          "headings": [
+            "Activity 2 - Check attribution and the proposed operation.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 104,
+          "words": 186,
+          "opening": "Activity 3 - Check support within independently read source treatment. Look for: source_treatments classifies each advocate span before any candidate is considered. Preserve that c",
+          "headings": [
+            "Activity 3 - Check support within independently read source treatment.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 124,
+          "words": 359,
+          "opening": "Activity 4 - Certify the account layer and every replacement target. Look for: The underlying reported conduct or actual party position, separately from disagreement with a draft, ",
+          "headings": [
+            "Activity 4 - Certify the account layer and every replacement target.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 161,
+          "words": 112,
+          "opening": "Outcome: Return only the declared JSON object with one verdict for every candidate ID, using each ID exactly once. `accept` is valid only for an `independent_dispute` whose whole f",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Check issue identity and formulation.",
+          "Activity 2 - Check attribution and the proposed operation.",
+          "Activity 3 - Check support within independently read source treatment.",
+          "Activity 4 - Certify the account layer and every replacement target."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "line": 28,
+      "end_line": 150,
+      "operation": "extract_disputes",
+      "activities": [
+        1
+      ],
+      "tier": "routine",
+      "words": 1198,
+      "sha256": "d70729ca330d6f8f6d6ef2396042758903b8d593ccfab808b09076d47459421e",
+      "input": "whole transcript, source treatments and current sourced issues",
+      "output": "new issue/revision proposals selected by owned source/target IDs",
+      "trigger": "material_review or proposed opening",
+      "bound": "1 + at most 1 contract correction",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 28,
+          "words": 83,
+          "opening": "Message: You receive the advocate's latest message, the complete earlier conversation as ordered exact spans with IDs, speakers and turn IDs, the current matter ID, and any active ",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 37,
+          "words": 63,
+          "opening": "Purpose: Propose independently contestable disputes contributed by the latest message in its full context, their identification status, and justified changes to sourced formulation",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 45,
+          "words": 323,
+          "opening": "Activity 1 - Identify the contested issue. Look for: Reported adverse conduct or a contested right or position needing its own practical conclusion. Separate issues that could be a",
+          "headings": [
+            "Activity 1 - Identify the contested issue.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 76,
+          "words": 361,
+          "opening": "Activity 2 - Choose creation or explicit revision. Look for: Whether the latest words add a distinct issue or change an identifiable active formulation. Shared words or people alon",
+          "headings": [
+            "Activity 2 - Choose creation or explicit revision.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 112,
+          "words": 267,
+          "opening": "Activity 3 - Attribute and preserve scope. Look for: Where source_treatments is supplied, it records a candidate-free read of each span's original purpose. Select substantive repor",
+          "headings": [
+            "Activity 3 - Attribute and preserve scope.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 139,
+          "words": 60,
+          "opening": "Activity 4 - Decide identification certainty. Look for: Whether the issue itself is identifiable, separately from whether the account is true or the case is legally sound. Outcome:",
+          "headings": [
+            "Activity 4 - Decide identification certainty.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 147,
+          "words": 41,
+          "opening": "Outcome: Return only the declared JSON object with `new_items` and `changes`. Return both arrays empty when no new dispute or justified repair arises from the latest contribution o",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Identify the contested issue.",
+          "Activity 2 - Choose creation or explicit revision.",
+          "Activity 3 - Attribute and preserve scope.",
+          "Activity 4 - Decide identification certainty."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_DECOMPOSE_SYSTEM",
+      "line": 249,
+      "end_line": 269,
+      "operation": "decompose_disputes",
+      "activities": [
+        2,
+        3
+      ],
+      "tier": "routine",
+      "words": 179,
+      "sha256": "17a254787f14fa5d557d71f6fcb75f91dc4247aa16cfd50b8d97cc929e0adca0",
+      "input": "whole transcript plus due owned enquiry subjects and material context",
+      "output": "up to four distinct search formulations per subject",
+      "trigger": "due research subject/batch",
+      "bound": "at most 2 calls per context-fitting group",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 249,
+          "words": 41,
+          "opening": "Message: You receive the complete ordered, attributed conversation and research subjects with their owner, scope, purpose, question and attributed record. A subject is a research i",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 254,
+          "words": 29,
+          "opening": "Purpose: Form complementary retrieval queries for candidate bare-Act sections and judgment passages addressing each subject's question. This call gathers evidence; it does not deci",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 258,
+          "words": 67,
+          "opening": "Look for: The question and requested outcome, contested relationships and conduct when stated, factual and temporal limits, and potentially relevant legal concepts. Use genuinely d",
+          "headings": [
+            "Look for:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 266,
+          "words": 42,
+          "opening": "Outcome: Return only plans under the schema, exactly one per subject_id. Prefer three or four distinct concise queries, never more than four; return fewer when further useful entry",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REQUIREMENTS_SYSTEM",
+      "line": 271,
+      "end_line": 320,
+      "operation": "read_legal_requirements",
+      "activities": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "tier": "routine",
+      "words": 487,
+      "sha256": "f7e05c6111000722b387a91a246ab0389074aaededf79b1fde5b061be1280314",
+      "input": "whole transcript, owned subject/context and retrieved exact passage candidates",
+      "output": "source-bound gathering/principle/condition/support/adverse findings",
+      "trigger": "readable searched subject/batch",
+      "bound": "at most 2 calls per context-fitting group; valid subjects survive peers",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 271,
+          "words": 48,
+          "opening": "Message: You receive the complete ordered, attributed conversation, research subjects and their attributed record, and candidate bare-Act sections and judgment passages retrieved f",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 277,
+          "words": 47,
+          "opening": "Purpose: Propose passage-supported findings addressing each subject's purpose and question. For gathering work, identify things to establish, obtain or check. For requested legal w",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 283,
+          "words": 249,
+          "opening": "Look for: What provisions mandate and the conditions, exceptions, timing and procedure limiting them; what judgments actually decide or explain, including contrary reasoning. Disti",
+          "headings": [
+            "Look for:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 308,
+          "words": 143,
+          "opening": "Outcome: Return only readings under the schema, exactly one per subject_id, including empty findings when nothing supplied supports a useful finding. Give each a crisp label, fulle",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_VERIFY_SYSTEM",
+      "line": 322,
+      "end_line": 434,
+      "operation": "verify_legal_requirements",
+      "activities": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "tier": "judge",
+      "words": 1073,
+      "sha256": "309fe48553c6f7699e95532e5d3139b5f5db1e5941a4d6f0d1dd5e95478c9591",
+      "input": "whole transcript, complete findings, exact source passages/fragment catalogue and account treatments",
+      "output": "support/use certificate, speaker/court treatment, predicates/application/force verdicts",
+      "trigger": "nonempty findings/batch",
+      "bound": "at most 2 calls per context-fitting unresolved group; semantic rejection is withheld",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 322,
+          "words": 50,
+          "opening": "Message: You receive the complete ordered conversation in attributed source_spans, owned research subjects and their reported record, and untrusted findings with exact cited legal ",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 328,
+          "words": 43,
+          "opening": "Purpose: Independently decide whether each complete finding may enter the research record. Check source provenance, entailment, factual application and claimed force separately. Do",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 333,
+          "words": 251,
+          "opening": "Activity 1 - Identify the operative source proposition. Look for: Whose words the finding relies on, their role, and how the issuing source treats that particular proposition. Dist",
+          "headings": [
+            "Activity 1 - Identify the operative source proposition.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 359,
+          "words": 201,
+          "opening": "Activity 2 - Check the complete finding's meaning. Look for: Every consequential claim in label, need and why against the retained passages: actor, relationship, action, remedy, ti",
+          "headings": [
+            "Activity 2 - Check the complete finding's meaning.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 379,
+          "words": 325,
+          "opening": "Activity 3 - Compare each legal predicate with the attributed account. Look for: Every express or implicit limiting predicate, relevant actor, relationship and period. Read origina",
+          "headings": [
+            "Activity 3 - Compare each legal predicate with the attributed account.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 414,
+          "words": 89,
+          "opening": "Activity 4 - Check force and proposed work. Look for: Whether the supported rule mandates the exact step or element, by the stated actor within its preserved conditions and period.",
+          "headings": [
+            "Activity 4 - Check force and proposed work.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 424,
+          "words": 114,
+          "opening": "Outcome: Return only the declared decisions object, exactly one decision per candidate_id. Overall verdict is supported/unsupported/uncertain. Retention requires a faithful label a",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Identify the operative source proposition.",
+          "Activity 2 - Check the complete finding's meaning.",
+          "Activity 3 - Compare each legal predicate with the attributed account.",
+          "Activity 4 - Check force and proposed work."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REPAIR_SYSTEM",
+      "line": 436,
+      "end_line": 442,
+      "operation": "shared research repair suffix",
+      "activities": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "tier": "inherits stage",
+      "words": 66,
+      "sha256": "0a46e2094a5e80a96f996f1b53fefdde9c5712867246aa6e9bde8f73831e2428",
+      "input": "original stage payload, precise failed unit IDs/issues and rejected output",
+      "output": "complete replacement only for unresolved stage units",
+      "trigger": "research stage contract failure",
+      "bound": "within each stage existing one-correction bound; no independent stage",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 438,
+          "words": 66,
+          "opening": "Message: This corrects rejected units of the same research activity. Valid peers are already retained. Purpose: Repair only the supplied failures under the same contract. Look for:",
+          "headings": [
+            "Message:",
+            "Purpose:",
+            "Look for:",
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "line": 322,
+      "end_line": 434,
+      "operation": "extract_legal_details",
+      "activities": [
+        1
+      ],
+      "tier": "routine",
+      "words": 1126,
+      "sha256": "64c7f429133fdda2bcc56acc37a2638680ea29ad683fa37496ca61e9739234de",
+      "input": "whole transcript, source treatments, active issues/details and assignment catalogue",
+      "output": "new details/revisions with source, target and assignment selections",
+      "trigger": "material_review or proposed opening; after dispute review",
+      "bound": "1 + at most 1 contract correction",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 322,
+          "words": 92,
+          "opening": "Message: You receive the advocate's latest message, the complete earlier conversation as ordered exact spans with IDs, speakers and turn IDs, the current matter ID, active material",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 333,
+          "words": 56,
+          "opening": "Purpose: Extract materially significant legal details in their full context and propose justified changes to identifiable saved details during relevant authorised review. A review ",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 340,
+          "words": 276,
+          "opening": "Activity 1 - Identify independently material details. Look for: Acts and omissions, chronology, people and roles, relationships, stated terms, attributed positions, objectives, rec",
+          "headings": [
+            "Activity 1 - Identify independently material details.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 366,
+          "words": 263,
+          "opening": "Activity 2 - Choose creation or explicit revision. Look for: Whether a proposition adds a distinct material item or changes an identifiable saved one. Newly received words do not n",
+          "headings": [
+            "Activity 2 - Choose creation or explicit revision.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 392,
+          "words": 398,
+          "opening": "Activity 3 - Attribute and link without changing source status. Look for: Where source_treatments is supplied, it records a candidate-free read of each span's original purpose. Sel",
+          "headings": [
+            "Activity 3 - Attribute and link without changing source status.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 431,
+          "words": 41,
+          "opening": "Outcome: Return only the declared JSON object with `new_items` and `changes`. Return both arrays empty when no new material or justified repair arises from the latest contribution ",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Identify independently material details.",
+          "Activity 2 - Choose creation or explicit revision.",
+          "Activity 3 - Attribute and link without changing source status."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "constant": "_SYSTEM",
+      "line": 31,
+      "end_line": 177,
+      "operation": "verify_material_grounding",
+      "activities": [
+        1
+      ],
+      "tier": "judge",
+      "words": 1411,
+      "sha256": "b981e9b25a2d916061207d10b25680393998121532d7250dcbb71c563afbec16",
+      "input": "original transcript, purpose catalogue, detail/opening candidates and owned linked records",
+      "output": "independent detail/opening source, operation, assignment and target checks",
+      "trigger": "nonempty details or opening proposal",
+      "bound": "at most 2 calls per invocation; unread-only correction with accepted peers retained",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 31,
+          "words": 124,
+          "opening": "Message: The input contains the advocate's latest message and the complete earlier conversation with speakers and exact source spans, plus model-proposed material details and, some",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 46,
+          "words": 38,
+          "opening": "Purpose: Independently decide whether each proposed detail and each proposed opening description faithfully represents the advocate's attributed words, and whether those words supp",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 51,
+          "words": 257,
+          "opening": "Activity 1 - Check the attributed proposition and assignment. Look for: Compare each detail's whole statement, materiality explanation, classification, matter scope, and claimed re",
+          "headings": [
+            "Activity 1 - Check the attributed proposition and assignment.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 75,
+          "words": 230,
+          "opening": "Activity 2 - Check the proposed record operation. Look for: Read the whole latest message, including the framing of quotations, drafts, hypotheses and requests for analysis. Distin",
+          "headings": [
+            "Activity 2 - Check the proposed record operation.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 5,
+          "line": 99,
+          "words": 186,
+          "opening": "Activity 3 - Check support within independently read source treatment. Look for: source_treatments classifies each advocate span before any candidate is considered. Preserve that c",
+          "headings": [
+            "Activity 3 - Check support within independently read source treatment.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 6,
+          "line": 119,
+          "words": 331,
+          "opening": "Activity 4 - Certify the account layer and every replacement target. Look for: The underlying reported proposition, separately from work on it. A critique, correction process or an",
+          "headings": [
+            "Activity 4 - Certify the account layer and every replacement target.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 7,
+          "line": 154,
+          "words": 166,
+          "opening": "Activity 5 - Check the opening description, when supplied. Look for: Check the proposed `party_name`, `subject`, and summary against the advocate's whole account; none may assert a",
+          "headings": [
+            "Activity 5 - Check the opening description, when supplied.",
+            "Look for:",
+            "Outcome:"
+          ]
+        },
+        {
+          "index": 8,
+          "line": 170,
+          "words": 79,
+          "opening": "Outcome: Return only the declared JSON object, with exactly one verdict for each listed candidate ID. `accept` means the complete proposal is grounded and faithful and `operation_s",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [
+          "Activity 1 - Check the attributed proposition and assignment.",
+          "Activity 2 - Check the proposed record operation.",
+          "Activity 3 - Check support within independently read source treatment.",
+          "Activity 4 - Certify the account layer and every replacement target.",
+          "Activity 5 - Check the opening description, when supplied."
+        ],
+        "look_for": true,
+        "outcome": true
+      }
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "constant": "_SOURCE_SYSTEM",
+      "line": 18,
+      "end_line": 54,
+      "operation": "classify_account_sources",
+      "activities": [
+        1
+      ],
+      "tier": "routine",
+      "words": 364,
+      "sha256": "c73f34470f32b6f059a9f365aaf14019ca453139b739e28d7800aaa1ca73c1c4",
+      "input": "candidate-free whole transcript with complete owned advocate span catalogue",
+      "output": "keyed purpose classifications; code attaches exact source ownership",
+      "trigger": "material_review or proposed opening",
+      "bound": "1 + at most 1 contract correction",
+      "paragraphs": [
+        {
+          "index": 1,
+          "line": 18,
+          "words": 52,
+          "opening": "Message: You receive the complete ordered conversation, including all saved NM words as context, the latest advocate message, and owned advocate spans. source_ids is the complete c",
+          "headings": [
+            "Message:"
+          ]
+        },
+        {
+          "index": 2,
+          "line": 24,
+          "words": 42,
+          "opening": "Purpose: Classify how each exact advocate span is supplied in its original context, independently of any downstream interpretation. These classifications are source-treatment propo",
+          "headings": [
+            "Purpose:"
+          ]
+        },
+        {
+          "index": 3,
+          "line": 29,
+          "words": 100,
+          "opening": "Look for: What the advocate actually reports as matter content, actual positions of parties in that matter, and material supplied only for examination. Reporting that a draft or an",
+          "headings": [
+            "Look for:"
+          ]
+        },
+        {
+          "index": 4,
+          "line": 40,
+          "words": 84,
+          "opening": "A genuinely reported account or actual party position may be disputed, tentative or unproved; those qualities do not make it merely examination material. Mixed means the same span ",
+          "headings": []
+        },
+        {
+          "index": 5,
+          "line": 48,
+          "words": 86,
+          "opening": "Outcome: Return only source_treatments, an object with every required source ID as a key. For each key return content_role and a short reason. The server owns the keys; do not retu",
+          "headings": [
+            "Outcome:"
+          ]
+        }
+      ],
+      "structure": {
+        "message": true,
+        "purpose": true,
+        "activity_headings": [],
+        "look_for": true,
+        "outcome": true
+      }
+    }
+  ],
+  "stable_prompt_count": 13,
+  "stable_prompt_words": 12421,
+  "nongenerative_model_instruction": {
+    "file": "nm/brain/retrieval.py",
+    "line": 25,
+    "name": "QUERY_INSTRUCTION",
+    "text": "Represent this sentence for searching relevant passages: ",
+    "purpose": "local embedding query prefix, not a generative brain call"
+  },
+  "execution_order": [
+    "authenticated API identity/offer -> exact durable replay lookup",
+    "full released transcript + work/dispute/detail/research projections",
+    "interpret requests, independent material purposes and requested evidence basis",
+    "if material purposes/opening: candidate-free source treatments -> dispute extraction/check -> detail extraction/check",
+    "assign durable candidate IDs; build current proposed state + code-owned execution receipt",
+    "schedule due owned legal subjects -> query decomposition -> local hybrid search/rerank -> passage reading -> independent support/application review",
+    "all request routes -> writer -> independent block/unit/progress review -> bounded replacement/narrowing",
+    "seal durable progress -> compose exact response/disclosures -> revalidate projections",
+    "atomic expected-version commit of input/material/research/execution/reply -> public release",
+    "StaleWrite durable exact-turn recovery reports actual current-attempt metrics; subsequent replay zero calls"
+  ],
+  "code_boundaries": [
+    {
+      "owner": "nm/brain/history.py::from_turns; turn.py::_current_records",
+      "invariant": "Complete attributed released transcript, matter/advocate/turn/source ownership and identical saved/public elements; core integrity failures stop all saving"
+    },
+    {
+      "owner": "nm/brain/conversation.py::_turn_plan",
+      "invariant": "Per-item request/contribution, route/scope, explicit material_purposes, response_basis/legal enquiry coherence; code derives material_review and normalizes identical duplicate purposes"
+    },
+    {
+      "owner": "nm/brain/record_review.py::classify_account_sources / owned_source_treatments",
+      "invariant": "Exactly complete canonical advocate catalogue; code owns exact turn/speaker/quotation. Source purpose is proposed semantic treatment, not factual proof or authority to mutate"
+    },
+    {
+      "owner": "nm/brain/material.py::operation_rows / resolve_sources / resolve_assignment / parse_material; disputes.py::extract_disputes",
+      "invariant": "Server-owned latest/prior source and existing revision/assignment IDs; latest original quote plus relevant prior sources; no unknown foreign targets or duplicate incompatible assignments"
+    },
+    {
+      "owner": "nm/brain/record_review.py::checked_record_decision / admitted_record_decisions; dispute_verification.py; material_verification.py",
+      "invariant": "Original sources, independent issue/detail fidelity, account layer and every owned target; accepted overall verdict cannot override failed source/operation/target check; retain valid peer decisions on unread-only retry"
+    },
+    {
+      "owner": "nm/brain/dispute_state.py::proposed_disputes; material_state.py::material_record / _current_links",
+      "invariant": "Source-backed active/history/uncertain-held projections; exact correction lineage; ambiguous historic one-to-many dispute replacement cannot silently relink a detail; explicit checked revision can restore link"
+    },
+    {
+      "owner": "nm/brain/turn.py::_material_execution / _material_effects / _check_execution_owner / _read_material",
+      "invariant": "Prepared then committed receipt owns exact attempt, version and source/target effects; required readers must record returned evidence; saved replay receipt must be committed and owned; held/outside-owned/rejected proposals are distinct from active effects"
+    },
+    {
+      "owner": "nm/brain/legal_requirements.py::_finding_verdict",
+      "invariant": "Actual exact legal passages/operative proposition/treatment, complete use entailment, attributed account predicates and legal force; supports entailment/applicability/force distinctions"
+    },
+    {
+      "owner": "nm/brain/requirements_state.py::research_record / research_fingerprint",
+      "invariant": "Canonical research reads and reusable subject/purpose/scope/question/record/corpus/version/verification dependencies; historical checks readable, not upgraded"
+    },
+    {
+      "owner": "nm/brain/continuation.py::_validate_unit / _resolve / _check_inline_citations; continuation_verification.py::_decision",
+      "invariant": "Owned unit/block/proposal/progress keys and exact original references; assessment requires selected current legal passage use, every block/subcheck checked, unique non-overlapping reachable source anchors"
+    },
+    {
+      "owner": "nm/brain/work_state.py::seal_progress / project_work",
+      "invariant": "Durable server-assigned requested/proposed task and question identities; explicit attributable lifecycle transitions; sufficiency and task completion distinct; legacy history untracked"
+    },
+    {
+      "owner": "nm/brain/turn.py::BrainService.run / _saved_reply",
+      "invariant": "Final exact reply, state and execution evidence atomically committed under expected version and current session before release; durable acknowledgement recovery/idempotent replay prevents duplicate effects"
+    },
+    {
+      "owner": "nm/brain/source_snapshots.py and nm/app/api.py served brain-source endpoints",
+      "invariant": "Reader reopens exact owned saved passage snapshot with source role/status metadata and release references; current corpus availability does not rewrite historical source"
+    }
+  ],
+  "recovery_inventory": {
+    "artifact": "/tmp/nm-brain-recovery-inventory-20261006.json",
+    "sha256": "0c8b04eeb03635a9d80eec403c77964bf8742089b3e9b16a9f177e6dcfe6b619",
+    "snapshot": {
+      "nm/brain/legal_requirements.py": {
+        "sha256": "40f756d58c8626e9fdf1deb6bc6f1aa14600290cc1592f4c1f9c6075e574c122",
+        "line_count": 1593,
+        "system_prompts": [
+          {
+            "name": "_DECOMPOSE_SYSTEM",
+            "lines": [
+              249,
+              269
+            ],
+            "characters": 1271
+          },
+          {
+            "name": "_REQUIREMENTS_SYSTEM",
+            "lines": [
+              271,
+              320
+            ],
+            "characters": 3415
+          },
+          {
+            "name": "_VERIFY_SYSTEM",
+            "lines": [
+              322,
+              434
+            ],
+            "characters": 7975
+          },
+          {
+            "name": "_REPAIR_SYSTEM",
+            "lines": [
+              436,
+              442
+            ],
+            "characters": 449
+          }
+        ]
+      },
+      "nm/brain/continuation.py": {
+        "sha256": "dd2ee1a385209e62b2ca95b0eff64b801f9a2f9ee06579d7595e6d2acaf767a8",
+        "line_count": 1113,
+        "system_prompts": [
+          {
+            "name": "_SYSTEM",
+            "lines": [
+              34,
+              197
+            ],
+            "characters": 11554
+          }
+        ]
+      },
+      "nm/brain/continuation_verification.py": {
+        "sha256": "116a6817049750c05c4f1697c8f07909552b64b5891b748811a2d8532abffa60",
+        "line_count": 438,
+        "system_prompts": [
+          {
+            "name": "_SYSTEM",
+            "lines": [
+              20,
+              150
+            ],
+            "characters": 9082
+          }
+        ]
+      },
+      "nm/brain/checked.py": {
+        "sha256": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb",
+        "line_count": 80,
+        "system_prompts": []
+      }
+    },
+    "dynamic_prompt_additions": [
+      {
+        "id": "research_repair",
+        "refs": [
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              436,
+              442
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              575,
+              578
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              597,
+              601
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              700,
+              703
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              863,
+              866
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              1422,
+              1428
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              1452,
+              1456
+            ]
+          }
+        ],
+        "trigger": "Second per-batch attempt with unread subject/candidate IDs and precise issues.",
+        "system_addition": "Message: same research activity; valid peers retained. Purpose: repair only supplied failures under same contract. Look for: issues/original attributed input/selected exact words; rejected output not evidence. Outcome: complete replacements only unresolved IDs, no peer repeat or invented support.",
+        "user_additions": [
+          "validation_issues: ID -> issue",
+          "rejected_units: ID -> rejected unit/group"
+        ],
+        "context_projection": "Only unresolved atomic units are rebundled; full attributed conversation and their complete material/passages retained. No original conversation trim.",
+        "removal_or_terminal": "No rejected-output removal here. If correction no longer fits full context, stop unresolved units as partial."
+      },
+      {
+        "id": "checked_read_repair",
+        "refs": [
+          {
+            "file": "nm/brain/checked.py",
+            "lines": [
+              45,
+              79
+            ]
+          }
+        ],
+        "trigger": "First SchemaViolation from call usability/schema/accept callback.",
+        "system_addition": "Four explicit Message/Purpose/Look for/Outcome sections: prior read rejected and unsaved; repair issue; use original attributed source words; complete supported replacement under same schema.",
+        "user_additions": [
+          "original_input",
+          "validation_issue",
+          "how_to_correct",
+          "rejected_output"
+        ],
+        "how_to_correct": "Full same-schema object; allowed source refs/classifications only; omit unsupported proposals; named saved-item links require intended target with required source IDs or removal/correction.",
+        "context_projection": "First preserves original input plus rejected data; if too large, removes only rejected_output. Second overflow raises ContextOverflow; original input is never trimmed.",
+        "preflight": "estimate_tokens(repair_system+repair_user)+output_limit <= model.context_budget(tier); encoded schema not included in this helper preflight."
+      },
+      {
+        "id": "continuation_writer_repair",
+        "refs": [
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              978,
+              1008
+            ]
+          }
+        ],
+        "trigger": "Second writer attempt for pending malformed or semantically rejected request units.",
+        "system_addition": "Four explicit sections: rejected units unreleased; resolve issue without reassessing accepted peers; compare rejection with claims/questions/references/full conversation and discard mistaken premise; complete replacements, truthful specific limits if unsupported.",
+        "user_additions": [
+          "correction.validation_issues list",
+          "correction.rejected_units filtered to pending requests when available",
+          "correction.intended_outcome"
+        ],
+        "context_projection": "work_items reduced to pending request indexes; all remaining original input and catalogues preserved. Accepted peer progress targets reserved in code.",
+        "operation_tier_change": "None: continue_conversation remains judge."
+      },
+      {
+        "id": "continuation_output_budget_guidance",
+        "refs": [
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1010,
+              1017
+            ]
+          }
+        ],
+        "trigger": "Previous writer call raised OutputTruncated.",
+        "system_addition": "None.",
+        "user_additions": [
+          "output_budget_guidance: concise complete units; combine compatible claims, avoid repeated account/limitations, retain essential source references."
+        ],
+        "effect": "Double pending-unit base output cap, bounded at 16384; no third writer call and no conversation trim."
+      },
+      {
+        "id": "continuation_reviewer_correction",
+        "refs": [
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              382,
+              403
+            ]
+          }
+        ],
+        "trigger": "Second review attempt for unread/malformed verdicts only.",
+        "system_addition": "None: static reviewer prompt reused.",
+        "user_additions": [
+          "validation_issues list of request_index and issue"
+        ],
+        "context_projection": "All input_payload stays under input; units only unresolved request indexes. Rejected review output itself is not supplied.",
+        "budget_change": "Recomputed from pending units, no truncation-specific expansion."
+      },
+      {
+        "id": "continuation_narrow_review",
+        "refs": [
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              902,
+              916
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1076,
+              1103
+            ]
+          }
+        ],
+        "trigger": "After bounded writer loop, last writer result has local _ContentFailure on otherwise checked identities/references/graph, no already accepted/certified retained unit, and a factual subset plus displayed limitation survives.",
+        "system_addition": "None: ordinary verify_continuation static prompt reused.",
+        "user_additions": [
+          "input.partial_response_review: original unreleased unit and content issues per narrowed request"
+        ],
+        "unit_projection": "Remove excluded failed blocks, proposal-owned blocks, legal/advice/question/completion blocks; retain only acknowledgment/account/limitation with at least one factual block and specific limitation. Clear questions,next_work,progress_updates; sufficiency partial; preserve exact surviving text and work association.",
+        "handoff": "Mechanical _validate_unit first, then independently review complete narrowed meaning; only positive verdict or certified further subset enters retained output.",
+        "extra_call_bound": "Up to 2 judge calls beyond writer-loop reviews; zero new writer calls."
+      },
+      {
+        "id": "dispute_verifier_unread_correction",
+        "file": "nm/brain/dispute_verification.py",
+        "lines": [
+          295,
+          308
+        ],
+        "trigger": "Second invocation attempt when selected verdicts are unread or malformed",
+        "system_addition": null,
+        "variable_input_additions": [
+          "candidates narrowed to unresolved candidate IDs",
+          "retained_candidate_context with complete valid peer decision",
+          "validation_issue with precise owner/source/operation/target issue and same-schema complete verdict requirement"
+        ],
+        "bound": "2 total verifier calls; semantic rejection is a checked disposition, not a third-generation branch"
+      },
+      {
+        "id": "material_verifier_unread_correction",
+        "file": "nm/brain/material_verification.py",
+        "lines": [
+          331,
+          346
+        ],
+        "trigger": "Second invocation attempt when detail/opening verdicts are unread or malformed",
+        "system_addition": null,
+        "variable_input_additions": [
+          "candidates narrowed to unresolved candidate IDs",
+          "retained_candidate_context with complete valid peer decision",
+          "validation_issue with precise source/operation/target issue and same-schema complete verdict requirement"
+        ],
+        "bound": "2 total calls per detail/opening invocation; original whole transcript and linked records preserved"
+      }
+    ],
+    "call_accounting": {
+      "research": "Per fitting batch: healthy 1 planning + 1 reading + 1 independent finding review where applicable. At most 2*(planning_batches+reading_batches+review_batches) brain dispatches; empty/inactive stages call zero. This is not a per-turn fixed ceiling because batching depends on atomic units/context.",
+      "continuation_healthy": "2 judge dispatches = 1 continue_conversation + 1 verify_continuation.",
+      "continuation_multiunit_ceiling": "8 = 2 writers + up to 2 reviews for each writer + up to 2 final narrow reviews. This requires different valid/local-failed units; not every path can hit all branches.",
+      "continuation_one_unit_ceiling": "6 = first mechanically valid writer + up to 2 reviewer calls + second local-content-failed writer + up to 2 narrowed reviewer calls. No reviewer runs on a mechanically invalid writer unit.",
+      "provider_attempts": "Not counted here. ModelPort adapter retries/degrades and configured pinned model IDs belong to parent global inventory."
+    },
+    "static_findings": [
+      {
+        "finding": "Recovery policy differs for truncation by module.",
+        "refs": [
+          {
+            "file": "nm/brain/checked.py",
+            "lines": [
+              42,
+              44
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              606,
+              608
+            ]
+          },
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              1462,
+              1464
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1030,
+              1034
+            ]
+          },
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              407,
+              412
+            ]
+          }
+        ],
+        "detail": "Generic checked read has no OutputTruncated correction; research does; continuation writer corrects with doubled cap; continuation reviewer treats truncation as terminal ModelError."
+      },
+      {
+        "finding": "Context preflight accounting differs.",
+        "refs": [
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              535,
+              538
+            ]
+          },
+          {
+            "file": "nm/brain/checked.py",
+            "lines": [
+              69,
+              75
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1018,
+              1020
+            ]
+          },
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              395,
+              398
+            ]
+          }
+        ],
+        "detail": "Research preflight counts encoded schema. Generic repair and continuation writer/reviewer local preflights count system/user/output cap, excluding schema; provider-port accounting is outside this scope."
+      },
+      {
+        "finding": "Empty finding verification is a structural no-op, not independent omission coverage.",
+        "refs": [
+          {
+            "file": "nm/brain/legal_requirements.py",
+            "lines": [
+              1384,
+              1385
+            ]
+          }
+        ],
+        "detail": "No atoms returns default per-subject state ok/checked_items 0 with no judge call; this must not be read as checked completeness of research or material."
+      },
+      {
+        "finding": "Semantic verdict acceptance is not mechanical effect/completion proof.",
+        "refs": [
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              819,
+              824
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1059,
+              1062
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1104,
+              1113
+            ]
+          },
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              123,
+              141
+            ]
+          }
+        ],
+        "detail": "Prompt/reviewer reason about delivered scope; legal-enquiry complete-with-no-law has a concrete code check. These four files do not validate typed requested-effect fulfillment or confirm persistence."
+      },
+      {
+        "finding": "Partial verdict metadata is still a single flat output shape.",
+        "refs": [
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              205,
+              219
+            ]
+          },
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              350,
+              368
+            ]
+          }
+        ],
+        "detail": "Fully accepted units must leave retention fields empty; nonempty retained metadata on accepted unit or an empty subset with populated retained_reason costs a review correction, then unread if repeated. No silent substantive metadata repair."
+      },
+      {
+        "finding": "Reviewer correction and final narrowed review do not append recovery-specific system sections.",
+        "refs": [
+          {
+            "file": "nm/brain/continuation_verification.py",
+            "lines": [
+              385,
+              389
+            ]
+          },
+          {
+            "file": "nm/brain/continuation.py",
+            "lines": [
+              1085,
+              1091
+            ]
+          }
+        ],
+        "detail": "Both preserve the fixed verifier prompt and add clearly named variable input; operation and tier remain unchanged."
+      }
+    ],
+    "dynamic_prompt_addition_count": 8
+  },
+  "normal_call_accounting": [
+    {
+      "path": "fresh readonly greeting/record answer with no extraction or due research",
+      "calls": 3,
+      "operations": "interpret + writer + independent response reviewer"
+    },
+    {
+      "path": "authorized material review, zero dispute/detail candidates and no opening/research",
+      "calls": 6,
+      "operations": "interpret + source purpose + dispute reader + detail reader + writer + reviewer; empty candidate checks omit calls"
+    },
+    {
+      "path": "material detail/correction candidate, no disputes/research",
+      "calls": 7,
+      "operations": "previous path + detail grounding reviewer"
+    },
+    {
+      "path": "nonempty dispute and detail proposals, no research",
+      "calls": 8,
+      "operations": "previous path + dispute reviewer"
+    },
+    {
+      "path": "first useful legal-authority batch with no fresh material review",
+      "calls": 6,
+      "operations": "interpret + query decomposition + passage reading + independent source/use check + writer + reviewer"
+    },
+    {
+      "path": "nonempty material + useful nonempty one-batch research",
+      "calls": 11,
+      "operations": "8 material path + 3 generative research calls; hybrid search/rerank is nongenerative"
+    },
+    {
+      "path": "durable exact replay before analysis",
+      "calls": 0,
+      "operations": "no model dispatch; return exact saved content and committed execution receipt if present"
+    },
+    {
+      "path": "lost save acknowledgement after current attempt",
+      "calls": "actual calls already dispatched",
+      "operations": "durable lookup releases exact saved content; current counted metrics preserved, later ordinary replay zero"
+    }
+  ],
+  "findings": [
+    {
+      "status": "confirmed current contract gap",
+      "topic": "semantic omission coverage",
+      "evidence": "required extraction-return guard proves a reader ran, not that it emitted every significant proposition; candidate reviewers return without semantic call on empty candidates",
+      "next_owner": "LB-178/179 exact observation/coverage dispositions; separate from prompt cleanup"
+    },
+    {
+      "status": "confirmed current representation limit",
+      "topic": "exact mixed-purpose portions and repeated references",
+      "evidence": "addressed_sources splits punctuation and long spans mechanically; source purpose is span-wide, including mixed. No owned exact role-portion inventory is present. Extraction reduced prior-record inputs omit saved prior_references and saved_source_ids links immediate source_turn_id/quoted, limiting repeated repair evidence presentation.",
+      "next_owner": "LB-178 shared source-purpose representation and lineage, separately scoped from prompt structure"
+    },
+    {
+      "status": "confirmed current contract limit",
+      "topic": "requested outcome fulfillment",
+      "evidence": "execution.semantic_coverage and requests[].fulfillment explicitly unassessed; no code-owned per-request success-condition/completion gate yet",
+      "next_owner": "LB-188 with work_state, continuation and turn effect binding"
+    },
+    {
+      "status": "confirmed current discovery limit",
+      "topic": "legal/precedent coverage",
+      "evidence": "retrieval caps four query formulations and six Act/six judgment candidates; judgment paragraph filter allows only ratio/reasoning/order; success means searches ran, not complete applicable substantive/procedural coverage or whole judgment context",
+      "next_owner": "LB-180 with law/version/jurisdiction and full-context treatment criteria"
+    },
+    {
+      "status": "confirmed current dependency limit",
+      "topic": "source-purpose cache invalidation",
+      "evidence": "research_fingerprint uses subject/record context/corpus/verification, but canonical source-treatment dependency decisions are not separately bound in reuse fingerprint",
+      "next_owner": "LB-181, independent of readability refactor"
+    },
+    {
+      "status": "confirmed documentation mismatch",
+      "topic": "served README",
+      "evidence": "README still says answer scope must be none and greetings cost one call; code accepts matter-specific conversation_record answers and routes all fresh items through writer/reviewer, normally three calls"
+    },
+    {
+      "status": "review checkpoint",
+      "topic": "stable structure",
+      "evidence": "All 13 stable prompt strings declare Message/Purpose/Look for/Outcome; conversation, disputes, material, both record reviewers, source-use reviewer, continuation and response reviewer already use Activity sections. Source classifier, search planner, passage reader and opening repair lack Activity headings but make one focused decision; do not add extra model calls to format instructions"
+    },
+    {
+      "status": "confirmed refactor opportunity",
+      "topic": "provisional interpreter prose",
+      "evidence": "conversation interpretation still emits provisional reply/clarification before extraction; turn._reply builds an initial response envelope, but continuation_indexes includes every parsed item and the checked writer replaces all final prose. Remove duplication only through an explicit contract migration; current safety rests on writer/reviewer release, not interpreter prose.",
+      "next_owner": "conversation/turn/continuation dependency must be surfaced before broadening a one-file milestone"
+    },
+    {
+      "status": "scope distinction",
+      "topic": "gates registry",
+      "evidence": "nm/shared/gates_contracts.py is declared standing owner; current nm/brain modules raise owned SchemaViolation/BrainRefused and do not directly import/consult that registry. Refactor must preserve precise existing failure scopes and cannot assume registry text alone enforces release"
+    },
+    {
+      "status": "not assessed in this task",
+      "topic": "semantic/latency/browser quality",
+      "evidence": "No actual model, API or browser call or test run; static hashes and paragraph inventory prove reviewed surface only. Live qualification remains explicitly deferred"
+    }
+  ],
+  "files": [
+    {
+      "file": "nm/brain/__init__.py",
+      "sha256": "bbbaeddb5f2489ff94dd9c963907c10c55f25f8a40fda18d18dc3e4177d342f8",
+      "lines": 1,
+      "symbols": []
+    },
+    {
+      "file": "nm/brain/checked.py",
+      "sha256": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb",
+      "lines": 80,
+      "symbols": [
+        {
+          "name": "require_independent_result",
+          "line": 21,
+          "end_line": 23,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "checked_read",
+          "line": 26,
+          "end_line": 80,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/continuation.py",
+      "sha256": "dd2ee1a385209e62b2ca95b0eff64b801f9a2f9ee06579d7595e6d2acaf767a8",
+      "lines": 1113,
+      "symbols": [
+        {
+          "name": "ContinuationResult",
+          "line": 280,
+          "end_line": 286,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_ContentFailure",
+          "line": 289,
+          "end_line": 294,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "continuation_indexes",
+          "line": 297,
+          "end_line": 303,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_identifier_array",
+          "line": 306,
+          "end_line": 310,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_progress_catalogue",
+          "line": 313,
+          "end_line": 329,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_work_choices",
+          "line": 332,
+          "end_line": 336,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_selected_work",
+          "line": 339,
+          "end_line": 351,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_progress_target",
+          "line": 354,
+          "end_line": 357,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_bind_progress_sources",
+          "line": 360,
+          "end_line": 396,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_record_context",
+          "line": 399,
+          "end_line": 419,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_schema",
+          "line": 422,
+          "end_line": 455,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_input",
+          "line": 458,
+          "end_line": 642,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_identifier_in_text",
+          "line": 645,
+          "end_line": 646,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_check_inline_citations",
+          "line": 649,
+          "end_line": 653,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_inline_reference",
+          "line": 656,
+          "end_line": 669,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_validate_unit",
+          "line": 672,
+          "end_line": 850,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_units",
+          "line": 853,
+          "end_line": 899,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_limited_unit",
+          "line": 902,
+          "end_line": 916,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_resolve",
+          "line": 919,
+          "end_line": 945,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "continue_conversation",
+          "line": 948,
+          "end_line": 1113,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "sha256": "116a6817049750c05c4f1697c8f07909552b64b5891b748811a2d8532abffa60",
+      "lines": 438,
+      "symbols": [
+        {
+          "name": "ContinuationVerification",
+          "line": 224,
+          "end_line": 227,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_schema",
+          "line": 230,
+          "end_line": 263,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_decision",
+          "line": 266,
+          "end_line": 370,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "verify_continuation",
+          "line": 373,
+          "end_line": 438,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "sha256": "d63d08c12621eb700f5b1a16a043ace5cd9ad07c8ea476af66005a3719f36368",
+      "lines": 606,
+      "symbols": [
+        {
+          "name": "IncompleteConversation",
+          "line": 25,
+          "end_line": 26,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "Message",
+          "line": 30,
+          "end_line": 39,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "Conversation",
+          "line": 43,
+          "end_line": 55,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "WorkItem",
+          "line": 59,
+          "end_line": 81,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "OpeningCandidate",
+          "line": 85,
+          "end_line": 99,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "opening_from_parts",
+          "line": 102,
+          "end_line": 107,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "TurnPlan",
+          "line": 111,
+          "end_line": 115,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "opening_title_issue",
+          "line": 375,
+          "end_line": 387,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "repair_opening",
+          "line": 420,
+          "end_line": 452,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_prompt",
+          "line": 455,
+          "end_line": 477,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "interpret",
+          "line": 480,
+          "end_line": 503,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_turn_plan",
+          "line": 506,
+          "end_line": 606,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/dispute_state.py",
+      "sha256": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839",
+      "lines": 176,
+      "symbols": [
+        {
+          "name": "belongs_to_current_matter",
+          "line": 11,
+          "end_line": 23,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_short_label",
+          "line": 26,
+          "end_line": 31,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_identity",
+          "line": 34,
+          "end_line": 56,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "proposed_disputes",
+          "line": 59,
+          "end_line": 176,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "sha256": "e1b57826eafcecd06d75c6c0174442527d73d335ae53eed5747dfd5fa0ee71ff",
+      "lines": 342,
+      "symbols": [
+        {
+          "name": "_schema",
+          "line": 190,
+          "end_line": 198,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_verdicts",
+          "line": 201,
+          "end_line": 251,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "verify_disputes",
+          "line": 254,
+          "end_line": 342,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "sha256": "f8fc2cfaf9e8ef6f0efe45f582b0672dd77338016dec9bc27698ed96075072d6",
+      "lines": 231,
+      "symbols": [
+        {
+          "name": "_schema",
+          "line": 153,
+          "end_line": 174,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "extract_disputes",
+          "line": 177,
+          "end_line": 231,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/history.py",
+      "sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+      "lines": 70,
+      "symbols": [
+        {
+          "name": "released_older_turns",
+          "line": 9,
+          "end_line": 20,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "from_turns",
+          "line": 23,
+          "end_line": 70,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "sha256": "40f756d58c8626e9fdf1deb6bc6f1aa14600290cc1592f4c1f9c6075e574c122",
+      "lines": 1593,
+      "symbols": [
+        {
+          "name": "_operative_assertion",
+          "line": 55,
+          "end_line": 56,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_statement_valid",
+          "line": 59,
+          "end_line": 78,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "source_verification_valid",
+          "line": 81,
+          "end_line": 131,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "finding_verification_valid",
+          "line": 134,
+          "end_line": 190,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_application_premises_valid",
+          "line": 193,
+          "end_line": 247,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "ResearchResult",
+          "line": 446,
+          "end_line": 449,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_conversation_rows",
+          "line": 456,
+          "end_line": 468,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_subject_input",
+          "line": 471,
+          "end_line": 513,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_coverage",
+          "line": 516,
+          "end_line": 526,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_prompt",
+          "line": 529,
+          "end_line": 542,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_ordered_batches",
+          "line": 545,
+          "end_line": 572,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_repair_payload",
+          "line": 575,
+          "end_line": 578,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_subject_groups",
+          "line": 581,
+          "end_line": 653,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_decomposition_schema",
+          "line": 656,
+          "end_line": 681,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "decompose_subjects",
+          "line": 684,
+          "end_line": 719,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_findings_schema",
+          "line": 722,
+          "end_line": 756,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_search_hits",
+          "line": 759,
+          "end_line": 788,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_finding",
+          "line": 791,
+          "end_line": 817,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "read_findings",
+          "line": 820,
+          "end_line": 899,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_passage_fragments",
+          "line": 902,
+          "end_line": 912,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_verification_schema",
+          "line": 915,
+          "end_line": 1060,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_resolve_statement",
+          "line": 1063,
+          "end_line": 1077,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_finding_verdict",
+          "line": 1080,
+          "end_line": 1300,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "verify_findings",
+          "line": 1303,
+          "end_line": 1536,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_dispute_subjects",
+          "line": 1539,
+          "end_line": 1564,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "decompose",
+          "line": 1567,
+          "end_line": 1571,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "read_requirements",
+          "line": 1574,
+          "end_line": 1582,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "verify_requirements",
+          "line": 1585,
+          "end_line": 1593,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material.py",
+      "sha256": "eb7a806d8a84cb8fd860833769c800de32f6172e7e529795a28c6318d9f687b1",
+      "lines": 615,
+      "symbols": [
+        {
+          "name": "assignment_targets",
+          "line": 31,
+          "end_line": 49,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "resolve_assignment",
+          "line": 52,
+          "end_line": 69,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "PriorReference",
+          "line": 73,
+          "end_line": 76,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "MaterialCandidate",
+          "line": 80,
+          "end_line": 121,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "addressed_sources",
+          "line": 153,
+          "end_line": 185,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "addressed_item_schema",
+          "line": 188,
+          "end_line": 215,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "resolve_sources",
+          "line": 218,
+          "end_line": 235,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "saved_source_ids",
+          "line": 238,
+          "end_line": 245,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "fill_empty_link_sources",
+          "line": 248,
+          "end_line": 264,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "operation_schema",
+          "line": 267,
+          "end_line": 286,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "operation_rows",
+          "line": 289,
+          "end_line": 292,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_extraction_schema",
+          "line": 295,
+          "end_line": 320,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "parse_material",
+          "line": 437,
+          "end_line": 520,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "extract_details",
+          "line": 523,
+          "end_line": 615,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material_state.py",
+      "sha256": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711",
+      "lines": 300,
+      "symbols": [
+        {
+          "name": "sourced_detail_for_display",
+          "line": 9,
+          "end_line": 23,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_identity",
+          "line": 26,
+          "end_line": 40,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_source_matches",
+          "line": 43,
+          "end_line": 70,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_current_links",
+          "line": 73,
+          "end_line": 93,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "material_record",
+          "line": 96,
+          "end_line": 300,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "sha256": "f7aedbc12646ce67d10635a264394d671a89bf5634981f3c5242d2b8bf0070e6",
+      "lines": 388,
+      "symbols": [
+        {
+          "name": "GroundingResult",
+          "line": 181,
+          "end_line": 186,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_schema",
+          "line": 201,
+          "end_line": 209,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_verdicts",
+          "line": 212,
+          "end_line": 259,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "verify_material_grounding",
+          "line": 262,
+          "end_line": 388,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "sha256": "32f5e108adfd1d01c5fa4fde4f06f360e35989d9a82abecb242df93ff2ab2fae",
+      "lines": 342,
+      "symbols": [
+        {
+          "name": "classify_account_sources",
+          "line": 57,
+          "end_line": 100,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "owned_source_treatments",
+          "line": 103,
+          "end_line": 117,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "source_treatment_reference_valid",
+          "line": 120,
+          "end_line": 128,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "substantive_source_treatments",
+          "line": 131,
+          "end_line": 147,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "derived_record",
+          "line": 150,
+          "end_line": 152,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "review_contract_issue",
+          "line": 155,
+          "end_line": 160,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "review_issues_text",
+          "line": 163,
+          "end_line": 166,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "candidate_account_ids",
+          "line": 169,
+          "end_line": 178,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "restoration_peer_ids",
+          "line": 181,
+          "end_line": 184,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "review_properties",
+          "line": 187,
+          "end_line": 237,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "validate_record_checks",
+          "line": 240,
+          "end_line": 321,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "admitted_record_decisions",
+          "line": 324,
+          "end_line": 342,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/requirements_state.py",
+      "sha256": "bfda84a045fca1e225d6b20e72ec946cc08ddd96c7e481a0d93843eafab38e63",
+      "lines": 416,
+      "symbols": [
+        {
+          "name": "_digest",
+          "line": 21,
+          "end_line": 24,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "subject_fingerprint",
+          "line": 27,
+          "end_line": 38,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "research_owner_id",
+          "line": 41,
+          "end_line": 43,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_identities",
+          "line": 46,
+          "end_line": 49,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_subject_valid",
+          "line": 52,
+          "end_line": 61,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_context",
+          "line": 64,
+          "end_line": 75,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "research_fingerprint",
+          "line": 78,
+          "end_line": 94,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_valid_row",
+          "line": 97,
+          "end_line": 128,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_legacy_read",
+          "line": 131,
+          "end_line": 153,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_valid",
+          "line": 156,
+          "end_line": 188,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_prior_account_words",
+          "line": 191,
+          "end_line": 206,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_account_references_valid",
+          "line": 209,
+          "end_line": 219,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "research_record",
+          "line": 222,
+          "end_line": 373,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "dispute_research_subjects",
+          "line": 376,
+          "end_line": 392,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "requirements_record",
+          "line": 395,
+          "end_line": 416,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/retrieval.py",
+      "sha256": "097213abc492c485d8354323cf33bb7394290e6cca79a29c20f406838801610d",
+      "lines": 498,
+      "symbols": [
+        {
+          "name": "SearchUnavailable",
+          "line": 34,
+          "end_line": 35,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "Collection",
+          "line": 38,
+          "end_line": 47,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_rrf",
+          "line": 50,
+          "end_line": 55,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_ordered",
+          "line": 58,
+          "end_line": 59,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_Models",
+          "line": 62,
+          "end_line": 90,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "LocalCollection",
+          "line": 93,
+          "end_line": 291,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_candidate",
+          "line": 294,
+          "end_line": 319,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "HybridSearcher",
+          "line": 322,
+          "end_line": 486,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_default_searcher",
+          "line": 490,
+          "end_line": 491,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "search_dispute",
+          "line": 494,
+          "end_line": 498,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/source_snapshots.py",
+      "sha256": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2",
+      "lines": 108,
+      "symbols": [
+        {
+          "name": "source_snapshots",
+          "line": 7,
+          "end_line": 65,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "inline_source_links",
+          "line": 68,
+          "end_line": 108,
+          "kind": "FunctionDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/turn.py",
+      "sha256": "65ababc413ab701b4971da80c5b43cdde7039b0bfad57d82978536db42f745a4",
+      "lines": 897,
+      "symbols": [
+        {
+          "name": "BrainRefused",
+          "line": 60,
+          "end_line": 68,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "BrainTurn",
+          "line": 72,
+          "end_line": 79,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "BrainOutput",
+          "line": 83,
+          "end_line": 87,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_CountedModel",
+          "line": 90,
+          "end_line": 143,
+          "kind": "ClassDef"
+        },
+        {
+          "name": "_digest",
+          "line": 146,
+          "end_line": 149,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_material_execution",
+          "line": 155,
+          "end_line": 173,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_material_effects",
+          "line": 176,
+          "end_line": 203,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_check_execution_owner",
+          "line": 206,
+          "end_line": 219,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "chat_matter_id",
+          "line": 222,
+          "end_line": 223,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_saved_reply",
+          "line": 226,
+          "end_line": 263,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_research_subjects",
+          "line": 266,
+          "end_line": 299,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_project_research",
+          "line": 302,
+          "end_line": 312,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_current_records",
+          "line": 315,
+          "end_line": 346,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_saved_source_treatments",
+          "line": 349,
+          "end_line": 379,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_reply",
+          "line": 382,
+          "end_line": 396,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_continuation_elements",
+          "line": 399,
+          "end_line": 432,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_material",
+          "line": 435,
+          "end_line": 472,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_legal_reads",
+          "line": 475,
+          "end_line": 550,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "BrainService",
+          "line": 553,
+          "end_line": 897,
+          "kind": "ClassDef"
+        }
+      ]
+    },
+    {
+      "file": "nm/brain/work_state.py",
+      "sha256": "f9e0ef91b2530f2f654d11dc77cbe13c5218aeed90b90df0025d6858678d28d1",
+      "lines": 439,
+      "symbols": [
+        {
+          "name": "_fail",
+          "line": 19,
+          "end_line": 20,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_text",
+          "line": 23,
+          "end_line": 26,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_ids",
+          "line": 29,
+          "end_line": 34,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_progress_id",
+          "line": 37,
+          "end_line": 42,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_catalogue",
+          "line": 45,
+          "end_line": 61,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_blocks",
+          "line": 64,
+          "end_line": 103,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_known",
+          "line": 106,
+          "end_line": 108,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_update",
+          "line": 111,
+          "end_line": 133,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "seal_progress",
+          "line": 136,
+          "end_line": 171,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_seal_unit",
+          "line": 174,
+          "end_line": 240,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_read_words",
+          "line": 243,
+          "end_line": 273,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_displayed",
+          "line": 276,
+          "end_line": 296,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_entry",
+          "line": 299,
+          "end_line": 305,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_event",
+          "line": 308,
+          "end_line": 315,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "project_work",
+          "line": 318,
+          "end_line": 370,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_project_unit",
+          "line": 373,
+          "end_line": 430,
+          "kind": "FunctionDef"
+        },
+        {
+          "name": "_create",
+          "line": 433,
+          "end_line": 439,
+          "kind": "FunctionDef"
+        }
+      ]
+    }
+  ],
+  "finalized": true
+}

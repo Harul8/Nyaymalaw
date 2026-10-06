@@ -1,0 +1,386 @@
+{
+  "date": "2026-10-06",
+  "reviewed_head": "ed8e348f28757ffc81793c5f65e21f5ec49bedd1",
+  "status": "read-only static audit; no repository edits, actual model calls, API calls or browser runs",
+  "scope": [
+    "nm/brain/legal_requirements.py",
+    "nm/brain/retrieval.py",
+    "nm/brain/requirements_state.py",
+    "nm/brain/turn.py research integration",
+    "current served brain focused test contracts"
+  ],
+  "reference": "material.py Message/Purpose and ordered Activity/Look for/Outcome responsibility pattern; same call can own related decisions.",
+  "prompts": {
+    "_DECOMPOSE_SYSTEM": {
+      "file": "nm/brain/legal_requirements.py",
+      "lines": [
+        249,
+        269
+      ],
+      "structure": {
+        "Message": "Original conversation, owned subjects and available stage input.",
+        "Purpose": "One coherent research-stage responsibility.",
+        "Look for": "The relevant evidence and consequential distinctions.",
+        "Outcome": "Existing plans/readings/decisions schema; no additional result fields."
+      },
+      "paragraphs": [
+        {
+          "number": 1,
+          "opening": "Message: You receive the complete ordered, attributed",
+          "original_text": "Message: You receive the complete ordered, attributed\nconversation and research subjects with their owner, scope, purpose, question\nand attributed record. A subject is a research instruction, not a finding that\na dispute, event, rule or permission exists. Reported material is unverified.",
+          "contract": "Whole original conversation and owned research subjects; subjects are instructions rather than established facts.",
+          "code_boundary": "_conversation_rows retains exact words/roles/order; _subject_input deep-copies subjects and material.",
+          "assessment": "Exact transcript is present. Saved material is not explicitly marked nm_interpretation in this shared payload.",
+          "recommendation": "Describe original words, derived record formulations and research instruction provenance separately."
+        },
+        {
+          "number": 2,
+          "opening": "Purpose: Form complementary retrieval queries for candidate bare-Act sections",
+          "original_text": "Purpose: Form complementary retrieval queries for candidate bare-Act sections\nand judgment passages addressing each subject's question. This call gathers\nevidence; it does not decide applicable law or the answer.",
+          "contract": "Generate hypotheses for retrieval, without deciding law or applicability.",
+          "assessment": "Clear single responsibility; no reason to add a model call for each activity.",
+          "recommendation": "Retain this scope and identify the subject purpose before forming routes."
+        },
+        {
+          "number": 3,
+          "opening": "Look for: The question and requested outcome, contested relationships and",
+          "original_text": "Look for: The question and requested outcome, contested relationships and\nconduct when stated, factual and temporal limits, and potentially relevant\nlegal concepts. Use genuinely different entry points, including concrete\nlanguage and plausible legal terminology. Exploring a term does not assert\nit as a fact or applicable rule. Preserve scope and purpose; do not import\nanother subject's facts, assume missing jurisdiction, expand hypothetical\nevents or make near-duplicate formulations.",
+          "contract": "Ground complementary factual/legal search routes, preserving question, purpose, time and scope.",
+          "assessment": "Flat dependency ordering; competing routes, exceptions and potentially adverse material are only implicit.",
+          "recommendation": "Activity 1 establishes the owned enquiry; Activity 2 selects grounded distinct routes including adverse/limiting routes when relevant. Do not invent missing jurisdiction."
+        },
+        {
+          "number": 4,
+          "opening": "Outcome: Return only plans under the schema, exactly one per subject_id.",
+          "original_text": "Outcome: Return only plans under the schema, exactly one per subject_id.\nPrefer three or four distinct concise queries, never more than four; return\nfewer when further useful entry points cannot be grounded. Queries are\nsearch hypotheses, not legal advice, facts or citations.",
+          "contract": "Exactly one plan per subject, 1–4 concise query texts; fewer routes are legitimate.",
+          "code_boundary": "_decomposition_schema minItems=1,maxItems=4; accept length<=300 and duplicate-casefold rejection.",
+          "assessment": "A returned query set establishes search instructions, not search sufficiency. Harmless duplicate formatting currently costs a retry.",
+          "recommendation": "Keep output shape/count contract and expose the existing 300-character limit; separately consider code normalization of identical query routes."
+        }
+      ]
+    },
+    "_REQUIREMENTS_SYSTEM": {
+      "file": "nm/brain/legal_requirements.py",
+      "lines": [
+        271,
+        320
+      ],
+      "structure": {
+        "Message": "Original conversation, owned subjects and available stage input.",
+        "Purpose": "One coherent research-stage responsibility.",
+        "Look for": "The relevant evidence and consequential distinctions.",
+        "Outcome": "Existing plans/readings/decisions schema; no additional result fields."
+      },
+      "paragraphs": [
+        {
+          "number": 1,
+          "opening": "Message: You receive the complete ordered, attributed",
+          "original_text": "Message: You receive the complete ordered, attributed\nconversation, research subjects and their attributed record, and candidate\nbare-Act sections and judgment passages retrieved for each subject. Each has\na local ID, exact text and locator. Rank and IDs do not establish legal support\nor applicability. Reported documents are uninspected.",
+          "contract": "Whole attributed conversation, owned subjects/record, per-subject candidate texts and locators; rank is not support.",
+          "code_boundary": "read_findings passes full candidates and allowed_source_ids/allowed_material_ids per subject.",
+          "assessment": "The shared material payload retains its fields. Court/date/retrieval metadata is available here, unlike the later verifier candidate projection.",
+          "recommendation": "Make original account versus derived record and candidate-only source status explicit."
+        },
+        {
+          "number": 2,
+          "opening": "Purpose: Propose passage-supported findings addressing each subject's purpose",
+          "original_text": "Purpose: Propose passage-supported findings addressing each subject's purpose\nand question. For gathering work, identify things to establish, obtain or\ncheck. For requested legal work, capture supported principles, conditions,\nhelpful reasoning and adverse limits needed for a useful answer. Do not\nreplace legal research with model legal memory.",
+          "contract": "Propose findings useful for gathering or requested legal work, including adverse limits, supported by supplied passages.",
+          "assessment": "Useful-purpose and adverse reasoning are present; model memory cannot substitute for law.",
+          "recommendation": "Preserve the distinct purpose/kind mapping without making every subject produce every kind."
+        },
+        {
+          "number": 3,
+          "opening": "Look for: What provisions mandate and the conditions, exceptions, timing and",
+          "original_text": "Look for: What provisions mandate and the conditions, exceptions, timing and\nprocedure limiting them; what judgments actually decide or explain, including\ncontrary reasoning. Distinguish holdings from arguments, background and\nhypothetical discussion. Compare legal predicates with attributed words\nwithout assuming missing facts. Preserve unresolved applicability conditions\nexpressly in the finding, including who must do what, when and under which\nlegal relationship. A later event or permission does not establish the status\nof earlier conduct. A judgment's procedural history or outcome does not itself\nmandate a step for this subject. An analogy may suggest a question to examine;\nit cannot substitute for applicable support or create a rule or requirement.\nRetrieval alone does not establish an in-force\nversion, jurisdictional reach, precedent treatment or binding weight. Select\nmaterial only when its actual words address the finding; reported document\npossession does not establish contents or prove an element. Do not invent\nfacts, document types, duties, holdings or sources.\nMake factual application a separate comparison: identify whose attributed\nwords describe each predicate and the period those words cover. Record\nheadings and NM's earlier interpretations cannot establish factual predicates.\nA source condition remains an express condition of the proposed need until\nthe attributed account addresses its entire actor, relationship and period;\notherwise propose gathering or conditional law, not satisfied applicability.\nEach finding/source use must rely on one operative proposition. Where distinct\npositions in a passage differ in speaker, role or treatment, keep them in\nseparate findings rather than assigning one label to the whole passage.",
+          "contract": "Distinguish operative source purpose, complete conditions/time, account application, custody, analogy and one proposition per finding/source use.",
+          "code_boundary": "Independent verifier checks ownership/treatment, rule relation, application and force; reader itself does not receive independent source treatments.",
+          "assessment": "Several dependent decisions share one flat Look for block. It asks for adverse content but supplies no independent research-wide coverage output.",
+          "recommendation": "Order Activity 1 source proposition; Activity 2 account/predicates; Activity 3 usefulness, adverse limits and remaining support gaps. Empty results are allowed but cannot certify coverage."
+        },
+        {
+          "number": 4,
+          "opening": "Outcome: Return only readings under the schema, exactly one per subject_id,",
+          "original_text": "Outcome: Return only readings under the schema, exactly one per subject_id,\nincluding empty findings when nothing supplied supports a useful finding.\nGive each a crisp label, fuller need (the proposition or work needed), and why\nconnecting it to cited words and the subject. Choose kind gathering, principle,\ncondition, support or adverse according to its role. Gathering force is\nrequired only if cited law mandates that proposed step or element under its\npreserved conditions; otherwise strengthening. Other kinds use force none.\nCite source_ids only from this subject's passages and material_ids only from\nits attributed record. The wire schema lists IDs across the batch, but each\nsubject's allowed_source_ids and allowed_material_ids are its exclusive\nselection boundary. A relevant passage supplied only to a different subject\nis not available here; omit that finding rather than borrowing its ID.\nNo proposal proves the account, legal force or success.",
+          "contract": "Exactly one readings unit per subject; fields kind,label,need,why,force,source_ids,material_ids; empty findings allowed.",
+          "code_boundary": "_finding enforces per-subject ownership and kind/force; accept rejects repeated labels across all kinds.",
+          "assessment": "Ownership boundary is strong. Same headings across distinct kinds cause an avoidable false rejection; a valid empty envelope is counted as checked and can later be reused.",
+          "recommendation": "Retain exact schema and exclusive IDs. Avoid inventing completion/coverage fields in a prompt-only edit; fix completion evidence in a separate owning-boundary slice."
+        }
+      ]
+    },
+    "_VERIFY_SYSTEM": {
+      "file": "nm/brain/legal_requirements.py",
+      "lines": [
+        322,
+        434
+      ],
+      "structure": {
+        "Message": "Original conversation, owned subjects and available stage input.",
+        "Purpose": "One coherent research-stage responsibility.",
+        "Look for": "The relevant evidence and consequential distinctions.",
+        "Outcome": "Existing plans/readings/decisions schema; no additional result fields."
+      },
+      "paragraphs": [
+        {
+          "number": 1,
+          "opening": "Message: You receive the complete ordered conversation in",
+          "original_text": "Message: You receive the complete ordered conversation in\nattributed source_spans, owned research subjects and their reported record,\nand untrusted findings with exact cited legal passages in numbered fragments.\nAll saved words are present. IDs, retrieval rank and earlier NM analysis are\nnot evidence of truth, legal support, applicability or authority.",
+          "contract": "Whole original attributed conversation, owned subject/record, proposed findings and their cited source fragments.",
+          "code_boundary": "verify_findings candidate sources project id,kind,title,locator,fragments; they omit court/date and uncited retrieval pool.",
+          "assessment": "All conversation words are present, but not every retrieved passage or source metadata field.",
+          "recommendation": "State that coverage is bounded to provided candidates/cited passages; do not imply full retrieval-pool or legal currency review."
+        },
+        {
+          "number": 2,
+          "opening": "Purpose: Independently decide whether each complete finding may enter the",
+          "original_text": "Purpose: Independently decide whether each complete finding may enter the\nresearch record. Check source provenance, entailment, factual application and\nclaimed force separately. Do not repair wording, supply missing law or facts,\ndecide merits beyond the supplied passages or certify proof or binding status.",
+          "contract": "Independent provenance, entailment, factual application and force checks; no wording repair or missing law/fact supply.",
+          "assessment": "Matches the material-style evidence dependencies and independent review ownership.",
+          "recommendation": "Keep the four checks separate; distinguish useful bounded findings from whole-task completion."
+        },
+        {
+          "number": 3,
+          "opening": "Activity 1 - Identify the operative source proposition.",
+          "original_text": "Activity 1 - Identify the operative source proposition.\nLook for: Whose words the finding relies on, their role, and how the issuing\nsource treats that particular proposition. Distinguish the deciding court's\nconclusion or reasoning from a particular party's submission, quoted authority,\ncase background and direct legislative text. A mixed paragraph needs separate\npositions, not a single blanket role. An adopted submission or quotation keeps\nits original speaker and role; adoption does not make it a court conclusion\nor binding ratio. A reported or rejected position is not adopted law. Adoption\nneeds exact court treatment words, never merely a citation, silence or shared\nterms. A finding about rejection must use the court's rejecting reason.\nOutcome: For each cited source select exact support, ownership and treatment\nfragment IDs from that source only. Give assertion_owner, assertion_role,\nowner_label, one faithful assertion_statement and source_treatment.\nThe assertion_statement articulates the source's own proposition; it cannot add\nthis matter's requested work or advice absent from those words. Source truth,\nownership and agreement with a recommendation are separate decisions.\nCourt roles require deciding_court; party_submission requires party; quoted_authority\nrequires quoted_authority; legislative_text requires provision text and\nlegislative_text ownership. Name a party only when the ownership words support\nthat identity. Legal support requires a known operative role and adopted\nsource_treatment. Case background and unclear roles are not operative law.\nKeep context_statements only for related positions needed to understand the\noperative use; otherwise []. Each context retains its own speaker, role,\nstatement, exact fragments and adopted/reported/rejected/unclear treatment.\nContext does not become another legal-support proposition.",
+          "contract": "Activity 1 preserves operative assertion owner/role, exact adopted treatment and contextual positions.",
+          "code_boundary": "_resolve_statement and source_verification_valid require same-source fragments and role-owner-kind consistency.",
+          "assessment": "Strong safeguard: adopting a submission does not change its speaker or make it binding ratio. Background/unclear cannot be operative support.",
+          "recommendation": "Preserve every distinction and code-owned fragment resolution; no simplification to a blanket source-approved flag."
+        },
+        {
+          "number": 4,
+          "opening": "Activity 2 - Check the complete finding's meaning.",
+          "original_text": "Activity 2 - Check the complete finding's meaning.\nLook for: Every consequential claim in label, need and why against the retained\npassages: actor, relationship, action, remedy, timing, conditions and exceptions.\nShared terms, exact quotation or advice consistent with a source alone are not\nentailment. The operative rule must support the exact proposition or gathering\nstep, rather than merely make it prudent or share its topic. Express rules and\nsupported inferences differ from analogy. An analogy supports only a faithfully\nlimited comparison or enquiry, not missing applicability or a mandatory step.\nA case's facts, procedural history or disposition do not themselves prescribe\na step in another matter. A condition of one legal route cannot become a\nuniversal prerequisite or exclude other routes without supporting passages.\nOutcome: Give entailment_basis source_rule for the actual rule,\nnecessary_application for a consequence supported by its predicates,\nlimited_analogy for an expressly limited comparison or enquiry, consistent_only\nfor merely compatible advice, topic_only for shared subject matter, or unsupported\nor uncertain. Only the first three can support a finding; limited_analogy cannot\nmake a gathering item required. Give label_verdict faithful/unsupported/uncertain and an entailment\nuse_check supported/unsupported/uncertain with actual retained supporting IDs.\nA correct role or overall verdict cannot override an unsupported claim.",
+          "contract": "Activity 2 checks full label/need/why meaning, predicates, exceptions and rule-versus-analogy relation.",
+          "code_boundary": "entailment_basis source_rule/necessary_application/limited_analogy; limited_analogy cannot support required gathering.",
+          "assessment": "Strong supported-use distinction. This can detect omission of a necessary qualification within a finding, but not omitted findings from an absent pool.",
+          "recommendation": "Explicitly check consequential unsupported additions and omissions; do not reject a faithful finding merely because it is only part of the answer."
+        },
+        {
+          "number": 5,
+          "opening": "Activity 3 - Compare each legal predicate with the attributed account.",
+          "original_text": "Activity 3 - Compare each legal predicate with the attributed account.\nLook for: Every express or implicit limiting predicate, relevant actor,\nrelationship and period. Read original advocate spans together with earlier\nqualifications and corrections. Material headings and prior NM conclusions are\ninterpretations, not factual evidence. Distinguish the advocate's own report\nfrom a quoted draft or another position they ask you to review. Later events\nor treatment do not establish an earlier status without attributed support\nfor that temporal reach. Absence of mention does not prove nonoccurrence.\nReported documents remain uninspected; possession does not prove contents.\nOutcome: Give application use_check and application_premises for each retained\nsource's limiting predicates. Each premise selects source_id and its exact\npredicate_fragment_id, account_source_ids only from the supplied independent\nsubstantive_account_sources catalogue, a status\nreported_satisfied/unresolved/reported_contradicted, and a reason explaining\nthe actor, relationship and time comparison. Satisfaction and contradiction\nneed attributable account IDs, not legal text, work instructions, examination\nmaterial or NM's words. This reviewer cannot upgrade independently read source\ntreatment. Missing eligible content leaves applicability unresolved. They describe\nthe reported account, not proof. For an unresolved or contrary predicate,\npreserved_condition must copy an existing explicit qualification or enquiry\nfrom the proposed need or why. Preserve the entire relevant limit, not an\nunrelated caveat. Reject application if the proposal asserts satisfaction\ninstead of preserving that limit; do not invent a replacement qualification.\nUse empty preserved_condition only for a reported_satisfied predicate.\nSelect scope_fragment_id for each source's operative predicate. established\nneeds reported_satisfied premises and attributed application.material_ids;\nasked_to_establish means gathering work actually seeks the predicate;\nconditional means the complete limiting predicate is preserved without\nclaiming satisfaction. no_special_condition permits an empty scope ID and\nno premises only when the proposition has no limiting predicate. Other scopes\nneed an exact scope fragment. General or conditional uses may lack material\nlinks only if they make no claim that the record satisfies their predicates.\nCheck every selected material ID exactly once as addresses/does_not_address/\nuncertain against its words; remove an incorrect link independently.",
+          "contract": "Activity 3 compares original eligible advocate account with every source predicate, actor, relationship and time; preserve unresolved/contrary limits.",
+          "code_boundary": "substantive_source_treatments selects eligible canonical references; _application_premises_valid validates source predicates and exact qualification preservation.",
+          "assessment": "Strong source-purpose boundary. established additionally requires application.material_ids even when original account references exist; treat relaxing this as an ownership-sensitive design decision, not metadata cleanup.",
+          "recommendation": "Retain original-account and independent source-treatment distinctions; general/conditional uses need no satisfied application or invented material links."
+        },
+        {
+          "number": 6,
+          "opening": "Activity 4 - Check force and proposed work.",
+          "original_text": "Activity 4 - Check force and proposed work.\nLook for: Whether the supported rule mandates the exact step or element,\nby the stated actor within its preserved conditions and period. Required is\nnot prudent, helpful, customary or something done in a previous case. Even a\nstrengthening recommendation needs a passage-supported connection to this\nenquiry. Fragmentary or indeterminate support is uncertain.\nOutcome: Give force use_check with actual supporting source IDs. Gathering\nforce is required only under the preserved mandate, otherwise strengthening;\nother kinds have force none. Reject overstated mandatory force.",
+          "contract": "Activity 4 separately checks mandate versus strengthening and unsupported mandatory force.",
+          "code_boundary": "_finding kind-force relationship and supported force use_check with owned retained sources.",
+          "assessment": "Good separation; a helpful question is not necessarily a legally mandated requirement.",
+          "recommendation": "Preserve force distinctions and assess whether this finding serves the subject purpose within its stated limits."
+        },
+        {
+          "number": 7,
+          "opening": "Outcome: Return only the declared decisions object, exactly one decision per",
+          "original_text": "Outcome: Return only the declared decisions object, exactly one decision per\ncandidate_id. Overall verdict is supported/unsupported/uncertain. Retention\nrequires a faithful label and supported entailment, application and force;\nfailed independent checks cannot be overridden by overall acceptance.\nReferences select only this candidate's cited sources and linked material;\npeer, unused or rejected references are not support. A supported finding must\ncheck every cited source and linked material exactly once and have retained\nsupport for its full meaning. Rejected findings may omit unused source,\nmaterial and premise checks. Reasons are nonempty and at most 500 characters.\nSupport fragments, role statements and preserved conditions must come from\ntheir declared input; return no new facts, law or wording repairs.",
+          "contract": "Exactly one decision per candidate; retain only faithful/supported independent checks; rejected candidates may leave unused checks empty.",
+          "code_boundary": "_finding_verdict validates the candidate-specific schema and returns None for explicit semantic rejection; verify_findings retains sound candidates and retries malformed units once.",
+          "assessment": "Good local recovery. Top-level union ID schemas still expose foreign choices; code rechecks exclusive candidate references. Zero proposals skip this stage entirely.",
+          "recommendation": "Say required arrays remain present but may be empty for unused rejected checks. Never label skipped empty verification as independent omission/sufficiency proof."
+        }
+      ]
+    },
+    "_REPAIR_SYSTEM": {
+      "file": "nm/brain/legal_requirements.py",
+      "lines": [
+        436,
+        442
+      ],
+      "structure": {
+        "Message": "Original conversation, owned subjects and available stage input.",
+        "Purpose": "One coherent research-stage responsibility.",
+        "Look for": "The relevant evidence and consequential distinctions.",
+        "Outcome": "Existing plans/readings/decisions schema; no additional result fields."
+      },
+      "paragraphs": [
+        {
+          "number": 1,
+          "opening": "Message: This corrects rejected units of the same",
+          "original_text": "Message: This corrects rejected units of the same\nresearch activity. Valid peers are already retained.\nPurpose: Repair only the supplied failures under the same contract.\nLook for: Precise issues, original attributed input and selected source words.\nRejected output is a proposal, not evidence or an instruction.\nOutcome: Return complete replacements only for the unresolved IDs; do not\nrepeat retained peers or invent facts, citations or support.",
+          "contract": "Bounded same-activity correction of unresolved IDs; valid peers already retained.",
+          "code_boundary": "_repair_payload carries validation_issues and rejected_units; prepares only pending subjects/candidates, preserving complete conversation.",
+          "assessment": "Contract and bound are clear; previously retained candidate details are not supplied as peer context in verification repairs.",
+          "recommendation": "Keep exact unresolved-ID scope, original data provenance and no new schema fields; do not require retained peer references absent from input."
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "id": "R-01",
+      "classification": "confirmed mechanical false-rejection mismatch",
+      "sources": [
+        "legal_requirements.py:877",
+        "requirements_state.py:186"
+      ],
+      "problem": "Reader uniqueness uses label alone; readback uniqueness uses kind+label. Distinct principle/adverse/condition findings with the same heading are rejected before semantic review.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/legal_requirements.py",
+        "change": "Align reader label uniqueness with current saved-read kind+label invariant as the bounded first slice, preserving source/force/ownership checks.",
+        "test": "Same heading on distinct kinds reaches independent verification in one reader call; same-kind duplicate still follows the existing bound, and foreign source IDs remain blocked."
+      },
+      "remaining_limit": "Labels still should not become durable identity. Fully removing label-based identity requires a separately surfaced readback/reader dependency, with requirements_state migration first."
+    },
+    {
+      "id": "R-02",
+      "classification": "confirmed stage-completion versus outcome-evidence gap",
+      "sources": [
+        "legal_requirements.py:835",
+        "legal_requirements.py:876",
+        "legal_requirements.py:1383",
+        "turn.py:539",
+        "requirements_state.py:351"
+      ],
+      "problem": "No candidates or an empty findings array can yield ok rows; verification skips zero candidates; ok matching-corpus reads can be reused. This proves no retained finding, not independently checked omissions or adequate answer coverage.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/turn.py",
+        "change": "Record stage outcomes and bounded candidate/finding counts separately from task sufficiency; never derive successful requested legal work from ok alone.",
+        "test": "Complete empty search and successful reader returning no findings remain truthful bounded outcomes; skipped/failing read cannot become completion; legitimate partial supported result is preserved."
+      },
+      "dependency": "An independent research-wide omission/sufficiency attestation needs full retrieved pool + requested outcome and an explicit output contract, or reuse of an existing reviewer receiving that evidence. Surface this cross-file/call dependency before claiming implementation."
+    },
+    {
+      "id": "R-03",
+      "classification": "confirmed silent read-gap accounting",
+      "sources": [
+        "retrieval.py:428",
+        "retrieval.py:478"
+      ],
+      "problem": "A ranked position absent from collection.read, malformed chunk/text, or missing title/locator is silently skipped. searched increments and two available collections can still produce state ok.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/retrieval.py",
+        "change": "Track unread candidate positions/invalid attributable metadata as a collection read gap; retain valid source peers and return partial with precise diagnostic. Distinguish no hits and intentional declared filters from unread candidates.",
+        "test": "One missing/malformed ranked candidate plus valid peers yields partial and retains exact peers; truly empty complete searches remain ok; one failed collection preserves the other."
+      },
+      "call_impact": "No added language-model call."
+    },
+    {
+      "id": "R-04",
+      "classification": "confirmed input/readback scope-contract mismatch",
+      "sources": [
+        "legal_requirements.py:471",
+        "legal_requirements.py:508",
+        "requirements_state.py:52"
+      ],
+      "problem": "_subject_input rejects material for scope none only; persisted subject validation permits record_ids only for current/proposed. Other/uncertain subjects can enter model stages with record links the saved contract rejects.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/legal_requirements.py",
+        "change": "Reject non-current/non-proposed subjects carrying material or record_ids before dispatch, matching persisted scope ownership.",
+        "test": "Other/uncertain/none subjects with current record links fail before any dispatch; same scopes with empty record context and valid general question remain accepted."
+      },
+      "call_impact": "No new call; invalid authoritative input fails before existing calls."
+    },
+    {
+      "id": "R-05",
+      "classification": "confirmed saved completeness validation gap",
+      "sources": [
+        "requirements_state.py:179",
+        "requirements_state.py:351"
+      ],
+      "problem": "Coverage counter types are checked when present, but ok with unread_items>0 or missing counters can still validate; reuse depends on ok/corpus/contract rather than complete known counters.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/requirements_state.py",
+        "change": "Require coherent known completeness evidence for reuse under the current contract; preserve historical readable work without inventing missing counters. Do not equate withheld semantic proposals with unread work.",
+        "test": "ok+unread or unknown counters cannot authorize reuse; legitimate checked rejection with withheld_items>0 and unread=0 does not automatically fail; supported current and historical readable peers remain intact."
+      },
+      "call_impact": "No additional call when evidence is reusable; honest incomplete evidence can trigger the existing bounded research path."
+    },
+    {
+      "id": "R-06",
+      "classification": "source-purpose retrieval exclusion risk, not observed corpus failure",
+      "sources": [
+        "retrieval.py:30",
+        "retrieval.py:434",
+        "tests/test_brain_retrieval.py:68"
+      ],
+      "problem": "Only ratio/reasoning/order paragraph labels are considered. A mislabeled adopted submission or court treatment within a mixed paragraph could be excluded before semantic source-purpose review.",
+      "recommendation": "Inspect corpus annotation provenance and paired adopted/reported/rejected/mixed cases. Keep legal-support admission strict; do not silently weaken established controls. If annotations are only proposals, candidate exclusion should not substitute for exact court treatment review.",
+      "remaining_limit": "Cannot establish recall or false rejection from static code or existing mock annotations."
+    },
+    {
+      "id": "R-07",
+      "classification": "confirmed legal currency and jurisdiction qualification limit",
+      "sources": [
+        "retrieval.py:381",
+        "retrieval.py:390",
+        "retrieval.py:440",
+        "turn.py:494",
+        "legal_requirements.py:1362"
+      ],
+      "problem": "jurisdiction is deleted despite docstring saying retained; optional as_of filters only judgments by year and is not passed by served _legal_reads. Provisions have no effective-version check. Verifier candidate projection omits court/date.",
+      "one_logic_file_fix": {
+        "file": "nm/brain/legal_requirements.py",
+        "change": "First preserve available court/date/source-context metadata in verifier candidate sources without generating or upgrading metadata. Treat legal currency/binding reach as unresolved unless separate authoritative evidence exists.",
+        "test": "Exact court/date metadata reaches reviewer unchanged; absent metadata stays absent/unknown and does not discard an independently supported conditional principle; payload still contains all exact passage fragments."
+      },
+      "dependency": "Typed legal horizon/jurisdiction and provision-version validation require a separate search/integration contract. Corpus snapshot freshness must not be called current law."
+    },
+    {
+      "id": "R-08",
+      "classification": "research reuse semantic-dependency risk",
+      "sources": [
+        "requirements_state.py:78",
+        "requirements_state.py:209",
+        "requirements_state.py:318"
+      ],
+      "problem": "Fingerprint includes full owned material, scope/purpose/question/corpus/verification, but not full conversation or independent source treatment. Readback checks exact account-reference existence, not changed semantic dependency/eligibility or complete later qualifications omitted from material.",
+      "recommendation": "Define immutable source/purpose and original-account dependency evidence for reuse. Invalidate relevant changed dependencies, not every unrelated greeting or transcript-length change. Do not solve this by hashing the entire growing chat and forcing research every turn.",
+      "test": "Relevant original-account/source-purpose revision invalidates application evidence; harmless aside with identical dependency evidence reuses; historical sources remain readable and unsuperseded effects are distinguished."
+    },
+    {
+      "id": "R-09",
+      "classification": "ownership-sensitive false-rejection design question",
+      "sources": [
+        "legal_requirements.py:184",
+        "legal_requirements.py:388",
+        "tests/test_brain_legal_requirements.py:1450"
+      ],
+      "problem": "Established factual application requires linked material_ids in addition to exact eligible account references. General/conditional findings correctly avoid that requirement. Whether owned original account alone should suffice is not answered by the negative legal-text-only fixture.",
+      "recommendation": "Pair positive exact owned original account without a derived row with negative legal-text/work-instruction/other-matter premises. If adding an alternative, bind authoritative ownership and full predicate evidence; never remove the guard as harmless metadata cleanup."
+    },
+    {
+      "id": "R-10",
+      "classification": "confirmed bounded scope of independent verification",
+      "sources": [
+        "legal_requirements.py:902",
+        "legal_requirements.py:1383",
+        "legal_requirements.py:1435"
+      ],
+      "problem": "Verifier sees overlapping exact 700-character fragments and cited candidates only. One scope/predicate fragment selection plus semantic judgment does not mechanically prove all limiting predicates or all adverse material were covered; empty proposals receive no independent call.",
+      "recommendation": "Preserve code-owned exact fragments and semantic predicate review. Claim guarantees only at the observed boundary; design research-wide omissions around the complete relevant pool and independent expected outcome if that guarantee is required."
+    },
+    {
+      "id": "R-11",
+      "classification": "partial retention granularity limitation",
+      "sources": [
+        "legal_requirements.py:581",
+        "legal_requirements.py:875",
+        "legal_requirements.py:1440"
+      ],
+      "problem": "Reader retry units are whole subjects; one malformed finding rejects the subject reading and can lose valid same-subject findings. Verification correctly retains and retries individual candidates.",
+      "recommendation": "If changing reader recovery, assign code-owned stable finding units and retain independently valid siblings with explicit unread coverage. Do not salvage malformed source ownership or silently rewrite meanings. Keep this as a separate schema/recovery slice rather than adding exceptions to prompt cleanup."
+    }
+  ],
+  "call_accounting": {
+    "scope": "Research contribution, separate from interpreter, material reading, writer and final reviewer.",
+    "normal_fitting_new_research": "1 routine decomposition + local hybrid search + 1 routine reading + 1 independent judge verification = 3 language-model calls when passages/findings exist.",
+    "whole_general_first_turn_fixture": "6 calls: interpreter, decomposition, reading, finding verifier, continuation writer, continuation reviewer; test_brain_research_service.py:74 is scripted wiring evidence.",
+    "conditional": "At most one correction per unresolved batch/activity; context fitting may split complete units into multiple consecutive groups. No transcript trimming. Valid subject/candidate peers are retained.",
+    "empty": "No hits skips reading; no proposed findings skips verification. These save calls but cannot be described as independent coverage review.",
+    "reuse": "Exact current-corpus/current-contract reusable evidence skips the three research calls; unknown corpus revision disables reuse.",
+    "audit_execution": "No actual model, local embedding/reranking model, API or browser was invoked."
+  },
+  "verification_limits": [
+    "Static inspection and read existing test contracts only; no behavioral or legal-quality qualification claimed.",
+    "No actual corpus was searched, so annotation recall, adverse-source recall, law currency and jurisdiction cannot be measured.",
+    "Mocked supported/rejected verdicts prove boundary wiring, not real-reviewer false acceptance/rejection rates.",
+    "Prompt replacements may clarify intended decisions but cannot implement absent receipts, independent sufficiency contracts or code gates."
+  ]
+}

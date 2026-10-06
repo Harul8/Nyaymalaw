@@ -1,0 +1,1036 @@
+{
+  "task": "Read-only intake prompt/parser audit",
+  "date": "2026-10-06",
+  "base_commit": "3b30cfb6507183e16506452b082101c31d213c10",
+  "scope": [
+    "nm/brain/conversation.py",
+    "nm/brain/record_review.py",
+    "nm/brain/disputes.py",
+    "nm/brain/material.py",
+    "nm/brain/dispute_verification.py",
+    "nm/brain/material_verification.py",
+    "nm/brain/checked.py"
+  ],
+  "evidence_limits": [
+    "Source inspection only",
+    "No actual model calls",
+    "No API requests",
+    "No browser execution",
+    "Prompt clarity does not establish semantic quality"
+  ],
+  "files": {
+    "nm/brain/conversation.py": "d63d08c12621eb700f5b1a16a043ace5cd9ad07c8ea476af66005a3719f36368",
+    "nm/brain/record_review.py": "32f5e108adfd1d01c5fa4fde4f06f360e35989d9a82abecb242df93ff2ab2fae",
+    "nm/brain/disputes.py": "f8fc2cfaf9e8ef6f0efe45f582b0672dd77338016dec9bc27698ed96075072d6",
+    "nm/brain/material.py": "eb7a806d8a84cb8fd860833769c800de32f6172e7e529795a28c6318d9f687b1",
+    "nm/brain/dispute_verification.py": "e1b57826eafcecd06d75c6c0174442527d73d335ae53eed5747dfd5fa0ee71ff",
+    "nm/brain/material_verification.py": "f7aedbc12646ce67d10635a264394d671a89bf5634981f3c5242d2b8bf0070e6",
+    "nm/brain/checked.py": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb"
+  },
+  "paragraph_contracts": [
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 1,
+      "line": 161,
+      "lead": "Message: You receive the advocate's latest message, the complete",
+      "purpose": "Preserve complete chronology and work context.",
+      "evidence": "Complete attributed transcript, progress and active formulations.",
+      "authority": "Latest message selects current activity; historical work is context, never facts or authority.",
+      "output_contract": "Variable input preserves exact words and owner IDs.",
+      "invariant_or_remaining_gap": "No automatic resumption during a diversion."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 2,
+      "line": 172,
+      "lead": "Purpose: Read the latest message in its full context. Identify what it asks or",
+      "purpose": "Interpret each current request without performing it.",
+      "evidence": "Latest words in full conversation.",
+      "authority": "Interpretation is provisional and cannot establish facts, law, execution or permission.",
+      "output_contract": "Ordered items, response route, opening and material purposes.",
+      "invariant_or_remaining_gap": "Valid JSON is not fulfillment evidence."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 3,
+      "line": 181,
+      "lead": "Activity 1 - Understand the message and its context.",
+      "purpose": "Identify independent requests, contribution and consequential ambiguity.",
+      "evidence": "Whole account, unanswered questions, promises, scope and uncertainty.",
+      "authority": "Advocate account controls meaning; recency or NM interpretation cannot choose a referent.",
+      "output_contract": "One ordered item per independent outcome, intent/relation/scope.",
+      "invariant_or_remaining_gap": "No independent omission check proves every requested outcome was represented."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 4,
+      "line": 214,
+      "lead": "Activity 2 - Prioritise and respond.",
+      "purpose": "Choose protective priority and a useful immediate route.",
+      "evidence": "Needed deliverable and missing distinctions for this item.",
+      "authority": "Routes do not establish completed record effects or authorize future activity.",
+      "output_contract": "Reply versus clarification are mutually exclusive; separate independent items proceed.",
+      "invariant_or_remaining_gap": "Nonlegal checked reconstruction can use legal_work with conversation_record basis; wording must not imply legal research is always required."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 5,
+      "line": 261,
+      "lead": "Activity 3 - Decide whether a matter can be opened.",
+      "purpose": "Propose opening only for a supported concrete matter.",
+      "evidence": "Named client-side role, subject and overall posture in original account.",
+      "authority": "Opening description remains a proposal; client identity cannot be invented.",
+      "output_contract": "One representative client-side party, subject, summary; no fields when unready.",
+      "invariant_or_remaining_gap": "Whitespace-only unready fields cause avoidable rejection in unconstrained first-turn schema."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 6,
+      "line": 285,
+      "lead": "Activity 4 - Decide whether sourced material proposals need reading.",
+      "purpose": "Declare the activity requiring original material readers.",
+      "evidence": "New account content separately from authorized reconciliation of derived formulations.",
+      "authority": "Review authorization is not substantive evidence or a changed account.",
+      "output_contract": "Per-item account_contribution and/or interpretation_review; code derives turn routing.",
+      "invariant_or_remaining_gap": "Purposes prove needed activity, not stage execution, exact effect or fulfillment."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 7,
+      "line": 316,
+      "lead": "Activity 5 - Define the needed legal-source enquiry.",
+      "purpose": "Define authority need before considering reuse.",
+      "evidence": "Actual immediate outcome, distinct factual/legal requests, supplied jurisdiction/timing.",
+      "authority": "Saved research question is a proposal, not authority that new work needs law.",
+      "output_contract": "conversation_record with empty enquiry, or legal_authority plus substantive enquiry and legal_work.",
+      "invariant_or_remaining_gap": "Do not inherit pending legal enquiry for a factual reconstruction or invent jurisdiction."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "paragraph": 8,
+      "line": 359,
+      "lead": "Outcome: Return only the declared JSON object with `items` and",
+      "purpose": "Constrain returned shape to provisional planning.",
+      "evidence": "Validated current interpretation.",
+      "authority": "No matter record effect is performed by this call.",
+      "output_contract": "Only items and opening under existing schema.",
+      "invariant_or_remaining_gap": "No semantic completeness guarantee follows from structural acceptance."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "paragraph": 1,
+      "line": 390,
+      "lead": "Message: The input contains the complete earlier",
+      "purpose": "Read the rejected opening with its original evidence.",
+      "evidence": "Complete transcript and latest words plus rejected title/summary.",
+      "authority": "Rejected opening is neither fact nor instruction.",
+      "output_contract": "Same original input supplied for local correction.",
+      "invariant_or_remaining_gap": "Preserve full account."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "paragraph": 2,
+      "line": 396,
+      "lead": "Purpose: Correct only the matter-opening description. Preserve the current",
+      "purpose": "Limit correction to the opening description.",
+      "evidence": "Supported current subject and original requested matter.",
+      "authority": "Repair cannot change other work decisions.",
+      "output_contract": "New opening proposal only.",
+      "invariant_or_remaining_gap": "No scope expansion."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "paragraph": 3,
+      "line": 399,
+      "lead": "Look for: The advocate's named client-side person or entity, their role, and",
+      "purpose": "Resolve one named client-side party and matter subject.",
+      "evidence": "Original advocate attribution, named entity and role.",
+      "authority": "Opposing names and uncertain identities cannot become client heading.",
+      "output_contract": "Supported representative party or empty party name; supported subject/summary.",
+      "invariant_or_remaining_gap": "A single entity can contain a connecting word; do not keyword-reject it."
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "paragraph": 4,
+      "line": 407,
+      "lead": "Outcome: Return only the declared JSON object containing `party_name`, a",
+      "purpose": "Return the existing opening repair contract.",
+      "evidence": "Grounded descriptions.",
+      "authority": "Server composes the title.",
+      "output_contract": "party_name, nonempty subject and summary.",
+      "invariant_or_remaining_gap": "No schema or extra model stage change."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 1,
+      "line": 28,
+      "lead": "Message: You receive the advocate's latest message, the complete",
+      "purpose": "Read immutable original sources and derived formulations separately.",
+      "evidence": "Ordered exact spans, speaker/turn IDs, current matter and active dispute records.",
+      "authority": "Earlier NM wording is interpretation, not original evidence.",
+      "output_contract": "Source IDs and candidate record context.",
+      "invariant_or_remaining_gap": "Do not upgrade unverified assertions."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 2,
+      "line": 37,
+      "lead": "Purpose: Propose independently contestable disputes contributed by the latest",
+      "purpose": "Propose contestable issues or authorized repairs.",
+      "evidence": "Latest account contribution or authorized review with prior account evidence.",
+      "authority": "Review can authorize repair without a fresh factual assertion.",
+      "output_contract": "Provisional disputes only.",
+      "invariant_or_remaining_gap": "No admission, law, permission, action or completed assessment."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 3,
+      "line": 45,
+      "lead": "Activity 1 - Identify the contested issue.",
+      "purpose": "Keep independent issues, uncertainty and temporal predicates.",
+      "evidence": "Reported adverse conduct or contested position and independent practical outcomes.",
+      "authority": "Unknown identity or proof does not erase an issue; critique is not adverse party conduct.",
+      "output_contract": "Crisp concrete label, neutral question statement and distinct materiality reason.",
+      "invariant_or_remaining_gap": "Do not infer actor, breach, legal theory or adoption of examination material."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 4,
+      "line": 76,
+      "lead": "Activity 2 - Choose creation or explicit revision.",
+      "purpose": "Select creation versus an exact sourced operation.",
+      "evidence": "Active identity, original account, source framing and authorized task.",
+      "authority": "Only duplicate/same-issue targets can be merged; repairs preserve every underlying account.",
+      "output_contract": "new_items cannot retire; changes select owned active targets with supported relation.",
+      "invariant_or_remaining_gap": "No safe target permits a new sourced issue, never a false changed/withdrawn claim."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 5,
+      "line": 112,
+      "lead": "Activity 3 - Attribute and preserve scope.",
+      "purpose": "Select substantive account separately from authority and context.",
+      "evidence": "Independent source treatment, original advocate spans and matter ownership.",
+      "authority": "Contextual reference does not authorize revision or establish facts.",
+      "output_contract": "Latest source_id, prior IDs, scope, basis and importance.",
+      "invariant_or_remaining_gap": "Unknown truth, actor or law is distinct from unresolved matter ownership."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 6,
+      "line": 139,
+      "lead": "Activity 4 - Decide identification certainty.",
+      "purpose": "Decide issue identity certainty.",
+      "evidence": "Whether the issue can be identified from attributed words.",
+      "authority": "Contested merits are not identity ambiguity.",
+      "output_contract": "identified plus empty clarification, or needs_clarification plus one consequential question.",
+      "invariant_or_remaining_gap": "Do not demand unnecessary clarifications."
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "paragraph": 7,
+      "line": 147,
+      "lead": "Outcome: Return only the declared JSON object with `new_items` and `changes`.",
+      "purpose": "Return existing operation envelope and legitimate no-change result.",
+      "evidence": "New issues or justified repairs actually supported.",
+      "authority": "No forced change merely because review was requested.",
+      "output_contract": "new_items and changes may both be empty.",
+      "invariant_or_remaining_gap": "Empty envelope currently has no independent omission/coverage proof."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 1,
+      "line": 322,
+      "lead": "Message: You receive the advocate's latest message, the complete",
+      "purpose": "Read full original evidence separately from derived records.",
+      "evidence": "Latest and earlier exact spans, current matter, active details and disputes.",
+      "authority": "Review request authorizes examination; original account supplies evidence.",
+      "output_contract": "Immutable source catalogue and existing record context.",
+      "invariant_or_remaining_gap": "Never let interpretation substantiate itself."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 2,
+      "line": 333,
+      "lead": "Purpose: Extract materially significant legal details in their full context",
+      "purpose": "Propose independently material account details and authorized repairs.",
+      "evidence": "Full attributed account and exact saved source evidence.",
+      "authority": "No fact admission, dispute reformulation, law, permission or action.",
+      "output_contract": "Typed provisional detail operations.",
+      "invariant_or_remaining_gap": "No completion follows from a proposed operation."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 3,
+      "line": 340,
+      "lead": "Activity 1 - Identify independently material details.",
+      "purpose": "Separate independently checkable matter content from NM tasks.",
+      "evidence": "Conduct, chronology, roles, terms, positions, real-world objectives, records, custody, procedure, risks and uncertainty.",
+      "authority": "Draft critique, work instruction and inferred legal status are not new matter facts.",
+      "output_contract": "Attributed statement, kind and materiality reason per independent detail.",
+      "invariant_or_remaining_gap": "Do not merge independently correctable content; reported custody is not record-content proof."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 4,
+      "line": 366,
+      "lead": "Activity 2 - Choose creation or explicit revision.",
+      "purpose": "Determine an owned creation or revision preserving lineage.",
+      "evidence": "Known saved proposition and original account, distinct from repair authority.",
+      "authority": "Targets must represent duplicates or the same proposition; repair cannot erase other accounts.",
+      "output_contract": "New item with no targets, or explicit change with active IDs and supported relation.",
+      "invariant_or_remaining_gap": "A correction/withdrawal retires only specifically selected supported detail; no safe target means no false update claim."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 5,
+      "line": 392,
+      "lead": "Activity 3 - Attribute and link without changing source status.",
+      "purpose": "Attribute evidence, then select one assignment decision.",
+      "evidence": "Substantive original account, source purpose, review context and directly relevant disputes.",
+      "authority": "Original status and ownership cannot be silently upgraded.",
+      "output_contract": "Source IDs and assignment_ids; code derives scope/placement; basis and importance preserve uncertainty.",
+      "invariant_or_remaining_gap": "Exact repeated selected IDs are set-equivalent and can be normalized; foreign or mixed assignments remain blocking."
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "paragraph": 6,
+      "line": 431,
+      "lead": "Outcome: Return only the declared JSON object with `new_items` and `changes`.",
+      "purpose": "Return only existing operation contract with legitimate empty outcome.",
+      "evidence": "Supported new details or justified repair.",
+      "authority": "Review request alone does not require a mutation.",
+      "output_contract": "new_items and changes arrays.",
+      "invariant_or_remaining_gap": "Empty extraction cannot independently establish complete examination."
+    }
+  ],
+  "findings": [
+    {
+      "id": "INTAKE-01",
+      "severity": "high",
+      "owner": "Independent coverage/fulfillment review",
+      "refs": [
+        "nm/brain/dispute_verification.py:261",
+        "nm/brain/material_verification.py:271",
+        "nm/brain/turn.py:material_coverage.execution"
+      ],
+      "gap": "Readers may return empty or omit an independent assertion; candidate verification only sees proposed items and early-returns on empty input. Execution receipts explicitly remain semantic_coverage and fulfillment unassessed.",
+      "smallest_safe_change": "Keep truthful unassessed coverage now. Design explicit independent original-source omission/no-change review at an existing responsible review boundary, with owned source/target IDs and precise reasons; do not turn self-reported source coverage into proof.",
+      "legitimate_neighbours": [
+        "Already-correct current record",
+        "Authorized formulation review declining edits",
+        "Unchanged repeated account",
+        "Read-only recap",
+        "Risk without independently contestable right"
+      ],
+      "faults": [
+        "Skip extraction",
+        "Empty output dropping new date correction",
+        "Only unrelated accepted detail while requested correction omitted"
+      ],
+      "call_impact": "A prompt clarification at an already running review adds no call. Reviewing previously bypassed empty stages would add conditional calls and requires explicit accounting.",
+      "dependency": "Effect fulfillment and independent semantic coverage require a surfaced owning-contract change; no silent cross-file schema change."
+    },
+    {
+      "id": "INTAKE-02",
+      "severity": "medium",
+      "owner": "conversation.py _turn_plan",
+      "refs": [
+        "nm/brain/conversation.py:588-605"
+      ],
+      "gap": "Unready opening whitespace-only strings are treated as substantive contradictory metadata on an unconstrained first-turn schema.",
+      "smallest_safe_change": "Strip party_name, subject and summary before ready/unready validation, consistent with opening_from_parts. Preserve rejection when normalized unready fields contain substantive text.",
+      "legitimate_neighbours": [
+        "ready=false with empty fields",
+        "ready=false with whitespace-only fields",
+        "Supported ready heading containing whitespace around fields"
+      ],
+      "faults": [
+        "ready=false carrying actual party or subject",
+        "ready=true with empty normalized subject or summary"
+      ],
+      "call_impact": "No new call; avoids one repair for meaning-free formatting.",
+      "limit": "Existing-matter schema enum restrictions run before local parser; this narrow change covers the first-turn unconstrained form only."
+    },
+    {
+      "id": "INTAKE-03",
+      "severity": "medium",
+      "owner": "material.py selected reference/assignment normalization",
+      "refs": [
+        "nm/brain/material.py:52",
+        "nm/brain/material.py:437",
+        "nm/brain/material.py:589"
+      ],
+      "gap": "Repeated identical selected owned assignment or target IDs trigger a blocking correction although the decisions use set semantics. Exact prior references already deduplicate in resolve_sources.",
+      "smallest_safe_change": "Validate string ownership first, then deduplicate only exact repeated selector IDs before deriving assignment or checking target uniqueness. Preserve independent candidate rows and all substantive content.",
+      "legitimate_neighbours": [
+        "One owned assignment repeated identically",
+        "Same explicit correction target ID repeated",
+        "Multiple distinct directly relevant disputes"
+      ],
+      "faults": [
+        "Unknown or foreign ID",
+        "Dispute/general assignment mixture",
+        "Two incompatible general assignments",
+        "Ownership-ambiguous edit targeting current-owned material"
+      ],
+      "call_impact": "No new call; fewer formatting repairs.",
+      "dependency": "Implement normalization at material.py owning helpers; do not weaken source/target ownership or normalize distinct facts."
+    },
+    {
+      "id": "INTAKE-04",
+      "severity": "high",
+      "owner": "source treatment semantic decision and recovery",
+      "refs": [
+        "nm/brain/record_review.py:294-310"
+      ],
+      "gap": "A structurally valid but semantically wrong source-role decision can block a legitimate repair; downstream reviewers cannot revise the source-owner classification.",
+      "smallest_safe_change": "Keep current ownership gate. Design a bounded candidate-free reconsideration of the affected original span at the source owner rather than allowing the writer/reviewer to override it. A true examination-only source must remain unusable as substantive account.",
+      "legitimate_neighbours": [
+        "Earlier genuine account mislabeled examination, followed by review-only authority",
+        "Tentative or disputed genuine party account",
+        "Mixed span genuinely supplying account and instruction"
+      ],
+      "faults": [
+        "Pure review request promoted to substantive evidence",
+        "Quoted draft treated as adopted account",
+        "NM interpretation substantantiating itself"
+      ],
+      "call_impact": "Potential one conditional source-owner correction; no new routine call justified.",
+      "dependency": "Surface source-owner feedback/recovery contract and retain successful unrelated classifications."
+    },
+    {
+      "id": "INTAKE-05",
+      "severity": "medium",
+      "owner": "Per-candidate verifier output schema",
+      "refs": [
+        "nm/brain/dispute_verification.py:190-198",
+        "nm/brain/material_verification.py:201-209"
+      ],
+      "gap": "Generation sees union reference/target/peer vocabularies, while per-candidate ownership is enforced afterward; semantically valid rejection also supplies unused positive-check bookkeeping.",
+      "smallest_safe_change": "Present keyed code-owned candidate IDs with each candidate's own valid choices and verdict-applicable shapes, preserving accepted-effect proof requirements. Do not loosen ownership validators.",
+      "legitimate_neighbours": [
+        "Rejected unsupported proposal with precise reason and no positive effect evidence",
+        "Accepted peer selecting only its own target/source",
+        "Empty irrelevant metadata"
+      ],
+      "faults": [
+        "Accepted proposal borrowing another candidate's target/source",
+        "Substantive checks contradicting accept",
+        "Required restoration successor absent"
+      ],
+      "call_impact": "No additional model stage; generation-contract migration needs focused parser/adapter fixtures.",
+      "dependency": "Sequential verifier slices; portable provider schema shape must be demonstrated."
+    },
+    {
+      "id": "INTAKE-06",
+      "severity": "high",
+      "owner": "Bounded verifier recovery and adapter boundary",
+      "refs": [
+        "nm/brain/dispute_verification.py:333-336",
+        "nm/brain/material_verification.py:371-374",
+        "nm/brain/checked.py:27-76"
+      ],
+      "gap": "Verifier retains valid semantic peers during repair, but exhaustion raises and loses in-memory valid results. Whole-schema provider rejection can hide peers before their per-candidate parser. Generic extractor repair replaces the full envelope and can omit valid original proposals.",
+      "smallest_safe_change": "Do not globally turn errors into empty success. Preserve safe units only with explicit pending/unread coverage and enforced restoration dependencies at the owning unit contract; otherwise retain truthful withholding. Verify actual adapter failure behavior with deterministic stubs before claiming per-unit recovery.",
+      "legitimate_neighbours": [
+        "One malformed candidate beside valid independent peer",
+        "One missing verdict beside accepted unrelated proposal",
+        "Wrong semantic candidate corrected once"
+      ],
+      "faults": [
+        "Dependent replacement admitted without required successor",
+        "Unread unit silently treated as rejected/complete",
+        "Schema failure converted into empty extraction success"
+      ],
+      "call_impact": "Existing correction remains bounded at one retry; no per-instruction routine model calls.",
+      "dependency": "Complete adapter/per-unit recovery is an inseparable surfaced contract issue, not a prompt-only repair."
+    }
+  ],
+  "prompt_style_reference": "material.py: Message/Purpose followed by coherent ordered Activities, each Look for and Outcome. Existing prompts already follow this style; preserve evidence, authority, attribution, chronology, ownership and output distinctions while reducing repetition.",
+  "source_verification_audit": {
+    "artifact": "nm-brain-source-verification-audit-v1",
+    "head": "7e030212cd837ec68ce0fe676e99d3dfd9f3bdd2",
+    "scope": {
+      "files": [
+        "nm/brain/record_review.py",
+        "nm/brain/dispute_verification.py",
+        "nm/brain/material_verification.py",
+        "nm/brain/checked.py"
+      ],
+      "mode": "read-only audit; no repository edits, model calls, API calls, browser use or test execution",
+      "supporting_reads": [
+        "nm/brain/disputes.py",
+        "nm/brain/turn.py",
+        "nm/shared/model_port.py",
+        "nm/shared/model_anthropic_adapter.py",
+        "nm/shared/model_openai_adapter.py",
+        "tests/brain_reader_fixture.py",
+        "tests/test_brain_account_source_treatment.py",
+        "tests/test_brain_record_source_checks.py",
+        "tests/test_brain_dispute_verification.py",
+        "tests/test_brain_material_verification.py"
+      ]
+    },
+    "file_sha256": {
+      "nm/brain/record_review.py": "32f5e108adfd1d01c5fa4fde4f06f360e35989d9a82abecb242df93ff2ab2fae",
+      "nm/brain/dispute_verification.py": "e1b57826eafcecd06d75c6c0174442527d73d335ae53eed5747dfd5fa0ee71ff",
+      "nm/brain/material_verification.py": "f7aedbc12646ce67d10635a264394d671a89bf5634981f3c5242d2b8bf0070e6",
+      "nm/brain/checked.py": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb"
+    },
+    "paragraph_contracts": [
+      {
+        "id": "record_review.1",
+        "file": "nm/brain/record_review.py",
+        "prompt": "_SOURCE_SYSTEM",
+        "line": 18,
+        "line_end": 22,
+        "purpose": "Read every original advocate span without candidate framing.",
+        "evidence": "Full ordered advocate/NM transcript, latest advocate words and server-owned source IDs.",
+        "authority": "Original words are evidence; conversation instructions cannot override this source-reading task.",
+        "output": "Classify each owned advocate span; exclude NM spans from advocate evidence.",
+        "invariant": "Candidate-free provenance and complete owned-source catalogue.",
+        "gap_refs": [
+          "F1",
+          "F2"
+        ]
+      },
+      {
+        "id": "record_review.2",
+        "file": "nm/brain/record_review.py",
+        "prompt": "_SOURCE_SYSTEM",
+        "line": 24,
+        "line_end": 27,
+        "purpose": "Assign original source purpose separately from factual adoption or truth.",
+        "evidence": "Exact span and its complete original conversational framing.",
+        "authority": "Model proposes purpose; server owns turn, speaker and exact words. Classification is neither proof nor fact adoption.",
+        "output": "One purpose classification with concise reason per owned source ID.",
+        "invariant": "Provenance, source purpose and fact certainty are different decisions.",
+        "gap_refs": [
+          "F2"
+        ]
+      },
+      {
+        "id": "record_review.3",
+        "file": "nm/brain/record_review.py",
+        "prompt": "_SOURCE_SYSTEM",
+        "line": 29,
+        "line_end": 38,
+        "purpose": "Distinguish account, real party position, examination, work instruction, NM interpretation, mixed and uncertain.",
+        "evidence": "Surrounding original advocate words, framing of quotations/drafts and express substantive adoption.",
+        "authority": "Work authority cannot supply facts; NM interpretations cannot substantiate themselves.",
+        "output": "Use the seven declared content-role values according to actual purpose.",
+        "invariant": "A source permits only its actual attributed evidentiary use.",
+        "gap_refs": [
+          "F2"
+        ]
+      },
+      {
+        "id": "record_review.4",
+        "file": "nm/brain/record_review.py",
+        "prompt": "_SOURCE_SYSTEM",
+        "line": 40,
+        "line_end": 46,
+        "purpose": "Preserve unproved/tentative account and true mixed spans without promoting pure work or historical analysis.",
+        "evidence": "Original framing and chronology, including disputed positions and later review requests.",
+        "authority": "Original framing controls historical treatment; legal merit and truth remain unassessed.",
+        "output": "Mixed only for real substantive content plus another purpose; uncertain when unresolved.",
+        "invariant": "Uncertainty is not a reason to suppress genuine account; later work requests do not rewrite provenance.",
+        "gap_refs": [
+          "F2"
+        ]
+      },
+      {
+        "id": "record_review.5",
+        "file": "nm/brain/record_review.py",
+        "prompt": "_SOURCE_SYSTEM",
+        "line": 48,
+        "line_end": 54,
+        "purpose": "Return a complete keyed source catalogue rather than an account summary or duplicated IDs.",
+        "evidence": "Original source_ids, exact transcript and precise correction field error.",
+        "authority": "Server owns catalogue keys; source reader owns content_role and reasons.",
+        "output": "Only source_treatments; every required key has content_role and substantive reason, including non-substantive/uncertain spans.",
+        "invariant": "Literal source coverage and correct envelope; not semantic material-extraction coverage.",
+        "gap_refs": [
+          "F1",
+          "F5"
+        ]
+      },
+      {
+        "id": "dispute_verification.1",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 30,
+        "line_end": 40,
+        "purpose": "Review proposed disputes independently of their author against complete original evidence.",
+        "evidence": "Whole ordered transcript, exact speaker spans, active disputes and separate-read proposals; retained peers on repair.",
+        "authority": "NM records are derived interpretations; retained verdicts are comparison context, not overridable decisions.",
+        "output": "Review only listed pending proposals using complete original evidence.",
+        "invariant": "Original evidence and proposal separation; bounded peer-preserving repair.",
+        "gap_refs": [
+          "F4",
+          "F6"
+        ]
+      },
+      {
+        "id": "dispute_verification.2",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 42,
+        "line_end": 46,
+        "purpose": "Judge distinct issue identity and exact operation support without deciding legal merit.",
+        "evidence": "Latest advocate message in whole conversation, attributed account, proposed title/statement and linked records.",
+        "authority": "Reviewer judges semantic support; exact IDs alone confer no operation authority.",
+        "output": "Per-proposal issue role and operation_supported judgment.",
+        "invariant": "Supported identity and supported transition are separate requirements.",
+        "gap_refs": [
+          "F1",
+          "F6"
+        ]
+      },
+      {
+        "id": "dispute_verification.3",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 48,
+        "line_end": 76,
+        "purpose": "Separate independent conduct/contested positions from premises, questions and duplicates; validate actors and chronology.",
+        "evidence": "All adjacent proposals, current and cited advocate words, canonical active disputes, actor-to-act relations and temporal predicates.",
+        "authority": "No general knowledge, retrieved law or NM formulations may fill missing matter facts.",
+        "output": "candidate_role is independent_dispute, supporting_premise, evidence_gap_or_question, duplicate or unsupported.",
+        "invariant": "No invented actor/date/status; unfamiliar formulations may still represent unproved independent disputes.",
+        "gap_refs": [
+          "F1"
+        ]
+      },
+      {
+        "id": "dispute_verification.4",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 78,
+        "line_end": 102,
+        "purpose": "Distinguish advocate account changes from authorised repair of NM interpretations.",
+        "evidence": "Full latest framing, genuine mixed content, earlier exact advocate support, each linked underlying issue and current work.",
+        "authority": "Changing original account needs attributable change/withdrawal; relevant work may repair derived errors while preserving account/lineage.",
+        "output": "operation_supported true only for exact authorised creation/revision with speaker, scope and every selected target; concise changed-layer reason.",
+        "invariant": "Review authority is not factual evidence; genuine repairs need no fresh assertion.",
+        "gap_refs": [
+          "F2",
+          "F6"
+        ]
+      },
+      {
+        "id": "dispute_verification.5",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 104,
+        "line_end": 122,
+        "purpose": "Check substantive support inside the independently classified source purpose.",
+        "evidence": "Source-treatment catalogue, exact original span/full context and selected proposal evidence.",
+        "authority": "Reviewer may not upgrade immutable source classification; a party position stays attributed and mixed spans support only their reported portion.",
+        "output": "One source_check per selected source_id: supplies_account_content, supports_proposal, concise reason; at least one substantive supporting source and whole-proposal support.",
+        "invariant": "Positive overall acceptance cannot override non-account evidence or lack of substantive support.",
+        "gap_refs": [
+          "F2",
+          "F3"
+        ]
+      },
+      {
+        "id": "dispute_verification.6",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 124,
+        "line_end": 159,
+        "purpose": "Certify the whole attributed account and every replacement target, preserving independent accounts during merged-record repair.",
+        "evidence": "Original advocate words and context for all selected targets; collective same-target successors and prior derived errors.",
+        "authority": "No new NM legal analysis; server owns candidate/source/target IDs; reader judgments on restoration and collective support remain semantic.",
+        "output": "account_check role/support/legal-analysis/source IDs/checks/reason; one target_check per selected target with identity, preservation, eligible peer dependencies and reason. New issues have no target checks; rejected units may leave unused arrays empty.",
+        "invariant": "Atomic replacement; no erasure of independent accounts; code prevents retirement when a declared required successor is rejected.",
+        "gap_refs": [
+          "F1",
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "id": "dispute_verification.7",
+        "file": "nm/brain/dispute_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 161,
+        "line_end": 171,
+        "purpose": "Return one independently valid verdict per proposal without rewriting it.",
+        "evidence": "Complete attributed account plus role, operation, source and target checks.",
+        "authority": "Acceptance cannot override failed supporting checks; server already owns original passages.",
+        "output": "accept only independent_dispute with whole-formulation support, operation true, substantive sources, no added NM law and preserved target identity; otherwise reject with concise reason.",
+        "invariant": "Validated outcome coverage across proposed IDs, not proof that extractor found every significant original item.",
+        "gap_refs": [
+          "F1",
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "id": "material_verification.1",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 31,
+        "line_end": 44,
+        "purpose": "Review untrusted material/opening text against whole original conversation and canonical linked records.",
+        "evidence": "Exact speaker spans, current matter ID, selected dispute/revision target records and same-turn retained peer context.",
+        "authority": "NM prose/records are derived interpretations, never evidence of an advocate assertion; retained decisions are immutable during retry.",
+        "output": "Independent judgment for each pending detail/opening.",
+        "invariant": "Original evidence, proposal and retained decision remain distinct.",
+        "gap_refs": [
+          "F4",
+          "F6"
+        ]
+      },
+      {
+        "id": "material_verification.2",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 46,
+        "line_end": 49,
+        "purpose": "Judge faithful attributed detail/opening content and exact record operation.",
+        "evidence": "Original advocate words, contextual account and proposal/target state.",
+        "authority": "Reviewer owns grounding judgment, not legal merit, proof or source applicability.",
+        "output": "Per-proposal faithful-content and operation-support decision.",
+        "invariant": "Whole-proposal grounding is required; existence of source IDs is insufficient.",
+        "gap_refs": [
+          "F1",
+          "F6"
+        ]
+      },
+      {
+        "id": "material_verification.3",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 51,
+        "line_end": 73,
+        "purpose": "Verify every material assertion, classification, assignment and scope independently from work routing.",
+        "evidence": "Selected latest/cited earlier advocate passages, whole context and every linked target account.",
+        "authority": "Reader selects assignment; code derives scope/placement; reviewer judges meaning and relevance. NM context cannot supply facts.",
+        "output": "Decide whole proposition/classification/scope/assignment faithful to selected advocate evidence, preserving uncertainty and attributed opinions.",
+        "invariant": "Known assignment does not establish relevance; requested NM work is not a new matter fact or client objective.",
+        "gap_refs": [
+          "F1",
+          "F2"
+        ]
+      },
+      {
+        "id": "material_verification.4",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 75,
+        "line_end": 97,
+        "purpose": "Check original-account change versus authorised correction of NM derived interpretation.",
+        "evidence": "Full latest quotation/request framing, each canonical material target, earlier original evidence and currently authorised work.",
+        "authority": "Account revision needs attributable change/withdrawal; relevant work may restore derived interpretations without inventing a new advocate correction.",
+        "output": "operation_supported only for exact supported new proposition/change, speaker/scope/relation and every selected assignment/revision target; explain changed layer/source basis.",
+        "invariant": "One supported mixed-message operation does not certify another; opposing position does not retire a different speaker account.",
+        "gap_refs": [
+          "F2",
+          "F6"
+        ]
+      },
+      {
+        "id": "material_verification.5",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 99,
+        "line_end": 117,
+        "purpose": "Check actual substantive support under independently owned source purposes.",
+        "evidence": "Candidate-free source_treatments and each exact selected original span in full context.",
+        "authority": "Reviewer cannot upgrade content_role; work instructions/NM context may authorise work but supply no underlying assertion.",
+        "output": "Exactly one source_check per selected source_id; substantive content/support flags and reason; at least one supporting substantive source, with whole-proposal supported separately.",
+        "invariant": "Original purpose and actual evidentiary support are independent; no authority-as-content promotion.",
+        "gap_refs": [
+          "F2",
+          "F3"
+        ]
+      },
+      {
+        "id": "material_verification.6",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 119,
+        "line_end": 152,
+        "purpose": "Protect atomic account identity during detail replacement and restoration of invalid merged/analytical NM records.",
+        "evidence": "Full original/canonical target sources/context, proposed successors and eligible same-target peers.",
+        "authority": "No invented NM legal position; attribution/uncertainty preserved; factual correction allowed; original sourced support authorises restoration, not NM interpretation itself.",
+        "output": "account_check role/support/legal analysis/exact sources/checks/reason; target_check per revision with identity/preservation/peer requirements/reason; new detail/opening targets empty; unused reject arrays may be empty.",
+        "invariant": "No independent-detail retirement by shared source/assignment; declared successor dependency checked by code, collective sufficiency still semantic.",
+        "gap_refs": [
+          "F1",
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "id": "material_verification.7",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 154,
+        "line_end": 168,
+        "purpose": "Ground opening party/subject/summary and preserve useful faithful paraphrase.",
+        "evidence": "Whole attributed advocate account, especially clearly named client-side person/entity and role.",
+        "authority": "Legal entity identity is semantic: do not split one entity solely on a connecting word; judge each proposal independently.",
+        "output": "Opening operation_supported means faithful grounded description; named client required if clear; subject-only allowed if unclear; one client entity/person in prefix.",
+        "invariant": "No unsupported opening allegation; no keyword split false positive; good peers survive bad proposals.",
+        "gap_refs": [
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "id": "material_verification.8",
+        "file": "nm/brain/material_verification.py",
+        "prompt": "_SYSTEM",
+        "line": 170,
+        "line_end": 177,
+        "purpose": "Return exactly one complete grounding verdict per proposed ID.",
+        "evidence": "Whole account plus source/target/operation checks.",
+        "authority": "Acceptance never overrides failed supporting attestations; reviewer does not rewrite or decide allegation truth.",
+        "output": "accept only whole grounded faithful proposal, operation true, attributable substantive sources, no introduced NM analysis and preserved targets; else reject with reason.",
+        "invariant": "Proposed-ID completeness is not original-account semantic coverage.",
+        "gap_refs": [
+          "F1",
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "id": "checked.repair_extension.1",
+        "file": "nm/brain/checked.py",
+        "prompt": "repair_system appended paragraph",
+        "line": 59,
+        "line_end": 66,
+        "purpose": "Repair exactly the stated failure on the same original read.",
+        "evidence": "Original exact attributed input and precise validation issue; rejected output is context only when budget permits.",
+        "authority": "Original prompt/schema govern; rejected response is unsaved and not authority. Model proposes replacement; code validates.",
+        "output": "Complete replacement under the same declared schema with only supported proposals.",
+        "invariant": "One conditional correction; original input preserved; no extra facts or references; context remains within configured tier budget.",
+        "gap_refs": [
+          "F5"
+        ]
+      }
+    ],
+    "existing_controls": [
+      "Candidate-free complete source-purpose catalogue with code-owned exact references.",
+      "Independent configured JUDGE required; downgraded reviewer refuses.",
+      "Source purpose cannot be silently promoted by candidate judge.",
+      "Whole-proposal support and every selected replacement identity checked, including inherited account preservation.",
+      "At most one verifier correction, retaining previously valid peer context when complete result reaches parser.",
+      "Declared missing-successor dependencies iteratively reject unsafe dependent retirements.",
+      "Full original evidence preserved; repair drops only redundant rejected-output context on overflow.",
+      "Concise faithful paraphrase and single legal entity containing a connecting word are legitimate."
+    ],
+    "call_accounting": {
+      "classify_account_sources": "1 ROUTINE read + at most 1 schema/contract correction.",
+      "verify_disputes": "0 calls when no candidates; otherwise 1 JUDGE read + at most 1 contract correction.",
+      "verify_material_grounding": "0 calls when no detail/opening; otherwise 1 JUDGE read + at most 1 contract correction.",
+      "checked_read": "1 caller-selected-tier read + at most 1 feedback correction; independent result required at JUDGE tier.",
+      "scope_note": "These are audited stages only, not complete per-turn application call counts."
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "priority": "high",
+        "type": "semantic coverage and omission gap",
+        "refs": [
+          "nm/brain/dispute_verification.py:261",
+          "nm/brain/material_verification.py:271",
+          "nm/brain/record_review.py:48",
+          "nm/brain/turn.py:452"
+        ],
+        "finding": "Both reviewers return immediately for no candidates; for nonempty outputs they review only proposed units. The source classifier covers purposes, not which materially significant account/repair obligations were extracted. Whole-proposal and successor checks do not independently inspect general omissions. Empty and partially omitted extraction therefore leave semantic coverage unassessed.",
+        "minimal_fix": "At one existing independent review owner, add explicit original-account/request coverage judgment and unresolved/omitted source-linked units; use the same populated-candidate call, and a conditional coverage-only call when relevant material work returned no candidates. Code reconciles owned declared coverage and carries missing work; it must not infer semantic completeness from source roles, count or an empty envelope.",
+        "counterexamples": [
+          "Wrong: date correction supplied, extractor returns empty and reply claims completion.",
+          "Wrong: extractor emits valid new circumstance but omits independent date correction in the same message.",
+          "Legitimate: greeting/read-only recap has no requested change and no significant new material.",
+          "Legitimate: actual review establishes current record already satisfies the requested correction."
+        ],
+        "call_impact": "No additional routine call for populated review when coverage shares its original evidence; relevant empty-result coverage adds one conditional independent read plus only declared bounded repair. Do not force extraction or a coverage call for every interaction.",
+        "depends": [
+          "Typed material purpose/current authorised request and success condition",
+          "Owned original source catalogue",
+          "Explicit partial/no-change/unfinished coverage handoff and release completion gate"
+        ],
+        "evidence_limit": "Static current-code contract; no actual model semantic quality evaluated."
+      },
+      {
+        "id": "F2",
+        "priority": "high",
+        "type": "source-owner false rejection and recovery gap",
+        "refs": [
+          "nm/brain/record_review.py:100",
+          "nm/brain/record_review.py:294",
+          "nm/brain/dispute_verification.py:104",
+          "nm/brain/material_verification.py:99"
+        ],
+        "finding": "Schema-valid source treatment is a downstream veto: examination, work_instruction, nm_interpretation or uncertain may not support a positive account. The only source-owner retry is structural SchemaViolation; there is no route to reconsider a semantically mistaken purpose. This prevents candidate-driven promotion but can suppress genuinely reported uncertain account or earlier original support for authorised repair.",
+        "minimal_fix": "Keep ownership immutable downstream. First evaluate source-owner judgments against independently labelled neighbouring cases. When an actual consequential disagreement is demonstrated, route a precise original-framing mismatch back to the source owner for one bounded reconsideration using original transcript, without a desired candidate formulation or silent upgrade. Preserve all unaffected classifications.",
+        "counterexamples": [
+          "Legitimate: tentative/unproved advocate report remains reported account; uncertain truth is not uncertain source purpose.",
+          "Legitimate: real opposing legal position remains that speaker position, not NM analysis.",
+          "Legitimate: mixed request includes reported facts; pure review authority cannot supply facts.",
+          "Legitimate: review request repairs NM date using earlier advocate account, without fresh assertion.",
+          "Wrong: quoted analysis or instruction is promoted because a proposed correction needs support."
+        ],
+        "call_impact": "Zero added normal-path calls; any proven semantic mismatch recovery is conditional and counted under an explicit bound.",
+        "depends": [
+          "Source-owner disagreement contract",
+          "Independent labelled real-model source-purpose evaluation",
+          "Downstream pending coverage instead of invented factual repair"
+        ],
+        "evidence_limit": "Structural unrepairability shown by code; no observed real-model misclassification claimed."
+      },
+      {
+        "id": "F3",
+        "priority": "medium",
+        "type": "schema-induced false rejection risk",
+        "refs": [
+          "nm/brain/dispute_verification.py:190",
+          "nm/brain/dispute_verification.py:225",
+          "nm/brain/dispute_verification.py:315",
+          "nm/brain/material_verification.py:201",
+          "nm/brain/material_verification.py:236",
+          "nm/brain/material_verification.py:354",
+          "nm/brain/record_review.py:187"
+        ],
+        "finding": "Provider receives one verdict-array item schema with a union of all candidate source/target/peer vocabularies; candidate-specific eligibility appears only in input text and later local validation. Every reject also requires complete positive account_check/target_checks fields, even when unused. Thus correct semantic judgments can require repair due to offered wrong bookkeeping choices or irrelevant metadata.",
+        "minimal_fix": "Expose server-keyed per-candidate verdict objects with that candidate exact allowed sources, targets and peers; use portable provider-supported shapes to separate accept-required attestations from an explained reject. Normalize only empty/inapplicable fields whose removal cannot change meaning; substantive contradictory support or identity content is not harmless. Keep accept ownership and source/target enforcement unchanged.",
+        "counterexamples": [
+          "Legitimate: C1 accepted with its own evidence while C2 rejected for no dispute; C2 need not invent positive source/target attestations.",
+          "Legitimate: rejected proposal has empty unused arrays and clear consequential reason.",
+          "Wrong: C1 chooses a C2-only source/target offered by the shared schema.",
+          "Wrong: acceptance contains nonempty contradictory content or unowned source; no normalization can hide it."
+        ],
+        "call_impact": "Same normal call count; reduces conditional repairs if actual provider evaluations support it.",
+        "depends": [
+          "Portable schema subset (current local validator has no oneOf/anyOf support)",
+          "Verifier schema and parser ownership agreement",
+          "One production file/prompt per sequential slice; shared helper/API changes must identify inseparable dependencies"
+        ],
+        "evidence_limit": "Static shape mismatch and retry conditions; actual false rejection rate remains unmeasured."
+      },
+      {
+        "id": "F4",
+        "priority": "high",
+        "type": "per-unit recovery reaches neither terminal nor adapter boundary",
+        "refs": [
+          "nm/brain/dispute_verification.py:329",
+          "nm/brain/dispute_verification.py:333",
+          "nm/brain/material_verification.py:367",
+          "nm/brain/material_verification.py:371",
+          "nm/brain/record_review.py:324",
+          "nm/shared/model_anthropic_adapter.py:134",
+          "nm/shared/model_openai_adapter.py:373"
+        ],
+        "finding": "A successfully returned schema-valid envelope retains independently valid peer decisions during one repair. If any remaining unit stays malformed, the reviewer raises and no valid peer result is returned to caller. Production adapters validate the entire schema before returning data, so one structural defect can also hide otherwise valid siblings before the per-candidate retention parser. Direct scripted verifier fixtures do not prove recovery across either boundary.",
+        "minimal_fix": "Define an explicit partial-review result carrying checked peers and pending IDs/reasons, and enforce existing retirement successor dependencies before allowing any independently safe effect. Whole-turn integrity faults still withhold. Prove envelope/adapter behavior before claiming structural per-unit retention; preserve typed contract authority rather than bypassing provider validation to consume malformed data.",
+        "counterexamples": [
+          "Legitimate: independent material A verified, independent B remains malformed after its one repair; A can survive if owned coverage explicitly records B unfinished.",
+          "Wrong: retiring a merged target when a necessary B successor failed would erase underlying account.",
+          "Wrong: treating unread B as semantic reject/no relevant material.",
+          "Wrong: history/identity/ownership integrity fault is handled as a harmless independent candidate defect."
+        ],
+        "call_impact": "No extra retries or normal calls; existing one-correction bound retained.",
+        "depends": [
+          "Partial-result handoff to turn coverage/effect persistence",
+          "Declared dependency closure",
+          "Production adapter boundary fixtures and actual model contract behavior"
+        ],
+        "evidence_limit": "Valid decisions are lost to verifier caller on terminal raise; exact durable turn-recovery behavior is outside these four audited files."
+      },
+      {
+        "id": "F5",
+        "priority": "high",
+        "type": "generic replacement may erase valid proposals",
+        "refs": [
+          "nm/brain/checked.py:40",
+          "nm/brain/checked.py:45",
+          "nm/brain/checked.py:49",
+          "nm/brain/checked.py:65"
+        ],
+        "finding": "checked_read validates the whole response and asks for a complete replacement. Its repair guidance permits unsupported proposal omission but has no independent-unit retention or semantic coverage reconciliation. Source catalogue coverage is protected by required keys, but extraction replacement arrays can lose previously sound proposals or become empty while still schema-valid.",
+        "minimal_fix": "Keep generic source/schema correction bounded. For readers that contain independently usable proposal units, put validation/retention at their owning parser and carry only unresolved units into repair with complete original evidence; explicitly reconcile omissions. Do not turn failure into empty extraction, or keep prior units whose ownership/support was never validated.",
+        "counterexamples": [
+          "Legitimate: one malformed prior-source link repaired while a separately valid new reported event remains.",
+          "Wrong: replacement fixes the link by deleting every significant valid peer, then empty envelope is treated as complete.",
+          "Legitimate: source treatment correction returns complete required catalogue without altering original words.",
+          "Wrong: context overflow drops original transcript instead of only redundant rejected output."
+        ],
+        "call_impact": "Same one conditional correction maximum; no routine extra stage.",
+        "depends": [
+          "Reader-specific independent-unit parse contract",
+          "Original-account omission/coverage review (F1)",
+          "Provider complete-envelope boundary behavior (F4)"
+        ],
+        "evidence_limit": "Mechanism permits proposal omission; no observed omission attributed to a real model in this audit."
+      },
+      {
+        "id": "F6",
+        "priority": "medium",
+        "type": "operation authority handoff is implicit",
+        "refs": [
+          "nm/brain/dispute_verification.py:42",
+          "nm/brain/dispute_verification.py:98",
+          "nm/brain/dispute_verification.py:263",
+          "nm/brain/material_verification.py:93",
+          "nm/brain/material_verification.py:273",
+          "nm/brain/turn.py:439"
+        ],
+        "finding": "Prompts correctly distinguish current authorised work from source factual support, but verifier payloads contain no typed request/purpose or required effect/success condition. Each verifier must rediscover current authorised activity from conversation. operation_supported remains a semantic proposal judgment and cannot mechanically establish per-request fulfillment.",
+        "minimal_fix": "Carry the owning interpreter/work-unit purpose and request identity as visibly separated work context to the relevant operation reviewer, preserving original evidence independently. Code checks which requested activity/effect was covered; reviewer decides semantic support. Do not require a fresh assertion for repair or let typed purpose supply the restored fact.",
+        "counterexamples": [
+          "Legitimate: earlier advocate evidence plus current authorised repair restores a derived record.",
+          "Legitimate: read-only recap uses saved state without inventing a record write.",
+          "Wrong: new legal theory is treated as authority to change original account.",
+          "Wrong: unrelated accepted material is used to mark a distinct correction request complete."
+        ],
+        "call_impact": "No new model stage; add typed context to existing relevant read/review call.",
+        "depends": [
+          "Owning interpreted work-unit/purpose contract",
+          "Request-to-effect/result linkage and checked current-state alternative",
+          "Cross-file input plumbing must be planned as sequential atomic slices"
+        ],
+        "evidence_limit": "No claim that missing field necessarily caused an observed model error; this is a contract/receipt limit."
+      }
+    ],
+    "recommended_order": [
+      "F1: define semantic coverage/no-change obligation at existing independent review boundary; never claim receipts alone assess it.",
+      "F3: reduce offered bookkeeping contradictions with candidate-specific schemas, preserving accept invariants.",
+      "F5/F4: prove bounded per-unit recovery through reader, adapter, verifier and turn handoffs before claiming complete retention.",
+      "F2: measure real source-purpose errors and implement only evidenced consequential owner reconsideration.",
+      "F6: carry owned request/purpose context and bind supported results; do not upgrade semantic judgment into mechanical proof."
+    ],
+    "validation_limits": "Audit is static plus reading existing scripted regressions. Existing fixtures often fill account/target checks automatically and classify sources as reported account; passing such fixtures is routing/validation evidence, not pinned-model semantic accuracy, omission coverage or false-positive rate."
+  }
+}

@@ -1,0 +1,2392 @@
+{
+  "contract": "nm_brain_final_current_prompt_module_inventory_v1",
+  "captured_at_utc": "2026-10-06T02:01:03.533428+00:00",
+  "requested_prompt_freeze_head": "6bb88d1",
+  "head_before": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+  "head_after": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+  "source_bytes_stable_during_capture": true,
+  "worktree_status_before": [
+    " M tests/test_brain_continuation_service.py",
+    " M tests/test_brain_continuation_use_scope.py",
+    " M tests/test_brain_dispute_transitions.py",
+    " M tests/test_brain_material.py",
+    " M tests/test_brain_material_answer_routing.py",
+    " M tests/test_brain_material_assignment.py",
+    " M tests/test_brain_material_execution.py",
+    " M tests/test_brain_material_operations.py",
+    " M tests/test_brain_material_purpose.py",
+    " M tests/test_brain_material_record.py",
+    " M tests/test_brain_material_scope.py",
+    " M tests/test_brain_progress_service.py",
+    " M tests/test_brain_record_review.py",
+    " M tests/test_brain_release_gate_social.py",
+    " M tests/test_brain_review_consistency.py",
+    " M tests/test_brain_source_selection.py",
+    " M tests/test_brain_source_treatment_coverage.py",
+    " M tests/test_brain_source_treatment_reuse.py",
+    " M tests/test_brain_turn.py",
+    " M tests/test_brain_work_identity_checks.py"
+  ],
+  "source_snapshot_directory": "/tmp/nm-brain-final-6bb88d1-inventory-20261006-sources",
+  "scope": "Read-only AST inventory of the frozen served production source. Only /tmp artifacts and immutable source copies written. No tests, actual models, APIs, browser or document publication. Runtime source activation and narrow owning controls are distinguished from semantic qualification.",
+  "counts": {
+    "python_modules_including_init": 20,
+    "baseline_python_modules_including_init": 19,
+    "added_module": "execution_contracts.py",
+    "baseline_stable_prompt_constants": 13,
+    "new_empty_reading_prompt_constants": 1,
+    "conditional_account_coverage_appendices": 2,
+    "conditional_retrieved_pool_appendices": 1,
+    "total_named_constants_fragments": 17,
+    "baseline_blank_separated_paragraphs": 83
+  },
+  "modules": [
+    {
+      "module": "__init__.py",
+      "purpose": "Package identity.",
+      "ref": "nm/brain/__init__.py:1",
+      "sha256": "bbbaeddb5f2489ff94dd9c963907c10c55f25f8a40fda18d18dc3e4177d342f8",
+      "bytes": 70,
+      "changed_since_b682132": false,
+      "docstring": "New legal-brain conversation contracts and turn interpretation."
+    },
+    {
+      "module": "checked.py",
+      "purpose": "Generic full-contract read with one schema correction; Judge callers must receive a real non-downgraded Judge result.",
+      "ref": "nm/brain/checked.py:26",
+      "sha256": "367e7cc5bd3c081acc3909994df245f9da0bef4d7dce88878fa032e8231073e9",
+      "bytes": 3718,
+      "changed_since_b682132": false,
+      "docstring": "Validate structured brain reads and offer one feedback-guided correction."
+    },
+    {
+      "module": "continuation.py",
+      "purpose": "Write complete response units from whole conversation, checked record, law and progress; preserve accepted peers and check every public route.",
+      "ref": "nm/brain/continuation.py:1145",
+      "sha256": "821f4a5225e3091ff8bbc3b07949a58f44f8567349f7046950be6bab96441988",
+      "bytes": 74818,
+      "changed_since_b682132": true,
+      "docstring": "Compose checked conversational progress from existing attributed work."
+    },
+    {
+      "module": "continuation_verification.py",
+      "purpose": "Independently check each response unit, its blocks/proposals, selected law and work transitions; retain valid decisions during local correction.",
+      "ref": "nm/brain/continuation_verification.py:575",
+      "sha256": "afb889a2dafc36cdc0566a2b7931a2bbb2a58f5d8e9b980db4b8f1c79f08f570",
+      "bytes": 37685,
+      "changed_since_b682132": true,
+      "docstring": "Independently check complete conversational request units before release."
+    },
+    {
+      "module": "conversation.py",
+      "purpose": "Interpret current independent requests, record/research need, scope and opening; separately repair a rejected opening proposal.",
+      "ref": "nm/brain/conversation.py:514",
+      "sha256": "8fbd1e55dd2268ddb96af686d030bd95fbb1a37f74755835e1ff9e6c4cb1948a",
+      "bytes": 35805,
+      "changed_since_b682132": false,
+      "docstring": "Interpret each new message against a complete, attributed conversation.\n\nThis module decides what work a message requests. It does not perform legal\nresearch, admit a matter fact, issue advice, or authorise an action."
+    },
+    {
+      "module": "dispute_state.py",
+      "purpose": "Project active dispute formulations and correction lineage from attributable saved history.",
+      "ref": "nm/brain/dispute_state.py:59",
+      "sha256": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839",
+      "bytes": 8536,
+      "changed_since_b682132": false,
+      "docstring": "Project current dispute readings from their attributed conversation history."
+    },
+    {
+      "module": "dispute_verification.py",
+      "purpose": "Judge independent disputes, original account, requested restoration and targets; optional full-source coverage and explicit unread recovery.",
+      "ref": "nm/brain/dispute_verification.py:285",
+      "sha256": "bb6ca52681a6f7b81cfe98351955e1ffd57ad90f905169c6f33e0e8f1fc69f88",
+      "bytes": 27509,
+      "changed_since_b682132": false,
+      "docstring": "Independently check proposed dispute formulations against the saved words."
+    },
+    {
+      "module": "disputes.py",
+      "purpose": "Propose independently contestable issues with owned exact account references and saved-record links.",
+      "ref": "nm/brain/disputes.py:145",
+      "sha256": "7864ebf0faaf21b6d1d08d72faf989b27445245012e124d82ac25c8e5a852194",
+      "bytes": 11161,
+      "changed_since_b682132": false,
+      "docstring": "Propose distinct, sourced disputes in one attributed conversation read."
+    },
+    {
+      "module": "execution_contracts.py",
+      "purpose": "Validate code-owned effect catalogues and selected typed record outcomes; validate exact requested-review completion separately from narrower results.",
+      "ref": "nm/brain/execution_contracts.py:101",
+      "sha256": "9d646228b5bf5b335ba0f613a77d01e5c72c17dfeaf316c81c259f7c5f0ade83",
+      "bytes": 22281,
+      "changed_since_b682132": true,
+      "docstring": "Code-owned record execution evidence, separate from semantic fulfillment.\n\nThis module validates selected declared outcomes. It cannot infer an operation\nclaim from prose, decide whether a result satisfies a legal/requested meaning,\nor certify a save from a prepared receipt. The caller owns those boundaries."
+    },
+    {
+      "module": "history.py",
+      "purpose": "Reconstruct the complete chronological user-visible transcript and refuse unreadable history.",
+      "ref": "nm/brain/history.py:9",
+      "sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+      "bytes": 3530,
+      "changed_since_b682132": false,
+      "docstring": "Build model context from the complete, user-visible saved conversation."
+    },
+    {
+      "module": "legal_requirements.py",
+      "purpose": "Plan queries, read exact passages, Judge complete proposed uses with optional whole-supplied-pool coverage in the same call, and conditionally Judge empty readings over their supplied pool.",
+      "ref": "nm/brain/legal_requirements.py:1982",
+      "sha256": "08bf2bc7fd6cd7092e26025fdf104ec4e7bdf38c5b923b84b8785cd83b881a73",
+      "bytes": 112520,
+      "changed_since_b682132": true,
+      "docstring": "Plan, read and independently check passage-grounded research subjects."
+    },
+    {
+      "module": "material.py",
+      "purpose": "Resolve exact attributed sources and code-owned assignment choices; propose significant details and their corrections/relationships.",
+      "ref": "nm/brain/material.py:512",
+      "sha256": "52741a8d244297202f998d75e6cb57bc96ba32efcee96f34fdd95fb4e1e55ad1",
+      "bytes": 32009,
+      "changed_since_b682132": true,
+      "docstring": "Provisional legal material identified in an attributed conversation."
+    },
+    {
+      "module": "material_state.py",
+      "purpose": "Project source-checked details, unresolved/held scope, changes and preserved contradiction history.",
+      "ref": "nm/brain/material_state.py:96",
+      "sha256": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711",
+      "bytes": 14547,
+      "changed_since_b682132": false,
+      "docstring": "Project an attributed material record from saved, source-checked turns."
+    },
+    {
+      "module": "material_verification.py",
+      "purpose": "Judge details and opening against original account and selected canonical targets; optional independent full-source coverage, checked-peer recovery and unread audits.",
+      "ref": "nm/brain/material_verification.py:315",
+      "sha256": "d5ae5d3cb88339df66ed2970021113a46e99e55a60a53ed5129d7813c6717f76",
+      "bytes": 30683,
+      "changed_since_b682132": false,
+      "docstring": "Check model-written material and opening words against attributed input."
+    },
+    {
+      "module": "record_review.py",
+      "purpose": "Candidate-free source-purpose read plus common attribution, restoration/dependency and raw coverage contracts.",
+      "ref": "nm/brain/record_review.py:69",
+      "sha256": "cd43427fd4bdfbe7e5ee5863fb5c126109f28abf3ebccf19e3f5901d586c10cd",
+      "bytes": 20979,
+      "changed_since_b682132": true,
+      "docstring": "Shared attestations for attributed account content and record transitions.\n\nOne candidate-free read owns source treatment. Existing reviewers own the\nsupport and record-transition checks; source classifications never prove facts."
+    },
+    {
+      "module": "requirements_state.py",
+      "purpose": "Project owned research and gathering board view; reuse only matching current evidence, including an explicit valid empty-reading receipt.",
+      "ref": "nm/brain/requirements_state.py:306",
+      "sha256": "0238de411bb9f3381a0738d5654ac7c9e148e95b7c27c49736061c4fc6051dc6",
+      "bytes": 28202,
+      "changed_since_b682132": true,
+      "docstring": "Project owned research once, with a gathering-only view for the matter board."
+    },
+    {
+      "module": "retrieval.py",
+      "purpose": "Local hybrid corpus retrieval, reranking, exact passage and index-freshness ownership; no generative response calls.",
+      "ref": "nm/brain/retrieval.py:338",
+      "sha256": "02ca34e6d3570518c98b61862ba5f798fa02ffca11ccbb7135cdd2fb7d8044ae",
+      "bytes": 26634,
+      "changed_since_b682132": false,
+      "docstring": "Local candidate search over the held bare-act and judgment passages.\n\nSearch ranks possible sources; it does not decide what law governs or what a\njudgment holds. Every returned quotation is read back from the passage store.\nThe two indexes and the local models load only when a search is requested."
+    },
+    {
+      "module": "source_snapshots.py",
+      "purpose": "Resolve exact response references and inline source links into durable readback snapshots.",
+      "ref": "nm/brain/source_snapshots.py:7",
+      "sha256": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2",
+      "bytes": 5948,
+      "changed_since_b682132": false,
+      "docstring": "Exact reading snapshots resolved from checked continuation references."
+    },
+    {
+      "module": "turn.py",
+      "purpose": "Orchestrate owned stages, model-call receipts, actual projection effects, research, checked responses and one version-checked atomic commit/replay.",
+      "ref": "nm/brain/turn.py:803",
+      "sha256": "60560ab7e813143e52f274d3417642c7ab0a9da52d20b244656d019fb87947ec",
+      "bytes": 67899,
+      "changed_since_b682132": true,
+      "docstring": "The authenticated chat turn, saved atomically with its conversation."
+    },
+    {
+      "module": "work_state.py",
+      "purpose": "Seal/project durable scoped tasks and questions from released units; promises, completion, cancellation and untracked historical work stay distinct.",
+      "ref": "nm/brain/work_state.py:637",
+      "sha256": "d94a71b12bdcf8b2edea3d428ab3fa6b672edb17b4a6bf6137b96ad8656e16e4",
+      "bytes": 43129,
+      "changed_since_b682132": true,
+      "docstring": "Project scoped work and questions from the one released conversation record."
+    }
+  ],
+  "prompts": [
+    {
+      "module": "continuation.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/continuation.py:45",
+      "end_line": 270,
+      "sha256_exact_value_utf8": "0124a3c2b93f58b5b86cb9a5044fe3ef85c2e245c8b948b50f4f194fafd011f8",
+      "chars": 15720,
+      "paragraph_count": 10,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 45,
+          "sha256_utf8": "b00c4c3fcec7c1259b2df72adcbf2713340c9638e7994980bcac8e69bfdc1ed2",
+          "first_line": "Message: The input contains the complete attributed conversation, latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 57,
+          "sha256_utf8": "10ea0b190203f2f7d98e6d51380abd44205972bf824a826bd33cb17a976f593d",
+          "first_line": "Purpose: Address each actual request with useful grounded progress using the"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 62,
+          "sha256_utf8": "8b277da782add8bf1c9d4f67992af5ed2eb4398c52d4bc2f618ccf97064629bc",
+          "first_line": "Activity 1 - Establish the request and its scope."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 76,
+          "sha256_utf8": "7a3624366f983aad385e6e33eb4bc97be37d21b5e59e3621850d7e5baeaa95df",
+          "first_line": "Activity 2 - Establish the attributed account."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 98,
+          "sha256_utf8": "0df39f48c6282cd0d7b9f074b8f400d082a549736cc95cc1039588398b9e9e0a",
+          "first_line": "Activity 3 - Establish what work actually occurred."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 125,
+          "sha256_utf8": "a8f4117bda02fd20217b9f2db365acad88c872de203b7bb70f43b6d5bd4530a5",
+          "first_line": "Activity 4 - Reason within the checked legal support."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 158,
+          "sha256_utf8": "fe36d631d807f8039cae3eb1ff8551846763fd10e83ef129fda95e60388b8223",
+          "first_line": "Activity 5 - Propose useful work and preserve identities."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 182,
+          "sha256_utf8": "b518fc9b8dc7511feda9a41ad94b563a557a32d1b491d7b89b12ead3f11575f6",
+          "first_line": "Activity 6 - Decide sufficiency and attributed progress."
+        },
+        {
+          "paragraph": 9,
+          "source_line": 216,
+          "sha256_utf8": "0f8231b01165635ba4db47498b916b005f08625979ebbac3189378d7e4f32e32",
+          "first_line": "Output contract."
+        },
+        {
+          "paragraph": 10,
+          "source_line": 241,
+          "sha256_utf8": "6f74c99c305cb8394dc2814e4e6ec61f519437ebd8009b939c5e26d62c3cb86e",
+          "first_line": "Record-outcome output."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 45
+        },
+        {
+          "label": "Purpose:",
+          "line": 57
+        },
+        {
+          "label": "Activity 1 - Establish the request and its scope.",
+          "line": 62
+        },
+        {
+          "label": "Look for:",
+          "line": 63
+        },
+        {
+          "label": "Outcome:",
+          "line": 71
+        },
+        {
+          "label": "Activity 2 - Establish the attributed account.",
+          "line": 76
+        },
+        {
+          "label": "Look for:",
+          "line": 77
+        },
+        {
+          "label": "Outcome:",
+          "line": 88
+        },
+        {
+          "label": "Activity 3 - Establish what work actually occurred.",
+          "line": 98
+        },
+        {
+          "label": "Look for:",
+          "line": 99
+        },
+        {
+          "label": "Outcome:",
+          "line": 116
+        },
+        {
+          "label": "Activity 4 - Reason within the checked legal support.",
+          "line": 125
+        },
+        {
+          "label": "Look for:",
+          "line": 126
+        },
+        {
+          "label": "Outcome:",
+          "line": 146
+        },
+        {
+          "label": "Activity 5 - Propose useful work and preserve identities.",
+          "line": 158
+        },
+        {
+          "label": "Look for:",
+          "line": 159
+        },
+        {
+          "label": "Outcome:",
+          "line": 167
+        },
+        {
+          "label": "Activity 6 - Decide sufficiency and attributed progress.",
+          "line": 182
+        },
+        {
+          "label": "Look for:",
+          "line": 183
+        },
+        {
+          "label": "Outcome:",
+          "line": 190
+        },
+        {
+          "label": "Outcome:",
+          "line": 217
+        },
+        {
+          "label": "Outcome:",
+          "line": 242
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish the request and its scope.",
+        "Activity 2 - Establish the attributed account.",
+        "Activity 3 - Establish what work actually occurred.",
+        "Activity 4 - Reason within the checked legal support.",
+        "Activity 5 - Propose useful work and preserve identities.",
+        "Activity 6 - Decide sufficiency and attributed progress."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "continue_conversation",
+      "tier": "judge",
+      "effective_owner": "continue_conversation",
+      "owner_ref": "nm/brain/continuation.py:1145",
+      "when": "Every displayed plan item, including greeting/answer/clarification/legal work; one normal batched writer invocation.",
+      "purpose": "Compose scoped complete response units and proposed progress.",
+      "source_purpose": "Address each actual request with useful grounded progress using the\nexisting attributed record and checked research. Do not re-extract material,\nchange evidence status, open matters or authorise external actions. Establish\nthe requested outcome and its evidence before deciding what was delivered."
+    },
+    {
+      "module": "continuation_verification.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/continuation_verification.py:20",
+      "end_line": 222,
+      "sha256_exact_value_utf8": "47ca8eebeb0f5ae4b9974291ef06145697ae79dcb8c8b4e13b7a5c497afbfed2",
+      "chars": 14587,
+      "paragraph_count": 8,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 20,
+          "sha256_utf8": "27a037a79bb6c6b28133ecf8c89b0d69045636acabaf5c6e40434a0dec5f8ff3",
+          "first_line": "Message: The input contains the complete attributed conversation, latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 30,
+          "sha256_utf8": "18cc4d0a03924cc5fa42cc71c4d140b76ec1c8d1198604e52e5f635e0c78647d",
+          "first_line": "Purpose: Independently decide whether each proposed request unit is grounded,"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 38,
+          "sha256_utf8": "3a7880155c87147dd6a701bac82af3d97c87da0b19b2d1d3fae54986722b3525",
+          "first_line": "Activity 1 - Establish the request and the attributed account."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 60,
+          "sha256_utf8": "6e5a4903859595aa9b2fe9e2ba6776b2659a7f17b1ca4e40afac22a4efd0726c",
+          "first_line": "Activity 2 - Check actual execution and claimed results."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 106,
+          "sha256_utf8": "19ebf079479c95f7d3009dee291ac6879a5afb79751e79302401e55dec3269a2",
+          "first_line": "Activity 3 - Check the selected legal use and coverage."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 140,
+          "sha256_utf8": "b983acd5d59592d317fed797f81a4e5c4a1a37053309323b8d88ff562f68a2cd",
+          "first_line": "Activity 4 - Check useful engagement and proposal identities."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 158,
+          "sha256_utf8": "0921a673273d4426368c335e95f08dca11ecc33f647aed970e622f052bd66a07",
+          "first_line": "Activity 5 - Check sufficiency, task scope and attributed progress."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 202,
+          "sha256_utf8": "1f93063d5972b1e11da425bdf1bf87d1046228d8c9fa43489c904b303d5fc367",
+          "first_line": "Output contract."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 20
+        },
+        {
+          "label": "Purpose:",
+          "line": 30
+        },
+        {
+          "label": "Activity 1 - Establish the request and the attributed account.",
+          "line": 38
+        },
+        {
+          "label": "Look for:",
+          "line": 39
+        },
+        {
+          "label": "Outcome:",
+          "line": 54
+        },
+        {
+          "label": "Activity 2 - Check actual execution and claimed results.",
+          "line": 60
+        },
+        {
+          "label": "Look for:",
+          "line": 61
+        },
+        {
+          "label": "Outcome:",
+          "line": 87
+        },
+        {
+          "label": "Activity 3 - Check the selected legal use and coverage.",
+          "line": 106
+        },
+        {
+          "label": "Look for:",
+          "line": 107
+        },
+        {
+          "label": "Outcome:",
+          "line": 133
+        },
+        {
+          "label": "Activity 4 - Check useful engagement and proposal identities.",
+          "line": 140
+        },
+        {
+          "label": "Look for:",
+          "line": 141
+        },
+        {
+          "label": "Outcome:",
+          "line": 150
+        },
+        {
+          "label": "Activity 5 - Check sufficiency, task scope and attributed progress.",
+          "line": 158
+        },
+        {
+          "label": "Look for:",
+          "line": 159
+        },
+        {
+          "label": "Outcome:",
+          "line": 190
+        },
+        {
+          "label": "Outcome:",
+          "line": 203
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish the request and the attributed account.",
+        "Activity 2 - Check actual execution and claimed results.",
+        "Activity 3 - Check the selected legal use and coverage.",
+        "Activity 4 - Check useful engagement and proposal identities.",
+        "Activity 5 - Check sufficiency, task scope and attributed progress."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_continuation",
+      "tier": "judge",
+      "effective_owner": "verify_continuation",
+      "owner_ref": "nm/brain/continuation_verification.py:575",
+      "when": "Every mechanically valid response unit before release. Empty valid-unit sets make no call; units blocked locally remain unfinished.",
+      "purpose": "Independently judge whole units, each block and linked progress proposal.",
+      "source_purpose": "Independently decide whether each proposed request unit is grounded,\nuseful and accurately describes delivered work. Start with the actual request\nand original evidence; do not endorse the writer's explanation as proof.\nCheck meaning, scope, identities, sufficiency and progress together. Write no\nadvice, supply no missing law and authorise no action. Units are independent;\npreserve valid peers and identify a precise consequential mismatch for any\nrejection. Style differences alone are not unsupported content."
+    },
+    {
+      "module": "conversation.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/conversation.py:180",
+      "end_line": 325,
+      "sha256_exact_value_utf8": "fd695b01a35730296b45cf153c042e3cadee9403ad63f859fe8ab7eb0dac957c",
+      "chars": 10415,
+      "paragraph_count": 7,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 180,
+          "sha256_utf8": "e9716e466ec7a9f4fba462e3b8b795477c577c74f7a6627a61aa4dab5305130b",
+          "first_line": "Message: You receive the advocate's latest message, the complete attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 190,
+          "sha256_utf8": "c97397440efa7fa4c45a44cf21e256d2e7cc25b5b503176360ad4f1b9351c757",
+          "first_line": "Purpose: Propose the distinct work requested or information contributed now,"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 196,
+          "sha256_utf8": "05a154dc4eff0060498633aa44b8db9ac946504ae5bc62f6fb313d491c92214e",
+          "first_line": "Activity 1 - Identify each current request or contribution."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 217,
+          "sha256_utf8": "76553592ca6e9d2a94e91bcea141e56142df4bff1628cd3e5cbc8dcf6c75d97d",
+          "first_line": "Activity 2 - Determine the required source work."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 278,
+          "sha256_utf8": "615e33d75cac26302d062a2f3aa3dc36924c43859129ab57d6ed4c285cc94eac",
+          "first_line": "Activity 3 - Choose a useful immediate response."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 308,
+          "sha256_utf8": "5881027e786980307278b61d428d9a2261c2d230eeedab67c74c5897cec6cd4e",
+          "first_line": "Activity 4 - Decide whether the matter can be opened."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 324,
+          "sha256_utf8": "0d6812e47763c1520f5d5a158ec59b9bbfd5f56850d37cdc65f38d23ac04e9d3",
+          "first_line": "Outcome: Return only the declared JSON object with items and opening."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 180
+        },
+        {
+          "label": "Purpose:",
+          "line": 190
+        },
+        {
+          "label": "Activity 1 - Identify each current request or contribution.",
+          "line": 196
+        },
+        {
+          "label": "Look for:",
+          "line": 197
+        },
+        {
+          "label": "Outcome:",
+          "line": 206
+        },
+        {
+          "label": "Activity 2 - Determine the required source work.",
+          "line": 217
+        },
+        {
+          "label": "Look for:",
+          "line": 218
+        },
+        {
+          "label": "Outcome:",
+          "line": 232
+        },
+        {
+          "label": "Activity 3 - Choose a useful immediate response.",
+          "line": 278
+        },
+        {
+          "label": "Look for:",
+          "line": 279
+        },
+        {
+          "label": "Outcome:",
+          "line": 284
+        },
+        {
+          "label": "Activity 4 - Decide whether the matter can be opened.",
+          "line": 308
+        },
+        {
+          "label": "Look for:",
+          "line": 309
+        },
+        {
+          "label": "Outcome:",
+          "line": 314
+        },
+        {
+          "label": "Outcome:",
+          "line": 324
+        }
+      ],
+      "activities": [
+        "Activity 1 - Identify each current request or contribution.",
+        "Activity 2 - Determine the required source work.",
+        "Activity 3 - Choose a useful immediate response.",
+        "Activity 4 - Decide whether the matter can be opened."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "interpret_conversation",
+      "tier": "judge",
+      "effective_owner": "interpret",
+      "owner_ref": "nm/brain/conversation.py:514",
+      "when": "Every admitted non-replay normal turn.",
+      "purpose": "Interpret current requests and plan.",
+      "source_purpose": "Propose the distinct work requested or information contributed now,\nits scope, the checking it needs and a useful immediate response. Keep account\nintake, review of NM's formulations and legal-source enquiry distinct. This\ninterpretation establishes no fact, decides no law, grants no permission and\nproves no record effect or completed work."
+    },
+    {
+      "module": "conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/conversation.py:354",
+      "end_line": 376,
+      "sha256_exact_value_utf8": "e4a16f14bac3f62064a3f41e382e651e6fbb3d89fb92c1fd391d595f491e49de",
+      "chars": 1396,
+      "paragraph_count": 4,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 354,
+          "sha256_utf8": "839a8b24e548c02ccd3b0de381f674fbbb31cd702a55686e9e2bb4b7abe9dd26",
+          "first_line": "Message: You receive the complete attributed conversation, the latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 358,
+          "sha256_utf8": "ce9f07f7503a4fc350788f34e0caa67164abc3f3bcef9ba3f11905f60d3a5641",
+          "first_line": "Purpose: Repair only the matter-opening description against original advocate"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 361,
+          "sha256_utf8": "2439607c9bfc62d9e8a4d1c290022029fd293b8b06f05ea35875c9891a3c3c09",
+          "first_line": "Activity 1 - Establish the supported client and subject."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 371,
+          "sha256_utf8": "235624a8a35b1e05289e05b135c9d50dbc991f11df876a881a2d1875bf078f80",
+          "first_line": "Activity 2 - Return the corrected opening proposal."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 354
+        },
+        {
+          "label": "Purpose:",
+          "line": 358
+        },
+        {
+          "label": "Activity 1 - Establish the supported client and subject.",
+          "line": 361
+        },
+        {
+          "label": "Look for:",
+          "line": 362
+        },
+        {
+          "label": "Outcome:",
+          "line": 367
+        },
+        {
+          "label": "Activity 2 - Return the corrected opening proposal.",
+          "line": 371
+        },
+        {
+          "label": "Look for:",
+          "line": 372
+        },
+        {
+          "label": "Outcome:",
+          "line": 374
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish the supported client and subject.",
+        "Activity 2 - Return the corrected opening proposal."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "repair_opening",
+      "tier": "routine",
+      "effective_owner": "repair_opening",
+      "owner_ref": "nm/brain/conversation.py:387",
+      "when": "Only a semantically rejected, independently read opening; an unread opening does not trigger this alternative-check branch.",
+      "purpose": "Repair a rejected opening proposal for a fresh independent check.",
+      "source_purpose": "Repair only the matter-opening description against original advocate\nevidence. Preserve the supported subject and other work decisions."
+    },
+    {
+      "module": "dispute_verification.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/dispute_verification.py:34",
+      "end_line": 161,
+      "sha256_exact_value_utf8": "44a20b43b0d06d6442ba6445a9a5c2616999431b1546f41b69bb77b772d29f20",
+      "chars": 9015,
+      "paragraph_count": 7,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 34,
+          "sha256_utf8": "7ef653c77ca809079e86c117882633c748d2a40c3004169aba1880cce1f77306",
+          "first_line": "Message: You receive the advocate's latest message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 44,
+          "sha256_utf8": "bbd36f46fcb3e366b4b5cd81506d3be28d45d82a587500653dd0a2f416c13936",
+          "first_line": "Purpose: Independently decide for each proposal whether it is a distinct dispute"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 50,
+          "sha256_utf8": "cbc99238f37ee8b8af83d93abd2156c9dfd4703f084dd682ec2cfb6685fc68be",
+          "first_line": "Activity 1 - Check original account support."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 80,
+          "sha256_utf8": "71f850ee6a995347dc3472f73a654a7a485d17dff8527317019e14c79625decc",
+          "first_line": "Activity 2 - Identify the issue and preserve its formulation."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 105,
+          "sha256_utf8": "8e856350b4c7ec2c9d410a031eb054ae62f5d88ff0c82b4e2bf296f98865a08c",
+          "first_line": "Activity 3 - Check the exact record operation and its authority."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 129,
+          "sha256_utf8": "a0ddea153de5f299e3031b2a857299d0a24f69d0f2779ec97c0bbcd0d675cc38",
+          "first_line": "Activity 4 - Preserve every underlying account through replacement."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 153,
+          "sha256_utf8": "b14cd26c7fa4ad5c19a15e0cf1d3572c3ee79aed1702fd87239ab76edc0beb40",
+          "first_line": "Outcome: Return only the declared JSON object with exactly one complete verdict"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 34
+        },
+        {
+          "label": "Purpose:",
+          "line": 44
+        },
+        {
+          "label": "Activity 1 - Check original account support.",
+          "line": 50
+        },
+        {
+          "label": "Look for:",
+          "line": 51
+        },
+        {
+          "label": "Outcome:",
+          "line": 62
+        },
+        {
+          "label": "Activity 2 - Identify the issue and preserve its formulation.",
+          "line": 80
+        },
+        {
+          "label": "Look for:",
+          "line": 81
+        },
+        {
+          "label": "Outcome:",
+          "line": 99
+        },
+        {
+          "label": "Activity 3 - Check the exact record operation and its authority.",
+          "line": 105
+        },
+        {
+          "label": "Look for:",
+          "line": 106
+        },
+        {
+          "label": "Outcome:",
+          "line": 123
+        },
+        {
+          "label": "Activity 4 - Preserve every underlying account through replacement.",
+          "line": 129
+        },
+        {
+          "label": "Look for:",
+          "line": 130
+        },
+        {
+          "label": "Outcome:",
+          "line": 137
+        },
+        {
+          "label": "Outcome:",
+          "line": 153
+        }
+      ],
+      "activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Identify the issue and preserve its formulation.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_disputes",
+      "tier": "judge",
+      "effective_owner": "verify_disputes",
+      "owner_ref": "nm/brain/dispute_verification.py:285",
+      "when": "Nonempty proposals, or a code-owned review_scope even when candidates are empty. Served material paths always provide that scope.",
+      "purpose": "Independently judge dispute proposals.",
+      "source_purpose": "Independently decide for each proposal whether it is a distinct dispute\nand whether current authorised work and the attributed account support its exact\nrecord operation. Its heading and statement must stay within that account.\nCheck identification, attribution and transition, not legal merit or proof.\nAn exact source or known target ID is not operation support."
+    },
+    {
+      "module": "dispute_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "classification": "conditional_account_coverage_appendix",
+      "ref": "nm/brain/dispute_verification.py:164",
+      "end_line": 195,
+      "sha256_exact_value_utf8": "6ac85c3aba303e8595b341605cd781bdd914a475ef9b5c51cbd0c7be9f32d9d5",
+      "chars": 2414,
+      "paragraph_count": 1,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 164,
+          "sha256_utf8": "6ac85c3aba303e8595b341605cd781bdd914a475ef9b5c51cbd0c7be9f32d9d5",
+          "first_line": "Message: review_scope states the code-owned authorised work to examine. The"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 164
+        },
+        {
+          "label": "Purpose:",
+          "line": 170
+        },
+        {
+          "label": "Activity 5 - Independently assess represented account coverage.",
+          "line": 173
+        },
+        {
+          "label": "Look for:",
+          "line": 174
+        },
+        {
+          "label": "Outcome:",
+          "line": 181
+        }
+      ],
+      "activities": [
+        "Activity 5 - Independently assess represented account coverage."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_disputes",
+      "tier": "judge",
+      "effective_owner": "verify_disputes",
+      "owner_ref": "nm/brain/dispute_verification.py:285",
+      "when": "Appended to the existing dispute Judge when review_scope is supplied; no additional call for nonempty candidates.",
+      "purpose": "Judge omitted independent disputes across full original advocate catalogue and requested scope.",
+      "source_purpose": "Check whether materially relevant account content or needed\nreconciliation in this stage's authorised scope remains unrepresented. This\njudgment does not prove facts, completeness of legal discovery or task fulfillment.\nActivity 5 - Independently assess represented account coverage.\nLook for: Read original advocate evidence before comparing the current records,\nheld or outside-owned proposals and operations that can actually be admitted.\nExisting records are NM interpretations to compare with that evidence, never\ntheir own authority. Rejected, unassessed or dependency-unavailable proposals\ncannot count as represented merely because they were submitted. An already\nfaithful current record may cover content without a new row. Review can\nlegitimately require no changes and no fresh factual assertion.\nOutcome: Include coverage with state complete, partial or unassessed; a concise\nreason identifying the substantive judgment; and missing_source_ids selected\nonly from coverage_source_ids. Complete means no materially missing content or\nneeded reconciliation was found in this scope and requires an empty missing list.\nPartial means relevant content or reconciliation remains missing: explain the\nmissing proposition or distinction and select owned original source IDs when\nthe gap can be localized. The missing list may be empty when it cannot. Unassessed means this\ncoverage could not be dependably decided; missing IDs may be empty when no gap\ncan be localized. A source span may contain several propositions; selecting it\nis not proof that every proposition is represented. Do not require a new record\nor force complete. Return coverage even for verdicts=[] on an authorised empty\nor coverage-only review. On correction, return verdicts only for the listed\npending candidates plus coverage; preserve settled peers and full source context.\nA valid partial or unassessed assessment is a legitimate result, not an error\nthat must be repaired into complete."
+    },
+    {
+      "module": "disputes.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/disputes.py:28",
+      "end_line": 118,
+      "sha256_exact_value_utf8": "1b48b0fd79c48ab7ec18799a1859fd99d6ec658df0692049c3e25d78cdff3e99",
+      "chars": 6287,
+      "paragraph_count": 7,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 28,
+          "sha256_utf8": "53efa1f9158300b4499a353fc51743be2110d8c0f7f6697ab87613da92c703d4",
+          "first_line": "Message: You receive the latest advocate message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 36,
+          "sha256_utf8": "2542cb953b1e60d5cf5b0f3f36ac5c9e3ba7253213a885e319d280b3f56dd619",
+          "first_line": "Purpose: Propose independently contestable issues contributed now, or justified"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 42,
+          "sha256_utf8": "4c947b327dbf3be933b4f4d768ac6b9877a99dd291fb92a9a1ed0f87a09356ab",
+          "first_line": "Activity 1 - Establish the original account and review authority."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 59,
+          "sha256_utf8": "f9a5f347a7830999c2337c63316964d1e0da138a805eb4f44ea25e5800f3a674",
+          "first_line": "Activity 2 - Identify the independently contested issue."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 81,
+          "sha256_utf8": "1d7e972b365c1611b51709b4ffc64661bc1d415e2eb51246e17a4b084f45ad1c",
+          "first_line": "Activity 3 - Choose an owned creation or revision."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 103,
+          "sha256_utf8": "04645f869019668f386d5b5f98f1d28aaff38bb740109dc66bceecc9c7b94458",
+          "first_line": "Activity 4 - Preserve attribution, ownership and identification certainty."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 116,
+          "sha256_utf8": "766e53e25a78387b830c5b323246592d382f2623ffe03895504ebcd80b714024",
+          "first_line": "Outcome: Return only the declared new_items and changes object. Both arrays"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 28
+        },
+        {
+          "label": "Purpose:",
+          "line": 36
+        },
+        {
+          "label": "Activity 1 - Establish the original account and review authority.",
+          "line": 42
+        },
+        {
+          "label": "Look for:",
+          "line": 43
+        },
+        {
+          "label": "Outcome:",
+          "line": 51
+        },
+        {
+          "label": "Activity 2 - Identify the independently contested issue.",
+          "line": 59
+        },
+        {
+          "label": "Look for:",
+          "line": 60
+        },
+        {
+          "label": "Outcome:",
+          "line": 72
+        },
+        {
+          "label": "Activity 3 - Choose an owned creation or revision.",
+          "line": 81
+        },
+        {
+          "label": "Look for:",
+          "line": 82
+        },
+        {
+          "label": "Outcome:",
+          "line": 93
+        },
+        {
+          "label": "Activity 4 - Preserve attribution, ownership and identification certainty.",
+          "line": 103
+        },
+        {
+          "label": "Look for:",
+          "line": 104
+        },
+        {
+          "label": "Outcome:",
+          "line": 107
+        },
+        {
+          "label": "Outcome:",
+          "line": 116
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish the original account and review authority.",
+        "Activity 2 - Identify the independently contested issue.",
+        "Activity 3 - Choose an owned creation or revision.",
+        "Activity 4 - Preserve attribution, ownership and identification certainty."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "extract_disputes",
+      "tier": "routine",
+      "effective_owner": "extract_disputes",
+      "owner_ref": "nm/brain/disputes.py:145",
+      "when": "Every selected material read.",
+      "purpose": "Propose contestable issues.",
+      "source_purpose": "Propose independently contestable issues contributed now, or justified\nrepairs of sourced formulations during relevant authorised review. Review can\nauthorise repair without a new factual assertion; original advocate words\nsupply its evidence. This call admits no fact, law, permission, action or\ncompleted assessment."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_DECOMPOSE_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/legal_requirements.py:343",
+      "end_line": 371,
+      "sha256_exact_value_utf8": "d6446dca538115ee6d14d8f314d5d7283f8cfbbb6d1376dbbc859ce9ef5f3997",
+      "chars": 1777,
+      "paragraph_count": 5,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 343,
+          "sha256_utf8": "add8edf70f742b63dde7d17a93aac60c04a1f352e131d94ac29dbdd1253340a9",
+          "first_line": "Message: You receive the complete ordered, attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 350,
+          "sha256_utf8": "b519b442ee6fcd04aa88d2edbad3150bfe14db7bd9b34c8db1c8ac666efe37cf",
+          "first_line": "Purpose: Form complementary retrieval queries for candidate bare-Act sections"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 354,
+          "sha256_utf8": "92b837305c558cf2b2aa5e029b8fedb00ffb3211a43c7b31fbb43a5090544b23",
+          "first_line": "Activity 1 - Establish the enquiry and its boundaries."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 360,
+          "sha256_utf8": "c931741d7109fec99ee832572689f964bfec58ba7d2e30ceccf5b018ab275486",
+          "first_line": "Activity 2 - Form distinct grounded search routes."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 368,
+          "sha256_utf8": "b4b28ffe23128924484039b1388ee3f81f9dac3e9aa2df341082d32e85866e79",
+          "first_line": "Outcome: Return only plans under the schema, exactly one per subject_id."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 343
+        },
+        {
+          "label": "Purpose:",
+          "line": 350
+        },
+        {
+          "label": "Activity 1 - Establish the enquiry and its boundaries.",
+          "line": 354
+        },
+        {
+          "label": "Look for:",
+          "line": 355
+        },
+        {
+          "label": "Outcome:",
+          "line": 357
+        },
+        {
+          "label": "Activity 2 - Form distinct grounded search routes.",
+          "line": 360
+        },
+        {
+          "label": "Look for:",
+          "line": 361
+        },
+        {
+          "label": "Outcome:",
+          "line": 364
+        },
+        {
+          "label": "Outcome:",
+          "line": 368
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish the enquiry and its boundaries.",
+        "Activity 2 - Form distinct grounded search routes."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "decompose_disputes",
+      "tier": "routine",
+      "effective_owner": "decompose_subjects",
+      "owner_ref": "nm/brain/legal_requirements.py:840",
+      "when": "Due independent research subjects that cannot reuse owned current evidence, in complete context-fitting batches.",
+      "purpose": "Form grounded complementary retrieval queries.",
+      "source_purpose": "Form complementary retrieval queries for candidate bare-Act sections\nand judgment passages addressing each subject's question, without deciding\napplicable law, factual satisfaction or the answer."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_REQUIREMENTS_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/legal_requirements.py:373",
+      "end_line": 441,
+      "sha256_exact_value_utf8": "87b0a7e9eac0ebffe6fa7757fa6b6b055b0bb0e04da9cfae95680fdd374e1353",
+      "chars": 4795,
+      "paragraph_count": 6,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 373,
+          "sha256_utf8": "e2751570dff1065ab9f8245e76aaa69389b5ae205b75b596722690cb5e8d0f22",
+          "first_line": "Message: You receive the complete ordered, attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 381,
+          "sha256_utf8": "78234d3f352df3a42bbb4cf52d3b2bc453bb224433188edac91c9fa59e3ab795",
+          "first_line": "Purpose: Propose passage-supported findings addressing each subject's purpose"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 387,
+          "sha256_utf8": "4ffc2cfff0e06485a22cbd49f730dc71c8e7606893cad25f487e7a5e4d6bbd7c",
+          "first_line": "Activity 1 - Identify separately usable source propositions."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 400,
+          "sha256_utf8": "b725d5d2c1eb7cf5e9c3492a8dc60555b559d9e8968af7f96b68e6a8a926163d",
+          "first_line": "Activity 2 - Compare legal predicates with the original account."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 415,
+          "sha256_utf8": "cd5d68a5152160d9a0ab6c579dea92c5a01846abbb3d5a039cc08a8a9af4051e",
+          "first_line": "Activity 3 - Check usefulness, adverse limits and remaining support."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 428,
+          "sha256_utf8": "780d89b1c5bf2b3abcf70f5968383067fa16816d9dcb65c20e45410072cb133e",
+          "first_line": "Outcome: Return only readings under the schema, exactly one per subject_id."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 373
+        },
+        {
+          "label": "Purpose:",
+          "line": 381
+        },
+        {
+          "label": "Activity 1 - Identify separately usable source propositions.",
+          "line": 387
+        },
+        {
+          "label": "Look for:",
+          "line": 388
+        },
+        {
+          "label": "Outcome:",
+          "line": 396
+        },
+        {
+          "label": "Activity 2 - Compare legal predicates with the original account.",
+          "line": 400
+        },
+        {
+          "label": "Look for:",
+          "line": 401
+        },
+        {
+          "label": "Outcome:",
+          "line": 409
+        },
+        {
+          "label": "Activity 3 - Check usefulness, adverse limits and remaining support.",
+          "line": 415
+        },
+        {
+          "label": "Look for:",
+          "line": 416
+        },
+        {
+          "label": "Outcome:",
+          "line": 422
+        },
+        {
+          "label": "Outcome:",
+          "line": 428
+        }
+      ],
+      "activities": [
+        "Activity 1 - Identify separately usable source propositions.",
+        "Activity 2 - Compare legal predicates with the original account.",
+        "Activity 3 - Check usefulness, adverse limits and remaining support."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "read_legal_requirements",
+      "tier": "routine",
+      "effective_owner": "read_findings",
+      "owner_ref": "nm/brain/legal_requirements.py:976",
+      "when": "Only owned subjects with actual readable retrieved passages. A genuinely empty supplied pool returns no findings without this call.",
+      "purpose": "Read actual supplied passages into useful bounded findings.",
+      "source_purpose": "Propose passage-supported findings addressing each subject's purpose\nand question. Gathering work identifies things to establish, obtain or check.\nRequested legal work needs supported principles, conditions, helpful reasoning\nand adverse limits for a useful answer. Model legal memory cannot replace\nsupplied support, and proposing findings does not complete the requested work."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_VERIFY_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/legal_requirements.py:443",
+      "end_line": 578,
+      "sha256_exact_value_utf8": "d7388aeed7ef89580432e02f876c9703ea6ed66b43f550889a14b786f8dcffc5",
+      "chars": 9561,
+      "paragraph_count": 7,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 443,
+          "sha256_utf8": "9f140e15e22204ae41a8e02fca17a35679f1214ede2ba8125463d81a0d91f9b2",
+          "first_line": "Message: You receive the complete ordered conversation in"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 452,
+          "sha256_utf8": "95c7f2c83553160e25657ce72c2609596c2d3aec5383a44bac99dea29b78202c",
+          "first_line": "Purpose: Independently decide whether each complete finding may enter the"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 460,
+          "sha256_utf8": "e4157f5614902b6afd2debe69b424dfdf9be623ea78a93fad8a30def04761f03",
+          "first_line": "Activity 1 - Identify the operative source proposition."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 490,
+          "sha256_utf8": "8cbeafcae15b4522a2df94f8d47b2316c042cd72c45f73ff913d6bfa1a17f7dc",
+          "first_line": "Activity 2 - Check the complete finding's meaning."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 514,
+          "sha256_utf8": "06ec4dd94dd3bdd2cf6f070748f8f68c9eb99f8f374cda4a7a08e38ec518b4ca",
+          "first_line": "Activity 3 - Compare each legal predicate with the attributed account."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 549,
+          "sha256_utf8": "a476a3faa68ecd75f0034609a54e46f2515cf335e57c382c71cac645f845f30b",
+          "first_line": "Activity 4 - Check force and the supported use."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 563,
+          "sha256_utf8": "c8014442795dc1a88d0ac16b8e77930ffeb574c0e911de8a86f99dea052607a6",
+          "first_line": "Outcome: Return only decisions under the schema, exactly one per candidate_id."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 443
+        },
+        {
+          "label": "Purpose:",
+          "line": 452
+        },
+        {
+          "label": "Activity 1 - Identify the operative source proposition.",
+          "line": 460
+        },
+        {
+          "label": "Look for:",
+          "line": 461
+        },
+        {
+          "label": "Outcome:",
+          "line": 470
+        },
+        {
+          "label": "Activity 2 - Check the complete finding's meaning.",
+          "line": 490
+        },
+        {
+          "label": "Look for:",
+          "line": 491
+        },
+        {
+          "label": "Outcome:",
+          "line": 502
+        },
+        {
+          "label": "Activity 3 - Compare each legal predicate with the attributed account.",
+          "line": 514
+        },
+        {
+          "label": "Look for:",
+          "line": 515
+        },
+        {
+          "label": "Outcome:",
+          "line": 523
+        },
+        {
+          "label": "Activity 4 - Check force and the supported use.",
+          "line": 549
+        },
+        {
+          "label": "Look for:",
+          "line": 550
+        },
+        {
+          "label": "Outcome:",
+          "line": 556
+        },
+        {
+          "label": "Outcome:",
+          "line": 563
+        }
+      ],
+      "activities": [
+        "Activity 1 - Identify the operative source proposition.",
+        "Activity 2 - Check the complete finding's meaning.",
+        "Activity 3 - Compare each legal predicate with the attributed account.",
+        "Activity 4 - Check force and the supported use."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_legal_requirements",
+      "tier": "judge",
+      "effective_owner": "verify_findings",
+      "owner_ref": "nm/brain/legal_requirements.py:1982",
+      "when": "Nonempty proposed findings, grouped with actual cited passages and conditional whole supplied-pool coverage.",
+      "purpose": "Independently judge proposed whole legal uses and original account application.",
+      "source_purpose": "Independently decide whether each complete finding may enter the\nresearch record. Check source provenance, entailment, factual application and\nclaimed force separately against original evidence, including unsupported\nadditions and consequential omissions. Do not repair wording, supply missing\nlaw or facts, decide merits beyond supplied passages or certify proof, currency\nor binding status. Supported findings establish bounded usable work, not\ncomplete research or completion of the subject's whole requested outcome."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_REPAIR_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/legal_requirements.py:580",
+      "end_line": 594,
+      "sha256_exact_value_utf8": "412fade16a745110c8ca5d7dcb423bcfde1efd2a43b9f6deaa2b9a4304d22a23",
+      "chars": 811,
+      "paragraph_count": 2,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 582,
+          "sha256_utf8": "792e1e960678780df48f889c683cb731b809a7c9002267cacfbb909701d672ba",
+          "first_line": "Message: This corrects unresolved units of the same research"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 588,
+          "sha256_utf8": "288fa3b1290d0435ce345df077653693d5a1439fb52ddf9d207fb183830f2aff",
+          "first_line": "Activity 1 - Correct only the unresolved decision."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 582
+        },
+        {
+          "label": "Purpose:",
+          "line": 586
+        },
+        {
+          "label": "Activity 1 - Correct only the unresolved decision.",
+          "line": 588
+        },
+        {
+          "label": "Look for:",
+          "line": 589
+        },
+        {
+          "label": "Outcome:",
+          "line": 592
+        }
+      ],
+      "activities": [
+        "Activity 1 - Correct only the unresolved decision."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": [
+        "decompose_disputes",
+        "read_legal_requirements",
+        "verify_legal_requirements",
+        "verify_empty_legal_reading"
+      ],
+      "tier": "inherited",
+      "effective_owner": "_repair_payload",
+      "owner_ref": "nm/brain/legal_requirements.py:727",
+      "when": "Correction appendix added only for unresolved local research validation issues; it is not an independent model stage.",
+      "purpose": "Repair only unresolved research units, preserving valid peers.",
+      "source_purpose": "Repair only these failures under the original decision/output contract."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_EMPTY_VERIFY_SYSTEM",
+      "classification": "new_empty_reading_constant",
+      "ref": "nm/brain/legal_requirements.py:1555",
+      "end_line": 1593,
+      "sha256_exact_value_utf8": "3e00b0d344587de5aa0559ab501d988a9b3f4a1bdc0e72554374817796b454ed",
+      "chars": 2641,
+      "paragraph_count": 5,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 1555,
+          "sha256_utf8": "1834878c642bc830f95b76fc96146b420b019a5683639f7fa4a3c9e84fa57d95",
+          "first_line": "Message: You receive the complete ordered, attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 1562,
+          "sha256_utf8": "b863b5df9a9be6ad9d300d07e9395961f8d2c4c0a03744e7989ccbbe3543f57a",
+          "first_line": "Purpose: Independently decide whether the empty reading omitted a useful,"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 1567,
+          "sha256_utf8": "162aa7e5c83bd05e8935bb460b3e252965538d6789295602c5166ab644a76c1c",
+          "first_line": "Activity 1 - Examine each supplied source in its original role."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 1577,
+          "sha256_utf8": "6420717f55a9f14ae81dc6e39bfdc9a59e8b192e89b0f484070013b2f51c023a",
+          "first_line": "Activity 2 - Check useful bounded work and legitimate absence."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 1588,
+          "sha256_utf8": "ef49fd86072bb86ae54de30e08fddb96bc1749ba352352a8a9b76db4764419c2",
+          "first_line": "Outcome: Return only readings, exactly one object per supplied subject_id,"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 1555
+        },
+        {
+          "label": "Purpose:",
+          "line": 1562
+        },
+        {
+          "label": "Activity 1 - Examine each supplied source in its original role.",
+          "line": 1567
+        },
+        {
+          "label": "Look for:",
+          "line": 1568
+        },
+        {
+          "label": "Outcome:",
+          "line": 1572
+        },
+        {
+          "label": "Activity 2 - Check useful bounded work and legitimate absence.",
+          "line": 1577
+        },
+        {
+          "label": "Look for:",
+          "line": 1578
+        },
+        {
+          "label": "Outcome:",
+          "line": 1583
+        },
+        {
+          "label": "Outcome:",
+          "line": 1588
+        }
+      ],
+      "activities": [
+        "Activity 1 - Examine each supplied source in its original role.",
+        "Activity 2 - Check useful bounded work and legitimate absence."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_empty_legal_reading",
+      "tier": "judge",
+      "effective_owner": "_verify_empty_readings",
+      "owner_ref": "nm/brain/legal_requirements.py:1690",
+      "when": "Zero proposed findings after actual owned passages: independently check each supplied source. No supplied passages => code-owned no_supplied_passages receipt and no Judge call.",
+      "purpose": "Judge whether an empty reading omitted useful supported findings from the exact supplied passage pool.",
+      "source_purpose": "Independently decide whether the empty reading omitted a useful,\npassage-supported finding for each subject. This checks only the supplied\nretrieved passages, not the corpus, every possible source or complete research.\nDo not generate findings, invent support, repair the account or decide merits."
+    },
+    {
+      "module": "legal_requirements.py",
+      "constant": "_POOL_VERIFY_APPENDIX",
+      "classification": "conditional_retrieved_pool_appendix",
+      "ref": "nm/brain/legal_requirements.py:1835",
+      "end_line": 1876,
+      "sha256_exact_value_utf8": "9c6028a724d416a31dfd1698625c4ba632ea128fdf36c1352e777c077bbf0f7d",
+      "chars": 2771,
+      "paragraph_count": 4,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 1837,
+          "sha256_utf8": "9e3593ef2c4639ad56d670875cfc72d1cbdf50312ad8c959860d7586e8a5b6b9",
+          "first_line": "Message: For subjects named in coverage_subject_ids, the input also supplies"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 1844,
+          "sha256_utf8": "3fc72fbb9dcc96aa2d118bc72c3738116e99507c529902927ab0e9525e6ef7e4",
+          "first_line": "Purpose: Independently assess whether useful passage-supported work was omitted"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 1851,
+          "sha256_utf8": "f77879c9014b73bc29089cb02a1afe067b896c66aa0ce4df360dfb2d42564549",
+          "first_line": "Activity 5 - Compare useful work with the full supplied passage pool."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 1870,
+          "sha256_utf8": "5d1c6729a52330087ac0903cc9e541cb8980e56ec6bd31b389e044d05c83b3fe",
+          "first_line": "Outcome: When coverage_subject_ids is present, return decisions and"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 1837
+        },
+        {
+          "label": "Purpose:",
+          "line": 1844
+        },
+        {
+          "label": "Activity 5 - Compare useful work with the full supplied passage pool.",
+          "line": 1851
+        },
+        {
+          "label": "Look for:",
+          "line": 1852
+        },
+        {
+          "label": "Outcome:",
+          "line": 1861
+        },
+        {
+          "label": "Outcome:",
+          "line": 1870
+        }
+      ],
+      "activities": [
+        "Activity 5 - Compare useful work with the full supplied passage pool."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_legal_requirements",
+      "tier": "judge",
+      "effective_owner": "verify_findings",
+      "owner_ref": "nm/brain/legal_requirements.py:1982",
+      "when": "Appended in the existing nonempty finding Judge when a full owned supplied pool fits. Oversized full scope retains narrower cited-source candidate checks and explicitly partial coverage.",
+      "purpose": "Independently assess omissions using the full supplied retrieved pool alongside candidate decisions in the existing Judge call.",
+      "source_purpose": "Independently assess whether useful passage-supported work was omitted\nfrom the proposed findings that your checks permit using. Assess this alongside\ncandidate decisions in this existing review, without a separate model activity.\nCoverage means only this subject's supplied retrieved passages. It cannot certify\nthe corpus, search completeness, absent adverse law, current law or the whole\nrequested outcome beyond those passages."
+    },
+    {
+      "module": "material.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/material.py:324",
+      "end_line": 424,
+      "sha256_exact_value_utf8": "9b19a7529fdfc499b3903c6c2174f8ab929474340bf8d60df2b75b43c0e89f4c",
+      "chars": 6965,
+      "paragraph_count": 7,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 324,
+          "sha256_utf8": "304092beb30ef24783614c76ac9b0ad21c0bdf222b59f0f10191e4ce404bcd3c",
+          "first_line": "Message: You receive the latest advocate message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 334,
+          "sha256_utf8": "1f1c2ac71345e9927f9146479f6f445880db774f6164f91597ff31d5e775e56c",
+          "first_line": "Purpose: Propose independently material account details and justified repairs"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 340,
+          "sha256_utf8": "c1a000cc61a9974a21c16fd45ee1a773c918398d52dbd82e99071e259a768d05",
+          "first_line": "Activity 1 - Establish substantive evidence and review authority."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 357,
+          "sha256_utf8": "08271edf46781538c63a72118c2690bce01adb15c0d55789b9ce8ae4b8f0aed9",
+          "first_line": "Activity 2 - Identify each independently material detail."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 379,
+          "sha256_utf8": "bcd223b00cbdcbc8ea16233dad0ed4dbc93b089eefad6a295cf8da177ff411d0",
+          "first_line": "Activity 3 - Choose an owned creation or explicit revision."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 401,
+          "sha256_utf8": "deacc7b29b9b66032f2458721c70301c15a4489e560bd43ed1f142c4cb8eb443",
+          "first_line": "Activity 4 - Select assignment and preserve status."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 422,
+          "sha256_utf8": "bf7fe764cd67c7b8f81a549e6653c4d726acff4ee0d2499b84fc80c4fb078035",
+          "first_line": "Outcome: Return only the declared new_items and changes object. Both arrays"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 324
+        },
+        {
+          "label": "Purpose:",
+          "line": 334
+        },
+        {
+          "label": "Activity 1 - Establish substantive evidence and review authority.",
+          "line": 340
+        },
+        {
+          "label": "Look for:",
+          "line": 341
+        },
+        {
+          "label": "Outcome:",
+          "line": 349
+        },
+        {
+          "label": "Activity 2 - Identify each independently material detail.",
+          "line": 357
+        },
+        {
+          "label": "Look for:",
+          "line": 358
+        },
+        {
+          "label": "Outcome:",
+          "line": 370
+        },
+        {
+          "label": "Activity 3 - Choose an owned creation or explicit revision.",
+          "line": 379
+        },
+        {
+          "label": "Look for:",
+          "line": 380
+        },
+        {
+          "label": "Outcome:",
+          "line": 391
+        },
+        {
+          "label": "Activity 4 - Select assignment and preserve status.",
+          "line": 401
+        },
+        {
+          "label": "Look for:",
+          "line": 402
+        },
+        {
+          "label": "Outcome:",
+          "line": 406
+        },
+        {
+          "label": "Outcome:",
+          "line": 422
+        }
+      ],
+      "activities": [
+        "Activity 1 - Establish substantive evidence and review authority.",
+        "Activity 2 - Identify each independently material detail.",
+        "Activity 3 - Choose an owned creation or explicit revision.",
+        "Activity 4 - Select assignment and preserve status."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "extract_legal_details",
+      "tier": "routine",
+      "effective_owner": "extract_details",
+      "owner_ref": "nm/brain/material.py:512",
+      "when": "Every selected material read, after checked dispute admission.",
+      "purpose": "Propose significant attributed details and select owned assignment.",
+      "source_purpose": "Propose independently material account details and justified repairs\nof identifiable saved details during relevant authorised review. Review can\nauthorise repair without a new account fact; original advocate words supply\nits evidence. This call admits no fact, reformulates no dispute, decides no\nlaw, grants no permission and performs no action."
+    },
+    {
+      "module": "material_verification.py",
+      "constant": "_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/material_verification.py:35",
+      "end_line": 164,
+      "sha256_exact_value_utf8": "04846c9c45bcb2838a9725ad53852fb2661e93add078335f5d91b251e1cbdf49",
+      "chars": 9266,
+      "paragraph_count": 8,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 35,
+          "sha256_utf8": "aa84b981a8388be0478b6719086ceca729b48b6983bda9258ca752cca467274a",
+          "first_line": "Message: You receive the advocate's latest message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 47,
+          "sha256_utf8": "9d09930e4cdb5e8b46777eb5d6a3e18d28ebd39e1e5641b6993183c2cf9643be",
+          "first_line": "Purpose: Independently decide whether each detail and opening description faithfully"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 52,
+          "sha256_utf8": "b30bf287c6daa6047a6c7592c356ed100e482fe1b7414e4e36ba1af23dc3b707",
+          "first_line": "Activity 1 - Check original account support."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 81,
+          "sha256_utf8": "f505e7e8fd92e0d8abfb642c339db2896044aca935ca23de474204a2b5f911bb",
+          "first_line": "Activity 2 - Check the complete detail and its assignment."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 102,
+          "sha256_utf8": "a042b034dd04649602492e7a4a4066119f3aca63bb3fb1fe2364bef4a998634b",
+          "first_line": "Activity 3 - Check the exact record operation and its authority."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 123,
+          "sha256_utf8": "c59800abb99f9957d43759b195cbc7e2a603d4a823c2e2f77d33eccc2eafcac7",
+          "first_line": "Activity 4 - Preserve every underlying account through replacement."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 145,
+          "sha256_utf8": "d8716d653684a5a61568b984f81e406160db07e6b5a3e265b36dda1c338edfcb",
+          "first_line": "Activity 5 - Check the opening description when supplied."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 158,
+          "sha256_utf8": "558b845d347080b80f63e079e0e01134097e8e4e055a4b77def2c03641e3d436",
+          "first_line": "Outcome: Return only the declared JSON object with exactly one complete verdict"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 35
+        },
+        {
+          "label": "Purpose:",
+          "line": 47
+        },
+        {
+          "label": "Activity 1 - Check original account support.",
+          "line": 52
+        },
+        {
+          "label": "Look for:",
+          "line": 53
+        },
+        {
+          "label": "Outcome:",
+          "line": 63
+        },
+        {
+          "label": "Activity 2 - Check the complete detail and its assignment.",
+          "line": 81
+        },
+        {
+          "label": "Look for:",
+          "line": 82
+        },
+        {
+          "label": "Outcome:",
+          "line": 95
+        },
+        {
+          "label": "Activity 3 - Check the exact record operation and its authority.",
+          "line": 102
+        },
+        {
+          "label": "Look for:",
+          "line": 103
+        },
+        {
+          "label": "Outcome:",
+          "line": 118
+        },
+        {
+          "label": "Activity 4 - Preserve every underlying account through replacement.",
+          "line": 123
+        },
+        {
+          "label": "Look for:",
+          "line": 124
+        },
+        {
+          "label": "Outcome:",
+          "line": 130
+        },
+        {
+          "label": "Activity 5 - Check the opening description when supplied.",
+          "line": 145
+        },
+        {
+          "label": "Look for:",
+          "line": 146
+        },
+        {
+          "label": "Outcome:",
+          "line": 155
+        },
+        {
+          "label": "Outcome:",
+          "line": 158
+        }
+      ],
+      "activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Check the complete detail and its assignment.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement.",
+        "Activity 5 - Check the opening description when supplied."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_material_grounding",
+      "tier": "judge",
+      "effective_owner": "verify_material_grounding",
+      "owner_ref": "nm/brain/material_verification.py:315",
+      "when": "Details, ready opening, or a code-owned review_scope even when both proposal sets are empty. Served material paths always provide that scope.",
+      "purpose": "Independently judge details/opening.",
+      "source_purpose": "Independently decide whether each detail and opening description faithfully\nrepresents the attributed advocate account and whether that account and current\nauthorised work support the exact proposed operation. Check grounding, not legal\nmerit, proof or source applicability."
+    },
+    {
+      "module": "material_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "classification": "conditional_account_coverage_appendix",
+      "ref": "nm/brain/material_verification.py:167",
+      "end_line": 210,
+      "sha256_exact_value_utf8": "45b9825057cb3880ce77292f2c581518965653e37c1a718c1789d7ef34ae4fd9",
+      "chars": 3056,
+      "paragraph_count": 3,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 169,
+          "sha256_utf8": "7e5d6b85cb922e81e01dfa32b35ab01bb608052e8acbc872ca7f5e11e782a7b1",
+          "first_line": "Message: This is a scoped extension of the same independent material grounding"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 174,
+          "sha256_utf8": "df74998fd52c20abf7b22ccc34498d7bf40b5deaef0c2803cb4440c9473670ed",
+          "first_line": "Purpose: Independently assess materially missing content or needed reconciliation"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 178,
+          "sha256_utf8": "d7d6ddca77979f5043e0bcdcb430fd2a150772c505727c8e01ccdbc56b510721",
+          "first_line": "Activity 6 - Independently check material coverage when review_scope is supplied."
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 169
+        },
+        {
+          "label": "Purpose:",
+          "line": 174
+        },
+        {
+          "label": "Activity 6 - Independently check material coverage when review_scope is supplied.",
+          "line": 178
+        },
+        {
+          "label": "Look for:",
+          "line": 179
+        },
+        {
+          "label": "Outcome:",
+          "line": 192
+        }
+      ],
+      "activities": [
+        "Activity 6 - Independently check material coverage when review_scope is supplied."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "verify_material_grounding",
+      "tier": "judge",
+      "effective_owner": "verify_material_grounding",
+      "owner_ref": "nm/brain/material_verification.py:315",
+      "when": "Appended to the existing detail/opening Judge when review_scope is supplied; no extra call for nonempty proposals.",
+      "purpose": "Judge omitted significant material across full original advocate catalogue, all active/held context and requested scope.",
+      "source_purpose": "Independently assess materially missing content or needed reconciliation\nin this material stage's authorised scope against original evidence and represented\nstate, separately from checking individual proposals."
+    },
+    {
+      "module": "record_review.py",
+      "constant": "_SOURCE_SYSTEM",
+      "classification": "baseline_constant",
+      "ref": "nm/brain/record_review.py:26",
+      "end_line": 66,
+      "sha256_exact_value_utf8": "058974683a8b15db756a0ea2c1cf8eefa6a0ed88be9b12a4cde53bafcb5448b0",
+      "chars": 2651,
+      "paragraph_count": 5,
+      "paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 26,
+          "sha256_utf8": "958ce4a7886eefb630b57a0f1a22fb3fbc7e926cb7dd794455357114a3ecb704",
+          "first_line": "Message: You receive the complete ordered conversation, including saved"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 32,
+          "sha256_utf8": "5840f029789dba5fbff0fe0688d0998c1df8d19f2d1a17f8e59dda92b0690ffb",
+          "first_line": "Purpose: Classify how each exact advocate span was supplied in its original"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 37,
+          "sha256_utf8": "fa962404fb388d196853222d69b91d269d5c344fbdce224bf37077902cff6cdd",
+          "first_line": "Activity 1 - Read the original source framing."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 51,
+          "sha256_utf8": "6e9416facde9500643ba105d93c751bad8ce734632f7ff5eea9a2927d7fa04a5",
+          "first_line": "Activity 2 - Keep substantive content separate from work authority."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 62,
+          "sha256_utf8": "b727247d335a115fb0d22abc71f38d24d189c7762f0b7cc747d6b835a60baf03",
+          "first_line": "Outcome: Return only the declared JSON object: source_treatments keyed by EVERY"
+        }
+      ],
+      "ordered_labels": [
+        {
+          "label": "Message:",
+          "line": 26
+        },
+        {
+          "label": "Purpose:",
+          "line": 32
+        },
+        {
+          "label": "Activity 1 - Read the original source framing.",
+          "line": 37
+        },
+        {
+          "label": "Look for:",
+          "line": 38
+        },
+        {
+          "label": "Outcome:",
+          "line": 47
+        },
+        {
+          "label": "Activity 2 - Keep substantive content separate from work authority.",
+          "line": 51
+        },
+        {
+          "label": "Look for:",
+          "line": 52
+        },
+        {
+          "label": "Outcome:",
+          "line": 58
+        },
+        {
+          "label": "Outcome:",
+          "line": 62
+        }
+      ],
+      "activities": [
+        "Activity 1 - Read the original source framing.",
+        "Activity 2 - Keep substantive content separate from work authority."
+      ],
+      "headings_present": {
+        "Message": true,
+        "Purpose": true,
+        "Look for": true,
+        "Outcome": true
+      },
+      "operation": "classify_account_sources",
+      "tier": "routine",
+      "effective_owner": "classify_account_sources",
+      "owner_ref": "nm/brain/record_review.py:69",
+      "when": "When interpreted account contribution/review purposes or a ready opening select material reading; candidate-free full advocate source catalogue.",
+      "purpose": "Classify original source purpose without candidates.",
+      "source_purpose": "Classify how each exact advocate span was supplied in its original\ncontext, independently of downstream interpretations. These are source-purpose\nproposals, not proof or adoption of an assertion. You decide source purpose;\nthe server attaches canonical turn, speaker and exact words."
+    }
+  ],
+  "six_current_handshakes": [
+    {
+      "id": "H1",
+      "name": "Complete original evidence and code-owned source identities",
+      "current": "Turn reconstructs owned saved history/projections, uses saved canonical source treatment and runs candidate-free classification on selected material reading. Corrupted original ownership/projection raises G-CORE before content release.",
+      "refs": [
+        "nm/brain/turn.py:555",
+        "nm/brain/turn.py:593",
+        "nm/brain/record_review.py:69",
+        "nm/brain/history.py:9"
+      ]
+    },
+    {
+      "id": "H2",
+      "name": "Full-account independent scope on empty and nonempty proposals",
+      "current": "Turn hands exact execution review_scope plus original owned advocate catalogue and active material/disputes to both record Judges; coverage appendices share their existing calls. Empty proposals no longer bypass requested independent review.",
+      "refs": [
+        "nm/brain/turn.py:230",
+        "nm/brain/turn.py:666",
+        "nm/brain/turn.py:881",
+        "nm/brain/dispute_verification.py:285",
+        "nm/brain/material_verification.py:315"
+      ]
+    },
+    {
+      "id": "H3",
+      "name": "Bounded smallest-unit recovery with honest unread status",
+      "current": "Valid checked peers survive two-attempt record review exhaustion. Turn retains rejected, dependency-held and unread counts/audits separately; coverage is conservatively unassessed after unread/admission changes. Unread opening does not restart opening correction.",
+      "refs": [
+        "nm/brain/dispute_verification.py:285",
+        "nm/brain/material_verification.py:315",
+        "nm/brain/turn.py:910",
+        "nm/brain/turn.py:965"
+      ]
+    },
+    {
+      "id": "H4",
+      "name": "Exact retrieved pool and current source purpose",
+      "current": "Turn passes the actual per-subject search_results pool to finding review. Nonempty whole-pool coverage runs within the existing Judge; empty findings over passages trigger separate empty-reading review. Projection/reuse compares original application-premise advocate roles with latest canonical source treatment.",
+      "refs": [
+        "nm/brain/turn.py:715",
+        "nm/brain/legal_requirements.py:1982",
+        "nm/brain/legal_requirements.py:1690",
+        "nm/brain/requirements_state.py:265"
+      ]
+    },
+    {
+      "id": "H5",
+      "name": "Typed actual effects, positive review completion and durable task scope",
+      "current": "Writer receives code-owned effects/current records and declares typed record_outcome; independent reviewer checks meaning. Code binds requested positive review outcomes to complete matching independent coverage even for partial displayed replies. Unresolved outcomes may preserve checked partial IDs; inherited completed review tasks retain their original requirement. Released work seals preserve this evidence for readback.",
+      "refs": [
+        "nm/brain/continuation.py:552",
+        "nm/brain/continuation.py:788",
+        "nm/brain/execution_contracts.py:372",
+        "nm/brain/execution_contracts.py:270",
+        "nm/brain/continuation_verification.py:396",
+        "nm/brain/work_state.py:410",
+        "nm/brain/work_state.py:637"
+      ]
+    },
+    {
+      "id": "H6",
+      "name": "One atomic save/release and exact durable replay",
+      "current": "Every displayed route goes through writer/reviewer; code-rendered effects/remaining coverage are composed into the final snapshot. The response returns after version-checked atomic commit or exact durable readback resolving lost acknowledgement. Unconfirmed save raises G-COMMIT without a saved-success fallback.",
+      "refs": [
+        "nm/brain/continuation.py:386",
+        "nm/brain/turn.py:632",
+        "nm/brain/turn.py:340",
+        "nm/brain/turn.py:450",
+        "nm/brain/turn.py:1197"
+      ]
+    }
+  ],
+  "changes_since_b682132": [
+    {
+      "area": "Empty account review",
+      "then_b682132": "Scope/counters helpers existed but turn did not activate them. Zero proposals could skip the two independent record Judges.",
+      "now": "Both exact scoped record handoffs are served, including empty proposals: selected material read is normally eight calls.",
+      "refs": [
+        "nm/brain/turn.py:230",
+        "nm/brain/turn.py:666",
+        "nm/brain/turn.py:881",
+        "nm/brain/dispute_verification.py:285",
+        "nm/brain/material_verification.py:315"
+      ]
+    },
+    {
+      "area": "Unread candidate recovery",
+      "then_b682132": "Helpers retained checked peers but turn conflated pending/rejected and could restart unread opening review.",
+      "now": "Turn carries genuine rejected/dependency-held/unread statuses and opening_unread prevents the correction cascade.",
+      "refs": [
+        "nm/brain/dispute_verification.py:285",
+        "nm/brain/material_verification.py:315",
+        "nm/brain/turn.py:910",
+        "nm/brain/turn.py:965"
+      ]
+    },
+    {
+      "area": "Typed outcome and whole requested review completion",
+      "then_b682132": "execution_contracts existed without writer/reviewer/work-state consumers.",
+      "now": "Writer, independent reviewer, current effect catalogue and durable task seals consume typed outcomes; positive review outcomes require complete exact scoped coverage even when displayed sufficiency is partial.",
+      "refs": [
+        "nm/brain/continuation.py:552",
+        "nm/brain/continuation.py:788",
+        "nm/brain/execution_contracts.py:372",
+        "nm/brain/execution_contracts.py:270",
+        "nm/brain/continuation_verification.py:396",
+        "nm/brain/work_state.py:410",
+        "nm/brain/work_state.py:637"
+      ]
+    },
+    {
+      "area": "Independent retrieved coverage and source-purpose freshness",
+      "then_b682132": "Turn did not pass search_results; empty scope was unconfirmed, nonempty review limited to cited sources and current source purpose propagation was pending.",
+      "now": "Actual owned passage pools and latest source treatment reach review/projection/reuse.",
+      "refs": [
+        "nm/brain/turn.py:715",
+        "nm/brain/legal_requirements.py:1982",
+        "nm/brain/legal_requirements.py:1690",
+        "nm/brain/requirements_state.py:265"
+      ]
+    },
+    {
+      "area": "Release and save gates",
+      "then_b682132": "Save readback chiefly addressed StaleWrite; declared gate rows had no served call sites.",
+      "now": "Runtime G-CORE/G-EFFECT/G-INCOMPLETE/G-COMMIT own context, typed effect mismatch, partial coverage disclosure and actual save confirmation; generic lost acknowledgements use exact durable readback.",
+      "refs": [
+        "nm/brain/continuation.py:386",
+        "nm/brain/turn.py:632",
+        "nm/brain/turn.py:340",
+        "nm/brain/turn.py:450",
+        "nm/brain/turn.py:1197"
+      ]
+    }
+  ],
+  "call_accounting": {
+    "normal_formula": "N = 3 + 5*m + Bq + Br + Bv + Be, before local correction/opening repair/narrowed-response review.",
+    "definitions": {
+      "3": "One interpretation + one batched response writer + one independent response Judge for a normal successful nonempty message, including greetings.",
+      "m": "1 when plan.material_review or opening.ready selects reading. Five calls: candidate-free source classification, dispute extraction, dispute Judge, detail extraction, detail/opening Judge. Exact review_scope activates both Judges even for zero proposals.",
+      "Bq": "Context-fitting due research query-planning batches; zero when no due subject or current owned evidence is reusable.",
+      "Br": "Context-fitting reader batches with actual supplied passages; no passages => zero reader calls.",
+      "Bv": "Context-fitting nonempty finding Judge batches; scoped supplied-pool coverage shares these calls.",
+      "Be": "Context-fitting empty-reading Judge batches for zero findings after actual supplied passages. No supplied passages => no empty Judge; state is a code-owned scoped receipt."
+    },
+    "normal_examples": [
+      {
+        "case": "Greeting, unchanged record, no due research",
+        "calls": 3
+      },
+      {
+        "case": "Selected material reading, both record proposal sets empty",
+        "calls": 8
+      },
+      {
+        "case": "Selected material reading, nonempty dispute/details or opening",
+        "calls": 8
+      },
+      {
+        "case": "Material reading plus one due, fitting useful research batch",
+        "calls": 11
+      },
+      {
+        "case": "General legal enquiry, one due fitting useful research batch, no material read",
+        "calls": 6
+      },
+      {
+        "case": "General legal enquiry, supplied passages but zero findings",
+        "calls": 6
+      },
+      {
+        "case": "General legal enquiry, genuinely zero supplied passages",
+        "calls": 4
+      },
+      {
+        "case": "Exact saved replay found before analysis",
+        "calls": 0
+      }
+    ],
+    "limits": [
+      "Repair-free context-fitting successful examples are not a fixed cost or global maximum. Some valid output can be retained after partial failures.",
+      "Each checked_read and each record Judge invocation allows at most two attempts; candidate/coverage correction stays local and retains independently checked peers.",
+      "Research groups are preflighted with complete context and can split. Full-pool input may change batching; oversize or unread coverage cannot erase valid narrower cited-source findings.",
+      "An independently rejected opening can trigger checked repair_opening and independent alternative checks. Exhausted unread O1 does not enter that branch.",
+      "Writer has two generation attempts; each response review invocation has two attempts. A separately narrowed subset may receive an additional response review; there is no global two-call response-recovery bound.",
+      "Code IDs, projections, snapshots, typed effect ownership gates, supplied-passage ownership, local search/rerank, work seals, commit and replay add no generative model calls.",
+      "Source/Judge separation is role independence, not model diversity. Actual service call receipts count model invocations; provider retries remain a separate metric.",
+      "Whole-account completion and supplied-passage coverage are independent model assessments: code validates owned scope/IDs/receipts, not semantic completeness of free prose or completeness of the corpus/search."
+    ],
+    "refs": [
+      "nm/brain/turn.py:666",
+      "nm/brain/turn.py:715",
+      "nm/brain/turn.py:803",
+      "nm/brain/conversation.py:514",
+      "nm/brain/legal_requirements.py:733",
+      "nm/brain/legal_requirements.py:697",
+      "nm/brain/continuation.py:1145",
+      "nm/brain/continuation_verification.py:575"
+    ]
+  },
+  "runtime_correction_fragments_not_counted_as_named_prompts": [
+    {
+      "owner": "nm/brain/checked.py:26",
+      "when": "One full-contract correction of a rejected structured read; same original prompt operation."
+    },
+    {
+      "owner": "nm/brain/continuation.py:1145",
+      "when": "One replacement generation for unresolved response units; accepted peers retained."
+    }
+  ],
+  "remaining_metadata_followup": "The four new gate rows are built and the six generated exports are current at 974152b. Runtime owning-path controls support activation; generic registry self-consultation remains an independent pre-existing limitation.",
+  "limits": [
+    "No additional production changes or tests were made by this inventory task.",
+    "Counts and hashes identify exactly the captured source constants, not every runtime prompt payload or every inline correction string.",
+    "Paragraphs are exact blank-separated pieces of the stripped constant; each paragraph hash excludes its separating blank lines, while constant hash covers the entire exact AST string value.",
+    "Full account/corpus semantic correctness and false-rejection rates require meaningful evaluation; mechanical presence and offline inventory do not establish those rates.",
+    "Explicit core source-layout classification of execution_contracts.py was corrected in 4b67da2. That change did not repair the generic trace registry self-consultation limitation; gate enforcement evidence comes from owning-path controls."
+  ],
+  "brain_sources_all_match_prompt_freeze_head": true,
+  "writer_prompt_frozen": true,
+  "current_head_followup": "All 20 brain module bytes match the production freeze 6bb88d1. Final broad offline qualification remains parent-owned; no model/API/browser qualification was performed.",
+  "artifact_status": "Frozen production source inventory; consolidated offline qualification result is recorded separately by the parent.",
+  "pending_inventory_refresh": [],
+  "historical_baseline_paragraph_map": {
+    "artifact": "/tmp/nm-brain-intermediate-3707698-inventory-20261006.json",
+    "baseline_blank_separated_paragraphs": 83,
+    "meaning": "The 83 initial blank-separated paragraph hashes are preserved as a historical snapshot. Final source hashes below reflect all owning width/range repairs; no unchanged-hash assumption is made."
+  },
+  "final_width_range_guards": {
+    "record_diagnostic_reasons": "Nonempty consequential reason required without arbitrary character width. Ownership and verdict contracts remain enforced.",
+    "material_labels": "Meaningful source-supported labels survive former width limits.",
+    "research_queries_and_headings": "Complete supported subject purpose and qualifications survive former query/heading widths.",
+    "law_use_evidence": "Full statement, owner, limiting conditions and exact excerpt survive former character widths; same-source contiguous fragments can express a full proposition without dropping qualifications. Foreign, reversed and unknown ranges remain rejected.",
+    "context_and_output_budgets": "Actual prompt/token/context limits remain explicit, and no silent factual shortening is permitted.",
+    "semantic_limit": "These guards prove exact ownership/transport, not substantive model quality."
+  }
+}

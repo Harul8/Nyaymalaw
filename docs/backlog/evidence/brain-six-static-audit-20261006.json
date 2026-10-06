@@ -1,0 +1,357 @@
+{
+  "schema": 1,
+  "kind": "supporting_static_function_audit",
+  "created_at": "2026-10-06T01:06:59+00:00",
+  "checkout": "/workspace/Nyaymalaw",
+  "head": "24c6048954b36a4ea7272e4a9116dddc1f2d3018",
+  "scope": "Supporting six-activity boundaries: checked structured reads, complete released history, exact source snapshots, dispute/material state, and work sealing/replay. Before Build LB-175 through LB-193 remain the owning queue; this artifact creates no alternative execution queue.",
+  "changes_made": [],
+  "validation": {
+    "method": "Source inspection and existing test/caller inspection only",
+    "tests_run": false,
+    "api_calls": false,
+    "browser_runs": false,
+    "model_calls": 0
+  },
+  "summary": {
+    "modules": 6,
+    "functions": 33,
+    "no_change": 32,
+    "follow_up": 1
+  },
+  "files": [
+    {
+      "path": "nm/brain/checked.py",
+      "sha256": "cbfb0faae44ac981fa88a77e583930451e605122e210c780789806f75bc336fb",
+      "functions": [
+        {
+          "function": "require_independent_result",
+          "line": 21,
+          "end_line": 23,
+          "disposition": "no_change",
+          "finding": "Rejects a configured independent read that was downgraded; distinct reviewer invocation and review contract remain the owning independence boundary.",
+          "paired_legitimate_case": "Configured judge result is allowed; downgraded review must fail before admission."
+        },
+        {
+          "function": "checked_read",
+          "line": 26,
+          "end_line": 80,
+          "disposition": "no_change",
+          "finding": "Checks completion, dictionary shape, schema and owning accept callback; permits one correction under the original schema, input and tier. Removes only the rejected output if correction context is too large, then refuses rather than reducing original evidence.",
+          "paired_legitimate_case": "One malformed structured result may be corrected; repeated invalid output or insufficient full context must refuse."
+        }
+      ]
+    },
+    {
+      "path": "nm/brain/history.py",
+      "sha256": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+      "functions": [
+        {
+          "function": "released_older_turns",
+          "line": 9,
+          "end_line": 20,
+          "disposition": "no_change",
+          "finding": "Uses authorised transcript projection, rejects archive/readback problems, checks every applied turn is recovered and validates attributable released conversation before returning it.",
+          "paired_legitimate_case": "Complete authorised older history is reusable; an unreadable or missing applied turn must stop later interpretation."
+        },
+        {
+          "function": "from_turns",
+          "line": 23,
+          "end_line": 70,
+          "disposition": "no_change",
+          "finding": "Preserves exact advocate text and exact released element text, turn order and speaker; rejects duplicate identities, missing words and unknown release states. Withheld drafts are forbidden; their established service explanation remains visible context.",
+          "paired_legitimate_case": "A withheld answer with an attributable explanation is retained; its unapproved draft cannot enter context."
+        }
+      ]
+    },
+    {
+      "path": "nm/brain/source_snapshots.py",
+      "sha256": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2",
+      "functions": [
+        {
+          "function": "source_snapshots",
+          "line": 7,
+          "end_line": 65,
+          "disposition": "no_change",
+          "finding": "Resolves distinct checked reference identities into exact passage snapshots with SHA-256 text digests and explicit legal/conversation/record qualifications. Requires nonblank kind-appropriate reading content.",
+          "paired_legitimate_case": "A saved research interpretation is a record; its separately cited Act or judgment passage is a legal source. Neither snapshot label upgrades source authority."
+        },
+        {
+          "function": "inline_source_links",
+          "line": 68,
+          "end_line": 108,
+          "disposition": "no_change",
+          "finding": "Matches each explicit citation to this block's legal snapshot, requires an exact unique visible phrase, rejects overlap and requires coverage of every selected legal passage. Legacy absence returns None without rewriting prior prose.",
+          "paired_legitimate_case": "Legacy blocks without inline metadata remain readable; explicit malformed, unowned or incomplete citation metadata must refuse."
+        }
+      ]
+    },
+    {
+      "path": "nm/brain/dispute_state.py",
+      "sha256": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839",
+      "functions": [
+        {
+          "function": "belongs_to_current_matter",
+          "line": 11,
+          "end_line": 23,
+          "disposition": "no_change",
+          "finding": "Carries attributable proposed opening-chat material into its eventual matter while excluding later proposed separate-matter material; legacy opening without route is limited to its first saved turn.",
+          "paired_legitimate_case": "Pre-opening proposed account belongs to the eventual opened matter; a later possible new matter does not become current merely by sharing the chat."
+        },
+        {
+          "function": "_short_label",
+          "line": 26,
+          "end_line": 31,
+          "disposition": "no_change",
+          "finding": "Creates a bounded display label from saved words only, without replacing the exact quote or full history.",
+          "paired_legitimate_case": "A long quote may have an abbreviated label; its source passage remains exact."
+        },
+        {
+          "function": "_read_identity",
+          "line": 34,
+          "end_line": 56,
+          "disposition": "no_change",
+          "finding": "Distinguishes legacy absent identification from authored current identification, validates label, clarification and distinct nonblank linked IDs.",
+          "paired_legitimate_case": "Legacy absence remains unassessed; an explicitly invalid current identification is rejected."
+        },
+        {
+          "function": "proposed_disputes",
+          "line": 59,
+          "end_line": 176,
+          "disposition": "no_change",
+          "finding": "Validates released turn/display identity, exact current and earlier source words, explicit active dispute links and attribution. Holds all dispute changes in a turn when a sibling is invalid; retains verified history and applies only validated retirement/addition sets.",
+          "paired_legitimate_case": "An explicit checked split may replace its linked prior dispute; an invalid sibling or wrong same-turn target must leave the earlier active dispute intact."
+        }
+      ]
+    },
+    {
+      "path": "nm/brain/material_state.py",
+      "sha256": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711",
+      "functions": [
+        {
+          "function": "sourced_detail_for_display",
+          "line": 9,
+          "end_line": 23,
+          "disposition": "no_change",
+          "finding": "Requires the exact saved advocate passage. Current independent grounding can retain its checked interpretation; legacy unreviewed rows become exact quote-only, uncertain and unresolved displays.",
+          "paired_legitimate_case": "Checked attributed paraphrase is usable; legacy model paraphrase is displayed only through its original advocate words."
+        },
+        {
+          "function": "_identity",
+          "line": 26,
+          "end_line": 40,
+          "disposition": "no_change",
+          "finding": "Keeps absent legacy placement unresolved and validates current placement/dispute-link equivalence and distinct linked identities.",
+          "paired_legitimate_case": "A matter-wide detail needs no dispute link; dispute placement needs actual dispute IDs."
+        },
+        {
+          "function": "_source_matches",
+          "line": 43,
+          "end_line": 70,
+          "disposition": "no_change",
+          "finding": "Checks source turn/current quote, declared source kind/importance/scope/relation and exact owned prior passages. Semantic account purpose and full-account fidelity remain the material reader/reviewer's responsibility.",
+          "paired_legitimate_case": "A current request may authorise review of an earlier sourced account; it does not itself prove the content of that account."
+        },
+        {
+          "function": "_current_links",
+          "line": 73,
+          "end_line": 93,
+          "disposition": "no_change",
+          "finding": "Follows only one clear successor at every historical replacement step, rejects ambiguity from any historical split even if one leaf later disappears, and stops cycles conservatively.",
+          "paired_legitimate_case": "A single clear replacement chain carries assignment; a historical split requires explicit checked material relinking."
+        },
+        {
+          "function": "material_record",
+          "line": 96,
+          "end_line": 300,
+          "disposition": "no_change",
+          "finding": "Replays checked material changes atomically per turn, validates active dispute and prior-material ownership, holds ambiguous current-owned revisions, preserves quote-only legacy material, and exposes unresolved/scope-excluded populations without promoting them into current facts.",
+          "paired_legitimate_case": "An explicit current-owned correction may retire its linked detail; ownership-ambiguous correction must preserve the owned item and remain held."
+        }
+      ]
+    },
+    {
+      "path": "nm/brain/work_state.py",
+      "sha256": "65173f6d4e87adaf8b55af2afec1545470d57401cfb20dbab07ac8758c746ec9",
+      "functions": [
+        {
+          "function": "_fail",
+          "line": 19,
+          "end_line": 20,
+          "disposition": "no_change",
+          "finding": "Raises the typed incomplete-history boundary instead of returning empty or complete progress.",
+          "paired_legitimate_case": "Corrupt progress stops context construction; genuinely empty progress may remain valid."
+        },
+        {
+          "function": "_text",
+          "line": 23,
+          "end_line": 26,
+          "disposition": "no_change",
+          "finding": "Validates attributable string values while allowing explicitly optional empty IDs where requested.",
+          "paired_legitimate_case": "An optional empty existing ID is permitted; missing owner text is not."
+        },
+        {
+          "function": "_ids",
+          "line": 29,
+          "end_line": 34,
+          "disposition": "no_change",
+          "finding": "Validates nonblank distinct list identities mechanically.",
+          "paired_legitimate_case": "An empty declared reference population can be valid; duplicate or unreadable identities cannot."
+        },
+        {
+          "function": "_progress_id",
+          "line": 37,
+          "end_line": 42,
+          "disposition": "no_change",
+          "finding": "Derives stable server-owned identity from matter, turn, interpreted request, section and local identity using canonical JSON and SHA-256.",
+          "paired_legitimate_case": "The same saved owner yields a stable ID; a different matter/turn/request yields a different owner."
+        },
+        {
+          "function": "_catalogue",
+          "line": 45,
+          "end_line": 61,
+          "disposition": "no_change",
+          "finding": "Requires readable prior progress state, known kinds/statuses, source text and distinct IDs before any lookup or transition.",
+          "paired_legitimate_case": "Readable prior requested/proposed items are selectable; malformed prior catalogue cannot become an empty baseline."
+        },
+        {
+          "function": "_blocks",
+          "line": 64,
+          "end_line": 103,
+          "disposition": "no_change",
+          "finding": "Requires checked displayed owners, exact resolvable reference populations and matching source kinds, plus an explicit owned sufficiency explanation. Source semantics remain independently reviewed upstream.",
+          "paired_legitimate_case": "A checked reply with no legal sources can be valid; a legal ID bound to a conversation record cannot."
+        },
+        {
+          "function": "_known",
+          "line": 106,
+          "end_line": 108,
+          "disposition": "no_change",
+          "finding": "Allows reuse only of an authorised prior progress identity of the expected task/question kind.",
+          "paired_legitimate_case": "Reusing a task ID as a task is allowed; cross-kind or foreign reuse is refused."
+        },
+        {
+          "function": "_update",
+          "line": 111,
+          "end_line": 133,
+          "disposition": "no_change",
+          "finding": "Validates target/status, displayed explanation, source support and advocate-span ownership. Answering questions and advocate-dependent suspended states need attributable advocate words; task delivery can instead be supported by checked delivered work.",
+          "paired_legitimate_case": "Checked completion of delivered task need not claim the advocate completed it; an answered question or advocate cancellation needs advocate evidence."
+        },
+        {
+          "function": "seal_progress",
+          "line": 136,
+          "end_line": 171,
+          "disposition": "no_change",
+          "finding": "Accepts only independently checked units under an interpreted request index, injects request scope/intent from the owner, assigns stable metadata and refuses conflicting same-turn transitions.",
+          "paired_legitimate_case": "Independently accepted peer units survive withheld peers; a model cannot supply server IDs or choose unowned request indices."
+        },
+        {
+          "function": "_seal_unit",
+          "line": 174,
+          "end_line": 240,
+          "disposition": "no_change",
+          "finding": "Separates requested task ownership from contributions, existing from newly created identities, and explicit proposal links from lifecycle transitions. Resolved/suspended proposals cannot be repeated without a supported reopening.",
+          "paired_legitimate_case": "A contribution can preserve existing work without inventing a requested task; a new actual request needs durable task ownership."
+        },
+        {
+          "function": "_read_words",
+          "line": 243,
+          "end_line": 273,
+          "disposition": "no_change",
+          "finding": "Validates exact released turn identity and displayed response consistency, preserves both speakers and rejects conflicting prior/current words or duplicate turns.",
+          "paired_legitimate_case": "Matching older authorised conversation can be reused; conflicting speaker/turn text must stop replay."
+        },
+        {
+          "function": "_read_words.remember",
+          "line": 246,
+          "end_line": 251,
+          "disposition": "no_change",
+          "finding": "Rejects conflicting text under the same attributed turn/speaker identity; retains identical repeated input without summarisation.",
+          "paired_legitimate_case": "Identical projection overlap is harmless; different words for the same owner are not."
+        },
+        {
+          "function": "_displayed",
+          "line": 276,
+          "end_line": 302,
+          "disposition": "no_change",
+          "finding": "Matches each progress block to exactly one displayed element, reconstructs exact snapshots/citation links, and verifies each conversation source exists, predates or belongs to the current input, and is not the current NM draft.",
+          "paired_legitimate_case": "An earlier released NM reply is attributable conversational context; the current NM draft cannot support its own progress."
+        },
+        {
+          "function": "_entry",
+          "line": 305,
+          "end_line": 311,
+          "disposition": "no_change",
+          "finding": "Creates a pending scoped record carrying requested/proposed origin, source owner, task link and displayed explanation, with copied target IDs.",
+          "paired_legitimate_case": "Requested work and proposed follow-up remain visibly distinct origins."
+        },
+        {
+          "function": "_event",
+          "line": 314,
+          "end_line": 321,
+          "disposition": "no_change",
+          "finding": "Records attributable created/referenced/transition events; referenced events do not alter status, while explicit transitions do.",
+          "paired_legitimate_case": "Referencing completed work retains its lifecycle status; reopening needs a distinct supported transition."
+        },
+        {
+          "function": "project_work",
+          "line": 324,
+          "end_line": 376,
+          "disposition": "follow_up",
+          "finding": "Replays stable checked units, validates owner/display/source integrity, distinguishes historical intent versions and derives active work without changing facts or closing the matter. However, a saved turn whose response lacks continuation is skipped without declaring historical progress coverage unknown.",
+          "paired_legitimate_case": "Legacy courtesy with no continuation legitimately adds no progress; legacy substantive accepted work without progress metadata must not imply fully tracked coverage. Pair these cases before changing the current courtesy expectation."
+        },
+        {
+          "function": "_project_unit",
+          "line": 379,
+          "end_line": 436,
+          "disposition": "no_change",
+          "finding": "Recomputes sealed identities for equality, validates saved intent/scope/relation, creates requested/proposed entries, reuses existing proposals without status changes, and applies only owned explicit transitions.",
+          "paired_legitimate_case": "A complete immediate reply can leave broader selected work pending; only its independently checked lifecycle update changes the task."
+        },
+        {
+          "function": "_create",
+          "line": 439,
+          "end_line": 445,
+          "disposition": "no_change",
+          "finding": "Refuses duplicate durable IDs and records pending creation rather than claiming completed work.",
+          "paired_legitimate_case": "A distinct new proposal can be created; an existing owned identity cannot be overwritten."
+        }
+      ]
+    }
+  ],
+  "follow_ups": [
+    {
+      "id": "legacy_progress_coverage",
+      "owner": "nm/brain/work_state.py:project_work; map to the matching existing Before Build row rather than assuming an ID",
+      "severity": "medium",
+      "observation": "A released row with no continuation reaches the continue branch and leaves older_progress labelled tracked even when no owned task/question status exists for that historical turn.",
+      "consequence": "The complete transcript is retained, but progress coverage can sound more certain than the stored evidence; later readers could duplicate work or overlook a prior accepted obligation if they mistake empty tracked progress for an assessed absence.",
+      "candidate_direction": "Represent historical unknown progress explicitly without interpreting request meaning through code or inventing tasks; first determine which versioned stored evidence can establish a legitimate no-progress courtesy.",
+      "regression_pair": [
+        "Legacy substantive accepted work without continuation must preserve exact history and disclose unknown progress coverage.",
+        "Legacy courtesy without continuation must retain existing obligations and add no invented requested task or lifecycle event."
+      ],
+      "existing_counterweight": "tests/test_brain_work_state.py::test_an_aside_has_no_progress_event_and_retains_existing_obligations currently asserts the entire projection remains identical; tests for missing-intent/version-1 progress explicitly require untracked coverage.",
+      "status": "Static conditional gap; no change proposed for immediate unscheduled implementation and no runtime proof claimed."
+    }
+  ],
+  "consequential_remaining_limits": [
+    "These helpers enforce ownership, exact source/display binding, bounded correction, atomic projection and explicit lifecycle transitions. They do not independently discover omitted material, omitted legal propositions, or the strongest contrary issue. Those semantic obligations belong to extraction/research/continuation owners reviewed by the other agents.",
+    "Task complete remains an independently reviewed semantic transition; this projection does not own an exhaustive executable list of every requirement for the requested result. Passing replay integrity cannot by itself establish useful completion.",
+    "Record snapshots preserve attributed interpretations and source passages. A snapshot digest proves exact saved text identity, not applicability, force, current law, or correctness of a finding.",
+    "No API, browser or live model behavior was observed. This artifact cannot qualify all six activities, Before Build completion, semantic accuracy or useful delivery.",
+    "The checkout contained concurrent work outside these audited modules; hashes record the exact inspected supporting module contents. No tracked or untracked checkout file was created, changed, reverted or committed by this audit."
+  ],
+  "existing_regression_references": [
+    "tests/test_brain_work_state.py",
+    "tests/test_brain_board_proposals.py",
+    "tests/test_brain_material_record.py",
+    "tests/test_brain_material_split_lineage.py",
+    "tests/test_brain_material_scope.py",
+    "tests/test_brain_source_readback.py",
+    "tests/test_brain_continuation.py",
+    "tests/test_brain_turn.py"
+  ]
+}

@@ -25,6 +25,52 @@
         "Activity 2 - Determine the required source work.",
         "Activity 3 - Choose a useful immediate response.",
         "Activity 4 - Decide whether the matter can be opened."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "fd695b01a35730296b45cf153c042e3cadee9403ad63f859fe8ab7eb0dac957c",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 180,
+          "sha256_utf8": "e9716e466ec7a9f4fba462e3b8b795477c577c74f7a6627a61aa4dab5305130b",
+          "first_line": "Message: You receive the advocate's latest message, the complete attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 190,
+          "sha256_utf8": "c97397440efa7fa4c45a44cf21e256d2e7cc25b5b503176360ad4f1b9351c757",
+          "first_line": "Purpose: Propose the distinct work requested or information contributed now,"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 196,
+          "sha256_utf8": "05a154dc4eff0060498633aa44b8db9ac946504ae5bc62f6fb313d491c92214e",
+          "first_line": "Activity 1 - Identify each current request or contribution."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 217,
+          "sha256_utf8": "76553592ca6e9d2a94e91bcea141e56142df4bff1628cd3e5cbc8dcf6c75d97d",
+          "first_line": "Activity 2 - Determine the required source work."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 278,
+          "sha256_utf8": "615e33d75cac26302d062a2f3aa3dc36924c43859129ab57d6ed4c285cc94eac",
+          "first_line": "Activity 3 - Choose a useful immediate response."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 308,
+          "sha256_utf8": "5881027e786980307278b61d428d9a2261c2d230eeedab67c74c5897cec6cd4e",
+          "first_line": "Activity 4 - Decide whether the matter can be opened."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 324,
+          "sha256_utf8": "0d6812e47763c1520f5d5a158ec59b9bbfd5f56850d37cdc65f38d23ac04e9d3",
+          "first_line": "Outcome: Return only the declared JSON object with items and opening."
+        }
       ]
     },
     {
@@ -44,6 +90,34 @@
       "new_activities": [
         "Activity 1 - Establish the supported client and subject.",
         "Activity 2 - Return the corrected opening proposal."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "e4a16f14bac3f62064a3f41e382e651e6fbb3d89fb92c1fd391d595f491e49de",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 354,
+          "sha256_utf8": "839a8b24e548c02ccd3b0de381f674fbbb31cd702a55686e9e2bb4b7abe9dd26",
+          "first_line": "Message: You receive the complete attributed conversation, the latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 358,
+          "sha256_utf8": "ce9f07f7503a4fc350788f34e0caa67164abc3f3bcef9ba3f11905f60d3a5641",
+          "first_line": "Purpose: Repair only the matter-opening description against original advocate"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 361,
+          "sha256_utf8": "2439607c9bfc62d9e8a4d1c290022029fd293b8b06f05ea35875c9891a3c3c09",
+          "first_line": "Activity 1 - Establish the supported client and subject."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 371,
+          "sha256_utf8": "235624a8a35b1e05289e05b135c9d50dbc991f11df876a881a2d1875bf078f80",
+          "first_line": "Activity 2 - Return the corrected opening proposal."
+        }
       ]
     },
     {
@@ -97,6 +171,40 @@
       "new_activities": [
         "Activity 1 - Read the original source framing.",
         "Activity 2 - Keep substantive content separate from work authority."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "058974683a8b15db756a0ea2c1cf8eefa6a0ed88be9b12a4cde53bafcb5448b0",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 26,
+          "sha256_utf8": "958ce4a7886eefb630b57a0f1a22fb3fbc7e926cb7dd794455357114a3ecb704",
+          "first_line": "Message: You receive the complete ordered conversation, including saved"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 32,
+          "sha256_utf8": "5840f029789dba5fbff0fe0688d0998c1df8d19f2d1a17f8e59dda92b0690ffb",
+          "first_line": "Purpose: Classify how each exact advocate span was supplied in its original"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 37,
+          "sha256_utf8": "fa962404fb388d196853222d69b91d269d5c344fbdce224bf37077902cff6cdd",
+          "first_line": "Activity 1 - Read the original source framing."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 51,
+          "sha256_utf8": "6e9416facde9500643ba105d93c751bad8ce734632f7ff5eea9a2927d7fa04a5",
+          "first_line": "Activity 2 - Keep substantive content separate from work authority."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 62,
+          "sha256_utf8": "b727247d335a115fb0d22abc71f38d24d189c7762f0b7cc747d6b835a60baf03",
+          "first_line": "Outcome: Return only the declared JSON object: source_treatments keyed by EVERY"
+        }
       ]
     },
     {
@@ -121,6 +229,52 @@
         "Activity 2 - Identify the independently contested issue.",
         "Activity 3 - Choose an owned creation or revision.",
         "Activity 4 - Preserve attribution, ownership and identification certainty."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "1b48b0fd79c48ab7ec18799a1859fd99d6ec658df0692049c3e25d78cdff3e99",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 28,
+          "sha256_utf8": "53efa1f9158300b4499a353fc51743be2110d8c0f7f6697ab87613da92c703d4",
+          "first_line": "Message: You receive the latest advocate message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 36,
+          "sha256_utf8": "2542cb953b1e60d5cf5b0f3f36ac5c9e3ba7253213a885e319d280b3f56dd619",
+          "first_line": "Purpose: Propose independently contestable issues contributed now, or justified"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 42,
+          "sha256_utf8": "4c947b327dbf3be933b4f4d768ac6b9877a99dd291fb92a9a1ed0f87a09356ab",
+          "first_line": "Activity 1 - Establish the original account and review authority."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 59,
+          "sha256_utf8": "f9a5f347a7830999c2337c63316964d1e0da138a805eb4f44ea25e5800f3a674",
+          "first_line": "Activity 2 - Identify the independently contested issue."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 81,
+          "sha256_utf8": "1d7e972b365c1611b51709b4ffc64661bc1d415e2eb51246e17a4b084f45ad1c",
+          "first_line": "Activity 3 - Choose an owned creation or revision."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 103,
+          "sha256_utf8": "04645f869019668f386d5b5f98f1d28aaff38bb740109dc66bceecc9c7b94458",
+          "first_line": "Activity 4 - Preserve attribution, ownership and identification certainty."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 116,
+          "sha256_utf8": "766e53e25a78387b830c5b323246592d382f2623ffe03895504ebcd80b714024",
+          "first_line": "Outcome: Return only the declared new_items and changes object. Both arrays"
+        }
       ]
     },
     {
@@ -144,6 +298,52 @@
         "Activity 2 - Identify each independently material detail.",
         "Activity 3 - Choose an owned creation or explicit revision.",
         "Activity 4 - Select assignment and preserve status."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "9b19a7529fdfc499b3903c6c2174f8ab929474340bf8d60df2b75b43c0e89f4c",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 324,
+          "sha256_utf8": "304092beb30ef24783614c76ac9b0ad21c0bdf222b59f0f10191e4ce404bcd3c",
+          "first_line": "Message: You receive the latest advocate message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 334,
+          "sha256_utf8": "1f1c2ac71345e9927f9146479f6f445880db774f6164f91597ff31d5e775e56c",
+          "first_line": "Purpose: Propose independently material account details and justified repairs"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 340,
+          "sha256_utf8": "c1a000cc61a9974a21c16fd45ee1a773c918398d52dbd82e99071e259a768d05",
+          "first_line": "Activity 1 - Establish substantive evidence and review authority."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 357,
+          "sha256_utf8": "08271edf46781538c63a72118c2690bce01adb15c0d55789b9ce8ae4b8f0aed9",
+          "first_line": "Activity 2 - Identify each independently material detail."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 379,
+          "sha256_utf8": "bcd223b00cbdcbc8ea16233dad0ed4dbc93b089eefad6a295cf8da177ff411d0",
+          "first_line": "Activity 3 - Choose an owned creation or explicit revision."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 401,
+          "sha256_utf8": "deacc7b29b9b66032f2458721c70301c15a4489e560bd43ed1f142c4cb8eb443",
+          "first_line": "Activity 4 - Select assignment and preserve status."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 422,
+          "sha256_utf8": "bf7fe764cd67c7b8f81a549e6653c4d726acff4ee0d2499b84fc80c4fb078035",
+          "first_line": "Outcome: Return only the declared new_items and changes object. Both arrays"
+        }
       ]
     },
     {
@@ -211,6 +411,52 @@
         "Activity 2 - Identify the issue and preserve its formulation.",
         "Activity 3 - Check the exact record operation and its authority.",
         "Activity 4 - Preserve every underlying account through replacement."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "44a20b43b0d06d6442ba6445a9a5c2616999431b1546f41b69bb77b772d29f20",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 34,
+          "sha256_utf8": "7ef653c77ca809079e86c117882633c748d2a40c3004169aba1880cce1f77306",
+          "first_line": "Message: You receive the advocate's latest message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 44,
+          "sha256_utf8": "bbd36f46fcb3e366b4b5cd81506d3be28d45d82a587500653dd0a2f416c13936",
+          "first_line": "Purpose: Independently decide for each proposal whether it is a distinct dispute"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 50,
+          "sha256_utf8": "cbc99238f37ee8b8af83d93abd2156c9dfd4703f084dd682ec2cfb6685fc68be",
+          "first_line": "Activity 1 - Check original account support."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 80,
+          "sha256_utf8": "71f850ee6a995347dc3472f73a654a7a485d17dff8527317019e14c79625decc",
+          "first_line": "Activity 2 - Identify the issue and preserve its formulation."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 105,
+          "sha256_utf8": "8e856350b4c7ec2c9d410a031eb054ae62f5d88ff0c82b4e2bf296f98865a08c",
+          "first_line": "Activity 3 - Check the exact record operation and its authority."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 129,
+          "sha256_utf8": "a0ddea153de5f299e3031b2a857299d0a24f69d0f2779ec97c0bbcd0d675cc38",
+          "first_line": "Activity 4 - Preserve every underlying account through replacement."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 153,
+          "sha256_utf8": "b14cd26c7fa4ad5c19a15e0cf1d3572c3ee79aed1702fd87239ab76edc0beb40",
+          "first_line": "Outcome: Return only the declared JSON object with exactly one complete verdict"
+        }
       ]
     },
     {
@@ -286,6 +532,58 @@
         "Activity 3 - Check the exact record operation and its authority.",
         "Activity 4 - Preserve every underlying account through replacement.",
         "Activity 5 - Check the opening description when supplied."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "04846c9c45bcb2838a9725ad53852fb2661e93add078335f5d91b251e1cbdf49",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 35,
+          "sha256_utf8": "aa84b981a8388be0478b6719086ceca729b48b6983bda9258ca752cca467274a",
+          "first_line": "Message: You receive the advocate's latest message, the complete earlier"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 47,
+          "sha256_utf8": "9d09930e4cdb5e8b46777eb5d6a3e18d28ebd39e1e5641b6993183c2cf9643be",
+          "first_line": "Purpose: Independently decide whether each detail and opening description faithfully"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 52,
+          "sha256_utf8": "b30bf287c6daa6047a6c7592c356ed100e482fe1b7414e4e36ba1af23dc3b707",
+          "first_line": "Activity 1 - Check original account support."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 81,
+          "sha256_utf8": "f505e7e8fd92e0d8abfb642c339db2896044aca935ca23de474204a2b5f911bb",
+          "first_line": "Activity 2 - Check the complete detail and its assignment."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 102,
+          "sha256_utf8": "a042b034dd04649602492e7a4a4066119f3aca63bb3fb1fe2364bef4a998634b",
+          "first_line": "Activity 3 - Check the exact record operation and its authority."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 123,
+          "sha256_utf8": "c59800abb99f9957d43759b195cbc7e2a603d4a823c2e2f77d33eccc2eafcac7",
+          "first_line": "Activity 4 - Preserve every underlying account through replacement."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 145,
+          "sha256_utf8": "d8716d653684a5a61568b984f81e406160db07e6b5a3e265b36dda1c338edfcb",
+          "first_line": "Activity 5 - Check the opening description when supplied."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 158,
+          "sha256_utf8": "558b845d347080b80f63e079e0e01134097e8e4e055a4b77def2c03641e3d436",
+          "first_line": "Outcome: Return only the declared JSON object with exactly one complete verdict"
+        }
       ]
     },
     {
@@ -331,6 +629,40 @@
       "new_activities": [
         "Activity 1 - Establish the enquiry and its boundaries.",
         "Activity 2 - Form distinct grounded search routes."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "d6446dca538115ee6d14d8f314d5d7283f8cfbbb6d1376dbbc859ce9ef5f3997",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 343,
+          "sha256_utf8": "add8edf70f742b63dde7d17a93aac60c04a1f352e131d94ac29dbdd1253340a9",
+          "first_line": "Message: You receive the complete ordered, attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 350,
+          "sha256_utf8": "b519b442ee6fcd04aa88d2edbad3150bfe14db7bd9b34c8db1c8ac666efe37cf",
+          "first_line": "Purpose: Form complementary retrieval queries for candidate bare-Act sections"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 354,
+          "sha256_utf8": "92b837305c558cf2b2aa5e029b8fedb00ffb3211a43c7b31fbb43a5090544b23",
+          "first_line": "Activity 1 - Establish the enquiry and its boundaries."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 360,
+          "sha256_utf8": "c931741d7109fec99ee832572689f964bfec58ba7d2e30ceccf5b018ab275486",
+          "first_line": "Activity 2 - Form distinct grounded search routes."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 368,
+          "sha256_utf8": "b4b28ffe23128924484039b1388ee3f81f9dac3e9aa2df341082d32e85866e79",
+          "first_line": "Outcome: Return only plans under the schema, exactly one per subject_id."
+        }
       ]
     },
     {
@@ -379,6 +711,46 @@
         "Activity 1 - Identify separately usable source propositions.",
         "Activity 2 - Compare legal predicates with the original account.",
         "Activity 3 - Check usefulness, adverse limits and remaining support."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "87b0a7e9eac0ebffe6fa7757fa6b6b055b0bb0e04da9cfae95680fdd374e1353",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 373,
+          "sha256_utf8": "e2751570dff1065ab9f8245e76aaa69389b5ae205b75b596722690cb5e8d0f22",
+          "first_line": "Message: You receive the complete ordered, attributed"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 381,
+          "sha256_utf8": "78234d3f352df3a42bbb4cf52d3b2bc453bb224433188edac91c9fa59e3ab795",
+          "first_line": "Purpose: Propose passage-supported findings addressing each subject's purpose"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 387,
+          "sha256_utf8": "4ffc2cfff0e06485a22cbd49f730dc71c8e7606893cad25f487e7a5e4d6bbd7c",
+          "first_line": "Activity 1 - Identify separately usable source propositions."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 400,
+          "sha256_utf8": "b725d5d2c1eb7cf5e9c3492a8dc60555b559d9e8968af7f96b68e6a8a926163d",
+          "first_line": "Activity 2 - Compare legal predicates with the original account."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 415,
+          "sha256_utf8": "cd5d68a5152160d9a0ab6c579dea92c5a01846abbb3d5a039cc08a8a9af4051e",
+          "first_line": "Activity 3 - Check usefulness, adverse limits and remaining support."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 428,
+          "sha256_utf8": "780d89b1c5bf2b3abcf70f5968383067fa16816d9dcb65c20e45410072cb133e",
+          "first_line": "Outcome: Return only readings under the schema, exactly one per subject_id."
+        }
       ]
     },
     {
@@ -445,6 +817,52 @@
         "Activity 2 - Check the complete finding's meaning.",
         "Activity 3 - Compare each legal predicate with the attributed account.",
         "Activity 4 - Check force and the supported use."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "d7388aeed7ef89580432e02f876c9703ea6ed66b43f550889a14b786f8dcffc5",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 443,
+          "sha256_utf8": "9f140e15e22204ae41a8e02fca17a35679f1214ede2ba8125463d81a0d91f9b2",
+          "first_line": "Message: You receive the complete ordered conversation in"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 452,
+          "sha256_utf8": "95c7f2c83553160e25657ce72c2609596c2d3aec5383a44bac99dea29b78202c",
+          "first_line": "Purpose: Independently decide whether each complete finding may enter the"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 460,
+          "sha256_utf8": "e4157f5614902b6afd2debe69b424dfdf9be623ea78a93fad8a30def04761f03",
+          "first_line": "Activity 1 - Identify the operative source proposition."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 490,
+          "sha256_utf8": "8cbeafcae15b4522a2df94f8d47b2316c042cd72c45f73ff913d6bfa1a17f7dc",
+          "first_line": "Activity 2 - Check the complete finding's meaning."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 514,
+          "sha256_utf8": "06ec4dd94dd3bdd2cf6f070748f8f68c9eb99f8f374cda4a7a08e38ec518b4ca",
+          "first_line": "Activity 3 - Compare each legal predicate with the attributed account."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 549,
+          "sha256_utf8": "a476a3faa68ecd75f0034609a54e46f2515cf335e57c382c71cac645f845f30b",
+          "first_line": "Activity 4 - Check force and the supported use."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 563,
+          "sha256_utf8": "c8014442795dc1a88d0ac16b8e77930ffeb574c0e911de8a86f99dea052607a6",
+          "first_line": "Outcome: Return only decisions under the schema, exactly one per candidate_id."
+        }
       ]
     },
     {
@@ -469,6 +887,22 @@
       "decision": null,
       "new_activities": [
         "Activity 1 - Correct only the unresolved decision."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "412fade16a745110c8ca5d7dcb423bcfde1efd2a43b9f6deaa2b9a4304d22a23",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 582,
+          "sha256_utf8": "792e1e960678780df48f889c683cb731b809a7c9002267cacfbb909701d672ba",
+          "first_line": "Message: This corrects unresolved units of the same research"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 588,
+          "sha256_utf8": "288fa3b1290d0435ce345df077653693d5a1439fb52ddf9d207fb183830f2aff",
+          "first_line": "Activity 1 - Correct only the unresolved decision."
+        }
       ]
     },
     {
@@ -539,6 +973,70 @@
         "Activity 4 - Reason within the checked legal support.",
         "Activity 5 - Propose useful work and preserve identities.",
         "Activity 6 - Decide sufficiency and attributed progress."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "0124a3c2b93f58b5b86cb9a5044fe3ef85c2e245c8b948b50f4f194fafd011f8",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 45,
+          "sha256_utf8": "b00c4c3fcec7c1259b2df72adcbf2713340c9638e7994980bcac8e69bfdc1ed2",
+          "first_line": "Message: The input contains the complete attributed conversation, latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 57,
+          "sha256_utf8": "10ea0b190203f2f7d98e6d51380abd44205972bf824a826bd33cb17a976f593d",
+          "first_line": "Purpose: Address each actual request with useful grounded progress using the"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 62,
+          "sha256_utf8": "8b277da782add8bf1c9d4f67992af5ed2eb4398c52d4bc2f618ccf97064629bc",
+          "first_line": "Activity 1 - Establish the request and its scope."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 76,
+          "sha256_utf8": "7a3624366f983aad385e6e33eb4bc97be37d21b5e59e3621850d7e5baeaa95df",
+          "first_line": "Activity 2 - Establish the attributed account."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 98,
+          "sha256_utf8": "0df39f48c6282cd0d7b9f074b8f400d082a549736cc95cc1039588398b9e9e0a",
+          "first_line": "Activity 3 - Establish what work actually occurred."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 125,
+          "sha256_utf8": "a8f4117bda02fd20217b9f2db365acad88c872de203b7bb70f43b6d5bd4530a5",
+          "first_line": "Activity 4 - Reason within the checked legal support."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 158,
+          "sha256_utf8": "fe36d631d807f8039cae3eb1ff8551846763fd10e83ef129fda95e60388b8223",
+          "first_line": "Activity 5 - Propose useful work and preserve identities."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 182,
+          "sha256_utf8": "b518fc9b8dc7511feda9a41ad94b563a557a32d1b491d7b89b12ead3f11575f6",
+          "first_line": "Activity 6 - Decide sufficiency and attributed progress."
+        },
+        {
+          "paragraph": 9,
+          "source_line": 216,
+          "sha256_utf8": "0f8231b01165635ba4db47498b916b005f08625979ebbac3189378d7e4f32e32",
+          "first_line": "Output contract."
+        },
+        {
+          "paragraph": 10,
+          "source_line": 241,
+          "sha256_utf8": "6f74c99c305cb8394dc2814e4e6ec61f519437ebd8009b939c5e26d62c3cb86e",
+          "first_line": "Record-outcome output."
+        }
       ]
     },
     {
@@ -599,7 +1097,60 @@
         "Activity 3 - Check the selected legal use and coverage.",
         "Activity 4 - Check useful engagement and proposal identities.",
         "Activity 5 - Check sufficiency, task scope and attributed progress."
+      ],
+      "final_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+      "final_sha256": "47ca8eebeb0f5ae4b9974291ef06145697ae79dcb8c8b4e13b7a5c497afbfed2",
+      "final_paragraphs": [
+        {
+          "paragraph": 1,
+          "source_line": 20,
+          "sha256_utf8": "27a037a79bb6c6b28133ecf8c89b0d69045636acabaf5c6e40434a0dec5f8ff3",
+          "first_line": "Message: The input contains the complete attributed conversation, latest"
+        },
+        {
+          "paragraph": 2,
+          "source_line": 30,
+          "sha256_utf8": "18cc4d0a03924cc5fa42cc71c4d140b76ec1c8d1198604e52e5f635e0c78647d",
+          "first_line": "Purpose: Independently decide whether each proposed request unit is grounded,"
+        },
+        {
+          "paragraph": 3,
+          "source_line": 38,
+          "sha256_utf8": "3a7880155c87147dd6a701bac82af3d97c87da0b19b2d1d3fae54986722b3525",
+          "first_line": "Activity 1 - Establish the request and the attributed account."
+        },
+        {
+          "paragraph": 4,
+          "source_line": 60,
+          "sha256_utf8": "6e5a4903859595aa9b2fe9e2ba6776b2659a7f17b1ca4e40afac22a4efd0726c",
+          "first_line": "Activity 2 - Check actual execution and claimed results."
+        },
+        {
+          "paragraph": 5,
+          "source_line": 106,
+          "sha256_utf8": "19ebf079479c95f7d3009dee291ac6879a5afb79751e79302401e55dec3269a2",
+          "first_line": "Activity 3 - Check the selected legal use and coverage."
+        },
+        {
+          "paragraph": 6,
+          "source_line": 140,
+          "sha256_utf8": "b983acd5d59592d317fed797f81a4e5c4a1a37053309323b8d88ff562f68a2cd",
+          "first_line": "Activity 4 - Check useful engagement and proposal identities."
+        },
+        {
+          "paragraph": 7,
+          "source_line": 158,
+          "sha256_utf8": "0921a673273d4426368c335e95f08dca11ecc33f647aed970e622f052bd66a07",
+          "first_line": "Activity 5 - Check sufficiency, task scope and attributed progress."
+        },
+        {
+          "paragraph": 8,
+          "source_line": 202,
+          "sha256_utf8": "1f93063d5972b1e11da425bdf1bf87d1046228d8c9fa43489c904b303d5fc367",
+          "first_line": "Output contract."
+        }
       ]
     }
-  ]
+  ],
+  "final_inventory": "docs/backlog/evidence/brain-six-final-current-inventory-20261006.json"
 }

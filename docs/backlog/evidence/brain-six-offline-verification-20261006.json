@@ -1,0 +1,24 @@
+{
+  "contract": "nm_brain_six_offline_verification_v1",
+  "captured_at_utc": "2026-10-06 02:03:26 UTC",
+  "tested_head": "ef4994161a90cf690f4c60dd451541b1d794040b",
+  "production_source_freeze": "6bb88d1b9dde46b1962f7f74a280cb3871f85859",
+  "scope": "All current six served NMBrain activities; scripted public boundaries and pure contracts.",
+  "pytest": {
+    "passed": 1501,
+    "failed": 0,
+    "deselected": 3,
+    "seconds": 59.69,
+    "command": "NM_PARTIAL_RUN=1 .venv/bin/python -m pytest tests/test_brain*.py tests/test_new_brain*.py tests/test_gate_matrix.py tests/test_shipped_layout_reconciles_actual_sources.py -m 'not journey' -o addopts='' -q --tb=short",
+    "junit": "docs/backlog/evidence/brain-six-offline-20261006.xml",
+    "junit_sha256": "e24510eefe8903f35ad1ac29e1eb1f1f4a030980ee1003a183747fa74a049abc"
+  },
+  "additional_checks": {
+    "production_ruff": "PASS",
+    "six_generated_specification_outputs": "current",
+    "node_saved_source_and_inline_contracts": "2 PASS"
+  },
+  "qualification": "Zero real-model API/browser calls. Scripted passes establish exercised mechanical contracts, not semantic accuracy, exhaustive law/account coverage or a measured zero false-positive rate.",
+  "standing_instructions": "AGENTS.md",
+  "canonical_queue": "docs/Nyaymalaw_Implementation_Plan.xlsx: Before Build LB-175–LB-193"
+}
