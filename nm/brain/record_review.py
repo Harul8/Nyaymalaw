@@ -59,6 +59,36 @@ def source_dependency(row: dict) -> tuple:
         (item["anchor_id"], item["start"], item["end"], item["quoted"])
         for item in row.get("substantive_spans", []))))
 
+
+def _source_proposal_schema(references: dict) -> dict:
+    items = {}
+    for identity, reference in references.items():
+        bound = len(reference["quoted"])
+        items[identity] = {"type": "object", "additionalProperties": False,
+            "required": ["content_role", "reason", "substantive_spans"], "properties": {
+                "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
+                "reason": {"type": "string", "minLength": 1},
+                "substantive_spans": {"type": "array", "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["start", "end"], "properties": {
+                        "start": {"type": "integer", "minimum": 0, "maximum": bound},
+                        "end": {"type": "integer", "minimum": 1, "maximum": bound}}}}}}
+    return {"type": "object", "additionalProperties": False,
+            "required": ["source_treatments"], "properties": {"source_treatments": {
+                "type": "object", "additionalProperties": False,
+                "required": list(items), "properties": items}}}
+
+
+def _source_proposal(reference: dict, row: dict) -> dict:
+    result = {**reference, "content_role": row["content_role"], "reason": row["reason"],
+              "selection_contract": SOURCE_SELECTION_CONTRACT,
+              "substantive_spans": owned_source_portions(reference, row["substantive_spans"])}
+    canonical = {(reference["turn_id"], reference["role"], reference["quoted"])}
+    if not source_treatment_reference_valid(result, canonical):
+        raise SchemaViolation(
+            "Source purpose requires role-consistent original substantive portions")
+    return result
+
 _SOURCE_SYSTEM = """Message: You receive the complete ordered conversation, including saved
 NM words as context, the latest advocate message, and owned advocate spans.
 source_ids is the complete catalogue of earlier and current advocate spans to
@@ -184,8 +214,16 @@ Do not infer the desired classification from the selection of a passage for
 reconsideration, generate facts or make a legal merits decision.
 
 Outcome: Return only the declared JSON object with source_treatments keyed by
-every selected source ID, each containing content_role and a concise substantive
-reason about its original framing. Do not return other IDs, provenance fields,
+every selected source ID, each containing content_role, a concise substantive
+reason and substantive_spans. Each portion supplies start (inclusive) and end
+(exclusive) character offsets in that source's exact quoted words from
+original_source_catalogue. Select the actual reported account or party-position
+portion with its negation, attribution and necessary conditions; mixed requires
+at least one such portion. Pure instructions, examination, NM interpretation
+and uncertain purpose select []. Account roles require nonempty portions.
+Overlapping context is legitimate; do not remove a qualification to shorten a
+selection. Offsets select words, not their truth. The server resolves exact
+words and durable identities. Do not return other IDs, provenance fields,
 candidate wording or copied passages. Reaffirming the original purpose and
 remaining uncertain are legitimate results; reconsideration does not require
 a changed role."""
@@ -208,21 +246,15 @@ def reconsider_account_sources(model, *, payload: dict, latest_turn_id: str,
                    for identity in source_ids)):
         raise SchemaViolation("Source reconsideration requires nonempty owned source IDs")
     selected = tuple(dict.fromkeys(source_ids))
-    item = {"type": "object", "additionalProperties": False,
-            "required": ["content_role", "reason"], "properties": {
-                "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
-                "reason": {"type": "string", "minLength": 1}}}
-    schema = {"type": "object", "additionalProperties": False,
-              "required": ["source_treatments"], "properties": {
-                  "source_treatments": {
-                      "type": "object", "additionalProperties": False,
-                      "required": list(selected),
-                      "properties": {key: item for key in selected}}}}
-    current = {**payload, "source_ids": list(selected)}
+    selected_references = {identity: references[identity] for identity in selected}
+    schema = _source_proposal_schema(selected_references)
+    current = {**payload, "source_ids": list(selected),
+               "source_selection_contract": SOURCE_SELECTION_CONTRACT,
+               "original_source_catalogue": selected_references}
     prompt = Prompt(system=_RECONSIDERATION_SYSTEM,
                     user=json.dumps(current, ensure_ascii=False, separators=(",", ":")),
                     operation="reconsider_account_sources")
-    output_limit = max(2048, min(16384, 96 * len(selected)))
+    output_limit = max(2048, min(16384, 192 * len(selected)))
     if (estimate_tokens(_RECONSIDERATION_SYSTEM + prompt.user) + output_limit
             > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("The complete conversation exceeds the source-reconsideration budget")
@@ -233,10 +265,10 @@ def reconsider_account_sources(model, *, payload: dict, latest_turn_id: str,
             raise SchemaViolation("Each reconsidered source needs a substantive nonempty reason")
         merged = {key: dict(row) for key, row in source_treatments.items()}
         for identity, row in rows.items():
-            merged[identity] = {**references[identity], **row}
+            merged[identity] = _source_proposal(references[identity], row)
         changed = tuple(identity for identity in selected
-                        if merged[identity]["content_role"]
-                        != source_treatments[identity]["content_role"])
+                        if source_dependency(merged[identity])
+                        != source_dependency(source_treatments[identity]))
         return merged, changed
 
     return checked_read(model, prompt, schema, output_limit, accept, tier=Tier.JUDGE)

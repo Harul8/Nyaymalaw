@@ -19,6 +19,7 @@ from nm.shared.model_port import (
     Usage,
     require_schema,
 )
+from tests.brain_reader_fixture import source_portion_reply
 
 
 class Model:
@@ -34,7 +35,7 @@ class Model:
 
     def structured(self, prompt, schema, tier, *, max_tokens):
         assert tier == Tier.JUDGE
-        output = next(self.outputs)
+        output = source_portion_reply(json.loads(prompt.user), next(self.outputs))
         self.calls.append((prompt, schema, output))
         require_schema(output, schema)
         return ModelResult(
@@ -46,7 +47,7 @@ class Model:
         )
 
 
-def context():
+def context(*, versioned=False):
     earlier = (
         Message("earlier-account", "advocate", "Our records show receipt on Thursday."),
         Message("earlier-analysis", "nm", "The previous formulation should be checked."),
@@ -64,6 +65,13 @@ def context():
         "content_role": "examination_material" if key == "L1" else "work_instruction",
         "reason": "First candidate-free purpose proposal.",
     } for key, words in current.items()})
+    if versioned:
+        for row in catalogue.values():
+            selected = ([{"start": 0, "end": len(row["quoted"])}]
+                        if row["content_role"] in (
+                            "reported_matter_account", "reported_party_position", "mixed") else [])
+            row.update(selection_contract=candidate.SOURCE_SELECTION_CONTRACT,
+                       substantive_spans=candidate.owned_source_portions(row, selected))
     return payload, catalogue
 
 
@@ -73,7 +81,7 @@ def output(role="reported_matter_account", *,
 
 
 def reconsider(model, *, payload=None, catalogue=None, selected=("L1",)):
-    original_payload, original_catalogue = context()
+    original_payload, original_catalogue = context(versioned=True)
     return candidate.reconsider_account_sources(
         model, payload=payload if payload is not None else original_payload,
         latest_turn_id="latest",
@@ -83,7 +91,7 @@ def reconsider(model, *, payload=None, catalogue=None, selected=("L1",)):
 
 
 def test_reconsideration_is_candidate_free_full_context_owned_subset_and_immutable_merge():
-    payload, catalogue = context()
+    payload, catalogue = context(versioned=True)
     original = deepcopy(catalogue)
     model = Model([output()])
     merged, changed = reconsider(model, payload=payload, catalogue=catalogue)
@@ -98,7 +106,16 @@ def test_reconsideration_is_candidate_free_full_context_owned_subset_and_immutab
     assert catalogue == original
     prompt, schema, _ = model.calls[0]
     assert prompt.operation == "reconsider_account_sources"
-    assert json.loads(prompt.user) == {**payload, "source_ids": ["L1"]}
+    sent = json.loads(prompt.user)
+    expected_input = {**payload, "source_ids": ["L1"]}
+    if sent.get("source_selection_contract") == candidate.SOURCE_SELECTION_CONTRACT:
+        expected_input.update(
+            source_selection_contract=candidate.SOURCE_SELECTION_CONTRACT,
+            original_source_catalogue={identity: {
+                field: row[field] for field in ("turn_id", "role", "quoted")}
+                for identity, row in catalogue.items() if identity == "L1"},
+        )
+    assert sent == expected_input
     assert schema["properties"]["source_treatments"]["required"] == ["L1"]
     assert len(model.calls) == 1
 
@@ -113,12 +130,46 @@ def test_changed_roles_and_uncertainty_are_decisions_not_forced_promotion(role):
 
 
 def test_explanation_change_alone_is_not_role_change():
-    _, catalogue = context()
+    _, catalogue = context(versioned=True)
     model = Model([output(
         "examination_material", reason="A different explanation of the same purpose.")])
     merged, changed = reconsider(model, catalogue=catalogue)
     assert changed == ()
     assert merged["L1"]["reason"] != catalogue["L1"]["reason"]
+
+
+def test_selected_legacy_attestation_is_promoted_without_rewriting_unselected_sources():
+    _, catalogue = context()
+    original = deepcopy(catalogue)
+    model = Model([{"source_treatments": {"L2": {
+        "content_role": "work_instruction", "reason": "The original work purpose is unchanged.",
+    }}}])
+    merged, changed = reconsider(model, catalogue=catalogue, selected=("L2",))
+    assert changed == ("L2",)
+    assert merged["L2"]["selection_contract"] == candidate.SOURCE_SELECTION_CONTRACT
+    assert merged["L2"]["substantive_spans"] == []
+    assert {identity: row for identity, row in merged.items() if identity != "L2"} == {
+        identity: row for identity, row in original.items() if identity != "L2"}
+    assert catalogue == original and len(model.calls) == 1
+
+
+def test_same_purpose_with_new_selected_portion_is_a_source_dependency_change():
+    _, catalogue = context(versioned=True)
+    row = catalogue["L1"]
+    row["content_role"] = "reported_matter_account"
+    full = {"start": 0, "end": len(row["quoted"])}
+    row["substantive_spans"] = candidate.owned_source_portions(row, [full])
+    noun_start = row["quoted"].index("signed original")
+    additional = {"start": noun_start, "end": noun_start + len("signed original")}
+    scripted = output()
+    scripted["source_treatments"]["L1"]["substantive_spans"] = [full, additional]
+    model = Model([scripted])
+    merged, changed = reconsider(model, catalogue=catalogue)
+    assert changed == ("L1",)
+    assert merged["L1"]["content_role"] == row["content_role"]
+    assert merged["L1"]["substantive_spans"] == candidate.owned_source_portions(
+        row, [full, additional])
+    assert len(model.calls) == 1
 
 
 def test_duplicate_exact_selection_ids_normalize_without_another_call():
