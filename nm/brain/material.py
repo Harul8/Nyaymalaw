@@ -390,6 +390,10 @@ reported contents or custody, procedure, timing, risks and uncertainty. Consider
 every latest span, including answers and corrections. A detail is material
 when it could affect an issue, assessment or next useful step. A request can
 contain matter content but is not itself a matter fact.
+Dispute headings and definitions guide association; they are not material-detail
+records. Capture independently material content even when a dispute mentions it.
+Omit an unchanged detail only when active_material faithfully preserves the
+same proposition, including attribution, chronology, uncertainty and source purpose.
 An objective is a desired real-world outcome for the client or dispute. NM
 explanation, investigation and production requests belong to work progress,
 not a duplicated matter objective without independent content. A promise or
@@ -398,8 +402,8 @@ contents. Critique or correction of a draft or NM interpretation belongs to
 work and response, not a new party position in the account.
 Outcome: Return one concise attributed statement, kind and why_material per
 independently checkable detail. Do not merge claims that could be confirmed,
-denied or corrected separately, repeat an unchanged proposition, or output a
-dispute formulation. Distinguish obligation, conduct, an actual reported party
+denied or corrected separately or output a dispute formulation.
+Distinguish obligation, conduct, an actual reported party
 position and a described record. Conduct alone is not an express position;
 a described record is not proof of its contents. Do not invent facts, terms,
 reasons, record content, permission, legal status or conclusions, including
