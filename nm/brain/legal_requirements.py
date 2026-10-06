@@ -96,10 +96,8 @@ def _statement_valid(statement: object, source: dict, *, operative: bool) -> boo
         (_operative_assertion(source["kind"], role, owner) or (not operative and related_role))
         and isinstance(statement.get("assertion_statement"), str)
         and bool(statement["assertion_statement"].strip())
-        and len(statement["assertion_statement"]) <= 500
         and isinstance(statement.get("owner_label"), str)
         and bool(statement["owner_label"].strip())
-        and len(statement["owner_label"]) <= 160
         and (
             statement.get("source_treatment") == "adopted"
             if operative
@@ -108,7 +106,6 @@ def _statement_valid(statement: object, source: dict, *, operative: bool) -> boo
         and all(
             isinstance(statement.get(key), str)
             and bool(statement[key].strip())
-            and len(statement[key]) <= 800
             and statement[key] in source["text"]
             for key in ("support_excerpt", "owner_excerpt", "treatment_excerpt")
         )
@@ -136,10 +133,8 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
     if (
         not isinstance(support, str)
         or not support.strip()
-        or len(support) > 800
         or support not in source["text"]
         or not isinstance(scope, str)
-        or len(scope) > 800
         or (scope and (not scope.strip() or scope not in source["text"]))
         or scope_status
         not in ("established", "asked_to_establish", "no_special_condition", "conditional")
@@ -168,12 +163,10 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
         and (source["kind"] != "provision" or verification["assertion_owner"] == "legislative_text")
         and isinstance(verification.get("owner_label"), str)
         and bool(verification["owner_label"].strip())
-        and len(verification["owner_label"]) <= 160
         and verification.get("source_treatment") == "adopted"
         and all(
             isinstance(verification.get(key), str)
             and bool(verification[key].strip())
-            and len(verification[key]) <= 800
             and verification[key] in source["text"]
             for key in ("owner_excerpt", "treatment_excerpt")
         )
@@ -297,12 +290,10 @@ def _application_premises_valid(finding: dict) -> bool:
             not in ("reported_satisfied", "unresolved", "reported_contradicted")
             or not isinstance(row.get("predicate_excerpt"), str)
             or not row["predicate_excerpt"].strip()
-            or len(row["predicate_excerpt"]) > 800
             or row["predicate_excerpt"] not in sources[row["source_id"]]["text"]
             or not isinstance(row.get("reason"), str)
             or not row["reason"].strip()
             or not isinstance(row.get("preserved_condition"), str)
-            or len(row["preserved_condition"]) > 1000
             or not isinstance(row.get("account_references"), list)
         ):
             return False
@@ -568,9 +559,11 @@ linked material exactly once and has retained support for its full meaning.
 For rejected findings, required arrays remain present but unused source,
 material and premise checks may be empty. Give nonempty substantive reasons
 that explain the relevant evidence comparison; reason length alone does not
-change a verdict. assertion_statement is at most 500, owner_label at most 160,
-and preserved_condition at most 1000 characters. Support fragments, role
-statements and conditions come from their declared input; return no new
+change a verdict. Preserve the full assertion meaning, attribution and limiting
+conditions rather than shortening them to meet a character count. Give concise
+wording where faithful; assertion_statement and owner_label remain nonempty for
+retained source use. Support fragments, role statements and conditions come
+from their declared input; return no new
 facts, law, fields or wording repairs."""
 
 _REPAIR_SYSTEM = """
@@ -1111,8 +1104,8 @@ def _verification_schema(
             "source_id": {"type": "string", "enum": list(source_ids)},
             "assertion_owner": {"type": "string", "enum": list(SOURCE_ASSERTION_OWNERS)},
             "assertion_role": {"type": "string", "enum": list(SOURCE_ASSERTION_ROLES)},
-            "assertion_statement": {"type": "string", "maxLength": 500},
-            "owner_label": {"type": "string", "maxLength": 160},
+            "assertion_statement": {"type": "string"},
+            "owner_label": {"type": "string"},
             "owner_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
             "source_treatment": {"type": "string", "enum": list(SOURCE_TREATMENTS)},
             "treatment_fragment_id": {"type": "string", "enum": ["", *fragment_ids]},
@@ -1222,7 +1215,7 @@ def _verification_schema(
                             "items": {"type": "string", "enum": list(account_ids) or [""]},
                             **({"maxItems": 0} if not account_ids else {}),
                         },
-                        "preserved_condition": {"type": "string", "maxLength": 1000},
+                        "preserved_condition": {"type": "string"},
                         "reason": {"type": "string", "minLength": 1},
                     },
                 },
@@ -1252,8 +1245,8 @@ def _resolve_statement(
         resolved[f"{field}_excerpt"] = fragments[identity]
     if not _statement_valid(resolved, source, operative=operative):
         raise SchemaViolation(
-            f"{label} needs a faithful nonempty assertion_statement within 500 characters, "
-            "a source/role/owner relationship, owner_label within 160 characters and exact "
+            f"{label} needs a faithful nonempty assertion_statement, "
+            "a source/role/owner relationship, nonempty owner_label and exact "
             "support, ownership and treatment words; contextual positions do not become law"
         )
     return resolved
@@ -1374,14 +1367,8 @@ def _finding_verdict(
                 f"{sources[source_id]['kind']!r} and assertion_owner "
                 f"{check['assertion_owner']!r}; case_background and unclear are not operative law"
             )
-        if verdict == "supported" and (
-            not check["assertion_statement"].strip() or len(check["assertion_statement"]) > 500
-        ):
-            raise SchemaViolation(
-                f"Source {source_id!r} needs a nonempty assertion_statement within 500 characters"
-            )
-        if verdict == "supported" and len(check["owner_label"]) > 160:
-            raise SchemaViolation(f"Source {source_id!r} needs owner_label within 160 characters")
+        if verdict == "supported" and not check["assertion_statement"].strip():
+            raise SchemaViolation(f"Source {source_id!r} needs a nonempty assertion_statement")
         if (
             not check["reason"].strip()
             or (verdict == "supported") != bool(support_id)

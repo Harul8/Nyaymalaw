@@ -1319,8 +1319,8 @@ def test_used_assertion_role_cannot_change_its_speaker_or_promote_background(rol
     assert "assertion_role" in repair["validation_issues"]["r1"]
 
 
-@pytest.mark.parametrize("statement", ["", "  ", "x" * 501])
-def test_used_assertion_requires_a_concise_statement_without_repeating_checked_peers(statement):
+@pytest.mark.parametrize("statement", ["", "  "])
+def test_used_assertion_requires_a_nonempty_statement_without_repeating_checked_peers(statement):
     source = request_hits()["q1"]["candidates"][0]
     proposed = {"q1": [{**finding(), "sources": [source]}]}
     wrong = supported_verdict("r1", "s1")

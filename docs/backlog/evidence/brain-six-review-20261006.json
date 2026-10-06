@@ -777,6 +777,23 @@
         "nm/brain/requirements_state.py",
         "tests/test_brain_saved_finding_label_width.py"
       ]
+    },
+    {
+      "slice": "full-legal-meaning-width",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-180",
+        "LB-181",
+        "LB-187"
+      ],
+      "decision": "Removed arbitrary size-only rejection of assertions, owner names, exact source excerpts and full preserved conditions across legal schema/runtime/historical validity. Retains full original words and independent role, adoption, source ownership, conditional application, force and evidence checks. Actual complete-context preflight, token budgets and bounded correction remain.",
+      "validation": "233 focused offline law controls passed; 46 explicit substantive-width cases rechecked after test formatting; Ruff clean. Previously rejected faithful assertions/conditions and exact >800-character saved excerpts now survive; blank/foreign/wrong-role/adoption cases remain invalid. One-fragment boundary range support remains the separate next slice; live semantics deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_substantive_widths.py",
+        "tests/test_brain_legal_requirements.py"
+      ]
     }
   ]
 }
