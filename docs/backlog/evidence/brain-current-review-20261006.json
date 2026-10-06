@@ -779,5 +779,68 @@
     "LB195/196 mechanically implemented and offline exercised; real semantic/browser acceptance remains open.",
     "LB175-193 current positions contain superseded copied stages; dated history remains preserved.",
     "LB198-202 preserved local candidates still deferred; no old code silently merged."
-  ]
+  ],
+  "repair_milestones": [
+    {
+      "piece": "activity1-source-portion-feedback",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "A rejected exact range receives its owned source ID, attempted endpoints, actual Unicode length and precise type/order/bounds mismatch; no fact or endpoint is repaired silently.",
+      "baseline": "18 new focused diagnostic assertions failed;5 accurate neighbor controls passed.",
+      "verification": {
+        "focused_synthetic_passed": 23,
+        "existing_owner_coverage_and_public_recovery_passed": 286,
+        "ruff": "passed",
+        "prompt_constants": "unchanged",
+        "routine_model_call_delta": 0,
+        "correction_allowance_delta": 0,
+        "saved_source_schema": "unchanged",
+        "paid_calls": 0,
+        "browser": "Deferred until connected source/material behavior is repaired, as newly directed."
+      },
+      "limits": "Precise feedback does not fix model arithmetic, source-purpose interpretation, source-selection duplication or material omissions. Provider-schema type failures precede this owner and remain outside this diagnostic slice."
+    }
+  ],
+  "additional_reviewer_input": {
+    "reviewed_version": "a028ac5",
+    "source": "User pasted offline independent reviewer findings, 6 October 2026",
+    "status": "Independently verify before repair; not automatically accepted as current behavior.",
+    "reported_findings": [
+      "Optional legal_source_ids conflicts with OpenAI strict required fields",
+      "Template/quote-only useful reply vocabulary",
+      "Two-pass status renderer not idempotent and linked questions overwritten",
+      "kindnone misroutes permit saved false completion",
+      "Classifier labels leak through correction diagnostics",
+      "Repeated-account inconsistent coverage",
+      "Scope holds trigger omission recovery",
+      "Whole-history coverage output growth/truncation",
+      "Repeated delivery metadata causes503",
+      "Display projection additions can alter historical replay",
+      "Absent material reading labelledok",
+      "Duplicate successful-change listing",
+      "Wrongly accepted finding.need can carry operational lie",
+      "Harmless expression focus causes fallback",
+      "Golden false-prose assertions fail to inject fresh lie",
+      "Semantic xfails use historicalwire",
+      "Baseline failures matchedbyname only",
+      "Auto-positive source fixture masks semantic discovery",
+      "Tooling UTF8 console guard gaps"
+    ],
+    "confirmed_overlap": [
+      "Current live canonical false completion",
+      "Quote/status-only useful-delivery failure",
+      "Duplicate saved-change presentation",
+      "Historical-wire semantic xfail limits",
+      "No population error rate from fabricated verdicts"
+    ],
+    "current_standing_rule": "Fresh closed evidence expressions stay mandatory. Implement useful checked propositions/questions/conditions within this contract; do not restore arbitrary writer text. Read-only/reusable work may complete on sufficient checked evidence without fresh extraction."
+  },
+  "budget_authorization": {
+    "user_authorized_maximum_usd": 5,
+    "conservative_application": "Use$5 as cumulative maximum of existing test ledger, including earlier charged usage; no reset or spend concealment.",
+    "ledger_charged_at_new_authorization": 1.877078,
+    "available_under_cumulative5": 3.122922,
+    "pinned_model": "gpt-4.1-mini-2025-04-14",
+    "no_further_paid_calls_since_baseline": true
+  }
 }

@@ -30,7 +30,8 @@ SOURCE_SUPPORT_CONTRACT = "independent_original_source_support_v2"
 COVERAGE_SELECTION_CONTRACT = "owned_account_dispositions_v2"
 
 
-def owned_source_portions(reference: dict, selections: list[dict]) -> list[dict]:
+def owned_source_portions(reference: dict, selections: list[dict], *,
+                          source_id: str | None = None) -> list[dict]:
     """Resolve exact offsets in an owned source; this does not certify meaning."""
     if (not isinstance(reference, dict) or reference.get("role") != "advocate"
             or any(not isinstance(reference.get(key), str) or not reference[key].strip()
@@ -39,11 +40,20 @@ def owned_source_portions(reference: dict, selections: list[dict]) -> list[dict]
         raise SchemaViolation("Source portions require canonical original advocate words")
     selected = set()
     for row in selections:
-        if (not isinstance(row, dict) or set(row) != {"start", "end"}
-                or type(row["start"]) is not int or type(row["end"]) is not int
-                or not 0 <= row["start"] < row["end"] <= len(reference["quoted"])):
-            raise SchemaViolation("Source portions require exact owned integer endpoints")
-        selected.add((row["start"], row["end"]))
+        if not isinstance(row, dict) or set(row) != {"start", "end"}:
+            raise SchemaViolation("Source portions require only start and end endpoints")
+        start, end = row["start"], row["end"]
+        length = len(reference["quoted"])
+        location = (f"source_id={source_id or 'unselected'} "
+                    f"start={start!r} end={end!r} length={length}")
+        if type(start) is not int or type(end) is not int:
+            raise SchemaViolation(f"Source portions {location}: endpoints must be integers")
+        if start >= end:
+            raise SchemaViolation(f"Source portions {location}: require start < end")
+        if start < 0 or end > length:
+            raise SchemaViolation(
+                f"Source portions {location}: endpoints are outside the owned source bounds")
+        selected.add((start, end))
     result = []
     for start, end in sorted(selected):
         identity = [reference[key] for key in ("turn_id", "role", "quoted")]
@@ -81,10 +91,11 @@ def _source_proposal_schema(references: dict) -> dict:
                 "required": list(items), "properties": items}}}
 
 
-def _source_proposal(reference: dict, row: dict) -> dict:
+def _source_proposal(reference: dict, row: dict, *, source_id: str) -> dict:
     result = {**reference, "content_role": row["content_role"], "reason": row["reason"],
               "selection_contract": SOURCE_SELECTION_CONTRACT,
-              "substantive_spans": owned_source_portions(reference, row["substantive_spans"])}
+              "substantive_spans": owned_source_portions(
+                  reference, row["substantive_spans"], source_id=source_id)}
     canonical = {(reference["turn_id"], reference["role"], reference["quoted"])}
     if not source_treatment_reference_valid(result, canonical):
         raise SchemaViolation(
@@ -184,7 +195,8 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
         rows = data["source_treatments"]
         if any(not row["reason"].strip() for row in rows.values()):
             raise SchemaViolation("Each source treatment needs a substantive nonempty reason")
-        return {key: _source_proposal(references[key], row) for key, row in rows.items()}
+        return {key: _source_proposal(references[key], row, source_id=key)
+                for key, row in rows.items()}
 
     return checked_read(model, prompt, schema, output_limit, accept)
 
@@ -269,7 +281,7 @@ def reconsider_account_sources(model, *, payload: dict, latest_turn_id: str,
             raise SchemaViolation("Each reconsidered source needs a substantive nonempty reason")
         merged = {key: dict(row) for key, row in source_treatments.items()}
         for identity, row in rows.items():
-            merged[identity] = _source_proposal(references[identity], row)
+            merged[identity] = _source_proposal(references[identity], row, source_id=identity)
         changed = tuple(identity for identity in selected
                         if source_dependency(merged[identity])
                         != source_dependency(source_treatments[identity]))
@@ -309,7 +321,8 @@ def _checked_support_portions(check, treatment) -> list[dict] | None:
     if not source_treatment_reference_valid(treatment, {(
             treatment.get("turn_id"), treatment.get("role"), treatment.get("quoted"))}):
         raise SchemaViolation("Independent support has no owned original source treatment")
-    portions = owned_source_portions(treatment, check["support_spans"])
+    portions = owned_source_portions(
+        treatment, check["support_spans"], source_id=check["source_id"])
     if (type(check.get("supplies_account_content")) is not bool
             or check["supplies_account_content"] != bool(portions)):
         raise SchemaViolation("Original source content conflicts with its exact support portions")
@@ -860,7 +873,8 @@ def _coverage_candidate_support(decisions, references, choices, admitted) -> dic
         support = {}
         for check in checks:
             source = check["source_id"]
-            portions = owned_source_portions(references[source], check.get("support_spans"))
+            portions = owned_source_portions(
+                references[source], check.get("support_spans"), source_id=source)
             if (type(check.get("supplies_account_content")) is not bool
                     or type(check.get("supports_proposal")) is not bool
                     or check["supplies_account_content"] != bool(portions)
@@ -913,7 +927,8 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
         identity = check["source_id"]
         if not check["reason"].strip():
             raise SchemaViolation("Coverage needs substantively reasoned source checks")
-        portions = owned_source_portions(references[identity], check["substantive_spans"])
+        portions = owned_source_portions(
+            references[identity], check["substantive_spans"], source_id=identity)
         if bool(portions) != (check["content_purpose"] == "account"):
             raise SchemaViolation("Coverage source purpose contradicts its substantive portions")
         canonical = {**check, **references[identity], "reason": check["reason"].strip(),
@@ -934,7 +949,7 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
         if not disposition["reason"].strip():
             raise SchemaViolation("Coverage disposition needs a substantive reason")
         portion = owned_source_portions(references[identity], [{
-            key: disposition[key] for key in ("start", "end")}])[0]
+            key: disposition[key] for key in ("start", "end")}], source_id=identity)[0]
         records = list(dict.fromkeys(disposition["record_ids"]))
         candidates = list(dict.fromkeys(disposition["candidate_ids"]))
         if disposition["status"] == "represented":
