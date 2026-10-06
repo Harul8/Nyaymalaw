@@ -1630,11 +1630,45 @@ def _partial_coverage(coverage, reason) -> None:
 
 
 def _affected_proposals(proposals, changed_sources, latest_sources, prior_sources,
-                        unavailable_assignments=()) -> set:
+                        unavailable_assignments=(), *, review_state=None) -> set:
+    """Withhold changed dependencies, preserving intact independently checked peers."""
+    dependencies = {candidate: candidate_account_ids(candidate, latest_sources, prior_sources)
+                    for candidate in proposals}
+    if review_state:
+        cache = review_state.get("cache")
+        review_context = getattr(cache, "context", None)
+        cached_sources = getattr(cache, "source_treatments", None)
+        if not isinstance(review_context, dict) or not isinstance(cached_sources, dict):
+            raise SchemaViolation("Recovery preservation has no intact original review")
+        stage = ("dispute_review" if proposals and proposals[0].kind == "dispute"
+                 else "detail_review")
+        prefix = "C" if stage == "dispute_review" else "D"
+        keyed = {f"{prefix}{index}": candidate for index, candidate in enumerate(proposals, 1)}
+        accounts = {identity: dependencies[candidate] for identity, candidate in keyed.items()}
+        targets = {identity: set(candidate.related_dispute_ids if prefix == "C"
+                                 else candidate.related_material_ids)
+                   for identity, candidate in keyed.items()}
+        if any(row.get("candidate_id") == "O1" for row in review_context.get("candidates", [])):
+            accounts["O1"] = set(cached_sources)
+            targets["O1"] = set()
+        # Validate the code-issued cache before consulting its decisions. This
+        # reads the original dependency snapshot, not changed classifications.
+        checked = retained_independent_review(
+            review_state, context=review_context, source_treatments=cached_sources,
+            account_ids=accounts, targets=targets)
+        offered = {row["candidate_id"]: row for row in review_context["candidates"]}
+        for identity, candidate in keyed.items():
+            if identity not in checked:
+                continue
+            original = {field: value for field, value in offered[identity].items()
+                        if field not in ("candidate_id", "allowed_account_source_ids",
+                                         "allowed_restoration_peer_ids")}
+            if original != _application_proposal_payload(candidate, stage=stage):
+                raise SchemaViolation("Recovery preservation changed an original reviewed proposal")
+            dependencies[candidate] = set(checked[identity]["account_check"]["source_ids"])
     affected = {
         candidate for candidate in proposals
-        if candidate_account_ids(candidate, latest_sources, prior_sources).intersection(
-            changed_sources)
+        if dependencies[candidate].intersection(changed_sources)
         or set(candidate.dispute_ids).intersection(unavailable_assignments)}
     while True:
         targets = {identity for candidate in affected
@@ -1780,7 +1814,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
         nonlocal grounded, active_disputes
         if hold_disputes:
             affected = _affected_proposals(
-                context["dispute_proposals"], changed_sources, latest_sources, prior_sources)
+                context["dispute_proposals"], changed_sources, latest_sources, prior_sources,
+                review_state=context["dispute_review_state"])
             context["accepted_disputes"] = tuple(
                 candidate for candidate in context["accepted_disputes"]
                 if candidate not in affected)
@@ -1802,7 +1837,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             conversation, context["accepted_disputes"], turn_id, slots)
         affected = _affected_proposals(
             context["detail_proposals"], changed_sources, latest_sources, prior_sources,
-            previous_ids - {row["id"] for row in active_disputes})
+            previous_ids - {row["id"] for row in active_disputes},
+            review_state=detail_review_state)
         grounded = _hold_affected_grounding(
             grounded, context["detail_proposals"], affected, opening, reason,
             opening_affected=bool(changed_sources))

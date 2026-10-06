@@ -1560,6 +1560,23 @@
       },
       "call_impact": "Zero added routine or conditional stages. Existing Judge call and bounded correction retain the same purpose. Token/cost changes unmeasured.",
       "remaining": "Same-turn multi-passage support and explicit underlying-issue relationships; correct opening ownership; integrated browser acceptance still FAILED."
+    },
+    {
+      "piece": "Source-support recovery prerequisite",
+      "base": "6f62807",
+      "production_file": "nm/brain/turn.py",
+      "prompt_changes": 0,
+      "invariant": "An exhausted review may withhold a proposal dependent on changed evidence, but an offered unrelated source is not an actual reviewed dependency.",
+      "observable_pass": "Intact checked peers remain available without a model call; selected positive/negative/context dependencies and unavailable assignments remain held. Changed proposals and tampered review caches cannot inherit preservation.",
+      "observed_counterexample": "Prepared same-turn support expansion made public COVERAGE-SOURCE-BUDGET lose its independently checked L1 peer after L2 purpose reconsideration exhausted review capacity.",
+      "verification": {
+        "focused": "6 passed, baseline5failed/1passed",
+        "affected_public_matrix": "107 passed",
+        "lint": "passed",
+        "meaning": "Original verdicts are authored. Public save/replay and conditional recovery are exercised; semantic meaning is not qualified."
+      },
+      "call_impact": "No new model calls: verify the intact owned cache and inspect actual selected dependencies mechanically before terminal holding.",
+      "remaining": "Original record_review.py source expansion candidate preserved at outputs/brain-repair-20261006/same-turn-support-owner.patch; must restore/verify it next. Added dispute association completeness and opening review holds need distinct owner repairs; broader semantic qualification remains failed."
     }
   ],
   "additional_reviewer_input": {
