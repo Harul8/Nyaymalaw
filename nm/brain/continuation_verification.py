@@ -308,6 +308,11 @@ _QUESTION_RESOLUTION = {
     },
 }
 
+_RECORD_DISPOSITIONS = {
+    "none": "not_requested", "performed": "fulfilled", "already_current": "fulfilled",
+    "review_no_change": "no_change_justified", "unresolved": "unfinished",
+}
+
 _RECORD_CHECK = {
     "type": "object", "additionalProperties": False,
     "required": ["outcome", "reason"],
@@ -422,6 +427,17 @@ def _schema(indexes: tuple[int, ...], proposed: dict[int, dict], progress: dict)
             "type": "string", "enum": blocks}},
     }}
     accepted, rejected = _transport_shapes(row)
+    alternatives = []
+    for index in indexes:
+        selected = deepcopy(accepted)
+        selected["properties"]["request_index"]["enum"] = [index]
+        status = proposed[index].get("record_outcome", {}).get("status")
+        if status in _RECORD_DISPOSITIONS:
+            selected["properties"]["record_check"]["properties"]["outcome"]["enum"] = [
+                _RECORD_DISPOSITIONS[status]]
+        alternatives.append(selected)
+    accepted = (alternatives[0] if len(alternatives) == 1 else
+                {"anyOf": alternatives} if alternatives else accepted)
     return {"type": "object", "additionalProperties": False,
             "required": ["accepted_units", "rejected_units"], "properties": {
                 "accepted_units": {"type": "array", "items": accepted},
@@ -441,9 +457,7 @@ def _record_check_rejections(check: dict, unit: dict, input_payload: dict) -> li
         raise SchemaViolation("record_check needs a substantive nonempty reason")
     declared = unit.get("record_outcome")
     status = declared["status"] if isinstance(declared, dict) else "none"
-    expected = {"none": "not_requested", "performed": "fulfilled",
-                "already_current": "fulfilled", "review_no_change": "no_change_justified",
-                "unresolved": "unfinished"}.get(status)
+    expected = _RECORD_DISPOSITIONS.get(status)
     rejected = []
     if check["outcome"] != expected:
         rejected.append("Record result differs from the writer's declared outcome: " + reason)

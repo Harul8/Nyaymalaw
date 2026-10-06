@@ -1635,6 +1635,19 @@
       "canonical_changes": "Fresh native generation only. Canonical RECORD_OUTCOME_SCHEMA, operation/current-state normalization, actual effect/ownership/target checks, saved rendering versions and replay remain unchanged. Harmless none block_id/reason remain accepted. No contradictory fields silently repaired.",
       "call_impact": "No new routine call. One writer and existing independent reviewer remain; schema choices remove impossible structural combinations before downstream bounded correction.",
       "remaining": "Judge accepted-disposition grammar is a separate owner prerequisite, followed by actual mini browser test of mixed recording/recap. Typed independent requested outcomes and semantic sufficiency remain unqualified."
+    },
+    {
+      "piece": "Accepted native reply review uses consistent declared disposition",
+      "base": "f96de30",
+      "production_file": "nm/brain/continuation_verification.py",
+      "prompt_changes": 0,
+      "invariant": "A fresh accepted review cannot contradict its proposed record outcome. A reviewer still reports actual mismatches in rejected rows; matching labels are never execution evidence.",
+      "observable_pass": "Per-request accepted branches offer the existing required status/disposition pairing. Rejections retain all outcomes and factual subset fields; unrelated effects, wrong owners/check coverage and false completion still fail existing gates.",
+      "baseline": "27 focused cases21pass/6fail on f96de30.",
+      "verification": "108 focused/dependent public, retention, execution/replay tests passed;27 currentfocused and Ruff pass after shared pairing deduplication. Read-only/current-state needs no write; inherited and partially retained work retain their proof lineage.",
+      "canonical_changes": "Native accepted branch only, sharing existing admission pairing definition. Canonical _RECORD_CHECK/_VERDICT, rejected fields/outcomes, transport, effect checks, renderer and saved replay versions unchanged. Explicit historical missing declarations remain broad compatibility, not inferred fresh evidence.",
+      "call_impact": "Zero stages added. One writer plus one independent reviewer unchanged; conditional structural correction may reduce, subject to actual browser measurement.",
+      "remaining": "Actual pinned mini/browser mixed recording+recap acceptance next. This proves schema consistency and false-claim rejection wiring, not reviewer semantic accuracy or useful completion."
     }
   ],
   "additional_reviewer_input": {
