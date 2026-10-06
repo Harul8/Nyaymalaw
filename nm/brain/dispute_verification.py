@@ -2,13 +2,17 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import asdict
 
 from nm.brain.checked import require_independent_result
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.record_review import (
+    ACCOUNT_COVERAGE_CONTRACT,
     admitted_record_decisions,
     candidate_account_ids,
+    checked_coverage,
+    coverage_schema,
     derived_record,
     owned_source_treatments,
     restoration_peer_ids,
@@ -157,6 +161,40 @@ operation. The server owns exact saved passages: do not copy them, rewrite
 proposals, add facts or decide legal merit."""
 
 
+_COVERAGE_SYSTEM = """Message: review_scope states the code-owned authorised work to examine. The
+input contains the complete original advocate source catalogue in
+coverage_source_ids, original transcript and source_treatments, all active
+records, proposed operations and your candidate decisions. These are distinct
+from a candidate's selected citations. On correction, retained_candidate_context
+contains settled peer decisions; do not repeat or override them.
+Purpose: Check whether materially relevant account content or needed
+reconciliation in this stage's authorised scope remains unrepresented. This
+judgment does not prove facts, completeness of legal discovery or task fulfillment.
+Activity 5 - Independently assess represented account coverage.
+Look for: Read original advocate evidence before comparing the current records,
+held or outside-owned proposals and operations that can actually be admitted.
+Existing records are NM interpretations to compare with that evidence, never
+their own authority. Rejected, unassessed or dependency-unavailable proposals
+cannot count as represented merely because they were submitted. An already
+faithful current record may cover content without a new row. Review can
+legitimately require no changes and no fresh factual assertion.
+Outcome: Include coverage with state complete, partial or unassessed; a concise
+reason identifying the substantive judgment; and missing_source_ids selected
+only from coverage_source_ids. Complete means no materially missing content or
+needed reconciliation was found in this scope and requires an empty missing list.
+Partial means relevant content or reconciliation remains missing: explain the
+missing proposition or distinction and select owned original source IDs when
+the gap can be localized. The missing list may be empty when it cannot. Unassessed means this
+coverage could not be dependably decided; missing IDs may be empty when no gap
+can be localized. A source span may contain several propositions; selecting it
+is not proof that every proposition is represented. Do not require a new record
+or force complete. Return coverage even for verdicts=[] on an authorised empty
+or coverage-only review. On correction, return verdicts only for the listed
+pending candidates plus coverage; preserve settled peers and full source context.
+A valid partial or unassessed assessment is a legitimate result, not an error
+that must be repaired into complete."""
+
+
 _VERDICT = {
     "type": "object", "additionalProperties": False,
     "required": ["candidate_id", "candidate_role", "operation_supported",
@@ -173,15 +211,22 @@ _VERDICT = {
 }
 
 
-def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=()) -> dict:
+def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
+            coverage_ids=None) -> dict:
     item = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
         **review_properties(source_ids, target_ids, peer_ids),
-        "candidate_id": {"type": "string", "enum": list(ids)},
+        "candidate_id": {"type": "string", "enum": list(ids) or [""]},
     }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
+    properties = {"verdicts": {"type": "array", "items": item,
+                               **({"maxItems": 0} if not ids else {})}}
+    required = ["verdicts"]
+    if coverage_ids is not None:
+        properties["coverage"] = coverage_schema(coverage_ids)
+        required.append("coverage")
     return {"type": "object", "additionalProperties": False,
-            "required": ["verdicts"],
-            "properties": {"verdicts": {"type": "array", "items": item}}}
+            "required": required, "properties": properties}
+
 
 
 def _read_verdicts(data: object, candidates: dict[str, MaterialCandidate],
@@ -242,14 +287,28 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     active_disputes: tuple[dict, ...],
                     audit: list[dict] | None = None,
                     source_treatments: dict[str, dict] | None = None,
+                    review_scope: dict | None = None,
+                    coverage: dict | None = None,
                     ) -> tuple[MaterialCandidate, ...]:
-    """Accept only fully checked proposals; refuse incomplete checking pre-save."""
-    if not candidates:
+    """Check proposed effects and, when requested, independent original coverage."""
+    requested = review_scope is not None
+    if requested and not isinstance(review_scope, dict):
+        raise SchemaViolation("Independent account review needs a code-owned scope")
+    if not candidates and not requested:
+        if coverage is not None:
+            coverage.clear()
+            coverage.update(contract=ACCOUNT_COVERAGE_CONTRACT, state="unassessed",
+                            reason="Independent account coverage was not requested.",
+                            missing_source_ids=[], missing_sources=[], review_scope=None)
         return ()
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     source_treatments = owned_source_treatments(source_treatments, latest_sources, prior_sources)
     payload["source_treatments"] = source_treatments
     payload["active_disputes"] = [derived_record(row) for row in active_disputes]
+    coverage_ids = tuple(source_treatments) if requested else None
+    if requested:
+        payload["review_scope"] = deepcopy(review_scope)
+        payload["coverage_source_ids"] = list(coverage_ids)
     keyed = {f"C{index}": candidate
              for index, candidate in enumerate(candidates, start=1)}
     account_ids = {key: candidate_account_ids(candidate, latest_sources, prior_sources)
@@ -274,6 +333,10 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     decisions: dict[str, dict] = {}
     pending = tuple(keyed)
     issues: dict[str, tuple[str, ...]] = {}
+    coverage_decision = None
+    last_valid_coverage = None
+    coverage_issue = "coverage is absent" if requested else None
+    system = _SYSTEM + "\n\n" + _COVERAGE_SYSTEM if requested else _SYSTEM
     for attempt in range(2):
         current = {**payload,
                    "candidates": [row for row in payload["candidates"]
@@ -289,19 +352,27 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 "requires independent_dispute, reported matter account with no invented legal "
                 "analysis, operation_supported true and complete supported target checks. "
                 "Failed account or target checks cannot be overridden by overall acceptance.")
+            if requested:
+                current["pending_review_keys"] = [
+                    *pending, *(["$coverage"] if coverage_issue else [])]
+                current["coverage_validation_issue"] = coverage_issue or ""
+                current["validation_issue"] += (
+                    " Return coverage for the complete authorised scope and original source "
+                    "catalogue. With no pending candidates return verdicts=[]; do not repeat "
+                    "retained candidate decisions.")
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 512 * len(pending)))
-        if (estimate_tokens(_SYSTEM + user) + output_limit
+        if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
-            raise ContextOverflow(
-                "The full conversation exceeds the dispute verification budget")
+            raise ContextOverflow("The full conversation exceeds the dispute verification budget")
         try:
             result = model.structured(
-                Prompt(system=_SYSTEM, user=user, operation="verify_disputes"),
+                Prompt(system=system, user=user, operation="verify_disputes"),
                 _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
                         tuple(sorted(set().union(*targets.values()))),
                         tuple(sorted({peer for key in pending
-                                      for peer in restoration_peer_ids(key, targets)}))),
+                                      for peer in restoration_peer_ids(key, targets)})),
+                        coverage_ids=coverage_ids),
                 Tier.JUDGE, max_tokens=output_limit)
             require_independent_result(result)
             if not result.usable:
@@ -310,17 +381,56 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 result.data, {key: keyed[key] for key in pending}, account_ids=account_ids,
                 targets=targets, source_treatments=source_treatments)
         except SchemaViolation as exc:
-            issues = {key: (review_contract_issue(exc),) for key in pending}
+            issue = review_contract_issue(exc)
+            issues = {key: (issue,) for key in pending}
+            if requested:
+                coverage_issue = issue
+                coverage_decision = None
             continue
         decisions.update(checked)
         pending = tuple(issues)
-        if not pending:
+        if requested:
+            try:
+                coverage_decision = checked_coverage(
+                    result.data.get("coverage") if isinstance(result.data, dict) else None,
+                    coverage_ids)
+                last_valid_coverage = deepcopy(coverage_decision)
+                coverage_issue = None
+            except SchemaViolation as exc:
+                coverage_decision = None
+                coverage_issue = review_contract_issue(exc)
+        if not pending and coverage_issue is None:
             break
     if pending:
         raise SchemaViolation(
             "Dispute verification remained incomplete for "
             + ", ".join(pending) + ": " + review_issues_text(issues))
-    decisions = admitted_record_decisions(decisions)
+    admitted = admitted_record_decisions(decisions)
+    downgraded = [key for key in decisions
+                  if decisions[key]["verdict"] == "accept" and admitted[key]["verdict"] != "accept"]
+    if requested and downgraded:
+        coverage_decision = None
+        coverage_issue = (
+            "Final admission withheld restoration candidates " + ", ".join(downgraded)
+            + " because required successors were unavailable; coverage of the final admitted "
+            "record was not reassessed.")
+    decisions = admitted
+    if coverage is not None:
+        coverage.clear()
+        assessment = coverage_decision or {
+            "state": "unassessed",
+            "reason": "Independent account coverage could not be dependably decided.",
+            "missing_source_ids": [],
+        }
+        coverage.update(contract=ACCOUNT_COVERAGE_CONTRACT,
+                        review_scope=deepcopy(review_scope), **assessment)
+        coverage["missing_sources"] = [{"source_id": key, **{
+            field: source_treatments[key][field] for field in ("turn_id", "role", "quoted")}}
+            for key in assessment["missing_source_ids"]]
+        if coverage_issue:
+            coverage["validation_issue"] = coverage_issue
+        if coverage_decision is None and last_valid_coverage is not None:
+            coverage["prior_assessment"] = last_valid_coverage
     if audit is not None:
         audit.extend({**decisions[key], "proposal": asdict(candidate)}
                      for key, candidate in keyed.items())

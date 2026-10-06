@@ -278,6 +278,20 @@
         "nm/brain/record_review.py",
         "tests/test_brain_account_coverage_contract.py"
       ]
+    },
+    {
+      "slice": "independent-dispute-omission-review",
+      "owners": [
+        "LB-176",
+        "LB-177",
+        "LB-179"
+      ],
+      "decision": "Extend the existing dispute reviewer with optional explicit authorized review_scope and independent coverage against every original advocate span and full active disputes. Requested empty extractions still receive an independent check; genuinely read-only calls still skip. Candidate-only selected citations do not limit coverage. Preserve valid candidate peers during coverage-only correction; after the existing bound, unavailable coverage becomes unassessed. Restoration admission downgrade invalidates complete coverage without rejecting unrelated valid peers. This verifier prerequisite is activated by the later turn handoff.",
+      "validation": "34 dispute coverage and existing verifier cases passed offline, including omitted empty account versus already represented no-change, full-source catalogue, coverage-only correction and exhausted coverage, restoration downgrade and strict adapter envelope. Ruff passes; semantic quality remains deferred.",
+      "files": [
+        "nm/brain/dispute_verification.py",
+        "tests/test_brain_dispute_coverage.py"
+      ]
     }
   ]
 }
