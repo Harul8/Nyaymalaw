@@ -189,8 +189,15 @@ def test_authorised_no_change_review_answer_is_delivered_without_invented_rows(
     assert response["metrics"]["llm_calls"] == 8
     assert response["material"] == []
     assert current_record(wired, opened["matter_id"]) == before
-    assert "matches your reported delivery date" in "\n".join(
-        row["text"] for row in response["elements"])
+    assert response["blocked"] is False
+    execution = response["material_coverage"]["execution"]
+    assert execution["record_changes"] == []
+    assert execution["requests"][0]["fulfillment"] == "no_change_justified"
+    assert response["elements"][0]["text"] == (
+        "The requested record review completed without a selected change.\n"
+        "Current entries:\n" + account)
+    unit, = response["continuation"]["units"]
+    assert unit["record_outcome"]["current_record_ids"] == ["review-original:material:1"]
 
 
 def test_legal_authority_cannot_use_answer_route_to_bypass_research(

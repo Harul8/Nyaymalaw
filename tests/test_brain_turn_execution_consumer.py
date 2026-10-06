@@ -349,6 +349,24 @@ def test_footer_displays_exact_actual_date_change_without_confusing_an_unrelated
         next_step="answer" if requested_change_performed else "legal_work",
         reply="The requested entry is revised." if requested_change_performed
         else "The requested records date remains unresolved.")
+    # Author both permissions from the original input before extraction. A
+    # requested records-date edit and an independently supplied equipment date
+    # are distinct contributions; permission for one cannot authorize the other.
+    second["items"][0]["mutation_scopes"] = [{
+        "authority_kind": "account_contribution",
+        "authority_source_ids": ["L1"],
+        "target_scope": "exact",
+        "target_ids": ["first:material:1"],
+        "permitted_relations": ["corrects"],
+    }]
+    if not requested_change_performed:
+        second["items"][0]["mutation_scopes"].append({
+            "authority_kind": "account_contribution",
+            "authority_source_ids": ["L2"],
+            "target_scope": "exact",
+            "target_ids": ["first:material:2"],
+            "permitted_relations": ["corrects"],
+        })
     store = FileMatterStore(tmp_path, key="consumer-fixture-sealing-key")
     model = ConsumerModel([
         plan(original, opening=True, material_purposes=("account_contribution",), candidates=[

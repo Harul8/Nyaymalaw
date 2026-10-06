@@ -48,6 +48,12 @@ def opening():
                           "Retain the separately reported unreturned-equipment and withheld-"
                           "payment issues on the file without treating the account as proved.")})
     result["items"][0].update(response_basis="conversation_record", research_question="")
+    # Original ACCOUNT L4 asks to retain these separately reported issues.
+    # Scope is declared before either reader proposes a record.
+    result["items"][0]["mutation_scopes"] = [{
+        "authority_kind": "account_contribution", "authority_source_ids": ["L4"],
+        "target_scope": "exact", "target_ids": [], "permitted_relations": ["new"],
+    }]
     return result
 
 

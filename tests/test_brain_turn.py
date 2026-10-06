@@ -564,6 +564,15 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
                   step="legal_work", reply=direct_reply)
     update["items"][0]["intent"] = "contribution"
     update["items"][0]["material_purposes"] = ["account_contribution"]
+    # Scope is authored from the later hearing contribution and saved original
+    # hearing target before the independent reader produces any proposal.
+    update["items"][0]["mutation_scopes"] = [{
+        "authority_kind": "account_contribution",
+        "authority_source_ids": ["L1"],
+        "target_scope": "exact",
+        "target_ids": ["correction-account:material:1"],
+        "permitted_relations": ["corrects"],
+    }]
 
     class SourcedModel(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -622,6 +631,14 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     assert response["material"][0]["prior_references"][0]["quoted"] == (
         "the hearing is on Tuesday.")
     assert response["metrics"]["llm_calls"] == 8
+    proposal, = response["material"]
+    assert proposal["related_material_ids"] == ["correction-account:material:1"]
+    assert proposal["mutation_authority"]["target_ids"] == ["correction-account:material:1"]
+    from nm.brain.turn import _current_records
+
+    conversation, _, _ = _current_records(
+        wired.store, wired.store.load(opened["matter_id"]))
+    assert [row["id"] for row in conversation.open_material] == ["correction-update:material:1"]
 
 
 def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired, monkeypatch):

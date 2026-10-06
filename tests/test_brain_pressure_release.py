@@ -77,9 +77,21 @@ class PassageModel(Model):
                 )
                 if self.control.get("duplicate_effects"):
                     selected = selected + selected
+                status_block_id = unit["blocks"][0]["id"] if status != "none" else ""
+                if status != "none" and self.control.get("separate_record_status"):
+                    # Independently useful content is not the operational status owner.
+                    status_block = deepcopy(unit["blocks"][0])
+                    status_block.update(
+                        id="record-status:" + str(unit["request_index"]),
+                        kind="completion", text="The requested record result remains unfinished.",
+                        record_ids=[], legal_source_ids=[],
+                        uncertainty="none", inline_citations=[],
+                    )
+                    unit["blocks"].append(status_block)
+                    status_block_id = status_block["id"]
                 unit["record_outcome"] = {
                     "status": status,
-                    "block_id": unit["blocks"][0]["id"] if status != "none" else "",
+                    "block_id": status_block_id,
                     "effect_ids": selected,
                     "current_record_ids": list(requirement["target_ids"])
                     if status == "already_current"
@@ -362,6 +374,24 @@ def test_wrong_target_cannot_certify_requested_date_even_with_accepting_judge(
         ],
         reply="The northern carton date has been corrected.",
     )
+    # The two permissions come from separate original advocate passages.
+    # Neither the extractor's selected target nor its verdict supplies a grant.
+    wrong["items"][0]["mutation_scopes"] = [
+        {
+            "authority_kind": "account_contribution",
+            "authority_source_ids": ["L1"],
+            "target_scope": "exact",
+            "target_ids": [DATE_ID],
+            "permitted_relations": ["corrects"],
+        },
+        {
+            "authority_kind": "account_contribution",
+            "authority_source_ids": ["L2"],
+            "target_scope": "exact",
+            "target_ids": [RIG_ID],
+            "permitted_relations": ["corrects"],
+        },
+    ]
     model = wire_model(
         wired,
         monkeypatch,
@@ -625,7 +655,8 @@ def test_truthful_partial_work_preserves_good_peer_and_unfinished_task(client, w
         wired,
         monkeypatch,
         [proposed],
-        [{"status": "unresolved", "missing_detail": True, "coverage": "partial"}],
+        [{"status": "unresolved", "missing_detail": True, "coverage": "partial",
+          "separate_record_status": True}],
     )
     delivered = send(client, message, "tablet-partial")
     result = delivered.json()

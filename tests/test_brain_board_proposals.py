@@ -82,13 +82,15 @@ def _with_source_ids(row, payload):
     return converted
 
 
-def route(request, *, relation, scope, opening=False, record_requirement=None):
+def route(request, *, relation, scope, opening=False, record_requirement=None,
+          mutation_scopes=()):
     return {
         "items": [{"request": request, "relation": relation,
                    "matter_scope": scope, "priority": "ordinary",
                    "next_step": "legal_work",
                    "reply": "I will assess the issues against the available record.",
                    "clarification": "", "material_purposes": ["account_contribution"],
+                   "mutation_scopes": list(mutation_scopes),
                    "record_requirement": (no_record_requirement() if record_requirement is None
                                           else record_requirement)}],
         "active_work_after": request,
@@ -195,7 +197,22 @@ def test_board_exposes_sourced_proposals_separately_from_worked_threads(
             dispute("The client contests a separate unpaid invoice.",
                     "A separate unpaid invoice"),
         ], "details": []},
-        route(second, relation="changes", scope="current"),
+        route(second, relation="changes", scope="current", mutation_scopes=[
+            {
+                "authority_kind": "account_contribution",
+                "authority_source_ids": ["L1"],
+                "target_scope": "exact",
+                "target_ids": ["turn-opening:material:2"],
+                "permitted_relations": ["withdraws"],
+            },
+            {
+                "authority_kind": "account_contribution",
+                "authority_source_ids": ["L2"],
+                "target_scope": "exact",
+                "target_ids": ["turn-opening:material:1"],
+                "permitted_relations": ["corrects"],
+            },
+        ]),
         {"disputes": [
             dispute("The earlier invoice dispute is withdrawn after payment.",
                     "the invoice has been paid", relation="withdraws",
@@ -412,7 +429,13 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
         opening,
         {"disputes": [dispute("Invoice dispute", first,
                               identification="needs_clarification")]},
-        route(second, relation="continues", scope="current"),
+        route(second, relation="continues", scope="current", mutation_scopes=[{
+            "authority_kind": "account_contribution",
+            "authority_source_ids": ["L1"],
+            "target_scope": "exact",
+            "target_ids": ["turn-uncertain:material:1"],
+            "permitted_relations": ["adds"],
+        }]),
         {"disputes": [dispute(
             "Later order invoice dispute", second, relation="adds",
             scope="current", related=["turn-uncertain:material:1"], prior=[{

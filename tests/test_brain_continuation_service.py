@@ -242,6 +242,13 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
                "relation": "changes", "matter_scope": "current", "priority": "ordinary",
                "next_step": "legal_work", "reply": "I will retain the attributed chronology.",
                "clarification": "", "intent": "contribution", "research_question": "",
+               "mutation_scopes": [{
+                   "authority_kind": "account_contribution",
+                   "authority_source_ids": ["L1", "L2"],
+                   "target_scope": "exact",
+                   "target_ids": [],
+                   "permitted_relations": ["new"],
+               }],
                "record_requirement": {
                    "kind": "change",
                    "target_ids": [],
