@@ -35,18 +35,31 @@ def pytest_configure(config):
     original = support.record_case
 
     def owned_record_case(case_id, **kwargs):
-        report = original(case_id, **kwargs)
         current = os.environ.get("PYTEST_CURRENT_TEST", "")
         if not current.endswith(" (call)"):
             raise ValueError("Paired evidence must belong to an executing test")
-        report["test_nodeid"] = current[:-len(" (call)")]
         target = Path(os.environ["NM_PRESSURE_EVIDENCE_DIR"]) / (case_id + ".json")
-        persisted = json.loads(target.read_text())
-        persisted["test_nodeid"] = report["test_nodeid"]
-        target.write_text(json.dumps(persisted, ensure_ascii=False, indent=2) + "\n")
+        if target.exists():
+            raise ValueError("A paired case ID may be recorded only once per round")
+        owner = current[:-len(" (call)")]
+        try:
+            report = original(case_id, **kwargs)
+        finally:
+            # record_case writes the observed mismatch before asserting. Its
+            # failed desired rule still needs exact ownership for strict xfail.
+            if target.is_file():
+                persisted = json.loads(target.read_text())
+                persisted["test_nodeid"] = owner
+                target.write_text(json.dumps(persisted, ensure_ascii=False, indent=2) + "\n")
+        report["test_nodeid"] = owner
         return report
 
     support.record_case = owned_record_case
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        item.user_properties.append(("pressure_test_nodeid", item.nodeid))
 """
 
 
@@ -103,6 +116,55 @@ def run_command(command, env, log):
     return result.stdout
 
 
+def checked_round_outcomes(nodes, testcases, cases):
+    """Bind each observation to an executed pass or explicit open semantic xfail."""
+    selected = set(nodes)
+    if len(selected) != len(nodes) or not selected:
+        raise ValueError("A nonempty distinct test selection is required")
+    if any(not isinstance(row, dict) or not isinstance(row.get("test_nodeid"), str)
+           for row in cases):
+        raise ValueError("Every paired observation requires its exact executing node")
+    owners = Counter(row["test_nodeid"] for row in cases)
+    if (len(cases) != len(nodes) or set(owners) != selected
+            or any(count != 1 for count in owners.values())):
+        raise ValueError("Every collected test must own exactly one paired evidence record")
+    case_ids = [row.get("case_id") for row in cases]
+    if (any(not isinstance(identity, str) or not identity for identity in case_ids)
+            or len(case_ids) != len(set(case_ids))):
+        raise ValueError("Every paired case must have one distinct nonempty identity")
+    by_owner = {row["test_nodeid"]: row for row in cases}
+    executed = {}
+    for testcase in testcases:
+        owners = [prop.get("value") for prop in testcase.findall("properties/property")
+                  if prop.get("name") == "pressure_test_nodeid"]
+        if (len(owners) != 1 or owners[0] not in selected or owners[0] in executed):
+            raise ValueError("Each JUnit testcase must own exactly one collected node")
+        if any(list(testcase.iter(tag)) for tag in ("failure", "error")):
+            raise ValueError("Failed, errored or unexpectedly passing tests are not qualified")
+        skipped = list(testcase.iter("skipped"))
+        if skipped and (len(skipped) != 1 or skipped[0].get("type") != "pytest.xfail"):
+            raise ValueError("Ordinary skipped tests are not pressure evidence")
+        executed[owners[0]] = "xfailed" if skipped else "passed"
+    if len(testcases) != len(nodes) or set(executed) != selected:
+        raise ValueError("Every selected test must have an owned executed JUnit outcome")
+    for owner, row in by_owner.items():
+        if ("expected" not in row or "observed" not in row
+                or type(row.get("expectation_met")) is not bool
+                or row["expectation_met"] != (row["expected"] == row["observed"])):
+            raise ValueError("Paired observations must report their actual expectation match")
+        if not row.get("user_passage") or not row.get("fabricated_model_outputs"):
+            raise ValueError("Every case needs both actual user words and fabricated outputs")
+        open_semantic = (row.get("protection_status") == "open_semantic_defect"
+                         and row.get("claim_scope") == "semantic_dependency")
+        if executed[owner] == "xfailed":
+            if not open_semantic or row["expectation_met"]:
+                raise ValueError("Expected failure requires an unmet typed open semantic defect")
+        elif not row["expectation_met"] or row.get("protection_status") == "open_semantic_defect":
+            raise ValueError("Unmet or unexpectedly passing semantic cases are not qualified")
+    counts = Counter(executed.values())
+    return {"passed": counts["passed"], "xfailed": counts["xfailed"]}
+
+
 def run(output, rounds, additional_tests=(), additional_sources=()):
     if output.exists():
         raise ValueError("Use a fresh evidence directory; prior observations are preserved")
@@ -148,25 +210,15 @@ def run(output, rounds, additional_tests=(), additional_sources=()):
         run_command(command, env, folder / "pytest.log")
         suites = ET.parse(folder / "results.xml").getroot()
         testcases = list(suites.iter("testcase"))
-        if len(testcases) != len(nodes) or any(
-                list(case.iter(tag)) for case in testcases
-                for tag in ("failure", "error", "skipped")):
-            raise ValueError("Every selected test must execute and pass")
         cases = [json.loads(p.read_text()) for p in sorted((folder / "cases").glob("*.json"))]
-        owners = Counter(row.get("test_nodeid") for row in cases)
-        if set(owners) != set(nodes) or any(count != 1 for count in owners.values()):
-            raise ValueError("Every collected test must own exactly one paired evidence record")
-        if len(cases) != len(nodes) or any(not row["expectation_met"] for row in cases):
-            raise ValueError("Missing or failed case-level observations")
-        if any(not row["user_passage"] or not row["fabricated_model_outputs"]
-               for row in cases):
-            raise ValueError("Every case needs both actual user words and fabricated outputs")
+        outcome_counts = checked_round_outcomes(nodes, testcases, cases)
         if source_hashes() != initial_hashes:
             raise ValueError("Production source changed during pressure testing")
         if test_source_hashes(tests, extra_sources) != initial_test_hashes:
             raise ValueError("Pressure test source changed during execution")
         results.append({"round": label, "order": order, "test_count": len(testcases),
-                        "case_count": len(cases), "cases": cases})
+                        "case_count": len(cases), "pytest_outcome_counts": outcome_counts,
+                        "cases": cases})
     identities = [{row["case_id"] for row in result["cases"]} for result in results]
     if any(ids != identities[0] for ids in identities):
         raise ValueError("The repeated runs must exercise the same distinct cases")
@@ -175,9 +227,12 @@ def run(output, rounds, additional_tests=(), additional_sources=()):
         for row in result["cases"]:
             previous = original[row["case_id"]]
             for field in ("test_nodeid", "user_passage", "fabricated_model_outputs",
-                          "expected", "observed"):
+                          "expected", "observed", "expectation_met", "claim_scope",
+                          "protection_status"):
                 if row[field] != previous[field]:
                     raise ValueError(f"Order-dependent {field} for {row['case_id']}")
+        if result["pytest_outcome_counts"] != results[0]["pytest_outcome_counts"]:
+            raise ValueError("Repeated runs changed passed or expected-failed outcomes")
     cases = list(original.values())
     round_summaries = []
     for result in results:
@@ -202,6 +257,9 @@ def run(output, rounds, additional_tests=(), additional_sources=()):
         "distinct_tests": len(nodes),
         "distinct_cases": len(cases),
         "total_test_executions": sum(r["test_count"] for r in results),
+        "distinct_pytest_outcome_counts": results[0]["pytest_outcome_counts"],
+        "total_pytest_outcome_counts": dict(sum(
+            (Counter(r["pytest_outcome_counts"]) for r in results), Counter())),
         "scenario_counts": dict(Counter(row["scenario"] for row in cases)),
         "claim_scope_counts": dict(Counter(row["claim_scope"] for row in cases)),
         "protection_status_counts": dict(Counter(row["protection_status"] for row in cases)),
@@ -218,6 +276,9 @@ def run(output, rounds, additional_tests=(), additional_sources=()):
             "checks, not actual provider behavior or semantic quality."),
         "qualification": (
             "Scripted passages and outputs exercise shipped mechanical boundaries. "
+            "Explicit open semantic defects remain unmet desired rules and are counted "
+            "separately as expected failures, never as passed protections. Ordinary skips, "
+            "unowned outcomes and unexpected passes are rejected. "
             "Demonstrated gaps remain unprevented even when their characterization "
             "assertions pass; scripted semantic judgments prove wiring, not reviewer "
             "accuracy. Repeated runs "
