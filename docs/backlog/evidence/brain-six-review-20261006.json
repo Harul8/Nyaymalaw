@@ -319,6 +319,20 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_finding_headings.py"
       ]
+    },
+    {
+      "slice": "exact-source-context",
+      "owners": [
+        "LB-179",
+        "LB-181",
+        "LB-185"
+      ],
+      "decision": "Independent law verification receives exact optional court, date and jurisdiction from each retrieved source. Missing metadata remains missing and does not become a new rejection or assumed currency test.",
+      "validation": "110 offline reader/reviewer cases passed, including paired metadata-present and metadata-absent cases; Ruff clean. No real-model or browser calls.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_source_metadata.py"
+      ]
     }
   ]
 }

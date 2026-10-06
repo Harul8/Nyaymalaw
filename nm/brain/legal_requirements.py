@@ -1593,6 +1593,8 @@ def verify_findings(
                 "sources": [
                     {
                         **{key: source[key] for key in ("id", "kind", "title", "locator")},
+                        **{key: deepcopy(source[key]) for key in ("court", "date", "jurisdiction")
+                           if key in source},
                         "fragments": _passage_fragments(source["text"]),
                     }
                     for source in item["sources"]
