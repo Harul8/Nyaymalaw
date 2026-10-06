@@ -13,9 +13,11 @@ from collections.abc import Iterable
 from copy import deepcopy
 
 from nm.brain.evidence_rendering import EVIDENCE_EXPRESSION_CONTRACT
+from nm.brain.mutation_contracts import AUTHORITY_CONTRACT, _checked_ledger
 from nm.shared.model_port import SchemaViolation, require_schema
 
 RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
+SCOPED_RECORD_OUTCOME_CONTRACT = "scoped_record_outcome_v2"
 RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v3"
 _LEGACY_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v2"
 RECORD_OUTCOME_SCHEMA = {
@@ -99,6 +101,96 @@ def _receipt(receipt: object) -> dict | None:
     # Equality with the real authenticated owner, original offer and store
     # version belongs to the caller, which has those authoritative inputs.
     return receipt
+
+
+
+def _scoped_outcome_contract(receipt: dict | None) -> bool:
+    if receipt is None:
+        return False
+    version = receipt.get("scope_outcome_contract")
+    if version not in (None, SCOPED_RECORD_OUTCOME_CONTRACT):
+        raise ExecutionEvidenceInvalid("The scoped record outcome contract is unsupported")
+    return version == SCOPED_RECORD_OUTCOME_CONTRACT
+
+
+def _owned_mutation_scopes(request: dict, receipt: dict | None) -> list[dict]:
+    """Select permission from the intact turn ledger, never writer metadata."""
+    if receipt is None:
+        return []
+    ledger = receipt.get("mutation_authorities")
+    version = receipt.get("mutation_authority_contract")
+    if ledger is None and version is None:
+        return []
+    if version != AUTHORITY_CONTRACT:
+        raise ExecutionEvidenceInvalid("The requested mutation authority is unreadable")
+    try:
+        _checked_ledger(ledger)
+    except SchemaViolation as exc:
+        raise ExecutionEvidenceInvalid(str(exc)) from exc
+    if (ledger["owner"] != receipt["owner"]
+            or ledger["expected_version"] != receipt["expected_version"]):
+        raise ExecutionEvidenceInvalid("The mutation scope has a different turn owner or snapshot")
+    index = request.get("request_index")
+    if type(index) is not int or len([
+            row for row in receipt["requests"]
+            if isinstance(row, dict) and row.get("request_index") == index]) != 1:
+        raise ExecutionEvidenceInvalid("The mutation scope has no exact execution request owner")
+    return [row for row in ledger["authorities"]
+            if row["request_index"] == index
+            and any(relation != "new" for relation in row["permitted_relations"])]
+
+
+def request_requires_record_outcome(request: dict, receipt: dict | None = None) -> bool:
+    """An owned non-new scope cannot disappear through redundant goal metadata.
+
+    Fresh writer choices may derive this fact from any intact owned ledger.
+    Saved validation separately branches on scope_outcome_contract so historical
+    unstamped none outcomes retain their original untracked meaning.
+    """
+    requirement = request.get("record_requirement")
+    return (request.get("response_mode") == "record_acknowledgement"
+            or isinstance(requirement, dict)
+            and requirement.get("kind") in ("review", "change")
+            or bool(_owned_mutation_scopes(request, receipt)))
+
+
+def _unit_execution_request(unit: dict, receipt: dict | None) -> dict | None:
+    if receipt is None:
+        return None
+    requests = [row for row in receipt["requests"] if isinstance(row, dict)
+                and row.get("request_index") == unit["request_index"]]
+    if len(requests) != 1 and _scoped_outcome_contract(receipt):
+        raise ExecutionEvidenceInvalid("The declared result has no exact execution request owner")
+    return requests[0] if len(requests) == 1 else None
+
+
+def _matches_mutation_scope(effect: dict, scopes: list[dict]) -> bool:
+    targets = set(effect["target_record_ids"])
+    permitted = {target for scope in scopes
+                 if effect["relation"] in scope["permitted_relations"]
+                 for target in scope["target_ids"]}
+    return (effect["relation"] != "new" and bool(targets) and targets <= permitted)
+
+
+def _scoped_work_complete(unit: dict) -> bool:
+    work = unit.get("work", {})
+    aliases = {"$work", work.get("existing_id"), work.get("progress_id")} - {None, ""}
+    return unit.get("sufficiency", {}).get("status") == "complete" or any(
+        row.get("status") == "complete" and row.get("target_id") in aliases
+        for row in unit.get("progress_updates", []))
+
+
+def _complete_account_scope_targets(scopes: list[dict]) -> set[str]:
+    return {target for scope in scopes
+            if scope["authority_kind"] == "account_contribution"
+            and scope["target_scope"] == "exact"
+            for target in scope["target_ids"]}
+
+
+def _represented_scope_targets(effects: list[dict], scopes: list[dict]) -> set[str]:
+    return {target for scope in scopes for effect in effects
+            if effect["relation"] in scope["permitted_relations"]
+            for target in effect["target_record_ids"] if target in scope["target_ids"]}
 
 
 def reader_admission_checked(stage: object) -> bool:
@@ -317,7 +409,14 @@ def validate_review_completion(
         ]
         if len(requests) == 1:
             requirement = requests[0].get("record_requirement")
-    if not isinstance(requirement, dict) or requirement.get("kind") != "review":
+    request = _unit_execution_request(unit, receipt)
+    scopes = (_owned_mutation_scopes(request, receipt)
+              if request is not None and _scoped_outcome_contract(receipt) else [])
+    scoped_review = task_id is None and bool(scopes) and (
+        any(scope["authority_kind"] == "interpretation_review" for scope in scopes)
+        or unit.get("record_outcome", {}).get("status") == "already_current")
+    if ((not isinstance(requirement, dict) or requirement.get("kind") != "review")
+            and not scoped_review):
         return
     work = unit.get("work", {})
     selected = (
@@ -394,7 +493,9 @@ def validate_review_completion(
             if isinstance(requests, list)
             else []
         )
-        if not covered:
+        if (not covered or scoped_review and (
+                scope.get("mutation_authority_contract") != AUTHORITY_CONTRACT
+                or scope.get("mutation_authorities") != receipt["mutation_authorities"])):
             raise ReviewCompletionIncomplete(
                 "Full requested review completion lacks the exact requested account scope"
             )
@@ -416,6 +517,15 @@ def validate_record_outcome(
     outcome = unit["record_outcome"]
     require_schema(outcome, RECORD_OUTCOME_SCHEMA)
     status = outcome["status"]
+    receipt = _receipt(receipt)
+    stamped_scope = _scoped_outcome_contract(receipt)
+    request = _unit_execution_request(unit, receipt)
+    scopes = (_owned_mutation_scopes(request, receipt)
+              if stamped_scope and request is not None else [])
+    if (status == "none" and scopes
+            and request_requires_record_outcome(request, receipt)):
+        raise SchemaViolation(
+            "The owned non-new mutation scope needs a declared record outcome, not none")
     blocks = {block["id"]: block for block in unit["blocks"]}
     if outcome["block_id"] not in blocks and (status != "none" or outcome["block_id"]):
         raise SchemaViolation("record_outcome.block_id must select its exact displayed owner")
@@ -451,10 +561,23 @@ def validate_record_outcome(
             raise SchemaViolation("record_outcome none cannot carry operation/current-state claims")
         return
     if status == "performed":
-        if not selected or current:
+        if not selected:
             raise SchemaViolation(
                 "record_outcome performed needs effects, not current-state substitutes"
             )
+        if scopes and not any(_matches_mutation_scope(catalogue[identity], scopes)
+                              for identity in selected):
+            raise SchemaViolation(
+                "The selected effect does not match the owned mutation target and operation")
+        if (scopes and _scoped_work_complete(unit)
+                and not _complete_account_scope_targets(scopes) <= _represented_scope_targets(
+                    [catalogue[identity] for identity in selected], scopes)):
+            raise SchemaViolation(
+                "Completed account mutation work lacks effects for every exact scoped target")
+        # Every supplied current identity was checked above. Performed wording
+        # derives from actual effects; redundant owned current selections add no
+        # meaning and can be dropped without replacing or inventing an effect.
+        outcome["current_record_ids"] = []
         for identity in selected:
             effect = catalogue[identity]
             if effect["activated"] and effect["result_id"] not in current_ids:
@@ -471,6 +594,13 @@ def validate_record_outcome(
             raise SchemaViolation(
                 "already_current needs current owned state, not a past operation claim"
             )
+        if scopes and not set(current).intersection(
+                target for scope in scopes for target in scope["target_ids"]):
+            raise SchemaViolation("The already-current selection has no owned mutation target")
+        if (scopes and _scoped_work_complete(unit)
+                and not _complete_account_scope_targets(scopes) <= set(current)):
+            raise SchemaViolation(
+                "Completed account mutation work lacks current state for every exact scoped target")
         return
     if status == "review_no_change":
         if selected:
@@ -492,7 +622,8 @@ def validate_record_outcome(
         requirement = requested.get("record_requirement")
         review_requested = (
             isinstance(requirement, dict) and requirement.get("kind") == "review"
-        ) or bool(inherited_reviews)
+        ) or bool(inherited_reviews) or any(
+            scope["authority_kind"] == "interpretation_review" for scope in scopes)
         if not review_requested or any(
             _stage(receipt, reader) != "returned"
             or _stage(receipt, review) not in ("checked", "no_candidates")
@@ -680,6 +811,7 @@ def canonical_record_acknowledgements(
         if version not in (None, _LEGACY_ACKNOWLEDGEMENT_CONTRACT,
                            RECORD_ACKNOWLEDGEMENT_CONTRACT):
             raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
+        scoped_contract = _scoped_outcome_contract(execution)
         if replay and version != RECORD_ACKNOWLEDGEMENT_CONTRACT:
             result = _legacy_record_acknowledgements(
                 result, {**execution, "requests": [request]},
@@ -698,6 +830,14 @@ def canonical_record_acknowledgements(
             continue
         outcome = unit.get("record_outcome", {})
         if outcome.get("status", "none") == "none":
+            if not replay and any(block["kind"] == "completion" for block in unit["blocks"]):
+                raise SchemaViolation(
+                    "A completion block needs a confirmed record outcome; "
+                    "use an ordinary evidence block for a non-record answer")
+            if ((not replay or scoped_contract)
+                    and request_requires_record_outcome(request, execution)):
+                raise ExecutionEvidenceInvalid(
+                    "A scoped record result has no declared record outcome")
             # A non-record answer remains semantic work. This renderer cannot
             # infer an operation claim or repair a wrongly classified request.
             if version == RECORD_ACKNOWLEDGEMENT_CONTRACT:
@@ -708,7 +848,9 @@ def canonical_record_acknowledgements(
         ordinary_partial = (outcome.get("status") == "unresolved"
                             and isinstance(requirement, dict)
                             and requirement.get("kind") == "none"
-                            and request.get("response_mode") != "record_acknowledgement")
+                            and request.get("response_mode") != "record_acknowledgement"
+                            and not ((not replay or scoped_contract)
+                                     and request_requires_record_outcome(request, execution)))
         if ordinary_partial:
             # Retained factual subsets use unresolved without inventing a
             # separate requested record task. Their actual limitation remains
@@ -731,9 +873,10 @@ def canonical_record_acknowledgements(
         pure = (request.get("response_mode") == "record_acknowledgement"
                 and not linked)
         selected = [block for block in unit["blocks"]
-                    if pure or block["id"] not in linked and (
-                        block["kind"] == "completion" or block["id"] == owner["id"]
-                        and block["kind"] in ("acknowledgment", "limitation"))]
+                    if pure or block["kind"] == "completion"
+                    and (not replay or scoped_contract or block["id"] not in linked)
+                    or block["id"] not in linked and block["id"] == owner["id"]
+                    and block["kind"] in ("acknowledgment", "limitation")]
         if owner not in selected:
             if selected:
                 outcome["block_id"] = selected[0]["id"]

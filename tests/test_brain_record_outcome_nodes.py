@@ -114,18 +114,18 @@ def test_current_state_uses_owned_entry_without_inventing_prior_change():
     assert result["record_outcome"]["effect_ids"] == []
 
 
-def test_false_operation_inside_unrestricted_account_remains_a_semantic_dependency():
+def test_historical_unstamped_account_is_replayed_without_rewriting_its_original_words():
     continuation, receipt, catalogue = nodes(kind="account")
     lie = "I corrected and saved every requested record."
     continuation["units"][0]["blocks"][0]["text"] = lie
-    result = render(continuation, receipt, catalogue)["units"][0]
+    result = render(continuation, receipt, catalogue, replay=True)["units"][0]
     assert result["blocks"][0]["text"] == lie
-    assert result["blocks"][1]["text"] == "The requested record work remains unfinished."
+    assert result == continuation["units"][0]
     assert result["record_check"]["outcome"] == "unfinished"
 
 
 def test_non_record_answer_is_not_rewritten_into_record_status():
-    continuation, receipt, catalogue = nodes()
+    continuation, receipt, catalogue = nodes(kind="account")
     continuation["units"][0]["record_outcome"].update(
         status="none", block_id="", reason="", effect_ids=[], current_record_ids=[])
     continuation["units"][0]["record_check"]["outcome"] = "not_requested"
