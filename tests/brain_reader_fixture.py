@@ -45,6 +45,64 @@ def fresh_review_reply(payload, data):
                 or not set(selected) <= set(owned)):
             continue
         del account["source_ids"]
+    if original.get("material_source_selection_contract") == "ordered_original_account_support_v1":
+        # Project the script's declared source-purpose decisions; this is not
+        # classification of the test words or endorsement of producer labels.
+        purposes = {}
+        ambiguous = set()
+        for row in rows:
+            for check in row.get("account_check", {}).get("source_checks", []):
+                if not isinstance(check, dict) or type(check.get("supplies_account_content")) \
+                        is not bool:
+                    continue
+                identity, purpose = check.get("source_id"), check["supplies_account_content"]
+                if identity in purposes and purposes[identity] != purpose:
+                    ambiguous.add(identity)
+                purposes[identity] = purpose
+        coverage = result.get("coverage", {})
+        for check in coverage.get("source_checks", []):
+            if (isinstance(check, dict)
+                    and check.get("content_purpose") in ("account", "non_account")):
+                purposes.setdefault(check["source_id"], check["content_purpose"] == "account")
+        result["source_readings"] = {
+            identity: {"content_role": ("reported_matter_account" if purposes.get(identity)
+                                       else "work_instruction" if identity in purposes
+                                       else "uncertain"),
+                       "reason": "The scripted review's declared original-source purpose."}
+            for identity in original.get("source_treatments", {})}
+        for row in rows:
+            account = row.get("account_check") if isinstance(row, dict) else None
+            if not isinstance(account, dict) or "source_ids" in account:
+                continue
+            candidate = candidates.get(row.get("candidate_id"), {})
+            allowed = candidate.get("allowed_account_source_ids", [])
+            selections = dict.fromkeys(allowed)
+            checks = account.get("source_checks")
+            if not isinstance(checks, list):
+                continue
+            valid = True
+            seen = set()
+            for check in checks:
+                if (not isinstance(check, dict) or "supports_statement" in check
+                        or check.get("source_id") not in selections
+                        or check.get("source_id") in seen
+                        or check.get("source_id") in ambiguous
+                        or type(check.get("supplies_account_content")) is not bool
+                        or type(check.get("supports_proposal")) is not bool):
+                    valid = False
+                    break
+                selected = {key: value for key, value in check.items() if key not in
+                            ("source_id", "supplies_account_content", "supports_proposal")}
+                selected["supports_statement"] = check["supports_proposal"]
+                if isinstance(selected.get("support_spans"), list):
+                    selected["support_spans"] = [
+                        {"extent": "exact_subrange", **part} if isinstance(part, dict) else part
+                        for part in selected["support_spans"]]
+                selections[check["source_id"]] = selected
+                seen.add(check["source_id"])
+            if valid:
+                del account["source_checks"]
+                account["source_selections"] = selections
     return result
 
 

@@ -2154,13 +2154,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.612253,
-    "remaining_usd": 2.387747,
-    "new_ledger_attempts": 192,
+    "combined_measured_usd": 2.872821,
+    "remaining_usd": 2.127179,
+    "new_ledger_attempts": 270,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus current measured attempts; cumulative authorization USD5 unchanged"
+    "basis": "166 frozen prior attempts plus current measured attempts; cumulative USD5 authorization unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2301,5 +2301,112 @@
   "applicable_outcomes_live_evidence": {
     "path": "docs\\backlog\\evidence\\brain-applicable-outcomes-20261007-live.json.gz",
     "sha256": "4603b79d369ebcb96e12ce2a6d33eb12bef73985aecaf7b2823b5bfb4816a277"
+  },
+  "material_purpose_experiments": {
+    "base": "96d3086",
+    "production_candidate": "nm/brain/material_verification.py",
+    "candidate_verified": false,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "browser_runs": [
+      {
+        "packets": [
+          192,
+          203
+        ],
+        "activity": "date correction retry",
+        "calls": 11,
+        "result": "FAILED: reviewer selected instructions as substantive support; original input saved, record unchanged, truthful unfinished reply."
+      },
+      {
+        "packets": [
+          203,
+          214
+        ],
+        "activity": "neutral Leela account",
+        "calls": 11,
+        "result": "Two material records and opening saved; unrelated coverage references cause incomplete coverage."
+      },
+      {
+        "packets": [
+          214,
+          225
+        ],
+        "activity": "quantity correction",
+        "calls": 11,
+        "result": "FAILED: reviewer selected instruction as substantive support; original input saved, record unchanged, truthful unfinished reply."
+      }
+    ],
+    "probe_findings": [
+      "Cleaner source definitions and rejected-draft feedback alone did not consistently repair the semantic purpose mismatch.",
+      "Keyed selectors eliminate duplicate source arrays, but do not establish semantic accuracy.",
+      "Splitting off factual support alone failed both cases; no extra routine model stage adopted.",
+      "Source-purpose-first reading followed by a separate factual relation decision in the same call admitted two experiment candidates, but repetition was inconsistent.",
+      "Whole-source selections resolve exact original words in code instead of asking the model to count endpoints; mixed-subrange admission remains explicit and checked.",
+      "Both date and quantity still have inaccurate coverage references: topic relationship is mistaken for checked source support.",
+      "No false completion was released and no save/replay or ownership gate was weakened."
+    ],
+    "next_pass": "Actual browser correction must persist the right active value, retain superseded original and reopen the exact truthful reply. Mechanical tests alone do not close this feature.",
+    "remaining": "Unchanged source-reconsideration recovery; material coverage purpose/owned representation; complete assignment context/atomicity; dispute identity; compound typed delivery; legal force/applicability/qualification; retrieval resources; UI diagnostics/closure; remaining audit owners.",
+    "ordered_source_browser": {
+      "matter_id": "mat_a477c810af44e5f2a9dde36e4c25e523",
+      "version": 2,
+      "packets": [
+        249,
+        270
+      ],
+      "first_turn_calls": 9,
+      "correction_calls": 12,
+      "reopened_without_new_calls": true,
+      "record_effect_pass": true,
+      "feature_complete": false,
+      "active_records": [
+        {
+          "id": "turn_c6b0ae75-e84f-4711-bf3d-780b8be62a66:material:1",
+          "statement": "The advocate represents Malik.",
+          "related_material_ids": []
+        },
+        {
+          "id": "turn_4f0962e5-5dd5-4b01-a750-1f7c6578db1e:material:1",
+          "statement": "On 11 April 2026, Malik gave seven sealed files to an appointed auditor for a scheduled inspection.",
+          "related_material_ids": [
+            "turn_c6b0ae75-e84f-4711-bf3d-780b8be62a66:material:2"
+          ]
+        }
+      ],
+      "historical_records": [
+        {
+          "id": "turn_c6b0ae75-e84f-4711-bf3d-780b8be62a66:material:1",
+          "statement": "The advocate represents Malik.",
+          "related_material_ids": []
+        },
+        {
+          "id": "turn_c6b0ae75-e84f-4711-bf3d-780b8be62a66:material:2",
+          "statement": "On 11 April 2026, Malik gave five sealed files to an appointed auditor for a scheduled inspection.",
+          "related_material_ids": []
+        },
+        {
+          "id": "turn_4f0962e5-5dd5-4b01-a750-1f7c6578db1e:material:1",
+          "statement": "On 11 April 2026, Malik gave seven sealed files to an appointed auditor for a scheduled inspection.",
+          "related_material_ids": [
+            "turn_c6b0ae75-e84f-4711-bf3d-780b8be62a66:material:2"
+          ]
+        }
+      ],
+      "passed": "Correct quantity7 persists with same client/date/event and5 remains superseded; exact truthful reply reopens with0 new calls. Whole-source factual selection resolves full original correction.",
+      "failed": "Coverage falsely associates correction candidate with client representation and unrelated original ranges; dispute coverage treats work instruction as account; requested-response review still blocks useful acknowledgement despite the saved effect.",
+      "runtime_note": "Browser stale-build banner arose after agent changed test formatting included in source fingerprint. Captured actual reviewer system matches current production prompt exactly; production owner unchanged during browser run. Server stopped before next piece."
+    }
+  },
+  "material_purpose_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-material-purpose-experiments-20261007.json.gz",
+    "sha256": "dc6cca842f233e5631b3bac9400dd30dbabf04819cfe706299ac92e6c0908de0"
+  },
+  "ordered_source_piece": {
+    "production_file": "nm/brain/material_verification.py",
+    "prompt_changes": 1,
+    "invariant": "Original source purpose and support for an account are separate from operation authority. Closed owned selections derive existing canonical proof; whole-source choice resolves exact complete words in code.",
+    "verification": "239 focused source/admission/cache/recovery/public-save/replay tests pass; Ruff passes. Browser9+12 calls applies quantity correction and reopens truthful saved effects. Feature coverage/semantic consistency remains open.",
+    "call_impact": "No new routine stage:1 material review call plus existing bounded1 conditional correction; native source read is within same call; shared recovery8/reserve2 unchanged. Failed units keep peers. No canonical save/replay upgrade.",
+    "remaining": "Unchanged source-reconsideration recovery; material coverage purpose/owned representation; complete assignment context/atomicity; dispute identity; compound typed delivery; legal force/applicability/qualification; retrieval resources; UI diagnostics/closure; remaining audit owners."
   }
 }

@@ -18,12 +18,28 @@ from tests.test_brain_source_support_verifiers import (
 SCOPE = {"requests": [{"request_index": 0, "material_purposes": ["account_contribution"]}]}
 
 
-def wire_verdict(reference, *, index=1, source_id="L1", identity=None):
+def wire_verdict(reference, *, index=1, source_id="L1", identity=None, source_ids=None):
+    """Author the exact fresh keyed shape; do not transport malformed wire rows."""
     result = verdict("material", reference, index=index, source_id=source_id)
     if identity is not None:
         result["candidate_id"] = identity
-    del result["account_check"]["source_ids"]
+    account = result["account_check"]
+    del account["source_ids"], account["source_checks"]
+    account["source_selections"] = dict.fromkeys(source_ids or (source_id,))
+    account["source_selections"][source_id] = {
+        "supports_statement": True,
+        "support_spans": [{"extent": "exact_subrange", "start": 0,
+                           "end": len(reference["quoted"])}],
+        "reason": "Read original framing and limiting context.",
+    }
     return result
+
+
+def wire_answer(references, rows, **extra):
+    return {"source_readings": {
+        identity: {"content_role": "reported_matter_account",
+                   "reason": "The scripted review's declared original-source purpose."}
+        for identity in references}, "verdicts": rows, **extra}
 
 
 def checked(model, latest, candidates, treatments, *, state=None, recheck=(), opening=None,
@@ -61,8 +77,12 @@ def test_fresh_material_schema_has_one_required_checked_source_selection():
 
     assert "source_ids" not in account["properties"]
     assert set(account["required"]) == set(account["properties"])
-    assert "source_checks" in account["required"]
-    require_schema({"verdicts": [wire_verdict(references["L1"])]}, schema)
+    assert "source_checks" not in account["properties"]
+    assert "source_selections" in account["required"]
+    selections = account["properties"]["source_selections"]
+    assert selections["additionalProperties"] is False
+    assert selections["required"] == ["L1"]
+    require_schema(wire_answer(references, [wire_verdict(references["L1"])]), schema)
 
 
 def test_fresh_material_call_marks_selection_and_keeps_exact_canonical_proof_once():
@@ -81,12 +101,13 @@ def test_fresh_material_call_marks_selection_and_keeps_exact_canonical_proof_onc
     assert disagreements == [] and len(model.calls) == 1
     call = model.calls[0]
     assert call["payload"]["review_selection_contract"] == "checked_source_selection_v1"
+    assert call["payload"]["material_source_selection_contract"] == (
+        "ordered_original_account_support_v1")
     account_schema = on_the_wire(call["schema"])["properties"]["verdicts"]["items"][
         "properties"]["account_check"]
     assert "source_ids" not in account_schema["properties"]
-    expected = deepcopy(canonical)
-    del expected["account_check"]["source_ids"]
-    assert call["output"] == {"verdicts": [expected]}
+    expected = wire_verdict(references["L1"])
+    assert call["output"] == wire_answer(references, [expected])
     require_schema(call["output"], call["schema"])
     assert decisions == {"D1": canonical}
     assert (canonical, treatments) == before
@@ -96,11 +117,13 @@ def test_raw_authored_source_ids_are_rejected_before_material_source_diagnostics
     latest = "The porter reports that the receipt was retained."
     references, treatments = source_catalogue(latest)
     candidate = proposal("material", latest)
-    authored = verdict("material", references["L1"])
-    authored["account_check"]["source_checks"][0].update(
-        supplies_account_content=False, supports_proposal=False, support_spans=[])
+    authored = wire_verdict(references["L1"])
+    authored["account_check"]["source_ids"] = ["L1"]
+    authored["account_check"]["source_selections"]["L1"].update(
+        supports_statement=False, support_spans=[])
     good = wire_verdict(references["L1"])
-    model = RawJudge([{"verdicts": [authored]}, {"verdicts": [good]}], transport=False)
+    model = RawJudge([wire_answer(references, [authored]), wire_answer(references, [good])],
+                     transport=False)
 
     result, decisions, _, disagreements = checked(model, latest, (candidate,), treatments)
 
@@ -110,24 +133,27 @@ def test_raw_authored_source_ids_are_rejected_before_material_source_diagnostics
     assert [row["candidate_id"] for row in correction["candidates"]] == ["D1"]
     assert "D1" in correction["validation_issue"] and "server-owned" in correction[
         "validation_issue"]
-    assert decisions["D1"]["account_check"] == {**good["account_check"], "source_ids": ["L1"]}
+    assert decisions["D1"] == verdict("material", references["L1"])
 
 
 @pytest.mark.parametrize("contradictory", [False, True])
-def test_repeated_material_source_checks_need_bounded_repair_preserving_peer(contradictory):
+def test_legacy_repeated_source_checks_keep_bounded_repair_and_valid_peer(contradictory):
     first_words = "The north handler retained the key."
     second_words = "The south handler retained the receipt."
     latest = first_words + " " + second_words
     references, treatments = source_catalogue(latest)
     candidates = (proposal("material", first_words), proposal("material", second_words))
-    peer = wire_verdict(references["L1"])
-    bad = wire_verdict(references["L2"], index=2, source_id="L2")
-    duplicate = deepcopy(bad["account_check"]["source_checks"][0])
+    peer = wire_verdict(references["L1"], source_ids=references)
+    bad = wire_verdict(references["L2"], index=2, source_id="L2", source_ids=references)
+    legacy = verdict("material", references["L2"], index=2, source_id="L2")[
+        "account_check"]["source_checks"][0]
+    duplicate = deepcopy(legacy)
     if contradictory:
         duplicate.update(supplies_account_content=False, supports_proposal=False, support_spans=[])
-    bad["account_check"]["source_checks"].append(duplicate)
-    good = wire_verdict(references["L2"], index=2, source_id="L2")
-    model = RawJudge([{"verdicts": [peer, bad]}, {"verdicts": [good]}], transport=False)
+    bad["account_check"]["source_checks"] = [legacy, duplicate]
+    good = wire_verdict(references["L2"], index=2, source_id="L2", source_ids=references)
+    model = RawJudge([wire_answer(references, [peer, bad]), wire_answer(references, [good])],
+                     transport=False)
 
     result, decisions, _, disagreements = checked(model, latest, candidates, treatments)
 
@@ -135,10 +161,14 @@ def test_repeated_material_source_checks_need_bounded_repair_preserving_peer(con
     assert len(model.calls) == 2
     correction = model.calls[1]["payload"]
     assert [row["candidate_id"] for row in correction["candidates"]] == ["D2"]
-    assert "source_checks repeats a source_id" in correction["validation_issue"]
-    canonical_peer = {**peer, "account_check": {**peer["account_check"], "source_ids": ["L1"]}}
+    assert "result.account_check" in correction["validation_issue"]
+    assert "undeclared properties" in correction["validation_issue"]
+    drafts = correction["rejected_review_context"]["verdicts"]
+    assert drafts == [bad] and drafts[0]["account_check"]["source_checks"] == [legacy, duplicate]
+    canonical_peer = verdict("material", references["L1"])
     assert correction["retained_candidate_context"][0]["decision"] == canonical_peer
     assert decisions["D1"] == canonical_peer
+    assert decisions["D2"] == verdict("material", references["L2"], index=2, source_id="L2")
 
 
 def test_material_cache_rereads_complete_canonical_proof_with_zero_calls():
@@ -194,12 +224,12 @@ def test_unread_opening_selection_preserves_admitted_detail_and_complete_materia
     opening = OpeningCandidate(True, "Cabinet key retention", latest)
     detail = wire_verdict(references["L1"])
     bad_opening = wire_verdict(references["L1"], identity="O1")
-    bad_opening["account_check"]["source_checks"].append(deepcopy(
-        bad_opening["account_check"]["source_checks"][0]))
+    legacy = verdict("material", references["L1"])["account_check"]["source_checks"][0]
+    bad_opening["account_check"]["source_checks"] = [legacy, deepcopy(legacy)]
     assessed = coverage(references, dispositions=[
         disposition("L1", references["L1"], status="represented", candidate_ids=("D1",))])
-    model = RawJudge([{"verdicts": [detail, bad_opening], "coverage": assessed},
-                      {"verdicts": [bad_opening]}], transport=False)
+    model = RawJudge([wire_answer(references, [detail, bad_opening], coverage=assessed),
+                     wire_answer(references, [bad_opening])], transport=False)
 
     result, decisions, checked_coverage, disagreements = checked(
         model, latest, (candidate,), treatments, opening=opening, scope=SCOPE)

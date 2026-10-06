@@ -206,9 +206,11 @@ def test_material_acceptance_needs_account_and_target_checks_independently(failu
     assert [row["candidate_id"] for row in correction["retained_candidate_context"]] == ["D2"]
     initial = json.loads(model.calls[0][0].user)
     assert all(row["allowed_restoration_peer_ids"] == [] for row in initial["candidates"])
-    peer_pool = model.calls[0][1]["properties"]["verdicts"]["items"]["properties"][
-        "target_checks"]["items"]["properties"]["required_peer_ids"]
-    assert peer_pool["maxItems"] == 0
+    items = model.calls[0][1]["properties"]["verdicts"]["items"]
+    for branch in items.get("anyOf", [items]):
+        peer_pool = branch["properties"]["target_checks"]["items"]["properties"][
+            "required_peer_ids"]
+        assert peer_pool["maxItems"] == 0
     expected = {
         "nm_analysis": "account_check.content_role=nm_analysis",
         "legal_analysis": "account_check.introduces_legal_analysis=true",
@@ -302,8 +304,10 @@ def test_one_batch_checks_details_and_opening_without_dropping_valid_peer():
     payload = json.loads(prompt.user)
     assert [row["candidate_id"] for row in payload["candidates"]] == [
         "D1", "D2", "O1"]
-    assert schema["properties"]["verdicts"]["items"]["properties"][
-        "candidate_id"]["enum"] == ["D1", "D2", "O1"]
+    items = schema["properties"]["verdicts"]["items"]
+    branches = items.get("anyOf", [items])
+    assert [identity for branch in branches for identity in branch["properties"][
+        "candidate_id"]["enum"]] == ["D1", "D2", "O1"]
 
 
 def test_invalid_verdict_retries_only_the_unresolved_proposal():
@@ -323,6 +327,12 @@ def test_invalid_verdict_retries_only_the_unresolved_proposal():
     repair = json.loads(model.calls[1][0].user)
     assert [row["candidate_id"] for row in repair["candidates"]] == ["D2"]
     assert "validation_issue" in repair
+    assert "rejected_review_context" not in json.loads(model.calls[0][0].user)
+    drafts = repair["rejected_review_context"]["verdicts"]
+    assert [row["candidate_id"] for row in drafts] == ["D2"]
+    assert drafts[0]["reason"] == ""
+    assert repair["retained_candidate_context"][0]["candidate_id"] == "D1"
+    assert "rejected review field is not evidence against" in repair["validation_issue"]
 
 
 def test_changed_detail_supplies_earlier_advocate_words_and_full_context():

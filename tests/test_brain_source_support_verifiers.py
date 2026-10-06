@@ -185,7 +185,7 @@ def test_checked_current_record_can_establish_no_change_without_new_candidate(ki
     assert "".join(row["text"] for row in payload["earlier_conversation"][1][
         "source_spans"]) == earlier[1].text
     assert assessed["dispositions"][0]["quoted"] == account
-    require_schema(output, model.calls[0]["schema"])
+    require_schema(model.calls[0]["output"], model.calls[0]["schema"])
 
 
 def test_exact_independently_checked_whole_account_is_admitted_in_one_call(kind):
