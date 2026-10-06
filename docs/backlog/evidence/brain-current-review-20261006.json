@@ -799,6 +799,36 @@
         "browser": "Deferred until connected source/material behavior is repaired, as newly directed."
       },
       "limits": "Precise feedback does not fix model arithmetic, source-purpose interpretation, source-selection duplication or material omissions. Provider-schema type failures precede this owner and remain outside this diagnostic slice."
+    },
+    {
+      "piece": "strict-expression-schema-and-historical-compatibility",
+      "production_file": "nm/brain/evidence_rendering.py",
+      "prompt_changes": 0,
+      "invariant": "Every fresh provider expression requires all declared fields. Saved v1 omission keeps its original empty direct legal-selection meaning without mutating stored expressions, schemas, blocks or seals.",
+      "baseline": "Four of seven new focused cases failed; the live writer schema with legal sources declared an optional legal_source_ids field.",
+      "verification": {
+        "new_synthetic_cases": 7,
+        "rendering_and_public_tests": 122,
+        "historical_expression_and_execution_replay_tests": 46,
+        "continuation_related_tests": 167,
+        "ruff": "passed",
+        "paid_calls": 0,
+        "routine_model_call_delta": 0,
+        "valid_writer_calls": 1,
+        "valid_independent_review_calls": 1,
+        "malformed_selector_conditional_writer_calls": 1,
+        "conditional_bound_delta": 0
+      },
+      "evidence": [
+        "tests/test_brain_expression_strict_schema.py",
+        "tests/test_brain_evidence_rendering.py",
+        "tests/test_brain_evidence_rendering_public.py",
+        "tests/test_brain_expression_replay.py",
+        "tests/test_brain_execution_replay_shapes.py"
+      ],
+      "official_provider_contract": "https://developers.openai.com/api/docs/guides/structured-outputs",
+      "limits": "Provider schema compatibility does not establish semantic applicability or useful legal delivery. Connected pinned-model browser acceptance remains open.",
+      "test_environment_note": "Windows CRLF golden checkout was restored to exact already committed source bytes after matching Git blob/hash; tests run with Python UTF-8 mode. No fixture hash or original golden text was changed."
     }
   ],
   "additional_reviewer_input": {
@@ -831,7 +861,10 @@
       "Quote/status-only useful-delivery failure",
       "Duplicate saved-change presentation",
       "Historical-wire semantic xfail limits",
-      "No population error rate from fabricated verdicts"
+      "No population error rate from fabricated verdicts",
+      "Legal-source expression provider schema omitted a mandatory field; repaired with historical rendering preserved.",
+      "Automatic dispute research support/principle/condition/adverse rows excluded from continuation catalogue by gathering-only projection plus request-only research filter.",
+      "Question/next-work links can point to record-result status; pure record acknowledgments overwrite independent blocks and repeated status rendering duplicates linked limitations."
     ],
     "current_standing_rule": "Fresh closed evidence expressions stay mandatory. Implement useful checked propositions/questions/conditions within this contract; do not restore arbitrary writer text. Read-only/reusable work may complete on sufficient checked evidence without fresh extraction."
   },

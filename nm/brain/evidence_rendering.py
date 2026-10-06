@@ -33,6 +33,7 @@ def expression_schema(spans: dict, records: dict, sources: dict | None = None) -
                 "focus": {"type": "string", "enum": list(FOCUSES)}}}
     if sources:
         schema["properties"]["legal_source_ids"] = _ids(sources)
+        schema["required"].append("legal_source_ids")
     return schema
 
 
@@ -69,7 +70,14 @@ def _record(identity: str, records: dict) -> str:
 
 def render_expression(expression: dict, *, spans: dict, records: dict, sources: dict) -> dict:
     """Resolve a closed expression; no arbitrary display string is accepted."""
-    require_schema(expression, expression_schema(spans, records, sources))
+    # Saved v1 expressions permitted this selector to be absent. Its omission
+    # meant an empty direct selection; finding-owned citations still resolved
+    # below. Validate that historical meaning without rewriting the durable
+    # expression or relaxing the fresh provider/admission schema.
+    validation_expression = deepcopy(expression)
+    if sources and isinstance(validation_expression, dict):
+        validation_expression.setdefault("legal_source_ids", [])
+    require_schema(validation_expression, expression_schema(spans, records, sources))
     operator, focus = expression["operator"], expression["focus"]
     selected_sources = _selection(expression["source_ids"], spans, "source_ids")
     selected_records = _selection(expression["record_ids"], records, "record_ids")

@@ -26,7 +26,28 @@ from nm.shared.model_port import (
     TierUnavailable,
     Usage,
 )
-from tests.brain_continuation_fixture import citation_units, reviewed_verdicts
+from tests.brain_continuation_fixture import citation_units as _legacy_citation_units
+from tests.brain_continuation_fixture import reviewed_verdicts
+
+
+def citation_units(payload, data):
+    """Declare empty legal selectors in this shared ordinary fresh-wire fixture.
+
+    Explicit selections and faults stay intact. Raw strict-schema fixtures use
+    their own model and do not pass through this ordinary fixture projection.
+    """
+    result = _legacy_citation_units(payload, data)
+    if (payload.get("response_expression_contract") != "evidence_expression_v1"
+            or not payload.get("legal_sources") or not isinstance(result, dict)
+            or not isinstance(result.get("units"), list)):
+        return result
+    for row in result["units"]:
+        if not isinstance(row, dict) or not isinstance(row.get("blocks"), list):
+            continue
+        for block in row["blocks"]:
+            if isinstance(block, dict) and isinstance(block.get("evidence_expression"), dict):
+                block["evidence_expression"].setdefault("legal_source_ids", [])
+    return result
 
 
 class ContinuationModel:
