@@ -39,6 +39,12 @@ from nm.brain.legal_requirements import (
 from nm.brain.material import addressed_sources, extract_details
 from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
+from nm.brain.mutation_contracts import (
+    AUTHORITY_CONTRACT,
+    bind_record_mutation,
+    build_mutation_authorities,
+    validate_record_mutation,
+)
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
@@ -259,6 +265,35 @@ def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
 
 
 
+def _mutation_catalogues(conversation, latest, turn_id):
+    """Resolve code-owned dependencies without interpreting source meaning."""
+    _, current, prior = addressed_sources(conversation.messages, latest)
+    sources = {identity: {"turn_id": ref.turn_id, "role": ref.role, "quoted": ref.quoted}
+               for identity, ref in prior.items() if ref.role == "advocate"}
+    sources.update({identity: {"turn_id": turn_id, "role": "advocate", "quoted": quoted}
+                    for identity, quoted in current.items()})
+    targets = {row["id"]: deepcopy(row) for row in
+               (*conversation.open_disputes, *conversation.open_material)}
+    return targets, sources
+
+
+def _mutation_authorities(execution, conversation, plan, latest):
+    """Freeze original source-linked scope before any record reader runs."""
+    scopes = [getattr(item, "mutation_scopes", None) for item in plan.items]
+    if any(scope is None for scope in scopes):
+        # Fresh interpreter wire output cannot take this historical branch.
+        return
+    targets, sources = _mutation_catalogues(conversation, latest, execution["owner"]["turn_id"])
+    ledger = build_mutation_authorities(
+        owner=execution["owner"], expected_version=execution["expected_version"],
+        target_catalogue=targets, source_catalogue=sources,
+        proposals=[{"request_index": index, **deepcopy(scope)}
+                   for index, declarations in enumerate(scopes) for scope in declarations],
+        request_indices=list(range(len(plan.items))))
+    execution.update(mutation_authority_contract=AUTHORITY_CONTRACT,
+                     mutation_authorities=ledger)
+
+
 def _material_effects(before: dict, after: dict, proposals: list[dict], *,
                       kind: str, turn_id: str) -> dict:
     """Derive deltas across both active-owned and ownership-held domains."""
@@ -315,7 +350,10 @@ def _execution_review_scope(execution: dict, progress: dict) -> dict:
                                  "task_id": task["id"],
                                  "request": task["text"], "matter_scope": task["matter_scope"],
                                  "record_requirement": deepcopy(requirement)})
-    return {"owner": deepcopy(execution["owner"]), "requests": requests}
+    return {"owner": deepcopy(execution["owner"]), "requests": requests,
+            **({"mutation_authorities": deepcopy(execution["mutation_authorities"]),
+                "mutation_authority_contract": execution["mutation_authority_contract"]}
+               if "mutation_authorities" in execution else {})}
 
 
 def _record_catalogue(disputes: dict, details: dict) -> dict:
@@ -454,6 +492,8 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
     _check_execution_owner(execution, matter, row["turn_id"], row["offer_digest"])
     snapshot = response.get("continuation", {}).get("record_snapshot")
     if snapshot is None and "display" not in execution:
+        if execution.get("mutation_authority_contract") is not None:
+            raise IncompleteConversation("A scoped record result has no saved snapshot")
         # Older receipts have no result snapshot/display binding. They remain
         # readable compatibility evidence, never new certified result proof.
         return
@@ -467,6 +507,47 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
                     version=execution["resulting_version"])
     before_disputes, before_details = _record_projections(before, prior_conversation)
     disputes, details = _record_projections(after, prior_conversation)
+    contract = execution.get("mutation_authority_contract")
+    ledger = execution.get("mutation_authorities")
+    if contract is not None or ledger is not None:
+        if contract != AUTHORITY_CONTRACT or not isinstance(ledger, dict):
+            raise IncompleteConversation("The saved mutation scope is absent or unsupported")
+        original_messages = (*prior_conversation,
+                             *from_turns(before.brain_chat, state="ok").messages)
+        original = Conversation(original_messages,
+                                open_disputes=tuple(before_disputes["rows"]),
+                                open_material=tuple([*before_details["rows"],
+                                                     *before_details.get("excluded_scope", [])]))
+        grants = ledger.get("authorities")
+        if (not isinstance(grants, list) or any(not isinstance(grant, dict) for grant in grants)):
+            raise IncompleteConversation("The saved mutation grants could not be read")
+        proposals = []
+        for grant in grants:
+            declaration = {key: deepcopy(value) for key, value in grant.items() if key != "id"}
+            if declaration.get("target_scope") == "reviewed_whole":
+                declaration["target_ids"] = []
+            proposals.append(declaration)
+        try:
+            targets, sources = _mutation_catalogues(original, row["message"], row["turn_id"])
+            rebuilt = build_mutation_authorities(
+                owner=execution["owner"], expected_version=execution["expected_version"],
+                target_catalogue=targets, source_catalogue=sources, proposals=proposals,
+                request_indices=[request["request_index"] for request in execution["requests"]])
+            if (rebuilt != ledger
+                    or execution.get("review_scope", {}).get("mutation_authorities") != ledger
+                    or execution.get("review_scope", {}).get("mutation_authority_contract")
+                    != AUTHORITY_CONTRACT):
+                raise SchemaViolation("Saved scope disagrees with its original dependencies")
+            for proposal in response["material"]:
+                validate_record_mutation(proposal, turn=row, execution=execution,
+                                         source_catalogue=ledger["source_catalogue"],
+                                         prior_words={(message.turn_id, message.role): message.text
+                                                      for message in original_messages},
+                                         target_catalogue=ledger["target_catalogue"])
+        except SchemaViolation as exc:
+            raise IncompleteConversation("The saved mutation proof could not be verified") from exc
+    elif any("mutation_authority" in proposal for proposal in response["material"]):
+        raise IncompleteConversation("An unversioned record has unexpected mutation proof")
     effects = {
         "disputes": _material_effects(before_disputes, disputes, response["material"],
                                       kind="disputes", turn_id=row["turn_id"]),
@@ -905,6 +986,8 @@ def _hold_affected_grounding(grounded, proposals, affected, opening, reason,
         grounded, details=tuple(row for row in grounded.details if row not in affected),
         rejected_proposals=rejected, rejected_details=len(rejected),
         withheld_proposals=withheld, unread_proposals=unread,
+        mutation_bindings=tuple((candidate, binding) for candidate, binding in
+                               grounded.mutation_bindings if candidate not in affected),
         opening_supported=(False if opening_affected and opening.ready
                            else grounded.opening_supported),
         opening_reason=reason if opening_affected and opening.ready else grounded.opening_reason)
@@ -1338,6 +1421,7 @@ class BrainService:
             source_treatments = _saved_source_treatments(matter, conversation)
             plan = interpret(counted_model, conversation, turn.message)
             execution = _material_execution(turn, matter, offer_digest, plan)
+            _mutation_authorities(execution, conversation, plan, turn.message)
             dispute_audit: list[dict] = []
             review_scope = _execution_review_scope(execution, conversation.progress)
             execution["review_scope"] = deepcopy(review_scope)
@@ -1462,6 +1546,28 @@ class BrainService:
         material = [candidate.recorded(
             turn.turn_id, recovery_context.get("slots", {}).get(candidate, index))
                     for index, candidate in enumerate(candidates, start=1)]
+        if "mutation_authorities" in execution:
+            bindings = dict(grounded.mutation_bindings)
+            for candidate in candidates:
+                if candidate.kind == "dispute" and candidate.relation != "new":
+                    matches = [decision.get("mutation_authority") for decision in dispute_audit
+                               if decision.get("verdict") == "accept"
+                               and decision.get("proposal") == asdict(candidate)]
+                    if len(matches) != 1:
+                        raise BrainRefused(409, "The admitted revision proof is missing",
+                                           gate_id="G-CORE", gate_state="invalid")
+                    bindings[candidate] = matches[0]
+            try:
+                for candidate, proposal in zip(candidates, material, strict=True):
+                    if candidate.relation == "new":
+                        continue
+                    if candidate not in bindings:
+                        raise SchemaViolation("The admitted revision proof is missing")
+                    proposal["mutation_authority"] = bind_record_mutation(
+                        proposal, execution["mutation_authorities"], binding=bindings[candidate])
+            except SchemaViolation as exc:
+                raise BrainRefused(409, "The admitted revision proof could not be verified",
+                                   gate_id="G-CORE", gate_state="invalid") from exc
         for item in material:
             if item["kind"] != "dispute":
                 item["grounding"] = "advocate_semantic_v1"

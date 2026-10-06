@@ -294,14 +294,13 @@ def test_golden_false_prose_vs_owned_pending_outcome(client, wired, monkeypatch,
     )
     receipt = data["material_coverage"]["execution"]
     text = json.dumps(data["elements"])
-    correct_mode = mode == "record_acknowledgement"
     expected = {
         "changes": [],
         "fulfillment": "unfinished",
-        "false_prose_released": not correct_mode,
+        "false_prose_released": False,
         "unchanged_record": True,
         "saved_turns": 2,
-        "acknowledgement_delivery": "code_only" if correct_mode else None,
+        "acknowledgement_delivery": "code_only",
     }
     observed = {
         "changes": receipt["record_changes"],
@@ -318,13 +317,12 @@ def test_golden_false_prose_vs_owned_pending_outcome(client, wired, monkeypatch,
         saved,
         expected,
         observed,
-        claim_scope="mechanical" if correct_mode else "semantic_dependency",
-        protection_status="blocked" if correct_mode else "gap_demonstrated",
+        claim_scope="mechanical",
+        protection_status="blocked",
         notes=(
-            "Pure acknowledgement rendering removes false operation prose before review."
-            if correct_mode
-            else "The explicitly wrong semantic ACCEPT releases false free prose; "
-            "the truthful code result does not certify the unrestricted claim."
+            "Every declared operation completion block is code-rendered before review; "
+            "a forced wrong semantic ACCEPT cannot override the typed pending result. "
+            "This checks declared outcome nodes, not arbitrary mislabeled free prose."
         ),
     )
     assert observed == expected
@@ -545,6 +543,13 @@ def test_golden_another_owned_target_cannot_complete_the_selected_target(
     model = GoldenModel(
         dossier,
         requirement=requirement(targets=(requested_target,), operation="corrects"),
+        mutation_scopes=[{
+            "authority_kind": "account_contribution",
+            "authority_source_ids": [dossier.details[0]["source_id"]],
+            "target_scope": "exact",
+            "target_ids": [requested_target],
+            "permitted_relations": ["corrects"],
+        }],
         reply=lie,
         hook=wrong_target,
     )
@@ -559,7 +564,8 @@ def test_golden_another_owned_target_cannot_complete_the_selected_target(
         "false_prose_released": False,
         "fulfillment": "unfinished",
         "requested_target_retained": True,
-        "other_owned_target_revised": True,
+        "other_owned_target_retained": True,
+        "other_owned_target_revised": False,
         "original_meaning_preserved": True,
     }
     observed = {
@@ -567,6 +573,8 @@ def test_golden_another_owned_target_cannot_complete_the_selected_target(
         "false_prose_released": lie in json.dumps(data["elements"]),
         "fulfillment": receipt["requests"][0]["fulfillment"],
         "requested_target_retained": requested_target
+        in {row["id"] for row in conversation.open_material},
+        "other_owned_target_retained": other_target
         in {row["id"] for row in conversation.open_material},
         "other_owned_target_revised": any(
             other_target in row["target_record_ids"]
@@ -583,8 +591,9 @@ def test_golden_another_owned_target_cannot_complete_the_selected_target(
         expected,
         observed,
         protection_status="blocked",
-        notes="Both records are genuinely owned. Independent acceptance of the second record's "
-        "re-formulation cannot certify an operation on the requested first record.",
+        notes="Both records are genuinely owned. The scope decision binds the first target "
+        "and its independent original source before extraction. A reviewer cannot expand "
+        "that permission to the second target; both predecessors remain intact.",
     )
     assert observed == expected
 
@@ -764,6 +773,13 @@ def test_golden_actual_two_turn_date_correction(client, wired, monkeypatch, wron
             operation="corrects",
             condition="The original dated account now records 15-4-2024.",
         ),
+        mutation_scopes=[{
+            "authority_kind": "account_contribution",
+            "authority_source_ids": [corrected.details[0]["source_id"]],
+            "target_scope": "exact",
+            "target_ids": [date_target],
+            "permitted_relations": ["corrects"],
+        }],
         hook=date_correction,
     )
     for attributes in model.semantic_attributes.values():
@@ -777,11 +793,11 @@ def test_golden_actual_two_turn_date_correction(client, wired, monkeypatch, wron
     expected = {
         "old_date_target_active": wrong_target,
         "old_date_meaning_active": wrong_target,
-        "new_date_meaning_saved": True,
+        "new_date_meaning_saved": not wrong_target,
         "fulfillment": "unfinished" if wrong_target else "fulfilled",
         "blocked": wrong_target,
-        "original_custody_target_active": not wrong_target,
-        "actual_selected_target": [selected_target],
+        "original_custody_target_active": True,
+        "actual_selected_target": [] if wrong_target else [date_target],
         "saved_turns": 2,
     }
     observed = {
@@ -791,8 +807,9 @@ def test_golden_actual_two_turn_date_correction(client, wired, monkeypatch, wron
         "fulfillment": receipt["requests"][0]["fulfillment"],
         "blocked": data["blocked"],
         "original_custody_target_active": custody_target in active,
-        "actual_selected_target": receipt["effects"]["details"]["operations"][0][
-            "target_record_ids"
+        "actual_selected_target": [
+            target for operation in receipt["effects"]["details"]["operations"]
+            for target in operation["target_record_ids"]
         ],
         "saved_turns": len(saved.brain_chat),
     }
@@ -804,12 +821,12 @@ def test_golden_actual_two_turn_date_correction(client, wired, monkeypatch, wron
         expected,
         observed,
         scenario="faulty" if wrong_target else "legitimate",
-        protection_status="gap_demonstrated" if wrong_target else "admitted",
-        claim_scope="semantic_dependency" if wrong_target else "mechanical",
+        protection_status="blocked" if wrong_target else "admitted",
+        claim_scope="mechanical",
         notes=(
-            "Code blocks false completion of the requested date target, but the deliberately "
-            "wrong identity judgment admits retirement of the unrelated custody record. "
-            "This semantic admission dependency means wrong-target work is not wholly prevented."
+            "The independently authored scope permits only the dated predecessor. "
+            "A deliberately wrong identity ACCEPT cannot admit retirement of custody. "
+            "No revision is saved; both originals remain active and work is pending."
             if wrong_target
             else "The first saved account contains only the exact 1984 statement; "
             "the later exact 2024 correction retires its owned predecessor and preserves custody. "
