@@ -15,7 +15,7 @@ from nm.brain import material_verification as draft
 from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.shared.budget_contracts import Completion
-from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
+from nm.shared.model_port import ModelResult, Tier, Usage, require_schema
 
 
 class Stub:
@@ -176,6 +176,8 @@ def test_legacy_read_only_empty_still_has_no_call_and_no_fabricated_coverage():
         "rejected_details",
         "opening_reason",
         "rejected_proposals",
+        "withheld_proposals",
+        "unread_proposals",
     ]
 
 
@@ -393,15 +395,16 @@ def test_candidate_repair_reassesses_coverage_and_preserves_prior_known_omission
     assert sink["previous_assessment"]["missing_sources"][0]["quoted"] == second_text
 
 
-def test_unresolved_candidate_still_raises_legacy_error_instead_of_becoming_empty_coverage():
+def test_unresolved_candidate_is_visible_unread_and_cannot_become_complete_empty_coverage():
     latest = "The handover occurred on Tuesday."
     model = Stub(
         [{"verdicts": [], "coverage": assessment()}, {"verdicts": [], "coverage": assessment()}]
     )
     sink = {}
-    with pytest.raises(SchemaViolation, match="remained incomplete for D1"):
-        review(model, latest=latest, candidates=(detail(latest),), scope={}, sink=sink)
-    assert len(model.calls) == 2 and sink == {}
+    result = review(model, latest=latest, candidates=(detail(latest),), scope={}, sink=sink)
+    assert len(model.calls) == 2 and result.details == ()
+    assert result.unread_details == 1 and result.rejected_details == 0
+    assert sink["state"] == "unassessed"
 
 
 def test_exact_duplicate_missing_ids_are_normalized_without_changing_partial_meaning():

@@ -217,6 +217,20 @@ class GroundingResult:
     rejected_details: int
     opening_reason: str = ""
     rejected_proposals: tuple[dict, ...] = ()
+    withheld_proposals: tuple[dict, ...] = ()
+    unread_proposals: tuple[dict, ...] = ()
+
+    @property
+    def withheld_details(self) -> int:
+        return sum(row["candidate_type"] == "detail" for row in self.withheld_proposals)
+
+    @property
+    def unread_details(self) -> int:
+        return sum(row["candidate_type"] == "detail" for row in self.unread_proposals)
+
+    @property
+    def opening_unread(self) -> bool:
+        return any(row["candidate_type"] == "opening" for row in self.unread_proposals)
 
 
 _VERDICT = {
@@ -306,7 +320,7 @@ def verify_material_grounding(
         review_scope: dict | None = None, active_material: tuple[dict, ...] = (),
         coverage: dict | None = None
         ) -> GroundingResult:
-    """Check proposals and requested coverage, preserving the legacy result shape."""
+    """Keep checked peers and distinguish unread proposals after bounded correction."""
     details = tuple(candidate for candidate in candidates
                     if candidate.kind != "dispute")
     requested_coverage = review_scope is not None
@@ -445,23 +459,38 @@ def verify_material_grounding(
         if not pending:
             break
     unresolved_candidates = tuple(identity for identity in pending if identity != "$coverage")
-    if unresolved_candidates:
-        candidate_issues = {identity: issues[identity] for identity in unresolved_candidates}
-        raise SchemaViolation(
-            "Material grounding verification remained incomplete for "
-            + ", ".join(unresolved_candidates) + ": " + review_issues_text(candidate_issues))
+    proposed_by_id = {row["candidate_id"]: row for row in proposed}
+    unread = tuple({
+        "candidate_id": identity,
+        "candidate_type": proposed_by_id[identity]["type"],
+        "verdict": "unassessed", "admission_issue": "review_unavailable",
+        "reason": ("Independent proposal review did not yield a usable verdict "
+                   "within its correction bound."),
+        "validation_issues": list(issues[identity]),
+        "proposal": (asdict(keyed[identity]) if identity in keyed else {
+            key: value for key, value in proposed_by_id[identity].items()
+            if key not in ("candidate_id", "allowed_account_source_ids",
+                           "allowed_restoration_peer_ids")}),
+    } for identity in unresolved_candidates)
     reviewed_decisions = decisions
     decisions = admitted_record_decisions(decisions)
     downgraded = [identity for identity, row in reviewed_decisions.items()
                   if row["verdict"] == "accept" and decisions[identity]["verdict"] != "accept"]
-    if requested_coverage and downgraded:
+    if requested_coverage and (unresolved_candidates or downgraded):
         if assessed_coverage is not None:
             previous_assessment = assessed_coverage
         assessed_coverage = None
-        issues["$coverage"] = (
-            "Final admission withheld reviewed proposals " + ", ".join(downgraded)
-            + " because required successors were unavailable; coverage has not assessed "
-            "this final admitted set.",)
+        invalidated = []
+        if unresolved_candidates:
+            invalidated.append(
+                "Independent verdicts remained unread for " + ", ".join(unresolved_candidates)
+                + "; coverage has not assessed this final admitted/unread set.")
+        if downgraded:
+            invalidated.append(
+                "Final admission withheld reviewed proposals " + ", ".join(downgraded)
+                + " because required successors were unavailable; coverage has not assessed "
+                "this final admitted set.")
+        issues["$coverage"] = tuple(invalidated)
     if requested_coverage and coverage is not None:
         assessment = assessed_coverage or {
             "state": "unassessed",
@@ -488,15 +517,22 @@ def verify_material_grounding(
         coverage.clear()
         coverage.update(bound)
     accepted = tuple(candidate for key, candidate in keyed.items()
-                     if decisions[key]["verdict"] == "accept")
+                     if key in decisions and decisions[key]["verdict"] == "accept")
     title_issue = opening_title_issue(opening.title) if opening.ready else None
-    opening_decision = decisions.get("O1", {"verdict": "accept", "reason": ""})
+    opening_decision = decisions.get("O1", {
+        "verdict": "unassessed" if opening.ready else "accept",
+        "reason": ("The opening description has no usable independent verdict after "
+                   "its bounded correction." if opening.ready else ""),
+    })
     opening_supported = opening_decision["verdict"] == "accept"
-    return GroundingResult(accepted, opening_supported and not title_issue,
-                           len(details) - len(accepted),
-                           title_issue or (opening_decision["reason"]
-                                           if not opening_supported else ""),
-                           tuple({**decisions[key],
-                                  "proposal": asdict(candidate)}
-                                 for key, candidate in keyed.items()
-                                 if decisions[key]["verdict"] != "accept"))
+    rejected = tuple({**decisions[key], "proposal": asdict(candidate)}
+                     for key, candidate in keyed.items()
+                     if key in decisions and decisions[key]["verdict"] == "reject"
+                     and reviewed_decisions[key]["verdict"] == "reject")
+    withheld = tuple({**decisions[key], "candidate_type": "detail",
+                      "proposal": asdict(keyed[key])}
+                     for key in downgraded if key in keyed)
+    return GroundingResult(
+        accepted, opening_supported and not title_issue, len(rejected),
+        title_issue or (opening_decision["reason"] if not opening_supported else ""),
+        rejected, withheld, unread)

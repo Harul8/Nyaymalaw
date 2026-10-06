@@ -421,6 +421,23 @@
         "tests/test_brain_dispute_candidate_recovery.py",
         "tests/test_brain_dispute_verification.py"
       ]
+    },
+    {
+      "slice": "preserve-checked-material-peers",
+      "owners": [
+        "LB-176",
+        "LB-178",
+        "LB-191",
+        "LB-192"
+      ],
+      "decision": "Bounded material-review exhaustion retains checked details alongside explicit unread and dependency-withheld proposals. Genuine rejection remains distinct. Unread opening descriptions cannot be certified or restart the exhausted review loop. Final omission coverage stays unassessed where unresolved work remains.",
+      "validation": "57 offline grounding/coverage/recovery cases passed with paired checked-peer/reject/unread/dependency cases; Ruff clean. No real-model/browser calls.",
+      "files": [
+        "nm/brain/material_verification.py",
+        "tests/test_brain_material_candidate_recovery.py",
+        "tests/test_brain_material_verification.py",
+        "tests/test_brain_material_coverage.py"
+      ]
     }
   ]
 }

@@ -147,13 +147,14 @@ def test_pending_material_feedback_and_exhaustion_keep_exact_safe_cause(failure,
     assert "D1: " in feedback["validation_issue"] and expected in feedback["validation_issue"]
     assert "PRIVATE_MATTER_WORDS" not in feedback["validation_issue"]
     failing = Model([first_answer, {"verdicts": bad_rows}])
-    with pytest.raises(SchemaViolation) as raised:
-        verify_material_grounding(
-            failing, candidates=candidates, earlier=(), latest=f"{first} {second}",
-            opening=OpeningCandidate(False, "", ""))
-    assert len(failing.calls) == 2
-    assert expected in str(raised.value) and "D1: " in str(raised.value)
-    assert all(text not in str(raised.value) for text in ("D2", first, "PRIVATE_MATTER_WORDS"))
+    recovered = verify_material_grounding(
+        failing, candidates=candidates, earlier=(), latest=f"{first} {second}",
+        opening=OpeningCandidate(False, "", ""))
+    assert len(failing.calls) == 2 and recovered.details == candidates[1:]
+    assert recovered.rejected_details == 0 and recovered.unread_details == 1
+    diagnostic = " ".join(recovered.unread_proposals[0]["validation_issues"])
+    assert expected in diagnostic
+    assert all(text not in diagnostic for text in ("D2", first, "PRIVATE_MATTER_WORDS"))
 
 
 def test_one_batch_checks_details_and_opening_without_dropping_valid_peer():
@@ -234,11 +235,12 @@ def test_unfinished_verification_refuses_to_save_unread_detail():
     proposed = detail(latest, "Payment is disputed.")
     model = Model([{"verdicts": []}, {"verdicts": []}])
 
-    with pytest.raises(SchemaViolation, match="remained incomplete"):
-        verify_material_grounding(
-            model, candidates=(proposed,),
-            opening=OpeningCandidate(False, "", ""), earlier=(), latest=latest)
-    assert len(model.calls) == 2
+    result = verify_material_grounding(
+        model, candidates=(proposed,),
+        opening=OpeningCandidate(False, "", ""), earlier=(), latest=latest)
+    assert len(model.calls) == 2 and result.details == ()
+    assert result.rejected_details == 0 and result.unread_details == 1
+    assert result.unread_proposals[0]["admission_issue"] == "review_unavailable"
 
 
 @pytest.mark.parametrize("failure", ["adapter_contract", "incomplete_completion"])
@@ -273,11 +275,12 @@ def test_grounding_dispatch_failure_preserves_peer_context_without_third_attempt
     second = detail("The notice is contested.", "The notice is contested.")
     model = Model([{"verdicts": [verdict("D1")]},
                    SchemaViolation("Adapter refused a missing account field")])
-    with pytest.raises(SchemaViolation, match="remained incomplete for D2"):
-        verify_material_grounding(
-            model, candidates=(first, second), opening=OpeningCandidate(False, "", ""),
-            earlier=(), latest=latest)
-    assert len(model.calls) == 2
+    result = verify_material_grounding(
+        model, candidates=(first, second), opening=OpeningCandidate(False, "", ""),
+        earlier=(), latest=latest)
+    assert len(model.calls) == 2 and result.details == (first,)
+    assert result.rejected_details == 0 and result.unread_details == 1
+    assert result.unread_proposals[0]["candidate_id"] == "D2"
     repair = json.loads(model.calls[1][0].user)
     assert [row["candidate_id"] for row in repair["candidates"]] == ["D2"]
     assert repair["retained_candidate_context"][0]["candidate_id"] == "D1"
