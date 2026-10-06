@@ -13,13 +13,34 @@ from nm.brain.work_state import project_work
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
 from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
     reader_operations,
     reviewed_record_verdicts,
-    source_treatment_reply,
 )
 from tests.brain_research_fixture import Corpus, ResearchModel
-from tests.test_brain_continuation_service import send
+from tests.test_brain_continuation_service import fixture_source_treatment, send
 from tests.test_brain_turn import plan
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """Scenario-owned purpose decisions, independent of extraction and its verdicts.
+
+    Exact original fixture words identify instructions, context and other-matter
+    content. Unlisted reported account remains missing unless an independently
+    checked owned record or candidate represents it.
+    """
+    purpose_by_original_words = {
+        'Keep these reported issues on the file.': 'non_account',
+        ("Reconcile the recorded formulations with my account and give me a short "
+         "factual summary."): "non_account",
+        'Keep uncertainty visible and leave legal assessment unfinished.': 'non_account',
+        'We act for Nila.': 'outside_scope',
+    }
+    return fixture_scoped_coverage(payload, reviewed, source_decisions={
+        identity: purpose_by_original_words.get(
+            payload["source_treatments"][identity]["quoted"], "account")
+        for identity in payload["coverage_source_ids"]})
+
 
 ACCOUNT = (
     "We act for Nila. The equipment has not been returned. The payment remains withheld. "
@@ -140,7 +161,7 @@ class RecordResearchModel(ResearchModel):
         self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
         if prompt.operation == "classify_account_sources":
-            data = source_treatment_reply(prompt.operation, payload)
+            data = fixture_source_treatment(prompt.operation, payload)
         elif prompt.operation == "extract_disputes":
             data = reader_operations(next(self.dispute_reads), payload,
                                      link_field="related_dispute_ids")
@@ -149,7 +170,8 @@ class RecordResearchModel(ResearchModel):
                 "candidate_id": row["candidate_id"], "candidate_role": "independent_dispute",
                 "operation_supported": True, "verdict": "accept",
                 "reason": "The reported issue remains a distinct attributed account.",
-            } for row in payload["candidates"]]}, scripted_full_scope=True)
+            } for row in payload["candidates"]]}, scripted_full_scope=True,
+                scripted_source_account=True, coverage_judgment=fixture_scope_judgment)
         return ModelResult(text=None, data=data, tier=tier, provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)
 
@@ -230,7 +252,9 @@ def test_public_factual_reconciliation_completes_while_automatic_dispute_researc
     assert released["sufficiency"]["status"] == "complete"
     assert released["blocks"][0]["legal_source_ids"] == []
     assert answer["continuation"]["coverage"][0]["state"] == "ok"
-    assert SUMMARY in "\n".join(row["text"] for row in answer["elements"])
+    displayed = "\n".join(row["text"] for row in answer["elements"])
+    assert "The equipment has not been returned." in displayed
+    assert "The payment remains withheld." in displayed
     saved = wired.store.load(first["matter_id"])
     assert saved.brain_chat[0] == prior
     saved_receipt = saved.brain_chat[-1]["response"]["material_coverage"]["execution"]

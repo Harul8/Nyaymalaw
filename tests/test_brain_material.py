@@ -14,15 +14,41 @@ from tests.brain_continuation_fixture import (
     no_record_requirement,
 )
 from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
     reader_operations,
     reader_repairs,
     reviewed_record_verdicts,
+    source_portion_reply,
 )
 
 
+def fixture_scope_judgment(payload, reviewed, *, source_purposes=None,
+                           dispute_scope=None, coverage_links=None):
+    """Normal scenarios author account and framed instruction purposes explicitly."""
+    authored = source_purposes or {}
+    decisions = {identity: authored.get(
+        payload["source_treatments"][identity]["quoted"].strip(), "account")
+        for identity in payload["coverage_source_ids"]}
+    if dispute_scope is not None:
+        # The fixture author declares the distinct-dispute stage's scope
+        # before extraction. Reader emptiness and rejected output are ignored.
+        decisions = {identity: purpose if purpose == "non_account" else dispute_scope.get(
+            payload["source_treatments"][identity]["quoted"].strip(), "outside_scope")
+            for identity, purpose in decisions.items()}
+    links = {identity: deepcopy(coverage_links[reference["quoted"].strip()])
+             for identity, reference in payload["source_treatments"].items()
+             if reference["quoted"].strip() in (coverage_links or {})}
+    return fixture_scoped_coverage(payload, reviewed, source_decisions=decisions,
+                                   representation_choices=links)
+
+
+
 class Model:
-    def __init__(self, plans):
+    def __init__(self, plans, *, source_purposes=None):
         self.plans = iter(plans)
+        self.source_purposes = dict(source_purposes or {})
+        self.dispute_scope = {}
+        self.coverage_links = {}
         self.calls = []
         self.material_calls = []
         self.next_material = []
@@ -37,7 +63,16 @@ class Model:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
                                           scripted_items=self.current_items)
-        if continuation is not None:
+        if prompt.operation == "classify_account_sources":
+            payload = json.loads(prompt.user)
+            original = payload.get("original_input", payload)
+            data = source_portion_reply(payload, {"source_treatments": {identity: {
+                "content_role": ("work_instruction" if self.source_purposes.get(
+                    reference["quoted"].strip()) == "non_account"
+                    else "reported_matter_account"),
+                "reason": "The scenario owner independently declares the source purpose.",
+            } for identity, reference in original["original_source_catalogue"].items()}})
+        elif continuation is not None:
             data = continuation
             if prompt.operation == "continue_conversation":
                 for unit in data["units"]:
@@ -69,15 +104,25 @@ class Model:
                  "verdict": "accept", "reason": "Attributable proposal"}
                 for row in payload["candidates"]]}
             data = reviewed_record_verdicts(
-                payload, data, scripted_full_scope=True)
+                payload, data, scripted_full_scope=True, scripted_source_account=True,
+                    coverage_judgment=lambda p, rows: fixture_scope_judgment(
+                        p, rows, source_purposes=self.source_purposes,
+                        dispute_scope=self.dispute_scope
+                        if prompt.operation == "verify_disputes" else None,
+                        coverage_links=self.coverage_links
+                        if prompt.operation == "verify_material_grounding" else None))
         else:
             self.calls.append(prompt)
             planned = next(self.plans)
             self.next_material = planned["material"]
+            self.source_purposes.update(planned.get("_source_purposes", {}))
+            self.dispute_scope.update(planned.get("_dispute_scope", {}))
+            self.coverage_links = planned.get("_coverage_links", {})
             self.current_record_disposition = planned.get("_record_disposition")
             self.current_response_expressions = planned.get("_response_expressions", {})
             data = {key: value for key, value in planned.items()
-                    if key not in ("material", "_record_disposition", "_response_expressions")}
+                    if key not in ("material", "_record_disposition", "_response_expressions",
+                                   "_source_purposes", "_dispute_scope", "_coverage_links")}
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
                 data = scripted_request_scope_transport(
@@ -160,8 +205,10 @@ def scripted_record_result(operation, payload, data, disposition):
     if operation == "continue_conversation":
         requests = {row["request_index"]: row for row in payload["work_items"]}
         for unit in result["units"]:
-            requirement = requests[unit["request_index"]]["record_requirement"]
-            if requirement["kind"] == "none":
+            request = requests[unit["request_index"]]
+            requirement = request["record_requirement"]
+            if (requirement["kind"] == "none"
+                    and "none" in request.get("record_outcome_statuses", ["none"])):
                 continue
             unit["record_outcome"] = {
                 "status": status, "block_id": unit["blocks"][0]["id"],
@@ -178,7 +225,9 @@ def scripted_record_result(operation, payload, data, disposition):
     else:
         requests = {row["request_index"]: row for row in payload["input"]["work_items"]}
         for row in result["verdicts"]:
-            if requests[row["request_index"]]["record_requirement"]["kind"] == "none":
+            request = requests[row["request_index"]]
+            if (request["record_requirement"]["kind"] == "none"
+                    and "none" in request.get("record_outcome_statuses", ["none"])):
                 continue
             row["record_check"] = {
                 "outcome": {"performed": "fulfilled", "review_no_change": "no_change_justified",
@@ -227,7 +276,8 @@ def material(kind, statement, quoted, *, relation="new", references=(),
 
 def plan(message, *, candidates=(), items=None, opening=False,
          active_work="review the account", material_purposes=(), record_requirement=None,
-         record_disposition=None, mutation_scopes=None, response_expressions=None):
+         record_disposition=None, mutation_scopes=None, response_expressions=None,
+         source_purposes=None, dispute_scope=None, coverage_links=None):
     if items is None:
         items = [{"request": message, "relation": "new",
                   "matter_scope": "proposed" if opening else "current",
@@ -244,6 +294,12 @@ def plan(message, *, candidates=(), items=None, opening=False,
         assert len(items) == 1, "Author independent scopes on each item of a mixed plan"
         items[0]["mutation_scopes"] = list(mutation_scopes)
     return {"items": items, "material": list(candidates),
+            **({"_dispute_scope": deepcopy(dispute_scope)}
+               if dispute_scope is not None else {}),
+            **({"_coverage_links": deepcopy(coverage_links)}
+               if coverage_links is not None else {}),
+            **({"_source_purposes": deepcopy(source_purposes)}
+               if source_purposes is not None else {}),
             **({"_response_expressions": deepcopy(response_expressions)}
                if response_expressions is not None else {}),
             **({"_record_disposition": record_disposition}
@@ -368,7 +424,8 @@ def test_correction_and_diversion_keep_prior_words_and_proposals(
         plan(first, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
         plan(correction, candidates=[revised], material_purposes=("account_contribution",),
-             mutation_scopes=[mutation_scope("material-one:material:1")]),
+             mutation_scopes=[mutation_scope("material-one:material:1")],
+             record_disposition="performed"),
         plan(aside, candidates=[], items=[aside_item]),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
@@ -414,7 +471,8 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
         "clarification": "",
         "record_requirement": no_record_requirement(),
         "mutation_scopes": [mutation_scope("first:material:1")]}],
-                       material_purposes=("account_contribution",))
+                       material_purposes=("account_contribution",),
+                       record_disposition="performed")
     second_plan["items"][0]["material_purposes"] = ["account_contribution"]
     model = Model([plan(first, candidates=[original], opening=True,
                         material_purposes=("account_contribution",)), second_plan])
@@ -453,7 +511,9 @@ def test_work_request_without_new_material_preserves_record_with_three_calls(
         "clarification": "", "record_requirement": no_record_requirement()}])
     assert work_plan["items"][0]["material_purposes"] == []
     model = Model([plan(first, candidates=original, opening=True,
-                        material_purposes=("account_contribution",)), work_plan])
+                        material_purposes=("account_contribution",),
+                        dispute_scope={"The reported delivery date is disputed.": "account"}),
+                   work_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, first, "recorded")
     assert opened.status_code == 200, opened.text
@@ -512,7 +572,8 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
                 "from the original account without adding facts."),
         }, record_disposition="performed")
     model = Model([plan(account, candidates=[old_dispute, old_detail], opening=True,
-                        material_purposes=("account_contribution",)), review_plan])
+                        material_purposes=("account_contribution",),
+                        dispute_scope={account: "account"}), review_plan])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "original").json()
     original_turn = deepcopy(wired.store.load(opened["matter_id"]).brain_chat[0])
@@ -561,9 +622,11 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
                       "operation": "none", "success_condition": (
                           "The saved handover description preserves the reported dispute "
                           "and unknown actor."),
-                  }, record_disposition="review_no_change")
+                  }, record_disposition="review_no_change",
+                  source_purposes={request: "non_account"})
     model = Model([plan(account, candidates=[original], opening=True,
-                        material_purposes=("account_contribution",)), review])
+                        material_purposes=("account_contribution",),
+                        dispute_scope={account: "account"}), review])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = send(client, account, "original-review-empty").json()
     matter_id = opened["matter_id"]
@@ -603,7 +666,11 @@ def test_answer_to_prior_nm_question_can_support_material(
                  "operator": "question", "source_ids": ["L1"],
                  "record_ids": [], "focus": "certainty",
              }}),
-        plan(answer, candidates=[confirmed], material_purposes=("account_contribution",)),
+        # The confirmation represents the same tentative prior event. This
+        # independent coverage choice does not add support or change authority
+        # to D1's latest-message account check.
+        plan(answer, candidates=[confirmed], material_purposes=("account_contribution",),
+             coverage_links={first: {"record_ids": [], "candidate_ids": ["D1"]}}),
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -656,7 +723,11 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
                  second, scope="other", importance="central"),
     ]
     model = Model([plan(message, candidates=candidates, opening=True,
-                        items=items, material_purposes=("account_contribution",))])
+                        items=items, material_purposes=("account_contribution",),
+                        source_purposes={f"Also {research}.": "non_account",
+                                         f"separately, {second}.": "outside_scope"},
+                        dispute_scope={f"{first};": "account",
+                                       f"separately, {second}.": "account"})])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     served = send(client, message, "multiple-material")

@@ -13,7 +13,7 @@ import pytest
 from nm.brain import turn as boundary
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
-from tests.brain_reader_fixture import reader_operations, reader_repairs
+from tests.brain_reader_fixture import fixture_scoped_coverage, reader_operations, reader_repairs
 from tests.test_brain_continuation_service import send
 from tests.test_brain_evidence_rendering_public import (
     RawExpressionModel,
@@ -30,6 +30,31 @@ CUSTODY = "The tablet remains with the client."
 INSTRUCTION = "Correct the arrival entry."
 REVISED = "The cartons arrived on 19 April."
 SAME_TURN = "same_original_advocate_turn_v1"
+
+
+def account_scope_judgment(payload, reviewed, *, distinct_disputes=False,
+                           dated_candidate_id=None):
+    """The scenario author declares factual events and the separate instruction.
+
+    Arrival and custody are event-record work, outside distinct-dispute
+    formulation. These declarations precede extraction; a rejected operation
+    cannot convert the dated account into non-account content.
+    """
+    purposes = {ORIGINAL: "account", CUSTODY: "account", REVISED: "account",
+                INSTRUCTION: "non_account"}
+    choices = {identity: purposes[reference["quoted"]]
+               for identity, reference in payload["source_treatments"].items()}
+    if distinct_disputes:
+        choices = {identity: "outside_scope" if purpose == "account" else purpose
+                   for identity, purpose in choices.items()}
+    # The scenario owner separately declares that the one arrival correction
+    # represents each verbatim repetition of the same reported date. Selecting
+    # its owned coverage link does not broaden source support or permission.
+    links = {identity: {"record_ids": [], "candidate_ids": [dated_candidate_id]}
+             for identity, reference in payload["source_treatments"].items()
+             if dated_candidate_id is not None and reference["quoted"] == REVISED}
+    return fixture_scoped_coverage(payload, reviewed, source_decisions=choices,
+                                   representation_choices=links)
 
 
 def result(data, tier):
@@ -67,25 +92,36 @@ class SpanNeighbourModel(RawExpressionModel):
             return result(reader_repairs(data, schema), tier)
         checked = super().structured(prompt, schema, tier, max_tokens=max_tokens)
         if prompt.operation == "classify_account_sources":
+            payload = json.loads(prompt.user)
+            original = payload.get("original_input", payload)
             data = deepcopy(checked.data)
             # This explicit scenario judgment distinguishes permission from
             # evidence; no fixture or production code classifies by keywords.
-            if self.selected_source is not None:
-                data["source_treatments"]["L1"] = {
-                    "content_role": "work_instruction", "substantive_spans": [],
-                    "reason": "The scenario owner declares this source an instruction.",
-                }
+            for identity, row in data["source_treatments"].items():
+                if original["original_source_catalogue"][identity]["quoted"] == INSTRUCTION:
+                    row.update(content_role="work_instruction", substantive_spans=[],
+                               reason="The scenario owner declares this source an instruction.")
             return replace(checked, data=data)
-        if prompt.operation == "verify_material_grounding" and self.selected_source:
+        if prompt.operation in ("verify_disputes", "verify_material_grounding"):
+            payload = json.loads(prompt.user)
             data = deepcopy(checked.data)
-            for verdict in data["verdicts"]:
-                if verdict["verdict"] == "accept":
-                    verdict["account_check"]["source_ids"] = [self.selected_source]
-                    verdict["account_check"]["source_checks"] = [{
-                        "source_id": self.selected_source, "supplies_account_content": True,
-                        "supports_proposal": True,
-                        "reason": "The scripted independent judge selects this dated account.",
-                    }]
+            if prompt.operation == "verify_material_grounding" and self.selected_source:
+                reference = payload["source_treatments"].get(self.selected_source)
+                for verdict in data["verdicts"]:
+                    if verdict["verdict"] == "accept":
+                        verdict["account_check"]["source_ids"] = [self.selected_source]
+                        verdict["account_check"]["source_checks"] = [{
+                            "source_id": self.selected_source, "supplies_account_content": True,
+                            "supports_proposal": True,
+                            "support_spans": [{"start": 0, "end": len(reference["quoted"])}]
+                            if reference is not None else [],
+                            "reason": "The scripted independent judge selects this dated account.",
+                        }]
+            data["coverage"] = account_scope_judgment(
+                payload, data, distinct_disputes=prompt.operation == "verify_disputes",
+                dated_candidate_id="D1"
+                if prompt.operation == "verify_material_grounding" and self.selected_source
+                else None)
             return replace(checked, data=data)
         if prompt.operation == "verify_continuation" and self.fulfilled:
             data = deepcopy(checked.data)
@@ -185,6 +221,7 @@ def test_owned_same_turn_support_saves_requested_correction_with_raw_reply_and_e
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     answer = send(client, message, turn_id, opened=opened)
     assert answer["blocked"] is False
+    assert answer["metrics"]["llm_calls"] == 8
     execution = answer["material_coverage"]["execution"]
     assert execution["requests"][0]["fulfillment"] == "fulfilled"
     assert execution["mutation_authorities"]["source_match_contract"] == SAME_TURN

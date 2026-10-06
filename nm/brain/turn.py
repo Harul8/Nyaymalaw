@@ -24,6 +24,7 @@ from nm.brain.dispute_verification import verify_disputes
 from nm.brain.disputes import extract_disputes
 from nm.brain.execution_contracts import (
     RECORD_ACKNOWLEDGEMENT_CONTRACT,
+    SCOPED_RECORD_OUTCOME_CONTRACT,
     ExecutionEvidenceInvalid,
     canonical_record_acknowledgements,
     effect_catalogue,
@@ -48,9 +49,11 @@ from nm.brain.mutation_contracts import (
 )
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
+    COVERAGE_SELECTION_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
     candidate_account_ids,
     classify_account_sources,
+    owned_source_portions,
     owned_source_treatments,
     reconsider_account_sources,
     source_treatment_reference_valid,
@@ -256,6 +259,8 @@ def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
              "turn_id": turn.turn_id, "offer_digest": offer_digest}
     return {
         "contract": MATERIAL_EXECUTION_CONTRACT,
+        "scope_outcome_contract": SCOPED_RECORD_OUTCOME_CONTRACT,
+        "display_policy": "requested_record_work_v2",
         "id": "mex_" + _digest(owner)[:32], "owner": owner,
         "expected_version": matter.version, "resulting_version": matter.version + 1,
         "persistence": "prepared_for_commit", "semantic_coverage": "unassessed",
@@ -464,8 +469,17 @@ def _record_change_lines(changes: list[dict]) -> list[str]:
     return record_change_lines(changes)
 
 
-def _execution_display(execution: dict) -> dict:
+def _execution_display(execution: dict) -> dict | None:
     """Render exact observed entry changes without claiming requested completion."""
+    policy = execution.get("display_policy")
+    if policy not in (None, "requested_record_work_v2"):
+        raise ExecutionEvidenceInvalid("The record display policy is unsupported")
+    required = execution.get("material_selected") or any(
+        isinstance(row.get("record_requirement"), dict)
+        and row["record_requirement"]["kind"] != "none" for row in execution["requests"])
+    ran = any(stage.get("state") != "not_run" for stage in execution["stages"].values())
+    if policy is not None and not (required or ran or execution["record_changes"]):
+        return None
     parts = _record_change_lines(execution["record_changes"])
     if not parts:
         parts.append("No changes were made to the saved record.")
@@ -474,19 +488,36 @@ def _execution_display(execution: dict) -> dict:
     if held:
         parts.append(str(len(held)) + " items remain separate while their matter ownership "
                      "is clarified.")
-    required = execution.get("material_selected") or any(
-        isinstance(row.get("record_requirement"), dict)
-        and row["record_requirement"]["kind"] != "none" for row in execution["requests"])
     reviews = [execution["stages"][name] for name in ("dispute_review", "detail_review")]
     reader_partial = any(execution["stages"][name].get("state") == "partial"
                          for name in ("dispute_extraction", "detail_extraction"))
     if required and (reader_partial or any(
             row.get("account_coverage", {}).get("state") != "complete" for row in reviews)):
         parts.append("The record reading remains unfinished.")
+    if policy is not None:
+        targets = execution.get("mutation_authorities", {}).get("target_catalogue", {})
+        shown = set()
+        for review in reviews:
+            for item in review.get("account_coverage", {}).get("admission_holds", []):
+                if item.get("admission_issue") != "mutation_scope":
+                    continue
+                for identity in item["target_ids"]:
+                    target = targets.get(identity)
+                    if not isinstance(target, dict) or not isinstance(target.get("quoted"), str):
+                        raise ExecutionEvidenceInvalid("A held change lost its owned target source")
+                    words = target["quoted"]
+                    key = (item["relation"], identity)
+                    if key not in shown:
+                        parts.append(
+                            f'The proposed {item["relation"]} change was held for the saved '
+                            f'account whose original source reads: “{words}”. '
+                            'Please confirm the record and the requested change.')
+                        shown.add(key)
     element = {"kind": "finding", "text": "\n".join(parts), "refs": [],
                "source": None, "section": "answer", "collapsible": False,
                "disclosure": bool(required), "material_execution_id": execution["id"]}
-    return {"contract": "material_result_display_v1", "receipt_id": execution["id"],
+    return {"contract": "material_result_display_v2" if policy else "material_result_display_v1",
+            "receipt_id": execution["id"],
             "element": element}
 
 
@@ -1080,6 +1111,39 @@ def _hold_affected_grounding(grounded, proposals, affected, opening, reason,
         opening_reason=reason if opening_affected and opening.ready else grounded.opening_reason)
 
 
+def _retain_source_purpose_conflicts(coverage, review_scope, source_treatments,
+                                     source_ids) -> None:
+    """Keep independently read peers while unresolved source judgments stay partial."""
+    if (coverage.get("selection_contract") != COVERAGE_SELECTION_CONTRACT
+            or coverage.get("review_scope") != review_scope):
+        return
+    selected = set(source_ids)
+    conflicts = []
+    for check in coverage.get("source_checks", []):
+        identity = check.get("source_id")
+        treatment = source_treatments.get(identity)
+        if (identity not in selected or treatment is None
+                or check.get("content_purpose") not in ("account", "non_account")
+                or any(check.get(key) != treatment[key]
+                       for key in ("turn_id", "role", "quoted"))):
+            continue
+        supplies = check["content_purpose"] == "account"
+        if supplies == bool(treatment.get("substantive_spans")):
+            continue
+        conflicts.append({
+            "source_id": identity,
+            "source_owner_content_role": treatment["content_role"],
+            "source_owner_substantive_spans": deepcopy(treatment["substantive_spans"]),
+            "independent_source_check": deepcopy(check),
+        })
+    if conflicts:
+        coverage["source_purpose_holds"] = conflicts
+        if coverage.get("state") == "complete":
+            coverage["state"] = "partial"
+        coverage["reason"] = (
+            "Original source-purpose judgments remain unresolved after bounded reconsideration.")
+
+
 def _localized_omission(coverage, review_scope, source_treatments) -> tuple[str, ...]:
     if (coverage.get("contract") != ACCOUNT_COVERAGE_CONTRACT
             or coverage.get("review_scope") != review_scope
@@ -1090,6 +1154,10 @@ def _localized_omission(coverage, review_scope, source_treatments) -> tuple[str,
     if not isinstance(ids, list) or not ids or any(
             not isinstance(identity, str) or identity not in source_treatments for identity in ids):
         return ()
+    if coverage.get("selection_contract") == COVERAGE_SELECTION_CONTRACT:
+        recoverable_ids = {check["source_id"] for check in coverage.get("source_checks", [])
+                           if check.get("content_purpose") != "non_account"}
+        ids = [identity for identity in ids if identity in recoverable_ids]
     return tuple(dict.fromkeys(ids))
 
 
@@ -1181,12 +1249,49 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
         selected = []
         for diagnostic in source_disagreements:
             identity = diagnostic.get("source_id")
+            if diagnostic.get("diagnostic_kind") == "coverage_source_purpose":
+                check = diagnostic.get("coverage_source_check")
+                owned_assessments = [detail_coverage,
+                                     stages["dispute_review"]["account_coverage"]]
+                if (identity not in source_treatments or not isinstance(check, dict)
+                        or diagnostic.get("review_scope") != review_scope
+                        or check.get("source_id") != identity
+                        or type(diagnostic.get("supplies_account_content")) is not bool
+                        or diagnostic.get("content_role") != (
+                            source_treatments[identity]["content_role"])
+                        or check.get("content_purpose") not in ("account", "non_account")
+                        or diagnostic["supplies_account_content"] != (
+                            check["content_purpose"] == "account")
+                        or bool(source_treatments[identity].get("substantive_spans")) == (
+                            diagnostic["supplies_account_content"])
+                        or not any(assessment.get("selection_contract")
+                                   == COVERAGE_SELECTION_CONTRACT
+                                   and assessment.get("review_scope") == review_scope
+                                   and check in assessment.get("source_checks", [])
+                                   for assessment in owned_assessments)):
+                    raise SchemaViolation(
+                        "Source reconsideration has no owned coverage disagreement")
+                reference = source_treatments[identity]
+                if any(check.get(key) != reference[key] for key in ("turn_id", "role", "quoted")):
+                    raise SchemaViolation("Coverage disagreement changed its original source")
+                portions = check.get("substantive_spans")
+                if (not isinstance(portions, list) or any(not isinstance(item, dict)
+                                                        for item in portions)
+                        or owned_source_portions(reference, [
+                            {"start": item.get("start"), "end": item.get("end")}
+                            for item in portions]) != portions
+                        or bool(portions) != diagnostic["supplies_account_content"]):
+                    raise SchemaViolation(
+                        "Coverage disagreement lost its owned substantive portions")
+                selected.append(identity)
+                continue
             candidate_id = diagnostic.get("candidate_id")
             candidate = by_id.get(candidate_id)
             expected = asdict(opening) if candidate_id == "O1" else (
                 asdict(candidate) if candidate is not None else None)
             if (identity not in source_treatments
-                    or diagnostic.get("supplies_account_content") is not True
+                    or type(diagnostic.get("supplies_account_content")) is not bool
+                    or expected is None
                     or diagnostic.get("content_role") != source_treatments[identity]["content_role"]
                     or diagnostic.get("proposal") != expected
                     or identity not in candidate_account_ids(
@@ -1245,6 +1350,11 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 "Source-dependent record review could not be confirmed.",
                 hold_disputes=not disputes_rechecked)
             return grounded, active_disputes, source_treatments
+
+    for assessment in (stages["dispute_review"]["account_coverage"], detail_coverage):
+        _retain_source_purpose_conflicts(
+            assessment, review_scope, source_treatments,
+            events["source_reconsideration"].get("source_ids", ()))
 
     gaps = {
         "dispute": _localized_omission(
@@ -1367,6 +1477,10 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
     completed = all(event.get(kind) == "reviewed"
                     for kind in ("dispute", "detail") if kind in event)
     event["state"] = "reviewed" if completed else "partial"
+    for assessment in (stages["dispute_review"]["account_coverage"], detail_coverage):
+        _retain_source_purpose_conflicts(
+            assessment, review_scope, source_treatments,
+            events["source_reconsideration"].get("source_ids", ()))
     return grounded, active_disputes, source_treatments
 
 

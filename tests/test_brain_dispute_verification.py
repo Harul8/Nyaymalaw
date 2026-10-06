@@ -16,7 +16,34 @@ from nm.shared.model_port import (
     TierUnavailable,
     Usage,
 )
-from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    classified_verifier,
+    fixture_coverage,
+    fixture_disposition,
+    fixture_representation_choices,
+    reviewed_record_verdicts,
+)
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """This normal fixture declares whole reported account against its checked owners.
+
+    Its simulated Judge intends each supplied source as account content, covered
+    by independent positive source checks or exact current record originals.
+    Unrepresented content stays missing; no candidate or permission is invented.
+    """
+    choices = fixture_representation_choices(payload, reviewed)
+    source_decisions = {identity: "account" for identity in payload["coverage_source_ids"]}
+    dispositions = []
+    for identity in source_decisions:
+        selected = choices.get(identity, {"record_ids": [], "candidate_ids": []})
+        represented = bool(selected["record_ids"] or selected["candidate_ids"])
+        dispositions.append(fixture_disposition(
+            payload, identity, status="represented" if represented else "missing", **selected))
+    state = "partial" if any(row["status"] == "missing" for row in dispositions) else "complete"
+    return fixture_coverage(payload, state=state, source_decisions=source_decisions,
+                            dispositions=dispositions)
+
 
 verify_disputes = classified_verifier(verify_disputes)
 
@@ -57,7 +84,8 @@ class Model:
         answer = next(self.replies)
         if isinstance(answer, Exception):
             raise answer
-        answer = reviewed_record_verdicts(json.loads(prompt.user), answer)
+        answer = reviewed_record_verdicts(json.loads(prompt.user), answer,
+            scripted_source_account=True, coverage_judgment=fixture_scope_judgment)
         return ModelResult(
             text=None, data=answer, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,

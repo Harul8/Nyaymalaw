@@ -15,7 +15,12 @@ from tests.brain_continuation_fixture import (
     interpretation,
     reviewed_verdicts,
 )
-from tests.brain_reader_fixture import reviewed_record_verdicts, source_treatment_reply
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    reader_operations,
+    reviewed_record_verdicts,
+    source_treatment_reply,
+)
 from tests.test_brain_continuation import (
     expression_block,
     mixed_purpose_unit,
@@ -25,14 +30,69 @@ from tests.test_brain_continuation import (
 )
 from tests.test_brain_turn import plan
 
+FIXTURE_SOURCE_PURPOSES = {
+    'Please review it.': 'non_account',
+    'Please retain that reported account.': 'non_account',
+    'Please return to the review.': 'non_account',
+    'Hello again.': 'non_account',
+    'Keep these reported issues on the file.': 'non_account',
+    ("Reconcile the recorded formulations with my account and give me a short "
+     "factual summary."): "non_account",
+    'Keep uncertainty visible and leave legal assessment unfinished.': 'non_account',
+    'We act for Nila.': 'outside_scope',
+    'I may have a note about the transaction.': 'outside_scope',
+    'We act for Mira concerning use of her property.': 'outside_scope',
+}
+
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """Scenario-owned purpose decisions, independent of extraction and its verdicts.
+
+    Exact original fixture words identify instructions, context and other-matter
+    content. Unlisted reported account remains missing unless an independently
+    checked owned record or candidate represents it.
+    """
+    authored = dict(FIXTURE_SOURCE_PURPOSES)
+    if "active_material" not in payload:
+        # These fixtures report material or available evidence, without
+        # proposing a distinct contested issue in the dispute-reader scope.
+        authored.update({
+            "I have a signed receipt for the disputed transaction.": "outside_scope",
+            "Correction: the receipt is unsigned.": "outside_scope",
+            "I cannot obtain a signed copy.": "outside_scope",
+            "I may have a note about the transaction.": "outside_scope",
+        })
+    return fixture_scoped_coverage(payload, reviewed, source_decisions={
+        identity: authored.get(payload["source_treatments"][identity]["quoted"], "account")
+        for identity in payload["coverage_source_ids"]})
+
+
+def fixture_source_treatment(operation, payload):
+    """Independent known-purpose original-source decisions for public fixtures."""
+    data = source_treatment_reply(operation, payload)
+    if data is None:
+        return None
+    original = payload.get("original_input", payload)
+    for identity, row in data["source_treatments"].items():
+        words = original["original_source_catalogue"][identity]["quoted"]
+        if FIXTURE_SOURCE_PURPOSES.get(words) == "non_account":
+            row["content_role"] = "work_instruction"
+            row["reason"] = "The scenario author supplies these words as an instruction or aside."
+            if "substantive_spans" in row:
+                row["substantive_spans"] = []
+    return data
+
+
 
 class PublicContinuationModel:
     provider = "scripted"
 
-    def __init__(self, routes, continuations, *, checks=None):
+    def __init__(self, routes, continuations, *, checks=None, detail_reads=None):
         self.routes = iter(routes)
         self.continuations = iter(continuations)
         self.checks = iter(checks) if checks is not None else None
+        self.detail_reads = iter(detail_reads) if detail_reads is not None else None
         self.calls = []
         self.schemas = []
         self.tiers = []
@@ -48,7 +108,7 @@ class PublicContinuationModel:
         self.calls.append((prompt.operation, payload))
         self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
-        treatment = source_treatment_reply(prompt.operation, payload)
+        treatment = fixture_source_treatment(prompt.operation, payload)
         if treatment is not None:
             data = treatment
         elif prompt.operation == "interpret_conversation":
@@ -57,7 +117,12 @@ class PublicContinuationModel:
         elif prompt.operation == "extract_disputes":
             data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
-            data = {"new_items": [], "changes": []}
+            if self.detail_reads is None:
+                data = {"new_items": [], "changes": []}
+            else:
+                from tests.test_brain_material import _with_source_ids
+                authored = [_with_source_ids(row, payload) for row in next(self.detail_reads)]
+                data = reader_operations(authored, payload, link_field="related_material_ids")
         elif prompt.operation == "verify_disputes":
             assert payload["candidates"] == [], "This fixture owns empty dispute review only"
             data = {"verdicts": []}
@@ -81,7 +146,8 @@ class PublicContinuationModel:
         else:
             raise AssertionError(f"Unexpected public model operation: {prompt.operation}")
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
-            data = reviewed_record_verdicts(payload, data, scripted_full_scope=True)
+            data = reviewed_record_verdicts(payload, data, scripted_full_scope=True,
+                scripted_source_account=True, coverage_judgment=fixture_scope_judgment)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,
@@ -279,7 +345,9 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
 
     class ContributorModel(MaterialModel):
         def __init__(self):
-            super().__init__([opening, contribution])
+            super().__init__([opening, contribution], source_purposes={
+                "Please retain that reported account.": "non_account",
+                "We act for Mira concerning use of her property.": "outside_scope"})
             self.replies = iter([initial, continued])
             self.seen = []
 
@@ -360,6 +428,16 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     routes[2] = aside_route
     routes[1]["items"][0]["material_purposes"] = ["account_contribution"]
     routes[3]["items"][0]["material_purposes"] = ["account_contribution"]
+    for index, operation, target in ((0, "new", []),
+                                     (1, "corrects", ["public-first:material:1"])):
+        routes[index]["items"][0]["record_requirement"] = {
+            "kind": "change", "operation": operation, "target_ids": target,
+            "success_condition": "The retained receipt status matches the advocate's account."}
+        routes[index]["items"][0]["mutation_scopes"] = [{
+            "authority_kind": "account_contribution", "authority_source_ids": ["L1"],
+            "target_scope": "exact", "target_ids": target,
+            "permitted_relations": [operation]}]
+
     corrected = unit(
         text="You have corrected the receipt's status to unsigned.",
         question="Is any other record of the transaction available?")
@@ -371,9 +449,34 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     greeted["blocks"][0].update(kind="completion", uncertainty="none")
     greeted.update(questions=[], work={"existing_id": "", "create": False},
                    sufficiency={"status": "complete", "block_id": "account-0"})
-    model = PublicContinuationModel(routes, [
+    from tests.test_brain_material import material, scripted_record_result
+
+    class ReceiptFlow(PublicContinuationModel):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            payload = json.loads(prompt.user)
+            if prompt.operation in ("continue_conversation", "verify_continuation"):
+                original = (payload if prompt.operation == "continue_conversation"
+                            else payload["input"])
+                status = ("performed" if original["work_items"][0][
+                    "record_requirement"]["kind"] == "change" else None)
+                return replace(result, data=scripted_record_result(
+                    prompt.operation, payload, result.data, status))
+            return result
+
+    model = ReceiptFlow(routes, [
         {"units": [unit()]}, {"units": [corrected]},
         {"units": [greeted]}, {"units": [final]},
+    ], detail_reads=[
+        [material("evidence", "The advocate reports holding a signed receipt.",
+                  "I have a signed receipt for the disputed transaction.", placement="matter")],
+        [material("evidence", "The advocate corrects the receipt status to unsigned.",
+                  correction, relation="corrects", scope="current", placement="matter",
+                  references=[{"turn_id": "public-first", "role": "advocate",
+                               "quoted": "I have a signed receipt for the disputed transaction."}],
+                  related_material_ids=["public-first:material:1"])],
+        [material("circumstance", "The advocate cannot obtain a signed copy.",
+                  "I cannot obtain a signed copy.", scope="current", placement="matter")],
     ])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
@@ -407,6 +510,10 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert [row["message"] for row in saved.brain_chat] == [
         first_message, correction, greeting, returned]
     assert saved.brain_chat[2]["active_work_after"] == before_aside["active_work"]
+    corrected_material = saved.brain_chat[1]["response"]["material"]
+    assert corrected_material[0]["relation"] == "corrects"
+    assert corrected_material[0]["quoted"] == correction
+    assert corrected_material[0]["related_material_ids"] == ["public-first:material:1"]
 
 
 def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired, monkeypatch):
@@ -614,8 +721,7 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_th
     assert len(model.calls) == previous_calls + 3
     assert model.tiers[-3:] == [Tier.JUDGE] * 3
     assert [row["text"] for row in reply["elements"]] == [
-        'Your message includes: “Thanks, I understand.”',
-        "No changes were made to the saved record."]
+        'Your message includes: “Thanks, I understand.”']
     saved = wired.store.load(first["matter_id"])
     assert project_work(saved) == before
     assert [row["message"] for row in saved.brain_chat] == [first_words, acknowledgment]
@@ -693,7 +799,8 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
                 return result
             if prompt.operation == "verify_material_grounding":
                 data = reviewed_record_verdicts(
-                    json.loads(prompt.user), data, scripted_full_scope=True)
+                    json.loads(prompt.user), data, scripted_full_scope=True,
+                        scripted_source_account=True, coverage_judgment=fixture_scope_judgment)
             return replace(result, data=data)
 
     thanked = unit(text="Thank you.")

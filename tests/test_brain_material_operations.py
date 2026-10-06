@@ -12,8 +12,18 @@ import pytest
 from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
-from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
-from tests.test_brain_material import Model, material, mutation_scope, plan, send
+from tests.brain_reader_fixture import (
+    classified_verifier,
+    reviewed_record_verdicts,
+)
+from tests.test_brain_material import (
+    Model,
+    fixture_scope_judgment,
+    material,
+    mutation_scope,
+    plan,
+    send,
+)
 from tests.test_brain_material_verification import Model as CheckerModel
 
 verify_material_grounding = classified_verifier(verify_material_grounding)
@@ -27,6 +37,8 @@ REVIEW = (f"A junior wrote, '{REVIEW_WORDS}' Please critique that analysis; "
 REVIEW_REPLACEMENT = "The advocate's advance payment was 3 lakh."
 POSITION = "The contractor now says the bank receipt is incomplete."
 REPORTED_POSITION = "The contractor reportedly says the bank receipt is incomplete."
+DISAGREEMENT = "That is their reported view, which we dispute."
+REPORTED_DISAGREEMENT = "The advocate disputes the contractor's reported bank-receipt position."
 
 
 def _decision(candidate_id, *, supported=True, accept=True):
@@ -128,8 +140,8 @@ def test_missing_operation_decision_is_not_treated_as_implicit_support():
 class OperationModel(Model):
     """Return explicitly scripted independent decisions, without word inference."""
 
-    def __init__(self, plans, rejected_statements=()):
-        super().__init__(plans)
+    def __init__(self, plans, rejected_statements=(), *, source_purposes=None):
+        super().__init__(plans, source_purposes=source_purposes)
         self.rejected_statements = set(rejected_statements)
         self.material_checks = []
 
@@ -145,7 +157,10 @@ class OperationModel(Model):
             verdicts.append(_decision(row["candidate_id"], supported=supported,
                                       accept=supported))
         return replace(result, data=reviewed_record_verdicts(
-            payload, {"verdicts": verdicts}, scripted_full_scope=True))
+            payload, {"verdicts": verdicts}, scripted_full_scope=True,
+                scripted_source_account=True,
+                coverage_judgment=lambda p, rows: fixture_scope_judgment(
+                    p, rows, source_purposes=self.source_purposes)))
 
 
 def _change(statement, latest, *, basis="stated"):
@@ -166,6 +181,18 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
                         scope="proposed", placement="matter")
     candidates = []
     rejected = []
+    # These exact authored passages are work-product examination, a question,
+    # or an account outside this matter. No production keyword classifier is
+    # copied into this fixture; the scenario owner declares their purposes.
+    source_purposes = {
+        f"A junior wrote, '{REVIEW_WORDS}' Please critique that analysis;": "non_account",
+        "I have not adopted its account or conclusion.": "non_account",
+        "Your earlier analysis changed the payment amount.": "non_account",
+        "Please explain it.": "non_account",
+        "She changed it yesterday.": "outside_scope",
+        "Does that settle things?": "non_account",
+        "On a different client file, the advance payment was 3 lakh.": "outside_scope",
+    }
     if mode in ("nonadopted_review", "mixed"):
         latest = REVIEW
         candidates.append(_change(REVIEW_REPLACEMENT, REVIEW_WORDS, basis="attributed"))
@@ -189,11 +216,13 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
         latest = CORRECTION
     if mode in ("actual_correction", "mixed"):
         if mode == "mixed":
-            latest += f" {CORRECTION} {POSITION} That is their reported view, which we dispute."
+            latest += f" {CORRECTION} {POSITION} {DISAGREEMENT}"
         candidates.append(_change(CORRECTED, CORRECTION))
     if mode == "mixed":
         candidates.append(material("position", REPORTED_POSITION, POSITION,
                                    scope="current", basis="attributed", placement="matter"))
+        candidates.append(material("position", REPORTED_DISAGREEMENT, DISAGREEMENT,
+                                   scope="current", basis="stated", placement="matter"))
     # Deliberately request account reading for the unsupported work-product
     # cases too: independent admission must reject the faulty router/proposal
     # combination without treating examination as authority to change facts.
@@ -201,10 +230,11 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
         plan(FIRST, candidates=[original], opening=True,
              material_purposes=("account_contribution",)),
         plan(latest, candidates=candidates, material_purposes=("account_contribution",),
+             record_disposition="performed" if mode in ("actual_correction", "mixed") else None,
              mutation_scopes=([mutation_scope(
                  "original:material:1", source_ids=("L3",) if mode == "mixed" else ("L1",))]
                  if mode in ("actual_correction", "mixed") else [])),
-    ], rejected)
+    ], rejected, source_purposes=source_purposes)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, FIRST, "original")
@@ -232,12 +262,12 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
     rows = {row["statement"]: row for row in record["rows"]}
     expected = {CORRECTED} if mode in ("actual_correction", "mixed") else {ORIGINAL}
     if mode == "mixed":
-        expected.add(REPORTED_POSITION)
+        expected.update((REPORTED_POSITION, REPORTED_DISAGREEMENT))
     assert set(rows) == expected
     if mode in ("actual_correction", "mixed"):
         assert rows[CORRECTED]["related_material_ids"] == ["original:material:1"]
         assert rows[CORRECTED]["relation"] == "corrects"
-        assert len(record["history"]) == (3 if mode == "mixed" else 2)
+        assert len(record["history"]) == (4 if mode == "mixed" else 2)
     else:
         assert rows[ORIGINAL]["id"] == "original:material:1"
         assert len(record["history"]) == 1
@@ -245,6 +275,10 @@ def test_public_material_change_needs_latest_support_and_retains_valid_mixed_con
         assert rows[REPORTED_POSITION]["basis"] == "attributed"
         assert rows[REPORTED_POSITION]["relation"] == "new"
         assert rows[REPORTED_POSITION]["related_material_ids"] == []
+        assert rows[REPORTED_DISAGREEMENT]["basis"] == "stated"
+        assert rows[REPORTED_DISAGREEMENT]["quoted"] == DISAGREEMENT
+        assert rows[REPORTED_DISAGREEMENT]["relation"] == "new"
+        assert rows[REPORTED_DISAGREEMENT]["related_material_ids"] == []
 
     saved = wired.store.load(answer["matter_id"])
     assert saved.brain_chat[0] == original_turn

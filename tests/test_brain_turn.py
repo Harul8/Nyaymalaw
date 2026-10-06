@@ -23,14 +23,58 @@ from tests.brain_continuation_fixture import (
     interpretation,
     no_record_requirement,
 )
-from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    reader_operations,
+    reviewed_record_verdicts,
+    source_portion_reply,
+)
+
+# Exact scenario-author declarations. These are offline simulated judgments,
+# not production classification rules or keyword inference.
+SOURCE_PURPOSES = {
+    "Hello": "non_account",
+    "Please assess our remedies.": "non_account",
+    "Please also review the draft response.": "non_account",
+    "What is the capital of France?": "non_account",
+    "Please return to the termination issue.": "non_account",
+    "Please continue with the deposit review.": "non_account",
+    # The hearing fixture reviews a hearing-date record; its broad notice
+    # opening remains outside that record's authored reconciliation scope.
+    "Our client contests the notice;": "outside_scope",
+}
+
+
+def fixture_scope_judgment(payload, reviewed, *, source_purposes=None,
+                           opening_account_only=False):
+    authored = SOURCE_PURPOSES if source_purposes is None else source_purposes
+    decisions = {identity: authored.get(
+        payload["source_treatments"][identity]["quoted"].strip(), "account")
+        for identity in payload["coverage_source_ids"]}
+    if opening_account_only:
+        # This base fixture owns broad opening/account review, not distinct
+        # dispute formulation. The declared stage intent precedes extraction.
+        decisions = {identity: purpose if purpose == "non_account" else "outside_scope"
+                     for identity, purpose in decisions.items()}
+    return fixture_scoped_coverage(payload, reviewed, source_decisions=decisions)
+
+
+def rendered_account(words, *, limitation=False):
+    quoted = f'Your message includes: “{words}”'
+    return ("The requested conclusion remains unresolved on the supplied support. " + quoted
+            if limitation else quoted)
+
 
 
 class Model:
     provider = "scripted"
 
-    def __init__(self, replies):
+    def __init__(self, replies, *, source_purposes=None):
         self.replies = iter(replies)
+        self.source_purposes = {**SOURCE_PURPOSES, **(source_purposes or {})}
+        self.current_response_expressions = {}
+        self.current_material = []
+        self.current_record_disposition = None
         self.calls = []
         self.all_calls = []
         self.current_items = []
@@ -46,12 +90,28 @@ class Model:
         self.all_calls.append(prompt.operation)
         continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
                                           scripted_items=self.current_items)
-        if continuation is not None:
+        if prompt.operation == "classify_account_sources":
+            payload = json.loads(prompt.user)
+            original = payload.get("original_input", payload)
+            data = source_portion_reply(payload, {"source_treatments": {identity: {
+                "content_role": ("work_instruction" if self.source_purposes.get(
+                    reference["quoted"].strip()) == "non_account"
+                    else "reported_matter_account"),
+                "reason": "The scenario owner independently declares the source purpose.",
+            } for identity, reference in original["original_source_catalogue"].items()}})
+        elif continuation is not None:
             data = continuation
+            if prompt.operation == "continue_conversation":
+                for unit in data["units"]:
+                    expression = self.current_response_expressions.get(unit["request_index"])
+                    if expression is not None:
+                        unit["blocks"][0]["evidence_expression"] = deepcopy(expression)
         elif prompt.operation == "extract_disputes":
             data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
-            data = {"new_items": [], "changes": []}
+            payload = json.loads(prompt.user)
+            data = reader_operations(deepcopy(self.current_material), payload,
+                                     link_field="related_material_ids")
         elif prompt.operation == "verify_disputes":
             payload = json.loads(prompt.user)
             assert payload["candidates"] == [], "This fixture owns empty dispute review only"
@@ -64,14 +124,27 @@ class Model:
                  "reason": "The proposal is attributable."}
                 for row in payload["candidates"]]}
         else:
-            data = next(self.replies)
+            data = deepcopy(next(self.replies))
+            self.current_response_expressions = data.pop("_response_expressions", {})
+            self.current_material = data.pop("_material", [])
+            self.current_record_disposition = data.pop("_record_disposition", None)
+            self.source_purposes.update(data.pop("_source_purposes", {}))
             self.calls.append(json.loads(prompt.user))
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
                 self.current_items = data["items"]
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             data = reviewed_record_verdicts(
-                json.loads(prompt.user), data, scripted_full_scope=True)
+                json.loads(prompt.user), data, scripted_full_scope=True,
+                    scripted_source_account=True,
+                    coverage_judgment=lambda p, rows: fixture_scope_judgment(
+                        p, rows, source_purposes=self.source_purposes,
+                        opening_account_only=prompt.operation == "verify_disputes"))
+        if self.current_record_disposition is not None:
+            from tests.test_brain_material import scripted_record_result
+
+            data = scripted_record_result(prompt.operation, json.loads(prompt.user), data,
+                                          self.current_record_disposition)
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
@@ -167,14 +240,12 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
         "continue_conversation", "verify_continuation"}
     assert opened["metrics"]["llm_calls"] == 8
     assert [row["text"] for row in model.calls[1]["earlier_conversation"]] == [
-        "Hello", "Hello.\nNo changes were made to the saved record."]
+        "Hello", rendered_account("Hello")]
     matter = store.load(opened["matter_id"])
     assert matter.brain_ready is True
     assert [row["message"] for row in matter.brain_chat] == ["Hello", text]
     assert len(matter_list_projection(store.list_for("adv"), registers={})["matters"]) == 1
-    assert opened["elements"][0]["text"] == (
-        "I understand the supply agreement is in dispute. I will "
-        "check the agreement and the relevant terms before giving a legal view.")
+    assert opened["elements"][0]["text"] == rendered_account(text, limitation=True)
     assert opened["blocked"] is False
     assert opened["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
 
@@ -201,9 +272,7 @@ def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(t
         "continue_conversation", "verify_continuation"}
     assert first["metrics"]["llm_calls"] == 8
     assert model.all_calls.count("classify_account_sources") == 1
-    assert first["elements"][0]["text"] == (
-        "I will check the invoice and the underlying agreement "
-        "before giving a legal view.")
+    assert first["elements"][0]["text"] == rendered_account(text, limitation=True)
     assert len(store.load(first["matter_id"]).brain_chat) == 1
 
 
@@ -251,7 +320,8 @@ def test_verifier_rejection_can_repair_a_client_heading_without_losing_turn(tmp_
                          "operation_supported": False,
                          "reason": "A clearly named client was omitted."}]}
                     return replace(result, data=reviewed_record_verdicts(
-                        json.loads(prompt.user), rejected, scripted_full_scope=True))
+                        json.loads(prompt.user), rejected, scripted_full_scope=True,
+                            scripted_source_account=True, coverage_judgment=fixture_scope_judgment))
             return result
 
     text = "Our client Mira Patel says a supplier retained her records."
@@ -384,7 +454,7 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
 
     visible = "\n\n".join(row["text"] for row in response["elements"])
     assert "guarantees damages" not in visible
-    assert "I will check the delivery terms and record before assessing remedies." in visible
+    assert rendered_account("The supplier missed delivery.", limitation=True) in visible
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
     assert response["metrics"]["llm_calls"] == 10
@@ -454,7 +524,7 @@ def test_a_diversion_preserves_the_full_matter_conversation_and_current_work(tmp
                        chat_id=first["chat_id"]))
     assert [row["text"] for row in model.calls[2]["earlier_conversation"]] == [
         facts, "\n".join(row["text"] for row in first["elements"]),
-        diversion, "Paris.\nNo changes were made to the saved record."]
+        diversion, rendered_account(diversion)]
     assert model.calls[2]["current_work"] == facts
 
 
@@ -464,6 +534,12 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
     legal_reply = ("I can assess deposit recovery after checking the agreement "
                    "and the stated reason for withholding it.")
     modelled_mixed = {
+        "_response_expressions": {
+            0: {"operator": "limitation", "source_ids": ["L1"],
+                "record_ids": [], "focus": "none"},
+            1: {"operator": "source_account", "source_ids": ["L2"],
+                "record_ids": [], "focus": "none"},
+        },
         "items": [
             {"request": "Assess recovery of the deposit", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
@@ -496,7 +572,9 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
                                 matter_id=opened["matter_id"],
                                 chat_id=opened["chat_id"])).as_dict()
     assert [row["text"] for row in reply["elements"]] == [
-        legal_reply, "Paris.", "No changes were made to the saved record."]
+        rendered_account("Please assess recovery of the deposit;", limitation=True),
+        rendered_account("also, what is the capital of France?"),
+    ]
     assert reply["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
     assert reply["metrics"]["llm_calls"] == 3
 
@@ -516,6 +594,15 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
                     "the order and exact deadline so I can check the filing requirement.")
     ordinary_reply = "I can review the draft response once I have its current version."
     urgent_plan = {
+        # This fixture tests scheduling of existing legal work, and explicitly
+        # leaves the reported urgency outside its record-reading scope.
+        "_source_purposes": {"A filing deadline is tomorrow.": "outside_scope"},
+        "_response_expressions": {
+            0: {"operator": "limitation", "source_ids": ["L2"],
+                "record_ids": [], "focus": "none"},
+            1: {"operator": "limitation", "source_ids": ["L1"],
+                "record_ids": [], "focus": "none"},
+        },
         "items": [
             {"request": "Review the draft response", "relation": "continues",
              "matter_scope": "current", "priority": "ordinary",
@@ -537,7 +624,7 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
              title="Supply termination", summary="The client disputes termination.",
              material_purposes=("account_contribution",)),
         urgent_plan,
-    ])
+    ], source_purposes={account: "outside_scope"})
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
     opened = client.post("/api/turn", json={
         "message": account, "turn_id": "urgent-account"}).json()
@@ -548,7 +635,10 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
     assert served.status_code == 200, served.text
     response = served.json()
     assert [row["text"] for row in response["elements"]] == [
-        urgent_reply, ordinary_reply, "No changes were made to the saved record."]
+        rendered_account("A filing deadline is tomorrow.", limitation=True),
+        rendered_account("Please also review the draft response.", limitation=True),
+        "No changes were made to the saved record."]
+    assert [row["continuation_request_index"] for row in response["elements"][:2]] == [1, 0]
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
     assert response["metrics"]["llm_calls"] == 8
@@ -564,6 +654,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
                   step="legal_work", reply=direct_reply)
     update["items"][0]["intent"] = "contribution"
     update["items"][0]["material_purposes"] = ["account_contribution"]
+    update["_record_disposition"] = "performed"
     # Scope is authored from the later hearing contribution and saved original
     # hearing target before the independent reader produces any proposal.
     update["items"][0]["mutation_scopes"] = [{
@@ -625,7 +716,10 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
 
     assert served.status_code == 200, served.text
     response = served.json()
-    assert response["elements"][0]["text"] == direct_reply
+    assert response["elements"][0]["text"] == (
+        "Saved record changes:\nRevised entry: The advocate reports a Tuesday hearing. "
+        "→ The advocate corrects the hearing date to Thursday.")
+    assert response["continuation"]["units"][0]["record_outcome"]["status"] == "performed"
     assert response["blocked"] is False
     assert response["material"][0]["quoted"] == correction
     assert response["material"][0]["prior_references"][0]["quoted"] == (
@@ -657,7 +751,7 @@ def test_served_first_chat_stays_blank_until_matter_details_arrive(client, wired
     assert first.status_code == 200, first.text
     greeting = first.json()
     assert greeting["matter_id"] is None
-    assert greeting["elements"][0]["text"] == "Hello."
+    assert greeting["elements"][0]["text"] == rendered_account("Hello")
     assert client.get("/api/matters").json()["matters"] == []
     pending = client.get(f"/api/chats/{greeting['chat_id']}")
     assert pending.status_code == 200
@@ -721,11 +815,9 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
                     {"candidate_id": "O1", "verdict": "reject",
                      "operation_supported": False,
                      "reason": "The opening adds an admission."},
-                ], "coverage": {
-                    "state": "partial", "missing_source_ids": ["L2"],
-                    "reason": ("The supplier's reported retention of the drawings remains "
-                               "unrepresented after rejecting the invented admission."),
-                }}, scripted_full_scope=True))
+                ]}, scripted_full_scope=True, scripted_source_account=True,
+                    coverage_judgment=lambda payload, reviewed: fixture_scoped_coverage(
+                        payload, reviewed, source_decisions={"L1": "account", "L2": "account"})))
             return result
 
     store = FileMatterStore(tmp_path, key="a-test-sealing-key")
@@ -788,7 +880,8 @@ def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
         BrainTurn("adv", "Please check the law for that order.", "mixed-turn",
                   matter_id=matter.id)).as_dict()
 
-    assert "Which order do you mean?" in "\n".join(
-        row["text"] for row in response["elements"])
+    visible = "\n".join(row["text"] for row in response["elements"])
+    assert ("What needs clarification about the meaning of the following account? "
+            'Your message includes: “Please check the law for that order.”') in visible
     assert any(unit["questions"] for unit in response["continuation"]["units"])
     assert response["metrics"]["llm_calls"] == 3

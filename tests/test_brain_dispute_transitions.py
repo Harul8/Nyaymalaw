@@ -5,9 +5,35 @@ from dataclasses import replace
 
 import pytest
 
-from tests.brain_reader_fixture import reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    reviewed_record_verdicts,
+)
 from tests.test_brain_board_proposals import dispute
 from tests.test_brain_material import Model, mutation_scope, plan, send
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """Scenario-owned purpose decisions, independent of extraction and its verdicts.
+
+    Exact original fixture words identify instructions, context and other-matter
+    content. Unlisted reported account remains missing unless an independently
+    checked owned record or candidate represents it.
+    """
+    purpose_by_original_words = {
+        "A reviewer wrote, 'These events form one established fraud dispute.'": 'non_account',
+        ("A reviewer wrote, 'These events form one established fraud dispute.' "
+         "Please criticise that draft;"): "non_account",
+        'Please criticise that draft;': 'non_account',
+        'it is neither my instruction nor an agreed finding.': 'non_account',
+        'That is their reported position;': 'outside_scope',
+        'we dispute it.': 'outside_scope',
+    }
+    return fixture_scoped_coverage(payload, reviewed, source_decisions={
+        identity: purpose_by_original_words.get(
+            payload["source_treatments"][identity]["quoted"], "account")
+        for identity in payload["coverage_source_ids"]})
+
 
 FIRST = "The operator retained our server. The operator withheld our deposit."
 REVIEW = "A reviewer wrote, 'These events form one established fraud dispute.'"
@@ -17,7 +43,17 @@ POSITION = "The administrator now claims that we have no right to inspect the ac
 
 class TransitionModel(Model):
     def __init__(self, plans):
-        super().__init__(plans)
+        super().__init__(plans, source_purposes={
+            REVIEW: "non_account",
+            REVIEW + " Please criticise that draft;": "non_account",
+            "Please criticise that draft;": "non_account",
+            "it is neither my instruction nor an agreed finding.": "non_account",
+            "That is their reported position;": "outside_scope",
+            "we dispute it.": "outside_scope"})
+        self.dispute_scope = {
+            "The operator retained our server.": "account",
+            "The operator withheld our deposit.": "account",
+            CORRECTION: "account", POSITION: "account"}
         self.dispute_checks = []
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
@@ -39,7 +75,8 @@ class TransitionModel(Model):
                 "not adoption; it cannot replace the underlying conduct disputes.",
             })
         return replace(result, data=reviewed_record_verdicts(
-            payload, {"verdicts": decisions}, scripted_full_scope=True))
+            payload, {"verdicts": decisions}, scripted_full_scope=True,
+                scripted_source_account=True, coverage_judgment=fixture_scope_judgment))
 
 
 def _revision(statement, quoted, targets):
@@ -85,10 +122,24 @@ def test_public_operations_require_latest_account_support_without_suppressing_mi
                                   material_purposes=("account_contribution",)),
                              plan(latest, candidates=candidates,
                                   material_purposes=("account_contribution",),
+                                  record_disposition="performed" if mode in ("correction", "mixed")
+                                  else None,
                                   mutation_scopes=([mutation_scope(
                                       "original:material:2",
                                       source_ids=("L3",) if mode == "mixed" else ("L1",))]
                                       if mode in ("correction", "mixed") else []))])
+    if mode in ("correction", "mixed"):
+        # This requirement is authored from the requested correction and known
+        # original target before any reader output exists.
+        plans = list(model.plans)
+        plans[-1]["items"][0]["record_requirement"] = {
+            "kind": "change", "operation": "corrects",
+            "target_ids": ["original:material:2"],
+            "success_condition": (
+                "The corrected deposit entry attributes withholding to the administrator, "
+                "preserving the separate operator/server issue and any reported opposition."),
+        }
+        model.plans = iter(plans)
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     opened = send(client, FIRST, "original")

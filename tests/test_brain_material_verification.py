@@ -1,5 +1,6 @@
 """A source ID cannot by itself establish a model-written material fact."""
 import json
+from copy import deepcopy
 from dataclasses import replace
 
 import pytest
@@ -9,9 +10,121 @@ from nm.brain.material import MaterialCandidate, PriorReference
 from nm.brain.material_verification import verify_material_grounding
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
-from tests.brain_reader_fixture import classified_verifier, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    classified_verifier,
+    fixture_coverage,
+    fixture_disposition,
+    fixture_representation_choices,
+    reviewed_record_verdicts,
+    scripted_support_spans,
+)
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """This normal fixture declares whole reported account against its checked owners.
+
+    Its simulated Judge intends each supplied source as account content, covered
+    by independent positive source checks or exact current record originals.
+    Unrepresented content stays missing; no candidate or permission is invented.
+    """
+    choices = fixture_representation_choices(payload, reviewed)
+    source_decisions = {identity: "account" for identity in payload["coverage_source_ids"]}
+    dispositions = []
+    for identity in source_decisions:
+        selected = choices.get(identity, {"record_ids": [], "candidate_ids": []})
+        represented = bool(selected["record_ids"] or selected["candidate_ids"])
+        dispositions.append(fixture_disposition(
+            payload, identity, status="represented" if represented else "missing", **selected))
+    state = "partial" if any(row["status"] == "missing" for row in dispositions) else "complete"
+    return fixture_coverage(payload, state=state, source_decisions=source_decisions,
+                            dispositions=dispositions)
+
 
 verify_material_grounding = classified_verifier(verify_material_grounding)
+
+
+@pytest.mark.parametrize("fresh,opted_in", [(False, False), (False, True), (True, False),
+                                          (True, True)])
+def test_scripted_support_transport_requires_the_fresh_contract_and_explicit_source_judgment(
+        fresh, opted_in):
+    words = "The buyer did not identify the sender."
+    payload = {"source_treatments": {"L1": {
+        "turn_id": "original", "role": "advocate", "quoted": words,
+    }}}
+    if fresh:
+        payload["source_support_contract"] = "independent_original_source_support_v2"
+    data = {"verdicts": [{"verdict": "reject", "account_check": {"source_checks": [{
+        "source_id": "L1", "supplies_account_content": True, "supports_proposal": False,
+    }]}}]}
+    before = deepcopy(payload), deepcopy(data)
+    result = scripted_support_spans(payload, data, scripted_source_account=opted_in)
+    check = result["verdicts"][0]["account_check"]["source_checks"][0]
+    if fresh and opted_in:
+        assert check["support_spans"] == [{"start": 0, "end": len(words)}]
+    else:
+        assert "support_spans" not in check
+    assert result["verdicts"][0]["verdict"] == "reject" and check["supports_proposal"] is False
+    assert (payload, data) == before
+
+
+@pytest.mark.parametrize("attack", ["explicit_empty", "explicit_invalid", "foreign", "bad_bool",
+                                   "nm_source", "missing_checks"])
+def test_scripted_source_transport_preserves_raw_invalid_support_and_ownership(attack):
+    payload = {"source_support_contract": "independent_original_source_support_v2",
+               "source_treatments": {"L1": {
+                   "turn_id": "original", "role": "advocate", "quoted": "The date is uncertain.",
+               }}}
+    check = {"source_id": "L1", "supplies_account_content": True, "supports_proposal": True}
+    if attack == "explicit_empty":
+        check["support_spans"] = []
+    elif attack == "explicit_invalid":
+        check["support_spans"] = [{"start": -1, "end": True}]
+    elif attack == "foreign":
+        check["source_id"] = "unowned"
+    elif attack == "bad_bool":
+        check["supplies_account_content"] = "true"
+    elif attack == "nm_source":
+        payload["source_treatments"]["L1"]["role"] = "nm"
+    data = {"verdicts": [{"account_check": {
+        "source_checks": [] if attack == "missing_checks" else [check],
+    }}]}
+    before = deepcopy(data)
+    assert scripted_support_spans(payload, data, scripted_source_account=True) == before
+    assert data == before
+
+
+def test_fixture_coverage_requires_owner_authored_dispositions_without_candidate_inference():
+    words = "The handover date remains disputed."
+    payload = {"source_treatments": {"L1": {
+        "turn_id": "original", "role": "advocate", "quoted": words,
+    }}, "candidates": [{"candidate_id": "D1", "statement": "The date is proved."}],
+        "mutation_authorities": {"authorities": []}}
+    before = deepcopy(payload)
+    output = fixture_coverage(
+        payload, state="partial", source_decisions={"L1": "account"},
+        dispositions=[fixture_disposition(payload, "L1", status="missing")])
+    assert output["state"] == "partial"
+    assert output["source_checks"][0]["substantive_spans"] == [
+        {"start": 0, "end": len(words)}]
+    assert output["dispositions"][0]["record_ids"] == []
+    assert output["dispositions"][0]["candidate_ids"] == []
+    assert output["dispositions"][0]["status"] == "missing"
+    assert payload == before
+
+
+def test_fixture_coverage_preserves_declared_bad_choices_instead_of_repairing_them():
+    payload = {"source_treatments": {"L1": {
+        "turn_id": "original", "role": "advocate", "quoted": "No receipt was found.",
+    }}}
+    spans = [{"start": False, "end": 1000}]
+    choice = {"content_purpose": "wrong", "substantive_spans": spans, "reason": ""}
+    disposition = fixture_disposition(
+        payload, "foreign", status="represented", candidate_ids=("rejected",),
+        bounds=(-1, 1000), reason="")
+    result = fixture_coverage(payload, state="complete", source_decisions={"L1": choice},
+                              dispositions=[disposition], reason="")
+    assert result["source_checks"] == [{"source_id": "L1", **choice}]
+    assert result["dispositions"] == [disposition] and result["reason"] == ""
 
 
 class Model:
@@ -28,7 +141,8 @@ class Model:
         answer = next(self.replies)
         if isinstance(answer, Exception):
             raise answer
-        data = reviewed_record_verdicts(json.loads(prompt.user), answer)
+        data = reviewed_record_verdicts(json.loads(prompt.user), answer,
+            scripted_source_account=True, coverage_judgment=fixture_scope_judgment)
         return ModelResult(
             text=None, data=data, tier=tier, provider="offline",
             model="offline", usage=Usage(0, 0, 0), latency_ms=0,

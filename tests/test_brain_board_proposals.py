@@ -12,7 +12,37 @@ from tests.brain_continuation_fixture import (
     interpretation,
     no_record_requirement,
 )
-from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    reader_operations,
+    reviewed_record_verdicts,
+)
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """Scenario-owned purpose decisions, independent of extraction and its verdicts.
+
+    Exact original fixture words identify instructions, context and other-matter
+    content. Unlisted reported account remains missing unless an independently
+    checked owned record or candidate represents it.
+    """
+    purpose_by_original_words = {
+        "A different client's lease is also contested.": 'outside_scope',
+    }
+    current_words = "".join(row["text"] for row in payload["latest_message_spans"])
+    if current_words == (
+            "Correction: the invoice has been paid; the termination notice was "
+            "never sent. A different client's lease is also contested."):
+        # Withdrawal history is retained by the dispute operation, outside
+        # current active material rows; the termination account stays represented.
+        purpose_by_original_words.update({
+            "A separate unpaid invoice is also contested.": "outside_scope",
+            "Correction: the invoice has been paid;": "outside_scope"})
+    return fixture_scoped_coverage(payload, reviewed, source_decisions={
+        identity: purpose_by_original_words.get(
+            payload["source_treatments"][identity]["quoted"], "account")
+        for identity in payload["coverage_source_ids"]})
+
 
 
 class ScriptedBrain:
@@ -22,6 +52,7 @@ class ScriptedBrain:
                          for route, material in zip(answers[::2], answers[1::2], strict=True)}
         self.calls = []
         self.current_items = []
+        self.current_record_disposition = None
 
     def context_budget(self, tier):
         assert tier in (Tier.ROUTINE, Tier.JUDGE)
@@ -33,10 +64,27 @@ class ScriptedBrain:
         continuation = continuation_reply(prompt.operation, payload,
                                           scripted_items=self.current_items)
         if continuation is not None:
-            answer = continuation
+            from tests.test_brain_material import scripted_record_result
+            answer = scripted_record_result(
+                prompt.operation, payload, continuation, self.current_record_disposition)
+            if prompt.operation == "continue_conversation":
+                requirements = {row["request_index"]: row["record_requirement"]
+                                for row in payload["work_items"]}
+                for unit in answer["units"]:
+                    required = requirements[unit["request_index"]]
+                    if required["kind"] == "change":
+                        unit["record_outcome"]["effect_ids"] = [
+                            identity for identity, effect in
+                            payload["record_effect_catalogue"].items()
+                            if effect["performed"] and effect["relation"] == required["operation"]
+                            and set(effect["removed_target_ids"]).intersection(
+                                required["target_ids"])]
         elif prompt.operation == "interpret_conversation":
             answer = interpretation(next(self.routes))
             self.current_items = answer["items"]
+            self.current_record_disposition = (
+                "performed" if any(row["record_requirement"]["kind"] == "change"
+                                   for row in self.current_items) else None)
         elif prompt.operation == "extract_legal_details":
             answer = {"new_items": [], "changes": []}
         elif prompt.operation in ("verify_disputes", "verify_material_grounding"):
@@ -57,7 +105,8 @@ class ScriptedBrain:
                                        link_field="related_dispute_ids")
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             answer = reviewed_record_verdicts(
-                payload, answer, scripted_full_scope=True)
+                payload, answer, scripted_full_scope=True, scripted_source_account=True,
+                    coverage_judgment=fixture_scope_judgment)
         return ModelResult(text=None, data=answer, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
@@ -84,18 +133,27 @@ def _with_source_ids(row, payload):
 
 def route(request, *, relation, scope, opening=False, record_requirement=None,
           mutation_scopes=()):
+    base = {"request": request, "relation": relation,
+            "matter_scope": scope, "priority": "ordinary", "next_step": "legal_work",
+            "reply": "I will assess the issues against the available record.",
+            "clarification": "", "material_purposes": ["account_contribution"]}
+    if record_requirement is None and mutation_scopes:
+        # Each original-source scope is authored by the scenario before reading.
+        # Separate different requested operations into owned independent goals.
+        items = [{**base, "mutation_scopes": [dict(scope_row)], "record_requirement": {
+            "kind": "change", "operation": scope_row["permitted_relations"][0],
+            "target_ids": list(scope_row["target_ids"]),
+            "success_condition": (
+                "Apply this source-declared correction or withdrawal to its selected "
+                "original entry while preserving independent unrelated issues."),
+        }} for scope_row in mutation_scopes]
+    else:
+        items = [{**base, "mutation_scopes": list(mutation_scopes),
+                  "record_requirement": no_record_requirement() if record_requirement is None
+                  else record_requirement}]
     return {
-        "items": [{"request": request, "relation": relation,
-                   "matter_scope": scope, "priority": "ordinary",
-                   "next_step": "legal_work",
-                   "reply": "I will assess the issues against the available record.",
-                   "clarification": "", "material_purposes": ["account_contribution"],
-                   "mutation_scopes": list(mutation_scopes),
-                   "record_requirement": (no_record_requirement() if record_requirement is None
-                                          else record_requirement)}],
-        "active_work_after": request,
-        "opening": {"ready": opening,
-                    "party_name": "",
+        "items": items, "active_work_after": request,
+        "opening": {"ready": opening, "party_name": "",
                     "subject": "Supply dispute" if opening else "",
                     "summary": "The client reports disputes concerning the supply relationship."
                     if opening else ""},
@@ -448,7 +506,8 @@ def test_clarification_replaces_only_the_linked_uncertain_dispute(
                                             "turn_id": "turn-uncertain"})
     assert opened.status_code == 200, opened.text
     assert opened.json()["metrics"]["llm_calls"] == 8
-    assert clarification in opened.json()["elements"][0]["text"]
+    assert "What needs clarification about the meaning" in opened.json()["elements"][0]["text"]
+    assert first in opened.json()["elements"][0]["text"]
     matter_id = opened.json()["matter_id"]
     initial_board = client.get(f"/api/matters/{matter_id}").json()
     assert initial_board["proposed_disputes"]["rows"][0][

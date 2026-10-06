@@ -20,8 +20,31 @@ from tests.brain_continuation_fixture import (
     interpretation,
     no_record_requirement,
 )
-from tests.brain_reader_fixture import reader_operations, reviewed_record_verdicts
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    reader_operations,
+    reviewed_record_verdicts,
+)
 from tests.brain_research_fixture import reviewed_retrieved_pool
+
+
+def fixture_scope_judgment(payload, reviewed):
+    """Scenario-owned purpose decisions, independent of extraction and its verdicts.
+
+    Exact original fixture words identify instructions, context and other-matter
+    content. Unlisted reported account remains missing unless an independently
+    checked owned record or candidate represents it.
+    """
+    purpose_by_original_words = {
+        'Hello again.': 'non_account',
+        "I have a signed delivery receipt for the tools.": "outside_scope"
+        if "active_material" not in payload else "account",
+    }
+    return fixture_scoped_coverage(payload, reviewed, source_decisions={
+        identity: purpose_by_original_words.get(
+            payload["source_treatments"][identity]["quoted"], "account")
+        for identity in payload["coverage_source_ids"]})
+
 
 FIRST = ("The supplier retained our tools. "
          "The customer withheld payment for the tools.")
@@ -76,6 +99,17 @@ class Model:
                                           scripted_items=self.current_items)
         if continuation is not None:
             data = continuation
+            if prompt.operation == "continue_conversation" and any(
+                    (row.get("state") if isinstance(row, dict) else row) != "ok"
+                    for row in payload["legal_coverage"].values()):
+                for unit in data["units"]:
+                    unit["blocks"].append({
+                        "id": f"missing-law:{unit['request_index']}", "kind": "limitation",
+                        "uncertainty": "uncertain", "evidence_expression": {
+                            "operator": "limitation", "source_ids": [],
+                            "record_ids": [], "focus": "none"}})
+                    unit["sufficiency"] = {
+                        "status": "partial", "block_id": unit["blocks"][-1]["id"]}
         elif prompt.operation == "interpret_conversation":
             data = interpretation(next(self.routes))
             self.current_items = data["items"]
@@ -153,7 +187,8 @@ class Model:
             raise AssertionError(f"unexpected model call: {prompt.operation}")
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             data = reviewed_record_verdicts(
-                payload, data, scripted_full_scope=True)
+                payload, data, scripted_full_scope=True, scripted_source_account=True,
+                    coverage_judgment=fixture_scope_judgment)
         elif prompt.operation == "verify_legal_requirements":
             data = reviewed_retrieved_pool(payload, data, scripted_full_pool=True)
         return ModelResult(
@@ -284,7 +319,7 @@ def test_identified_disputes_are_batched_and_requirements_keep_exact_sources(tmp
                "The disputed obligation must be established."
                for item in first_read)
     assert "I will check the record and applicable law" not in first["elements"][0]["text"]
-    assert "Establish the obligation" in first["elements"][0]["text"]
+    assert "Establish the disputed obligation from the record." in first["elements"][0]["text"]
     plans = next(payload for operation, payload in model.calls
                  if operation == "decompose_disputes")
     assert [row["text"] for row in plans["conversation"] if
@@ -422,7 +457,12 @@ def test_rejected_dispute_proposal_does_not_hide_accepted_peer(tmp_path):
                         "verdict": "reject" if index == 0 else "accept",
                         "reason": "Independent attributed decision.",
                     } for index, row in enumerate(payload["candidates"])]},
-                        scripted_full_scope=True),
+                        scripted_full_scope=True, scripted_source_account=True,
+                            coverage_judgment=lambda p, rows: fixture_scoped_coverage(
+                                p, rows, source_decisions={
+                                    identity: "outside_scope" if p["source_treatments"][identity][
+                                        "quoted"] == "The supplier retained our tools."
+                                    else "account" for identity in p["coverage_source_ids"]})),
                     tier=tier, provider="offline", model="offline",
                     usage=Usage(0, 0, 0), latency_ms=0,
                     completion=Completion.COMPLETE)
@@ -498,9 +538,14 @@ def test_one_verifier_failure_keeps_other_disputes_checked_work(tmp_path):
     assert checked["rows"][0]["sources"][0]["text"] == \
         "The disputed obligation must be established."
     reply = opened["elements"][0]["text"]
-    assert "Establish the obligation (Customer withheld payment)" in reply
-    assert "Establish the obligation (Supplier retained tools)" not in reply
-    assert "incomplete for 1 dispute" in reply
+    assert "Establish the disputed obligation from the record." in reply
+    sources = opened["continuation"]["units"][0]["blocks"][0]["references"]
+    assert any(row.get("record", {}).get("dispute_id", "").endswith(":material:2")
+               for row in sources if row["type"] == "requirement")
+    assert all(not row.get("record", {}).get("dispute_id", "").endswith(":material:1")
+               for row in sources if row["type"] == "requirement")
+    assert "The requested conclusion remains unresolved on the supplied support." in "\n".join(
+        row["text"] for row in opened["elements"])
 
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -549,9 +594,10 @@ def test_invalid_subject_unit_keeps_checked_peer_and_repairs_only_unread_subject
     assert failed["coverage"]["unread_items"] >= 1
     assert failed["diagnostics"]
     assert checked["state"] == "ok" and len(checked["rows"]) == 1
-    assert "Establish the obligation (Customer withheld payment)" in \
+    assert "Establish the disputed obligation from the record." in \
         opened["elements"][0]["text"]
-    assert "incomplete for 1 dispute" in opened["elements"][0]["text"]
+    assert "The requested conclusion remains unresolved on the supplied support." in "\n".join(
+        row["text"] for row in opened["elements"])
     assert opened["metrics"]["llm_calls"] == 12
     attempts = [payload for name, payload in model.calls if name == operation]
     assert len(attempts) == 2

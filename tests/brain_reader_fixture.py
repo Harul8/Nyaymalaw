@@ -98,7 +98,166 @@ def scripted_source_treatments(earlier, latest, *, roles=None, turn_id="current"
     return rows
 
 
-def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False):
+def scripted_support_spans(payload, data, *, scripted_source_account=False):
+    """Transport an explicitly declared original-source judgment to owned ranges.
+
+    A scenario owner opts in separately from candidate acceptance or mutation
+    authority. Existing source-check booleans declare whether the original
+    passage supplies account content; this helper resolves only its full exact
+    range. Explicit ranges, foreign sources and malformed judgments stay raw.
+    """
+    result = deepcopy(data)
+    if (not scripted_source_account
+            or payload.get("source_support_contract")
+            != "independent_original_source_support_v2"):
+        return result
+    if not isinstance(result, dict) or not isinstance(result.get("verdicts"), list):
+        return result
+    catalogue = payload.get("source_treatments", {})
+    for verdict in result["verdicts"]:
+        if not isinstance(verdict, dict):
+            continue
+        account = verdict.get("account_check")
+        if not isinstance(account, dict) or not isinstance(account.get("source_checks"), list):
+            continue
+        for check in account["source_checks"]:
+            if not isinstance(check, dict) or "support_spans" in check:
+                continue
+            reference = catalogue.get(check.get("source_id"))
+            if (not isinstance(reference, dict) or reference.get("role") != "advocate"
+                    or not isinstance(reference.get("quoted"), str)
+                    or not reference["quoted"].strip()
+                    or type(check.get("supplies_account_content")) is not bool):
+                continue
+            check["support_spans"] = (
+                [{"start": 0, "end": len(reference["quoted"])}]
+                if check["supplies_account_content"] else [])
+    return result
+
+
+def fixture_disposition(payload, source_id, *, status, record_ids=(), candidate_ids=(),
+                        bounds=None, reason="The fixture owner declares this scoped disposition."):
+    """Resolve a declared disposition's exact full range; choose no status or owner."""
+    if bounds is None:
+        reference = payload.get("source_treatments", {}).get(source_id, {})
+        words = reference.get("quoted", "") if isinstance(reference, dict) else ""
+        bounds = (0, len(words)) if isinstance(words, str) else (0, 0)
+    return {"source_id": source_id, "start": bounds[0], "end": bounds[1],
+            "status": status, "record_ids": list(record_ids), "candidate_ids": list(candidate_ids),
+            "reason": reason}
+
+
+def fixture_coverage(payload, *, state, source_decisions, dispositions,
+                     reason="The fixture owner independently declares whole-source coverage."):
+    """Construct v2 coverage from scenario-owned purpose and disposition choices.
+
+    This does not read candidate statements, verdicts, source-owner labels,
+    execution receipts or mutation scopes to decide meaning or coverage. Each
+    source decision explicitly declares its purpose and may author narrower
+    substantive_spans. Invalid choices and intervals remain invalid.
+    """
+    checks = []
+    catalogue = payload.get("source_treatments", {})
+    for identity, declared in source_decisions.items():
+        choice = {"content_purpose": declared} if isinstance(declared, str) else deepcopy(declared)
+        purpose = choice["content_purpose"]
+        if "substantive_spans" not in choice:
+            reference = catalogue.get(identity, {})
+            words = reference.get("quoted", "") if isinstance(reference, dict) else ""
+            choice["substantive_spans"] = (
+                [{"start": 0, "end": len(words)}]
+                if purpose == "account" and isinstance(words, str) else [])
+        checks.append({"source_id": identity, **choice,
+                       "reason": choice.get(
+                           "reason", "The fixture owner declares source purpose.")})
+    return {"state": state, "reason": reason, "source_checks": checks,
+            "dispositions": deepcopy(dispositions)}
+
+
+def fixture_representation_choices(payload, reviewed):
+    """Resolve potential owned links from explicit checks and current original quotes.
+
+    These are choices for the fixture's coverage owner, not judgments of source
+    purpose, completeness or mutation authority. Candidate text supplies no
+    truth; an independently scripted positive source check supplies its link.
+    Production admission still rejects any proposed owner it does not admit.
+    """
+    catalogue = payload.get("source_treatments", {})
+    choices = {identity: {"record_ids": [], "candidate_ids": []} for identity in catalogue}
+    allowed_candidates = set(payload.get("coverage_candidate_ids", ()))
+    retained = [{**row.get("decision", {}), "candidate_id": row.get("candidate_id")}
+                for row in payload.get("retained_candidate_context", [])
+                if isinstance(row, dict) and isinstance(row.get("decision"), dict)]
+    for row in [*reviewed.get("verdicts", []), *retained]:
+        if not isinstance(row, dict) or row.get("verdict") != "accept":
+            continue
+        identity = row.get("candidate_id")
+        if identity not in allowed_candidates:
+            continue
+        account = row.get("account_check")
+        if not isinstance(account, dict) or account.get("supported") is not True:
+            continue
+        for check in account.get("source_checks", []):
+            if (not isinstance(check, dict)
+                    or check.get("supplies_account_content") is not True
+                    or check.get("supports_proposal") is not True):
+                continue
+            source = check.get("source_id")
+            if source in choices and identity not in choices[source]["candidate_ids"]:
+                choices[source]["candidate_ids"].append(identity)
+    allowed_records = set(payload.get("coverage_record_ids", ()))
+    for field in ("active_material", "active_disputes"):
+        for row in payload.get(field, []):
+            if not isinstance(row, dict) or row.get("id") not in allowed_records:
+                continue
+            references = [{"turn_id": row.get("source_turn_id"), "role": "advocate",
+                           "quoted": row.get("quoted")},
+                          *[ref for ref in row.get("prior_references", [])
+                            if isinstance(ref, dict)]]
+            for source, reference in catalogue.items():
+                if (isinstance(reference, dict) and reference.get("role") == "advocate"
+                        and isinstance(reference.get("quoted"), str)
+                        and any(ref.get("role") == "advocate"
+                                and ref.get("turn_id") == reference.get("turn_id")
+                                and isinstance(ref.get("quoted"), str)
+                                and ref["quoted"].strip()
+                                and ref["quoted"] in reference["quoted"] for ref in references)
+                        and row["id"] not in choices[source]["record_ids"]):
+                    choices[source]["record_ids"].append(row["id"])
+    return choices
+
+
+def fixture_scoped_coverage(payload, reviewed, *, source_decisions,
+                            representation_choices=None):
+    """Resolve owner-declared purposes against independently checked owned links.
+
+    Every purpose is supplied by the scenario author. A non-account or an
+    out-of-scope passage receives that explicit disposition; an account with
+    no checked owner remains missing. This never classifies source wording.
+    """
+    choices = fixture_representation_choices(payload, reviewed)
+    # Explicit semantic coverage links are authored independently of candidate
+    # support permissions. Production still requires actual owned admission.
+    choices.update(deepcopy(representation_choices or {}))
+    purposes = {}
+    dispositions = []
+    for identity, declared in source_decisions.items():
+        purposes[identity] = "account" if declared == "outside_scope" else declared
+        if declared in ("non_account", "outside_scope", "unresolved"):
+            dispositions.append(fixture_disposition(payload, identity, status=declared))
+        else:
+            selected = choices.get(identity, {"record_ids": [], "candidate_ids": []})
+            represented = bool(selected["record_ids"] or selected["candidate_ids"])
+            dispositions.append(fixture_disposition(
+                payload, identity, status="represented" if represented else "missing", **selected))
+    state = "partial" if any(row["status"] in ("missing", "unresolved")
+                             for row in dispositions) else "complete"
+    return fixture_coverage(payload, state=state, source_decisions=purposes,
+                            dispositions=dispositions)
+
+
+def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False,
+                             scripted_source_account=False, coverage_judgment=None):
     """Carry explicit offline judgments through the shipped record checks.
 
     Normal public provider fixtures explicitly opt into full authorised
@@ -111,7 +270,8 @@ def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False):
     if not isinstance(result, dict) or not isinstance(result.get("verdicts"), list):
         return result
     if (scripted_full_scope and payload.get("review_scope") is not None
-            and "coverage_source_ids" in payload):
+            and "coverage_source_ids" in payload
+            and payload.get("coverage_selection_contract") != "owned_account_dispositions_v2"):
         result.setdefault("coverage", {
             "state": "complete", "missing_source_ids": [],
             "reason": ("The normal offline fixture declares the complete authorised "
@@ -145,6 +305,11 @@ def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False):
             "reason": "The scripted operation retains the selected account's identity.",
         } for target in candidate.get("related_dispute_ids",
                                       candidate.get("related_material_ids", []))])
+    result = scripted_support_spans(
+        payload, result, scripted_source_account=scripted_source_account)
+    if (coverage_judgment is not None and "coverage" not in result
+            and payload.get("coverage_selection_contract") == "owned_account_dispositions_v2"):
+        result["coverage"] = coverage_judgment(payload, deepcopy(result))
     return result
 
 
