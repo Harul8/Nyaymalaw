@@ -1622,6 +1622,19 @@
       "canonical_changes": "Test helper only. No production semantics, status, proof, source classification or ownership altered. Larger continuation candidate preserved separately before prerequisite.",
       "call_impact": "Zero production stages/calls. Explicit fixture judgments are not model accuracy evidence.",
       "remaining": "Resume native continuation outcome generation; all semantic/browser acceptance gaps remain open."
+    },
+    {
+      "piece": "Per-request applicable native record outcomes",
+      "base": "e48c634",
+      "production_file": "nm/brain/continuation.py",
+      "prompt_changes": 0,
+      "invariant": "Inapplicable outcome metadata must not be routinely generated for useful independently requested work; each owned request retains its own mandatory record result.",
+      "observable_pass": "Mixed recording/read-only units cannot cross-use none obligations; none selects no effects/current claims, performed selects >=1 effect, already_current selects >=1 current record, review_no_change selects no effects. Inherited work and partial unresolved owned results remain available.",
+      "baseline": "Initial30tests17pass/13fail;31 passed after change before two additional empty-catalogue/pending-neighbour checks. Earlier source-anchor fixture prerequisite split, committed and pushed before restoration.",
+      "verification": "170 focused/public/execution/replay tests passed before two additional neighbours; current33 focused tests and Ruff pass. Public complete-history,8-call and v3/v4 no-reseal replay assertions retained.",
+      "canonical_changes": "Fresh native generation only. Canonical RECORD_OUTCOME_SCHEMA, operation/current-state normalization, actual effect/ownership/target checks, saved rendering versions and replay remain unchanged. Harmless none block_id/reason remain accepted. No contradictory fields silently repaired.",
+      "call_impact": "No new routine call. One writer and existing independent reviewer remain; schema choices remove impossible structural combinations before downstream bounded correction.",
+      "remaining": "Judge accepted-disposition grammar is a separate owner prerequisite, followed by actual mini browser test of mixed recording/recap. Typed independent requested outcomes and semantic sufficiency remain unqualified."
     }
   ],
   "additional_reviewer_input": {

@@ -453,17 +453,9 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
             record_outcome_requests: frozenset[int] = frozenset()) -> dict:
     unit = deepcopy(_MODEL_UNIT)
     outcome = unit["properties"]["record_outcome"]["properties"]
-    if indexes and all(index in record_outcome_requests
-                       or (response_modes or {}).get(index) == "record_acknowledgement"
-                       for index in indexes):
-        outcome["status"]["enum"].remove("none")
     outcome["effect_ids"] = _identifier_array(effect_ids)
     outcome["current_record_ids"] = _identifier_array(current_record_ids)
     work = _progress_catalogue(progress)
-    unit["properties"]["work_selector"]["enum"] = list(dict.fromkeys(
-        choice for index in indexes
-        for choice in _work_choices((intents or {}).get(index, "request"), work)))
-    unit["properties"]["request_index"]["enum"] = list(indexes)
     block = unit["properties"]["blocks"]["items"]["properties"]
     block["evidence_expression"] = expression_schema(
         spans, records, sources, generation=True)
@@ -479,9 +471,41 @@ def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
     update["items"]["properties"]["target_id"]["enum"] = ["$work", *work]
     update["items"]["properties"]["span_ids"] = _identifier_array(tuple(
         key for key, row in spans.items() if row["role"] == "advocate"))
+    alternatives = []
+    for index in indexes:
+        selected = deepcopy(unit)
+        selected["properties"]["request_index"]["enum"] = [index]
+        selected["properties"]["work_selector"]["enum"] = _work_choices(
+            (intents or {}).get(index, "request"), work)
+        outcomes = []
+        for status in outcome["status"]["enum"]:
+            if (status == "none" and (index in record_outcome_requests
+                    or (response_modes or {}).get(index) == "record_acknowledgement")):
+                continue
+            if status == "performed" and not effect_ids:
+                continue
+            if status == "already_current" and not current_record_ids:
+                continue
+            shape = deepcopy(unit["properties"]["record_outcome"])
+            fields = shape["properties"]
+            fields["status"]["enum"] = [status]
+            if status in ("none", "already_current", "review_no_change"):
+                fields["effect_ids"]["maxItems"] = 0
+            if status in ("none", "performed"):
+                fields["current_record_ids"]["maxItems"] = 0
+            if status == "performed":
+                fields["effect_ids"]["minItems"] = 1
+            if status == "already_current":
+                fields["current_record_ids"]["minItems"] = 1
+            outcomes.append(shape)
+        selected["properties"]["record_outcome"] = {"anyOf": outcomes}
+        alternatives.append(selected)
+    item = (alternatives[0] if len(alternatives) == 1 else
+            {"anyOf": alternatives} if alternatives else unit)
     return {"type": "object", "additionalProperties": False,
             "required": ["units"], "properties": {
-                "units": {"type": "array", "items": unit}}}
+                "units": {"type": "array", "items": item,
+                          **({"maxItems": 0} if not indexes else {})}}}
 
 
 def _input(conversation: Conversation, latest: str, plan: TurnPlan,
