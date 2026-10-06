@@ -2023,11 +2023,57 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.401917,
-    "remaining_usd": 2.598083,
-    "new_ledger_attempts": 128,
-    "unknown_attempts": 0,
-    "inflight_attempts": 0,
-    "basis": "166 frozen prior attempts at1.877078 +128 measured current attempts at0.524839; cumulative authorization5 unchanged"
+    "combined_measured_usd": 2.472069,
+    "remaining_usd": 2.527931,
+    "new_ledger_attempts": 148,
+    "states": [
+      "measured"
+    ],
+    "basis": "166 frozen prior attempts plus 148 current measured attempts; cumulative authorization USD5 unchanged"
+  },
+  "scope_generation_live_acceptance": {
+    "commit": "88af4ce",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "matter_id": "mat_5002683ce57386dfceefc623fc38dae5",
+    "saved_version": 2,
+    "saved_turns": 2,
+    "browser_observed": true,
+    "reopened_without_new_calls": true,
+    "slices": [
+      {
+        "label": "neutral",
+        "calls": 10,
+        "charge_usd": 0.027804,
+        "tokens_in": 55097,
+        "tokens_out": 3600,
+        "model_elapsed_s": 64.924
+      },
+      {
+        "label": "opposing",
+        "calls": 10,
+        "charge_usd": 0.042348,
+        "tokens_in": 75456,
+        "tokens_out": 7601,
+        "model_elapsed_s": 71.908
+      }
+    ],
+    "passed": [
+      "Neutral interpreter produced one valid scope in one call.",
+      "Neutral reader proposed no disputes; no legal retrieval ran.",
+      "Both inputs and independent material effects persisted; reopening did not call the provider.",
+      "Second performed/complete claim withheld by actual target/effect checks."
+    ],
+    "failed": [
+      "Opposing accounts and evidence uncertainty still proposed and accepted as three independent disputes.",
+      "Opening stayed false; proposals scoped none; no matter board or legal research followed.",
+      "Interpreter combined distinct requested outcomes and bound new accounts to two earlier mutation targets.",
+      "Coverage still invents represented dispositions without corresponding eligible records, or wrong support portions.",
+      "Neutral recap quotes the instruction and is accepted complete; reply repeats saved entries and unfinished status."
+    ],
+    "acceptance": "FAILED integrated semantic/useful-delivery acceptance; no production-readiness claim"
+  },
+  "scope_generation_live_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-scopes-generation-20261007-live.json.gz",
+    "sha256": "b963ccc75567e6d5da26137e33bf531ddaa5c4ed01bc5eff9c8bc1fd164c76d5"
   }
 }
