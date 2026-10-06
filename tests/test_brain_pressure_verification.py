@@ -44,22 +44,18 @@ class PassageJudge:
             "transport": "received",
         }
         self.calls.append(call)
+        result = ModelResult(
+            text=None, data=data, tier=tier, provider="offline",
+            model="fabricated-passage-judge", usage=Usage(0, 0, 0),
+            latency_ms=0, completion=Completion.COMPLETE,
+        )
         try:
             require_schema(data, schema)
         except SchemaViolation as exc:
             call["transport"] = "whole_envelope_rejected"
             call["adapter_issue"] = str(exc)
-            raise
-        return ModelResult(
-            text=None,
-            data=data,
-            tier=tier,
-            provider="offline",
-            model="fabricated-passage-judge",
-            usage=Usage(0, 0, 0),
-            latency_ms=0,
-            completion=Completion.COMPLETE,
-        )
+            raise SchemaViolation(str(exc), rejected_result=result) from exc
+        return result
 
 
 def proposed(words, *, statement=None, targets=()):
@@ -591,7 +587,7 @@ def test_valid_peer_survives_schema_valid_malformed_sibling_exhaustion():
     )
 
 
-def test_strict_adapter_rejection_hides_valid_first_attempt_sibling():
+def test_strict_adapter_quarantine_preserves_valid_first_attempt_sibling():
     first, second = "The keys arrived on 8 June.", "The inventory arrived on 9 June."
 
     def wrong(payload):
@@ -604,13 +600,14 @@ def test_strict_adapter_rejection_hides_valid_first_attempt_sibling():
         first + " " + second,
         (proposed(first), proposed(second)),
         [wrong, {"verdicts": [], "coverage": coverage()}],
-        expected(unread=2, state="unassessed", attempts=2, retry=["D1", "D2"]),
+        expected(accepted=1, unread=1, state="unassessed", attempts=2,
+                 retry=["D2"], retained=["D1"]),
         scenario="mixed",
-        claim_scope="known_gap",
-        status="gap_demonstrated",
+        status="blocked",
         notes=(
-            "A valid first-attempt sibling cannot be retained when strict provider "
-            "validation hides the entire envelope."
+            "The strict adapter still rejects the envelope. Its completed quarantine "
+            "lets the independent owner retain the valid peer and retry only the "
+            "unread sibling; neither transport receipt nor retained peer certifies coverage."
         ),
     )
 

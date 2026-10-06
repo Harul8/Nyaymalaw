@@ -5,7 +5,13 @@ import json
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 
-from nm.brain.checked import require_independent_result
+from nm.brain.checked import (
+    abandon_recovery,
+    claim_recovery,
+    quarantined_independent_result,
+    require_independent_result,
+    verdict_envelope_issue,
+)
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.record_review import (
@@ -16,16 +22,23 @@ from nm.brain.record_review import (
     coverage_schema,
     derived_record,
     owned_source_treatments,
+    remember_independent_review,
     restoration_peer_ids,
+    retained_independent_review,
     review_contract_issue,
     review_issues_text,
     review_properties,
+    source_role_disagreements,
     validate_record_checks,
 )
 from nm.shared.model_port import (
+    ContentRefused,
     ContextOverflow,
     ModelPort,
+    OutputTruncated,
     Prompt,
+    ProviderUnavailable,
+    RateLimited,
     SchemaViolation,
     Tier,
     estimate_tokens,
@@ -51,8 +64,9 @@ merit, proof or source applicability.
 
 Activity 1 - Check original account support.
 Look for: source_treatments owns each advocate span's original content_role,
-classified before candidates were considered. Do not upgrade it. Read selected
-exact spans in full context. A real party position remains that speaker's position
+classified before candidates were considered. Do not upgrade or replace it.
+Independently read selected exact spans in full context. A real party position
+remains that speaker's position
 without proof or adoption; for mixed spans only the genuine reported portion
 supplies content. Examination material, work instructions and NM interpretations
 can explain work authority or context but cannot supply underlying assertions.
@@ -70,8 +84,15 @@ Select exact source_ids only from this candidate's allowed_account_source_ids.
 Give exactly one source_checks entry for each selected ID, and no others:
 source_id, supplies_account_content, supports_proposal and concise reason without
 copied passages; do not repeat source content_role in those entries.
-supplies_account_content means substantive account is reported, not permission
-to review. supports_proposal means that substantive content supports an assertion
+supplies_account_content means substantive account is reported in the original
+context, not permission to review or agreement with the supplied source treatment.
+Keep that original-evidence judgment explicit when it disagrees with a supplied
+non-account role: retain the selected source_id and true supplies_account_content,
+and reject the proposed operation while that source-purpose conflict is unresolved.
+The server may ask the source owner to reconsider the original passage; this
+review cannot reclassify it or admit the operation itself. Do not hide a genuine
+disagreement by changing the source check to match the earlier classification.
+supports_proposal means that substantive content supports an assertion
 in the proposed account. At least one selected source must substantively support
 an accepted proposal. supported certifies the WHOLE proposition against all
 selected evidence, not merely quoted words or an isolated fragment.
@@ -264,7 +285,8 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
 
 def _read_verdicts(data: object, ids: tuple[str, ...],
                    *, account_ids: dict[str, set[str]], targets: dict[str, set[str]],
-                   source_treatments: dict[str, dict]
+                   source_treatments: dict[str, dict],
+                   source_disagreements: list[dict] | None = None
                    ) -> tuple[dict[str, dict], dict[str, tuple[str, ...]]]:
     """Retain valid peers and retry only missing or malformed decisions."""
     rows = data.get("verdicts") if isinstance(data, dict) else None
@@ -286,18 +308,24 @@ def _read_verdicts(data: object, ids: tuple[str, ...],
         row = group[0]
         conflicts = []
         try:
-            require_schema(row, {**_VERDICT, "required": [
+            schema = {**_VERDICT, "required": [
                 *_VERDICT["required"], "account_check", "target_checks"], "properties": {
                 **_VERDICT["properties"],
                 **review_properties(tuple(account_ids[candidate_id]),
                                     tuple(targets[candidate_id]),
                                     restoration_peer_ids(candidate_id, targets)),
                 "candidate_id": {"type": "string", "enum": [candidate_id]},
-            }})
+            }}
+            require_schema(row, schema)
             validate_record_checks(
                 row, source_ids=account_ids[candidate_id], target_ids=targets[candidate_id],
                 candidate_id=candidate_id, candidates=targets, issues=conflicts,
                 source_treatments=source_treatments)
+            if source_disagreements is not None:
+                source_disagreements.extend(
+                    {"candidate_id": candidate_id, **diagnostic}
+                    for diagnostic in source_role_disagreements(
+                        row, account_ids[candidate_id], source_treatments, schema=schema))
         except SchemaViolation as exc:
             issues[candidate_id] = (review_contract_issue(exc),)
             continue
@@ -318,7 +346,8 @@ def verify_material_grounding(
         active_disputes: tuple[dict, ...] = (), prior_material: tuple[dict, ...] = (),
         current_matter_id: str | None = None, source_treatments: dict[str, dict] | None = None,
         review_scope: dict | None = None, active_material: tuple[dict, ...] = (),
-        coverage: dict | None = None
+        coverage: dict | None = None, source_disagreements: list[dict] | None = None,
+        review_state: dict | None = None, recheck_source_ids: tuple[str, ...] = ()
         ) -> GroundingResult:
     """Keep checked peers and distinguish unread proposals after bounded correction."""
     details = tuple(candidate for candidate in candidates
@@ -387,23 +416,39 @@ def verify_material_grounding(
         row["allowed_account_source_ids"] = sorted(account_ids[row["candidate_id"]])
         row["allowed_restoration_peer_ids"] = list(
             restoration_peer_ids(row["candidate_id"], targets))
-    decisions: dict[str, dict] = {}
-    pending = tuple(row["candidate_id"] for row in proposed)
+    retained = retained_independent_review(
+        review_state, context=payload, source_treatments=source_treatments,
+        account_ids=account_ids, targets=targets, recheck_source_ids=recheck_source_ids)
+    decisions, retained_issues = _read_verdicts(
+        {"verdicts": list(retained.values())}, tuple(retained), account_ids=account_ids,
+        targets=targets, source_treatments=source_treatments)
+    if retained_issues:
+        raise SchemaViolation("Retained independent material decisions are no longer admissible")
+    pending = tuple(row["candidate_id"] for row in proposed
+                    if row["candidate_id"] not in decisions)
     if requested_coverage:
         pending += ("$coverage",)
     issues: dict[str, tuple[str, ...]] = {}
     assessed_coverage = None
     previous_assessment = None
+    observed_disagreements: list[dict] = []
     system = _SYSTEM + (_COVERAGE_SYSTEM if requested_coverage else "")
-    for attempt in range(2):
-        candidate_ids = tuple(identity for identity in pending if identity != "$coverage")
+    recovery_phase = "verify_material_grounding:correction"
+    for attempt in range(2 if pending or requested_coverage else 0):
+        if attempt and not claim_recovery(model, recovery_phase):
+            issues = {key: (*value, "The shared recovery budget is exhausted")
+                      for key, value in issues.items()}
+            break
+        candidate_ids = tuple(identity for identity in pending
+                              if identity not in {"$coverage", "$envelope"})
         current = {**payload,
                    "candidates": [row for row in proposed
                                   if row["candidate_id"] in candidate_ids]}
-        if attempt:
+        if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
                 for row in proposed if row["candidate_id"] in decisions]
+        if attempt:
             current["validation_issue"] = (
                 review_issues_text(issues) + ". "
                 "Return one valid verdict per listed "
@@ -416,25 +461,48 @@ def verify_material_grounding(
                    if requested_coverage else ""))
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 512 * len(pending)))
-        if (estimate_tokens(system + user) + output_limit
-                > model.context_budget(Tier.JUDGE)):
-            raise ContextOverflow(
-                "The full conversation exceeds the material verification budget")
         try:
-            result = model.structured(
-                Prompt(system=system, user=user, operation="verify_material_grounding"),
-                _schema(candidate_ids, tuple(sorted(set().union(*account_ids.values()))),
-                        tuple(sorted(set().union(*targets.values()))),
-                        tuple(sorted({peer for key in candidate_ids
-                                      for peer in restoration_peer_ids(key, targets)})),
-                        coverage_ids=coverage_ids),
-                Tier.JUDGE, max_tokens=output_limit)
+            if (estimate_tokens(system + user) + output_limit
+                    > model.context_budget(Tier.JUDGE)):
+                if attempt:
+                    abandon_recovery(model, recovery_phase)
+                raise ContextOverflow(
+                    "The full conversation exceeds the material verification budget")
+            try:
+                result = model.structured(
+                    Prompt(system=system, user=user, operation="verify_material_grounding"),
+                    _schema(candidate_ids, tuple(sorted(set().union(*account_ids.values()))),
+                            tuple(sorted(set().union(*targets.values()))),
+                            tuple(sorted({peer for key in candidate_ids
+                                          for peer in restoration_peer_ids(key, targets)})),
+                            coverage_ids=coverage_ids),
+                    Tier.JUDGE, max_tokens=output_limit)
+            except SchemaViolation as exc:
+                result = quarantined_independent_result(exc)
+                if result is None:
+                    raise
             require_independent_result(result)
             if not result.usable:
                 raise SchemaViolation("Material grounding verification did not finish")
+            envelope_issue = verdict_envelope_issue(
+                result.data, candidate_ids, coverage=requested_coverage)
             checked, issues = _read_verdicts(
                 result.data, candidate_ids, account_ids=account_ids,
-                targets=targets, source_treatments=source_treatments)
+                targets=targets, source_treatments=source_treatments,
+                source_disagreements=observed_disagreements
+                if source_disagreements is not None else None)
+        except (ProviderUnavailable, ContextOverflow, OutputTruncated,
+                ContentRefused, RateLimited) as exc:
+            if not attempt or not (requested_coverage and coverage is not None):
+                raise
+            issue = "Conditional independent review unavailable (" + type(exc).__name__ + ")"
+            issues = {key: (issue,) for key in pending}
+            issues["$coverage"] = (issue,)
+            if assessed_coverage is not None:
+                previous_assessment = assessed_coverage
+            assessed_coverage = None
+            pending = tuple(issues)
+            break
         except SchemaViolation as exc:
             issues = {key: (review_contract_issue(exc),) for key in pending}
             if requested_coverage:
@@ -445,6 +513,8 @@ def verify_material_grounding(
             pending = tuple(issues)
             continue
         decisions.update(checked)
+        if envelope_issue:
+            issues["$envelope"] = (envelope_issue,)
         if requested_coverage:
             if assessed_coverage is not None:
                 previous_assessment = assessed_coverage
@@ -458,8 +528,21 @@ def verify_material_grounding(
         pending = tuple(issues)
         if not pending:
             break
-    unresolved_candidates = tuple(identity for identity in pending if identity != "$coverage")
+    unresolved_candidates = tuple(identity for identity in pending
+                                  if identity not in {"$coverage", "$envelope"})
     proposed_by_id = {row["candidate_id"]: row for row in proposed}
+    if source_disagreements is not None:
+        reported = set()
+        for diagnostic in observed_disagreements:
+            identity = diagnostic["candidate_id"]
+            key = (identity, diagnostic["source_id"])
+            if key in reported:
+                continue
+            reported.add(key)
+            source_disagreements.append({
+                **diagnostic, "candidate_type": proposed_by_id[identity]["type"],
+                "proposal": asdict(keyed[identity]) if identity in keyed else asdict(opening),
+            })
     unread = tuple({
         "candidate_id": identity,
         "candidate_type": proposed_by_id[identity]["type"],
@@ -472,15 +555,25 @@ def verify_material_grounding(
             if key not in ("candidate_id", "allowed_account_source_ids",
                            "allowed_restoration_peer_ids")}),
     } for identity in unresolved_candidates)
+    remember_independent_review(
+        review_state, context=payload, source_treatments=source_treatments, decisions=decisions)
+    if "$envelope" in pending and not requested_coverage:
+        raise SchemaViolation(
+            "Material review envelope remained unread: "
+            + review_issues_text({"$envelope": issues["$envelope"]}))
     reviewed_decisions = decisions
     decisions = admitted_record_decisions(decisions)
     downgraded = [identity for identity, row in reviewed_decisions.items()
                   if row["verdict"] == "accept" and decisions[identity]["verdict"] != "accept"]
-    if requested_coverage and (unresolved_candidates or downgraded):
+    if requested_coverage and (unresolved_candidates or downgraded or "$envelope" in pending):
         if assessed_coverage is not None:
             previous_assessment = assessed_coverage
         assessed_coverage = None
         invalidated = []
+        if "$envelope" in pending:
+            invalidated.append(
+                "The independent review envelope remained unread: "
+                + review_issues_text({"$envelope": issues["$envelope"]}))
         if unresolved_candidates:
             invalidated.append(
                 "Independent verdicts remained unread for " + ", ".join(unresolved_candidates)
