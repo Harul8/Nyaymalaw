@@ -11,6 +11,7 @@ import pytest
 
 import nm.brain.turn as brain_turn
 from nm.brain.execution_contracts import RECORD_ACKNOWLEDGEMENT_CONTRACT
+from nm.brain.mutation_contracts import model_mutation_context
 from nm.shared.store_port import StaleWrite
 from tests.test_brain_material import material, send
 from tests.test_brain_material_purpose import (
@@ -114,7 +115,7 @@ def assert_prepared_handoffs(model, start, committed):
                 if request["response_mode"] == "substantive":
                     request.pop("acknowledgement_contract", None)
                     request.pop("acknowledgement_delivery", None)
-        assert receipt == expected
+        assert receipt == model_mutation_context(expected)
         assert all(request["fulfillment"] == "unassessed" for request in receipt["requests"])
         seen.append(operation)
     assert seen == ["continue_conversation", "verify_continuation"]

@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 from nm.brain.checked import claim_recovery, require_independent_result
+from nm.brain.mutation_contracts import model_mutation_context
 from nm.brain.work_state import PROGRESS_STATUSES
 from nm.shared.model_port import (
     ContextOverflow,
@@ -607,8 +609,10 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
     for attempt in range(2):
         if not pending:
             break
-        payload = {"input": input_payload,
-                   "units": [proposed[index] for index in pending]}
+        # Present the trusted backend context once. Proposed reply units and
+        # reviewer feedback are data, never mutation-authority ledgers.
+        payload = {"input": model_mutation_context(input_payload),
+                   "units": deepcopy([proposed[index] for index in pending])}
         if attempt:
             payload["validation_issues"] = [
                 {"request_index": index, "issue": issues[index]} for index in pending]
