@@ -1,4 +1,4 @@
-"""Candidate public replay regressions for durable mutation authority.
+"""Public replay regressions for durable mutation authority.
 
 Fresh valid GS-15 corrections are saved before fault injection. The mutations
 below alter only offline test storage. No live provider or legal corpus is used.
@@ -181,10 +181,11 @@ def test_saved_mutation_binding_tamper_refuses_public_replay_without_model_or_wr
     record_case(
         identity, boundary="POST /api/turn -> saved mutation projection -> durable replay",
         user_passage=model.dossier.message,
-        model_outputs=[*model.outputs, {"stored_authority_fault": fault,
-                                      "changed_saved_response": row["response"]}],
+        model_outputs=model.outputs,
         expected=expected, observed=observed,
-        calls=[*model.seen, {"operation": "public_replay", "response": result,
+        calls=[*model.seen, {"operation": "inject_saved_authority_fault", "fault": fault,
+                            "changed_saved_response": row["response"]},
+               {"operation": "public_replay", "response": result,
                             "owning_binding_issues": binding_issues,
                             "earlier_progress_issues": progress_issues}],
         scenario="faulty", claim_scope="mechanical", protection_status="blocked",

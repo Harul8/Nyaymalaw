@@ -1,7 +1,6 @@
-"""Candidate public regressions for scope and code-owned mixed outcomes.
+"""Public regressions for scope and code-owned mixed outcomes.
 
-This file intentionally lives outside the repository until the owning fixes
-land. All meanings are declared offline; a scripted ACCEPT is never evidence
+All meanings are declared offline; a scripted ACCEPT is never evidence
 that a real reviewer would identify identity or an operational false claim.
 """
 
