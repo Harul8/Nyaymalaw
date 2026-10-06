@@ -178,6 +178,7 @@ def test_legacy_read_only_empty_still_has_no_call_and_no_fabricated_coverage():
         "rejected_proposals",
         "withheld_proposals",
         "unread_proposals",
+        "mutation_bindings",
     ]
 
 

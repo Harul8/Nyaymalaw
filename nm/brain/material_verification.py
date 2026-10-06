@@ -14,6 +14,7 @@ from nm.brain.checked import (
 )
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
 from nm.brain.material import MaterialCandidate, addressed_sources
+from nm.brain.mutation_contracts import scoped_record_decisions
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     admitted_record_decisions,
@@ -240,6 +241,7 @@ class GroundingResult:
     rejected_proposals: tuple[dict, ...] = ()
     withheld_proposals: tuple[dict, ...] = ()
     unread_proposals: tuple[dict, ...] = ()
+    mutation_bindings: tuple[tuple[MaterialCandidate, dict], ...] = ()
 
     @property
     def withheld_details(self) -> int:
@@ -562,7 +564,10 @@ def verify_material_grounding(
             "Material review envelope remained unread: "
             + review_issues_text({"$envelope": issues["$envelope"]}))
     reviewed_decisions = decisions
-    decisions = admitted_record_decisions(decisions)
+    mutation_bindings = {}
+    scoped_decisions = scoped_record_decisions(
+        decisions, keyed, review_scope, binding_sink=mutation_bindings)
+    decisions = admitted_record_decisions(scoped_decisions)
     downgraded = [identity for identity, row in reviewed_decisions.items()
                   if row["verdict"] == "accept" and decisions[identity]["verdict"] != "accept"]
     if requested_coverage and (unresolved_candidates or downgraded or "$envelope" in pending):
@@ -581,8 +586,10 @@ def verify_material_grounding(
         if downgraded:
             invalidated.append(
                 "Final admission withheld reviewed proposals " + ", ".join(downgraded)
-                + " because required successors were unavailable; coverage has not assessed "
-                "this final admitted set.")
+                + ": " + "; ".join(
+                    identity + " [" + decisions[identity].get("admission_issue", "admission")
+                    + "]: " + decisions[identity]["reason"] for identity in downgraded)
+                + "; coverage has not assessed this final admitted set.")
         issues["$coverage"] = tuple(invalidated)
     if requested_coverage and coverage is not None:
         assessment = assessed_coverage or {
@@ -628,4 +635,6 @@ def verify_material_grounding(
     return GroundingResult(
         accepted, opening_supported and not title_issue, len(rejected),
         title_issue or (opening_decision["reason"] if not opening_supported else ""),
-        rejected, withheld, unread)
+        rejected, withheld, unread,
+        tuple((keyed[key], deepcopy(binding)) for key, binding in mutation_bindings.items()
+              if decisions.get(key, {}).get("verdict") == "accept"))
