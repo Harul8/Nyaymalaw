@@ -618,6 +618,23 @@
         "tests/test_brain_review_completion_diagnostics.py",
         "tests/test_brain_execution_contracts.py"
       ]
+    },
+    {
+      "slice": "Served final record display, admission, atomic save and replay",
+      "owners": [
+        "LB-182",
+        "LB-188",
+        "LB-189",
+        "LB-190",
+        "LB-191",
+        "LB-192"
+      ],
+      "decision": "Activate scoped account coverage/status, exact legal passage pools, typed requested results, immutable snapshot sealing and source-purpose reuse handoffs through the served turn. Every turn exposes canonical entry statements/old-to-new changes or no changes before release; writer/reviewer see the same prepared display. Canonical operations require returned readers AND checked independent admission; valid peers survive incomplete wider coverage. Final prepared projection is restricted to the exact loaded-version pending turn; confirmed atomic save or exact durable replay is required, and replay rederives original-prefix effects/snapshot/display. Raw interpreter reply fallback is removed and unconfirmed saves receive truthful declared diagnostics.",
+      "validation": "86 offline service, work sealing, execution and full-review checks passed, including 26 new save/lost-ack/replay/tamper/skipped-reader/skipped-review/unread-peer/date-change/no-change/empty-unassessed service controls; Ruff and diff check passed. Old broad fixture migration is separate; live-model/browser qualification deferred.",
+      "files": [
+        "nm/brain/turn.py",
+        "tests/test_brain_turn_execution_consumer.py"
+      ]
     }
   ]
 }
