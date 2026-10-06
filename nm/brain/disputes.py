@@ -71,9 +71,16 @@ Use an empty new_items array when no new conflict is reported; an accurate fact
 need not appear here to be captured by the material reader.
 
 Activity 3 - Separate issues and compare existing formulations.
-Look for: A dispute needs its own practical resolution. Separate independently
-contested conduct or rights that could be resolved differently, even with shared
-actors or evidence. Supporting premises, legal theories, evidentiary gaps,
+Look for: Identify the underlying conduct or contested right to be resolved,
+not a separate dispute for each speaker's position. Opposing accounts of the
+same conduct belong within one issue; preserve each account as separately
+attributed material. Opposite answers, different sentences or supporting reasons
+do not establish independence. Separate another reported adverse act or
+contested entitlement requiring its own decision. Shared evidence or a common
+preliminary question does not alone merge those independent issues. Ask whether
+resolving the identified conflict leaves another reported conflict to decide;
+this is a contextual distinction, not an automatic grouping rule.
+Supporting premises, legal theories, evidentiary gaps,
 alternative remedies and legal-effect uncertainty do not alone create additional
 disputes. A defence belongs to the issue it answers unless it reports another
 independent conflict. Future harm is a risk unless a contested right exists now.

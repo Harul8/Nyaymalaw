@@ -1388,6 +1388,73 @@
       },
       "call_impact": "Same existing reader, no new model stage/call; actual new prompt qualification pending.",
       "remaining": "Pinned neutral/adverse browser pair; requested-delivery/recap and support-span semantics remain open."
+    },
+    {
+      "piece": "Group opposing positions by underlying reported conflict",
+      "owner": "nm/brain/disputes.py::_SYSTEM Activity3",
+      "version": "971c6a2 plus one prompt/production file",
+      "invariant": "Opposing accounts of the same act are positions within one dispute; split independently contested adverse acts/entitlements, not speakers, opposite answers or supporting proof questions. Shared preliminary questions/evidence do not force merger.",
+      "verification": {
+        "focused_passed": 68,
+        "ruff": "passed",
+        "actual_baseline": {
+          "commit": "971c6a2",
+          "matter_id": "mat_89485bf4e5a4c70e0c890bd46cfc1b5e",
+          "model": "gpt-4.1-mini-2025-04-14",
+          "browser_observed": true,
+          "reopened_without_new_calls": true,
+          "neutral": {
+            "calls": 12,
+            "charge_usd": 0.030726,
+            "tokens_in": 58253,
+            "tokens_out": 4638,
+            "turn_id": "turn_bf25617d-3ef1-4933-867a-7a856b5e06aa",
+            "dispute_count": 0,
+            "material_details": 2,
+            "automatic_legal_calls": 0,
+            "reader_domain": "Passed this neutral example only; complete feature not qualified",
+            "remaining": "Dispute coverage represents neutral details with no record; recap quotes instruction, accepted complete."
+          },
+          "interrupted": {
+            "calls": 3,
+            "charge_usd": 0.007704,
+            "tokens_in": 15260,
+            "tokens_out": 999,
+            "saved_version_after_interruption": 1,
+            "saved_turns_after_interruption": 1,
+            "cause": "Windows native access violation; unconfirmed root cause",
+            "missing_observed_output_packets": 1,
+            "recovery": "Same browser turn retry control; no admitted duplicate; periodic diagnostic dump removed from harness only."
+          },
+          "adverse": {
+            "calls": 13,
+            "charge_usd": 0.066324,
+            "tokens_in": 129128,
+            "tokens_out": 9167,
+            "turn_id": "turn_d5b0c615-91ef-4c1a-a074-4493bdfaf37e",
+            "saved_version": 2,
+            "saved_turns": 2,
+            "dispute_count": 3,
+            "material_details_added": 3,
+            "false_admissions": [
+              "Opposing positions split into two issues concerning same act.",
+              "Proof gap initially classified supporting_premise+accept then promoted independent_dispute during correction."
+            ],
+            "positive_controls": [
+              "Owned target/operation check refused writer performed/complete claim because new effects did not satisfy interpreted adds-to-existing-targets requirement.",
+              "Input and independent saved effects preserved; fulfillment marked unfinished.",
+              "Reopened reply, board and source pane unchanged with zero new calls.",
+              "Retry used same turn identity and saved second turn exactly once."
+            ],
+            "remaining": "Material compounds two independently correctable assertions; interpretation wrongly binds added positions to prior record mutation; useful certainty account not delivered; automatic legal requirements unavailable."
+          },
+          "combined_measured_usd": 2.398364,
+          "remaining_usd": 2.601636,
+          "acceptance": "PARTIAL reader improvement; whole behavior FAILED"
+        }
+      },
+      "call_impact": "No added model stage/call. Reviewer role/verdict generation coupling and matching reviewer semantics are separately required prerequisites, to be committed individually before integrated browser qualification.",
+      "remaining": "Align reviewer generation and original-conflict/coverage decisions, then repeat meaningful browser pairs. No feature completion from reader neutral success."
     }
   ],
   "additional_reviewer_input": {
@@ -1436,9 +1503,9 @@
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
     "cumulative_charge_usd": 2.202524,
-    "remaining_usd": 2.70639,
+    "remaining_usd": 2.601636,
     "unknown_attempts": 0,
-    "combined_measured_usd": 2.29361
+    "combined_measured_usd": 2.398364
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1807,5 +1874,64 @@
   "reader_live_evidence": {
     "path": "docs/backlog/evidence/brain-dispute-reader-20261007-live.json.gz",
     "sha256": "46242a1975b5404e2a51b94787173e32a93cf3d9d9598ea3cdf09542557cdc9a"
+  },
+  "grouping_live_acceptance": {
+    "commit": "971c6a2",
+    "matter_id": "mat_89485bf4e5a4c70e0c890bd46cfc1b5e",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "browser_observed": true,
+    "reopened_without_new_calls": true,
+    "neutral": {
+      "calls": 12,
+      "charge_usd": 0.030726,
+      "tokens_in": 58253,
+      "tokens_out": 4638,
+      "turn_id": "turn_bf25617d-3ef1-4933-867a-7a856b5e06aa",
+      "dispute_count": 0,
+      "material_details": 2,
+      "automatic_legal_calls": 0,
+      "reader_domain": "Passed this neutral example only; complete feature not qualified",
+      "remaining": "Dispute coverage represents neutral details with no record; recap quotes instruction, accepted complete."
+    },
+    "interrupted": {
+      "calls": 3,
+      "charge_usd": 0.007704,
+      "tokens_in": 15260,
+      "tokens_out": 999,
+      "saved_version_after_interruption": 1,
+      "saved_turns_after_interruption": 1,
+      "cause": "Windows native access violation; unconfirmed root cause",
+      "missing_observed_output_packets": 1,
+      "recovery": "Same browser turn retry control; no admitted duplicate; periodic diagnostic dump removed from harness only."
+    },
+    "adverse": {
+      "calls": 13,
+      "charge_usd": 0.066324,
+      "tokens_in": 129128,
+      "tokens_out": 9167,
+      "turn_id": "turn_d5b0c615-91ef-4c1a-a074-4493bdfaf37e",
+      "saved_version": 2,
+      "saved_turns": 2,
+      "dispute_count": 3,
+      "material_details_added": 3,
+      "false_admissions": [
+        "Opposing positions split into two issues concerning same act.",
+        "Proof gap initially classified supporting_premise+accept then promoted independent_dispute during correction."
+      ],
+      "positive_controls": [
+        "Owned target/operation check refused writer performed/complete claim because new effects did not satisfy interpreted adds-to-existing-targets requirement.",
+        "Input and independent saved effects preserved; fulfillment marked unfinished.",
+        "Reopened reply, board and source pane unchanged with zero new calls.",
+        "Retry used same turn identity and saved second turn exactly once."
+      ],
+      "remaining": "Material compounds two independently correctable assertions; interpretation wrongly binds added positions to prior record mutation; useful certainty account not delivered; automatic legal requirements unavailable."
+    },
+    "combined_measured_usd": 2.398364,
+    "remaining_usd": 2.601636,
+    "acceptance": "PARTIAL reader improvement; whole behavior FAILED"
+  },
+  "grouping_live_evidence": {
+    "path": "docs/backlog/evidence/brain-dispute-grouping-20261007-live.json.gz",
+    "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   }
 }
