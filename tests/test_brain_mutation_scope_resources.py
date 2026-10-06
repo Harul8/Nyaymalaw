@@ -188,7 +188,18 @@ def assert_prompt_preservation(account, model):
     original, _, _ = addressed_sources(account.earlier, LATEST)
     assert payload["earlier_conversation"] == original["earlier_conversation"]
     assert payload["latest_message_spans"] == original["latest_message_spans"]
-    assert payload["source_treatments"] == account.sources
+    # The independent Judge sees original evidence, without the classifier's
+    # proposed role or rationale anchoring its own source judgment.
+    assert payload["source_treatments"] == {
+        identity: {field: row[field] for field in ("turn_id", "role", "quoted")}
+        for identity, row in account.sources.items()}
+    assert all(set(row) == {"turn_id", "role", "quoted"}
+               for row in payload["source_treatments"].values())
+    # Deanchoring is a presentation change: durable source dependencies retain
+    # every classifier field for the server's ownership and admission checks.
+    assert account.scope["mutation_authorities"]["source_catalogue"] == account.sources
+    assert all({"content_role", "reason"} <= row.keys()
+               for row in account.sources.values())
     assert payload["coverage_source_ids"] == list(account.sources)
     assert payload["active_disputes" if account.kind == "dispute" else "active_material"] == [
         derived_record(row) for row in account.targets]
@@ -223,13 +234,16 @@ def test_verifier_presents_complete_sources_with_lean_permissions_and_full_serve
         kind, wrong_target):
     account = fixture(kind)
     initial_scope = deepcopy(account.scope)
+    initial_sources = deepcopy(account.sources)
     candidate, response = proposal_and_verdict(account, wrong_target=wrong_target)
     model = ScriptedJudge(response)
     retained, coverage, audit = evaluate(account, model, candidate)
     assert_prompt_preservation(account, model)
     assert account.scope == initial_scope
+    assert account.sources == initial_sources
     assert coverage["review_scope"] == initial_scope
     assert "mutation_authorities" in coverage["review_scope"]
+    assert coverage["review_scope"]["mutation_authorities"]["source_catalogue"] == initial_sources
     if wrong_target:
         assert retained == ()
         assert audit[0]["admission_issue"] == "mutation_scope"
@@ -243,10 +257,14 @@ def test_verifier_presents_complete_sources_with_lean_permissions_and_full_serve
 @pytest.mark.parametrize("kind", ["event", "dispute"])
 def test_redundant_ledger_does_not_spend_context_needed_for_original_sources(kind):
     account = fixture(kind)
+    initial_scope = deepcopy(account.scope)
+    initial_sources = deepcopy(account.sources)
     candidate, response = proposal_and_verdict(account)
     baseline = ScriptedJudge(response)
     retained, _, _ = evaluate(account, baseline, candidate)
     assert retained == (candidate,)
+    assert account.scope == initial_scope
+    assert account.sources == initial_sources
     lean_tokens, full_tokens, output_limit = assert_prompt_preservation(account, baseline)
     budget = lean_tokens + output_limit + 32
     assert full_tokens + output_limit > budget
@@ -254,6 +272,9 @@ def test_redundant_ledger_does_not_spend_context_needed_for_original_sources(kin
     retained, coverage, _ = evaluate(account, budgeted, candidate)
     assert retained == (candidate,)
     assert coverage["state"] == "complete"
+    assert account.scope == initial_scope
+    assert account.sources == initial_sources
+    assert coverage["review_scope"] == initial_scope
     assert_prompt_preservation(account, budgeted)
 
 

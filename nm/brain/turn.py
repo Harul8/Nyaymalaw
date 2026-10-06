@@ -41,6 +41,7 @@ from nm.brain.material_state import material_record, sourced_detail_for_display
 from nm.brain.material_verification import verify_material_grounding
 from nm.brain.mutation_contracts import (
     AUTHORITY_CONTRACT,
+    SAME_TURN_SOURCE_MATCH,
     bind_record_mutation,
     build_mutation_authorities,
     validate_record_mutation,
@@ -118,9 +119,12 @@ class BrainOutput:
 class _CountedModel:
     """Count actual calls, including a conditional correction in either reader."""
 
-    def __init__(self, inner, *, recovery_limit: int = 8) -> None:
+    def __init__(self, inner, *, recovery_limit: int = 8,
+                 reply_recovery_reserve: int = 2) -> None:
         if type(recovery_limit) is not int or recovery_limit < 0:
             raise ValueError("Recovery call ceiling must be a nonnegative integer")
+        if type(reply_recovery_reserve) is not int or reply_recovery_reserve < 0:
+            raise ValueError("Reply recovery reserve must be a nonnegative integer")
         self.inner = inner
         self.calls = 0
         self.provider_retries = 0
@@ -129,6 +133,8 @@ class _CountedModel:
         self.recovery_limit = recovery_limit
         self.recovery_events: list[dict] = []
         self.recovery_reserved = 0
+        self.reply_recovery_reserve = min(reply_recovery_reserve, recovery_limit)
+        self.reply_recovery_reserved = 0
         self.recovery_local = local()
 
     def __getattr__(self, name):
@@ -141,12 +147,18 @@ class _CountedModel:
         self.cancel_pending_recovery()
         with self.lock:
             used = self.recovery_reserved
-            permitted = used < self.recovery_limit
+            reply_owned = phase in {
+                "continue_conversation:correction", "verify_continuation:correction",
+                "continue_conversation:limited_review"}
+            remaining_floor = max(0, self.reply_recovery_reserve - self.reply_recovery_reserved)
+            permitted = used < self.recovery_limit - (0 if reply_owned else remaining_floor)
             event = {"phase": phase, "state": "reserved" if permitted else
                      "budget_exhausted", "scope": getattr(self.recovery_local, "scope", "initial")}
             self.recovery_events.append(event)
             if permitted:
                 self.recovery_reserved += 1
+                if reply_owned:
+                    self.reply_recovery_reserved += 1
                 event["reservation"] = self.recovery_reserved
                 self.recovery_local.pending = len(self.recovery_events) - 1
             return permitted
@@ -222,6 +234,8 @@ class _CountedModel:
                 "model_calls": list(self.receipts), "recovery": {
                     "limit": self.recovery_limit,
                     "reserved_calls": self.recovery_reserved,
+                    "reply_reserve": self.reply_recovery_reserve,
+                    "reply_reserved_calls": self.reply_recovery_reserved,
                     "dispatched_calls": sum("call" in event for event in self.recovery_events),
                     "events": deepcopy(self.recovery_events)}}
 
@@ -289,7 +303,8 @@ def _mutation_authorities(execution, conversation, plan, latest):
         target_catalogue=targets, source_catalogue=sources,
         proposals=[{"request_index": index, **deepcopy(scope)}
                    for index, declarations in enumerate(scopes) for scope in declarations],
-        request_indices=list(range(len(plan.items))))
+        request_indices=list(range(len(plan.items))),
+        source_match_contract=SAME_TURN_SOURCE_MATCH)
     execution.update(mutation_authority_contract=AUTHORITY_CONTRACT,
                      mutation_authorities=ledger)
 
@@ -539,7 +554,8 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
             rebuilt = build_mutation_authorities(
                 owner=execution["owner"], expected_version=execution["expected_version"],
                 target_catalogue=targets, source_catalogue=sources, proposals=proposals,
-                request_indices=[request["request_index"] for request in requests])
+                request_indices=[request["request_index"] for request in requests],
+                source_match_contract=ledger.get("source_match_contract"))
             if (rebuilt != ledger
                     or execution.get("review_scope", {}).get("mutation_authorities") != ledger
                     or execution.get("review_scope", {}).get("mutation_authority_contract")

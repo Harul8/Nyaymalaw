@@ -70,6 +70,11 @@ class PurposeModel(Model):
                     treatment["content_role"] = (
                         "work_instruction" if identity in current_ids
                         else "reported_matter_account")
+                    if (payload.get("source_selection_contract") == "owned_substantive_spans_v2"
+                            and identity in current_ids):
+                        # The scenario explicitly supplies authority without
+                        # substantive account in the current review request.
+                        treatment["substantive_spans"] = []
             elif prompt.operation == "verify_material_grounding":
                 candidates = {row["candidate_id"]: row for row in payload["candidates"]}
                 for verdict in data["verdicts"]:

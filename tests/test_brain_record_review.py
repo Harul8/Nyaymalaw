@@ -320,6 +320,11 @@ def test_public_review_only_sources_cannot_ground_false_acceptance_while_real_so
                     data = deepcopy(result.data)
                     for source_id, row in data["source_treatments"].items():
                         row["content_role"] = roles.get(source_id, "reported_matter_account")
+                        if (payload.get("source_selection_contract")
+                                == "owned_substantive_spans_v2"
+                                and row["content_role"] == "work_instruction"):
+                            # These authored instructions provide no account.
+                            row["substantive_spans"] = []
                     return replace(result, data=data)
             return result
 

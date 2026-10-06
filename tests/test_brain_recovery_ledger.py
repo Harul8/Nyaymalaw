@@ -12,7 +12,7 @@ def test_shared_budget_allows_same_local_correction_for_distinct_invocations():
                                usage=Usage(0, 0, 0), latency_ms=0,
                                completion=Completion.COMPLETE)
 
-    model = boundary._CountedModel(Inner(), recovery_limit=2)
+    model = boundary._CountedModel(Inner(), recovery_limit=2, reply_recovery_reserve=0)
     prompt = Prompt(system="Owned test", user="{}", operation="extract_legal_details")
     for _ in range(2):
         assert model.claim_recovery("extract_legal_details:correction")
@@ -30,7 +30,7 @@ def test_abandoned_context_reservation_never_labels_next_routine_dispatch():
                                usage=Usage(0, 0, 0), latency_ms=0,
                                completion=Completion.COMPLETE)
 
-    model = boundary._CountedModel(Inner(), recovery_limit=1)
+    model = boundary._CountedModel(Inner(), recovery_limit=1, reply_recovery_reserve=0)
     assert model.claim_recovery("extract_legal_details:correction")
     model.abandon_recovery("extract_legal_details:correction")
     model.structured(Prompt(system="Next Judge", user="{}", operation="verify_disputes"),

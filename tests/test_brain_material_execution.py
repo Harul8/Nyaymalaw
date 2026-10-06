@@ -13,7 +13,7 @@ import nm.brain.turn as brain_turn
 from nm.brain.execution_contracts import RECORD_ACKNOWLEDGEMENT_CONTRACT
 from nm.brain.mutation_contracts import model_mutation_context
 from nm.shared.store_port import StaleWrite
-from tests.test_brain_material import material, send
+from tests.test_brain_material import material, mutation_scope, send
 from tests.test_brain_material_purpose import (
     PurposeModel,
     item,
@@ -31,8 +31,9 @@ def correction_plan(account, correction, *, original_turn="receipt-original"):
         references=({"turn_id": original_turn, "role": "advocate", "quoted": account},),
         related_material_ids=(f"{original_turn}:material:1",))
     return routed(correction, candidates=[revised], items=[
-        item(correction, revised["statement"], purposes=("account_contribution",),
-             intent="contribution"),
+        {**item(correction, revised["statement"], purposes=("account_contribution",),
+                intent="contribution"),
+         "mutation_scopes": [mutation_scope(f"{original_turn}:material:1")]},
     ])
 
 
@@ -390,8 +391,9 @@ def test_held_revision_and_other_matter_peer_never_become_current_record_effects
         relation="corrects", related_material_ids=("receipt-held:material:1",),
         references=({"turn_id": "receipt-held", "role": "advocate", "quoted": uncertain},))
     follow = routed(correction, candidates=[revised], items=[
-        item(correction, "The corrected file association remains uncertain.",
-             purposes=("account_contribution",), intent="contribution"),
+        {**item(correction, "The corrected file association remains uncertain.",
+                purposes=("account_contribution",), intent="contribution"),
+         "mutation_scopes": [mutation_scope("receipt-held:material:1")]},
     ])
     model = PurposeModel([seed_plan(account), held_plan, follow])
     opened = open_account(client, wired, monkeypatch, model, account,
@@ -430,8 +432,10 @@ def test_withdrawal_receipt_records_retirement_without_an_activated_replacement(
         references=({"turn_id": "receipt-original", "role": "advocate", "quoted": account},),
         related_material_ids=("receipt-original:material:1",))
     follow = routed(request, candidates=[withdrawn], items=[
-        item(request, withdrawn["statement"], purposes=("account_contribution",),
-             intent="contribution"),
+        {**item(request, withdrawn["statement"], purposes=("account_contribution",),
+                intent="contribution"),
+         "mutation_scopes": [mutation_scope("receipt-original:material:1",
+                                            relations=("withdraws",))]},
     ])
     model = PurposeModel([seed_plan(account), follow])
     opened = open_account(client, wired, monkeypatch, model, account,
