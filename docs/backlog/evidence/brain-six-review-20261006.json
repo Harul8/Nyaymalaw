@@ -347,6 +347,20 @@
         "nm/brain/continuation_verification.py",
         "tests/test_brain_review_transport.py"
       ]
+    },
+    {
+      "slice": "independently-check-empty-law-reading",
+      "owners": [
+        "LB-179",
+        "LB-180",
+        "LB-181"
+      ],
+      "decision": "An empty reading is now checked against every exact supplied retrieved passage. Per-source owned judgments distinguish justified absence, useful omitted support and uncertainty; no passages is a code fact needing no model call. Receipt scope is supplied passages only; nonempty whole-pool sufficiency remains qualified.",
+      "validation": "125 offline legal cases passed with bounded corrections, peer retention, useful conditional law and legitimate empty pool neighbors; Ruff clean. Real-model/browser checks deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_empty_reading.py"
+      ]
     }
   ]
 }
