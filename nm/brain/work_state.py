@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 
 from nm.brain.conversation import IncompleteConversation
-from nm.brain.source_snapshots import source_snapshots
+from nm.brain.source_snapshots import inline_source_links, source_snapshots
 
 PROGRESS_STATUSES = (
     "pending", "complete", "promised", "unavailable", "deferred", "cancelled")
@@ -287,6 +287,12 @@ def _displayed(unit: dict, blocks: dict, row: dict, words: dict,
                 or element.get("source") != (sources[0] if sources else None)
                 or element.get("refs", []) != [source["locator"] for source in sources]):
             _fail("progress and displayed sources disagree")
+        try:
+            links = inline_source_links(block, sources)
+        except ValueError as exc:
+            _fail(str(exc))
+        if element.get("inline_citations", []) != (links or []):
+            _fail("progress and displayed inline citations disagree")
         for reference in block["references"]:
             if reference["type"] == "conversation":
                 key = (reference["turn_id"], reference["role"])

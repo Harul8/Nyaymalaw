@@ -367,6 +367,24 @@ def test_new_progress_has_its_own_version_and_cannot_omit_interpreted_intent():
         project_work(replace(matter, brain_chat=rows))
 
 
+def test_empty_inline_metadata_does_not_invalidate_a_legacy_checked_block():
+    matter = opened()
+    rows = deepcopy(matter.brain_chat)
+    rows[0]["elements"][0]["inline_citations"] = []
+    rows[0]["response"]["elements"] = deepcopy(rows[0]["elements"])
+    assert project_work(replace(matter, brain_chat=rows))["state"] == "ok"
+
+
+def test_displayed_inline_link_without_a_checked_owner_is_rejected():
+    matter = opened()
+    rows = deepcopy(matter.brain_chat)
+    rows[0]["elements"][0]["inline_citations"] = [
+        {"text": "supported response", "source_id": "foreign", "source_index": 0}]
+    rows[0]["response"]["elements"] = deepcopy(rows[0]["elements"])
+    with pytest.raises(IncompleteConversation, match="inline citations disagree"):
+        project_work(replace(matter, brain_chat=rows))
+
+
 def test_already_completed_selected_task_needs_no_duplicate_lifecycle_transition():
     matter = Matter(id="complete-progress", advocate_id="adv_owner", title="A scoped task")
     words = "Please complete this narrow assessment."

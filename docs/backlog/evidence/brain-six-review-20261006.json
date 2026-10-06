@@ -49,6 +49,20 @@
         "nm/brain/conversation.py",
         "tests/test_new_brain_conversation.py"
       ]
+    },
+    {
+      "slice": "saved-inline-citation-release-integrity",
+      "owners": [
+        "LB-179",
+        "LB-182",
+        "LB-188"
+      ],
+      "decision": "Recompute inline source links from the checked block and its exact saved source snapshots when projecting saved work. Displayed anchors must equal that projection. Empty optional metadata remains harmless for historical blocks without inline anchors; nonempty links without a checked owner are not allowed. Text and source checks remain separate.",
+      "validation": "55 work-state and inline-citation tests passed; forged displayed anchor fails, historical absent/empty metadata succeeds, current inline render/readback cases remain valid. Tests are scripted offline; no semantic/browser acceptance.",
+      "files": [
+        "nm/brain/work_state.py",
+        "tests/test_brain_work_state.py"
+      ]
     }
   ]
 }
