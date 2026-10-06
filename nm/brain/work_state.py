@@ -5,7 +5,8 @@ import hashlib
 import json
 from copy import deepcopy
 
-from nm.brain.conversation import IncompleteConversation
+from nm.brain.conversation import IncompleteConversation, Message
+from nm.brain.evidence_rendering import EVIDENCE_EXPRESSION_CONTRACT, render_expression
 from nm.brain.execution_contracts import (
     RECORD_OUTCOME_CONTRACT,
     ExecutionEvidenceInvalid,
@@ -13,6 +14,7 @@ from nm.brain.execution_contracts import (
     validate_record_outcome,
     validate_review_completion,
 )
+from nm.brain.material import addressed_sources
 from nm.brain.source_snapshots import inline_source_links, source_snapshots
 from nm.shared.model_port import SchemaViolation
 
@@ -582,6 +584,41 @@ def _read_words(prior_conversation, turns: tuple) -> dict[tuple[str, str], str]:
 def _displayed(unit: dict, blocks: dict, row: dict, words: dict,
                allowed_turn_ids: set[str]) -> None:
     for block in blocks.values():
+        expression = block.get("evidence_expression")
+        if expression is not None or "expression_contract" in block:
+            if block.get("expression_contract") != EVIDENCE_EXPRESSION_CONTRACT:
+                _fail("a displayed expression has an unsupported rendering contract")
+            original = tuple(Message(turn, role, text) for (turn, role), text in words.items()
+                             if turn in allowed_turn_ids and turn != row["turn_id"])
+            _, current, prior = addressed_sources(original, words[(row["turn_id"], "advocate")])
+            spans = {key: {"id": key, "role": "advocate", "turn_id": row["turn_id"],
+                           "text": text} for key, text in current.items()}
+            spans.update({key: {"id": key, "role": ref.role, "turn_id": ref.turn_id,
+                                "text": ref.quoted} for key, ref in prior.items()})
+            references = {item["id"]: item for item in block["references"]}
+            records = {key: ref for key, ref in references.items()
+                       if ref["type"] in ("material", "dispute", "requirement", "research")}
+            legal = {key: ref for key, ref in references.items() if ref["type"] == "legal"}
+            try:
+                rendered = render_expression(expression, spans=spans,
+                                             records=records, sources=legal)
+            except (SchemaViolation, TypeError, KeyError) as exc:
+                _fail("the saved expression cannot be resolved from its original evidence: "
+                      + str(exc))
+            # The execution owner independently reconstructs record_result from
+            # the original receipt; it is never certified by this placeholder.
+            if expression["operator"] != "record_result":
+                if (block["text"] != rendered["text"]
+                        or block["record_ids"] != rendered["record_ids"]
+                        or block["legal_source_ids"] != rendered["legal_source_ids"]
+                        or block.get("inline_citations", []) != rendered["inline_citations"]
+                        or not set(rendered["span_ids"]) <= set(block["span_ids"])):
+                    _fail("the saved expression differs from its code-rendered original evidence")
+                for identity in rendered["span_ids"]:
+                    actual, expected = references.get(identity), spans[identity]
+                    if (actual is None or any(actual.get(field) != expected[field]
+                                              for field in ("turn_id", "role", "text"))):
+                        _fail("the saved expression source differs from its complete owned span")
         matches = [element for element in row["elements"]
                    if element.get("continuation_request_index") == unit["request_index"]
                    and element.get("continuation_block_id") == block["id"]]
