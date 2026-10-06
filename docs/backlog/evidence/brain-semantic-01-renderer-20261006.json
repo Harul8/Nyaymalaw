@@ -1,0 +1,13 @@
+{
+  "checkpoint": 1,
+  "base_head": "611b1e8",
+  "activation": "prepared only; public writer unchanged",
+  "tests": 83,
+  "failures": 0,
+  "hashes": {
+    "nm/brain/evidence_rendering.py": "018e8d79f4e0182c1ae3dcdeeb6644d27e150372afa3624efdd6fa3332ad8af2",
+    "tests/test_brain_evidence_rendering.py": "d5b7959b19e626d9a6b94cabed1d264b2a0ea4d4d173c0cc8043d7ffa770a8f2"
+  },
+  "routine_model_call_delta": 0,
+  "remaining": "Writer/reviewer/receipt/saved replay handoffs and all semantic/source coverage qualification remain pending."
+}
