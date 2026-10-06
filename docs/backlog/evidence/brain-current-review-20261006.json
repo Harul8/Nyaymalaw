@@ -977,6 +977,22 @@
       "baseline": "Three new reader input-contract cases already passed before prompt cleanup; they verify original transcript/assignment-vs-material ownership and repair/no-new handoff, not semantic omission detection.",
       "call_accounting": "Existing one detail reader and one independent grounding/coverage call; no new stage. Existing bounded correction/recovery only when an owned gap requires it.",
       "limits": "Actual mini-model omission improvement is not established by a cleaned prompt or scripted reader. Connected browser test still required; no causal assertion that prior empty reader was caused solely by headings."
+    },
+    {
+      "piece": "neutral-original-source-purpose-correction-feedback",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_constants_changed": 0,
+      "invariant": "Correction feedback names the owned source and disagreement without repeating an upstream semantic classification as an answer. All existing account support, original-purpose, exact range, target and ownership gates remain unchanged; typed source-owner reconsideration is preserved.",
+      "baseline": "2of13 focused cases reproduced classifier label leakage through real material/dispute correction payloads;11 legitimate gating/recovery neighbours already passed.",
+      "verification": {
+        "new_cases_passed": 13,
+        "focused_source_support_recovery_and_endpoint_checks_passed": 157,
+        "ruff": "passed",
+        "paid_calls": 0,
+        "routine_model_call_delta": 0
+      },
+      "call_accounting": "Existing material/dispute independent call, at most1local correction and existing conditional candidate-free source-owner recovery; no new prompt/stage or expanded ledger.",
+      "limits": "This removes label anchoring from two diagnostics, not every semantic dependence. Local correction still precedes source-owner reconsideration; outcome quality requires pinned-model measurement. Model disagreement remains untrusted until source owner checks original evidence."
     }
   ],
   "additional_reviewer_input": {
@@ -1023,5 +1039,30 @@
     "available_under_cumulative5": 3.122922,
     "pinned_model": "gpt-4.1-mini-2025-04-14",
     "no_further_paid_calls_since_baseline": true
+  },
+  "delivered_work_contract_review": {
+    "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
+    "critical_distinction": "Partial background law is not alone a blocking invariant: live response_basis conversation_record and empty research_question. Bind only actual required outcome and relevant checked coverage; permit narrow read-only/current/reused results and independent diversions despite unrelated historical gaps.",
+    "proposed_general_contract": "Freeze independently required deliverables and success conditions from original request; server assigns outcome IDs. Provide one owned catalogue of applicable current/reused records, scoped coverage, checked research and effects. Writer selects displayed result blocks per outcome. Existing independent reviewer checks original request, omissions and actual usefulness. Code certifies exact outcome coverage, dependencies, ownership and persistence, then derives completion. Keep record effect fulfillment separate.",
+    "staged_owners": [
+      "conversation.py independent deliverables/success conditions",
+      "turn.py owned outcome IDs/result catalogue; separate record/delivery fulfillment",
+      "continuation.py result/block selectors and bounded admission",
+      "continuation_verification.py original-request outcome sufficiency/omissions",
+      "work_state.py versioned delivery seals/snapshots and retained task outcomes"
+    ],
+    "inseparable_dependency": "These are preparatory one-file pieces of one versioned handoff, not individually completed protection. Fresh progress needs explicit new-version reconstruction; historical proof must not be upgraded or resealed. Preserve existing record snapshots unless their canonical projection changes.",
+    "routine_call_delta": 0,
+    "paired_acceptance": [
+      "omitted outcome versus full useful delivery",
+      "quote-only versus checked analysis",
+      "unrelated effect versus exact relevant effect",
+      "missing required coverage versus unrelated historical gaps",
+      "fresh failure versus applicable reusable evidence",
+      "declined edit versus completed review",
+      "inherited broad task versus narrow current answer",
+      "mixed independent greeting/diversion/question outcome"
+    ],
+    "status": "Plan only; not implemented or qualified."
   }
 }

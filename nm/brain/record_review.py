@@ -715,12 +715,15 @@ def validate_record_checks(row: dict, *, source_ids: set[str], target_ids: set[s
                            and check["supplies_account_content"])
         if check["supports_proposal"] and not genuine_content:
             conflicts.append(f"source {check['source_id']}: supports_proposal=true conflicts with "
-                             f"independent content_role={independent_role} or "
-                             "supplies_account_content=false")
+                             "the original-source purpose/support checks. Independently "
+                             "re-examine the original words and their framing; distinguish "
+                             "substantive account support from authority or context")
         if (check["supplies_account_content"]
                 and independent_role not in _ACCOUNT_CONTENT_ROLES):
             conflicts.append(f"source {check['source_id']}: supplies_account_content=true "
-                             f"conflicts with independent content_role={independent_role}")
+                             "disagrees with the original-source purpose assessment. "
+                             "Independently re-examine the original words and their framing; "
+                             "do not infer their purpose from another classification")
         portions = support_portions[check["source_id"]]
         treatment = source_treatments[check["source_id"]]
         selected_account = True
