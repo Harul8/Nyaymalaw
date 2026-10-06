@@ -835,6 +835,21 @@
         "tests/test_brain_legal_requirements.py",
         "tests/test_brain_legal_substantive_widths.py"
       ]
+    },
+    {
+      "slice": "legal-query-meaning-width",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-180",
+        "LB-183"
+      ],
+      "decision": "Research query plans no longer fail solely above 300 characters. Preserve consequential actor, relationship, period, exceptions and conditions while requesting concise faithful routes. Keep one-to-four owned routes, duplicate/blank/foreign subject checks and actual complete-context/output/encoder resource controls.",
+      "validation": "267 focused offline law controls passed including 4 query-width/blank/foreign pairs; Ruff clean. Meaningful long route accepted in first call without clipping or needless correction. Actual retrieval/model/browser quality deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_query_phrase_width.py"
+      ]
     }
   ]
 }

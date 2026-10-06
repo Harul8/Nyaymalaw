@@ -366,7 +366,8 @@ Use fewer when additional useful routes cannot be grounded; avoid near-duplicate
 A query set does not establish search sufficiency.
 
 Outcome: Return only plans under the schema, exactly one per subject_id.
-Each plan has one to four query objects with text no longer than 300 characters.
+Each plan has one to four query objects. Keep each route concise while
+preserving its relevant actor, relationship, period, conditions and exceptions.
 Queries are search hypotheses, not legal advice, facts or citations."""
 
 _REQUIREMENTS_SYSTEM = """Message: You receive the complete ordered, attributed
@@ -864,8 +865,8 @@ def decompose_subjects(
 
     def accept(identifier, row):
         phrases = [item["text"].strip() for item in row["queries"]]
-        if any(not phrase or len(phrase) > 300 for phrase in phrases):
-            raise SchemaViolation("Each search query must be concise and nonempty")
+        if any(not phrase for phrase in phrases):
+            raise SchemaViolation("Each search query must be meaningful and nonempty")
         if len({phrase.casefold() for phrase in phrases}) != len(phrases):
             raise SchemaViolation("A subject has duplicate search queries")
         return tuple(phrases)
