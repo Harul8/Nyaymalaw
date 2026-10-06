@@ -760,6 +760,9 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                                       "result": deepcopy(opening_result)}
     if {row["result_id"] for row in receipt["bindings"]} != {row["id"] for row in material}:
         raise ExecutionEvidenceInvalid("Coverage application cannot bind every admitted result")
+    # Seal the durable JSON form so fresh and saved evidence are identical.
+    # Dataclass tuple fields otherwise become lists only when the store serializes.
+    receipt = json.loads(json.dumps(receipt, ensure_ascii=False))
     receipt["seal"] = _digest(receipt)
     return receipt
 
@@ -2378,23 +2381,7 @@ class BrainService:
         title = matter.title if matter.brain_ready or not opening.ready else opening.title
         summary = (matter.brain_opening_summary if matter.brain_ready or not opening.ready
                    else opening.summary)
-        try:
-            _, latest_sources, prior_sources = addressed_sources(
-                conversation.messages, turn.message)
-            coverage_application = _capture_coverage_application(
-                execution,
-                states={"dispute_review": recovery_context.get("dispute_review_state"),
-                        "detail_review": detail_review_state},
-                proposals={"dispute_review": recovery_context.get("dispute_proposals", ()),
-                           "detail_review": recovery_context.get("detail_proposals", ())},
-                candidates=candidates, material=material, opening=plan.opening,
-                opening_supported=grounded.opening_supported, sources=source_treatments,
-                latest_sources=latest_sources, prior_sources=prior_sources,
-                opening_result={"ready": ready, "title": title, "summary": summary,
-                                "result_id": str(matter.id)})
-        except (SchemaViolation, ExecutionEvidenceInvalid) as exc:
-            raise BrainRefused(409, "The admitted account representation could not be verified",
-                               gate_id="G-CORE", gate_state="invalid") from exc
+        coverage_application = None
         now = datetime.now(timezone.utc).isoformat()
         element = {"kind": "question" if asked and not needs_work else
                    "ground" if needs_work else "finding",
@@ -2439,9 +2426,6 @@ class BrainService:
                "active_work_after": plan.active_work_after,
                "elements": response["elements"], "committed": True,
                "release_state": "released", "matter_id": str(matter.id)}
-        if coverage_application is not None and coverage_application["opening"] is not None:
-            row["opening_result"] = {
-                "ready": ready, "title": title, "summary": summary, "result_id": str(matter.id)}
         updated = replace(matter, title=title, brain_ready=ready,
                           brain_opening_summary=summary,
                           brain_chat=(*matter.brain_chat, row),
@@ -2472,6 +2456,24 @@ class BrainService:
                             "record changes. Please try again later.",
                             code="material_execution_unconfirmed",
                             gate_id="G-CORE", gate_state="unconfirmed")
+                _, latest_sources, prior_sources = addressed_sources(
+                    conversation.messages, turn.message)
+                coverage_application = _capture_coverage_application(
+                    execution,
+                    states={"dispute_review": recovery_context.get("dispute_review_state"),
+                            "detail_review": detail_review_state},
+                    proposals={"dispute_review": recovery_context.get("dispute_proposals", ()),
+                               "detail_review": recovery_context.get("detail_proposals", ())},
+                    candidates=candidates, material=material, opening=plan.opening,
+                    opening_supported=grounded.opening_supported, sources=source_treatments,
+                    latest_sources=latest_sources, prior_sources=prior_sources,
+                    opening_result={"ready": ready, "title": title, "summary": summary,
+                                    "result_id": str(matter.id)})
+                if (coverage_application is not None
+                        and coverage_application["opening"] is not None):
+                    row["opening_result"] = {
+                        "ready": ready, "title": title, "summary": summary,
+                        "result_id": str(matter.id)}
                 execution["rejected_proposals"] = {
                     "disputes": [entry["candidate_id"] for entry in dispute_audit
                                  if entry["verdict"] == "reject"

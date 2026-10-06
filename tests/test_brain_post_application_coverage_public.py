@@ -192,3 +192,32 @@ def test_owned_application_dependency_tamper_is_refused_without_model_or_write(
     )
     assert response.status_code == 409, response.text
     assert len(model.seen) == count and wired.store.load(opened["matter_id"]) == before
+
+
+@pytest.mark.parametrize("relation", ["corrects", "withdraws"])
+def test_fresh_tuple_bearing_admission_proof_is_json_stable_before_save_and_replay(
+    client, wired, monkeypatch, relation
+):
+    captured = []
+    capture = owner._capture_coverage_application
+
+    def observe(*args, **kwargs):
+        receipt = capture(*args, **kwargs)
+        captured.append(deepcopy(receipt))
+        return receipt
+
+    monkeypatch.setattr(owner, "_capture_coverage_application", observe)
+    model, opened, latest, reply, saved = saved_revision(client, wired, monkeypatch, relation)
+    fresh = captured[-1]
+    proposal, = [row["proposal"] for row in fresh["bindings"]]
+    assert isinstance(proposal["prior_references"], list) and proposal["prior_references"]
+    assert isinstance(proposal["related_material_ids"], list)
+    assert proposal["related_material_ids"] == [TARGET]
+    assert fresh == json.loads(json.dumps(fresh, ensure_ascii=False))
+    assert fresh == reply["material_coverage"]["execution"]["coverage_application"]
+    calls = len(model.seen)
+    replay = send(client, latest, "application-revision", opened=opened)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["replayed"] and replay.json()["metrics"]["llm_calls"] == 0
+    assert replay.json()["material_coverage"]["execution"]["coverage_application"] == fresh
+    assert len(model.seen) == calls and wired.store.load(opened["matter_id"]) == saved
