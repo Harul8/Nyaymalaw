@@ -438,6 +438,22 @@
         "tests/test_brain_material_verification.py",
         "tests/test_brain_material_coverage.py"
       ]
+    },
+    {
+      "slice": "require-independent-review-completion",
+      "owners": [
+        "LB-176",
+        "LB-187",
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Completing a typed record review requires actual checked reading and independently complete account coverage for its exact current or inherited scope. Additional independently covered goals do not block it. Partial or unassessed wider review preserves checked effects and truthful partial replies; an independently answered question can complete without completing the record review.",
+      "validation": "26 offline effect/completion contract cases passed, including inherited nonselected review tasks, exact scope and valid partial peers; Ruff clean. No model/API/browser calls.",
+      "files": [
+        "nm/brain/execution_contracts.py",
+        "tests/test_brain_execution_contracts.py",
+        "tests/test_brain_review_completion.py"
+      ]
     }
   ]
 }

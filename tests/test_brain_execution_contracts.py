@@ -208,6 +208,14 @@ def test_review_no_change_allows_zero_candidates_but_not_skipped_or_unrequested_
     evidence = receipt(activated=(), requested_review=True, review="no_candidates")
     for kind in ("disputes", "details"):
         evidence["effects"][kind]["operations"] = []
+    requirement = evidence["requests"][0]["record_requirement"]
+    for review in ("dispute_review", "detail_review"):
+        evidence["stages"][review]["account_coverage"] = {
+            "contract": "independent_account_coverage_v1", "state": "complete",
+            "reason": "The complete original scope is already faithfully represented.",
+            "missing_source_ids": [], "review_scope": {"requests": [{
+                "request_index": 0, "record_requirement": deepcopy(requirement)}]},
+        }
     validate_record_outcome(
         unit("review_no_change", current=["prior"], complete=True), evidence, ["prior"]
     )

@@ -228,6 +228,100 @@ def effect_catalogue(receipt: dict | None) -> dict[str, dict]:
     return result
 
 
+def validate_review_completion(
+    unit: dict, receipt: dict | None, *, requirement: dict | None = None, task_id: str | None = None
+) -> None:
+    """Full requested review needs independently assessed omission coverage.
+
+    This does not withhold an independently checked performed peer or a
+    truthful partial response when wider review coverage is partial/unassessed.
+    The caller may supply an inherited selected task's retained requirement;
+    its complete requested scope must appear in the current owned assessment.
+    """
+    receipt = _receipt(receipt)
+    if requirement is None and isinstance(receipt, dict):
+        requests = [
+            row
+            for row in receipt.get("requests", [])
+            if isinstance(row, dict) and row.get("request_index") == unit["request_index"]
+        ]
+        if len(requests) == 1:
+            requirement = requests[0].get("record_requirement")
+    if not isinstance(requirement, dict) or requirement.get("kind") != "review":
+        return
+    work = unit.get("work", {})
+    selected = (
+        {task_id}
+        if task_id is not None
+        else {"$work", work.get("existing_id"), work.get("progress_id")} - {None, ""}
+    )
+    completing = (
+        task_id is None and unit.get("sufficiency", {}).get("status") == "complete"
+    ) or any(
+        row.get("status") == "complete" and row.get("target_id") in selected
+        for row in unit.get("progress_updates", [])
+    )
+    if not completing:
+        return
+    receipt = _receipt(receipt)
+    if receipt is None:
+        raise SchemaViolation(
+            "Full requested review completion needs owned independent account coverage"
+        )
+    for reader, review in _KINDS.values():
+        if _stage(receipt, reader) != "returned" or _stage(receipt, review) not in (
+            "checked",
+            "no_candidates",
+        ):
+            raise SchemaViolation(
+                "Full requested review completion needs actual reading and review"
+            )
+        stage = receipt["stages"][review]
+        assessment = stage.get("account_coverage")
+        if assessment is None:
+            raise SchemaViolation(
+                "Full requested review completion lacks independent account coverage"
+            )
+        if (
+            not isinstance(assessment, dict)
+            or assessment.get("contract") != "independent_account_coverage_v1"
+            or assessment.get("state") not in ("complete", "partial", "unassessed")
+        ):
+            raise ExecutionEvidenceInvalid("Independent account coverage is unreadable")
+        if assessment["state"] != "complete":
+            raise SchemaViolation(
+                "Full requested review completion has partial/unassessed account coverage"
+            )
+        missing = assessment.get("missing_source_ids")
+        if (
+            not isinstance(missing, list)
+            or missing
+            or not isinstance(assessment.get("reason"), str)
+            or not assessment["reason"].strip()
+        ):
+            raise ExecutionEvidenceInvalid(
+                "Complete account coverage contradicts its checked assessment"
+            )
+        scope = assessment.get("review_scope")
+        requests = scope.get("requests") if isinstance(scope, dict) else None
+        covered = (
+            [
+                row
+                for row in requests
+                if isinstance(row, dict)
+                and row.get("request_index") == unit["request_index"]
+                and row.get("record_requirement") == requirement
+                and (task_id is None or row.get("task_id") == task_id)
+            ]
+            if isinstance(requests, list)
+            else []
+        )
+        if not covered:
+            raise SchemaViolation(
+                "Full requested review completion lacks the exact requested account scope"
+            )
+
+
 def validate_record_outcome(
     unit: dict, receipt: dict | None, current_record_ids: Iterable[str]
 ) -> None:
@@ -265,6 +359,7 @@ def validate_record_outcome(
         )
     if any(not catalogue[identity]["performed"] for identity in selected):
         raise SchemaViolation("record_outcome selects an unread, unchanged or unadmitted effect")
+    validate_review_completion(unit, receipt)
     # Both complete selections were checked before normalizing repetitions.
     # Owned receipt identities are never repaired; only model set-like choices
     # can repeat without adding or changing their meaning.
