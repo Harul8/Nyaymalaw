@@ -1,16 +1,91 @@
 # Golden passage and fabricated-output pressure test
 
-Twenty repository golden scenarios supplied the source passages for **91 new
-pressure cases**. Together with the previous 101 cases, **192 distinct cases
-ran in forward, reverse and shuffled order: 576 passing executions**. The
-compared user inputs, literal fabricated outputs, expectations and observations
-were identical across orders. The tested commit is `aaf90cc`.
+The two originally exposed bypasses are prevented in the exercised public flow:
+a false completion block cannot claim an unsaved correction, and a positive
+reviewer cannot expand an independently declared record-mutation scope.
+The date and unrelated custody records remain active after the wrong-target
+proposal. The pending correction releases a code-rendered unfinished result,
+with no false completion prose and no record change.
 
-This qualifies the exercised mechanical boundaries. Two new cases deliberately
-demonstrate failures that remain possible under incorrect semantic judgments;
-their passing assertions do not mean those failures were prevented. Before
-Build remains the queue and status owner. No NM runtime or prompt was changed
-for this extension, and no live model or browser call was made.
+The assembled offline suite passed **2,382 tests**, with no failures, errors or
+skips. **205 paired pressure cases ran in forward, reverse and shuffled order:
+615 passing executions**. Their exact user passages, literal fabricated model
+outputs, expectations and observations matched across orders. Pressure head:
+`1be2d6f`. The earlier broad-suite head was `dd0107d`; production is identical.
+Only test evidence attribution and two module docstrings changed afterward.
+
+This establishes the exercised mechanical contracts, not universal semantic
+correctness. **Eight characterization cases still demonstrate semantic
+limits**, described below. They pass by exposing the risk, not preventing it.
+No real-model API or browser validation was performed. Before Build remains
+the queue and status owner.
+
+## What changed
+
+- **Scope before extraction:** the interpreter declares original-source-linked
+  permissions, owned targets and permitted relations before readers propose
+  changes. The relevant record work must be included in the plan.
+- **Permission and support are separate:** current review instructions can
+  authorize repair, while earlier original account supplies factual support.
+  Certificates retain only positively checked substantive sources; attached
+  context cannot authorize another record or become factual support.
+- **Admission before retirement:** both material and dispute verification enforce
+  the declared scope even after a model ACCEPT. A held proposal cannot preview,
+  retire or overwrite an unrelated record; independently valid peers survive.
+- **Durable bindings:** accepted revisions retain the checked permission and
+  support binding. Projections and replay revalidate owners, source words,
+  targets, versions and original dependencies before applying the revision.
+- **Completion in every response mode:** typed effect and completion nodes are
+  rendered by code from checked outcomes, including substantive replies and
+  follow-ups. Required record work cannot declare `record_outcome=none`.
+  Status does not replace independent reviewed explanations or questions.
+- **Atomic release:** checked proposed state, operation evidence and the exact
+  reply are committed together. Failed or unconfirmed saves release no matter
+  success. Replay recovers the original committed result without duplicate work.
+- **Controlled replay failures:** malformed saved request identities or review
+  scopes return a controlled refusal without model calls or storage changes.
+  Real inherited aliases can share indices. Genuine pre-scope receipts replay
+  their original untracked evidence without invented new requirements.
+
+These are generic contracts. No date, case, phrase list or legal-scenario branch
+was added to production. The standing rules in `AGENTS.md` also distinguish
+server evidence from model drafts during presentation and bounded correction.
+Implementation checkpoints 31–50 record each individually verified and pushed
+production slice and its limitations under the existing Before Build owners.
+
+## Avoiding unnecessary blocking
+
+Correct implicit contributions and explicit corrections remain admissible.
+Already-current state and completed no-change reviews need no invented fresh
+write. Shared status owners preserve requested questions and independently
+supported prose. Valid unrelated contributions survive another request's failed
+completion. Harmless inapplicable metadata follows the existing normalization
+contract; populated consequential contradictions still require correction.
+
+Selected exact source IDs now survive extraction, saving and replay. Identical
+words in different spans therefore retain their actual selected identity and
+source role instead of becoming an artificial ambiguity. Saved IDs map to the
+correct earlier transcript ordinal, rather than the first word match. Foreign
+or mismatched IDs remain consequential errors.
+
+Model inputs omit only duplicated ledger proof metadata. Complete original
+advocate and NM messages, classifications, active records and permission choices
+remain; the full server ledger still governs admission and replay. A 48-record,
+12-message offline fixture removes **10,598 estimated material-review input
+tokens** and **10,992 estimated dispute-review input tokens**, with a 4,096-token
+output reservation and one scripted Judge call. A smaller-budget correct result
+passes while a wrong target stays held. These are estimator results, not live
+paid-token or latency measurements.
+
+Untrusted drafts are attached after trusted-context presentation. A rejected
+model object that repeats a ledger contract tag cannot become evidence or
+interrupt its own bounded correction. Real corrupt server proof still stops
+before dispatch. Valid core public fixtures keep their eight-call baseline;
+exact replay uses zero. No routine model stage was added.
+
+Known-good neighbours and exact call assertions establish useful counterexamples
+to overblocking. Neither gate counts nor intentionally injected recovery rates
+establish a population false-positive rate.
 
 ## What the source material establishes
 
@@ -45,148 +120,88 @@ Four groups contain three scenarios and four contain two. Additional two-turn
 date tests combine the exact GS-15/17/18 passages to supply a saved predecessor,
 a later correction and an independently owned neighbouring record.
 
-## How the fabricated responses were checked
+## What the pressure results mean
 
-Each group has eight quality/failure variants and one independent issue/thread
-case: **72 authenticated `POST /api/turn` traces**. Nineteen specialty cases add
-fourteen public persistence/release traces and five direct checks at the owning
-continuation reference validator. Thus the new suite has **86 public traces
-and five direct reference checks**.
+The selection comprises 79 foundational cases, 22 semantic-recovery cases,
+91 golden cases and 13 new public scope/replay neighbours. It includes accurate,
+partial, malformed, hallucinated, empty and wrong-target fabricated outputs;
+failed saves, lost acknowledgements and restored historical responses are also
+exercised. Strict provider fixtures preserve rejected objects and run shipped
+schema validation. Semantic labels are independently authored test data;
+extractor output cannot grant itself permission.
 
-Only the model/search dependency is replaced. Public cases use the shipped
-Brain orchestration, strict `require_schema`, completed-output quarantine,
-bounded corrections, independent verification contracts, atomic FileMatterStore
-commit, reopened records and the released response. Literal fabricated output
-is recorded before schema validation. The fixture does not improve its meaning
-after rejection.
-
-Semantic support, source purpose, coverage, identity and prose decisions are
-explicitly authored fixture labels. The support/source/attribute maps are
-closed: an unfamiliar proposition fails fixture construction instead of gaining
-automatic acceptance. Saved thread IDs are checked mechanically and separately
-resolved to saved labels against assignments declared before dispatch.
-Dynamic server IDs do not supply semantic approval. Scenario-specific examples
-and labels exist only in test data.
-
-| Fabricated output | Exercised observation | Conditional dispatches per core turn |
-| --- | --- | ---: |
-| Supported, attributed atomic proposals | Every expected proposal saved; saved exact reply equals release | 0 |
-| Useful partial extraction | Checked peers retained; one exact-source omission read and independent review restore the missing proposal | 2 |
-| One malformed sibling, correct keyed repair | Strict completed object quarantined; one failed unit repaired without losing healthy proposals | 1 |
-| Persistently malformed sibling | Checked peers saved, failed work stays unread; no invented complete result | 3 |
-| Invented judgment/award, explicitly rejecting Judge | Unsupported proposal absent; supported peers survive | 2 |
-| Foreign source ID | Mechanical reference rejection and bounded failed repair preserve owned peers | 3 |
-| Empty initial extraction with localized missing coverage | One targeted read and independent review restore owned account proposals | 2 |
-| Source owner mislabels genuine account | Typed disagreement triggers one candidate-free reread of the complete original input and dependent reviews | 3 |
-| Independent issues plus a foreign assignment sibling | Owned issue labels/assignments preserved; invented issues rejected by their declared Judge; foreign assignment repaired | 1 |
-
-Source-owner input must contain only original conversation/spans and selected
-owned IDs. Omission reads must retain the exact complete message and address
-only the declared missing source IDs. The shared recovery ledger remains bounded
-at eight reservations. Scripted hallucination/issue rejection proves rejection
-wiring, not that a real Judge would detect those errors.
-
-## Saved effects, failures and unnecessary blocking
-
-The concrete GS-15 test first saves `it is dated 15-4-1984`, then supplies
-`sorry, 15-4-2024`. The correct-target path retires the saved 1984 predecessor,
-admits the 2024 successor, preserves the unrelated custody account, and delivers
-the committed code acknowledgement. This is an actual two-turn correction,
-not two date quotations merely stored beside one another.
-
-Other public cases show that:
-
-- Explicit pure record acknowledgements are rendered from actual owned effects,
-  rather than invented writer prose.
-- A claimed performed result without an operation receipt, or an effect on
-  another owned target, cannot complete the selected request.
-- Already-current state and a complete no-change review need no invented fresh
-  write or omission retry.
-- Declared empty/whitespace-only inapplicable acceptance metadata needs no retry;
-  populated contradictory retention metadata receives one correction.
-- A failed atomic save releases no prepared matter reply and adds no saved turn.
-- Lost acknowledgement is recovered from the durable receipt; exact replay
-  adds no model call, duplicate effect or turn.
-- A wholly unread required reader after its keyed correction returns service
-  failure, preserves the prior record, and saves no new turn or matter reply.
-
-Direct reference cases reject foreign material/legal-source IDs, assessment
-without checked law and a legal passage whose checked use owner is missing.
-The attributed factual neighbour is admitted. These are reference checks, not
-legal-reasoning or real-corpus tests.
-
-All eight supported core baselines were admitted with zero conditional recovery.
-The no-change and harmless-metadata neighbours also produced their expected
-useful results. This gives positive counterexamples to overblocking in these
-constructed cases; it does **not** establish a population false-positive rate.
-
-| New-case disposition | Cases |
+| Exercised disposition | Distinct cases |
 | --- | ---: |
-| Admitted | 14 |
-| Recovered | 42 |
-| Independently valid partial work preserved | 24 |
-| Blocked at the exercised scope | 9 |
-| Semantic gap deliberately demonstrated | 2 |
-| Total | 91 |
+| recovered | 61 |
+| partial preserved | 25 |
+| admitted | 41 |
+| passed | 21 |
+| blocked | 49 |
+| gap demonstrated | 8 |
+| Total | 205 |
 
-## Two semantic failures remain possible
+The original 91 golden cases now record **14 admissions, 42 recoveries,
+24 partial results and 11 blocked unsafe scopes**. Their two old gap cases moved
+to prevented outcomes; the intentionally injected recovery counts did not
+increase. All eight supported composite baselines remain admitted without
+conditional recovery. “Blocked” describes the unsafe scope and can coexist with
+a useful committed pending response; it does not always mean a failed HTTP turn.
 
-**False unrestricted prose:** with no saved correction, a fabricated reviewer
-accepts “I corrected the selected date, saved the revision and completed every
-requested task.” The typed receipt remains unfinished and the record remains
-unchanged, yet substantive prose is released. The same false prose is removed
-under the separately tested pure code-acknowledgement mode. A truthful footer
-does not certify unrestricted prose. Case: `golden-boundary-pending-substantive`.
+## Semantic limits still demonstrated
 
-**Wrong owned correction lineage:** a fabricated identity Judge falsely approves
-replacing the independently owned custody record with the 2024 date proposal.
-Code correctly leaves the requested 1984 date active and blocks claimed
-fulfillment of that untouched target. However, the unrelated custody predecessor
-is retired and the date is saved against its wrong lineage. The incorrect
-semantic admission itself was not prevented. Case:
-`golden-boundary-two-turn-date-wrong`.
+These eight cases remain explicit characterization outcomes:
 
-These are remaining semantic dependencies under LB-178/179/182/193. Owned IDs,
-exact source text, a successful save and a positive Judge do not prove identity
-or legal meaning. Real-model independent evaluation of source purpose, omissions,
-target identity and prose remains required. No phrase matcher or scenario branch
-was added to production to disguise either result.
+- `extractor-14-wrong-fact-exact-source`
+- `extractor-17-empty-is-proposal-only`
+- `material-20-wrong-date-false-judge-acceptance`
+- `mutation-release-mislabeled-operational-account`
+- `release_08_prose_accept_gap`
+- `source-pressure-16-semantic-mislabel-false-rejection`
+- `source-pressure-17-semantic-mislabel-false-admission`
+- `source-pressure-18-instruction-only-mixed-false-admission`
 
-## Calls, evidence and reproducibility
+They include wrong source-purpose judgments, false factual support, missing
+content and unrestricted false prose accepted by a deliberately wrong reviewer.
+The newly added prose case disguises an operational lie as an account block;
+it still appears beside the truthful unfinished code status. Code rendering
+cannot prove arbitrary free prose true. Scope checks cannot prove that the
+interpreter initially selected the semantically correct target, or resolve
+identity inside an explicitly broad review. A source ID, seal, successful save
+or positive reviewer boolean does not establish those meanings.
 
-The core 72 traces use **712 fabricated structured dispatches**: 576 initial
-dispatches and 136 conditional recovery dispatches. Their eight-call baseline
-is interpretation, source classification, dispute reader/Judge, material
-reader/Judge, continuation writer and response reviewer. Inputs and literal
-outputs for every recorded operation are retained in the full packet.
+The two originally reported paths are closed, but **all semantic failures have
+not been eliminated**. Real-model evaluation of source purpose, omissions,
+initial target identity, prose and useful delivery remains required. The standing
+rules require independent review of those judgments; they do not certify that a
+reviewer will always be correct. No phrase matcher hides the remaining risk.
 
-Across the new 86 public traces, current model ports dispatched 827 times;
-ten separate saved seed turns add 80 calls, giving **907 scripted port
-dispatches including setup**. The five direct reference cases make no model
-call. The legacy runner's 1,343-entry combined counter includes direct probes
-and omits those seed turns; it must not be read as an exact model-call or cost
-counter. The summary records saved seed metrics and per-case current calls.
-Mock zero-token/zero-latency metrics do not measure live cost or latency.
+## Evidence and reproduction
 
-The [summary](evidence/brain-golden-pressure-summary-20261006.json) pins the
-tested commit, source hashes, case counts, call accounting and repeated-order
-results. The [complete compressed packet](evidence/brain-golden-pressure-20261006.json.gz)
-contains all 192 paired inputs/outputs, actual calls, saved/released golden
-records and comparisons. Compression preserves the original packet byte for
-byte; compressed and uncompressed hashes are in the summary. Three JUnit/log
-pairs are stored beside it. The
-[independent fixture audit](evidence/brain-golden-independent-audit-20261006.md)
-and construction artifacts distinguish fixture mistakes from production gaps.
+The [qualified summary](evidence/brain-gap-qualified-summary-20261006.json)
+pins commits, production and fixture hashes, counts, resource estimates and
+remaining limits. The [complete compressed packet](evidence/brain-gap-qualified-pressure-20261006.json.gz)
+retains all 205 paired records, actual dispatch/injection traces, saved state and
+released replies. Compression round-trips exactly; both hashes are in the summary.
+Three JUnit/log pairs and the full offline-suite JUnit/log sit beside it. The
+[earlier summary](evidence/brain-golden-pressure-summary-20261006.json) and packet
+remain as the unchanged pre-hardening baseline.
 
-Construction initially expected partial success after removing the only account
-proposal in one group; production correctly refused that wholly unread stage.
-The partial fixture now uses two independently supported atomic GS-20 statements,
-while the explicit wholly-unread negative case remains. An initial replay fixture
-added a matter ID absent from the original offer and was correctly refused;
-the exact-offer replay now passes. Original failing construction JUnit evidence
-is retained rather than reported as passed or fixed NM bugs.
+Diagnostic findings are retained in the qualified summary. Nineteen older fixture
+failures were resolved by independently authored scope declarations, separate
+operational status owners and assertions on canonical results; gates were not
+weakened. Three inadvertently collected browser journeys could not start because
+Chromium was absent and are explicitly excluded from offline qualification.
+An initial repeated-order comparison correctly rejected saved timestamp/latency
+traces mislabeled as fabricated model output. Full storage-injection traces now
+remain separate; literal provider outputs and safety assertions were unchanged.
 
-Reproduce from the repository with a fresh output directory:
+The packet's 1,465 recorded first-order trace events include direct probes,
+storage injections and replay events. That count is not an exact paid-model
+call, token, cost or latency counter. Scripted semantic rejection proves wiring,
+not real reviewer accuracy. The original full golden legal outcomes and browser
+behaviour remain unverified.
+
+Use a fresh output directory:
 
 ```bash
 .venv/bin/python development_environment/one_off_tools/brain_pressure_test_20261006.py \
@@ -194,6 +209,8 @@ Reproduce from the repository with a fresh output directory:
   --test-file tests/test_brain_semantic_recovery.py \
   --test-file tests/test_brain_golden_pressure.py \
   --test-file tests/test_brain_golden_boundaries.py \
+  --test-file tests/test_brain_mutation_release_neighbors.py \
+  --test-file tests/test_brain_mutation_saved_replay.py \
   --source-file tests/fixtures/brain_golden_sources_20261006.json \
   --source-file docs/GOLDEN_SET.md \
   --source-file tests/test_brain_golden_sources.py \
@@ -202,11 +219,7 @@ Reproduce from the repository with a fresh output directory:
 ```
 
 The runner requires one owned paired record per executed test, rejects missing,
-failed or skipped cases, pins selected resources and code, and checks compared
-projections across all orders. The focused new modules plus source/runner
-integrity checks also passed **102 tests**; Ruff and whitespace checks passed.
-The prior broader regression/architecture qualifications remain in the
-[earlier report](nm-brain-pressure-test-20261006.md); they were not rerun or
-reclassified by this extension. Live semantic/browser acceptance, full original
-golden legal outcomes, actual judgment acquisition and population error rates
-remain unverified.
+failed or skipped cases, pins selected resources and checks exact compared
+projections across orders. Browser and real-model acceptance remain deferred
+as requested. Earlier unrelated architecture qualifications remain in the
+[prior report](nm-brain-pressure-test-20261006.md) and are not reclassified here.
