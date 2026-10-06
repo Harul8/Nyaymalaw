@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from nm.brain.material import SCOPES
+from nm.brain.mutation_contracts import validate_record_mutation
+from nm.shared.model_port import SchemaViolation
 from nm.work_the_file.matter_contracts import Matter
 
 _RELATIONS = frozenset({"new", "adds", "corrects", "contradicts", "withdraws"})
@@ -85,6 +87,9 @@ def proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
             problems.append("a conversation proposal could not be read")
             continue
         previous_active = dict(active)
+        material_coverage = response.get("material_coverage")
+        execution = (material_coverage.get("execution")
+                     if isinstance(material_coverage, dict) else None)
         turn_rows: list[dict] = []
         turn_retire: set[str] = set()
         turn_incomplete = False
@@ -94,6 +99,14 @@ def proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
                 turn_incomplete = True
                 continue
             if proposal.get("kind") != "dispute":
+                continue
+            try:
+                validate_record_mutation(
+                    proposal, turn=entry, execution=execution,
+                    prior_words=prior_words, target_catalogue=previous_active)
+            except SchemaViolation:
+                problems.append("a dispute proposal lacks valid saved mutation authority")
+                turn_incomplete = True
                 continue
             scope = proposal.get("matter_scope")
             if scope not in SCOPES:
