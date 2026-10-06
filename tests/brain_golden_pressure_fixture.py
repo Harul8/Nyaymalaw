@@ -21,6 +21,7 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
 from tests import __file__ as test_package_file
 from tests.brain_pressure_support import record_case
+from tests.brain_reader_fixture import source_portion_reply
 from tests.test_brain_golden_sources import validate_sources
 
 ROOT = Path(test_package_file).resolve().parents[1]
@@ -534,8 +535,9 @@ class GoldenModel:
             self.turn_number += 1
             data = self._interpret()
         elif operation == "classify_account_sources":
+            original = payload.get("original_input", payload)
             roles = dict(self.dossier.source_roles)
-            for message in payload.get("earlier_conversation", []):
+            for message in original.get("earlier_conversation", []):
                 if message["role"] != "advocate":
                     continue
                 for span in message["source_spans"]:
@@ -556,9 +558,10 @@ class GoldenModel:
                         ),
                         "reason": "This source purpose is separately declared for this case.",
                     }
-                    for identity in payload["source_ids"]
+                    for identity in original["source_ids"]
                 }
             }
+            data = source_portion_reply(payload, data)
         elif operation == "reconsider_account_sources":
             self.owner_reconsidered = True
             original = payload.get("original_input", payload)
@@ -571,6 +574,7 @@ class GoldenModel:
                     for identity in original["source_ids"]
                 }
             }
+            data = source_portion_reply(payload, data)
         elif operation in ("extract_disputes", "extract_legal_details"):
             data = self._reader(operation, payload, schema)
         elif operation in ("verify_disputes", "verify_material_grounding"):

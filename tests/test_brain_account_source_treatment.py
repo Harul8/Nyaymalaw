@@ -8,12 +8,14 @@ from nm.brain.conversation import Message
 from nm.brain.dispute_verification import verify_disputes
 from nm.brain.material import addressed_sources
 from nm.brain.record_review import (
+    SOURCE_SELECTION_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
     classify_account_sources,
     substantive_source_treatments,
 )
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
+from tests.brain_reader_fixture import source_portion_reply
 from tests.test_brain_dispute_verification import _candidate
 
 
@@ -28,7 +30,8 @@ class SourceModel:
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
-        return ModelResult(text=None, data=next(self.replies), tier=tier, provider="offline",
+        data = source_portion_reply(json.loads(prompt.user), next(self.replies))
+        return ModelResult(text=None, data=data, tier=tier, provider="offline",
                            model="offline", usage=Usage(0, 0, 0), latency_ms=0,
                            completion=Completion.COMPLETE)
 
@@ -47,7 +50,7 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
                 "I do not adopt its analysis."),
     )
     latest = "Review the draft. Please note the carrier retained our receipt."
-    payload, _, _ = addressed_sources(earlier, latest)
+    payload, current, prior = addressed_sources(earlier, latest)
     before = deepcopy(payload)
     roles = {"P1S1": "reported_party_position", "P3S1": "examination_material",
              "P3S2": "work_instruction", "L1": "work_instruction", "L2": "mixed"}
@@ -56,7 +59,18 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
     catalogue = classify_account_sources(model, payload=payload, latest_turn_id="latest")
 
     sent = json.loads(model.calls[0][0].user)
-    assert sent == {**before, "source_ids": list(roles)}
+    expected_input = {**before, "source_ids": list(roles)}
+    if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
+        expected_input.update(
+            source_selection_contract=SOURCE_SELECTION_CONTRACT,
+            original_source_catalogue={
+                **{identity: {"turn_id": reference.turn_id, "role": reference.role,
+                              "quoted": reference.quoted}
+                   for identity, reference in prior.items() if reference.role == "advocate"},
+                **{identity: {"turn_id": "latest", "role": "advocate", "quoted": words}
+                   for identity, words in current.items()},
+            })
+    assert sent == expected_input
     assert payload == before and len(model.calls) == 1
     assert model.calls[0][0].operation == "classify_account_sources"
     assert all(name in model.calls[0][0].system for name in (
@@ -66,12 +80,27 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
     assert schema["required"] == list(roles) and set(schema["properties"]) == set(roles)
     for entry in schema["properties"].values():
         assert entry["additionalProperties"] is False
-        assert set(entry["required"]) == set(entry["properties"]) == {"content_role", "reason"}
+        fields = {"content_role", "reason"}
+        if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
+            fields.add("substantive_spans")
+            offsets = entry["properties"]["substantive_spans"]["items"]
+            assert set(offsets["required"]) == set(offsets["properties"]) == {"start", "end"}
+        assert set(entry["required"]) == set(entry["properties"]) == fields
     assert "P2S1" not in catalogue
-    assert catalogue["P1S1"] == {
+    expected_row = {
         "turn_id": "account", "role": "advocate", "quoted": earlier[0].text,
         "content_role": "reported_party_position", "reason": reply(roles)[
             "source_treatments"]["P1S1"]["reason"]}
+    row = catalogue["P1S1"]
+    if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
+        assert row["selection_contract"] == SOURCE_SELECTION_CONTRACT
+        assert len(row["substantive_spans"]) == 1
+        portion = row["substantive_spans"][0]
+        assert portion["start"] == 0 and portion["end"] == len(earlier[0].text)
+        assert portion["quoted"] == earlier[0].text and portion["anchor_id"].startswith("asp_")
+        expected_row.update(selection_contract=SOURCE_SELECTION_CONTRACT,
+                            substantive_spans=row["substantive_spans"])
+    assert row == expected_row
     _, _, research_sources = addressed_sources(
         (*earlier, Message("latest", "advocate", latest)), "")
     research_sources = {key: ref for key, ref in research_sources.items() if ref.role == "advocate"}
@@ -109,7 +138,8 @@ def test_incomplete_source_catalogue_gets_one_precise_same_input_correction(dama
     assert set(result) == {"L1", "L2"} and len(model.calls) == 2
     correction = json.loads(model.calls[1][0].user)
     assert correction["original_input"] == json.loads(model.calls[0][0].user)
-    assert correction["validation_issue"] and correction["rejected_output"] == wrong
+    assert correction["validation_issue"] and correction["rejected_output"] == source_portion_reply(
+        correction["original_input"], wrong)
 
 
 def test_missing_independent_catalogue_cannot_be_reconstructed_by_candidate_judge():

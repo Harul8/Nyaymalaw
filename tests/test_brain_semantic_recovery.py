@@ -292,7 +292,7 @@ def test_source_owner_reconsideration_is_candidate_free_and_bounded(
     evidence("SEM-SOURCE-" + str(changed), model, data, saved, {
         "saved": [FIRST, SECOND] if changed else [FIRST], "owner_calls": 1,
         "owner_tier": "judge", "owner_keys": ["earlier_conversation", "latest_message_spans",
-                                                 "source_ids"],
+            "original_source_catalogue", "source_ids", "source_selection_contract"],
         "selected": ["L2"], "new_roles": ["reported_matter_account",
              "reported_matter_account" if changed else "examination_material"],
         "rereviews": 1 if changed else 0,

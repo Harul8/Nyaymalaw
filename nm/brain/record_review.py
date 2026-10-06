@@ -126,7 +126,16 @@ Do not use a desired work result as evidence of source purpose, classify NM
 spans as advocate evidence, reproduce passages or summarise the account.
 
 Outcome: Return only the declared JSON object: source_treatments keyed by EVERY
-required source ID, with content_role and a short substantive reason for each.
+required source ID, with content_role, a short substantive reason and
+substantive_spans for each. A portion supplies inclusive start and exclusive
+end character offsets in that source's quoted original words from
+original_source_catalogue; schema bounds supply the whole-source endpoint.
+Select genuine reported account or party-position portions with attribution,
+negation, uncertainty and necessary conditions intact. Account roles and mixed
+need nonempty portions; examination, pure work instruction, NM interpretation
+and uncertain purpose select []. Do not select desired work as account.
+Overlapping context is legitimate. The server resolves exact original words
+and assigns durable IDs; offsets do not certify meaning or truth.
 The server owns the keys; do not return an array or repeat source_id inside an
 entry. On correction, use the original source_ids and the stated field error
 to return the complete keyed catalogue."""
@@ -157,21 +166,14 @@ def _account_source_references(payload: dict, latest_turn_id: str) -> dict[str, 
 def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> dict[str, dict]:
     """Read source treatment without candidate framing; attach exact owned references."""
     references = _account_source_references(payload, latest_turn_id)
-    item = {"type": "object", "additionalProperties": False,
-            "required": ["content_role", "reason"], "properties": {
-                "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
-                "reason": {"type": "string", "minLength": 1}}}
-    schema = {"type": "object", "additionalProperties": False,
-              "required": ["source_treatments"], "properties": {
-                  "source_treatments": {
-                      "type": "object", "additionalProperties": False,
-                      "required": list(references),
-                      "properties": {key: item for key in references}}}}
-    current = {**payload, "source_ids": list(references)}
+    schema = _source_proposal_schema(references)
+    current = {**payload, "source_ids": list(references),
+               "source_selection_contract": SOURCE_SELECTION_CONTRACT,
+               "original_source_catalogue": references}
     prompt = Prompt(system=_SOURCE_SYSTEM,
                     user=json.dumps(current, ensure_ascii=False, separators=(",", ":")),
                     operation="classify_account_sources")
-    output_limit = max(2048, min(16384, 96 * len(references)))
+    output_limit = max(2048, min(16384, 192 * len(references)))
     if (estimate_tokens(_SOURCE_SYSTEM + prompt.user) + output_limit
             > model.context_budget(Tier.ROUTINE)):
         raise ContextOverflow("The complete conversation exceeds the source-treatment budget")
@@ -180,7 +182,7 @@ def classify_account_sources(model, *, payload: dict, latest_turn_id: str) -> di
         rows = data["source_treatments"]
         if any(not row["reason"].strip() for row in rows.values()):
             raise SchemaViolation("Each source treatment needs a substantive nonempty reason")
-        return {key: {**references[key], **row} for key, row in rows.items()}
+        return {key: _source_proposal(references[key], row) for key, row in rows.items()}
 
     return checked_read(model, prompt, schema, output_limit, accept)
 

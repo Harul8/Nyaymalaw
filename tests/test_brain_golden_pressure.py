@@ -64,7 +64,11 @@ def test_golden_composite_public_pressure(client, wired, monkeypatch, index, var
             row["operation"] == "reconsider_account_sources" for row in model.seen
         ),
         "source_owner_candidate_free_and_complete": all(
-            set(payload) == {"earlier_conversation", "latest_message_spans", "source_ids"}
+            set(payload) == {"earlier_conversation", "latest_message_spans", "source_ids",
+                             "original_source_catalogue", "source_selection_contract"}
+            and set(payload["original_source_catalogue"]) == {model.selected_gap}
+            and set(payload["original_source_catalogue"][model.selected_gap]) == {
+                "turn_id", "role", "quoted"}
             and payload["earlier_conversation"] == []
             and "".join(span["text"] for span in payload["latest_message_spans"]) == dossier.message
             and payload["source_ids"] == [model.selected_gap] for payload in owner_reads),
