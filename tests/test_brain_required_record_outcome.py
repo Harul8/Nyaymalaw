@@ -13,6 +13,9 @@ from tests.test_brain_continuation import (
 from tests.test_brain_continuation_record_outcome import declaration, evidence, run, verdict
 
 pytestmark = pytest.mark.class_a
+ORIGINAL_ACCOUNT = 'Your message includes: “The handover was on 4 May.”'
+SOURCED_QUESTION = (
+    'What needs clarification about the meaning of the following account? ' + ORIGINAL_ACCOUNT)
 
 
 def owned_inputs(*, mode="substantive", kind="change", mixed=False):
@@ -75,10 +78,10 @@ def test_none_cannot_bypass_declared_record_work_and_only_failed_unit_is_repaire
     assert [row["state"] for row in result.coverage] == ["ok", "ok"]
     assert result.units[0]["record_outcome"]["status"] == "unresolved"
     assert result.units[0]["record_check"]["outcome"] == "unfinished"
-    assert result.units[1]["blocks"][0]["text"] == ordinary["blocks"][0]["text"]
+    assert result.units[1]["blocks"][0]["text"] == ORIGINAL_ACCOUNT
     if followup:
         assert result.units[0]["questions"] == corrected["questions"]
-        assert result.units[0]["blocks"][1]["text"] == corrected["blocks"][1]["text"]
+        assert result.units[0]["blocks"][1]["text"] == SOURCED_QUESTION
     statuses = {row["request_index"]: row["record_outcome_statuses"]
                 for row in model.calls[0][1]["work_items"]}
     assert "none" not in statuses[0]
@@ -113,9 +116,9 @@ def test_correct_mixed_owner_and_followup_are_normalized_without_retry_or_loss()
     result = run(model, receipt, plan=plan)
     assert _operation_names(model) == ["continue_conversation", "verify_continuation"]
     first = result.units[0]
-    assert first["blocks"][0]["text"] == supported["blocks"][0]["text"]
+    assert first["blocks"][0]["text"] == ORIGINAL_ACCOUNT
     assert first["questions"] == supported["questions"]
-    assert first["blocks"][1]["text"] == supported["blocks"][1]["text"]
+    assert first["blocks"][1]["text"] == SOURCED_QUESTION
     assert first["record_outcome"]["block_id"] not in (
         supported["blocks"][0]["id"], supported["blocks"][1]["id"])
     assert first["blocks"][-1]["text"] == "The requested record work remains unfinished."

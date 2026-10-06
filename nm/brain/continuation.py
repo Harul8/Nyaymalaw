@@ -27,6 +27,7 @@ from nm.brain.execution_contracts import (
     ReviewCompletionIncomplete,
     canonical_record_acknowledgements,
     effect_catalogue,
+    request_requires_record_outcome,
     validate_record_outcome,
     validate_review_completion,
 )
@@ -104,6 +105,7 @@ declining an edit completes the review, not the declined change. Historical acti
 needs saved operation evidence that remains applicable to the current condition.
 Outcome: Return record_outcome status, exact owner block_id, effect_ids,
 current_record_ids and a concise internal reason. For declared review/change
+or an owned non-new mutation scope, even with requirement kind=none,
 select a non-none status in every mode, including follow-ups. performed selects
 actual relevant performed effects; already_current selects current owned records
 without inventing a past operation. review_no_change needs actual requested
@@ -433,16 +435,13 @@ def _record_context(row: dict, words: dict[tuple[str, str], str]) -> list[dict]:
     return list(resolved.values())
 
 
-def _requires_record_outcome(request: dict) -> bool:
+def _requires_record_outcome(request: dict, execution_receipt: dict | None = None) -> bool:
     """A declared record contract cannot disappear through writer metadata.
 
     This checks consistency with the owned declaration, not whether its
     interpretation of the original request is semantically correct.
     """
-    requirement = request.get("record_requirement")
-    return (request.get("response_mode") == "record_acknowledgement"
-            or isinstance(requirement, dict)
-            and requirement.get("kind") in ("review", "change"))
+    return request_requires_record_outcome(request, execution_receipt)
 
 
 def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
@@ -692,9 +691,9 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     owned_requests = (execution_receipt or {}).get("requests", [])
     for item in payload["work_items"]:
         item["work_choices"] = list(_work_choices(item["intent"], work))
-        required = (_requires_record_outcome(item) or any(
+        required = (_requires_record_outcome(item, execution_receipt) or any(
             request.get("request_index") == item["request_index"]
-            and _requires_record_outcome(request) for request in owned_requests))
+            and _requires_record_outcome(request, execution_receipt) for request in owned_requests))
         item["record_outcome_statuses"] = [
             status for status in RECORD_OUTCOME_SCHEMA["properties"]["status"]["enum"]
             if status != "none" or not required]
@@ -913,7 +912,7 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
         requests = (execution_receipt or {}).get("requests", [])
         required_record_outcome = any(
             request.get("request_index") == unit["request_index"]
-            and _requires_record_outcome(request) for request in requests)
+            and _requires_record_outcome(request, execution_receipt) for request in requests)
         if (required_record_outcome
                 and unit.get("record_outcome", {}).get("status") == "none"):
             raise SchemaViolation(
