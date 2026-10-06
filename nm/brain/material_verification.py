@@ -220,6 +220,9 @@ submitted. A checked current record may already represent the account without
 any new proposal. Preserve uncertainty, source purpose and separate propositions,
 including multiple propositions in one span. Held/outside-owned observations
 must retain their actual scope, not become current-matter facts.
+Each represented candidate must have independently checked support overlapping
+that original account portion. Acceptance for another source or an unrelated
+portion cannot establish this representation; shared original context is allowed.
 Outcome: Return coverage with state and reason. Under coverage_selection_contract,
 give source_checks for every coverage_source_id: source_id, content_purpose
 account/non_account/unresolved, substantive_spans as exact start/end offsets,
@@ -574,7 +577,8 @@ def verify_material_grounding(
                     coverage_ids, source_references=source_references,
                     record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
                     admitted_candidate_ids=[identity for identity, row in decisions.items()
-                                            if row["verdict"] == "accept"])
+                                            if row["verdict"] == "accept"],
+                    candidate_support=decisions if source_references is not None else None)
             except SchemaViolation as exc:
                 assessed_coverage = None
                 issues["$coverage"] = (review_contract_issue(exc),)

@@ -443,7 +443,10 @@ def test_golden_acceptance_metadata_has_precise_false_positive_boundary(
         "review_calls": model.operation_counts["verify_continuation"],
         "source_statements_saved": {row["statement"] for row in conversation.open_material}
         == {row["statement"] for row in dossier.details},
-        "reply_released": model.reply in json.dumps(data["elements"]),
+        "reply_released": (
+            f'Your message includes: “{dossier.source_quotes[dossier.details[0]["source_id"]]}”'
+            in " ".join(row["text"] for row in data["elements"])
+        ),
     }
     evidence(
         "golden-boundary-metadata-" + metadata,

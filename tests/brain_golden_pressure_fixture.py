@@ -21,7 +21,12 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
 from tests import __file__ as test_package_file
 from tests.brain_pressure_support import record_case
-from tests.brain_reader_fixture import source_portion_reply
+from tests.brain_reader_fixture import (
+    fixture_representation_choices,
+    fixture_scoped_coverage,
+    scripted_support_spans,
+    source_portion_reply,
+)
 from tests.test_brain_golden_sources import validate_sources
 
 ROOT = Path(test_package_file).resolve().parents[1]
@@ -275,6 +280,10 @@ class GoldenModel:
             }
             for row in dossier.details
         }
+        # This ordinary matrix independently requests material representation
+        # without a new dispute obligation. The thread matrix overrides this
+        # scope with its separately authored THREAD_ISSUES originals below.
+        self.dispute_coverage_sources = set()
 
     def context_budget(self, tier):
         assert tier in (Tier.ROUTINE, Tier.JUDGE)
@@ -433,6 +442,47 @@ class GoldenModel:
                     else "The independently scripted coverage owner declares the scope represented."
                 ),
             }
+        result = scripted_support_spans(original, result, scripted_source_account=True)
+        if original.get("coverage_selection_contract") != "owned_account_dispositions_v2":
+            return result
+        # Corpus annotations independently own original purpose and this stage's
+        # obligations. Resolve exact IDs before the raw hook; never repair an
+        # adversarial writer, reviewer or classifier after its authored output.
+        legacy_missing = set(result.get("coverage", {}).get("missing_source_ids", ()))
+        decisions = {}
+        issue_sources = self.dispute_coverage_sources
+        for identity in original["coverage_source_ids"]:
+            words = original["source_treatments"][identity]["quoted"]
+            roles = {self.dossier.source_roles[key]
+                     for key, exact in self.dossier.source_quotes.items() if exact == words}
+            assert len(roles) == 1, (identity, words, roles)
+            if next(iter(roles)) not in ("reported_matter_account", "reported_party_position"):
+                decisions[identity] = "non_account"
+            elif operation == "verify_disputes" and not any(
+                    self.dossier.source_quotes[source] == words for source in issue_sources):
+                decisions[identity] = "outside_scope"
+            else:
+                decisions[identity] = "account"
+        choices = fixture_representation_choices(original, result)
+        # Repeated unchanged words may be represented by the previously saved
+        # authored proposition. This is a corpus-owned semantic judgment, not
+        # a general inference that any record with a citation covers its source.
+        for identity, purpose in decisions.items():
+            if purpose != "account" or identity in legacy_missing:
+                continue
+            words = original["source_treatments"][identity]["quoted"]
+            propositions = {
+                row["statement"] for row in self.dossier.details
+                if self.dossier.source_quotes[row["source_id"]] == words
+            }
+            for row in original.get("active_material", ()):
+                if (row.get("id") in original.get("coverage_record_ids", ())
+                        and row.get("statement") in propositions):
+                    choices[identity]["record_ids"].append(row["id"])
+        for identity in legacy_missing:
+            choices[identity] = {"record_ids": [], "candidate_ids": []}
+        result["coverage"] = fixture_scoped_coverage(
+            original, result, source_decisions=decisions, representation_choices=choices)
         return result
 
     def _continuation(self, payload):
@@ -864,6 +914,7 @@ class ThreadGoldenModel(GoldenModel):
         index = int(dossier.id.rsplit("-", 1)[1]) - 1
         self.issue_specs = THREAD_ISSUES[index]
         self.issue_rows = []
+        self.dispute_coverage_sources = set()
         self.assignment_labels = {row["statement"]: [] for row in dossier.details}
         for case_id, exact_words, label, statement, accepted in self.issue_specs:
             source_ids = [
@@ -890,6 +941,7 @@ class ThreadGoldenModel(GoldenModel):
             self.semantic_sources[statement] = source_id
             if not accepted:
                 continue
+            self.dispute_coverage_sources.add(source_id)
             for detail in dossier.details:
                 # The author supplies this relation in the fixture corpus.
                 # Matching original quoted words here binds its exact ID only;
