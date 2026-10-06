@@ -212,6 +212,7 @@ class GoldenModel:
         *,
         response_mode="substantive",
         requirement=None,
+        mutation_scopes=None,
         reply=None,
         hook=None,
     ):
@@ -219,6 +220,25 @@ class GoldenModel:
         self.variant = variant
         self.response_mode = response_mode
         self.requirement = deepcopy(requirement or no_requirement())
+        # Scope semantics are independently authored before any reader output.
+        # No candidate footprint or reviewer acceptance can supply permission.
+        if mutation_scopes is None and self.requirement["kind"] == "change":
+            # The constructor's independently supplied requirement owns its
+            # requested targets and operation even when extraction returns no
+            # candidate. The curated rehearsal has one explicit review source.
+            # Exact correction regressions supply their own contribution scope.
+            _, current, _ = addressed_sources((), dossier.message)
+            instructions = [identity for identity in current
+                            if dossier.source_roles[identity] == "work_instruction"]
+            assert len(instructions) == 1, "A request scope needs its declared original owner"
+            mutation_scopes = [{
+                "authority_kind": "interpretation_review",
+                "authority_source_ids": instructions,
+                "target_scope": "exact",
+                "target_ids": list(self.requirement["target_ids"]),
+                "permitted_relations": [self.requirement["operation"]],
+            }]
+        self.mutation_scopes = deepcopy(mutation_scopes or [])
         self.reply = reply or (
             "The supplied scenario accounts remain separately attributed. "
             "The requests and legal examination passages are not admitted facts."
@@ -275,6 +295,7 @@ class GoldenModel:
                     "research_question": "",
                     "material_purposes": ["account_contribution", "interpretation_review"],
                     "record_requirement": deepcopy(self.requirement),
+                    "mutation_scopes": deepcopy(self.mutation_scopes),
                     "response_mode": self.response_mode,
                 }
             ],

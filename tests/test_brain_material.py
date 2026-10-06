@@ -72,6 +72,9 @@ class Model:
                     if key not in ("material", "_record_disposition")}
             if prompt.operation == "interpret_conversation":
                 data = interpretation(data)
+                data = legacy_mutation_scope_transport(
+                    data, json.loads(prompt.user), planned["material"],
+                    scripted_items=planned["items"])
                 self.current_items = data["items"]
         data = scripted_record_result(
             prompt.operation, json.loads(prompt.user), data, self.current_record_disposition)
@@ -79,6 +82,108 @@ class Model:
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
                            completion=Completion.COMPLETE)
+
+
+def legacy_mutation_scope_transport(data, payload, scripted_candidates, *, scripted_items):
+    """Explicit offline legacy scope declarations, transported before extraction.
+
+    Older test plans colocated meanings and reader proposals. For their migration
+    only, authored non-new candidates declare a prior-target contribution scope.
+    A typed request's independently specified targets and operation take
+    precedence, so a malformed candidate cannot grant itself wider permission.
+    New mutation regressions must declare item.mutation_scopes independently;
+    this legacy helper never rewrites an explicit declaration or decides meaning.
+    """
+    from copy import deepcopy
+
+    from nm.brain.conversation import Message
+    from nm.brain.material import addressed_sources
+
+    result = deepcopy(data)
+    payload = payload.get("original_input", payload)
+    earlier = tuple(Message(row["turn_id"], row["role"], row["text"])
+                    for row in payload["earlier_conversation"])
+    _, current, prior = addressed_sources(earlier, payload["latest_message"])
+    target_catalogue = {row["id"]: row["record"]
+                        for row in payload.get("target_catalogue", [])}
+    for item, authored in zip(result["items"], scripted_items, strict=True):
+        if "mutation_scopes" in authored:
+            continue
+        requirement = item.get("record_requirement", no_record_requirement())
+        scopes = []
+        if requirement["kind"] == "change":
+            # The request owner supplies permission independently of extraction.
+            # Empty, rejected or wrongly targeted reader output does not erase
+            # its exact target/operation decision. Only literal source matches
+            # transport the authored request; ambiguous associations stay empty.
+            sources = [identity for identity, words in current.items()
+                       if (item["request"] in words or words.strip() in item["request"])]
+            if sources:
+                scopes.append({
+                    "authority_kind": (
+                        "interpretation_review"
+                        if item.get("material_purposes") == ["interpretation_review"]
+                        else "account_contribution"
+                    ),
+                    "authority_source_ids": sources,
+                    "target_scope": "exact",
+                    "target_ids": list(requirement["target_ids"]),
+                    "permitted_relations": [requirement["operation"]],
+                })
+        for candidate in scripted_candidates:
+            relation = candidate.get("relation", "new")
+            if relation == "new":
+                continue
+            if (len(result["items"]) > 1
+                    and candidate["quoted"] not in item["request"]):
+                continue
+            sources = [identity for identity, words in current.items()
+                       if candidate["quoted"] in words]
+            if len(sources) != 1:
+                # Preserve the invalid original reader fixture. Do not choose a
+                # convenient authority when its source is unsupported/ambiguous.
+                continue
+            selected_prior = {
+                identity for identity, reference in prior.items()
+                if any(reference.turn_id == selected["turn_id"]
+                       and reference.role == selected["role"]
+                       and selected["quoted"] in reference.quoted
+                       for selected in candidate.get("prior_references", []))
+            }
+            if requirement["kind"] == "change" or requirement["target_ids"]:
+                targets = list(requirement["target_ids"])
+                relations = ([requirement["operation"]]
+                             if requirement["operation"] != "none" else [relation])
+            else:
+                target_field = ("related_dispute_ids" if candidate.get("kind") == "dispute"
+                                else "related_material_ids")
+                targets = list(candidate.get(target_field, []))
+                if not targets:
+                    targets = [identity for identity, target in target_catalogue.items()
+                               if any(reference.turn_id == target.get("source_turn_id")
+                                      and reference.role == "advocate"
+                                      and (target.get("quoted", "") in reference.quoted
+                                           or reference.quoted in target.get("quoted", ""))
+                                      for identity, reference in prior.items()
+                                      if identity in selected_prior)]
+                relations = [relation]
+            if not targets:
+                continue
+            scope = {
+                "authority_kind": (
+                    "interpretation_review"
+                    if item.get("material_purposes") == ["interpretation_review"]
+                    else "account_contribution"
+                ),
+                "authority_source_ids": sources,
+                "target_scope": "exact",
+                "target_ids": sorted(set(targets)),
+                "permitted_relations": relations,
+            }
+            if scope not in scopes:
+                scopes.append(scope)
+        item["mutation_scopes"] = scopes
+    return result
 
 
 

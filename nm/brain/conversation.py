@@ -81,6 +81,10 @@ class WorkItem:
     # output must select the deliverable explicitly; record work alone is not
     # proof that an acknowledgement is the only requested response.
     response_mode: Literal["record_acknowledgement", "substantive"] = "substantive"
+    # Fresh interpretation declares original-source mutation scope separately
+    # from desired completion. None preserves only genuinely older in-process
+    # callers; an empty tuple grants no destructive change authority.
+    mutation_scopes: tuple[dict, ...] | None = None
 
     def __post_init__(self) -> None:
         # Older in-process callers supplied the question without a separate
@@ -136,6 +140,22 @@ _RECORD_REQUIREMENT_SCHEMA = {
     },
 }
 
+_MUTATION_SCOPE_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["authority_kind", "authority_source_ids", "target_scope",
+                 "target_ids", "permitted_relations"],
+    "properties": {
+        "authority_kind": {"type": "string", "enum": [
+            "account_contribution", "interpretation_review"]},
+        "authority_source_ids": {"type": "array", "minItems": 1,
+                                 "items": {"type": "string"}},
+        "target_scope": {"type": "string", "enum": ["exact", "reviewed_whole"]},
+        "target_ids": {"type": "array", "items": {"type": "string"}},
+        "permitted_relations": {"type": "array", "minItems": 1, "items": {
+            "type": "string", "enum": ["new", "adds", "corrects", "contradicts", "withdraws"]}},
+    },
+}
+
 
 _SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -146,7 +166,8 @@ _SCHEMA = {
             "required": ["request", "relation", "matter_scope",
                          "priority", "next_step", "reply",
                          "clarification", "intent", "response_basis", "research_question",
-                         "material_purposes", "record_requirement", "response_mode"],
+                         "material_purposes", "record_requirement", "response_mode",
+                         "mutation_scopes"],
             "properties": {
                 "request": {"type": "string"},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
@@ -165,6 +186,7 @@ _SCHEMA = {
                 "response_mode": {"type": "string", "enum": [
                     "record_acknowledgement", "substantive"]},
                 "record_requirement": _RECORD_REQUIREMENT_SCHEMA,
+                "mutation_scopes": {"type": "array", "items": _MUTATION_SCOPE_SCHEMA},
                 "material_purposes": {"type": "array", "items": {
                     "type": "string", "enum": [
                         "account_contribution", "interpretation_review"]}},
@@ -186,7 +208,8 @@ _SCHEMA = {
 _SYSTEM = """Message: You receive the advocate's latest message, the complete attributed
 conversation in chronological order, the current matter and authorised work,
 active sourced dispute formulations, a server-owned target_catalogue of saved
-dispute and material formulations, and saved progress and research coverage.
+dispute and material formulations, an exact advocate mutation_source_catalogue
+with original source IDs, and saved progress and research coverage.
 Progress distinguishes requested tasks, proposed work, unanswered questions,
 promises, unavailable material and scoped completion. Earlier NM words,
 formulations and research questions are interpretations and work context,
@@ -268,6 +291,31 @@ select it only for an explicitly authorised scope reconciliation, preserving
 that uncertainty for independent checking. The server checks ownership and
 routing; later readers and review compare the condition with actual effects.
 Do not declare a record requirement as completed in this interpretation.
+Separately declare mutation_scopes from the original request or contribution,
+before any extraction candidate exists. A requested success condition does not
+grant arbitrary changes; an account contribution can authorise a supported
+revision without an imperative or a requested record outcome. Select
+authority_kind from this item's material_purposes, authority_source_ids from
+the original advocate catalogue, target_scope, exact target_ids and only
+permitted_relations supported by that authority. Include the latest source
+that contributes the change or authorises the current examination; earlier
+sources may establish the referenced work. Review authority and earlier factual
+support are separate: authorising review cannot supply the restored fact, and
+an NM interpretation or attached target passage cannot authorise itself.
+Use exact scope for identifiable targets. Multiple separately authorised targets
+can have separate scopes; distinguish their original sources and operations.
+For distinct new material, select new without an existing revision target.
+Use reviewed_whole only for genuinely authorised examination of the whole saved
+record, with interpretation_review and an empty target list. An empty
+record_requirement target list, shared source words, an unresolved reference or
+a legal enquiry alone does not establish that broader authority. The server
+expands the explicit whole scope only to its existing snapshot. A targeted
+requested review cannot expand into whole-record authority; independent account
+contributions retain their own scope. Return an empty mutation_scopes list for
+items with no supported mutation authority. Do not force a change to follow a
+review, promote a proposal into authority or use factual uncertainty to guess
+the record meant. These scopes remain interpretations of original authority,
+not factual admission, execution receipts or proof of semantic identity.
 Set response_basis=conversation_record when the result needs only attributed
 conversation or record reconciliation and leave research_question empty.
 Set legal_authority only when a substantive legal proposition, assessment,
@@ -507,6 +555,93 @@ def _record_requirement(data: object, *, index: int, purposes: list[str],
             "success_condition": condition}
 
 
+def _mutation_source_catalogue(conversation: Conversation, latest: str) -> dict[str, dict]:
+    """Use the same exact original spans later supplied to the material owners.
+
+    The current turn ID is attached by the executing owner, never invented by
+    interpretation. Earlier NM words remain full conversation context but are
+    unavailable as original advocate authority selections.
+    """
+    from nm.brain.material import addressed_sources
+
+    _, current, prior = addressed_sources(conversation.messages, latest)
+    return {
+        **{identity: {**vars(reference), "origin": "earlier"}
+           for identity, reference in prior.items() if reference.role == "advocate"},
+        **{identity: {"turn_id": None, "role": "advocate", "quoted": words,
+                      "origin": "latest"} for identity, words in current.items()},
+    }
+
+
+def _mutation_scopes(data: object, *, index: int, purposes: list[str],
+                     known_ids: set[str], current_ids: set[str], source_catalogue: dict,
+                     matter_scope: str, requirement: dict) -> tuple[dict, ...]:
+    """Validate declared scope choices before readers can propose any effects."""
+    path = f"items[{index}].mutation_scopes"
+    if not isinstance(data, list):
+        raise SchemaViolation(path + " must explicitly declare a scope list, including empty")
+    required = set(_MUTATION_SCOPE_SCHEMA["required"])
+    relations = {"new", "adds", "corrects", "contradicts", "withdraws"}
+    result, seen = [], set()
+    for offset, scope in enumerate(data):
+        location = f"{path}[{offset}]"
+        if not isinstance(scope, dict) or set(scope) != required:
+            raise SchemaViolation(location + " contains undeclared or missing scope fields")
+        kind = scope["authority_kind"]
+        if kind not in purposes or kind not in ("account_contribution", "interpretation_review"):
+            raise SchemaViolation(location + ": authority_kind requires its material purpose")
+        selections = {}
+        for field, choices in (("authority_source_ids", set(source_catalogue)),
+                               ("target_ids", known_ids), ("permitted_relations", relations)):
+            values = scope[field]
+            if (not isinstance(values, list) or any(
+                    not isinstance(value, str) or value not in choices for value in values)):
+                raise SchemaViolation(location + "." + field + " contains unowned choices")
+            selections[field] = sorted(set(values))
+        source_ids = selections["authority_source_ids"]
+        permitted = selections["permitted_relations"]
+        targets = selections["target_ids"]
+        if not source_ids or not any(source_catalogue[identity]["origin"] == "latest"
+                                     for identity in source_ids):
+            raise SchemaViolation(location + " requires the current original advocate authority")
+        if not permitted:
+            raise SchemaViolation(location + " requires declared permitted_relations")
+        target_scope = scope["target_scope"]
+        if target_scope == "reviewed_whole":
+            if kind != "interpretation_review" or targets:
+                raise SchemaViolation(
+                    location + ": reviewed_whole requires review and empty targets")
+            affected = known_ids
+        elif target_scope == "exact":
+            if any(relation != "new" for relation in permitted) and not targets:
+                raise SchemaViolation(location + ": an exact revision scope requires owned targets")
+            affected = set(targets)
+        else:
+            raise SchemaViolation(location + " requires exact or reviewed_whole target_scope")
+        if matter_scope in ("none", "other") and current_ids.intersection(affected):
+            raise SchemaViolation(
+                location + ": scope cannot mutate current targets for another matter")
+        if (requirement["kind"] == "review" and requirement["target_ids"]
+                and kind == "interpretation_review"
+                and (target_scope != "exact"
+                     or not set(targets) <= set(requirement["target_ids"]))):
+            raise SchemaViolation(location + ": a targeted review cannot expand its review scope")
+        canonical = {"authority_kind": kind, **selections, "target_scope": target_scope}
+        key = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+        if key not in seen:
+            seen.add(key)
+            result.append(canonical)
+    if requirement["kind"] == "change":
+        operation = requirement["operation"]
+        applicable = [scope for scope in result if operation in scope["permitted_relations"]]
+        represented = {identity for scope in applicable for identity in (
+            known_ids if scope["target_scope"] == "reviewed_whole" else scope["target_ids"])}
+        if not applicable or not set(requirement["target_ids"]) <= represented:
+            raise SchemaViolation(
+                path + ": requested change lacks its relevant source-linked scope")
+    return tuple(result)
+
+
 def _prompt(conversation: Conversation, latest: str) -> Prompt:
     if not conversation.complete:
         raise IncompleteConversation("The earlier conversation is incomplete")
@@ -528,6 +663,7 @@ def _prompt(conversation: Conversation, latest: str) -> Prompt:
             for row in conversation.open_disputes
         ],
         "latest_message": latest,
+        "mutation_source_catalogue": _mutation_source_catalogue(conversation, latest),
     }
     return Prompt(user=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                   system=_SYSTEM, operation="interpret_conversation")
@@ -543,6 +679,12 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
     target_selection["items"]["enum"] = list(target_ids) or [""]
     if not target_ids:
         target_selection["maxItems"] = 0
+    scopes = decisions["mutation_scopes"]["items"]["properties"]
+    scopes["target_ids"]["items"]["enum"] = list(target_ids) or [""]
+    if not target_ids:
+        scopes["target_ids"]["maxItems"] = 0
+    source_ids = tuple(_mutation_source_catalogue(conversation, latest))
+    scopes["authority_source_ids"]["items"]["enum"] = list(source_ids)
     if not conversation.current_matter_id:
         decisions["matter_scope"]["enum"].remove("current")
     else:
@@ -561,10 +703,10 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
             > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("The full conversation exceeds this model's context budget")
     return checked_read(model, prompt, schema, output_limit,
-                        lambda data: _turn_plan(data, conversation), tier=Tier.JUDGE)
+                        lambda data: _turn_plan(data, conversation, latest=latest), tier=Tier.JUDGE)
 
 
-def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
+def _turn_plan(data: dict, conversation: Conversation, *, latest: str = "") -> TurnPlan:
     rows = data.get("items")
     if not isinstance(rows, list) or not rows:
         raise SchemaViolation("The interpretation needs at least one work item")
@@ -627,6 +769,11 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
             row.get("record_requirement"), index=index, purposes=purposes,
             known_ids=known_targets, current_ids=current_targets,
             matter_scope=row.get("matter_scope"))
+        mutation_scopes = _mutation_scopes(
+            row.get("mutation_scopes"), index=index, purposes=purposes,
+            known_ids=known_targets, current_ids=current_targets,
+            source_catalogue=_mutation_source_catalogue(conversation, latest),
+            matter_scope=row.get("matter_scope"), requirement=requirement)
         if response_mode not in ("record_acknowledgement", "substantive"):
             raise SchemaViolation(
                 f"items[{index}].response_mode must explicitly select "
@@ -648,7 +795,8 @@ def _turn_plan(data: dict, conversation: Conversation) -> TurnPlan:
                             research_question=research_question.strip(),
                             response_basis=response_basis,
                             material_purposes=tuple(dict.fromkeys(purposes)),
-                            record_requirement=requirement, response_mode=response_mode)
+                            record_requirement=requirement, response_mode=response_mode,
+                            mutation_scopes=mutation_scopes)
         except (KeyError, TypeError) as exc:
             raise SchemaViolation("A work item is incomplete") from exc
         if (item.relation not in ("continues", "changes", "aside", "new", "uncertain")
