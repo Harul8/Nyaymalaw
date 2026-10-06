@@ -13,6 +13,7 @@ from nm.shared.model_port import (
     Prompt,
     SchemaViolation,
     Tier,
+    canonical_schema_data,
     estimate_tokens,
     require_schema,
 )
@@ -319,8 +320,10 @@ def _transport_shapes(row: dict) -> tuple[dict, dict]:
         return {**row, "required": [field for field in row["required"] if field not in removed],
                 "properties": {field: spec for field, spec in row["properties"].items()
                                if field not in removed}}
-    return (shape(frozenset({"verdict", "retained_block_ids", "retained_reason"})),
-            shape(frozenset({"verdict"})))
+    accepted = shape(frozenset({"verdict", "retained_block_ids", "retained_reason"}))
+    accepted["x-nm-empty-metadata"] = {
+        "retained_block_ids": "array", "retained_reason": "string"}
+    return accepted, shape(frozenset({"verdict"}))
 
 def _transport_rows(data: object) -> list[tuple[str, dict]]:
     """Read one declared transport. Each row is validated at its unit boundary.
@@ -348,7 +351,8 @@ def _transport_row(section: str, row: dict) -> dict:
         return dict(row)
     if section == "accepted_units":
         require_schema(row, accepted)
-        return {**row, "verdict": "accept", "retained_block_ids": [], "retained_reason": ""}
+        return {**canonical_schema_data(row, accepted), "verdict": "accept",
+                "retained_block_ids": [], "retained_reason": ""}
     if section == "rejected_units":
         require_schema(row, rejected)
         return {**row, "verdict": "reject"}

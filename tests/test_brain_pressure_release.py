@@ -725,9 +725,9 @@ def test_free_prose_effect_claim_depends_on_independent_semantic_review(
     "metadata,expected_calls,case",
     [
         ("legacy_empty", 1, "release_10_legacy_empty_metadata"),
-        ("split_empty_first", 2, "release_11_split_empty_metadata"),
+        ("split_empty_first", 1, "release_11_split_empty_metadata"),
         ("split_populated_first", 2, "release_12_split_populated_metadata"),
-        ("split_empty_repeated", 2, "release_17_repeated_empty_metadata_gap"),
+        ("split_empty_repeated", 1, "release_17_repeated_empty_metadata_gap"),
     ],
 )
 def test_acceptance_metadata_shapes_preserve_valid_reply_after_bounded_repair(
@@ -741,12 +741,11 @@ def test_acceptance_metadata_shapes_preserve_valid_reply_after_bounded_repair(
     delivered = send(client, message, "metadata-pressure")
     result = delivered.json()
     saved, active = reopened(wired, result)
-    repeated_empty = metadata == "split_empty_repeated"
     expected = {
         "http": 200,
-        "blocked": repeated_empty,
+        "blocked": False,
         "active": [],
-        "prose_released": not repeated_empty,
+        "prose_released": True,
         "review_calls": expected_calls,
         "writer_calls": 1,
         "saved_turns": 1,
@@ -767,21 +766,12 @@ def test_acceptance_metadata_shapes_preserve_valid_reply_after_bounded_repair(
         expected,
         observed,
         scenario="legitimate" if metadata != "split_populated_first" else "mixed",
-        scope="known_gap"
-        if metadata in ("split_empty_first", "split_empty_repeated")
-        else "mechanical",
-        status="gap_demonstrated"
-        if repeated_empty
-        else ("admitted" if expected_calls == 1 else "recovered"),
+        scope="mechanical",
+        status="admitted" if expected_calls == 1 else "recovered",
         notes=(
-            "Empty retention metadata on the live accepted shape causes an extra reviewer call; "
-            "the corrected useful reply is released. This is measured formatting friction."
-            if metadata == "split_empty_first"
-            else "Repeated empty inapplicable retention fields cause a correct reply "
-            "to be withheld "
-            "after two review attempts. This is semantic false rejection caused by output shape, "
-            "even though each provider object violates the declared transport schema."
-            if repeated_empty
+            "Schema-declared empty inapplicable retention fields are normalized without "
+            "a corrective call; the original received output is retained as evidence."
+            if metadata in ("split_empty_first", "split_empty_repeated")
             else "Populated inapplicable retention content is not silently dropped."
             if metadata == "split_populated_first"
             else "Legacy/offline ACCEPT with empty retention fields needs no corrective call."

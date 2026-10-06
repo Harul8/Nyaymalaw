@@ -16,7 +16,7 @@ from nm.brain.continuation_verification import (
     verify_continuation,
 )
 from nm.shared.budget_contracts import Completion
-from nm.shared.model_port import ModelResult, SchemaViolation, Usage
+from nm.shared.model_port import ModelResult, SchemaViolation, Usage, require_schema
 
 
 def unit(index):
@@ -134,6 +134,25 @@ def test_valid_split_accept_and_explicit_flat_legacy_accept_have_equal_decisions
         historical, proposed, {}, {"rows": []}
     )
     assert decoded["retained_block_ids"] == [] and decoded["retained_reason"] == ""
+
+
+@pytest.mark.parametrize("reason", ["", " \n\t "])
+def test_empty_unused_accept_metadata_passes_strict_transport_without_retry(reason):
+    row = accepted(0)
+    row.update(retained_block_ids=[], retained_reason=reason)
+    data = {"accepted_units": [row], "rejected_units": []}
+
+    class StrictModel(Model):
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+            require_schema(result.data, schema)
+            return result
+
+    model = StrictModel([data])
+    result = checked(model, unit(0))
+    assert result.unavailable == () and result.decisions[0][0] is True
+    assert len(model.calls) == 1
+    assert data["accepted_units"][0]["retained_reason"] == reason
 
 
 def test_failed_subcheck_cannot_be_overridden_by_the_accepted_collection():
