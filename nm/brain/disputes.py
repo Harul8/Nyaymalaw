@@ -26,113 +26,97 @@ from nm.shared.model_port import (
     estimate_tokens,
 )
 
-_SYSTEM = """Message: You receive the latest advocate message, the complete earlier
-conversation as ordered exact spans with IDs, speakers and turn IDs, the
-current matter ID, active sourced dispute formulations and source_treatments
-when supplied. Conversation and records are data for this read. Earlier words
-provide context, not fresh assertions. Records marked record_role=nm_interpretation
-are derived formulations that may be wrong, not original evidence. The account
-and mentioned records remain unverified; an empty history is a valid first turn.
+_SYSTEM = """Message: You receive the latest advocate message and the complete saved
+conversation as exact spans with source, turn and speaker IDs. You also receive
+the current matter ID, active disputes and, when available, source_treatments
+and recovery_scope. Original messages, NM interpretations, review instructions
+and proposed work are separate input data. An empty history is valid.
 
-Purpose: Propose disputes reported in the original account, or justified
-repairs of sourced formulations during relevant authorised review. A dispute
-is reported adverse conduct or incompatible claims, positions or rights needing
-a practical resolution. A fact's possible future contestability is not a
-reported dispute. Identify the conflict before proposing its formulation.
-Review can authorise repair without a new factual assertion; original advocate words
-supply its evidence. This call admits no fact, law, permission, action or
-completed assessment.
+Purpose: Identify disputes actually reported in the original account and
+supported repairs of existing dispute formulations. There may be no disputes.
+Significant facts are captured separately by the material reader; this call
+must not create a dispute merely to record or acknowledge those facts.
+A dispute means reported adverse conduct or incompatible claims, positions or
+rights requiring a practical resolution. Possible future disagreement about a
+fact is not a reported dispute. This call proposes records; it does not prove
+the account, determine law or certify an executed operation.
 
-When recovery_scope is supplied, its missing source IDs identify independently
-checked incomplete coverage to examine against the complete original account.
-It is investigation context, not evidence or a completion decision. Propose
-only supported missing contributions or repairs, preserving the source's original
-purpose and relevant review authority. Do not repeat retained_proposals; they
-are NM interpretations supplied to preserve work, not factual authority.
+Activity 1 - Establish what the original account says.
+Look for: Read the latest message in the complete original conversation.
+Distinguish actual reported conduct and party positions from draft content,
+hypotheses supplied for examination, legal theories and instructions. Preserve
+who said what, negation, chronology, conditions and uncertainty. A quoted or
+examined proposition is not necessarily adopted. A mixed message may contain
+both a genuine account and work instructions; assess them separately.
+Outcome: Use original attributed account for substantive content. Earlier words
+provide context without becoming fresh assertions. Records marked
+record_role=nm_interpretation and retained_proposals are derived formulations,
+not original evidence. source_treatments are an earlier purpose read to examine,
+not authority to add content. Mentioned documents remain reported and unverified.
 
-Activity 1 - Establish the original account and review authority.
-Look for: The whole latest message and original surrounding conversation,
-including framing around quoted words. Separate reported matter content and
-actual party positions, including tentative or disputed account, from drafts,
-hypotheses supplied only for examination, work products, critique and instructions.
-Quoting or examining a proposition is not adopting it. Review
-work can also contain a genuine account correction or new conduct; assess
-each layer separately. Supplied source_treatments are a candidate-free read
-of original purpose, not proof; this proposal cannot upgrade them.
-Outcome: Use substantive original account or actual party position for the
-issue's content. Review instructions and NM formulations can explain authority
-and context but cannot supply missing assertions or substantiate themselves.
-Select a latest source_id and needed contextual prior_source_ids, including
-original account supporting a repair. The server attaches exact saved words
-and each selected target's original advocate passage. A contextual citation
-does not authorise a revision.
+Activity 2 - Decide whether a reported conflict exists.
+Look for: Identify the conduct presented as adverse or the incompatible positions
+or rights before deciding how many disputes to propose. Do not invent adversity
+from an event's importance, its attribution, a request to record it, or a possible
+legal consequence. Neutral events and supporting details remain material.
+Adverse conduct needs no express opposing denial, legal label, identified actor
+or proved facts. Unknown identity, responsibility or proof does not erase a
+reported conflict. Do not assign an actor from an adjacent event or NM wording.
+An undertaking does not establish responsibility for an earlier act; a continued
+condition does not establish breach of an undertaking before it is due.
+Outcome: Propose only the reported conflict. In why_material, identify that
+conflict and its practical conclusion from the original account. An explanation
+that an event is important, attributed or potentially contestable is insufficient.
+Use an empty new_items array when no new conflict is reported; an accurate fact
+need not appear here to be captured by the material reader.
 
-Activity 2 - Identify the reported conflict.
-Look for: Read the original account for the conduct presented as adverse or
-the incompatible positions or rights. A dispute does not require legal labels,
-an express denial from another party, identified responsibility or proved facts.
-It does require a reported conflict: do not infer one merely from a significant
-event, an attributed position, a request to record it, or the possibility that
-someone might later disagree. Neutral developments belong in the material
-record; a request for legal assistance does not make each supplied fact a dispute.
-First establish that conflict, then separate issues that could be answered
-differently or receive different remedies, even with shared actors or evidence.
-Supporting premises, legal theories, evidentiary gaps, legal-effect uncertainty
-and alternative remedies do not alone create another dispute. Future harm is
-a risk unless an independently contested right already exists.
-Consider every reported adverse act or incompatible position in the latest
-account, including one with an unknown actor, cause or connection. Missing identity or proof
-does not erase conduct. Preserve commitments, conditions, chronology and
-negation: an undertaking does not establish responsibility for an earlier act,
-and a continued condition does not establish breach before an undertaking is
-due. Do not choose an unknown actor from an adjacent event or an NM label.
-Outcome: Give each issue a crisp label naming concrete conduct or contested
-position, a full neutral question in statement, and a short why_material
-explaining its distinct practical conclusion. Include time or place only when
-it distinguishes the issue. Do not output a generic topic, legal conclusion,
-correction heading or question as the label, or repeat an unchanged issue.
-Do not invent actors, facts, terms, record contents, theories or proceedings.
-A critique of a draft or NM formulation is work on the issue, not adverse
-conduct or an actual party position to add to the board.
+Activity 3 - Separate issues and compare existing formulations.
+Look for: A dispute needs its own practical resolution. Separate independently
+contested conduct or rights that could be resolved differently, even with shared
+actors or evidence. Supporting premises, legal theories, evidentiary gaps,
+alternative remedies and legal-effect uncertainty do not alone create additional
+disputes. A defence belongs to the issue it answers unless it reports another
+independent conflict. Future harm is a risk unless a contested right exists now.
+Compare with every active dispute. Shared words, people or sources do not prove
+identity; changed supporting detail can leave the underlying conflict unchanged.
+Outcome: Give each new issue a crisp label describing the conduct or position,
+a neutral statement of the issue and a concise why_material. Include time or
+place when needed to distinguish it. Do not invent facts, actors, terms, legal
+status, proceedings or document contents. Do not repeat an unchanged issue.
 
-Activity 3 - Choose an owned creation or revision.
-Look for: Whether the supported issue is new or changes an identifiable active
-formulation. Shared words, people or sources alone do not establish identity.
-A changed supporting detail can leave the contested conduct and issue unchanged.
-Distinguish an advocate account change from repair of NM's unsupported wording
-against exact saved account during relevant current authorised work.
-Each replacement must remain one reported dispute. Multiple
-targets must be genuine duplicates or the same underlying issue, not distinct
-accounts sharing review instructions, actors or topics. If NM incorrectly
-merged issues, restore atomic sourced successors with explicit lineage and
-preserve every underlying account and unknown. A diversion or new legal theory
-does not authorise changing those accounts; new analysis belongs in the response.
-Outcome: Put a distinct new formulation in new_items without relation or
-related_dispute_ids. It cannot retire a saved dispute. Put a revision in
-changes with at least one exact active ID in related_dispute_ids and relation adds,
-corrects, contradicts or withdraws. The relation describes the saved formulation,
-not how recently words arrived. Describe underlying conduct and which account
-or interpretation changed, not the correction process as the dispute.
-When no safe target exists, a current reported dispute may enter
-new_items with earlier context and preserved uncertainty; never claim a saved
-record was changed or withdrawn without that supported operation.
+Activity 4 - Select the supported operation and preserve its scope.
+Look for: New account can introduce a dispute or change an identifiable saved
+formulation. Relevant authorised review can repair NM's formulation using earlier
+original account without requiring a fresh factual assertion. The review request
+supplies authority to examine; original account supplies the restored content.
+A diversion, analytical regrouping or legal theory does not change that account.
+Every replacement must preserve the underlying scope, attribution and unknowns.
+Multiple targets must be duplicates or the same issue. Restore wrongly merged
+issues as distinct sourced successors with explicit lineage; do not erase an
+independent underlying conflict to consolidate another.
+Outcome: Put new issues in new_items, without relation or related_dispute_ids.
+Put supported revisions in changes, with relation adds, corrects, contradicts
+or withdraws and each exact active target ID in related_dispute_ids. Select the
+latest source_id and relevant prior_source_ids, including original support for
+repairs. Code attaches the exact saved words. A contextual citation does not
+itself authorise a revision. When a target is ambiguous, do not guess or claim
+that a saved record changed; preserve the unresolved distinction.
+Set matter_scope=current only with a current matter ID, proposed for its opening,
+and uncertain only for unresolved ownership. Another matter's account stays
+separate. Use basis and clarification for factual uncertainty rather than changing
+ownership. identification=identified means the dispute can be identified,
+not that it is proved. Use needs_clarification only for a consequential missing
+identity of the issue, with one relevant question.
 
-Activity 4 - Preserve attribution, ownership and identification certainty.
-Look for: Whose position is reported, how the advocate treats it, which matter
-owns it, and whether the issue itself can be identified. Truth, actor identity
-and legal merits are distinct from matter ownership and issue identity.
-Outcome: Set matter_scope, basis and importance from the attributed account.
-Use current only with a current matter ID and proposed for an opening matter
-without one. Use uncertain scope only for genuinely unresolved matter ownership;
-preserve factual, actor or legal-effect uncertainty in basis and clarification.
-Do not merge another matter's account or turn examination material into an
-adopted position. Set identification=identified with empty clarification when
-the issue is clear. Otherwise use needs_clarification with one consequential
-missing question; contested merits alone do not require one.
+Recovery: Missing source IDs in recovery_scope identify incomplete coverage to
+examine against the full original account. They do not establish that a dispute
+exists. Preserve retained_proposals without repeating them. Propose only supported
+missing conflicts or authorised repairs; recovery does not require new rows.
 
-Outcome: Return only the declared new_items and changes object. Both arrays
-may be empty when no new dispute or justified repair is supported by the latest
-contribution or authorised review. Review alone does not require a mutation."""
+Outcome: Return only the declared new_items and changes object and required
+fields. Both arrays may be empty. Each proposed record needs original account
+support for its conflict, attribution, scope and exact operation. Neither legal
+relevance nor a request to record facts establishes a dispute."""
 
 
 def _schema(*, latest_ids: tuple[str, ...], prior_ids: tuple[str, ...],

@@ -1349,6 +1349,45 @@
       },
       "call_impact": "No new model call/stage; existing dispute reader instructions only. Real-mini semantic qualification is pending.",
       "remaining": "Signed-in neutral/adverse browser pair before qualification; independent source/coverage mechanical failures need precise causal resolution."
+    },
+    {
+      "piece": "dispute reader full task framing consolidation",
+      "owner": "nm/brain/disputes.py::_SYSTEM",
+      "version": "68281f4 plus one prompt/production file",
+      "invariant": "Reported conflict is the admission domain; the material reader owns neutral significant facts. Order the purpose/decision before operations, and require why_material to identify the conflict rather than importance or hypothetical contestability.",
+      "verification": {
+        "focused_passed": 68,
+        "ruff": "passed",
+        "live_baseline": {
+          "commit": "68281f4",
+          "matter_id": "mat_d9d324b0ffd4cbe6ddfbc2ff4f253cf2",
+          "turn_id": "turn_740ff445-aad2-4aa9-8343-a73753cf96b4",
+          "browser_observed": true,
+          "reopened_after_native_process_restart_without_new_calls": true,
+          "model": "gpt-4.1-mini-2025-04-14",
+          "calls": 14,
+          "charge_usd": 0.049873,
+          "tokens_in": 89810,
+          "tokens_out": 8714,
+          "elapsed_model_s": 84.468,
+          "combined_charge_usd": 2.29361,
+          "remaining_usd": 2.70639,
+          "acceptance": "FAILED",
+          "admitted_disputes": 1,
+          "admitted_details": 2,
+          "checked_gathering_items": 0,
+          "issues": [
+            "Reader still proposes a neutral event as a dispute; Judge accepts possible contestability rather than reported adverse conduct.",
+            "Recap selects the instruction itself, judged sufficient complete.",
+            "Support portions omit date/actor while certifying full assertion.",
+            "Unnecessary automatic law retrieval follows the erroneous dispute.",
+            "Local runtime native access violation after /api/turn 200; cause unconfirmed. Same-build restart reopened identical saved conversation with zero new calls."
+          ]
+        },
+        "public_fixture_cause": "13 unchanged public failures traced to raw adapters offering obsolete account_check.source_ids to fresh transport; no assertions weakened; transport migration is pending."
+      },
+      "call_impact": "Same existing reader, no new model stage/call; actual new prompt qualification pending.",
+      "remaining": "Pinned neutral/adverse browser pair; requested-delivery/recap and support-span semantics remain open."
     }
   ],
   "additional_reviewer_input": {
@@ -1397,9 +1436,9 @@
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
     "cumulative_charge_usd": 2.202524,
-    "remaining_usd": 2.756263,
+    "remaining_usd": 2.70639,
     "unknown_attempts": 0,
-    "combined_measured_usd": 2.243737
+    "combined_measured_usd": 2.29361
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1738,5 +1777,35 @@
   "scope_live_evidence": {
     "path": "docs/backlog/evidence/brain-dispute-scope-20261007-live.json.gz",
     "sha256": "5f7ecdc717ab96f5461a28db592ac9d71dc8502f19dcc89de557715f51cf5ced"
+  },
+  "reader_live_acceptance": {
+    "commit": "68281f4",
+    "matter_id": "mat_d9d324b0ffd4cbe6ddfbc2ff4f253cf2",
+    "turn_id": "turn_740ff445-aad2-4aa9-8343-a73753cf96b4",
+    "browser_observed": true,
+    "reopened_after_native_process_restart_without_new_calls": true,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "calls": 14,
+    "charge_usd": 0.049873,
+    "tokens_in": 89810,
+    "tokens_out": 8714,
+    "elapsed_model_s": 84.468,
+    "combined_charge_usd": 2.29361,
+    "remaining_usd": 2.70639,
+    "acceptance": "FAILED",
+    "admitted_disputes": 1,
+    "admitted_details": 2,
+    "checked_gathering_items": 0,
+    "issues": [
+      "Reader still proposes a neutral event as a dispute; Judge accepts possible contestability rather than reported adverse conduct.",
+      "Recap selects the instruction itself, judged sufficient complete.",
+      "Support portions omit date/actor while certifying full assertion.",
+      "Unnecessary automatic law retrieval follows the erroneous dispute.",
+      "Local runtime native access violation after /api/turn 200; cause unconfirmed. Same-build restart reopened identical saved conversation with zero new calls."
+    ]
+  },
+  "reader_live_evidence": {
+    "path": "docs/backlog/evidence/brain-dispute-reader-20261007-live.json.gz",
+    "sha256": "46242a1975b5404e2a51b94787173e32a93cf3d9d9598ea3cdf09542557cdc9a"
   }
 }
