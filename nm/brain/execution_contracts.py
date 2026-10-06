@@ -15,7 +15,8 @@ from copy import deepcopy
 from nm.shared.model_port import SchemaViolation, require_schema
 
 RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
-RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v2"
+RECORD_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v3"
+_LEGACY_ACKNOWLEDGEMENT_CONTRACT = "record_acknowledgement_v2"
 RECORD_OUTCOME_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -534,7 +535,50 @@ def record_change_lines(changes: list[dict]) -> list[str]:
     return parts
 
 
-def canonical_record_acknowledgements(
+def _record_outcome_text(unit: dict, effects: dict, changes: dict,
+                         record_catalogue: dict, *, require_checked: bool) -> tuple[str, str]:
+    """Render selected facts, never infer requested meaning or read free prose."""
+    expected_check = {"performed": "fulfilled", "already_current": "fulfilled",
+                      "review_no_change": "no_change_justified", "unresolved": "unfinished"}
+    outcome = unit.get("record_outcome", {})
+    status = outcome.get("status")
+    if (status not in expected_check or require_checked
+            and unit.get("record_check", {}).get("outcome") != expected_check[status]):
+        raise ExecutionEvidenceInvalid("The code acknowledgement has no checked record outcome")
+    selected = list(dict.fromkeys(outcome["effect_ids"]))
+    if any(identity not in effects or not effects[identity]["performed"]
+           or identity not in changes for identity in selected):
+        raise ExecutionEvidenceInvalid("The code acknowledgement selects an unperformed change")
+    current = list(dict.fromkeys(outcome["current_record_ids"]))
+    if any(identity not in record_catalogue for identity in current):
+        raise ExecutionEvidenceInvalid(
+            "The code acknowledgement selects an unowned current entry")
+    lines = record_change_lines([changes[identity] for identity in selected])
+    entries = [record_catalogue[identity]["record"]["statement"] for identity in current]
+    if status == "performed":
+        if not lines:
+            raise ExecutionEvidenceInvalid(
+                "The code acknowledgement has no actual changed entry")
+        text = "Saved record changes:\n" + "\n".join(lines)
+    elif status == "already_current":
+        if not entries:
+            raise ExecutionEvidenceInvalid("The code acknowledgement has no current entry")
+        # Current state does not establish that NM changed it previously.
+        text = "Current record entries:\n" + "\n".join(entries)
+    elif status == "review_no_change":
+        text = "The requested record review completed without a selected change."
+        if entries:
+            text += "\nCurrent entries:\n" + "\n".join(entries)
+    else:
+        text = "The requested record work remains unfinished."
+        if lines:
+            text += "\nSaved record changes:\n" + "\n".join(lines)
+        if entries:
+            text += "\nCurrent entries:\n" + "\n".join(entries)
+    return text, status
+
+
+def _legacy_record_acknowledgements(
         continuation: dict, execution: dict, *, record_catalogue: dict,
         require_checked: bool = True, replay: bool = False) -> dict:
     """Render checked record-only outcomes before progress and commit sealing.
@@ -558,8 +602,6 @@ def canonical_record_acknowledgements(
         return result
     effects = effect_catalogue(execution)
     changes = {change["effect_id"]: change for change in execution["record_changes"]}
-    expected_check = {"performed": "fulfilled", "already_current": "fulfilled",
-                      "review_no_change": "no_change_justified", "unresolved": "unfinished"}
     for request in execution["requests"]:
         if request.get("response_mode", "substantive") != "record_acknowledgement":
             if "acknowledgement_delivery" in request or "acknowledgement_contract" in request:
@@ -567,11 +609,11 @@ def canonical_record_acknowledgements(
                     "A code acknowledgement has no declared delivery owner")
             continue
         version = request.get("acknowledgement_contract")
-        if version is not None and version != RECORD_ACKNOWLEDGEMENT_CONTRACT:
+        if version is not None and version != _LEGACY_ACKNOWLEDGEMENT_CONTRACT:
             raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
         legacy = replay and version is None
         if not replay:
-            request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
+            request["acknowledgement_contract"] = _LEGACY_ACKNOWLEDGEMENT_CONTRACT
         index = request["request_index"]
         unit = units.get(index)
         if unit is None:
@@ -582,41 +624,8 @@ def canonical_record_acknowledgements(
         if unit["questions"] or unit["next_work"]:
             request["acknowledgement_delivery"] = "substantive_followup"
             continue
-        outcome = unit.get("record_outcome", {})
-        status = outcome.get("status")
-        if (status not in expected_check or require_checked
-                and unit.get("record_check", {}).get("outcome") != expected_check[status]):
-            raise ExecutionEvidenceInvalid("The code acknowledgement has no checked record outcome")
-        selected = list(dict.fromkeys(outcome["effect_ids"]))
-        if any(identity not in effects or not effects[identity]["performed"]
-               or identity not in changes for identity in selected):
-            raise ExecutionEvidenceInvalid("The code acknowledgement selects an unperformed change")
-        current = list(dict.fromkeys(outcome["current_record_ids"]))
-        if any(identity not in record_catalogue for identity in current):
-            raise ExecutionEvidenceInvalid(
-                "The code acknowledgement selects an unowned current entry")
-        lines = record_change_lines([changes[identity] for identity in selected])
-        entries = [record_catalogue[identity]["record"]["statement"] for identity in current]
-        if status == "performed":
-            if not lines:
-                raise ExecutionEvidenceInvalid(
-                    "The code acknowledgement has no actual changed entry")
-            text = "Saved record changes:\n" + "\n".join(lines)
-        elif status == "already_current":
-            if not entries:
-                raise ExecutionEvidenceInvalid("The code acknowledgement has no current entry")
-            # Current state does not establish that NM changed it previously.
-            text = "Current record entries:\n" + "\n".join(entries)
-        elif status == "review_no_change":
-            text = "The requested record review completed without a selected change."
-            if entries:
-                text += "\nCurrent entries:\n" + "\n".join(entries)
-        else:
-            text = "The requested record work remains unfinished."
-            if lines:
-                text += "\nSaved record changes:\n" + "\n".join(lines)
-            if entries:
-                text += "\nCurrent entries:\n" + "\n".join(entries)
+        text, status = _record_outcome_text(
+            unit, effects, changes, record_catalogue, require_checked=require_checked)
         for block in unit["blocks"]:
             block["text"] = text
             # These anchors described the replaced model prose. The fixed
@@ -642,4 +651,121 @@ def canonical_record_acknowledgements(
                 else:
                     block["inline_citations"] = []
         request["acknowledgement_delivery"] = "code_only"
+    return result
+
+
+def canonical_record_acknowledgements(
+        continuation: dict, execution: dict, *, record_catalogue: dict,
+        require_checked: bool = True, replay: bool = False) -> dict:
+    """Render declared record-result nodes in every delivery mode.
+
+    Fresh outcomes use a versioned renderer even when explanatory paragraphs or
+    follow-ups are present. Explicit completion/status nodes are application
+    text. Separately requested substantive work and linked follow-ups keep their
+    own independently reviewed blocks. If an outcome shares their owner, append
+    a separate code-owned status node rather than erase that deliverable.
+
+    This does not classify arbitrary prose: an operation claim disguised inside
+    account/assessment/question text remains an independent semantic judgment.
+    Historical unstamped and v2 receipts retain their original renderer. Unknown
+    contracts fail rather than silently reinterpreting historical responses.
+    """
+    result = deepcopy(continuation)
+    units = {unit["request_index"]: unit for unit in result["units"]}
+    effects = None
+    changes = None
+    for request in execution["requests"]:
+        version = request.get("acknowledgement_contract")
+        if version not in (None, _LEGACY_ACKNOWLEDGEMENT_CONTRACT,
+                           RECORD_ACKNOWLEDGEMENT_CONTRACT):
+            raise ExecutionEvidenceInvalid("The acknowledgement rendering contract is unsupported")
+        if replay and version != RECORD_ACKNOWLEDGEMENT_CONTRACT:
+            result = _legacy_record_acknowledgements(
+                result, {**execution, "requests": [request]},
+                record_catalogue=record_catalogue, require_checked=require_checked,
+                replay=True)
+            units = {unit["request_index"]: unit for unit in result["units"]}
+            continue
+        index = request["request_index"]
+        unit = units.get(index)
+        if unit is None:
+            if (request.get("response_mode") == "record_acknowledgement"
+                    or isinstance(request.get("record_requirement"), dict)
+                    and request["record_requirement"].get("kind") != "none"):
+                request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
+                request["acknowledgement_delivery"] = "code_only"
+            continue
+        outcome = unit.get("record_outcome", {})
+        if outcome.get("status", "none") == "none":
+            # A non-record answer remains semantic work. This renderer cannot
+            # infer an operation claim or repair a wrongly classified request.
+            if version == RECORD_ACKNOWLEDGEMENT_CONTRACT:
+                raise ExecutionEvidenceInvalid(
+                    "A code record result has no declared record outcome")
+            continue
+        requirement = request.get("record_requirement")
+        ordinary_partial = (outcome.get("status") == "unresolved"
+                            and isinstance(requirement, dict)
+                            and requirement.get("kind") == "none"
+                            and request.get("response_mode") != "record_acknowledgement")
+        if ordinary_partial:
+            # Retained factual subsets use unresolved without inventing a
+            # separate requested record task. Their actual limitation remains
+            # independently checked substantive content.
+            if version == RECORD_ACKNOWLEDGEMENT_CONTRACT:
+                raise ExecutionEvidenceInvalid(
+                    "A code record result has no requested record scope")
+            continue
+        if effects is None:
+            effects = effect_catalogue(execution)
+            changes = {change["effect_id"]: change for change in execution["record_changes"]}
+        text, status = _record_outcome_text(
+            unit, effects, changes, record_catalogue, require_checked=require_checked)
+        owners = {block["id"]: block for block in unit["blocks"]}
+        owner = owners.get(outcome.get("block_id"))
+        if owner is None:
+            raise ExecutionEvidenceInvalid("The code record result has no displayed outcome owner")
+        linked = {link["block_id"] for field in ("questions", "next_work")
+                  for link in unit[field]}
+        pure = (request.get("response_mode") == "record_acknowledgement"
+                and not linked)
+        selected = [block for block in unit["blocks"]
+                    if pure or block["id"] not in linked and (
+                        block["kind"] == "completion" or block["id"] == owner["id"]
+                        and block["kind"] in ("acknowledgment", "limitation"))]
+        if owner not in selected:
+            if selected:
+                outcome["block_id"] = selected[0]["id"]
+            else:
+                node = deepcopy(owner)
+                base = "nm_record_outcome_" + hashlib.sha256(
+                    json.dumps([execution["id"], index], separators=(",", ":")).encode()
+                ).hexdigest()[:16]
+                identity = base
+                suffix = 0
+                while identity in owners:
+                    suffix += 1
+                    identity = base + "_" + str(suffix)
+                node["id"] = identity
+                unit["blocks"].append(node)
+                outcome["block_id"] = identity
+                selected = [node]
+        for block in selected:
+            block["text"] = text
+            block["kind"] = "limitation" if status == "unresolved" else "acknowledgment"
+            block["uncertainty"] = "none"
+            block["legal_source_ids"] = []
+            block["record_ids"] = [identity for identity in block["record_ids"]
+                                   if identity in record_catalogue]
+            if "references" in block:
+                references = set(block["span_ids"] + block["record_ids"])
+                block["references"] = [reference for reference in block["references"]
+                                       if reference["id"] in references]
+            if require_checked:
+                block.pop("inline_citations", None)
+            else:
+                block["inline_citations"] = []
+        request["acknowledgement_contract"] = RECORD_ACKNOWLEDGEMENT_CONTRACT
+        request["acknowledgement_delivery"] = (
+            "code_only" if len(selected) == len(unit["blocks"]) else "substantive_followup")
     return result

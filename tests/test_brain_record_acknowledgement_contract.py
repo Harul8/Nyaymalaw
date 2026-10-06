@@ -120,15 +120,20 @@ def test_substantive_followup_preserves_checked_content_instead_of_silently_drop
     continuation, receipt, catalogue = inputs("unresolved")
     continuation["units"][0][field] = [{"id": "followup", "block_id": "owned-block"}]
     original = deepcopy(continuation)
-    assert render(continuation, receipt, catalogue) == original
+    result = render(continuation, receipt, catalogue)["units"][0]
+    assert result["blocks"][0] == original["units"][0]["blocks"][0]
+    assert result[field] == original["units"][0][field]
+    assert result["blocks"][-1]["text"] == "The requested record work remains unfinished."
+    assert result["record_outcome"]["block_id"] == result["blocks"][-1]["id"]
     assert receipt["requests"][0]["acknowledgement_delivery"] == "substantive_followup"
 
 
-def test_substantive_receipt_cannot_carry_forged_code_delivery_marker():
+def test_historical_substantive_receipt_cannot_carry_forged_code_delivery_marker():
     continuation, receipt, catalogue = inputs()
-    receipt["requests"][0].update(response_mode="substantive", acknowledgement_delivery="code_only")
+    receipt["requests"][0].update(response_mode="substantive", acknowledgement_delivery="code_only",
+                                  acknowledgement_contract="record_acknowledgement_v2")
     with pytest.raises(ExecutionEvidenceInvalid, match="no declared delivery owner"):
-        render(continuation, receipt, catalogue)
+        render(continuation, receipt, catalogue, replay=True)
 
 
 def test_discarded_law_prose_does_not_leave_false_inline_anchors_on_code_status():
@@ -178,7 +183,7 @@ def test_substantive_receipt_cannot_carry_unowned_contract_version():
     continuation, receipt, catalogue = inputs()
     receipt['requests'][0]['response_mode'] = 'substantive'
     receipt['requests'][0]['acknowledgement_contract'] = 'unknown-renderer'
-    with pytest.raises(ExecutionEvidenceInvalid, match='no declared delivery owner'):
+    with pytest.raises(ExecutionEvidenceInvalid, match='unsupported'):
         render(continuation, receipt, catalogue, replay=True)
 
 

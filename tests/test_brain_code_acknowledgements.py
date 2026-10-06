@@ -113,7 +113,8 @@ def test_current_state_acknowledgement_does_not_claim_prior_operation(client, wi
     assert text.startswith("Current record entries:")
 
 
-def test_substantive_mode_remains_under_independent_semantic_review(client, wired, monkeypatch):
+def test_substantive_completion_node_is_code_owned_before_independent_review(
+        client, wired, monkeypatch):
     message = "Correct the carton record and explain the unresolved account distinction."
     prose = "I changed the carton date and saved it."
     install(wired, monkeypatch,
@@ -123,9 +124,10 @@ def test_substantive_mode_remains_under_independent_semantic_review(client, wire
     result = send(client, message, "mixed-semantic-dependency", opened=baseline).json()
     _, active = reopened(wired, result)
     assert active == [OLD_DATE, OLD_RIG]
-    assert prose in json.dumps(result["elements"])
+    assert prose not in json.dumps(result["elements"])
+    assert "The requested record work remains unfinished." in json.dumps(result["elements"])
     execution = result["material_coverage"]["execution"]
-    assert "acknowledgement_delivery" not in execution["requests"][0]
+    assert execution["requests"][0]["acknowledgement_delivery"] == "code_only"
     assert execution["requests"][0]["fulfillment"] == "unfinished"
 
 
@@ -320,7 +322,7 @@ def test_discarded_pure_prose_never_reaches_review_or_causes_retry(client, wired
     assert result["continuation"]["units"][0]["record_check"]["outcome"] == "unfinished"
 
 
-def test_same_fault_in_substantive_prose_still_requires_semantic_rejection(
+def test_substantive_completion_lie_is_replaced_without_unnecessary_retry(
         client, wired, monkeypatch):
     message = "Correct the carton entry and explain the broader account distinction."
     lie = "I saved the correction and completed all record work."
@@ -332,9 +334,9 @@ def test_same_fault_in_substantive_prose_still_requires_semantic_rejection(
     before = len(model.seen)
     result = send(client, message, "substantive-prereview", opened=baseline).json()
     _, active = reopened(wired, result)
-    assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is True
+    assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is False
     assert lie not in json.dumps(result["elements"])
-    assert sum(row["operation"] == "continue_conversation" for row in model.seen[before:]) == 2
+    assert sum(row["operation"] == "continue_conversation" for row in model.seen[before:]) == 1
 
 
 def test_repeated_none_outcome_keeps_saved_input_and_truthful_unfinished_fallback(

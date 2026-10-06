@@ -10,6 +10,7 @@ from dataclasses import replace
 import pytest
 
 import nm.brain.turn as brain_turn
+from nm.brain.execution_contracts import RECORD_ACKNOWLEDGEMENT_CONTRACT
 from nm.shared.store_port import StaleWrite
 from tests.test_brain_material import material, send
 from tests.test_brain_material_purpose import (
@@ -64,6 +65,9 @@ def assert_saved_execution(wired, response, *, before_version, turn_id, request,
         "relation": unit["work"]["relation"], "matter_scope": unit["work"]["matter_scope"],
         "intent": unit["work"]["intent"], "record_requirement": declared,
         "response_mode": "substantive",
+        **({"acknowledgement_contract": RECORD_ACKNOWLEDGEMENT_CONTRACT,
+            "acknowledgement_delivery": "code_only"}
+           if outcome["status"] != "none" and declared["kind"] != "none" else {}),
         "fulfillment": fulfillment,
         "fulfillment_check": {
             **check, "receipt_id": receipt["id"], "request_index": 0,
@@ -105,6 +109,11 @@ def assert_prepared_handoffs(model, start, committed):
         for request in expected["requests"]:
             request["fulfillment"] = "unassessed"
             request.pop("fulfillment_check")
+        if operation == "continue_conversation":
+            for request in expected["requests"]:
+                if request["response_mode"] == "substantive":
+                    request.pop("acknowledgement_contract", None)
+                    request.pop("acknowledgement_delivery", None)
         assert receipt == expected
         assert all(request["fulfillment"] == "unassessed" for request in receipt["requests"])
         seen.append(operation)
