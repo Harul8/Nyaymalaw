@@ -806,6 +806,22 @@
       "files": [
         "AGENTS.md"
       ]
+    },
+    {
+      "slice": "exact-owned-legal-ranges",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-180",
+        "LB-181",
+        "LB-187"
+      ],
+      "decision": "Independent legal reviewer can select one owned fragment or a same-source ordered contiguous f1:f2 range for support, attribution, treatment, scope and factual predicates. Inputs expose canonical original offsets; code slices exact source once, preserving intervening limitations and removing window overlap without inventing or trimming words. Provider schema admits ranges; runtime owns endpoint validation.",
+      "validation": "263 focused offline legal controls passed; Ruff clean. Boundary-spanning predicate survives once with exact full original text and saved validity; 30 range controls reject foreign/nonmatching/reverse selectors after one correction, retain checked peers and preserve single-fragment compatibility. No new model call; actual semantics/browser deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_fragment_ranges.py"
+      ]
     }
   ]
 }
