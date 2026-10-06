@@ -415,7 +415,7 @@ def estimate_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-NM_SCHEMA_KEYS = ("x-nm-read", "x-nm-fixed-inventory")
+NM_SCHEMA_KEYS = ("x-nm-read", "x-nm-fixed-inventory", "x-nm-empty-metadata")
 
 
 def on_the_wire(schema) -> dict:
@@ -464,6 +464,33 @@ def on_the_wire(schema) -> dict:
     return strip(dict(schema))
 
 
+def canonical_schema_data(data: Any, schema: Mapping[str, Any]) -> Any:
+    """Copy a wire value, removing only schema-declared empty unused metadata.
+
+    This is a transport allowance, not fact repair. The generation schema still
+    offers only applicable fields. Original provider data remains available for
+    auditing; populated/unknown fields survive and fail ordinary validation.
+    """
+    if isinstance(data, dict):
+        properties = schema.get("properties", {})
+        empty = schema.get("x-nm-empty-metadata", {})
+        if (not isinstance(empty, dict) or set(empty).intersection(properties)
+                or any(kind not in ("array", "string") for kind in empty.values())):
+            raise ValueError("Empty metadata must declare only unused array/string fields")
+        result = {}
+        for key, value in data.items():
+            kind = empty.get(key)
+            if ((kind == "array" and isinstance(value, list) and not value)
+                    or (kind == "string" and isinstance(value, str) and not value.strip())):
+                continue
+            result[key] = (canonical_schema_data(value, properties[key])
+                           if key in properties else value)
+        return result
+    if isinstance(data, list) and "items" in schema:
+        return [canonical_schema_data(value, schema["items"]) for value in data]
+    return data
+
+
 def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
     """The subset of JSON Schema the port promises across providers.
 
@@ -471,7 +498,7 @@ def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
     offer, and a validator richer than that intersection would let a call site
     depend on something the next adapter cannot honour.
     """
-    _require_type("result", data, schema)
+    _require_type("result", canonical_schema_data(data, schema), schema)
 
 
 _TYPES = {"string": str, "integer": int, "number": (int, float),
