@@ -12,6 +12,7 @@ import json
 from collections.abc import Iterable
 from copy import deepcopy
 
+from nm.brain.evidence_rendering import EVIDENCE_EXPRESSION_CONTRACT
 from nm.shared.model_port import SchemaViolation, require_schema
 
 RECORD_OUTCOME_CONTRACT = "checked_record_outcome_v1"
@@ -751,6 +752,16 @@ def canonical_record_acknowledgements(
                 outcome["block_id"] = identity
                 selected = [node]
         for block in selected:
+            if "evidence_expression" in block or "expression_contract" in block:
+                if block.get("expression_contract") != EVIDENCE_EXPRESSION_CONTRACT:
+                    raise ExecutionEvidenceInvalid(
+                        "The record expression has an unsupported rendering contract")
+                # An appended status node may inherit its substantive owner's
+                # expression. Replace that dependency as well as its wording;
+                # the original substantive block keeps its own expression.
+                block["evidence_expression"] = {
+                    "operator": "record_result", "source_ids": [],
+                    "record_ids": [], "focus": "none"}
             block["text"] = text
             block["kind"] = "limitation" if status == "unresolved" else "acknowledgment"
             block["uncertainty"] = "none"
