@@ -1263,6 +1263,20 @@
         "legal_requirements.py force alternatives",
         "delivered outcome and saved completion"
       ]
+    },
+    {
+      "piece": "dispute coverage responsibility matches its record domain",
+      "owner": "nm/brain/dispute_verification.py::_COVERAGE_SYSTEM",
+      "version": "00d60f2 plus one prompt/production file",
+      "invariant": "Coverage of independently contestable issues and authorised dispute repairs cannot require ordinary significant facts to become dispute records. Original account purpose remains distinct from stage scope; neutral/supporting account receives explicit outside_scope, while actual missing conflicts remain missing.",
+      "verification": {
+        "new_cases": 6,
+        "new_cases_baseline": "6 passed: existing mechanics already permit the correct scope; scripted verdicts are not semantic proof",
+        "focused_public_passed": 42,
+        "ruff": "passed"
+      },
+      "call_impact": "Existing reviewer coverage prompt only; no new model stage/call or weaker admission. Live effect/retry reduction unmeasured.",
+      "remaining": "Pinned neutral/adverse/contextual browser verification before this issue is qualified. No completion claim from offline counts."
     }
   ],
   "additional_reviewer_input": {
