@@ -454,6 +454,21 @@
         "tests/test_brain_execution_contracts.py",
         "tests/test_brain_review_completion.py"
       ]
+    },
+    {
+      "slice": "verify-actual-independent-tier",
+      "owners": [
+        "LB-177",
+        "LB-178",
+        "LB-181",
+        "LB-187"
+      ],
+      "decision": "Independent checking now verifies the actual returned Judge tier as well as downgrade metadata. An unflagged Routine result cannot certify review; a valid Judge result adds no call. Separate calls remain potentially correlated and do not establish model diversity.",
+      "validation": "159 offline independent-tier and dispute/material/law-review cases passed; flagged and unflagged wrong-tier neighbors paired with valid Judge result; Ruff clean. No real-model/API/browser calls.",
+      "files": [
+        "nm/brain/checked.py",
+        "tests/test_brain_independent_tier.py"
+      ]
     }
   ]
 }

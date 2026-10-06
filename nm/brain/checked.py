@@ -19,7 +19,7 @@ _T = TypeVar("_T")
 
 
 def require_independent_result(result) -> None:
-    if result.was_downgraded:
+    if result.was_downgraded or result.tier != Tier.JUDGE:
         raise TierUnavailable("The configured independent review was unavailable")
 
 
