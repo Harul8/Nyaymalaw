@@ -6,7 +6,7 @@ from dataclasses import replace
 import pytest
 
 from nm.shared.model_port import require_schema
-from tests.brain_reader_fixture import scripted_support_spans
+from tests.brain_reader_fixture import fresh_review_reply, scripted_support_spans
 from tests.test_brain_material import Model, fixture_scope_judgment, material, plan, send
 
 
@@ -42,7 +42,7 @@ class ReviewModel(Model):
                 dispute_scope=self.dispute_scope if prompt.operation == "verify_disputes" else None,
                 coverage_links=self.coverage_links)
             result = replace(result, data=data)
-        return result
+        return replace(result, data=fresh_review_reply(json.loads(prompt.user), result.data))
 
 
 def test_public_review_cannot_replace_distinct_accounts_with_analysis_and_preserves_valid_peers(

@@ -11,6 +11,7 @@ import pytest
 
 from nm.brain import record_review as record
 from nm.shared.model_port import SchemaViolation
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_source_owner_portion_contract import RawReplies, declared, read
 from tests.test_brain_source_support_verifiers import (
     RawJudge,
@@ -186,4 +187,4 @@ def test_valid_support_and_coverage_keep_the_one_call_path(kind):
     assert retained == candidates
     assert assessed["state"] == "complete"
     assert len(model.calls) == 1
-    assert model.calls[0]["output"] == output
+    assert model.calls[0]["output"] == fresh_review_reply(model.calls[0]["payload"], output)

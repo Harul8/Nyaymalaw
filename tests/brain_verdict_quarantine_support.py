@@ -11,6 +11,7 @@ from nm.brain.conversation import OpeningCandidate
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
+from tests.brain_reader_fixture import fresh_review_reply
 
 FIRST = "The custodian retained the signed original."
 SECOND = "The courier delivered the duplicate copy."
@@ -94,6 +95,7 @@ class Judge:
                                "schema": schema})
             raise output
         data = output(payload) if callable(output) else deepcopy(output)
+        data = fresh_review_reply(payload, data)
         self.calls.append({"payload": payload, "output": deepcopy(data), "schema": schema})
         result = ModelResult(
             text=None, data=data, tier=self.tier, provider="offline",

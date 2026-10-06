@@ -157,7 +157,7 @@ def test_overall_acceptance_cannot_override_failed_account_or_each_target_check(
     ("duplicate", "candidate_id has duplicate verdicts"),
     ("empty_reason", "reason is empty"),
     ("missing_field", "result.account_check.supported is missing"),
-    ("foreign_source", "result.account_check.source_ids[0]' is outside the permitted vocabulary"),
+    ("foreign_source", "source_ids is server-owned canonical proof"),
     ("foreign_target", "result.target_checks[0].target_id' is outside the permitted vocabulary"),
     ("unsupported", "account_check.supported=false"),
 ])

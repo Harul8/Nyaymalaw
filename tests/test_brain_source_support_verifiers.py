@@ -13,6 +13,7 @@ from nm.brain.conversation import Message, OpeningCandidate
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Tier, Usage, require_schema
+from tests.brain_reader_fixture import fresh_review_reply
 
 SCOPE = {"requests": [{"request_index": 0, "material_purposes": ["interpretation_review"]}]}
 
@@ -23,11 +24,12 @@ def kind(request):
 
 
 class RawJudge:
-    """Return exactly authored objects; no fixture adapter invents evidence fields."""
+    """Keep authored judgments; optionally transport faithful legacy selections."""
 
-    def __init__(self, outputs):
+    def __init__(self, outputs, *, transport=True):
         self.outputs = iter(deepcopy(outputs))
         self.calls = []
+        self.transport = transport
 
     def context_budget(self, tier):
         assert tier == Tier.JUDGE
@@ -36,7 +38,10 @@ class RawJudge:
     def structured(self, prompt, schema, tier, *, max_tokens):
         assert tier == Tier.JUDGE
         output = next(self.outputs)
-        self.calls.append({"prompt": prompt, "payload": json.loads(prompt.user),
+        payload = json.loads(prompt.user)
+        if self.transport:
+            output = fresh_review_reply(payload, output)
+        self.calls.append({"prompt": prompt, "payload": payload,
                            "schema": deepcopy(schema), "output": deepcopy(output),
                            "max_tokens": max_tokens})
         return ModelResult(
@@ -197,9 +202,10 @@ def test_exact_independently_checked_whole_account_is_admitted_in_one_call(kind)
     assert retained == (candidate,) and assessed["state"] == "complete"
     assert assessed["selection_contract"] == record.COVERAGE_SELECTION_CONTRACT
     assert disagreements == [] and len(model.calls) == 1
-    assert model.calls[0]["output"] == output
+    transported = fresh_review_reply(model.calls[0]["payload"], output)
+    assert model.calls[0]["output"] == transported
     assert model.calls[0]["payload"]["source_treatments"] == references
-    require_schema(output, model.calls[0]["schema"])
+    require_schema(transported, model.calls[0]["schema"])
 
 
 def test_partial_multi_clause_coverage_keeps_admitted_work_and_localises_remaining_content(kind):
@@ -401,7 +407,8 @@ def test_explicit_legacy_rows_keep_the_existing_schema_without_silent_version_up
     assert "selection_contract" not in assessed
     assert "source_support_contract" not in model.calls[0]["payload"]
     assert "coverage_selection_contract" not in model.calls[0]["payload"]
-    require_schema(output, model.calls[0]["schema"])
+    require_schema(fresh_review_reply(model.calls[0]["payload"], output),
+                   model.calls[0]["schema"])
 
 
 def test_fresh_cached_peer_survives_added_owned_candidate_choices(kind):

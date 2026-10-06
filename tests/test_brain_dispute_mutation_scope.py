@@ -14,6 +14,7 @@ from nm.brain.mutation_contracts import AUTHORITY_CONTRACT, build_mutation_autho
 from nm.brain.turn import _preview_disputes
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage, require_schema
+from tests.brain_reader_fixture import fresh_review_reply
 
 FIRST = "The reported duty is disputed."
 SECOND = "The record custody is contested."
@@ -43,6 +44,7 @@ class Model:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
         data = deepcopy(next(self.responses))
+        data = fresh_review_reply(json.loads(prompt.user), data)
         require_schema(data, schema)
         return ModelResult(text=None, data=data, tier=tier, provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0, completion=Completion.COMPLETE)

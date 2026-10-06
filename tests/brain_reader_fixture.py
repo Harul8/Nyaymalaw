@@ -5,6 +5,49 @@ from copy import deepcopy
 from functools import wraps
 
 
+def fresh_review_reply(payload, data):
+    """Transport only faithful old selections to the explicit fresh wire shape.
+
+    This never creates checks or repairs their ownership, flags, spans or other
+    evidence. Contradictory, repeated and malformed selections remain authored
+    defects for the production owner to reject.
+    """
+    result = deepcopy(data)
+    original = payload.get("original_input", payload)
+    if original.get("review_selection_contract") != "checked_source_selection_v1":
+        return result
+    rows = result.get("verdicts") if isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return result
+    candidates = {row["candidate_id"]: row for row in original.get("candidates", [])
+                  if isinstance(row, dict) and isinstance(row.get("candidate_id"), str)}
+    for row in rows:
+        account = row.get("account_check") if isinstance(row, dict) else None
+        if not isinstance(account, dict) or "source_ids" not in account:
+            continue
+        selected, checks = account["source_ids"], account.get("source_checks")
+        if (not isinstance(selected, list) or not isinstance(checks, list)
+                or any(not isinstance(value, str) or not value for value in selected)
+                or any(not isinstance(check, dict)
+                       or not isinstance(check.get("source_id"), str)
+                       or not check["source_id"] for check in checks)):
+            continue
+        checked = [check["source_id"] for check in checks]
+        if (len(selected) != len(set(selected)) or len(checked) != len(set(checked))
+                or set(selected) != set(checked)):
+            continue
+        identity = row.get("candidate_id")
+        if not isinstance(identity, str) or identity not in candidates:
+            continue
+        candidate = candidates[identity]
+        owned = candidate.get("allowed_account_source_ids")
+        if (not isinstance(owned, list) or any(not isinstance(value, str) for value in owned)
+                or not set(selected) <= set(owned)):
+            continue
+        del account["source_ids"]
+    return result
+
+
 def reader_repairs(data, schema):
     """Express scripted operation rows under the selected correction schema.
 
@@ -310,7 +353,7 @@ def reviewed_record_verdicts(payload, data, *, scripted_full_scope=False,
     if (coverage_judgment is not None and "coverage" not in result
             and payload.get("coverage_selection_contract") == "owned_account_dispositions_v2"):
         result["coverage"] = coverage_judgment(payload, deepcopy(result))
-    return result
+    return fresh_review_reply(payload, result)
 
 
 def reader_operations(rows, payload, *, link_field, infer_targets=True):

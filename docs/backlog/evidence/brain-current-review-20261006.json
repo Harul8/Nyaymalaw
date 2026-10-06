@@ -1017,6 +1017,29 @@
       },
       "call_impact": "No active consumers migrated yet; zero routine or conditional call changes and no paid calls.",
       "remaining": "Migrate dispute and material verifier fresh wire paths separately; canonical cached decisions use unchanged validation. Fresh precise per-source endpoint choices and pinned browser measurement remain open."
+    },
+    {
+      "piece": "dispute reviewer fresh source-selection activation",
+      "owner": "nm/brain/dispute_verification.py",
+      "version": "f6df754 plus this one production file",
+      "pass_condition": "Fresh provider output selects owned sources exactly once through source_checks; canonical IDs are code-derived and retained cache/durable proof stays unchanged. Malformed independent decisions use existing bounded correction and preserve valid peers.",
+      "verification": {
+        "new_tests": 13,
+        "focused_passed": 251,
+        "known_unchanged_call_count_failures": 5,
+        "excluded_names": [
+          "public_singleton_self_dependency",
+          "public_operations_require_latest_account_support_without_suppressing_mixed_content"
+        ],
+        "baseline_evidence": [
+          "outputs/brain-repair-20261006/record-review-prerequisite-baseline.txt",
+          "outputs/brain-repair-20261006/dispute-wire-transitions-baseline.txt"
+        ],
+        "ruff": "passed"
+      },
+      "call_impact": "Zero additional routine stages or calls; existing correction ledger unchanged. No paid calls.",
+      "test_transport": "Legacy scripted reviewer fixture output is translated only when the fresh contract marker is supplied and unique owned checks exactly match the legacy source selection. Contradictions, foreign IDs and malformed checks remain rejected. RawJudge can bypass fixture transport.",
+      "remaining": "Material reviewer activation, exact per-source offered endpoint bounds, independent-contestability semantics and pinned browser acceptance remain open."
     }
   ],
   "additional_reviewer_input": {
@@ -1062,7 +1085,7 @@
     "ledger_charged_at_new_authorization": 1.877078,
     "available_under_cumulative5": 3.122922,
     "pinned_model": "gpt-4.1-mini-2025-04-14",
-    "no_further_paid_calls_since_baseline": true,
+    "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
     "cumulative_charge_usd": 2.005571,
     "remaining_usd": 2.994429

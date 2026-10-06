@@ -15,6 +15,7 @@ from tests.brain_continuation_fixture import (
 )
 from tests.brain_reader_fixture import (
     fixture_scoped_coverage,
+    fresh_review_reply,
     reader_operations,
     reader_repairs,
     reviewed_record_verdicts,
@@ -130,6 +131,7 @@ class Model:
                 self.current_items = data["items"]
         data = scripted_record_result(
             prompt.operation, json.loads(prompt.user), data, self.current_record_disposition)
+        data = fresh_review_reply(json.loads(prompt.user), data)
         return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,

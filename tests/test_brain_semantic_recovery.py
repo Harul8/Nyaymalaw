@@ -20,6 +20,7 @@ from tests.brain_reader_fixture import (
     fixture_coverage,
     fixture_disposition,
     fixture_representation_choices,
+    fresh_review_reply,
     reader_operations,
     reader_repairs,
     source_portion_reply,
@@ -210,6 +211,7 @@ class RecoveryModel(PassageModel):
                                    reason="This added interpretation changes the reported meaning.")
                         row["account_check"].update(supported=False)
             data["coverage"] = self.coverage_judgment(operation, original, data)
+        data = fresh_review_reply(payload, data)
         # Preserve the actual post-fabrication object, replacing super's log entry.
         self.outputs[-1]["output"] = deepcopy(data)
         return replace(result, data=data)
