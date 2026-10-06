@@ -680,6 +680,20 @@
         "nm/brain/record_review.py",
         "tests/test_brain_record_diagnostic_reason_lengths.py"
       ]
+    },
+    {
+      "slice": "legal-diagnostic-reason-width",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-181"
+      ],
+      "decision": "Removed size-only rejection of normal legal verdict, label, source, material-link, use and application-premise explanations across schema, runtime and saved validity. Meaningful reasons retain their original content; blank reasons and unsupported source ownership, force, application and exact evidence still fail.",
+      "validation": "165 focused legal offline controls passed, including 25 paired short/600-character and blank-reason cases. Existing bounded correction and token budgets retained. Empty-reading reason owner follows in separate slice; actual model/browser quality deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_reason_lengths.py"
+      ]
     }
   ]
 }

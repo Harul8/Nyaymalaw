@@ -146,7 +146,6 @@ def source_verification_valid(source: object, *, contract: str = RESEARCH_VERIFI
         or (scope_status == "no_special_condition") != (not scope)
         or not isinstance(reason, str)
         or not reason.strip()
-        or len(reason) > 500
     ):
         return False
     if contract in ("research_support_v1", "source_support_v4"):
@@ -250,7 +249,6 @@ def finding_verification_valid(finding: object, *, contract: str = RESEARCH_VERI
             or check.get("verdict") != "supported"
             or not isinstance(check.get("reason"), str)
             or not check["reason"].strip()
-            or len(check["reason"]) > 500
         ):
             return False
         for field, allowed in (("source_ids", sources), ("material_ids", material)):
@@ -303,7 +301,6 @@ def _application_premises_valid(finding: dict) -> bool:
             or row["predicate_excerpt"] not in sources[row["source_id"]]["text"]
             or not isinstance(row.get("reason"), str)
             or not row["reason"].strip()
-            or len(row["reason"]) > 500
             or not isinstance(row.get("preserved_condition"), str)
             or len(row["preserved_condition"]) > 1000
             or not isinstance(row.get("account_references"), list)
@@ -569,8 +566,9 @@ candidate's cited sources and linked material. Peer, unused or rejected
 references are not support. A retained finding checks each cited source and
 linked material exactly once and has retained support for its full meaning.
 For rejected findings, required arrays remain present but unused source,
-material and premise checks may be empty. Reasons are nonempty and at most
-500 characters. assertion_statement is at most 500, owner_label at most 160,
+material and premise checks may be empty. Give nonempty substantive reasons
+that explain the relevant evidence comparison; reason length alone does not
+change a verdict. assertion_statement is at most 500, owner_label at most 160,
 and preserved_condition at most 1000 characters. Support fragments, role
 statements and conditions come from their declared input; return no new
 facts, law, fields or wording repairs."""
@@ -1082,7 +1080,7 @@ def _verification_schema(
         "required": ["verdict", "reason", "source_ids", "material_ids"],
         "properties": {
             "verdict": {"type": "string", "enum": ["supported", "unsupported", "uncertain"]},
-            "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+            "reason": {"type": "string", "minLength": 1},
             "source_ids": {"type": "array", "items": {"type": "string", "enum": list(source_ids)}},
             "material_ids": {
                 "type": "array",
@@ -1225,7 +1223,7 @@ def _verification_schema(
                             **({"maxItems": 0} if not account_ids else {}),
                         },
                         "preserved_condition": {"type": "string", "maxLength": 1000},
-                        "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+                        "reason": {"type": "string", "minLength": 1},
                     },
                 },
             },
@@ -1287,11 +1285,9 @@ def _finding_verdict(
     checks = decision["source_checks"]
     if (
         not decision["reason"].strip()
-        or len(decision["reason"]) > 500
         or not decision["label_reason"].strip()
-        or len(decision["label_reason"]) > 500
     ):
-        raise SchemaViolation("Keep nonempty verdict reasons within 500 characters")
+        raise SchemaViolation("Keep nonempty substantive verdict reasons")
     if decision["verdict"] != "supported" or decision["label_verdict"] != "faithful":
         return None
     if any(check["verdict"] != "supported" for check in decision["use_checks"].values()):
@@ -1313,10 +1309,9 @@ def _finding_verdict(
             material_id in seen_material
             or material_id not in item["material_ids"]
             or not check["reason"].strip()
-            or len(check["reason"]) > 500
         ):
             raise SchemaViolation(
-                "A material link verdict is duplicated, foreign or lacks a concise reason"
+                "A material link verdict is duplicated, foreign or lacks a substantive reason"
             )
         seen_material.add(material_id)
         if check["verdict"] == "addresses":
@@ -1389,7 +1384,6 @@ def _finding_verdict(
             raise SchemaViolation(f"Source {source_id!r} needs owner_label within 160 characters")
         if (
             not check["reason"].strip()
-            or len(check["reason"]) > 500
             or (verdict == "supported") != bool(support_id)
             or (verdict == "supported" and scope_status != "no_special_condition" and not scope_id)
             or (
