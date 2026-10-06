@@ -1277,6 +1277,64 @@
       },
       "call_impact": "Existing reviewer coverage prompt only; no new model stage/call or weaker admission. Live effect/retry reduction unmeasured.",
       "remaining": "Pinned neutral/adverse/contextual browser verification before this issue is qualified. No completion claim from offline counts."
+    },
+    {
+      "piece": "dispute-domain actual browser qualification",
+      "owner": "nm/brain/dispute_verification.py",
+      "version": "04e948c",
+      "verification": {
+        "commit": "04e948c",
+        "matter_id": "mat_5fb87cc859c917d15e3447e1166634d2",
+        "turn_id": "turn_f9d6d99f-4598-4278-8206-6729bc3c9242",
+        "browser_observed": true,
+        "reopened_without_new_calls": true,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "calls": 16,
+        "operations": [
+          "interpret_conversation",
+          "classify_account_sources",
+          "extract_disputes",
+          "verify_disputes",
+          "verify_disputes",
+          "extract_legal_details",
+          "verify_material_grounding",
+          "reconsider_account_sources",
+          "verify_disputes",
+          "verify_disputes",
+          "verify_material_grounding",
+          "decompose_disputes",
+          "read_legal_requirements",
+          "read_legal_requirements",
+          "continue_conversation",
+          "verify_continuation"
+        ],
+        "elapsed_model_s": 73.233,
+        "charge_usd": 0.041213,
+        "tokens_in": 78583,
+        "tokens_out": 6109,
+        "combined_charge_usd": 2.243737,
+        "remaining_usd": 2.756263,
+        "admitted_disputes": 1,
+        "admitted_details": 2,
+        "acceptance": "FAILED",
+        "issues": [
+          "Neutral event admitted as independent dispute based on attribution/possible contestability rather than reported adverse conduct or competing position.",
+          "Material support portions omit the stated date/actor while reviewer certifies whole assertions; exact bounds are not semantic entailment.",
+          "Dispute coverage invents account content in recording instruction and cannot bind represented portions to admitted records; shared recovery is exhausted.",
+          "Independent recap quotes the request itself rather than the account to be recapped, yet sufficiency is accepted as complete.",
+          "Reply duplicates account and status blocks.",
+          "Automatic legal stage is triggered by erroneous dispute and no useful legal gathering is delivered."
+        ],
+        "positive_controls": [
+          "Two attributable details persisted.",
+          "Fresh fixed-expression shape did not fail this turn.",
+          "No recap record-status mismatch this turn; no schema repair was needed.",
+          "Browser reopened identical saved conversation without new calls."
+        ],
+        "legal_read_groups": 1,
+        "checked_gathering_items": 0
+      },
+      "remaining": "Neutral event is still wrongly admitted; writer/Judge meaning distinction needs repair. Recap completeness and support-span entailment remain open. Not production ready."
     }
   ],
   "additional_reviewer_input": {
@@ -1325,8 +1383,9 @@
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
     "cumulative_charge_usd": 2.202524,
-    "remaining_usd": 2.797476,
-    "unknown_attempts": 0
+    "remaining_usd": 2.756263,
+    "unknown_attempts": 0,
+    "combined_measured_usd": 2.243737
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1609,5 +1668,61 @@
       "No legal gathering; erroneous dispute triggers unnecessary law research. Saved/reopened input/reply retain actual partial scope."
     ]
   },
-  "conflict_live_evidence": "docs/backlog/evidence/brain-conflict-review-20261007-live.json.gz"
+  "conflict_live_evidence": "docs/backlog/evidence/brain-conflict-review-20261007-live.json.gz",
+  "scope_live_acceptance": {
+    "commit": "04e948c",
+    "matter_id": "mat_5fb87cc859c917d15e3447e1166634d2",
+    "turn_id": "turn_f9d6d99f-4598-4278-8206-6729bc3c9242",
+    "browser_observed": true,
+    "reopened_without_new_calls": true,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "calls": 16,
+    "operations": [
+      "interpret_conversation",
+      "classify_account_sources",
+      "extract_disputes",
+      "verify_disputes",
+      "verify_disputes",
+      "extract_legal_details",
+      "verify_material_grounding",
+      "reconsider_account_sources",
+      "verify_disputes",
+      "verify_disputes",
+      "verify_material_grounding",
+      "decompose_disputes",
+      "read_legal_requirements",
+      "read_legal_requirements",
+      "continue_conversation",
+      "verify_continuation"
+    ],
+    "elapsed_model_s": 73.233,
+    "charge_usd": 0.041213,
+    "tokens_in": 78583,
+    "tokens_out": 6109,
+    "combined_charge_usd": 2.243737,
+    "remaining_usd": 2.756263,
+    "admitted_disputes": 1,
+    "admitted_details": 2,
+    "acceptance": "FAILED",
+    "issues": [
+      "Neutral event admitted as independent dispute based on attribution/possible contestability rather than reported adverse conduct or competing position.",
+      "Material support portions omit the stated date/actor while reviewer certifies whole assertions; exact bounds are not semantic entailment.",
+      "Dispute coverage invents account content in recording instruction and cannot bind represented portions to admitted records; shared recovery is exhausted.",
+      "Independent recap quotes the request itself rather than the account to be recapped, yet sufficiency is accepted as complete.",
+      "Reply duplicates account and status blocks.",
+      "Automatic legal stage is triggered by erroneous dispute and no useful legal gathering is delivered."
+    ],
+    "positive_controls": [
+      "Two attributable details persisted.",
+      "Fresh fixed-expression shape did not fail this turn.",
+      "No recap record-status mismatch this turn; no schema repair was needed.",
+      "Browser reopened identical saved conversation without new calls."
+    ],
+    "legal_read_groups": 1,
+    "checked_gathering_items": 0
+  },
+  "scope_live_evidence": {
+    "path": "docs/backlog/evidence/brain-dispute-scope-20261007-live.json.gz",
+    "sha256": "5f7ecdc717ab96f5461a28db592ac9d71dc8502f19dcc89de557715f51cf5ced"
+  }
 }
