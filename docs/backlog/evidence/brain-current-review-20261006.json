@@ -993,6 +993,30 @@
       },
       "call_accounting": "Existing material/dispute independent call, at most1local correction and existing conditional candidate-free source-owner recovery; no new prompt/stage or expanded ledger.",
       "limits": "This removes label anchoring from two diagnostics, not every semantic dependence. Local correction still precedes source-owner reconsideration; outcome quality requires pinned-model measurement. Model disagreement remains untrusted until source owner checks original evidence."
+    },
+    {
+      "piece": "source selection wire/canonical prerequisite",
+      "owner": "nm/brain/record_review.py",
+      "version": "160f0f9 plus this one production file",
+      "pass_condition": "Fresh source_checks are the sole source selection; checked unique owned IDs are derived in order without altering checks, source text or input. Existing canonical proof schema stays unchanged.",
+      "counterexamples": [
+        "Forbidden fresh authored source_ids (including empty)",
+        "Repeated populated check IDs, contradictory or identical",
+        "Foreign selected sources",
+        "Invalid flags, extra fields, malformed range metadata"
+      ],
+      "verification": {
+        "new_tests": 20,
+        "focused_passed": 150,
+        "existing_failure": {
+          "test": "tests/test_brain_record_review.py::test_public_singleton_self_dependency_is_corrected_without_retiring_uncovered_account",
+          "observed": "11 calls vs frozen expected 9; no state loss; identical failure reproduced with HEAD record_review.py restored",
+          "baseline_evidence": "outputs/brain-repair-20261006/record-review-prerequisite-baseline.txt"
+        },
+        "ruff": "passed"
+      },
+      "call_impact": "No active consumers migrated yet; zero routine or conditional call changes and no paid calls.",
+      "remaining": "Migrate dispute and material verifier fresh wire paths separately; canonical cached decisions use unchanged validation. Fresh precise per-source endpoint choices and pinned browser measurement remain open."
     }
   ],
   "additional_reviewer_input": {

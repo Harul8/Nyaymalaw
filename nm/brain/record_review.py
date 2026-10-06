@@ -28,6 +28,7 @@ ACCOUNT_COVERAGE_CONTRACT = "independent_account_coverage_v1"
 SOURCE_SELECTION_CONTRACT = "owned_substantive_spans_v2"
 SOURCE_SUPPORT_CONTRACT = "independent_original_source_support_v2"
 COVERAGE_SELECTION_CONTRACT = "owned_account_dispositions_v2"
+REVIEW_SELECTION_CONTRACT = "checked_source_selection_v1"
 
 
 def owned_source_portions(reference: dict, selections: list[dict], *,
@@ -590,7 +591,8 @@ def restoration_peer_ids(candidate_id: str, targets: dict[str, set[str]]) -> tup
 
 
 def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
-                      candidate_ids: tuple[str, ...], *, source_references=None) -> dict:
+                      candidate_ids: tuple[str, ...], *, source_references=None,
+                      wire: bool = False) -> dict:
     def ids(values):
         return {"type": "array", "items": {"type": "string", "enum": list(values) or [""]},
                 **({"maxItems": 0} if not values else {})}
@@ -648,7 +650,37 @@ def review_properties(source_ids: tuple[str, ...], target_ids: tuple[str, ...],
         check["properties"]["support_spans"] = {
             "type": "array", "items": _source_range_schema(references),
             **({"maxItems": 0} if not source_ids else {})}
+    if wire:
+        account = properties["account_check"]
+        account["required"].remove("source_ids")
+        del account["properties"]["source_ids"]
     return properties
+
+
+def canonical_review_from_wire(row: dict, *, schema: dict,
+                               source_ids: set[str]) -> dict:
+    """Resolve one fresh selection into durable proof, without semantic approval.
+
+    Only checked source IDs are redundant. Keep every selected check, including
+    negative and contextual checks, and leave support, purpose and target
+    admission to their existing owners. Canonical/historical rows never use
+    this conversion; their original complete proof must validate unchanged.
+    """
+    if (isinstance(row, dict) and isinstance(row.get("account_check"), dict)
+            and "source_ids" in row["account_check"]):
+        raise SchemaViolation(
+            "Fresh account_check selects sources only through source_checks; "
+            "source_ids is server-owned canonical proof")
+    require_schema(row, schema)
+    result = deepcopy(row)
+    checks = result["account_check"]["source_checks"]
+    selected = [check["source_id"] for check in checks]
+    if len(selected) != len(set(selected)):
+        raise SchemaViolation("account_check.source_checks repeats a source_id")
+    if not set(selected) <= source_ids:
+        raise SchemaViolation("account_check.source_checks contains unowned source IDs")
+    result["account_check"]["source_ids"] = selected
+    return result
 
 
 def validate_record_checks(row: dict, *, source_ids: set[str], target_ids: set[str],
