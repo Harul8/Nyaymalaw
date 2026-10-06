@@ -24,7 +24,8 @@ def test_selection_normalizes_exact_durable_references_after_validating_all_ids(
 
     result = resolve_sources(selected, latest={"L1": "Correction."}, prior=prior)
 
-    assert result == [{"statement": selected[0]["statement"], "quoted": "Correction.",
+    assert result == [{"source_id": "L1", "statement": selected[0]["statement"],
+                       "quoted": "Correction.",
                        "prior_references": [vars(earlier), vars(nm_words),
                                             vars(another_turn), vars(different_passage)]}]
     assert selected == before

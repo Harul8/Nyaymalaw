@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from nm.brain.checked import checked_unit_read
+from nm.brain.mutation_contracts import model_mutation_context
 from nm.brain.record_review import derived_record, owned_source_treatments
 from nm.shared.model_port import (
     ContextOverflow,
@@ -96,6 +97,7 @@ class MaterialCandidate:
     placement: str = ""
     dispute_ids: tuple[str, ...] = ()
     related_material_ids: tuple[str, ...] = ()
+    source_id: str | None = None
 
     def recorded(self, turn_id: str, index: int) -> dict:
         record = {
@@ -112,6 +114,8 @@ class MaterialCandidate:
             "importance": self.importance,
             "why_material": self.why_material,
         }
+        if self.source_id is not None:
+            record["source_id"] = self.source_id
         if self.kind == "dispute":
             record.update(label=self.label, identification=self.identification,
                           clarification=self.clarification,
@@ -230,7 +234,7 @@ def resolve_sources(rows: list[dict], *, latest: dict[str, str],
                        for key in prior_ids)):
             raise SchemaViolation("A material source selection is invalid")
         resolved.append({**{key: value for key, value in row.items()
-                            if key not in {"source_id", "prior_source_ids"}},
+                            if key != "prior_source_ids"},
                          "quoted": latest[source_id],
                          "prior_references": [vars(ref) for ref in
                                               dict.fromkeys(prior[key] for key in prior_ids)]})
@@ -238,7 +242,25 @@ def resolve_sources(rows: list[dict], *, latest: dict[str, str],
 
 
 def saved_source_ids(saved: dict, prior: dict[str, PriorReference]) -> tuple[str, ...]:
-    """Address a saved item's exact advocate passage in this full transcript."""
+    """Address a saved item's original selected span in this full transcript."""
+    selected_source = saved.get("source_id")
+    if selected_source is not None:
+        ordinal = (re.fullmatch(r"L([1-9][0-9]*)", selected_source)
+                   if isinstance(selected_source, str) else None)
+        if ordinal is None:
+            raise SchemaViolation("A saved material source identity is invalid")
+        selected = []
+        for identity, ref in prior.items():
+            previous = re.fullmatch(r"P[1-9][0-9]*S([1-9][0-9]*)", identity)
+            if (previous is not None and previous[1] == ordinal[1]
+                    and ref.role == "advocate"
+                    and ref.turn_id == saved.get("source_turn_id")):
+                selected.append((identity, ref))
+        if (len(selected) != 1 or not isinstance(saved.get("quoted"), str)
+                or selected[0][1].quoted != saved["quoted"]):
+            raise SchemaViolation(
+                "A saved material source identity does not match its original owned passage")
+        return (selected[0][0],)
     return tuple(source_id for source_id, ref in prior.items()
                  if ref.role == "advocate"
                  and ref.turn_id == saved.get("source_turn_id")
@@ -437,11 +459,18 @@ def parse_material(rows: object, *, latest: str,
     if not isinstance(rows, list):
         raise SchemaViolation("The material proposals are missing")
     prior_words = {(item.turn_id, item.role): item.text for item in earlier}
+    _, current_sources, _ = addressed_sources((), latest)
     candidates = []
     for row in rows:
         if not isinstance(row, dict):
             raise SchemaViolation("A material proposal is not an object")
         quote = row.get("quoted")
+        source_id = row.get("source_id")
+        if source_id is not None and (
+                not isinstance(source_id, str) or source_id not in current_sources
+                or current_sources[source_id] != quote):
+            raise SchemaViolation(
+                "A material source identity does not match its exact owned passage")
         statement = row.get("statement")
         reason = row.get("why_material")
         references = row.get("prior_references")
@@ -512,7 +541,8 @@ def parse_material(rows: object, *, latest: str,
             matter_scope=row["matter_scope"], basis=row["basis"],
             importance=row["importance"], why_material=reason,
             label=label, identification=identification,
-            clarification=clarification, related_dispute_ids=related_ids))
+            clarification=clarification, related_dispute_ids=related_ids,
+            source_id=source_id))
     return tuple(candidates)
 
 
@@ -549,10 +579,11 @@ def extraction_recovery_scope(scope: dict, latest: dict[str, str],
                        or PriorReference(ref["turn_id"], ref["role"], ref["quoted"])
                        not in originals for ref in references)):
             raise SchemaViolation("Retained recovery context requires owned earlier references")
-    return {"review_scope": deepcopy(scope["review_scope"]),
-            "missing_source_ids": list(dict.fromkeys(selected)),
-            "retained_proposals": [derived_record(deepcopy(row)) for row in retained],
-            "reason": scope["reason"]}
+    return model_mutation_context({
+        "review_scope": deepcopy(scope["review_scope"]),
+        "missing_source_ids": list(dict.fromkeys(selected)),
+        "retained_proposals": [derived_record(deepcopy(row)) for row in retained],
+        "reason": scope["reason"]})
 
 
 def extract_details(model: ModelPort, *, earlier: tuple[object, ...],
