@@ -1543,6 +1543,23 @@
       "canonical_changes": "None: _SCHEMA, _MUTATION_SCOPE_SCHEMA, _mutation_scopes, record requirement and saved execution ownership unchanged.",
       "call_impact": "Zero added routine or conditional calls. Existing one interpreter plus bounded conditional correction; more applicable native shape branches can reduce invalid attempts but token/latency impact remains unmeasured.",
       "remaining": "Resume same unsaved browser input then neutral-to-opposing dispute qualification; requested-delivery goals, material atomicity/association, legal gathering and wider semantic readiness remain open."
+    },
+    {
+      "piece": "Independent dispute scope presentation",
+      "base": "ba1155c",
+      "production_file": "nm/brain/dispute_verification.py",
+      "prompt_changes": 1,
+      "invariant": "Ownership of scope permissions cannot promote interpreter-generated requested-outcome meaning into original account or independent dispute classification.",
+      "observable_pass": "Complete interpreted requests remain visibly nm_interpretation, outside model-only permission selectors; original words, mutation ledger and complete durable coverage scope remain unchanged.",
+      "observed_counterexample": "Live packet141 receives packet138 success_condition prescribing opposing positions and proof gaps as disputes under authorised review_scope; all3 are accepted.",
+      "verification": {
+        "focused_presentation": "5 passed; preceding ba1155c baseline 5 failed",
+        "focused_regression": "93 passed",
+        "lint": "passed",
+        "meaning": "Authored semantic decisions exercise actual dispatch/coverage/authority control; no actual model semantic qualification for this preparatory piece."
+      },
+      "call_impact": "Zero added routine or conditional stages. Existing Judge call and bounded correction retain the same purpose. Token/cost changes unmeasured.",
+      "remaining": "Same-turn multi-passage support and explicit underlying-issue relationships; correct opening ownership; integrated browser acceptance still FAILED."
     }
   ],
   "additional_reviewer_input": {

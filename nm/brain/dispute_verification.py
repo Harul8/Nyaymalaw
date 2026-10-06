@@ -59,6 +59,10 @@ unproved. Records marked record_role=nm_interpretation are NM's derived
 formulations, including potentially erroneous ones; only original attributed
 spans can supply account evidence. On retry, retained_candidate_context contains
 already-decided same-turn peers for comparison; do not repeat or override them.
+review_scope supplies owned permission and target selectors. interpreted_work
+contains a previous model's requested-outcome interpretation, not the advocate's
+original words or a decision about which content is a dispute. Determine issue
+identity from the original conversation, independently of that interpretation.
 
 Purpose: Independently decide for each proposal whether it is a distinct dispute
 and whether current authorised work and the attributed account support its exact
@@ -451,7 +455,17 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     payload["active_disputes"] = [derived_record(row) for row in active.values()]
     coverage_ids = tuple(source_treatments) if requested else None
     if requested:
-        payload["review_scope"] = model_review_scope(review_scope)
+        scope_presentation = model_review_scope(review_scope)
+        # Durable scope still binds permissions, coverage and replay. Its
+        # interpreted completion goals are neither original account nor an
+        # independent issue classification; keep them visibly separate.
+        requests = scope_presentation.get("requests", [])
+        if isinstance(requests, list) and all(isinstance(row, dict) for row in requests):
+            payload["interpreted_work"] = [derived_record(row) for row in requests]
+            scope_presentation["requests"] = [
+                {field: row[field] for field in ("request_index", "material_purposes")
+                 if field in row} for row in requests]
+        payload["review_scope"] = scope_presentation
         payload["coverage_source_ids"] = list(coverage_ids)
     keyed = {f"C{index}": candidate
              for index, candidate in enumerate(candidates, start=1)}
