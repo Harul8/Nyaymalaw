@@ -209,6 +209,40 @@ def test_scripted_uncertain_adverse_act_and_independent_opposing_act_remain_admi
     assert len(model.calls) == 1 and model.claims == []
 
 
+def test_scripted_duplicate_opposing_position_preserves_its_attributed_account():
+    first = "The recipient denies receiving the entrusted originals."
+    opposing = "The depositor says the recipient took the originals."
+    candidates = (candidate(first), candidate(opposing))
+    model = Model({"verdicts": [
+        decision("C1", "independent_dispute", accept=True, source="L1", words=first),
+        decision("C2", "duplicate", accept=False, source="L2", words=opposing),
+    ]})
+
+    accepted, audit, status = check(model, candidates, first + " " + opposing)
+
+    assert accepted == candidates[:1] and status["state"] == "checked"
+    assert audit[1]["candidate_role"] == "duplicate"
+    assert audit[1]["account_check"]["supported"] is True
+    assert audit[1]["account_check"]["source_checks"][0]["supplies_account_content"] is True
+    assert len(model.calls) == 1 and model.claims == []
+
+
+def test_scripted_distinct_contested_rights_can_share_the_same_reported_event():
+    first = "The operator moved the entrusted equipment despite our refusal of consent."
+    other_right = "The operator demands a disputed relocation charge for that move."
+    candidates = (candidate(first), candidate(other_right))
+    model = Model({"verdicts": [
+        decision("C1", "independent_dispute", accept=True, source="L1", words=first),
+        decision("C2", "independent_dispute", accept=True, source="L2", words=other_right),
+    ]})
+
+    accepted, audit, status = check(model, candidates, first + " " + other_right)
+
+    assert accepted == candidates and status["accepted_items"] == 2
+    assert all(row["account_check"]["supported"] for row in audit)
+    assert len(model.calls) == 1 and model.claims == []
+
+
 @pytest.mark.parametrize("exhaust", [False, True])
 def test_overall_acceptance_cannot_override_non_dispute_role_or_lose_valid_peer(exhaust):
     neutral = "The inventory was delivered to the appointed examiner."

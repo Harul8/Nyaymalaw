@@ -115,8 +115,15 @@ classifications/conclusions, not a faithfully attributed actual party position.
 Activity 2 - Identify the issue and preserve its formulation.
 Look for: First identify from the complete original advocate context the reported
 act or failure presented as adverse, or the competing claim, denial or right
-that makes the issue contestable. Then compare that conflict with all proposals
-and active disputes to decide whether it needs an independent practical conclusion.
+that makes the issue contestable. Identify the underlying conduct or contested
+right before comparing all proposals and active disputes. Opposing accounts of
+the same conduct are positions within one issue, not separate disputes for each
+speaker. Preserve each position's attribution without deciding its truth.
+Different answers, wording or supporting reasons do not establish independence.
+Separate another reported adverse act or contested entitlement requiring its
+own decision. Shared evidence or a common preliminary question does not alone
+merge independent issues. Judge the remaining conflict in the original context,
+not by counting speakers, sentences or possible legal theories.
 Accuracy, importance and possible legal relevance of a reported event do not
 themselves establish a conflict. Neutral background and developments can remain
 material or support an existing issue without creating another dispute.
@@ -144,8 +151,9 @@ or retrieved law cannot supply missing facts.
 Outcome: Explain the reported conflict before choosing independent_dispute.
 Use supporting_premise for supported non-dispute account/context and
 evidence_gap_or_question for unresolved factual or proof distinctions; rejecting
-the dispute role does not reject the attributed account. Give candidate_role independent_dispute,
-evidence_gap_or_question, duplicate or unsupported. Reject a heading or statement
+the dispute role does not reject the attributed account. Give candidate_role
+independent_dispute, supporting_premise, evidence_gap_or_question, duplicate or
+unsupported. Reject a heading or statement
 that adds an unsupported event, actor, term, position, legal status or other
 matter-affecting proposition. Explain the role and distinction from adjacent
 proposals concisely.

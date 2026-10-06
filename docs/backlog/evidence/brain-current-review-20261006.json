@@ -1480,6 +1480,17 @@
       },
       "call_impact": "Zero routine or conditional calls added. Existing correction remains bounded; native generation prevents inconsistent role/verdict pairs but may still choose a wrong semantic role.",
       "remaining": "Reader grouping, matching independent reviewer and dispute coverage need integrated pinned-model/browser qualification. Full legal brain not production-ready."
+    },
+    {
+      "piece": "Dispute Judge compares underlying conflicts before roles",
+      "base": "0a02145",
+      "production_file": "nm/brain/dispute_verification.py",
+      "prompt": "_SYSTEM Activity 2 only",
+      "invariant": "Opposing accounts of the same conduct retain separate attribution within one issue; distinct contested conduct or rights are not merged solely because evidence or preliminary questions are shared.",
+      "pass_condition": "Scripted duplicate rejection preserves its supported original account and a valid dispute peer; separately scripted distinct rights sharing an event remain admitted. Prompt receives complete original sources and active issues.",
+      "verification": "143 focused mechanics passed; Ruff passed. Scripted semantic roles test wiring only; pinned-model behavior pending.",
+      "call_impact": "Zero added calls or stages; existing Judge and scoped correction.",
+      "remaining": "Fresh reader and Judge grouping plus dispute coverage must be qualified together in browser. Neutral success from previous reader run does not qualify this prompt or the whole feature."
     }
   ],
   "additional_reviewer_input": {
