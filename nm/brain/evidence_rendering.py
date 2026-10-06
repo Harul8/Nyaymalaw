@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from nm.brain.legal_requirements import source_verification_valid
 from nm.shared.model_port import SchemaViolation, require_schema
 
 EVIDENCE_EXPRESSION_CONTRACT = "evidence_expression_v1"
@@ -23,13 +24,16 @@ def _ids(choices) -> dict:
         {"enum": values} if values else {})}, **({"maxItems": 0} if not values else {})}
 
 
-def expression_schema(spans: dict, records: dict) -> dict:
-    return {"type": "object", "additionalProperties": False,
+def expression_schema(spans: dict, records: dict, sources: dict | None = None) -> dict:
+    schema = {"type": "object", "additionalProperties": False,
             "required": ["operator", "source_ids", "record_ids", "focus"],
             "properties": {
                 "operator": {"type": "string", "enum": list(OPERATORS)},
                 "source_ids": _ids(spans), "record_ids": _ids(records),
                 "focus": {"type": "string", "enum": list(FOCUSES)}}}
+    if sources:
+        schema["properties"]["legal_source_ids"] = _ids(sources)
+    return schema
 
 
 def _selection(values, catalogue: dict, field: str) -> list[str]:
@@ -65,17 +69,21 @@ def _record(identity: str, records: dict) -> str:
 
 def render_expression(expression: dict, *, spans: dict, records: dict, sources: dict) -> dict:
     """Resolve a closed expression; no arbitrary display string is accepted."""
-    require_schema(expression, expression_schema(spans, records))
+    require_schema(expression, expression_schema(spans, records, sources))
     operator, focus = expression["operator"], expression["focus"]
     selected_sources = _selection(expression["source_ids"], spans, "source_ids")
     selected_records = _selection(expression["record_ids"], records, "record_ids")
+    selected_legal = _selection(expression.get("legal_source_ids", []),
+                                sources, "legal_source_ids")
+    if selected_legal and operator != "checked_legal":
+        raise SchemaViolation("Only a checked legal expression may select legal passages")
     if focus != "none" and operator not in ("question", "next_work"):
         raise SchemaViolation("Only a question or proposed work may select an expression focus")
     if operator in ("acknowledgment", "record_result") and (
             selected_sources or selected_records):
         raise SchemaViolation("A fixed expression must not carry unrelated evidence selections")
     if operator in ("source_account", "comparison", "question", "next_work", "checked_legal"):
-        if not selected_sources and not selected_records:
+        if not selected_sources and not selected_records and not selected_legal:
             raise SchemaViolation("This expression needs its original evidence or checked finding")
     if operator == "comparison" and len(selected_sources) + len(selected_records) < 2:
         raise SchemaViolation("A comparison needs at least two distinct evidence selections")
@@ -100,8 +108,15 @@ def render_expression(expression: dict, *, spans: dict, records: dict, sources: 
                     legal_ids.append(identity)
         else:
             passages.append(_record(key, records))
+    for identity in selected_legal:
+        source = sources[identity]
+        if not source_verification_valid(source):
+            raise SchemaViolation("A directly selected legal passage needs its checked use")
+        passages.append(f'The checked legal passage includes: “{source["text"]}”')
+        if identity not in legal_ids:
+            legal_ids.append(identity)
     if operator == "checked_legal" and not legal_ids:
-        raise SchemaViolation("A legal expression needs a checked finding and its legal sources")
+        raise SchemaViolation("A legal expression needs a checked legal passage")
     text = " ".join(passages)
     if operator == "comparison":
         text = "Compare these attributed passages in their original context. " + text

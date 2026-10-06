@@ -11,6 +11,7 @@ from nm.brain.evidence_rendering import (
     validate_rendered_block,
 )
 from nm.shared.model_port import SchemaViolation, require_schema
+from tests.test_brain_continuation import checked_law
 
 NEGATED_ACCOUNT = (
     "I never said the cartons arrived on 18 June. My neighbour alleged that date; "
@@ -88,6 +89,56 @@ def test_fresh_expression_schema_offers_owned_ids_and_no_authored_text(evidence)
         require_schema(expression(sources=("foreign",)), schema)
     with pytest.raises(SchemaViolation):
         require_schema(expression(records=("foreign",)), schema)
+
+
+def test_standalone_checked_passage_preserves_its_complete_condition(evidence):
+    evidence["sources"]["legal:1"] = checked_law(evidence["sources"]["legal:1"])
+    selected = {**expression("checked_legal", sources=()),
+                "legal_source_ids": ["legal:1"]}
+    rendered = render_expression(selected, **evidence)
+    assert LAW in rendered["text"]
+    assert rendered["record_ids"] == []
+    assert rendered["legal_source_ids"] == ["legal:1"]
+    assert rendered["inline_citations"] == [
+        {"text": "Checked legal passage 1", "legal_source_id": "legal:1"}]
+
+
+@pytest.mark.parametrize("checked", [False, True])
+def test_direct_passage_needs_an_owned_current_use_check(evidence, checked):
+    if checked:
+        evidence["sources"]["legal:1"] = checked_law(evidence["sources"]["legal:1"])
+    selected = {**expression("checked_legal", sources=()),
+                "legal_source_ids": ["foreign" if checked else "legal:1"]}
+    with pytest.raises(SchemaViolation):
+        render_expression(selected, **evidence)
+
+
+def test_legal_expression_and_finding_share_one_citation_without_losing_words(evidence):
+    evidence["sources"]["legal:1"] = checked_law(evidence["sources"]["legal:1"])
+    selected = {**expression("checked_legal", sources=(), records=("research:1",)),
+                "legal_source_ids": ["legal:1", "legal:1"]}
+    rendered = render_expression(selected, **evidence)
+    assert "The checked legal proposition" in rendered["text"]
+    assert "The checked legal passage includes" in rendered["text"]
+    assert rendered["legal_source_ids"] == ["legal:1"]
+    assert len(rendered["inline_citations"]) == 1
+
+
+@pytest.mark.parametrize("operator", ["source_account", "comparison", "question",
+                                     "next_work", "limitation", "acknowledgment",
+                                     "record_result"])
+def test_legal_selection_cannot_relabel_another_expression(evidence, operator):
+    selected = {**expression(operator), "legal_source_ids": ["legal:1"]}
+    with pytest.raises(SchemaViolation):
+        render_expression(selected, **evidence)
+
+
+def test_no_passage_catalogue_does_not_offer_a_legal_selection(evidence):
+    evidence["sources"] = {}
+    assert "legal_source_ids" not in expression_schema(**evidence)["properties"]
+    with pytest.raises(SchemaViolation):
+        render_expression({**expression("checked_legal"), "legal_source_ids": []},
+                          **evidence)
 
 
 def test_account_keeps_complete_negation_attribution_and_uncertainty(evidence):
