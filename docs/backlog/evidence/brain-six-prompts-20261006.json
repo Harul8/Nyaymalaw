@@ -98,6 +98,30 @@
         "Activity 1 - Read the original source framing.",
         "Activity 2 - Keep substantive content separate from work authority."
       ]
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "d70729ca330d6f8f6d6ef2396042758903b8d593ccfab808b09076d47459421e",
+      "new_sha256": "1b48b0fd79c48ab7ec18799a1859fd99d6ec658df0692049c3e25d78cdff3e99",
+      "old_words": 1198,
+      "new_words": 905,
+      "paragraph_mapping": {
+        "old_1": "Message",
+        "old_2": "Purpose",
+        "old_3": "Activity 2",
+        "old_4": "Activities 1 and 3",
+        "old_5": "Activities 1 and 4",
+        "old_6": "Activity 4",
+        "old_7": "Final Outcome"
+      },
+      "decision": "Reads source framing and authority before issue formulation, then owned operation and independent uncertainty dimensions; keeps existing JSON and no-change contract.",
+      "new_activities": [
+        "Activity 1 - Establish the original account and review authority.",
+        "Activity 2 - Identify the independently contested issue.",
+        "Activity 3 - Choose an owned creation or revision.",
+        "Activity 4 - Preserve attribution, ownership and identification certainty."
+      ]
     }
   ]
 }

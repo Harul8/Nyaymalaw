@@ -117,6 +117,18 @@
       "files": [
         "nm/brain/record_review.py"
       ]
+    },
+    {
+      "slice": "Order dispute prompt by source evidence and independent issue identity",
+      "owners": [
+        "LB-176",
+        "LB-177"
+      ],
+      "decision": "Rewrite issue reading as original account and review authority, independently contested conduct, then explicit owned creation/revision. Preserve actor/time/negation, atomic identity and full successor lineage, stated and uncertain account, legitimate empty result. Proposal and source identity prove no admitted effect. Existing operation schema and call bound retained.",
+      "validation": "37 passed in 0.22s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/disputes.py"
+      ]
     }
   ]
 }
