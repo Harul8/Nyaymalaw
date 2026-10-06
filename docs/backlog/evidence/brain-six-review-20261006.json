@@ -556,6 +556,20 @@
         "nm/brain/execution_contracts.py",
         "tests/test_brain_review_completion_diagnostics.py"
       ]
+    },
+    {
+      "slice": "Saved task result seals and original scope",
+      "owners": [
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Progress version 3 seals independently reviewed record outcomes to same-turn execution and full owned record snapshots, preserving immutable original task requirements across narrower messages. Replay requires committed owner/version proof and original transcript references; prepared validation is restricted to the exact final in-memory turn. Legacy missing proof stays qualified untracked. Narrower checked effects survive unfinished wider reviews.",
+      "validation": "95 offline work-state, persistence, legacy, supersession, prepared/current owner and full-review paired checks passed; Ruff passed. Turn consumer integration and live model/browser qualification remain separate.",
+      "files": [
+        "nm/brain/work_state.py",
+        "tests/test_brain_work_record_outcome.py",
+        "tests/test_brain_work_state.py"
+      ]
     }
   ]
 }

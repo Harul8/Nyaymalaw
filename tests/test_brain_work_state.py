@@ -361,7 +361,7 @@ def test_new_progress_has_its_own_version_and_cannot_omit_interpreted_intent():
     matter = opened()
     rows = deepcopy(matter.brain_chat)
     unit = rows[0]["response"]["continuation"]["units"][0]
-    assert unit["progress_version"] == 2
+    assert unit["progress_version"] == 3
     unit["work"].pop("intent")
     with pytest.raises(IncompleteConversation, match="intent"):
         project_work(replace(matter, brain_chat=rows))
