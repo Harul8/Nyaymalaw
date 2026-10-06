@@ -79,13 +79,14 @@ def test_source_read_preserves_complete_transcript_without_candidate_framing_and
     assert schema["type"] == "object" and schema["additionalProperties"] is False
     assert schema["required"] == list(roles) and set(schema["properties"]) == set(roles)
     for entry in schema["properties"].values():
-        assert entry["additionalProperties"] is False
-        fields = {"content_role", "reason"}
-        if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
-            fields.add("substantive_spans")
-            offsets = entry["properties"]["substantive_spans"]["items"]
-            assert set(offsets["required"]) == set(offsets["properties"]) == {"start", "end"}
-        assert set(entry["required"]) == set(entry["properties"]) == fields
+        for branch in entry.get("anyOf", [entry]):
+            assert branch["additionalProperties"] is False
+            fields = {"content_role", "reason"}
+            if sent.get("source_selection_contract") == SOURCE_SELECTION_CONTRACT:
+                fields.add("substantive_spans")
+                offsets = branch["properties"]["substantive_spans"]["items"]
+                assert set(offsets["required"]) == set(offsets["properties"]) == {"start", "end"}
+            assert set(branch["required"]) == set(branch["properties"]) == fields
     assert "P2S1" not in catalogue
     expected_row = {
         "turn_id": "account", "role": "advocate", "quoted": earlier[0].text,

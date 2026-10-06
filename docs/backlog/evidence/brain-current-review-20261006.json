@@ -1648,6 +1648,19 @@
       "canonical_changes": "Native accepted branch only, sharing existing admission pairing definition. Canonical _RECORD_CHECK/_VERDICT, rejected fields/outcomes, transport, effect checks, renderer and saved replay versions unchanged. Explicit historical missing declarations remain broad compatibility, not inferred fresh evidence.",
       "call_impact": "Zero stages added. One writer plus one independent reviewer unchanged; conditional structural correction may reduce, subject to actual browser measurement.",
       "remaining": "Actual pinned mini/browser mixed recording+recap acceptance next. This proves schema consistency and false-claim rejection wiring, not reviewer semantic accuracy or useful completion."
+    },
+    {
+      "piece": "Source-purpose native roles select only applicable substantive portions",
+      "base": "d8df870",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "A declared original account role requires substantive owned portions; a declared non-account or uncertain purpose has no substantive portions. Source meaning remains an independent judgment.",
+      "observable_pass": "Native and strict-wire shapes reject role/portion contradictions and admit all seven existing roles with their appropriate shapes, source-specific endpoint bounds and unchanged closed fields.",
+      "baseline": "47 new shape cases:33pass14fail on d8df870. Five separate retention/public correction cases fail identically on unchanged baseline; tracked for owning-boundary diagnosis.",
+      "verification": "116 focused schema/classification/source feedback/coverage/public save tests passed; Ruff passed. Original words, owned IDs and failed substantive choices remain unchanged.",
+      "canonical_changes": "Fresh per-source schema only. Canonical source-purpose/support checks, historical contracts, renderer, save and replay versions unchanged.",
+      "call_impact": "Zero added calls. Same candidate-free classifier and conditional reconsideration use the common helper. May prevent repeated metadata correction; real semantic impact unverified.",
+      "remaining": "Material Judge factual-correction semantics, coverage source-purpose metadata, baseline fixture/proof failures and integrated browser correction acceptance remain open."
     }
   ],
   "additional_reviewer_input": {

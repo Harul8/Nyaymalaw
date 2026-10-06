@@ -83,15 +83,20 @@ def _source_proposal_schema(references: dict) -> dict:
     items = {}
     for identity, reference in references.items():
         bound = len(reference["quoted"])
-        items[identity] = {"type": "object", "additionalProperties": False,
-            "required": ["content_role", "reason", "substantive_spans"], "properties": {
-                "content_role": {"type": "string", "enum": list(_SOURCE_ROLES)},
-                "reason": {"type": "string", "minLength": 1},
-                "substantive_spans": {"type": "array", "items": {
-                    "type": "object", "additionalProperties": False,
-                    "required": ["start", "end"], "properties": {
-                        "start": {"type": "integer", "minimum": 0, "maximum": bound},
-                        "end": {"type": "integer", "minimum": 1, "maximum": bound}}}}}}
+        portion = {"type": "object", "additionalProperties": False,
+            "required": ["start", "end"], "properties": {
+                "start": {"type": "integer", "minimum": 0, "maximum": bound},
+                "end": {"type": "integer", "minimum": 1, "maximum": bound}}}
+        items[identity] = {"anyOf": [
+            {"type": "object", "additionalProperties": False,
+             "required": ["content_role", "reason", "substantive_spans"], "properties": {
+                 "content_role": {"type": "string", "enum": list(roles)},
+                 "reason": {"type": "string", "minLength": 1},
+                 "substantive_spans": {"type": "array", limit: count, "items": portion}}}
+            for roles, limit, count in (
+                (_ACCOUNT_CONTENT_ROLES, "minItems", 1),
+                (tuple(role for role in _SOURCE_ROLES if role not in _ACCOUNT_CONTENT_ROLES),
+                 "maxItems", 0))]}
     return {"type": "object", "additionalProperties": False,
             "required": ["source_treatments"], "properties": {"source_treatments": {
                 "type": "object", "additionalProperties": False,
