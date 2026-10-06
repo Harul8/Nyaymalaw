@@ -325,7 +325,10 @@ def test_linked_original_sources_and_selected_context_reach_independent_check(
     corrected = send(client, latest, "correction", opened=opened.json())
 
     assert corrected.status_code == 200, corrected.text
-    assert corrected.json()["metrics"]["llm_calls"] == 8
+    metrics = corrected.json()["metrics"]
+    assert metrics["llm_calls"] == (8 if supported else 10)
+    assert [row["phase"] for row in metrics["recovery"]["events"]] == (
+        [] if supported else ["omission_recovery:detail_reader", "omission_recovery:detail_review"])
     checked = [row for payload in model.check_inputs
                for row in payload["candidates"] if row.get("relation") == "corrects"]
     assert checked

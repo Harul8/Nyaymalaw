@@ -275,7 +275,7 @@ def test_empty_review_can_legitimately_be_complete_without_new_rows():
     )
 
 
-def test_empty_extraction_with_omitted_date_is_reported_but_not_reextracted():
+def test_standalone_verifier_reports_owned_omission_for_turn_recovery():
     latest = "Please correct the handover date: the handover took place on 8 June, not 7 June."
     run_case(
         "material-03-empty-date-omission-no-recovery",
@@ -290,11 +290,11 @@ def test_empty_extraction_with_omitted_date_is_reported_but_not_reextracted():
             }
         ],
         expected(state="partial", missing=["L1"]),
-        claim_scope="known_gap",
-        status="gap_demonstrated",
+        status="blocked",
         notes=(
-            "Coverage flags the omitted date without calling an extractor or recovering "
-            "it; one Judge attempt only."
+            "The standalone independent verifier reports the owned omission in one "
+            "Judge attempt. Extraction recovery belongs to the separately tested "
+            "public-turn orchestrator, so this review does not invent another reader call."
         ),
     )
 

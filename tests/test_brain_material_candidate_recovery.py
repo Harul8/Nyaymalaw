@@ -1,8 +1,9 @@
 """Isolated drafted material-coverage contracts, not semantic or browser proof.
 
-The strict stub applies the production adapter's whole-envelope schema check.
+The legacy strict stub applies whole-envelope schema checking without quarantine.
 Schema-valid contradictions exercise coverage-only peer retention; missing or
-foreign schema-invalid coverage cannot expose peers before that check.
+foreign schema-invalid coverage cannot expose peers through this stub. Separate
+quarantine tests exercise completed rejected objects through the owning verifier.
 """
 
 import json
@@ -426,20 +427,51 @@ def test_source_catalogue_ownership_failure_remains_blocking():
     assert model.calls == []
 
 
-@pytest.mark.parametrize(
-    "error",
-    [
-        ProviderUnavailable("Provider unavailable."),
-        TierUnavailable("Independent review unavailable."),
-    ],
-)
-def test_provider_or_tier_fault_still_propagates_instead_of_masquerading_as_candidate_rejection(
-    error,
-):
-    first, second = "The handover occurred on Tuesday.", "A separate record was retained."
-    model = Stub([lambda p: {"verdicts": [verdict(p, "D1")], "coverage": assessment()}, error])
+@pytest.mark.parametrize("error_type", [ProviderUnavailable, TierUnavailable])
+def test_initial_provider_or_tier_fault_propagates_without_an_empty_success(error_type):
+    latest = "The handover occurred on Tuesday."
+    model = Stub([error_type("Initial independent review unavailable.")])
     sink = {}
-    with pytest.raises(type(error)):
+    with pytest.raises(error_type):
+        review(model, latest=latest, candidates=(detail(latest),), scope={}, sink=sink)
+    assert len(model.calls) == 1 and sink == {}
+
+
+def test_conditional_provider_failure_preserves_checked_peer_and_explicit_unread_scope():
+    first, second = "The handover occurred on Tuesday.", "A separate record was retained."
+    candidates = (detail(first), detail(second))
+    model = Stub([
+        lambda p: {"verdicts": [verdict(p, "D1")], "coverage": assessment()},
+        ProviderUnavailable("Conditional independent review unavailable."),
+    ])
+    sink = {}
+    result = review(model, latest=first + " " + second, candidates=candidates, scope={}, sink=sink)
+    assert result.details == candidates[:1] and len(model.calls) == 2
+    assert result.unread_details == 1 and result.rejected_details == result.withheld_details == 0
+    assert result.rejected_proposals == result.withheld_proposals == ()
+    unread, = result.unread_proposals
+    assert unread["candidate_id"] == "D2" and unread["verdict"] == "unassessed"
+    assert unread["admission_issue"] == "review_unavailable"
+    assert unread["proposal"]["quoted"] == second
+    assert "ProviderUnavailable" in unread["validation_issues"][0]
+    assert not {
+        "account_check", "target_checks", "operation_supported", "model_decision"
+    } & unread.keys()
+    assert sink["state"] == "unassessed"
+    assert sink["previous_assessment"]["state"] == "complete"
+    repair = model.calls[1][0]
+    assert [row["candidate_id"] for row in repair["candidates"]] == ["D2"]
+    assert [row["candidate_id"] for row in repair["retained_candidate_context"]] == ["D1"]
+
+
+def test_conditional_tier_fault_still_propagates_instead_of_becoming_candidate_rejection():
+    first, second = "The handover occurred on Tuesday.", "A separate record was retained."
+    model = Stub([
+        lambda p: {"verdicts": [verdict(p, "D1")], "coverage": assessment()},
+        TierUnavailable("Independent review unavailable."),
+    ])
+    sink = {}
+    with pytest.raises(TierUnavailable):
         review(
             model,
             latest=first + " " + second,

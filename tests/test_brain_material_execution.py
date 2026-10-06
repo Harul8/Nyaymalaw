@@ -75,6 +75,21 @@ def assert_saved_execution(wired, response, *, before_version, turn_id, request,
     return receipt
 
 
+
+def assert_complete_reader_stage(stage, *, count, unit_ids):
+    """The owner binds admissible counts to its complete extraction receipt."""
+    assert stage["state"] == "returned"
+    assert stage["proposals"] == stage["admissible_proposals"] == count
+    assert stage["proposal_validation"] == "owned_extraction_proposals_v1"
+    assert stage["read_status"] == {
+        "state": "returned", "attempts": 1,
+        "recovery_exhausted": False, "conditional_failure": None,
+        "proposal_count": count, "retained_unit_ids": unit_ids,
+        "repaired_unit_ids": [], "omitted_unit_ids": [], "unread_units": [],
+        "envelope_state": "checked", "envelope_issue": "",
+    }
+
+
 def assert_prepared_handoffs(model, start, committed):
     seen = []
     for operation, payload in model.seen[start:]:
@@ -114,10 +129,12 @@ def test_public_correction_receipt_matches_record_effects_and_replays_once(
         wired, result, before_version=before.version, turn_id="receipt-correction",
         request=correction, purposes=("account_contribution",))
     assert receipt["stages"]["source_classification"]["state"] == "returned"
-    assert receipt["stages"]["dispute_extraction"] == {"state": "returned", "proposals": 0}
+    assert_complete_reader_stage(
+        receipt["stages"]["dispute_extraction"], count=0, unit_ids=[])
     assert receipt["stages"]["dispute_review"]["state"] == "checked"
     assert receipt["stages"]["dispute_review"]["account_coverage"]["state"] == "complete"
-    assert receipt["stages"]["detail_extraction"] == {"state": "returned", "proposals": 1}
+    assert_complete_reader_stage(
+        receipt["stages"]["detail_extraction"], count=1, unit_ids=["changes:1"])
     assert receipt["stages"]["detail_review"]["state"] == "checked"
     effects = receipt["effects"]["details"]
     assert effects["activated_record_ids"] == ["receipt-correction:material:1"]

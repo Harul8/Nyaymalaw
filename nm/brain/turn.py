@@ -5,9 +5,9 @@ import hashlib
 import json
 import logging
 from copy import deepcopy
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
-from threading import Lock
+from threading import Lock, local
 from time import perf_counter
 
 from nm.brain.continuation import continuation_indexes, continue_conversation
@@ -22,7 +22,14 @@ from nm.brain.conversation import (
 from nm.brain.dispute_state import proposed_disputes
 from nm.brain.dispute_verification import verify_disputes
 from nm.brain.disputes import extract_disputes
-from nm.brain.execution_contracts import ExecutionEvidenceInvalid, effect_catalogue
+from nm.brain.execution_contracts import (
+    RECORD_ACKNOWLEDGEMENT_CONTRACT,
+    ExecutionEvidenceInvalid,
+    canonical_record_acknowledgements,
+    effect_catalogue,
+    reader_admission_checked,
+    record_change_lines,
+)
 from nm.brain.history import from_turns, released_older_turns
 from nm.brain.legal_requirements import (
     decompose_subjects,
@@ -35,8 +42,10 @@ from nm.brain.material_verification import verify_material_grounding
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
+    candidate_account_ids,
     classify_account_sources,
     owned_source_treatments,
+    reconsider_account_sources,
     source_treatment_reference_valid,
 )
 from nm.brain.requirements_state import (
@@ -61,6 +70,7 @@ from nm.shared.model_port import (
     OutputTruncated,
     ProviderUnavailable,
     SchemaViolation,
+    TierUnavailable,
 )
 from nm.shared.store_port import StaleWrite, StorePort
 from nm.work_the_file.matter_contracts import Matter, MatterId
@@ -102,15 +112,52 @@ class BrainOutput:
 class _CountedModel:
     """Count actual calls, including a conditional correction in either reader."""
 
-    def __init__(self, inner) -> None:
+    def __init__(self, inner, *, recovery_limit: int = 8) -> None:
+        if type(recovery_limit) is not int or recovery_limit < 0:
+            raise ValueError("Recovery call ceiling must be a nonnegative integer")
         self.inner = inner
         self.calls = 0
         self.provider_retries = 0
         self.receipts = []
         self.lock = Lock()
+        self.recovery_limit = recovery_limit
+        self.recovery_events: list[dict] = []
+        self.recovery_reserved = 0
+        self.recovery_local = local()
 
     def __getattr__(self, name):
         return getattr(self.inner, name)
+
+    def claim_recovery(self, phase: str) -> bool:
+        """Reserve one explicitly owned conditional call without resetting its bound."""
+        if not isinstance(phase, str) or not phase.strip():
+            raise ValueError("A recovery call requires an explicit phase identity")
+        self.cancel_pending_recovery()
+        with self.lock:
+            used = self.recovery_reserved
+            permitted = used < self.recovery_limit
+            event = {"phase": phase, "state": "reserved" if permitted else
+                     "budget_exhausted", "scope": getattr(self.recovery_local, "scope", "initial")}
+            self.recovery_events.append(event)
+            if permitted:
+                self.recovery_reserved += 1
+                event["reservation"] = self.recovery_reserved
+                self.recovery_local.pending = len(self.recovery_events) - 1
+            return permitted
+
+    def cancel_pending_recovery(self) -> None:
+        """A refused context may consume a reservation without dispatching a call."""
+        pending = getattr(self.recovery_local, "pending", None)
+        if pending is not None:
+            with self.lock:
+                self.recovery_events[pending]["state"] = "not_dispatched"
+            self.recovery_local.pending = None
+
+    def abandon_recovery(self, phase: str) -> None:
+        """Retain a spent reservation while abandoning only its undispatched permit."""
+        pending = getattr(self.recovery_local, "pending", None)
+        if pending is not None and self.recovery_events[pending]["phase"] == phase:
+            self.cancel_pending_recovery()
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         started = perf_counter()
@@ -118,6 +165,13 @@ class _CountedModel:
         with self.lock:
             self.calls += 1
             ordinal = self.calls
+            recovery_index = getattr(self.recovery_local, "pending", None)
+            self.recovery_local.pending = None
+            recovery_phase = ""
+            if recovery_index is not None:
+                event = self.recovery_events[recovery_index]
+                event.update(state="started", call=ordinal)
+                recovery_phase = event["phase"]
         logger.info("Model call %s started: %s", ordinal, prompt.operation)
         result = None
         failure = None
@@ -145,8 +199,12 @@ class _CountedModel:
                        "tokens_out": measured_usage.tokens_out if measured_usage else 0,
                        "usage_recorded": measured_usage is not None,
                        "cost_usd": measured_usage.cost_usd if measured_usage else None}
+            if recovery_phase:
+                receipt["recovery_phase"] = recovery_phase
             with self.lock:
                 self.receipts.append(receipt)
+                if recovery_index is not None:
+                    self.recovery_events[recovery_index]["state"] = failure or "completed"
                 if result is not None:
                     self.provider_retries += result.retries
             logger.info("Model call %s finished: %s, %sms, %s", ordinal,
@@ -155,7 +213,11 @@ class _CountedModel:
 
     def metrics(self) -> dict:
         return {"llm_calls": self.calls, "provider_retries": self.provider_retries,
-                "model_calls": list(self.receipts)}
+                "model_calls": list(self.receipts), "recovery": {
+                    "limit": self.recovery_limit,
+                    "reserved_calls": self.recovery_reserved,
+                    "dispatched_calls": sum("call" in event for event in self.recovery_events),
+                    "events": deepcopy(self.recovery_events)}}
 
 
 def _digest(value: dict) -> str:
@@ -184,6 +246,9 @@ def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
                       "relation": item.relation, "matter_scope": item.matter_scope,
                       "intent": item.intent,
                       "response_mode": getattr(item, "response_mode", "substantive"),
+                      **({"acknowledgement_contract": RECORD_ACKNOWLEDGEMENT_CONTRACT}
+                         if getattr(item, "response_mode", "substantive")
+                         == "record_acknowledgement" else {}),
                       "record_requirement": deepcopy(item.record_requirement),
                       "fulfillment": "unassessed"}
                      for index, item in enumerate(plan.items)],
@@ -306,6 +371,10 @@ def _execution_diagnostics(execution: dict) -> list[dict]:
         state = ("partial" if any(value in ("partial", "complete") for value in states)
                  else "unassessed")
         diagnostics.append(gate_diagnostic("G-INCOMPLETE", state))
+    for name in ("dispute_extraction", "detail_extraction"):
+        if execution["stages"][name].get("state") == "partial":
+            diagnostics.append({**gate_diagnostic("G-MODEL", "degraded"),
+                                "stage": name})
     for request in execution["requests"]:
         if (request["record_requirement"]["kind"] != "none"
                 and request.get("fulfillment") == "unfinished"):
@@ -339,22 +408,7 @@ def _record_changes(before_disputes: dict, before_details: dict,
 
 
 def _record_change_lines(changes: list[dict]) -> list[str]:
-    """Describe canonical entry deltas without interpreting requested success."""
-    parts = []
-    for change in changes:
-        before = [row["statement"] for row in change["before_records"]]
-        after = change["after_record"]
-        if change["relation"] == "withdraws":
-            parts.extend("Withdrawn entry: " + text for text in before)
-        elif change["relation"] == "contradicts" and change["kind"] == "details":
-            parts.append("Opposing entry added: " + after["statement"])
-            parts.extend("Earlier entry retained: " + text for text in before)
-        elif change["relation"] == "corrects" or (
-                change["kind"] == "disputes" and before):
-            parts.append("Revised entry: " + " ; ".join(before) + " → " + after["statement"])
-        else:
-            parts.append("New entry: " + after["statement"])
-    return parts
+    return record_change_lines(changes)
 
 
 def _execution_display(execution: dict) -> dict:
@@ -371,8 +425,10 @@ def _execution_display(execution: dict) -> dict:
         isinstance(row.get("record_requirement"), dict)
         and row["record_requirement"]["kind"] != "none" for row in execution["requests"])
     reviews = [execution["stages"][name] for name in ("dispute_review", "detail_review")]
-    if required and any(row.get("account_coverage", {}).get("state") != "complete"
-                        for row in reviews):
+    reader_partial = any(execution["stages"][name].get("state") == "partial"
+                         for name in ("dispute_extraction", "detail_extraction"))
+    if required and (reader_partial or any(
+            row.get("account_coverage", {}).get("state") != "complete" for row in reviews)):
         parts.append("The record reading remains unfinished.")
     element = {"kind": "finding", "text": "\n".join(parts), "refs": [],
                "source": None, "section": "answer", "collapsible": False,
@@ -382,78 +438,11 @@ def _execution_display(execution: dict) -> dict:
 
 
 def _canonical_record_acknowledgements(
-        continuation: dict, execution: dict, *, record_catalogue: dict) -> dict:
-    """Render checked record-only outcomes before progress and commit sealing.
-
-    The delivery mode is an interpreted proposal, not proof of completion.
-    Outcome, source, target, inherited-goal and persistence checks still own
-    their existing decisions. A reviewed substantive follow-up remains under
-    semantic review instead of being silently removed to force code-only text.
-    """
-    result = deepcopy(continuation)
-    units = {unit["request_index"]: unit for unit in result["units"]}
-    effects = effect_catalogue(execution)
-    changes = {change["effect_id"]: change for change in execution["record_changes"]}
-    expected_check = {"performed": "fulfilled", "already_current": "fulfilled",
-                      "review_no_change": "no_change_justified", "unresolved": "unfinished"}
-    for request in execution["requests"]:
-        if request.get("response_mode", "substantive") != "record_acknowledgement":
-            if "acknowledgement_delivery" in request:
-                raise IncompleteConversation(
-                    "A code acknowledgement has no declared delivery owner")
-            continue
-        index = request["request_index"]
-        unit = units.get(index)
-        if unit is None:
-            # The existing content-free unavailable notice is code-authored;
-            # it does not certify a requested effect or a completed task.
-            request["acknowledgement_delivery"] = "code_only"
-            continue
-        if unit["questions"] or unit["next_work"]:
-            request["acknowledgement_delivery"] = "substantive_followup"
-            continue
-        outcome = unit.get("record_outcome", {})
-        status = outcome.get("status")
-        if (status not in expected_check or unit.get("record_check", {}).get("outcome")
-                != expected_check[status]):
-            raise IncompleteConversation("The code acknowledgement has no checked record outcome")
-        selected = list(dict.fromkeys(outcome["effect_ids"]))
-        if any(identity not in effects or not effects[identity]["performed"]
-               or identity not in changes for identity in selected):
-            raise IncompleteConversation("The code acknowledgement selects an unperformed change")
-        current = list(dict.fromkeys(outcome["current_record_ids"]))
-        if any(identity not in record_catalogue for identity in current):
-            raise IncompleteConversation(
-                "The code acknowledgement selects an unowned current entry")
-        lines = _record_change_lines([changes[identity] for identity in selected])
-        entries = [record_catalogue[identity]["record"]["statement"] for identity in current]
-        if status == "performed":
-            if not lines:
-                raise IncompleteConversation("The code acknowledgement has no actual changed entry")
-            text = "Saved record changes:\n" + "\n".join(lines)
-        elif status == "already_current":
-            if not entries:
-                raise IncompleteConversation("The code acknowledgement has no current entry")
-            # Current state does not establish that NM changed it previously.
-            text = "Current record entries:\n" + "\n".join(entries)
-        elif status == "review_no_change":
-            text = "The requested record review completed without a selected change."
-            if entries:
-                text += "\nCurrent entries:\n" + "\n".join(entries)
-        else:
-            text = "The requested record work remains unfinished."
-            if lines:
-                text += "\nSaved record changes:\n" + "\n".join(lines)
-            if entries:
-                text += "\nCurrent entries:\n" + "\n".join(entries)
-        for block in unit["blocks"]:
-            block["text"] = text
-            # These anchors described the replaced model prose. The fixed
-            # acknowledgement contains no legal proposition; its retained
-            # checked references remain available as context source controls.
-            block.pop("inline_citations", None)
-        request["acknowledgement_delivery"] = "code_only"
-    return result
+        continuation: dict, execution: dict, *, record_catalogue: dict,
+        replay: bool = False) -> dict:
+    """Use the shared code-owned acknowledgement contract after review."""
+    return canonical_record_acknowledgements(
+        continuation, execution, record_catalogue=record_catalogue, replay=replay)
 
 
 def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation) -> None:
@@ -499,7 +488,7 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
     checked_execution = deepcopy(execution)
     canonical = _canonical_record_acknowledgements(
         response["continuation"], checked_execution,
-        record_catalogue=snapshot["record_catalogue"])
+        record_catalogue=snapshot["record_catalogue"], replay=True)
     if canonical != response["continuation"] or checked_execution != execution:
         raise IncompleteConversation(
             "The saved code acknowledgement differs from its checked result")
@@ -752,38 +741,17 @@ def _continuation_elements(plan, continuation: dict) -> list[dict]:
 
 
 
-def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
-                   audit: list[dict] | None = None, *, source_treatments=None,
-                   execution: dict | None = None, review_scope: dict | None = None):
-    """Read ordered proposals and independently assess the original account."""
-    arguments = {"earlier": conversation.messages, "latest": latest,
-                 "current_matter_id": conversation.current_matter_id}
-    proposed = extract_disputes(
-        model, prior_disputes=conversation.open_disputes,
-        source_treatments=source_treatments, **arguments)
-    if execution is not None:
-        execution["dispute_extraction"] = {"state": "returned", "proposals": len(proposed)}
-    account_coverage, review_status = {}, {}
-    disputes = verify_disputes(
-        model, candidates=proposed,
-        earlier=conversation.messages, latest=latest,
-        active_disputes=conversation.open_disputes, audit=audit,
-        source_treatments=source_treatments, review_scope=review_scope,
-        coverage=account_coverage, review_status=review_status)
-    if execution is not None:
-        # A checked admitted peer keeps its execution evidence even when the
-        # broader reading has unread/held peers. Full coverage is separate.
-        execution["dispute_review"] = {
-            "state": "checked" if (review_status.get("checked_items", 0)
-                                     or review_status.get("state") == "checked") else "partial",
-            "accepted": len(disputes),
-            "rejected": review_status.get("rejected_items", 0),
-            "held": review_status.get("withheld_items", 0),
-            "unread": review_status.get("unread_items", 0),
-            "review_status": deepcopy(review_status),
-            "account_coverage": deepcopy(account_coverage)}
+def _record_slots(slots: dict, candidates) -> None:
+    """Assign monotonic owned result slots when a proposal is first admitted."""
+    for candidate in candidates:
+        if candidate not in slots:
+            slots[candidate] = max(slots.values(), default=0) + 1
+
+
+def _preview_disputes(conversation, candidates, turn_id, slots) -> tuple[dict, ...]:
+    _record_slots(slots, candidates)
     active = {row["id"]: row for row in conversation.open_disputes}
-    for index, candidate in enumerate(disputes, start=1):
+    for candidate in candidates:
         if not (candidate.matter_scope == "current" or
                 (candidate.matter_scope == "proposed" and
                  conversation.current_matter_id is None)):
@@ -791,14 +759,445 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
         for prior_id in candidate.related_dispute_ids:
             active.pop(prior_id, None)
         if candidate.relation != "withdraws":
-            row = candidate.recorded(turn_id, index)
+            row = candidate.recorded(turn_id, slots[candidate])
             active[row["id"]] = row
-    details = extract_details(
-        model, disputes=tuple(active.values()), prior_material=conversation.open_material,
-        source_treatments=source_treatments, **arguments)
+    return tuple(active.values())
+
+
+def _reader_execution(proposals, diagnostics) -> dict:
+    return {"state": "partial" if diagnostics.get("state") == "partial" else "returned",
+            "proposals": len(proposals), "admissible_proposals": len(proposals),
+            "proposal_validation": "owned_extraction_proposals_v1",
+            "read_status": deepcopy(diagnostics)}
+
+
+def _extend_reader_execution(stage, proposals, diagnostics) -> None:
+    """Bind aggregate admission counts while retaining each raw read receipt."""
+    stage.setdefault("initial_read_status", deepcopy(stage.get("read_status", {})))
+    stage.setdefault("reads", [{"phase": "initial", "status": deepcopy(
+        stage["initial_read_status"])}])
+    stage["reads"].append({"phase": "omission_recovery", "status": deepcopy(diagnostics)})
+    stage["recovery_read_status"] = deepcopy(diagnostics)
+    partial = stage.get("state") == "partial" or diagnostics.get("state") == "partial"
+    aggregate = deepcopy(stage.get("read_status", {}))
+    aggregate.update(state="partial" if partial else "returned", proposal_count=len(proposals))
+    aggregate["unread_units"] = [
+        {**row, "read_batch": index}
+        for index, batch in enumerate(stage["reads"], 1)
+        for row in batch["status"].get("unread_units", [])]
+    stage.update(state="partial" if partial else "returned", proposals=len(proposals),
+                 admissible_proposals=len(proposals), read_status=aggregate)
+
+
+def _dispute_review_execution(disputes, status, coverage) -> dict:
+    return {
+        "state": "checked" if (status.get("checked_items", 0)
+                                 or status.get("state") == "checked") else "partial",
+        "accepted": len(disputes), "rejected": status.get("rejected_items", 0),
+        "held": status.get("withheld_items", 0), "unread": status.get("unread_items", 0),
+        "review_status": deepcopy(status), "account_coverage": deepcopy(coverage),
+    }
+
+
+def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
+                   audit: list[dict] | None = None, *, source_treatments=None,
+                   execution: dict | None = None, review_scope: dict | None = None,
+                   recovery_context: dict | None = None,
+                   source_disagreements: list[dict] | None = None):
+    """Read ordered proposals and independently assess the original account."""
+    arguments = {"earlier": conversation.messages, "latest": latest,
+                 "current_matter_id": conversation.current_matter_id}
+    dispute_read = {}
+    proposed = extract_disputes(
+        model, prior_disputes=conversation.open_disputes,
+        source_treatments=source_treatments, diagnostics=dispute_read, **arguments)
     if execution is not None:
-        execution["detail_extraction"] = {"state": "returned", "proposals": len(details)}
-    return (*disputes, *details), tuple(active.values())
+        execution["dispute_extraction"] = _reader_execution(proposed, dispute_read)
+    account_coverage, review_status = {}, {}
+    dispute_review_state = {}
+    disputes = verify_disputes(
+        model, candidates=proposed,
+        earlier=conversation.messages, latest=latest,
+        active_disputes=conversation.open_disputes, audit=audit,
+        source_treatments=source_treatments, review_scope=review_scope,
+        coverage=account_coverage, review_status=review_status,
+        source_disagreements=source_disagreements, review_state=dispute_review_state)
+    if execution is not None:
+        # A checked admitted peer keeps its execution evidence even when the
+        # broader reading has unread/held peers. Full coverage is separate.
+        execution["dispute_review"] = _dispute_review_execution(
+            disputes, review_status, account_coverage)
+    slots = {}
+    active = _preview_disputes(conversation, disputes, turn_id, slots)
+    detail_read = {}
+    details = extract_details(
+        model, disputes=active, prior_material=conversation.open_material,
+        source_treatments=source_treatments, diagnostics=detail_read, **arguments)
+    if execution is not None:
+        execution["detail_extraction"] = _reader_execution(details, detail_read)
+    if recovery_context is not None:
+        recovery_context.update(dispute_proposals=proposed, detail_proposals=details,
+                                accepted_disputes=disputes, slots=slots,
+                                dispute_review_state=dispute_review_state)
+    return (*disputes, *details), active
+
+
+def _conditional_read(model, phase, reader, **arguments):
+    """A conditional dispatch carries an explicit scope and spends the shared limit."""
+    previous_scope = getattr(model.recovery_local, "scope", "initial")
+    model.recovery_local.scope = phase
+    try:
+        if not model.claim_recovery(phase):
+            return None
+        return reader(model, **arguments)
+    finally:
+        model.cancel_pending_recovery()
+        model.recovery_local.scope = previous_scope
+
+
+def _partial_coverage(coverage, reason) -> None:
+    previous = deepcopy(coverage)
+    coverage.update(state="unassessed", missing_source_ids=[], missing_sources=[],
+                    reason=reason, validation_issue=reason)
+    if previous:
+        coverage["previous_assessment"] = previous
+
+
+def _affected_proposals(proposals, changed_sources, latest_sources, prior_sources,
+                        unavailable_assignments=()) -> set:
+    affected = {
+        candidate for candidate in proposals
+        if candidate_account_ids(candidate, latest_sources, prior_sources).intersection(
+            changed_sources)
+        or set(candidate.dispute_ids).intersection(unavailable_assignments)}
+    while True:
+        targets = {identity for candidate in affected
+                   for identity in (*candidate.related_dispute_ids,
+                                    *candidate.related_material_ids)}
+        expanded = affected | {
+            candidate for candidate in proposals
+            if targets.intersection((*candidate.related_dispute_ids,
+                                     *candidate.related_material_ids))}
+        if expanded == affected:
+            return affected
+        affected = expanded
+
+
+def _unread_proposal(candidate, identity, reason, *, kind="detail") -> dict:
+    return {"candidate_id": identity, "candidate_type": kind, "verdict": "unassessed",
+            "admission_issue": "review_unavailable", "reason": reason,
+            "validation_issues": [reason], "proposal": asdict(candidate)}
+
+
+def _hold_affected_grounding(grounded, proposals, affected, opening, reason,
+                            *, opening_affected=False):
+    ids = {f"D{index}" for index, candidate in enumerate(proposals, 1) if candidate in affected}
+    rejected = tuple(row for row in grounded.rejected_proposals if row["candidate_id"] not in ids)
+    withheld = tuple(row for row in grounded.withheld_proposals if row["candidate_id"] not in ids)
+    unread = tuple(row for row in grounded.unread_proposals
+                   if row["candidate_id"] not in ids and not (
+                       opening_affected and row["candidate_id"] == "O1"))
+    unread += tuple(_unread_proposal(candidate, f"D{index}", reason)
+                    for index, candidate in enumerate(proposals, 1) if candidate in affected)
+    if opening_affected and opening.ready:
+        unread += (_unread_proposal(opening, "O1", reason, kind="opening"),)
+    return replace(
+        grounded, details=tuple(row for row in grounded.details if row not in affected),
+        rejected_proposals=rejected, rejected_details=len(rejected),
+        withheld_proposals=withheld, unread_proposals=unread,
+        opening_supported=(False if opening_affected and opening.ready
+                           else grounded.opening_supported),
+        opening_reason=reason if opening_affected and opening.ready else grounded.opening_reason)
+
+
+def _localized_omission(coverage, review_scope, source_treatments) -> tuple[str, ...]:
+    if (coverage.get("contract") != ACCOUNT_COVERAGE_CONTRACT
+            or coverage.get("review_scope") != review_scope
+            or coverage.get("state") != "partial" or "validation_issue" in coverage
+            or not isinstance(coverage.get("reason"), str) or not coverage["reason"].strip()):
+        return ()
+    ids = coverage.get("missing_source_ids")
+    if not isinstance(ids, list) or not ids or any(
+            not isinstance(identity, str) or identity not in source_treatments for identity in ids):
+        return ()
+    return tuple(dict.fromkeys(ids))
+
+
+def _recover_material(model, *, conversation, latest, turn_id, opening, context,
+                      source_treatments, source_disagreements, detail_review_state,
+                      detail_coverage, grounded, active_disputes, dispute_audit,
+                      execution, review_scope):
+    """Recover owned source conflicts and localized omissions once before any effects."""
+    if not context:
+        return grounded, active_disputes, source_treatments
+    slots = context["slots"]
+    _record_slots(slots, grounded.details)
+    stages = execution["stages"]
+    events = execution["semantic_recovery"] = {
+        "contract": "bounded_material_recovery_v1",
+        "source_reconsideration": {"state": "not_needed"},
+        "omission_recovery": {"state": "not_needed"},
+    }
+    original_payload, latest_sources, prior_sources = addressed_sources(
+        conversation.messages, latest)
+    initial_assignment_ids = {row["id"] for row in active_disputes}
+    changed_sources = ()
+    disputes_rechecked = False
+
+    def check_disputes(phase, *, changed=()):
+        assessed, status, audit = {}, {}, []
+        checked = _conditional_read(
+            model, phase, verify_disputes,
+            candidates=context["dispute_proposals"], earlier=conversation.messages,
+            latest=latest, active_disputes=conversation.open_disputes,
+            audit=audit, source_treatments=source_treatments, review_scope=review_scope,
+            coverage=assessed, review_status=status, review_state=context["dispute_review_state"],
+            recheck_source_ids=changed if context["dispute_review_state"] else ())
+        if checked is not None:
+            context["accepted_disputes"] = checked
+            dispute_audit[:] = audit
+            stages["dispute_review"] = _dispute_review_execution(checked, status, assessed)
+        return checked
+
+    def check_details(phase, *, changed=()):
+        return _conditional_read(
+            model, phase, verify_material_grounding,
+            candidates=context["detail_proposals"], opening=opening,
+            earlier=conversation.messages, latest=latest, active_disputes=active_disputes,
+            prior_material=conversation.open_material,
+            current_matter_id=conversation.current_matter_id,
+            source_treatments=source_treatments, review_scope=review_scope,
+            active_material=conversation.open_material, coverage=detail_coverage,
+            review_state=detail_review_state,
+            recheck_source_ids=changed if detail_review_state else ())
+
+    def hold_changed(reason, *, hold_disputes):
+        nonlocal grounded, active_disputes
+        if hold_disputes:
+            affected = _affected_proposals(
+                context["dispute_proposals"], changed_sources, latest_sources, prior_sources)
+            context["accepted_disputes"] = tuple(
+                candidate for candidate in context["accepted_disputes"]
+                if candidate not in affected)
+            affected_ids = {f"C{index}" for index, candidate in enumerate(
+                context["dispute_proposals"], 1) if candidate in affected}
+            dispute_audit[:] = [row for row in dispute_audit
+                                if row["candidate_id"] not in affected_ids]
+            dispute_audit.extend(_unread_proposal(candidate, f"C{index}", reason, kind="dispute")
+                                 for index, candidate in enumerate(context["dispute_proposals"], 1)
+                                 if candidate in affected)
+            stage = stages["dispute_review"]
+            _partial_coverage(stage["account_coverage"], reason)
+            stage.update(accepted=len(context["accepted_disputes"]),
+                         unread=len(affected_ids))
+            if not context["accepted_disputes"]:
+                stage["state"] = "partial"
+        previous_ids = initial_assignment_ids | {row["id"] for row in active_disputes}
+        active_disputes = _preview_disputes(
+            conversation, context["accepted_disputes"], turn_id, slots)
+        affected = _affected_proposals(
+            context["detail_proposals"], changed_sources, latest_sources, prior_sources,
+            previous_ids - {row["id"] for row in active_disputes})
+        grounded = _hold_affected_grounding(
+            grounded, context["detail_proposals"], affected, opening, reason,
+            opening_affected=bool(changed_sources))
+        _partial_coverage(detail_coverage, reason)
+
+    if source_disagreements:
+        by_id = {f"C{index}": candidate for index, candidate in enumerate(
+            context["dispute_proposals"], 1)}
+        by_id.update({f"D{index}": candidate for index, candidate in enumerate(
+            context["detail_proposals"], 1)})
+        selected = []
+        for diagnostic in source_disagreements:
+            identity = diagnostic.get("source_id")
+            candidate_id = diagnostic.get("candidate_id")
+            candidate = by_id.get(candidate_id)
+            expected = asdict(opening) if candidate_id == "O1" else (
+                asdict(candidate) if candidate is not None else None)
+            if (identity not in source_treatments
+                    or diagnostic.get("supplies_account_content") is not True
+                    or diagnostic.get("content_role") != source_treatments[identity]["content_role"]
+                    or diagnostic.get("proposal") != expected
+                    or identity not in candidate_account_ids(
+                        candidate, latest_sources, prior_sources)):
+                raise SchemaViolation(
+                    "Source reconsideration has no owned typed review disagreement")
+            selected.append(identity)
+        selected = tuple(dict.fromkeys(selected))
+        event = events["source_reconsideration"]
+        event["source_ids"] = list(selected)
+        try:
+            result = _conditional_read(
+                model, "source_reconsideration:source_owner", reconsider_account_sources,
+                payload=original_payload, latest_turn_id=turn_id,
+                source_treatments=source_treatments, source_ids=selected)
+            if result is None:
+                event["state"] = "budget_exhausted"
+                _partial_coverage(stages["dispute_review"]["account_coverage"],
+                                  "Source-purpose reconsideration remains unfinished.")
+                _partial_coverage(
+                    detail_coverage, "Source-purpose reconsideration remains unfinished.")
+                return grounded, active_disputes, source_treatments
+            source_treatments, changed_sources = result
+            event.update(state="changed" if changed_sources else "unchanged",
+                         changed_source_ids=list(changed_sources))
+            if changed_sources:
+                checked = check_disputes(
+                    "source_reconsideration:dispute_review", changed=changed_sources)
+                if checked is None:
+                    hold_changed(
+                        "Source-dependent record review remains unfinished.", hold_disputes=True)
+                    event["state"] = "partial"
+                    return grounded, active_disputes, source_treatments
+                disputes_rechecked = True
+                previous = active_disputes
+                active_disputes = _preview_disputes(conversation, checked, turn_id, slots)
+                if any(row not in active_disputes for row in previous):
+                    detail_review_state.clear()
+                checked_details = check_details(
+                    "source_reconsideration:detail_review", changed=changed_sources)
+                if checked_details is None:
+                    hold_changed(
+                        "Source-dependent material review remains unfinished.", hold_disputes=False)
+                    event["state"] = "partial"
+                    return grounded, active_disputes, source_treatments
+                grounded = checked_details
+                _record_slots(slots, grounded.details)
+                # Both owners now cache the revised purpose catalogue. A later
+                # omission review should only revisit its additional dependencies.
+                changed_sources = ()
+        except (ConfigurationError, TierUnavailable):
+            raise
+        except ModelError as exc:
+            event.update(state="partial", failure=type(exc).__name__)
+            hold_changed(
+                "Source-dependent record review could not be confirmed.",
+                hold_disputes=not disputes_rechecked)
+            return grounded, active_disputes, source_treatments
+
+    gaps = {
+        "dispute": _localized_omission(
+            stages["dispute_review"]["account_coverage"], review_scope, source_treatments),
+        "detail": _localized_omission(detail_coverage, review_scope, source_treatments),
+    }
+    if not any(gaps.values()):
+        return grounded, active_disputes, source_treatments
+    event = events["omission_recovery"]
+    event.update(state="started", source_ids={
+        key: list(value) for key, value in gaps.items() if value})
+    arguments = {"earlier": conversation.messages, "latest": latest,
+                 "current_matter_id": conversation.current_matter_id,
+                 "source_treatments": source_treatments}
+    before_omission_disputes = active_disputes
+    for kind in ("dispute", "detail"):
+        if not gaps[kind]:
+            continue
+        coverage = (stages["dispute_review"]["account_coverage"]
+                    if kind == "dispute" else detail_coverage)
+        retained = context["accepted_disputes"] if kind == "dispute" else grounded.details
+        recovery_scope = {"review_scope": deepcopy(review_scope),
+                          "missing_source_ids": list(gaps[kind]), "reason": coverage["reason"],
+                          "retained_proposals": [asdict(row) for row in retained]}
+        diagnostics = {}
+        additions = ()
+        try:
+            reader_arguments = dict(
+                arguments, diagnostics=diagnostics, recovery_scope=recovery_scope)
+            if kind == "dispute":
+                reader_arguments["prior_disputes"] = conversation.open_disputes
+                reader = extract_disputes
+            else:
+                reader_arguments.update(
+                    disputes=active_disputes, prior_material=conversation.open_material)
+                reader = extract_details
+            additions = _conditional_read(
+                model, f"omission_recovery:{kind}_reader", reader, **reader_arguments)
+            if additions is None:
+                event[kind] = "budget_exhausted"
+                continue
+            key = f"{kind}_proposals"
+            prior = context[key]
+            context[key] = (*prior, *(row for row in additions if row not in prior))
+            stage = stages[f"{kind}_extraction"]
+            _extend_reader_execution(stage, context[key], diagnostics)
+            if kind == "dispute":
+                checked = check_disputes(
+                    "omission_recovery:dispute_review", changed=changed_sources)
+                if checked is not None:
+                    previous = active_disputes
+                    active_disputes = _preview_disputes(conversation, checked, turn_id, slots)
+                    if any(row not in active_disputes for row in previous):
+                        detail_review_state.clear()
+            else:
+                checked = check_details("omission_recovery:detail_review", changed=changed_sources)
+                if checked is not None:
+                    grounded = checked
+                    _record_slots(slots, grounded.details)
+            event[kind] = "reviewed" if checked is not None else "review_budget_exhausted"
+            if checked is None:
+                reason = "The additional proposal's independent review remains unfinished."
+                pending = set(context[key]) - set(prior)
+                if kind == "dispute":
+                    dispute_audit.extend(
+                        _unread_proposal(row, f"C{index}", reason, kind="dispute")
+                        for index, row in enumerate(context[key], 1) if row in pending)
+                    stages["dispute_review"]["unread"] += len(pending)
+                else:
+                    grounded = _hold_affected_grounding(
+                        grounded, context[key], pending, opening, reason)
+        except (ConfigurationError, TierUnavailable):
+            raise
+        except ModelError as exc:
+            event[kind] = type(exc).__name__
+            _partial_coverage(coverage, "Recovery of missing material could not be confirmed.")
+            if additions:
+                key = f"{kind}_proposals"
+                pending = set(context[key]) - set(prior)
+                reason = "The additional proposal's independent review could not be confirmed."
+                if kind == "dispute":
+                    dispute_audit.extend(
+                        _unread_proposal(row, f"C{index}", reason, kind="dispute")
+                        for index, row in enumerate(context[key], 1) if row in pending)
+                    stages["dispute_review"]["unread"] += len(pending)
+                else:
+                    grounded = _hold_affected_grounding(
+                        grounded, context[key], pending, opening, reason)
+    if active_disputes != before_omission_disputes and not gaps["detail"]:
+        try:
+            checked = check_details("omission_recovery:detail_review", changed=changed_sources)
+            if checked is not None:
+                grounded = checked
+                _record_slots(slots, grounded.details)
+                event["detail"] = "reviewed"
+            else:
+                event["detail"] = "review_budget_exhausted"
+                _partial_coverage(detail_coverage, "Final material coverage remains unfinished.")
+        except (ConfigurationError, TierUnavailable):
+            raise
+        except ModelError as exc:
+            event["detail"] = type(exc).__name__
+            unavailable = {row["id"] for row in before_omission_disputes} - {
+                row["id"] for row in active_disputes}
+            affected = _affected_proposals(
+                context["detail_proposals"], (), latest_sources, prior_sources, unavailable)
+            grounded = _hold_affected_grounding(
+                grounded, context["detail_proposals"], affected, opening,
+                "Final material assignment review could not be confirmed.")
+            _partial_coverage(detail_coverage, "Final material coverage could not be confirmed.")
+    if active_disputes != before_omission_disputes and event.get("detail") != "reviewed":
+        unavailable = {row["id"] for row in before_omission_disputes} - {
+            row["id"] for row in active_disputes}
+        affected = _affected_proposals(
+            context["detail_proposals"], (), latest_sources, prior_sources, unavailable)
+        grounded = _hold_affected_grounding(
+            grounded, context["detail_proposals"], affected, opening,
+            "Final material assignment review remains unfinished.")
+        _partial_coverage(detail_coverage, "Final material coverage remains unfinished.")
+    completed = all(event.get(kind) == "reviewed"
+                    for kind in ("dispute", "detail") if kind in event)
+    event["state"] = "reviewed" if completed else "partial"
+    return grounded, active_disputes, source_treatments
 
 
 def _legal_reads(model, search, *, conversation: Conversation,
@@ -883,11 +1282,12 @@ def _legal_reads(model, search, *, conversation: Conversation,
 
 class BrainService:
     def __init__(self, store: StorePort, model, legal_search=None, *,
-                 session_current=None) -> None:
+                 session_current=None, recovery_limit: int = 8) -> None:
         self.store = store
         self.model = model
         self.legal_search = legal_search
         self.session_current = session_current
+        self.recovery_limit = recovery_limit
 
     def run(self, turn: BrainTurn) -> BrainOutput:
         if not turn.advocate_id.strip() or not turn.message.strip() or not turn.turn_id.strip():
@@ -922,7 +1322,7 @@ class BrainService:
                                code="stale_version")
         if turn.turn_id in matter.turns_applied:
             raise BrainRefused(409, "This turn already belongs to an earlier response")
-        counted_model = _CountedModel(self.model)
+        counted_model = _CountedModel(self.model, recovery_limit=self.recovery_limit)
         revision_reader = getattr(self.legal_search, "revision", None)
         try:
             corpus_revision = revision_reader() if callable(revision_reader) else None
@@ -942,6 +1342,9 @@ class BrainService:
             review_scope = _execution_review_scope(execution, conversation.progress)
             execution["review_scope"] = deepcopy(review_scope)
             detail_account_coverage: dict = {}
+            detail_review_state: dict = {}
+            recovery_context: dict = {}
+            source_disagreements: list[dict] = []
             source_reviewed = False
             if plan.material_review or plan.opening.ready:
                 source_payload, _, _ = addressed_sources(conversation.messages, turn.message)
@@ -952,8 +1355,9 @@ class BrainService:
                 candidates, active_disputes = _read_material(
                     counted_model, conversation, turn.message, turn.turn_id, dispute_audit,
                     source_treatments=source_treatments, execution=execution["stages"],
-                    review_scope=review_scope)
-                if any(execution["stages"][stage]["state"] != "returned" for stage in (
+                    review_scope=review_scope, recovery_context=recovery_context,
+                    source_disagreements=source_disagreements)
+                if any(not reader_admission_checked(execution["stages"][stage]) for stage in (
                         "dispute_extraction", "detail_extraction")):
                     raise BrainRefused(
                         503, "NM could not confirm that the required material reading "
@@ -968,7 +1372,17 @@ class BrainService:
                 current_matter_id=conversation.current_matter_id,
                 source_treatments=source_treatments,
                 review_scope=review_scope if source_reviewed else None,
-                active_material=conversation.open_material, coverage=detail_account_coverage)
+                active_material=conversation.open_material, coverage=detail_account_coverage,
+                source_disagreements=source_disagreements, review_state=detail_review_state)
+            if source_reviewed:
+                grounded, active_disputes, source_treatments = _recover_material(
+                    counted_model, conversation=conversation, latest=turn.message,
+                    turn_id=turn.turn_id, opening=plan.opening, context=recovery_context,
+                    source_treatments=source_treatments, source_disagreements=source_disagreements,
+                    detail_review_state=detail_review_state,
+                    detail_coverage=detail_account_coverage,
+                    grounded=grounded, active_disputes=active_disputes,
+                    dispute_audit=dispute_audit, execution=execution, review_scope=review_scope)
             requested_review = source_reviewed
             # The coverage owner adds validation_issue only when no valid
             # independent assessment survives. A valid unassessed judgment
@@ -1006,8 +1420,9 @@ class BrainService:
                 state == "complete" for state in coverage_states) else
                 "partial" if any(state in ("complete", "partial") for state in coverage_states)
                 else "unassessed")
-            candidates = (tuple(candidate for candidate in candidates
-                                if candidate.kind == "dispute") + grounded.details)
+            candidates = (recovery_context.get("accepted_disputes", tuple(
+                candidate for candidate in candidates if candidate.kind == "dispute"))
+                + grounded.details)
         except IncompleteConversation as exc:
             logging.getLogger(__name__).warning("Saved conversation validation failed: %s", exc)
             raise BrainRefused(
@@ -1044,7 +1459,8 @@ class BrainService:
                 retryable = True
             raise BrainRefused(503, why, retryable=retryable) from exc
         needs_work, asked = _response_mode(plan)
-        material = [candidate.recorded(turn.turn_id, index)
+        material = [candidate.recorded(
+            turn.turn_id, recovery_context.get("slots", {}).get(candidate, index))
                     for index, candidate in enumerate(candidates, start=1)]
         for item in material:
             if item["kind"] != "dispute":
@@ -1054,9 +1470,12 @@ class BrainService:
         if opening.ready and not opening_supported and not grounded.opening_unread:
             alternatives = []
             try:
-                alternatives.append(repair_opening(
-                    counted_model, conversation, turn.message, opening,
-                    grounded.opening_reason))
+                repaired = _conditional_read(
+                    counted_model, "opening_recovery:reader", repair_opening,
+                    conversation=conversation, latest=turn.message, rejected=opening,
+                    rejection_reason=grounded.opening_reason)
+                if repaired is not None:
+                    alternatives.append(repaired)
             except (ModelError, ContextOverflow) as exc:
                 logging.getLogger(__name__).warning(
                     "Opening repair was unavailable: %s", exc)
@@ -1068,15 +1487,16 @@ class BrainService:
                     True, subject, opening.summary, "", subject))
             for proposal in alternatives:
                 try:
-                    checked = verify_material_grounding(
-                        counted_model, candidates=(), opening=proposal,
+                    checked = _conditional_read(
+                        counted_model, "opening_recovery:review", verify_material_grounding,
+                        candidates=(), opening=proposal,
                         earlier=conversation.messages, latest=turn.message,
                         source_treatments=source_treatments)
                 except (ModelError, ContextOverflow) as exc:
                     logging.getLogger(__name__).warning(
                         "Opening correction could not be checked: %s", exc)
                     continue
-                if checked.opening_supported:
+                if checked is not None and checked.opening_supported:
                     opening = proposal
                     opening_supported = True
                     break
@@ -1104,7 +1524,10 @@ class BrainService:
                     "material_coverage": {
                         "state": "partial" if (grounded.withheld_details
                             or grounded.unread_details or source_reviewed
-                            and execution["semantic_coverage"] != "complete") else "ok",
+                            and (execution["semantic_coverage"] != "complete" or any(
+                                execution["stages"][name].get("state") == "partial"
+                                for name in ("dispute_extraction", "detail_extraction"))))
+                            else "ok",
                         "rejected_details": grounded.rejected_details,
                         "withheld_details": grounded.withheld_details,
                         "unread_details": grounded.unread_details,
@@ -1151,7 +1574,7 @@ class BrainService:
                         ("disputes", "dispute_extraction", "dispute_review"),
                         ("details", "detail_extraction", "detail_review")):
                     if (execution["effects"][kind]["operations"]
-                            and (execution["stages"][reader]["state"] != "returned"
+                            and (not reader_admission_checked(execution["stages"][reader])
                                  or execution["stages"][reviewer]["state"] != "checked")):
                         raise BrainRefused(
                             503, "NM could not verify execution evidence for the proposed "

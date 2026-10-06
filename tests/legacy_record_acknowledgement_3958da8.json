@@ -1,0 +1,2246 @@
+{
+  "captured_from_commit": "3958da8",
+  "request": {
+    "advocate_id": "adv_demo",
+    "message": "The northern carton arrival was 19 April, correcting the earlier account.",
+    "turn_id": "legacy-code-acknowledgement",
+    "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+    "expected_version": 1
+  },
+  "matter": {
+    "id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+    "advocate_id": "adv_demo",
+    "title": "Attributed delivery account",
+    "threads": [],
+    "facts": [],
+    "loop_records": [],
+    "engagement": null,
+    "commission": null,
+    "commission_history": [],
+    "emergencies": [],
+    "urgency_records": [],
+    "urgency_operations": [],
+    "authority_refusals": [],
+    "authority_bindings": [],
+    "decisions": [],
+    "commission_invalidations": [],
+    "emergency_triage": [],
+    "uploads": {},
+    "intake_request_key": "",
+    "intake_opening_offer": {},
+    "reservations": [],
+    "screens": [],
+    "assessed": [],
+    "intake_parties": {},
+    "intake_answers": {},
+    "emergency_because": "",
+    "turns_applied": [],
+    "turn_receipts": [],
+    "asked": [],
+    "paused_needs": [],
+    "last_activity": "2026-10-06",
+    "service_authorities": [],
+    "service_jobs": [],
+    "hearing_packs": [],
+    "action_proposals": [],
+    "handovers": [],
+    "closure": {},
+    "drafting_packages": [],
+    "source_bindings": {},
+    "comparisons": {},
+    "advice_decisions": [],
+    "retention": [],
+    "research": [],
+    "dependencies": {},
+    "brain_ready": true,
+    "brain_chat": [
+      {
+        "turn_id": "depot-original",
+        "advocate_id": "adv_demo",
+        "message": "The archive cartons reached the northern depot on 17 April. The calibration rig reached the southern depot on 22 April.",
+        "response": {
+          "turn_id": "depot-original",
+          "chat_id": "depot-original",
+          "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+          "route": "matter",
+          "mode": "explanation",
+          "mode_statement": "conversation response",
+          "blocked": false,
+          "blocked_reason": null,
+          "elements": [
+            {
+              "kind": "finding",
+              "text": "Your account distinguishes the two deliveries.",
+              "thread": null,
+              "by_when": null,
+              "no_deadline_reason": null,
+              "signal": "none",
+              "collapsible": false,
+              "disclosure": false,
+              "refs": [
+                "depot-original"
+              ],
+              "source": {
+                "brain": true,
+                "id": "L1",
+                "kind": "conversation",
+                "label": "Your saved words",
+                "locator": "depot-original",
+                "text": "The archive cartons reached the northern depot on 17 April.",
+                "digest": "1c730520c2261c738e39586937dd3df352343ec760f2fe98f79467da28734aba",
+                "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+              },
+              "sources": [
+                {
+                  "brain": true,
+                  "id": "L1",
+                  "kind": "conversation",
+                  "label": "Your saved words",
+                  "locator": "depot-original",
+                  "text": "The archive cartons reached the northern depot on 17 April.",
+                  "digest": "1c730520c2261c738e39586937dd3df352343ec760f2fe98f79467da28734aba",
+                  "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+                }
+              ],
+              "section": "answer",
+              "continuation_request_index": 0,
+              "continuation_block_id": "block:0",
+              "inline_citations": []
+            },
+            {
+              "kind": "finding",
+              "text": "New entry: The archive cartons reached the northern depot on 17 April.\nNew entry: The calibration rig reached the southern depot on 22 April.",
+              "refs": [],
+              "source": null,
+              "section": "answer",
+              "collapsible": false,
+              "disclosure": true,
+              "material_execution_id": "mex_98c43a777ccb7e59f8071bd76412504e"
+            }
+          ],
+          "material": [
+            {
+              "id": "depot-original:material:1",
+              "source_turn_id": "depot-original",
+              "state": "proposed",
+              "kind": "event",
+              "statement": "The archive cartons reached the northern depot on 17 April.",
+              "quoted": "The archive cartons reached the northern depot on 17 April.",
+              "relation": "new",
+              "prior_references": [],
+              "matter_scope": "proposed",
+              "basis": "stated",
+              "importance": "relevant",
+              "why_material": "It may affect the requested legal work.",
+              "placement": "matter",
+              "dispute_ids": [],
+              "related_material_ids": [],
+              "grounding": "advocate_semantic_v1"
+            },
+            {
+              "id": "depot-original:material:2",
+              "source_turn_id": "depot-original",
+              "state": "proposed",
+              "kind": "event",
+              "statement": "The calibration rig reached the southern depot on 22 April.",
+              "quoted": "The calibration rig reached the southern depot on 22 April.",
+              "relation": "new",
+              "prior_references": [],
+              "matter_scope": "proposed",
+              "basis": "stated",
+              "importance": "relevant",
+              "why_material": "It may affect the requested legal work.",
+              "placement": "matter",
+              "dispute_ids": [],
+              "related_material_ids": [],
+              "grounding": "advocate_semantic_v1"
+            }
+          ],
+          "material_coverage": {
+            "state": "ok",
+            "rejected_details": 0,
+            "withheld_details": 0,
+            "unread_details": 0,
+            "rejected_proposals": [],
+            "withheld_proposals": [],
+            "unread_proposals": [],
+            "dispute_review": [],
+            "source_treatments": {
+              "L1": {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The archive cartons reached the northern depot on 17 April.",
+                "content_role": "reported_matter_account",
+                "reason": "The scripted source-treatment decision reports account content."
+              },
+              "L2": {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The calibration rig reached the southern depot on 22 April.",
+                "content_role": "reported_matter_account",
+                "reason": "The scripted source-treatment decision reports account content."
+              }
+            },
+            "source_treatment_contract": "independent_account_source_treatment_v1",
+            "execution": {
+              "contract": "material_execution_v1",
+              "id": "mex_98c43a777ccb7e59f8071bd76412504e",
+              "owner": {
+                "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                "advocate_id": "adv_demo",
+                "turn_id": "depot-original",
+                "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681"
+              },
+              "expected_version": 0,
+              "resulting_version": 1,
+              "persistence": "committed",
+              "semantic_coverage": "complete",
+              "material_selected": true,
+              "requests": [
+                {
+                  "request_index": 0,
+                  "request": "The archive cartons reached the northern depot on 17 April. The calibration rig reached the southern depot on 22 April.",
+                  "material_purposes": [
+                    "account_contribution"
+                  ],
+                  "relation": "new",
+                  "matter_scope": "proposed",
+                  "intent": "request",
+                  "response_mode": "substantive",
+                  "record_requirement": {
+                    "kind": "none",
+                    "target_ids": [],
+                    "operation": "none",
+                    "success_condition": ""
+                  },
+                  "fulfillment": "not_requested",
+                  "fulfillment_check": {
+                    "outcome": "not_requested",
+                    "reason": "Fabricated independent decision on the original scoped result.",
+                    "receipt_id": "mex_98c43a777ccb7e59f8071bd76412504e",
+                    "request_index": 0,
+                    "block_id": "",
+                    "effect_ids": [],
+                    "current_record_ids": []
+                  }
+                }
+              ],
+              "stages": {
+                "source_classification": {
+                  "state": "returned"
+                },
+                "dispute_extraction": {
+                  "state": "returned",
+                  "proposals": 0
+                },
+                "dispute_review": {
+                  "state": "checked",
+                  "accepted": 0,
+                  "rejected": 0,
+                  "held": 0,
+                  "unread": 0,
+                  "review_status": {
+                    "state": "checked",
+                    "checked_items": 0,
+                    "accepted_items": 0,
+                    "rejected_items": 0,
+                    "withheld_items": 0,
+                    "unread_items": 0,
+                    "unread_candidate_ids": []
+                  },
+                  "account_coverage": {
+                    "contract": "independent_account_coverage_v1",
+                    "review_scope": {
+                      "owner": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "advocate_id": "adv_demo",
+                        "turn_id": "depot-original",
+                        "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681"
+                      },
+                      "requests": [
+                        {
+                          "request_index": 0,
+                          "record_requirement": {
+                            "kind": "none",
+                            "target_ids": [],
+                            "operation": "none",
+                            "success_condition": ""
+                          }
+                        }
+                      ]
+                    },
+                    "state": "complete",
+                    "reason": "Fabricated independent examination: the full requested account is represented.",
+                    "missing_source_ids": [],
+                    "missing_sources": []
+                  }
+                },
+                "detail_extraction": {
+                  "state": "returned",
+                  "proposals": 2
+                },
+                "detail_review": {
+                  "state": "checked",
+                  "accepted": 2,
+                  "rejected": 0,
+                  "held": 0,
+                  "unread": 0,
+                  "review_status": {
+                    "state": "checked",
+                    "checked_items": 3,
+                    "accepted_items": 2,
+                    "rejected_items": 0,
+                    "withheld_items": 0,
+                    "unread_items": 0,
+                    "unread_candidate_ids": []
+                  },
+                  "account_coverage": {
+                    "state": "complete",
+                    "reason": "Fabricated independent examination: the full requested account is represented.",
+                    "missing_source_ids": [],
+                    "contract": "independent_account_coverage_v1",
+                    "review_scope": {
+                      "owner": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "advocate_id": "adv_demo",
+                        "turn_id": "depot-original",
+                        "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681"
+                      },
+                      "requests": [
+                        {
+                          "request_index": 0,
+                          "record_requirement": {
+                            "kind": "none",
+                            "target_ids": [],
+                            "operation": "none",
+                            "success_condition": ""
+                          }
+                        }
+                      ]
+                    },
+                    "missing_sources": []
+                  },
+                  "opening_proposed": true,
+                  "opening_unread": false
+                }
+              },
+              "review_scope": {
+                "owner": {
+                  "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                  "advocate_id": "adv_demo",
+                  "turn_id": "depot-original",
+                  "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681"
+                },
+                "requests": [
+                  {
+                    "request_index": 0,
+                    "record_requirement": {
+                      "kind": "none",
+                      "target_ids": [],
+                      "operation": "none",
+                      "success_condition": ""
+                    }
+                  }
+                ]
+              },
+              "effects": {
+                "disputes": {
+                  "before_record_ids": [],
+                  "after_record_ids": [],
+                  "before_held_record_ids": [],
+                  "after_held_record_ids": [],
+                  "activated_record_ids": [],
+                  "retired_record_ids": [],
+                  "operations": [],
+                  "held_record_ids": [],
+                  "outside_owned_record_ids": []
+                },
+                "details": {
+                  "before_record_ids": [],
+                  "after_record_ids": [
+                    "depot-original:material:1",
+                    "depot-original:material:2"
+                  ],
+                  "before_held_record_ids": [],
+                  "after_held_record_ids": [],
+                  "activated_record_ids": [
+                    "depot-original:material:1",
+                    "depot-original:material:2"
+                  ],
+                  "retired_record_ids": [],
+                  "operations": [
+                    {
+                      "result_id": "depot-original:material:1",
+                      "relation": "new",
+                      "target_record_ids": [],
+                      "retired_target_ids": [],
+                      "source_references": [
+                        {
+                          "turn_id": "depot-original",
+                          "role": "advocate",
+                          "quoted": "The archive cartons reached the northern depot on 17 April."
+                        }
+                      ]
+                    },
+                    {
+                      "result_id": "depot-original:material:2",
+                      "relation": "new",
+                      "target_record_ids": [],
+                      "retired_target_ids": [],
+                      "source_references": [
+                        {
+                          "turn_id": "depot-original",
+                          "role": "advocate",
+                          "quoted": "The calibration rig reached the southern depot on 22 April."
+                        }
+                      ]
+                    }
+                  ],
+                  "held_record_ids": [],
+                  "outside_owned_record_ids": []
+                }
+              },
+              "rejected_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "withheld_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "unread_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "record_changes": [
+                {
+                  "effect_id": "rfx_bc847ea3ac17d7a230b6d19edcfe61b2",
+                  "kind": "details",
+                  "relation": "new",
+                  "before_records": [],
+                  "after_record": {
+                    "id": "depot-original:material:1",
+                    "source_turn_id": "depot-original",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The archive cartons reached the northern depot on 17 April.",
+                    "quoted": "The archive cartons reached the northern depot on 17 April.",
+                    "relation": "new",
+                    "prior_references": [],
+                    "matter_scope": "proposed",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                },
+                {
+                  "effect_id": "rfx_bf606f0b905bf97ca32a4f0cab2b22fb",
+                  "kind": "details",
+                  "relation": "new",
+                  "before_records": [],
+                  "after_record": {
+                    "id": "depot-original:material:2",
+                    "source_turn_id": "depot-original",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The calibration rig reached the southern depot on 22 April.",
+                    "quoted": "The calibration rig reached the southern depot on 22 April.",
+                    "relation": "new",
+                    "prior_references": [],
+                    "matter_scope": "proposed",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                }
+              ],
+              "display": {
+                "contract": "material_result_display_v1",
+                "receipt_id": "mex_98c43a777ccb7e59f8071bd76412504e",
+                "element": {
+                  "kind": "finding",
+                  "text": "New entry: The archive cartons reached the northern depot on 17 April.\nNew entry: The calibration rig reached the southern depot on 22 April.",
+                  "refs": [],
+                  "source": null,
+                  "section": "answer",
+                  "collapsible": false,
+                  "disclosure": true,
+                  "material_execution_id": "mex_98c43a777ccb7e59f8071bd76412504e"
+                }
+              },
+              "gate_diagnostics": []
+            },
+            "opening_fallback": false
+          },
+          "research_reads": [],
+          "metrics": {
+            "llm_calls": 8,
+            "provider_retries": 0,
+            "model_calls": [
+              {
+                "operation": "interpret_conversation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "classify_account_sources",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "extract_disputes",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_disputes",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "extract_legal_details",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_material_grounding",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "continue_conversation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_continuation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              }
+            ]
+          },
+          "replayed": false,
+          "committed": "committed",
+          "input_admitted": false,
+          "matter_version": 1,
+          "briefing": {},
+          "board_changes": [],
+          "at": "2026-10-06T05:07:23.273042+00:00",
+          "composed": [],
+          "continuation": {
+            "units": [
+              {
+                "request_index": 0,
+                "blocks": [
+                  {
+                    "id": "block:0",
+                    "kind": "completion",
+                    "text": "Your account distinguishes the two deliveries.",
+                    "span_ids": [
+                      "L1"
+                    ],
+                    "record_ids": [],
+                    "legal_source_ids": [],
+                    "uncertainty": "reported",
+                    "inline_citations": [],
+                    "references": [
+                      {
+                        "type": "conversation",
+                        "id": "L1",
+                        "role": "advocate",
+                        "text": "The archive cartons reached the northern depot on 17 April.",
+                        "turn_id": "depot-original"
+                      }
+                    ]
+                  }
+                ],
+                "questions": [],
+                "next_work": [],
+                "sufficiency": {
+                  "status": "complete",
+                  "block_id": "block:0"
+                },
+                "progress_updates": [
+                  {
+                    "target_id": "wp_90ddbf31a551ff8ac2c80985",
+                    "status": "complete",
+                    "block_id": "block:0",
+                    "reason": "The requested scoped answer is delivered.",
+                    "span_ids": [
+                      "L1"
+                    ]
+                  }
+                ],
+                "record_outcome": {
+                  "status": "none",
+                  "block_id": "",
+                  "effect_ids": [],
+                  "current_record_ids": [],
+                  "reason": ""
+                },
+                "work": {
+                  "existing_id": "",
+                  "create": true,
+                  "request": "The archive cartons reached the northern depot on 17 April. The calibration rig reached the southern depot on 22 April.",
+                  "relation": "new",
+                  "matter_scope": "proposed",
+                  "intent": "request",
+                  "progress_id": "wp_90ddbf31a551ff8ac2c80985",
+                  "record_requirement": {
+                    "kind": "none",
+                    "target_ids": [],
+                    "operation": "none",
+                    "success_condition": ""
+                  },
+                  "record_requirement_origin": {
+                    "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                    "turn_id": "depot-original",
+                    "request_index": 0,
+                    "progress_id": "wp_90ddbf31a551ff8ac2c80985"
+                  }
+                },
+                "verification": "source_aware_continuation_v1",
+                "record_check": {
+                  "outcome": "not_requested",
+                  "reason": "Fabricated independent decision on the original scoped result."
+                },
+                "progress_checks": [
+                  {
+                    "target_id": "wp_90ddbf31a551ff8ac2c80985",
+                    "status": "complete",
+                    "scope_preserved": true,
+                    "result_supported": true,
+                    "verdict": "accept",
+                    "reason": "The scripted transition retains its scoped attributed support."
+                  }
+                ],
+                "record_outcome_contract": "checked_record_outcome_v1",
+                "record_requirement": {
+                  "kind": "none",
+                  "target_ids": [],
+                  "operation": "none",
+                  "success_condition": ""
+                },
+                "progress_version": 3,
+                "record_outcome_seal": {
+                  "contract": "saved_record_outcome_v1",
+                  "version": 1,
+                  "id": "ros_40160382de880678e19318af8408d5368b727ca6add2af063ad2e5f4d8f7a4e5",
+                  "receipt_id": "mex_98c43a777ccb7e59f8071bd76412504e",
+                  "resulting_version": 1,
+                  "requirements": [
+                    {
+                      "owner": "current_request",
+                      "request_index": 0,
+                      "record_requirement": {
+                        "kind": "none",
+                        "target_ids": [],
+                        "operation": "none",
+                        "success_condition": ""
+                      }
+                    },
+                    {
+                      "owner": "completed_task",
+                      "target_id": "wp_90ddbf31a551ff8ac2c80985",
+                      "record_requirement": {
+                        "kind": "none",
+                        "target_ids": [],
+                        "operation": "none",
+                        "success_condition": ""
+                      },
+                      "record_requirement_origin": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "turn_id": "depot-original",
+                        "request_index": 0,
+                        "progress_id": "wp_90ddbf31a551ff8ac2c80985"
+                      }
+                    }
+                  ],
+                  "review": {
+                    "outcome": "not_requested",
+                    "reason": "Fabricated independent decision on the original scoped result."
+                  },
+                  "digest": "40160382de880678e19318af8408d5368b727ca6add2af063ad2e5f4d8f7a4e5"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "request_index": 0,
+                "state": "ok",
+                "diagnostics": []
+              }
+            ],
+            "record_snapshot": {
+              "contract": "record_result_snapshot_v1",
+              "receipt_id": "mex_98c43a777ccb7e59f8071bd76412504e",
+              "owner": {
+                "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                "advocate_id": "adv_demo",
+                "turn_id": "depot-original",
+                "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681"
+              },
+              "resulting_version": 1,
+              "record_catalogue": {
+                "depot-original:material:1": {
+                  "id": "depot-original:material:1",
+                  "type": "material",
+                  "record": {
+                    "id": "depot-original:material:1",
+                    "source_turn_id": "depot-original",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The archive cartons reached the northern depot on 17 April.",
+                    "quoted": "The archive cartons reached the northern depot on 17 April.",
+                    "relation": "new",
+                    "prior_references": [],
+                    "matter_scope": "proposed",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                },
+                "depot-original:material:2": {
+                  "id": "depot-original:material:2",
+                  "type": "material",
+                  "record": {
+                    "id": "depot-original:material:2",
+                    "source_turn_id": "depot-original",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The calibration rig reached the southern depot on 22 April.",
+                    "quoted": "The calibration rig reached the southern depot on 22 April.",
+                    "relation": "new",
+                    "prior_references": [],
+                    "matter_scope": "proposed",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "offer_digest": "e7bfff6b6fe290f1106aab77bf47f2114368fd998a13cb7b3cb1b5eea80e8681",
+        "at": "2026-10-06T05:07:23.273042+00:00",
+        "active_work_after": "",
+        "elements": [
+          {
+            "kind": "finding",
+            "text": "Your account distinguishes the two deliveries.",
+            "thread": null,
+            "by_when": null,
+            "no_deadline_reason": null,
+            "signal": "none",
+            "collapsible": false,
+            "disclosure": false,
+            "refs": [
+              "depot-original"
+            ],
+            "source": {
+              "brain": true,
+              "id": "L1",
+              "kind": "conversation",
+              "label": "Your saved words",
+              "locator": "depot-original",
+              "text": "The archive cartons reached the northern depot on 17 April.",
+              "digest": "1c730520c2261c738e39586937dd3df352343ec760f2fe98f79467da28734aba",
+              "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+            },
+            "sources": [
+              {
+                "brain": true,
+                "id": "L1",
+                "kind": "conversation",
+                "label": "Your saved words",
+                "locator": "depot-original",
+                "text": "The archive cartons reached the northern depot on 17 April.",
+                "digest": "1c730520c2261c738e39586937dd3df352343ec760f2fe98f79467da28734aba",
+                "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+              }
+            ],
+            "section": "answer",
+            "continuation_request_index": 0,
+            "continuation_block_id": "block:0",
+            "inline_citations": []
+          },
+          {
+            "kind": "finding",
+            "text": "New entry: The archive cartons reached the northern depot on 17 April.\nNew entry: The calibration rig reached the southern depot on 22 April.",
+            "refs": [],
+            "source": null,
+            "section": "answer",
+            "collapsible": false,
+            "disclosure": true,
+            "material_execution_id": "mex_98c43a777ccb7e59f8071bd76412504e"
+          }
+        ],
+        "committed": true,
+        "release_state": "released",
+        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d"
+      },
+      {
+        "turn_id": "legacy-code-acknowledgement",
+        "advocate_id": "adv_demo",
+        "message": "The northern carton arrival was 19 April, correcting the earlier account.",
+        "response": {
+          "turn_id": "legacy-code-acknowledgement",
+          "chat_id": null,
+          "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+          "route": "matter",
+          "mode": "explanation",
+          "mode_statement": "conversation response",
+          "blocked": false,
+          "blocked_reason": null,
+          "elements": [
+            {
+              "kind": "finding",
+              "text": "Saved record changes:\nRevised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+              "thread": null,
+              "by_when": null,
+              "no_deadline_reason": null,
+              "signal": "none",
+              "collapsible": false,
+              "disclosure": false,
+              "refs": [
+                "legacy-code-acknowledgement"
+              ],
+              "source": {
+                "brain": true,
+                "id": "L1",
+                "kind": "conversation",
+                "label": "Your saved words",
+                "locator": "legacy-code-acknowledgement",
+                "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+                "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+                "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+              },
+              "sources": [
+                {
+                  "brain": true,
+                  "id": "L1",
+                  "kind": "conversation",
+                  "label": "Your saved words",
+                  "locator": "legacy-code-acknowledgement",
+                  "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+                  "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+                  "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+                }
+              ],
+              "section": "answer",
+              "continuation_request_index": 0,
+              "continuation_block_id": "block:0"
+            },
+            {
+              "kind": "finding",
+              "text": "Revised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+              "refs": [],
+              "source": null,
+              "section": "answer",
+              "collapsible": false,
+              "disclosure": true,
+              "material_execution_id": "mex_6248838d8f93c61c5faf61371020e516"
+            }
+          ],
+          "material": [
+            {
+              "id": "legacy-code-acknowledgement:material:1",
+              "source_turn_id": "legacy-code-acknowledgement",
+              "state": "proposed",
+              "kind": "event",
+              "statement": "The archive cartons reached the northern depot on 19 April.",
+              "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+              "relation": "corrects",
+              "prior_references": [
+                {
+                  "turn_id": "depot-original",
+                  "role": "advocate",
+                  "quoted": "The archive cartons reached the northern depot on 17 April."
+                }
+              ],
+              "matter_scope": "current",
+              "basis": "stated",
+              "importance": "relevant",
+              "why_material": "It may affect the requested legal work.",
+              "placement": "matter",
+              "dispute_ids": [],
+              "related_material_ids": [
+                "depot-original:material:1"
+              ],
+              "grounding": "advocate_semantic_v1"
+            }
+          ],
+          "material_coverage": {
+            "state": "ok",
+            "rejected_details": 0,
+            "withheld_details": 0,
+            "unread_details": 0,
+            "rejected_proposals": [],
+            "withheld_proposals": [],
+            "unread_proposals": [],
+            "dispute_review": [],
+            "source_treatments": {
+              "P1S1": {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The archive cartons reached the northern depot on 17 April.",
+                "content_role": "reported_matter_account",
+                "reason": "The scripted source-treatment decision reports account content."
+              },
+              "P1S2": {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The calibration rig reached the southern depot on 22 April.",
+                "content_role": "reported_matter_account",
+                "reason": "The scripted source-treatment decision reports account content."
+              },
+              "L1": {
+                "turn_id": "legacy-code-acknowledgement",
+                "role": "advocate",
+                "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+                "content_role": "reported_matter_account",
+                "reason": "The scripted source-treatment decision reports account content."
+              }
+            },
+            "source_treatment_contract": "independent_account_source_treatment_v1",
+            "execution": {
+              "contract": "material_execution_v1",
+              "id": "mex_6248838d8f93c61c5faf61371020e516",
+              "owner": {
+                "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                "advocate_id": "adv_demo",
+                "turn_id": "legacy-code-acknowledgement",
+                "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+              },
+              "expected_version": 1,
+              "resulting_version": 2,
+              "persistence": "committed",
+              "semantic_coverage": "complete",
+              "material_selected": true,
+              "requests": [
+                {
+                  "request_index": 0,
+                  "request": "The northern carton arrival was 19 April, correcting the earlier account.",
+                  "material_purposes": [
+                    "interpretation_review"
+                  ],
+                  "relation": "new",
+                  "matter_scope": "current",
+                  "intent": "request",
+                  "response_mode": "record_acknowledgement",
+                  "record_requirement": {
+                    "kind": "change",
+                    "target_ids": [
+                      "depot-original:material:1"
+                    ],
+                    "operation": "corrects",
+                    "success_condition": "The northern-depot carton entry records 19 April."
+                  },
+                  "fulfillment": "fulfilled",
+                  "fulfillment_check": {
+                    "outcome": "fulfilled",
+                    "reason": "Fabricated independent decision on the original scoped result.",
+                    "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+                    "request_index": 0,
+                    "block_id": "block:0",
+                    "effect_ids": [
+                      "rfx_89e41d7d4d824b977cddd2eb894ca495"
+                    ],
+                    "current_record_ids": []
+                  },
+                  "acknowledgement_delivery": "code_only"
+                }
+              ],
+              "stages": {
+                "source_classification": {
+                  "state": "returned"
+                },
+                "dispute_extraction": {
+                  "state": "returned",
+                  "proposals": 0
+                },
+                "dispute_review": {
+                  "state": "checked",
+                  "accepted": 0,
+                  "rejected": 0,
+                  "held": 0,
+                  "unread": 0,
+                  "review_status": {
+                    "state": "checked",
+                    "checked_items": 0,
+                    "accepted_items": 0,
+                    "rejected_items": 0,
+                    "withheld_items": 0,
+                    "unread_items": 0,
+                    "unread_candidate_ids": []
+                  },
+                  "account_coverage": {
+                    "contract": "independent_account_coverage_v1",
+                    "review_scope": {
+                      "owner": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "advocate_id": "adv_demo",
+                        "turn_id": "legacy-code-acknowledgement",
+                        "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+                      },
+                      "requests": [
+                        {
+                          "request_index": 0,
+                          "record_requirement": {
+                            "kind": "change",
+                            "target_ids": [
+                              "depot-original:material:1"
+                            ],
+                            "operation": "corrects",
+                            "success_condition": "The northern-depot carton entry records 19 April."
+                          }
+                        }
+                      ]
+                    },
+                    "state": "complete",
+                    "reason": "Fabricated independent examination: the full requested account is represented.",
+                    "missing_source_ids": [],
+                    "missing_sources": []
+                  }
+                },
+                "detail_extraction": {
+                  "state": "returned",
+                  "proposals": 1
+                },
+                "detail_review": {
+                  "state": "checked",
+                  "accepted": 1,
+                  "rejected": 0,
+                  "held": 0,
+                  "unread": 0,
+                  "review_status": {
+                    "state": "checked",
+                    "checked_items": 1,
+                    "accepted_items": 1,
+                    "rejected_items": 0,
+                    "withheld_items": 0,
+                    "unread_items": 0,
+                    "unread_candidate_ids": []
+                  },
+                  "account_coverage": {
+                    "state": "complete",
+                    "reason": "Fabricated independent examination: the full requested account is represented.",
+                    "missing_source_ids": [],
+                    "contract": "independent_account_coverage_v1",
+                    "review_scope": {
+                      "owner": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "advocate_id": "adv_demo",
+                        "turn_id": "legacy-code-acknowledgement",
+                        "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+                      },
+                      "requests": [
+                        {
+                          "request_index": 0,
+                          "record_requirement": {
+                            "kind": "change",
+                            "target_ids": [
+                              "depot-original:material:1"
+                            ],
+                            "operation": "corrects",
+                            "success_condition": "The northern-depot carton entry records 19 April."
+                          }
+                        }
+                      ]
+                    },
+                    "missing_sources": []
+                  },
+                  "opening_proposed": false,
+                  "opening_unread": false
+                }
+              },
+              "review_scope": {
+                "owner": {
+                  "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                  "advocate_id": "adv_demo",
+                  "turn_id": "legacy-code-acknowledgement",
+                  "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+                },
+                "requests": [
+                  {
+                    "request_index": 0,
+                    "record_requirement": {
+                      "kind": "change",
+                      "target_ids": [
+                        "depot-original:material:1"
+                      ],
+                      "operation": "corrects",
+                      "success_condition": "The northern-depot carton entry records 19 April."
+                    }
+                  }
+                ]
+              },
+              "effects": {
+                "disputes": {
+                  "before_record_ids": [],
+                  "after_record_ids": [],
+                  "before_held_record_ids": [],
+                  "after_held_record_ids": [],
+                  "activated_record_ids": [],
+                  "retired_record_ids": [],
+                  "operations": [],
+                  "held_record_ids": [],
+                  "outside_owned_record_ids": []
+                },
+                "details": {
+                  "before_record_ids": [
+                    "depot-original:material:1",
+                    "depot-original:material:2"
+                  ],
+                  "after_record_ids": [
+                    "depot-original:material:2",
+                    "legacy-code-acknowledgement:material:1"
+                  ],
+                  "before_held_record_ids": [],
+                  "after_held_record_ids": [],
+                  "activated_record_ids": [
+                    "legacy-code-acknowledgement:material:1"
+                  ],
+                  "retired_record_ids": [
+                    "depot-original:material:1"
+                  ],
+                  "operations": [
+                    {
+                      "result_id": "legacy-code-acknowledgement:material:1",
+                      "relation": "corrects",
+                      "target_record_ids": [
+                        "depot-original:material:1"
+                      ],
+                      "retired_target_ids": [
+                        "depot-original:material:1"
+                      ],
+                      "source_references": [
+                        {
+                          "turn_id": "legacy-code-acknowledgement",
+                          "role": "advocate",
+                          "quoted": "The northern carton arrival was 19 April, correcting the earlier account."
+                        },
+                        {
+                          "turn_id": "depot-original",
+                          "role": "advocate",
+                          "quoted": "The archive cartons reached the northern depot on 17 April."
+                        }
+                      ]
+                    }
+                  ],
+                  "held_record_ids": [],
+                  "outside_owned_record_ids": []
+                }
+              },
+              "rejected_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "withheld_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "unread_proposals": {
+                "disputes": [],
+                "details": []
+              },
+              "record_changes": [
+                {
+                  "effect_id": "rfx_89e41d7d4d824b977cddd2eb894ca495",
+                  "kind": "details",
+                  "relation": "corrects",
+                  "before_records": [
+                    {
+                      "id": "depot-original:material:1",
+                      "source_turn_id": "depot-original",
+                      "state": "proposed",
+                      "kind": "event",
+                      "statement": "The archive cartons reached the northern depot on 17 April.",
+                      "quoted": "The archive cartons reached the northern depot on 17 April.",
+                      "relation": "new",
+                      "prior_references": [],
+                      "matter_scope": "proposed",
+                      "basis": "stated",
+                      "importance": "relevant",
+                      "why_material": "It may affect the requested legal work.",
+                      "placement": "matter",
+                      "dispute_ids": [],
+                      "related_material_ids": [],
+                      "grounding": "advocate_semantic_v1"
+                    }
+                  ],
+                  "after_record": {
+                    "id": "legacy-code-acknowledgement:material:1",
+                    "source_turn_id": "legacy-code-acknowledgement",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The archive cartons reached the northern depot on 19 April.",
+                    "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+                    "relation": "corrects",
+                    "prior_references": [
+                      {
+                        "turn_id": "depot-original",
+                        "role": "advocate",
+                        "quoted": "The archive cartons reached the northern depot on 17 April."
+                      }
+                    ],
+                    "matter_scope": "current",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [
+                      "depot-original:material:1"
+                    ],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                }
+              ],
+              "display": {
+                "contract": "material_result_display_v1",
+                "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+                "element": {
+                  "kind": "finding",
+                  "text": "Revised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+                  "refs": [],
+                  "source": null,
+                  "section": "answer",
+                  "collapsible": false,
+                  "disclosure": true,
+                  "material_execution_id": "mex_6248838d8f93c61c5faf61371020e516"
+                }
+              },
+              "gate_diagnostics": []
+            },
+            "opening_fallback": false
+          },
+          "research_reads": [],
+          "metrics": {
+            "llm_calls": 8,
+            "provider_retries": 0,
+            "model_calls": [
+              {
+                "operation": "interpret_conversation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "classify_account_sources",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "extract_disputes",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_disputes",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "extract_legal_details",
+                "latency_ms": 0,
+                "tier": "routine",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_material_grounding",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "continue_conversation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              },
+              {
+                "operation": "verify_continuation",
+                "latency_ms": 0,
+                "tier": "judge",
+                "model": "offline",
+                "state": "ok",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "usage_recorded": true,
+                "cost_usd": 0
+              }
+            ]
+          },
+          "replayed": false,
+          "committed": "committed",
+          "input_admitted": false,
+          "matter_version": 2,
+          "briefing": {},
+          "board_changes": [],
+          "at": "2026-10-06T05:07:23.292766+00:00",
+          "composed": [],
+          "continuation": {
+            "units": [
+              {
+                "request_index": 0,
+                "blocks": [
+                  {
+                    "id": "block:0",
+                    "kind": "completion",
+                    "text": "Saved record changes:\nRevised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+                    "span_ids": [
+                      "L1"
+                    ],
+                    "record_ids": [],
+                    "legal_source_ids": [],
+                    "uncertainty": "reported",
+                    "references": [
+                      {
+                        "type": "conversation",
+                        "id": "L1",
+                        "role": "advocate",
+                        "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+                        "turn_id": "legacy-code-acknowledgement"
+                      }
+                    ]
+                  }
+                ],
+                "questions": [],
+                "next_work": [],
+                "sufficiency": {
+                  "status": "complete",
+                  "block_id": "block:0"
+                },
+                "progress_updates": [
+                  {
+                    "target_id": "wp_40cf72614cf99059fb072829",
+                    "status": "complete",
+                    "block_id": "block:0",
+                    "reason": "The requested scoped answer is delivered.",
+                    "span_ids": [
+                      "L1"
+                    ]
+                  }
+                ],
+                "record_outcome": {
+                  "status": "performed",
+                  "block_id": "block:0",
+                  "effect_ids": [
+                    "rfx_89e41d7d4d824b977cddd2eb894ca495"
+                  ],
+                  "current_record_ids": [],
+                  "reason": "Fabricated scoped outcome against the owned record."
+                },
+                "work": {
+                  "existing_id": "",
+                  "create": true,
+                  "request": "The northern carton arrival was 19 April, correcting the earlier account.",
+                  "relation": "new",
+                  "matter_scope": "current",
+                  "intent": "request",
+                  "progress_id": "wp_40cf72614cf99059fb072829",
+                  "record_requirement": {
+                    "kind": "change",
+                    "target_ids": [
+                      "depot-original:material:1"
+                    ],
+                    "operation": "corrects",
+                    "success_condition": "The northern-depot carton entry records 19 April."
+                  },
+                  "record_requirement_origin": {
+                    "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                    "turn_id": "legacy-code-acknowledgement",
+                    "request_index": 0,
+                    "progress_id": "wp_40cf72614cf99059fb072829"
+                  }
+                },
+                "verification": "source_aware_continuation_v1",
+                "record_check": {
+                  "outcome": "fulfilled",
+                  "reason": "Fabricated independent decision on the original scoped result."
+                },
+                "progress_checks": [
+                  {
+                    "target_id": "wp_40cf72614cf99059fb072829",
+                    "status": "complete",
+                    "scope_preserved": true,
+                    "result_supported": true,
+                    "verdict": "accept",
+                    "reason": "The scripted transition retains its scoped attributed support."
+                  }
+                ],
+                "record_outcome_contract": "checked_record_outcome_v1",
+                "record_requirement": {
+                  "kind": "change",
+                  "target_ids": [
+                    "depot-original:material:1"
+                  ],
+                  "operation": "corrects",
+                  "success_condition": "The northern-depot carton entry records 19 April."
+                },
+                "progress_version": 3,
+                "record_outcome_seal": {
+                  "contract": "saved_record_outcome_v1",
+                  "version": 1,
+                  "id": "ros_28819c4ab1b4684b7ed118d52045890d23db3b966ed55fb23fc060e09c278354",
+                  "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+                  "resulting_version": 2,
+                  "requirements": [
+                    {
+                      "owner": "current_request",
+                      "request_index": 0,
+                      "record_requirement": {
+                        "kind": "change",
+                        "target_ids": [
+                          "depot-original:material:1"
+                        ],
+                        "operation": "corrects",
+                        "success_condition": "The northern-depot carton entry records 19 April."
+                      }
+                    },
+                    {
+                      "owner": "completed_task",
+                      "target_id": "wp_40cf72614cf99059fb072829",
+                      "record_requirement": {
+                        "kind": "change",
+                        "target_ids": [
+                          "depot-original:material:1"
+                        ],
+                        "operation": "corrects",
+                        "success_condition": "The northern-depot carton entry records 19 April."
+                      },
+                      "record_requirement_origin": {
+                        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                        "turn_id": "legacy-code-acknowledgement",
+                        "request_index": 0,
+                        "progress_id": "wp_40cf72614cf99059fb072829"
+                      }
+                    }
+                  ],
+                  "review": {
+                    "outcome": "fulfilled",
+                    "reason": "Fabricated independent decision on the original scoped result."
+                  },
+                  "digest": "28819c4ab1b4684b7ed118d52045890d23db3b966ed55fb23fc060e09c278354"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "request_index": 0,
+                "state": "ok",
+                "diagnostics": []
+              }
+            ],
+            "record_snapshot": {
+              "contract": "record_result_snapshot_v1",
+              "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+              "owner": {
+                "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                "advocate_id": "adv_demo",
+                "turn_id": "legacy-code-acknowledgement",
+                "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+              },
+              "resulting_version": 2,
+              "record_catalogue": {
+                "depot-original:material:2": {
+                  "id": "depot-original:material:2",
+                  "type": "material",
+                  "record": {
+                    "id": "depot-original:material:2",
+                    "source_turn_id": "depot-original",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The calibration rig reached the southern depot on 22 April.",
+                    "quoted": "The calibration rig reached the southern depot on 22 April.",
+                    "relation": "new",
+                    "prior_references": [],
+                    "matter_scope": "proposed",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                },
+                "legacy-code-acknowledgement:material:1": {
+                  "id": "legacy-code-acknowledgement:material:1",
+                  "type": "material",
+                  "record": {
+                    "id": "legacy-code-acknowledgement:material:1",
+                    "source_turn_id": "legacy-code-acknowledgement",
+                    "state": "proposed",
+                    "kind": "event",
+                    "statement": "The archive cartons reached the northern depot on 19 April.",
+                    "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+                    "relation": "corrects",
+                    "prior_references": [
+                      {
+                        "turn_id": "depot-original",
+                        "role": "advocate",
+                        "quoted": "The archive cartons reached the northern depot on 17 April."
+                      }
+                    ],
+                    "matter_scope": "current",
+                    "basis": "stated",
+                    "importance": "relevant",
+                    "why_material": "It may affect the requested legal work.",
+                    "placement": "matter",
+                    "dispute_ids": [],
+                    "related_material_ids": [
+                      "depot-original:material:1"
+                    ],
+                    "grounding": "advocate_semantic_v1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001",
+        "at": "2026-10-06T05:07:23.292766+00:00",
+        "active_work_after": "",
+        "elements": [
+          {
+            "kind": "finding",
+            "text": "Saved record changes:\nRevised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+            "thread": null,
+            "by_when": null,
+            "no_deadline_reason": null,
+            "signal": "none",
+            "collapsible": false,
+            "disclosure": false,
+            "refs": [
+              "legacy-code-acknowledgement"
+            ],
+            "source": {
+              "brain": true,
+              "id": "L1",
+              "kind": "conversation",
+              "label": "Your saved words",
+              "locator": "legacy-code-acknowledgement",
+              "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+              "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+              "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+            },
+            "sources": [
+              {
+                "brain": true,
+                "id": "L1",
+                "kind": "conversation",
+                "label": "Your saved words",
+                "locator": "legacy-code-acknowledgement",
+                "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+                "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+                "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+              }
+            ],
+            "section": "answer",
+            "continuation_request_index": 0,
+            "continuation_block_id": "block:0"
+          },
+          {
+            "kind": "finding",
+            "text": "Revised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+            "refs": [],
+            "source": null,
+            "section": "answer",
+            "collapsible": false,
+            "disclosure": true,
+            "material_execution_id": "mex_6248838d8f93c61c5faf61371020e516"
+          }
+        ],
+        "committed": true,
+        "release_state": "released",
+        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d"
+      }
+    ],
+    "brain_opening_summary": "The archive cartons reached the northern depot on 17 April. The calibration rig reached the southern depot on 22 April.",
+    "version": 2
+  },
+  "expected_elements": [
+    {
+      "kind": "finding",
+      "text": "Saved record changes:\nRevised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+      "thread": null,
+      "by_when": null,
+      "no_deadline_reason": null,
+      "signal": "none",
+      "collapsible": false,
+      "disclosure": false,
+      "refs": [
+        "legacy-code-acknowledgement"
+      ],
+      "source": {
+        "brain": true,
+        "id": "L1",
+        "kind": "conversation",
+        "label": "Your saved words",
+        "locator": "legacy-code-acknowledgement",
+        "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+        "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+        "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+      },
+      "sources": [
+        {
+          "brain": true,
+          "id": "L1",
+          "kind": "conversation",
+          "label": "Your saved words",
+          "locator": "legacy-code-acknowledgement",
+          "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+          "digest": "350f5c44ec336c56a6ef9917cfb8ddef697b5ef5b38e4a2b6797d429c991aa65",
+          "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+        }
+      ],
+      "section": "answer",
+      "continuation_request_index": 0,
+      "continuation_block_id": "block:0"
+    },
+    {
+      "kind": "finding",
+      "text": "Revised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+      "refs": [],
+      "source": null,
+      "section": "answer",
+      "collapsible": false,
+      "disclosure": true,
+      "material_execution_id": "mex_6248838d8f93c61c5faf61371020e516"
+    }
+  ],
+  "expected_execution": {
+    "contract": "material_execution_v1",
+    "id": "mex_6248838d8f93c61c5faf61371020e516",
+    "owner": {
+      "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+      "advocate_id": "adv_demo",
+      "turn_id": "legacy-code-acknowledgement",
+      "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+    },
+    "expected_version": 1,
+    "resulting_version": 2,
+    "persistence": "committed",
+    "semantic_coverage": "complete",
+    "material_selected": true,
+    "requests": [
+      {
+        "request_index": 0,
+        "request": "The northern carton arrival was 19 April, correcting the earlier account.",
+        "material_purposes": [
+          "interpretation_review"
+        ],
+        "relation": "new",
+        "matter_scope": "current",
+        "intent": "request",
+        "response_mode": "record_acknowledgement",
+        "record_requirement": {
+          "kind": "change",
+          "target_ids": [
+            "depot-original:material:1"
+          ],
+          "operation": "corrects",
+          "success_condition": "The northern-depot carton entry records 19 April."
+        },
+        "fulfillment": "fulfilled",
+        "fulfillment_check": {
+          "outcome": "fulfilled",
+          "reason": "Fabricated independent decision on the original scoped result.",
+          "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+          "request_index": 0,
+          "block_id": "block:0",
+          "effect_ids": [
+            "rfx_89e41d7d4d824b977cddd2eb894ca495"
+          ],
+          "current_record_ids": []
+        },
+        "acknowledgement_delivery": "code_only"
+      }
+    ],
+    "stages": {
+      "source_classification": {
+        "state": "returned"
+      },
+      "dispute_extraction": {
+        "state": "returned",
+        "proposals": 0
+      },
+      "dispute_review": {
+        "state": "checked",
+        "accepted": 0,
+        "rejected": 0,
+        "held": 0,
+        "unread": 0,
+        "review_status": {
+          "state": "checked",
+          "checked_items": 0,
+          "accepted_items": 0,
+          "rejected_items": 0,
+          "withheld_items": 0,
+          "unread_items": 0,
+          "unread_candidate_ids": []
+        },
+        "account_coverage": {
+          "contract": "independent_account_coverage_v1",
+          "review_scope": {
+            "owner": {
+              "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+              "advocate_id": "adv_demo",
+              "turn_id": "legacy-code-acknowledgement",
+              "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+            },
+            "requests": [
+              {
+                "request_index": 0,
+                "record_requirement": {
+                  "kind": "change",
+                  "target_ids": [
+                    "depot-original:material:1"
+                  ],
+                  "operation": "corrects",
+                  "success_condition": "The northern-depot carton entry records 19 April."
+                }
+              }
+            ]
+          },
+          "state": "complete",
+          "reason": "Fabricated independent examination: the full requested account is represented.",
+          "missing_source_ids": [],
+          "missing_sources": []
+        }
+      },
+      "detail_extraction": {
+        "state": "returned",
+        "proposals": 1
+      },
+      "detail_review": {
+        "state": "checked",
+        "accepted": 1,
+        "rejected": 0,
+        "held": 0,
+        "unread": 0,
+        "review_status": {
+          "state": "checked",
+          "checked_items": 1,
+          "accepted_items": 1,
+          "rejected_items": 0,
+          "withheld_items": 0,
+          "unread_items": 0,
+          "unread_candidate_ids": []
+        },
+        "account_coverage": {
+          "state": "complete",
+          "reason": "Fabricated independent examination: the full requested account is represented.",
+          "missing_source_ids": [],
+          "contract": "independent_account_coverage_v1",
+          "review_scope": {
+            "owner": {
+              "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+              "advocate_id": "adv_demo",
+              "turn_id": "legacy-code-acknowledgement",
+              "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+            },
+            "requests": [
+              {
+                "request_index": 0,
+                "record_requirement": {
+                  "kind": "change",
+                  "target_ids": [
+                    "depot-original:material:1"
+                  ],
+                  "operation": "corrects",
+                  "success_condition": "The northern-depot carton entry records 19 April."
+                }
+              }
+            ]
+          },
+          "missing_sources": []
+        },
+        "opening_proposed": false,
+        "opening_unread": false
+      }
+    },
+    "review_scope": {
+      "owner": {
+        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+        "advocate_id": "adv_demo",
+        "turn_id": "legacy-code-acknowledgement",
+        "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+      },
+      "requests": [
+        {
+          "request_index": 0,
+          "record_requirement": {
+            "kind": "change",
+            "target_ids": [
+              "depot-original:material:1"
+            ],
+            "operation": "corrects",
+            "success_condition": "The northern-depot carton entry records 19 April."
+          }
+        }
+      ]
+    },
+    "effects": {
+      "disputes": {
+        "before_record_ids": [],
+        "after_record_ids": [],
+        "before_held_record_ids": [],
+        "after_held_record_ids": [],
+        "activated_record_ids": [],
+        "retired_record_ids": [],
+        "operations": [],
+        "held_record_ids": [],
+        "outside_owned_record_ids": []
+      },
+      "details": {
+        "before_record_ids": [
+          "depot-original:material:1",
+          "depot-original:material:2"
+        ],
+        "after_record_ids": [
+          "depot-original:material:2",
+          "legacy-code-acknowledgement:material:1"
+        ],
+        "before_held_record_ids": [],
+        "after_held_record_ids": [],
+        "activated_record_ids": [
+          "legacy-code-acknowledgement:material:1"
+        ],
+        "retired_record_ids": [
+          "depot-original:material:1"
+        ],
+        "operations": [
+          {
+            "result_id": "legacy-code-acknowledgement:material:1",
+            "relation": "corrects",
+            "target_record_ids": [
+              "depot-original:material:1"
+            ],
+            "retired_target_ids": [
+              "depot-original:material:1"
+            ],
+            "source_references": [
+              {
+                "turn_id": "legacy-code-acknowledgement",
+                "role": "advocate",
+                "quoted": "The northern carton arrival was 19 April, correcting the earlier account."
+              },
+              {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The archive cartons reached the northern depot on 17 April."
+              }
+            ]
+          }
+        ],
+        "held_record_ids": [],
+        "outside_owned_record_ids": []
+      }
+    },
+    "rejected_proposals": {
+      "disputes": [],
+      "details": []
+    },
+    "withheld_proposals": {
+      "disputes": [],
+      "details": []
+    },
+    "unread_proposals": {
+      "disputes": [],
+      "details": []
+    },
+    "record_changes": [
+      {
+        "effect_id": "rfx_89e41d7d4d824b977cddd2eb894ca495",
+        "kind": "details",
+        "relation": "corrects",
+        "before_records": [
+          {
+            "id": "depot-original:material:1",
+            "source_turn_id": "depot-original",
+            "state": "proposed",
+            "kind": "event",
+            "statement": "The archive cartons reached the northern depot on 17 April.",
+            "quoted": "The archive cartons reached the northern depot on 17 April.",
+            "relation": "new",
+            "prior_references": [],
+            "matter_scope": "proposed",
+            "basis": "stated",
+            "importance": "relevant",
+            "why_material": "It may affect the requested legal work.",
+            "placement": "matter",
+            "dispute_ids": [],
+            "related_material_ids": [],
+            "grounding": "advocate_semantic_v1"
+          }
+        ],
+        "after_record": {
+          "id": "legacy-code-acknowledgement:material:1",
+          "source_turn_id": "legacy-code-acknowledgement",
+          "state": "proposed",
+          "kind": "event",
+          "statement": "The archive cartons reached the northern depot on 19 April.",
+          "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+          "relation": "corrects",
+          "prior_references": [
+            {
+              "turn_id": "depot-original",
+              "role": "advocate",
+              "quoted": "The archive cartons reached the northern depot on 17 April."
+            }
+          ],
+          "matter_scope": "current",
+          "basis": "stated",
+          "importance": "relevant",
+          "why_material": "It may affect the requested legal work.",
+          "placement": "matter",
+          "dispute_ids": [],
+          "related_material_ids": [
+            "depot-original:material:1"
+          ],
+          "grounding": "advocate_semantic_v1"
+        }
+      }
+    ],
+    "display": {
+      "contract": "material_result_display_v1",
+      "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+      "element": {
+        "kind": "finding",
+        "text": "Revised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+        "refs": [],
+        "source": null,
+        "section": "answer",
+        "collapsible": false,
+        "disclosure": true,
+        "material_execution_id": "mex_6248838d8f93c61c5faf61371020e516"
+      }
+    },
+    "gate_diagnostics": []
+  },
+  "expected_continuation": {
+    "units": [
+      {
+        "request_index": 0,
+        "blocks": [
+          {
+            "id": "block:0",
+            "kind": "completion",
+            "text": "Saved record changes:\nRevised entry: The archive cartons reached the northern depot on 17 April. → The archive cartons reached the northern depot on 19 April.",
+            "span_ids": [
+              "L1"
+            ],
+            "record_ids": [],
+            "legal_source_ids": [],
+            "uncertainty": "reported",
+            "references": [
+              {
+                "type": "conversation",
+                "id": "L1",
+                "role": "advocate",
+                "text": "The northern carton arrival was 19 April, correcting the earlier account.",
+                "turn_id": "legacy-code-acknowledgement"
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "next_work": [],
+        "sufficiency": {
+          "status": "complete",
+          "block_id": "block:0"
+        },
+        "progress_updates": [
+          {
+            "target_id": "wp_40cf72614cf99059fb072829",
+            "status": "complete",
+            "block_id": "block:0",
+            "reason": "The requested scoped answer is delivered.",
+            "span_ids": [
+              "L1"
+            ]
+          }
+        ],
+        "record_outcome": {
+          "status": "performed",
+          "block_id": "block:0",
+          "effect_ids": [
+            "rfx_89e41d7d4d824b977cddd2eb894ca495"
+          ],
+          "current_record_ids": [],
+          "reason": "Fabricated scoped outcome against the owned record."
+        },
+        "work": {
+          "existing_id": "",
+          "create": true,
+          "request": "The northern carton arrival was 19 April, correcting the earlier account.",
+          "relation": "new",
+          "matter_scope": "current",
+          "intent": "request",
+          "progress_id": "wp_40cf72614cf99059fb072829",
+          "record_requirement": {
+            "kind": "change",
+            "target_ids": [
+              "depot-original:material:1"
+            ],
+            "operation": "corrects",
+            "success_condition": "The northern-depot carton entry records 19 April."
+          },
+          "record_requirement_origin": {
+            "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+            "turn_id": "legacy-code-acknowledgement",
+            "request_index": 0,
+            "progress_id": "wp_40cf72614cf99059fb072829"
+          }
+        },
+        "verification": "source_aware_continuation_v1",
+        "record_check": {
+          "outcome": "fulfilled",
+          "reason": "Fabricated independent decision on the original scoped result."
+        },
+        "progress_checks": [
+          {
+            "target_id": "wp_40cf72614cf99059fb072829",
+            "status": "complete",
+            "scope_preserved": true,
+            "result_supported": true,
+            "verdict": "accept",
+            "reason": "The scripted transition retains its scoped attributed support."
+          }
+        ],
+        "record_outcome_contract": "checked_record_outcome_v1",
+        "record_requirement": {
+          "kind": "change",
+          "target_ids": [
+            "depot-original:material:1"
+          ],
+          "operation": "corrects",
+          "success_condition": "The northern-depot carton entry records 19 April."
+        },
+        "progress_version": 3,
+        "record_outcome_seal": {
+          "contract": "saved_record_outcome_v1",
+          "version": 1,
+          "id": "ros_28819c4ab1b4684b7ed118d52045890d23db3b966ed55fb23fc060e09c278354",
+          "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+          "resulting_version": 2,
+          "requirements": [
+            {
+              "owner": "current_request",
+              "request_index": 0,
+              "record_requirement": {
+                "kind": "change",
+                "target_ids": [
+                  "depot-original:material:1"
+                ],
+                "operation": "corrects",
+                "success_condition": "The northern-depot carton entry records 19 April."
+              }
+            },
+            {
+              "owner": "completed_task",
+              "target_id": "wp_40cf72614cf99059fb072829",
+              "record_requirement": {
+                "kind": "change",
+                "target_ids": [
+                  "depot-original:material:1"
+                ],
+                "operation": "corrects",
+                "success_condition": "The northern-depot carton entry records 19 April."
+              },
+              "record_requirement_origin": {
+                "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+                "turn_id": "legacy-code-acknowledgement",
+                "request_index": 0,
+                "progress_id": "wp_40cf72614cf99059fb072829"
+              }
+            }
+          ],
+          "review": {
+            "outcome": "fulfilled",
+            "reason": "Fabricated independent decision on the original scoped result."
+          },
+          "digest": "28819c4ab1b4684b7ed118d52045890d23db3b966ed55fb23fc060e09c278354"
+        }
+      }
+    ],
+    "coverage": [
+      {
+        "request_index": 0,
+        "state": "ok",
+        "diagnostics": []
+      }
+    ],
+    "record_snapshot": {
+      "contract": "record_result_snapshot_v1",
+      "receipt_id": "mex_6248838d8f93c61c5faf61371020e516",
+      "owner": {
+        "matter_id": "mat_2f4ad4ef04fd8011d7b8999bc64efe2d",
+        "advocate_id": "adv_demo",
+        "turn_id": "legacy-code-acknowledgement",
+        "offer_digest": "a12531715c311b9e7038ca343a56585c52c9b0a1ea44d13ab5f314aa0377b001"
+      },
+      "resulting_version": 2,
+      "record_catalogue": {
+        "depot-original:material:2": {
+          "id": "depot-original:material:2",
+          "type": "material",
+          "record": {
+            "id": "depot-original:material:2",
+            "source_turn_id": "depot-original",
+            "state": "proposed",
+            "kind": "event",
+            "statement": "The calibration rig reached the southern depot on 22 April.",
+            "quoted": "The calibration rig reached the southern depot on 22 April.",
+            "relation": "new",
+            "prior_references": [],
+            "matter_scope": "proposed",
+            "basis": "stated",
+            "importance": "relevant",
+            "why_material": "It may affect the requested legal work.",
+            "placement": "matter",
+            "dispute_ids": [],
+            "related_material_ids": [],
+            "grounding": "advocate_semantic_v1"
+          }
+        },
+        "legacy-code-acknowledgement:material:1": {
+          "id": "legacy-code-acknowledgement:material:1",
+          "type": "material",
+          "record": {
+            "id": "legacy-code-acknowledgement:material:1",
+            "source_turn_id": "legacy-code-acknowledgement",
+            "state": "proposed",
+            "kind": "event",
+            "statement": "The archive cartons reached the northern depot on 19 April.",
+            "quoted": "The northern carton arrival was 19 April, correcting the earlier account.",
+            "relation": "corrects",
+            "prior_references": [
+              {
+                "turn_id": "depot-original",
+                "role": "advocate",
+                "quoted": "The archive cartons reached the northern depot on 17 April."
+              }
+            ],
+            "matter_scope": "current",
+            "basis": "stated",
+            "importance": "relevant",
+            "why_material": "It may affect the requested legal work.",
+            "placement": "matter",
+            "dispute_ids": [],
+            "related_material_ids": [
+              "depot-original:material:1"
+            ],
+            "grounding": "advocate_semantic_v1"
+          }
+        }
+      }
+    }
+  }
+}

@@ -62,7 +62,10 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
             result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
             if prompt.operation == "verify_material_grounding":
                 self.grounding_inputs.append(json.loads(prompt.user))
-                if len(self.grounding_inputs) == 2:
+                # This fixture independently owns the same unresolved account
+                # gap on the initial review and on its coverage-only recheck.
+                # Empty fresh candidates do not erase retained rejected work.
+                if len(self.grounding_inputs) >= 2:
                     result = replace(result, data={**result.data,
                         "coverage": {"state": "partial", "missing_source_ids": ["L1"],
                                      "reason": ("The receipt is retained; "
@@ -113,6 +116,15 @@ def test_public_mixed_correction_and_diversion_preserve_peers_when_assignment_is
     assert "assignment-first:material:3" in {row["id"] for row in record["rows"]}
     saved = wired.store.load(response["matter_id"])
     assert [row["message"] for row in saved.brain_chat] == [first, latest]
-    assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 2
-    assert len(model.grounding_inputs) == 2
-    assert response["metrics"]["llm_calls"] == 8
+    assert sum(call.operation == "extract_legal_details" for call in model.material_calls) == 3
+    assert len(model.grounding_inputs) == 3
+    recovered = model.grounding_inputs[2]
+    assert recovered["candidates"] == []
+    assert recovered["latest_message_spans"] == reviewed["latest_message_spans"]
+    assert recovered["review_scope"] == reviewed["review_scope"]
+    assert {row["candidate_id"]: row["decision"]["verdict"]
+            for row in recovered["retained_candidate_context"]} == {
+                "D1": "accept", "D2": "reject"}
+    assert response["metrics"]["llm_calls"] == 10
+    assert [row["phase"] for row in response["metrics"]["recovery"]["events"]] == [
+        "omission_recovery:detail_reader", "omission_recovery:detail_review"]

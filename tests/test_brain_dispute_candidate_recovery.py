@@ -88,6 +88,9 @@ def test_exhausted_independent_candidate_keeps_checked_peer_and_marks_unread(fai
         "withheld_items": 0,
         "unread_items": 1,
         "unread_candidate_ids": ["C2"],
+        "envelope_unread": False,
+        "envelope_validation_issue": "",
+        "conditional_review_failure": "",
     }
     assert coverage["state"] == "unassessed"
     assert coverage["prior_assessment"]["state"] == "complete"

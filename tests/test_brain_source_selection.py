@@ -60,19 +60,28 @@ class RepeatedSelectionModel(Model):
         payload = json.loads(prompt.user)
         if prompt.operation == "verify_material_grounding":
             self.grounding_inputs.append(payload)
-        if prompt.operation != "extract_legal_details" or not result.data["changes"]:
+        if prompt.operation != "extract_legal_details":
+            return result
+        data = deepcopy(result.data)
+        if "repairs" in data:
+            groups = [unit["proposals"] for identity, unit in data["repairs"].items()
+                      if unit.get("field", identity.split(":", 1)[0]) == "changes"]
+        else:
+            groups = [data["changes"]]
+        if not any(groups):
             return result
         original = payload.get("original_input", payload)
         references = [span["id"] for message in original["earlier_conversation"]
                       if message["turn_id"] == "original" and message["role"] == "advocate"
                       for span in message["source_spans"] if span["text"].strip() == FIRST_PASSAGE]
         assert len(references) == 2
-        row = deepcopy(result.data["changes"][0])
-        row["prior_source_ids"] = [references[0], references[0], references[1]]
-        if self.invalid is not None:
-            row["prior_source_ids"].append(self.invalid)
-        self.raw_selections.append(deepcopy(row["prior_source_ids"]))
-        return replace(result, data={"new_items": result.data["new_items"], "changes": [row]})
+        for proposals in groups:
+            for row in proposals:
+                row["prior_source_ids"] = [references[0], references[0], references[1]]
+                if self.invalid is not None:
+                    row["prior_source_ids"].append(self.invalid)
+                self.raw_selections.append(deepcopy(row["prior_source_ids"]))
+        return replace(result, data=data)
 
 
 def _public_model(*, invalid=None):
@@ -136,5 +145,11 @@ def test_public_invalid_id_after_repeats_stops_before_judge_or_commit(
     assert response.status_code == 503, response.text
     assert response.json()["detail"]["committed"] == "not_committed"
     assert len(model.raw_selections) == 2
+    assert all(selection[-1] == invalid for selection in model.raw_selections)
+    repairs = [json.loads(prompt.user) for prompt in model.material_calls
+               if "validation_issue" in json.loads(prompt.user)]
+    assert len(repairs) == 1
+    assert repairs[0]["failed_units"][0]["unit_id"] == "changes:1"
+    assert repairs[0]["failed_units"][0]["proposal"]["prior_source_ids"][-1] == invalid
     assert len(model.grounding_inputs) == 1
     assert wired.store.load(opened.json()["matter_id"]).brain_chat == before

@@ -275,3 +275,88 @@ def test_completed_no_change_review_is_a_legitimate_code_acknowledgement(
     assert execution["requests"][0]["fulfillment"] == "no_change_justified"
     assert execution["requests"][0]["acknowledgement_delivery"] == "code_only"
     assert "review completed" in result["continuation"]["units"][0]["blocks"][0]["text"]
+
+
+class ContentRejectingModel(PassageModel):
+    """A scripted reviewer rejects the known fabricated unsupported prose."""
+    def structured(self, prompt, schema, tier, *, max_tokens=None):
+        result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
+        if prompt.operation != "verify_continuation" or not self.control.get("reject_text"):
+            return result
+        payload = json.loads(prompt.user)
+        data = deepcopy(result.data)
+        units = {unit["request_index"]: unit for unit in payload["units"]}
+        for verdict in data["verdicts"]:
+            unit = units[verdict["request_index"]]
+            if any(block["text"] == self.control["reject_text"] for block in unit["blocks"]):
+                verdict.update(verdict="reject",
+                               reason="This prose claims an unperformed operation.")
+                for check in verdict["block_checks"]:
+                    check.update(verdict="reject", reason=verdict["reason"])
+        return replace(result, data=data)
+
+
+def test_discarded_pure_prose_never_reaches_review_or_causes_retry(client, wired, monkeypatch):
+    message = "Correct the northern carton record using the saved original account."
+    lie = "I saved the correction and completed all record work."
+    model = install(wired, monkeypatch, [initial_plan(), record_plan(message)],
+                    [{}, {"status": "unresolved", "prose": lie, "reject_text": lie}],
+                    model_type=ContentRejectingModel)
+    baseline = send(client, ORIGINAL, BASE_TURN).json()
+    before = len(model.seen)
+    delivered = send(client, message, "pure-prereview", opened=baseline)
+    assert delivered.status_code == 200
+    result = delivered.json()
+    _, active = reopened(wired, result)
+    assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is False
+    assert lie not in json.dumps(result["elements"])
+    calls = model.seen[before:]
+    assert sum(row["operation"] == "continue_conversation" for row in calls) == 1
+    assert sum(row["operation"] == "verify_continuation" for row in calls) == 1
+    review = next(row["input"] for row in calls if row["operation"] == "verify_continuation")
+    assert all(block["text"] != lie for unit in review["units"] for block in unit["blocks"])
+    assert review["input"]["material_coverage"]["execution"]["requests"][0][
+        "acknowledgement_delivery"] == "code_only"
+    assert result["continuation"]["units"][0]["record_check"]["outcome"] == "unfinished"
+
+
+def test_same_fault_in_substantive_prose_still_requires_semantic_rejection(
+        client, wired, monkeypatch):
+    message = "Correct the carton entry and explain the broader account distinction."
+    lie = "I saved the correction and completed all record work."
+    model = install(wired, monkeypatch,
+                    [initial_plan(), record_plan(message, mode="substantive")],
+                    [{}, {"status": "unresolved", "prose": lie, "reject_text": lie}],
+                    model_type=ContentRejectingModel)
+    baseline = send(client, ORIGINAL, BASE_TURN).json()
+    before = len(model.seen)
+    result = send(client, message, "substantive-prereview", opened=baseline).json()
+    _, active = reopened(wired, result)
+    assert active == [OLD_DATE, OLD_RIG] and result["blocked"] is True
+    assert lie not in json.dumps(result["elements"])
+    assert sum(row["operation"] == "continue_conversation" for row in model.seen[before:]) == 2
+
+
+def test_repeated_none_outcome_keeps_saved_input_and_truthful_unfinished_fallback(
+        client, wired, monkeypatch):
+    message = 'Correct the northern carton record to show 19 April.'
+    lie = 'I changed and saved the carton date as requested.'
+    model = install(wired, monkeypatch, [initial_plan(), record_plan(message)],
+                    [{}, {'status': 'none', 'prose': lie}])
+    opened = send(client, ORIGINAL, BASE_TURN).json()
+    before = len(model.seen)
+    delivered = send(client, message, 'pure-none-repeated', opened=opened)
+    assert delivered.status_code == 200
+    result = delivered.json()
+    saved, active = reopened(wired, result)
+    assert active == [OLD_DATE, OLD_RIG]
+    assert saved.brain_chat[-1]['message'] == message
+    assert result['continuation']['units'] == []
+    assert result['continuation']['coverage'][0]['state'] == 'unavailable'
+    assert lie not in json.dumps(result['elements'])
+    assert any('remains unfinished' in row['text'] for row in result['elements'])
+    assert result['material_coverage']['execution']['requests'][0][
+        'acknowledgement_delivery'] == 'code_only'
+    calls = [row['operation'] for row in model.seen[before:]]
+    assert calls.count('continue_conversation') == 2
+    assert calls.count('verify_continuation') == 0

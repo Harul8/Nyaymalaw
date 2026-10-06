@@ -404,11 +404,12 @@ def passage_cases():
                 expected_grounding=False,
                 scenario="faulty",
                 status="gap_demonstrated",
-                claim_scope="known_gap",
+                claim_scope="semantic_dependency",
                 notes=(
                     "Known substantive account is mislabeled by a schema-valid source read: "
-                    "code admits that read without retry and the downstream gate rejects "
-                    "a genuine account proposal. No semantic reconsideration exists."
+                    "this standalone classifier/downstream gate rejects the proposal. "
+                    "Public turns separately exercise typed, bounded source-owner "
+                    "reconsideration; this local check cannot establish source meaning."
                 ),
             ),
             case(

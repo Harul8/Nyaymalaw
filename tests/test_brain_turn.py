@@ -716,7 +716,13 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     response = BrainService(store, model).run(
         BrainTurn("adv", latest, "grounding-turn")).as_dict()
 
-    assert response["metrics"]["llm_calls"] == 10
+    assert response["metrics"]["llm_calls"] == 13
+    recovery = response["metrics"]["recovery"]
+    assert recovery["reserved_calls"] == recovery["dispatched_calls"] == 5
+    assert [row["phase"] for row in recovery["events"]] == [
+        "omission_recovery:detail_reader", "omission_recovery:detail_review",
+        "verify_material_grounding:correction", "opening_recovery:reader",
+        "repair_opening:correction"]
     assert [row["statement"] for row in response["material"]] == [
         "We sent a notice."]
     assert {key: response["material_coverage"][key] for key in (
@@ -731,7 +737,13 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
         row["text"] for row in response["elements"])
     receipt = response["material_coverage"]["execution"]
     assessment = receipt["stages"]["detail_review"]["account_coverage"]
-    assert assessment["state"] == "partial" and assessment["missing_source_ids"] == ["L2"]
+    # This deliberately stale provider repeats old verdict IDs during a
+    # coverage-only recheck. The invalid envelope cannot certify its otherwise
+    # scripted partial judgment, while the checked peer remains available.
+    assert assessment["state"] == "unassessed" and assessment["missing_source_ids"] == []
+    assert assessment["validation_issue"]
+    assert assessment["previous_assessment"]["state"] == "partial"
+    assert assessment["previous_assessment"]["missing_source_ids"] == ["L2"]
     assert receipt["record_changes"][0]["after_record"]["statement"] == "We sent a notice."
 
 
