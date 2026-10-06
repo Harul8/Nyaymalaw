@@ -57,7 +57,7 @@ def review_evidence(*, state="complete", performed=False):
 def test_incomplete_omission_coverage_keeps_checked_performed_peer_but_not_full_review(state):
     evidence, _ = review_evidence(state=state, performed=True)
     identity = next(iter(effect_catalogue(evidence)))
-    partial = unit("performed", effects=[identity])
+    partial = unit("unresolved", effects=[identity])
     validate_record_outcome(partial, evidence, ["result"])
     with pytest.raises(SchemaViolation, match="partial/unassessed"):
         validate_record_outcome(
@@ -80,7 +80,7 @@ def test_stage_returned_and_no_candidates_do_not_substitute_for_independent_cove
         evidence["stages"]["detail_review"].pop("account_coverage")
     else:
         evidence["stages"]["detail_review"]["account_coverage"]["state"] = "unassessed"
-    validate_record_outcome(unit("review_no_change"), evidence, [])
+    validate_record_outcome(unit("unresolved"), evidence, [])
     with pytest.raises(SchemaViolation, match="coverage"):
         validate_record_outcome(unit("review_no_change", complete=True), evidence, [])
 
@@ -98,7 +98,7 @@ def test_narrower_complete_scope_does_not_close_whole_requested_review():
 def test_selected_review_task_completion_needs_coverage_while_independent_question_can_complete():
     evidence, _ = review_evidence(state="unassessed")
     independent = unit(
-        "review_no_change", progress=[{"target_id": "independent-question", "status": "complete"}]
+        "unresolved", progress=[{"target_id": "independent-question", "status": "complete"}]
     )
     validate_record_outcome(independent, evidence, [])
     completing = unit("review_no_change", progress=[{"target_id": "$work", "status": "complete"}])
@@ -173,3 +173,19 @@ def test_inherited_review_task_different_from_selected_work_requires_its_owned_s
         validate_review_completion(
             completing, evidence, requirement=required, task_id="another-review"
         )
+
+
+@pytest.mark.parametrize("status", ["performed", "already_current", "review_no_change"])
+@pytest.mark.parametrize("state", ["partial", "unassessed"])
+def test_positive_review_result_cannot_use_partial_reply_as_completion_bypass(status, state):
+    evidence, _ = review_evidence(state=state, performed=status == "performed")
+    effects = list(effect_catalogue(evidence)) if status == "performed" else []
+    current = ["result"] if status == "already_current" else []
+    positive = unit(status, effects=effects, current=current)
+    with pytest.raises(SchemaViolation, match="partial/unassessed"):
+        validate_record_outcome(positive, evidence, ["result"])
+    limited = unit("unresolved", effects=effects, current=current)
+    validate_record_outcome(limited, evidence, ["result"])
+    for reviewer in ("dispute_review", "detail_review"):
+        evidence["stages"][reviewer]["account_coverage"]["state"] = "complete"
+    validate_record_outcome(positive, evidence, ["result"])

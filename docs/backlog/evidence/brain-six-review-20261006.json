@@ -603,6 +603,21 @@
         "tests/test_brain_research_semantic_reuse.py",
         "tests/test_brain_research_account_purpose_reuse.py"
       ]
+    },
+    {
+      "slice": "Positive review results require whole requested coverage",
+      "owners": [
+        "LB-190",
+        "LB-191"
+      ],
+      "decision": "Any positive typed result for a requested review requires complete independent coverage of that exact original current scope even when reply sufficiency is partial. A real narrower correction/current-state observation remains usable under unresolved with checked IDs; independently answered prior questions can complete. Explicitly named inherited review goals are checked only when actually completed, avoiding an unrelated-task false rejection.",
+      "validation": "95 offline execution, review coverage, effect/current-state, work sealing and writer cases passed; six new paired positive-result bypass controls cover performed/already_current/review_no_change with partial/unassessed coverage. Ruff passed; real-model/browser semantics deferred.",
+      "files": [
+        "nm/brain/execution_contracts.py",
+        "tests/test_brain_review_completion.py",
+        "tests/test_brain_review_completion_diagnostics.py",
+        "tests/test_brain_execution_contracts.py"
+      ]
     }
   ]
 }

@@ -221,7 +221,7 @@ def test_review_no_change_allows_zero_candidates_but_not_skipped_or_unrequested_
     )
     skipped = deepcopy(evidence)
     skipped["stages"]["detail_extraction"]["state"] = "not_run"
-    with pytest.raises(SchemaViolation, match="actual requested reading"):
+    with pytest.raises(SchemaViolation, match="actual reading"):
         validate_record_outcome(unit("review_no_change"), skipped, ["prior"])
     unrequested = deepcopy(evidence)
     unrequested["requests"][0]["record_requirement"]["kind"] = "none"

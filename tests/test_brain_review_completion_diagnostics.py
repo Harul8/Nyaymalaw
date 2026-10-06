@@ -57,7 +57,7 @@ def review_evidence(*, state="complete", performed=False):
 def test_incomplete_omission_coverage_keeps_checked_performed_peer_but_not_full_review(state):
     evidence, _ = review_evidence(state=state, performed=True)
     identity = next(iter(effect_catalogue(evidence)))
-    partial = unit("performed", effects=[identity])
+    partial = unit("unresolved", effects=[identity])
     validate_record_outcome(partial, evidence, ["result"])
     with pytest.raises(SchemaViolation, match="partial/unassessed"):
         validate_record_outcome(
@@ -80,7 +80,7 @@ def test_stage_returned_and_no_candidates_do_not_substitute_for_independent_cove
         evidence["stages"]["detail_review"].pop("account_coverage")
     else:
         evidence["stages"]["detail_review"]["account_coverage"]["state"] = "unassessed"
-    validate_record_outcome(unit("review_no_change"), evidence, [])
+    validate_record_outcome(unit("unresolved"), evidence, [])
     with pytest.raises(SchemaViolation, match="coverage"):
         validate_record_outcome(unit("review_no_change", complete=True), evidence, [])
 
@@ -98,7 +98,7 @@ def test_narrower_complete_scope_does_not_close_whole_requested_review():
 def test_selected_review_task_completion_needs_coverage_while_independent_question_can_complete():
     evidence, _ = review_evidence(state="unassessed")
     independent = unit(
-        "review_no_change", progress=[{"target_id": "independent-question", "status": "complete"}]
+        "unresolved", progress=[{"target_id": "independent-question", "status": "complete"}]
     )
     validate_record_outcome(independent, evidence, [])
     completing = unit("review_no_change", progress=[{"target_id": "$work", "status": "complete"}])

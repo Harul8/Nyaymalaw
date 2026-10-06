@@ -295,11 +295,18 @@ def validate_review_completion(
         else {"$work", work.get("existing_id"), work.get("progress_id")} - {None, ""}
     )
     completing = (
+        task_id is None
+        and unit.get("record_outcome", {}).get("status")
+        in ("performed", "already_current", "review_no_change")
+    ) or (
         task_id is None and unit.get("sufficiency", {}).get("status") == "complete"
     ) or any(
         row.get("status") == "complete" and row.get("target_id") in selected
         for row in unit.get("progress_updates", [])
     )
+    # A positive declared result certifies the requested review even when
+    # prose sufficiency is partial. Narrower checked effects remain available
+    # under unresolved, without turning them into whole-review fulfillment.
     if not completing:
         return
     receipt = _receipt(receipt)
