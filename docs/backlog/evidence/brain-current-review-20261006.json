@@ -1038,7 +1038,10 @@
     "ledger_charged_at_new_authorization": 1.877078,
     "available_under_cumulative5": 3.122922,
     "pinned_model": "gpt-4.1-mini-2025-04-14",
-    "no_further_paid_calls_since_baseline": true
+    "no_further_paid_calls_since_baseline": true,
+    "no_further_paid_sincebaseline": false,
+    "cumulative_charge_usd": 2.005571,
+    "remaining_usd": 2.994429
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1064,5 +1067,60 @@
       "mixed independent greeting/diversion/question outcome"
     ],
     "status": "Plan only; not implemented or qualified."
-  }
+  },
+  "repair_live_acceptance": {
+    "date": "2026-10-06",
+    "version": "9f4c1ef production; stable focused tests fingerprint f6a152b43ffc1cf5",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "browser": "authenticated Codex in-app browser synthetic matter, reloaded and reopened from My work",
+    "matter_id": "mat_eb20e39e8197101b161b06c878ff6c88",
+    "turn_id": "turn_ca16b3e0-0867-4b0f-89c4-dba211574f9c",
+    "matter_version": 1,
+    "calls": 17,
+    "operations": {
+      "interpret_conversation": 2,
+      "classify_account_sources": 1,
+      "extract_disputes": 2,
+      "verify_disputes": 2,
+      "extract_legal_details": 1,
+      "verify_material_grounding": 2,
+      "decompose_disputes": 2,
+      "read_legal_requirements": 1,
+      "verify_legal_requirements": 2,
+      "continue_conversation": 1,
+      "verify_continuation": 1
+    },
+    "model_seconds": 235.609,
+    "input_tokens": 215926,
+    "output_tokens": 26324,
+    "charge_usd": 0.128493,
+    "unknown_charges": 0,
+    "combined_charge_usd": 2.005571,
+    "combined_remaining_usd": 2.994429,
+    "observed_disputes": 3,
+    "observed_material_details": 6,
+    "gathering_items": 0,
+    "acceptance": "failed; material reader no longer empty, but detail/support omissions, dispute inflation, no useful source-backed work, internal diagnostic display and repetitive reply remain",
+    "observed_improvements": [
+      "Six attributed detail records saved; former baseline saved none. This is observational, not causal attribution from one probabilistic run.",
+      "Current public and canonical outcome were partial/unfinished, unlike earlier complete task baseline. This does not establish mechanical delivery fulfillment.",
+      "Selected original words and reported junior draft attribution preserved in saved/reopened reply; no admission by client was asserted."
+    ],
+    "remaining": [
+      "Rent issue held after source-selection mismatch despite substantive account.",
+      "Uncertain screenshot withheld after out-of-bounds support then reviewer interpreted its own malformed span as unsupported candidate.",
+      "Denial of unapproved draft classified as separate dispute; evidence questions correctly rejected as supporting premises after contradictory initial verdicts.",
+      "Independently checkable conduct grouped into one matter-wide detail; no details linked to disputes.",
+      "No gathering items or checked legal findings delivered.",
+      "Opening title held after source-check mismatch; matter called Matter.",
+      "Reply repeats original account and material statuses rather than requested analysis.",
+      "Dispute pane exposed internal verification instructions and corpus diagnostic text."
+    ],
+    "call_analysis": "17 actual calls: 2 interpreter, 1 source-purpose, 2 dispute reader, 2 dispute Judge, 1 material reader, 2 material Judge, 2 decomposition groups, 1 law reader, 2 law Judge, 1 continuation writer, 1 continuation Judge. Existing bounded corrections; no new routine stage from current fixes.",
+    "screenshots": [
+      "outputs\\brain-repair-20261006\\matter-a-dispute.png",
+      "outputs\\brain-repair-20261006\\matter-a-reopened.png"
+    ]
+  },
+  "repair_live_evidence": "docs/backlog/evidence/brain-current-review-20261006-repair-live.json.gz"
 }
