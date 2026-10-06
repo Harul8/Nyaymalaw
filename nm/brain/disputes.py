@@ -34,9 +34,12 @@ provide context, not fresh assertions. Records marked record_role=nm_interpretat
 are derived formulations that may be wrong, not original evidence. The account
 and mentioned records remain unverified; an empty history is a valid first turn.
 
-Purpose: Propose independently contestable issues contributed now, or justified
-repairs of sourced formulations during relevant authorised review. Review can
-authorise repair without a new factual assertion; original advocate words
+Purpose: Propose disputes reported in the original account, or justified
+repairs of sourced formulations during relevant authorised review. A dispute
+is reported adverse conduct or incompatible claims, positions or rights needing
+a practical resolution. A fact's possible future contestability is not a
+reported dispute. Identify the conflict before proposing its formulation.
+Review can authorise repair without a new factual assertion; original advocate words
 supply its evidence. This call admits no fact, law, permission, action or
 completed assessment.
 
@@ -64,15 +67,21 @@ original account supporting a repair. The server attaches exact saved words
 and each selected target's original advocate passage. A contextual citation
 does not authorise a revision.
 
-Activity 2 - Identify the independently contested issue.
-Look for: Reported adverse conduct or a contested right or position needing
-its own practical conclusion. Separate issues that could be answered
+Activity 2 - Identify the reported conflict.
+Look for: Read the original account for the conduct presented as adverse or
+the incompatible positions or rights. A dispute does not require legal labels,
+an express denial from another party, identified responsibility or proved facts.
+It does require a reported conflict: do not infer one merely from a significant
+event, an attributed position, a request to record it, or the possibility that
+someone might later disagree. Neutral developments belong in the material
+record; a request for legal assistance does not make each supplied fact a dispute.
+First establish that conflict, then separate issues that could be answered
 differently or receive different remedies, even with shared actors or evidence.
 Supporting premises, legal theories, evidentiary gaps, legal-effect uncertainty
 and alternative remedies do not alone create another dispute. Future harm is
 a risk unless an independently contested right already exists.
-Consider every contestable act or position in the latest account, including
-one with an unknown actor, cause or connection. Missing identity or proof
+Consider every reported adverse act or incompatible position in the latest
+account, including one with an unknown actor, cause or connection. Missing identity or proof
 does not erase conduct. Preserve commitments, conditions, chronology and
 negation: an undertaking does not establish responsibility for an earlier act,
 and a continued condition does not establish breach before an undertaking is
@@ -92,7 +101,7 @@ formulation. Shared words, people or sources alone do not establish identity.
 A changed supporting detail can leave the contested conduct and issue unchanged.
 Distinguish an advocate account change from repair of NM's unsupported wording
 against exact saved account during relevant current authorised work.
-Each replacement must remain one independently contestable issue. Multiple
+Each replacement must remain one reported dispute. Multiple
 targets must be genuine duplicates or the same underlying issue, not distinct
 accounts sharing review instructions, actors or topics. If NM incorrectly
 merged issues, restore atomic sourced successors with explicit lineage and
@@ -104,7 +113,7 @@ changes with at least one exact active ID in related_dispute_ids and relation ad
 corrects, contradicts or withdraws. The relation describes the saved formulation,
 not how recently words arrived. Describe underlying conduct and which account
 or interpretation changed, not the correction process as the dispute.
-When no safe target exists, a current contestable formulation may enter
+When no safe target exists, a current reported dispute may enter
 new_items with earlier context and preserved uncertainty; never claim a saved
 record was changed or withdrawn without that supported operation.
 

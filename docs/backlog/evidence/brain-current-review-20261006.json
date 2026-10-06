@@ -1335,6 +1335,20 @@
         "checked_gathering_items": 0
       },
       "remaining": "Neutral event is still wrongly admitted; writer/Judge meaning distinction needs repair. Recap completeness and support-span entailment remain open. Not production ready."
+    },
+    {
+      "piece": "dispute reader establishes a reported conflict before proposing issues",
+      "owner": "nm/brain/disputes.py::_SYSTEM",
+      "version": "bb68078 plus one prompt/production file",
+      "invariant": "A significant original fact or hypothetical future disagreement is not a reported dispute. Neutral material remains material; reported adverse conduct needs no express opposing denial, legal label, identified actor or proof.",
+      "verification": {
+        "focused_passed": 70,
+        "unchanged_public_failures": 13,
+        "baseline_method": "Replace only _SYSTEM in memory with bb68078 original: coverage public6 failures/21pass; post-application public7failures/2pass, identical to candidate. Causes still under review, not waived.",
+        "ruff": "passed"
+      },
+      "call_impact": "No new model call/stage; existing dispute reader instructions only. Real-mini semantic qualification is pending.",
+      "remaining": "Signed-in neutral/adverse browser pair before qualification; independent source/coverage mechanical failures need precise causal resolution."
     }
   ],
   "additional_reviewer_input": {
