@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 
 from nm.brain.checked import require_independent_result
 from nm.brain.conversation import OpeningCandidate, opening_title_issue
 from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.record_review import (
+    ACCOUNT_COVERAGE_CONTRACT,
     admitted_record_decisions,
     candidate_account_ids,
+    checked_coverage,
+    coverage_schema,
     derived_record,
     owned_source_treatments,
     restoration_peer_ids,
@@ -160,6 +164,52 @@ Overall acceptance cannot override these checks. Give a short reason; do not
 rewrite a proposal, copy passages, decide allegation truth or add facts."""
 
 
+_COVERAGE_SYSTEM = """
+
+Message: This is a scoped extension of the same independent material grounding
+read. The input additionally supplies review_scope, coverage_source_ids,
+active_material and active_disputes; source_treatments and the complete original
+conversation remain the evidentiary basis.
+
+Purpose: Independently assess materially missing content or needed reconciliation
+in this material stage's authorised scope against original evidence and represented
+state, separately from checking individual proposals.
+
+Activity 6 - Independently check material coverage when review_scope is supplied.
+Look for: First read the complete original advocate account within the current
+review_scope, separately from candidate-selected citations. coverage_source_ids
+is the full owned advocate catalogue. source_treatments supplies canonical
+turns, speakers and exact words. review_scope describes authorised work, not
+facts to restore. active_material and active_disputes supply the complete
+current/held interpretations; compare them with original words, never treat
+their NM formulations as their own evidence. Then assess what remains
+represented after this call's verdicts and retained_candidate_context decisions.
+A rejected proposal does not represent an omitted account merely because it was
+submitted. A checked current record may already represent the account without
+any new proposal. Preserve uncertainty, source purpose and separate propositions,
+including multiple propositions in one span. Held/outside-owned observations
+must retain their actual scope, not become current-matter facts.
+Outcome: In addition to verdicts, return coverage with state, reason and
+missing_source_ids. complete means no materially missing content or needed
+reconciliation was found in this material stage's authorised scope after checking
+original evidence and represented state; missing_source_ids is empty. partial
+means materially missing content or needed reconciliation remains: select owned
+source IDs from coverage_source_ids when the gap can be localised, and explain
+the missing proposition or distinction. Missing IDs may be empty when a relevant
+reconciliation or scope gap cannot be localised; explain that limitation.
+unassessed means coverage could not be dependably decided; missing_source_ids
+may identify known unresolved portions or remain empty when they cannot be
+localised. A valid partial or unassessed judgment is not a malformed response.
+Give a concise substantive source-linked reason for every state. Do not infer
+coverage from candidate counts, cited-ID coverage or the existence of a JSON
+object, or invent facts, materiality or completion. One source ID does not mean
+one proposition, and selecting it does not prove all its content was represented.
+This is a coverage judgment, not proof of factual truth, execution, saving,
+per-request fulfillment or legal-task completion. Return verdicts=[] when no
+candidate IDs are listed, including coverage-only correction. Retained candidate
+decisions remain comparison context and must not be repeated or overridden."""
+
+
 @dataclass(frozen=True)
 class GroundingResult:
     details: tuple[MaterialCandidate, ...]
@@ -181,15 +231,21 @@ _VERDICT = {
 }
 
 
-def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=()) -> dict:
+def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
+            *, coverage_ids: tuple[str, ...] | None = None) -> dict:
     verdict = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
         **review_properties(source_ids, target_ids, peer_ids),
-        "candidate_id": {"type": "string", "enum": list(ids)},
+        "candidate_id": {"type": "string", "enum": list(ids) or [""]},
     }, "required": [*_VERDICT["required"], "account_check", "target_checks"]}
+    properties = {"verdicts": {"type": "array", "items": verdict,
+                              **({"maxItems": 0} if not ids else {})}}
+    required = ["verdicts"]
+    if coverage_ids is not None:
+        properties["coverage"] = coverage_schema(coverage_ids)
+        required.append("coverage")
     return {"type": "object", "additionalProperties": False,
-            "required": ["verdicts"],
-            "properties": {"verdicts": {"type": "array", "items": verdict}}}
+            "required": required, "properties": properties}
 
 
 def _read_verdicts(data: object, ids: tuple[str, ...],
@@ -246,17 +302,26 @@ def verify_material_grounding(
         model: ModelPort, *, candidates: tuple[MaterialCandidate, ...],
         opening: OpeningCandidate, earlier: tuple[object, ...], latest: str,
         active_disputes: tuple[dict, ...] = (), prior_material: tuple[dict, ...] = (),
-        current_matter_id: str | None = None, source_treatments: dict[str, dict] | None = None
+        current_matter_id: str | None = None, source_treatments: dict[str, dict] | None = None,
+        review_scope: dict | None = None, active_material: tuple[dict, ...] = (),
+        coverage: dict | None = None
         ) -> GroundingResult:
-    """Check all detail and opening prose before any of it is persisted."""
+    """Check proposals and requested coverage, preserving the legacy result shape."""
     details = tuple(candidate for candidate in candidates
                     if candidate.kind != "dispute")
-    if not details and not opening.ready:
+    requested_coverage = review_scope is not None
+    if not details and not opening.ready and not requested_coverage:
         return GroundingResult((), True, 0)
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
     source_treatments = owned_source_treatments(source_treatments, latest_sources, prior_sources)
     payload["source_treatments"] = source_treatments
     payload["current_matter_id"] = current_matter_id
+    coverage_ids = tuple(source_treatments) if requested_coverage else None
+    if requested_coverage:
+        payload["review_scope"] = deepcopy(review_scope)
+        payload["coverage_source_ids"] = list(coverage_ids)
+        payload["active_material"] = [derived_record(row) for row in active_material]
+        payload["active_disputes"] = [derived_record(row) for row in active_disputes]
     selected_disputes = {identity for candidate in details for identity in candidate.dispute_ids}
     selected_material = {identity for candidate in details
                          for identity in candidate.related_material_ids}
@@ -310,11 +375,17 @@ def verify_material_grounding(
             restoration_peer_ids(row["candidate_id"], targets))
     decisions: dict[str, dict] = {}
     pending = tuple(row["candidate_id"] for row in proposed)
+    if requested_coverage:
+        pending += ("$coverage",)
     issues: dict[str, tuple[str, ...]] = {}
+    assessed_coverage = None
+    previous_assessment = None
+    system = _SYSTEM + (_COVERAGE_SYSTEM if requested_coverage else "")
     for attempt in range(2):
+        candidate_ids = tuple(identity for identity in pending if identity != "$coverage")
         current = {**payload,
                    "candidates": [row for row in proposed
-                                  if row["candidate_id"] in pending]}
+                                  if row["candidate_id"] in candidate_ids]}
         if attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
@@ -324,38 +395,98 @@ def verify_material_grounding(
                 "Return one valid verdict per listed "
                 "ID; acceptance requires reported matter account with no invented legal "
                 "analysis, operation_supported true and complete supported target checks. "
-                "Failed account or target checks cannot be overridden by overall acceptance.")
+                "Failed account or target checks cannot be overridden by overall acceptance."
+                + (" Return coverage under the same contract, assessing the original "
+                   "account against this call's verdicts and retained decisions; a valid "
+                   "partial or unassessed judgment need not be changed to complete."
+                   if requested_coverage else ""))
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(8192, 512 * len(pending)))
-        if (estimate_tokens(_SYSTEM + user) + output_limit
+        if (estimate_tokens(system + user) + output_limit
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow(
                 "The full conversation exceeds the material verification budget")
         try:
             result = model.structured(
-                Prompt(system=_SYSTEM, user=user, operation="verify_material_grounding"),
-                _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
+                Prompt(system=system, user=user, operation="verify_material_grounding"),
+                _schema(candidate_ids, tuple(sorted(set().union(*account_ids.values()))),
                         tuple(sorted(set().union(*targets.values()))),
-                        tuple(sorted({peer for key in pending
-                                      for peer in restoration_peer_ids(key, targets)}))),
+                        tuple(sorted({peer for key in candidate_ids
+                                      for peer in restoration_peer_ids(key, targets)})),
+                        coverage_ids=coverage_ids),
                 Tier.JUDGE, max_tokens=output_limit)
             require_independent_result(result)
             if not result.usable:
                 raise SchemaViolation("Material grounding verification did not finish")
-            checked, issues = _read_verdicts(result.data, pending, account_ids=account_ids,
-                                            targets=targets, source_treatments=source_treatments)
+            checked, issues = _read_verdicts(
+                result.data, candidate_ids, account_ids=account_ids,
+                targets=targets, source_treatments=source_treatments)
         except SchemaViolation as exc:
             issues = {key: (review_contract_issue(exc),) for key in pending}
+            if requested_coverage:
+                issues["$coverage"] = (review_contract_issue(exc),)
+                if assessed_coverage is not None:
+                    previous_assessment = assessed_coverage
+                assessed_coverage = None
+            pending = tuple(issues)
             continue
         decisions.update(checked)
+        if requested_coverage:
+            if assessed_coverage is not None:
+                previous_assessment = assessed_coverage
+            try:
+                assessed_coverage = checked_coverage(
+                    result.data.get("coverage") if isinstance(result.data, dict) else None,
+                    coverage_ids)
+            except SchemaViolation as exc:
+                assessed_coverage = None
+                issues["$coverage"] = (review_contract_issue(exc),)
         pending = tuple(issues)
         if not pending:
             break
-    if pending:
+    unresolved_candidates = tuple(identity for identity in pending if identity != "$coverage")
+    if unresolved_candidates:
+        candidate_issues = {identity: issues[identity] for identity in unresolved_candidates}
         raise SchemaViolation(
             "Material grounding verification remained incomplete for "
-            + ", ".join(pending) + ": " + review_issues_text(issues))
+            + ", ".join(unresolved_candidates) + ": " + review_issues_text(candidate_issues))
+    reviewed_decisions = decisions
     decisions = admitted_record_decisions(decisions)
+    downgraded = [identity for identity, row in reviewed_decisions.items()
+                  if row["verdict"] == "accept" and decisions[identity]["verdict"] != "accept"]
+    if requested_coverage and downgraded:
+        if assessed_coverage is not None:
+            previous_assessment = assessed_coverage
+        assessed_coverage = None
+        issues["$coverage"] = (
+            "Final admission withheld reviewed proposals " + ", ".join(downgraded)
+            + " because required successors were unavailable; coverage has not assessed "
+            "this final admitted set.",)
+    if requested_coverage and coverage is not None:
+        assessment = assessed_coverage or {
+            "state": "unassessed",
+            "reason": ("Independent material coverage could not be confirmed for the "
+                       "final admitted proposals."),
+            "missing_source_ids": [],
+            "validation_issue": review_issues_text({"$coverage": issues.get("$coverage", ())}),
+        }
+        bound = {**assessment, "contract": ACCOUNT_COVERAGE_CONTRACT,
+                 "review_scope": deepcopy(review_scope),
+                 "missing_sources": [
+                     {"source_id": identity,
+                      **{field: source_treatments[identity][field]
+                         for field in ("turn_id", "role", "quoted")}}
+                     for identity in assessment["missing_source_ids"]]}
+        if assessed_coverage is None and previous_assessment is not None:
+            bound["previous_assessment"] = {
+                **previous_assessment,
+                "missing_sources": [
+                    {"source_id": identity,
+                     **{field: source_treatments[identity][field]
+                        for field in ("turn_id", "role", "quoted")}}
+                    for identity in previous_assessment["missing_source_ids"]]}
+        coverage.clear()
+        coverage.update(bound)
     accepted = tuple(candidate for key, candidate in keyed.items()
                      if decisions[key]["verdict"] == "accept")
     title_issue = opening_title_issue(opening.title) if opening.ready else None

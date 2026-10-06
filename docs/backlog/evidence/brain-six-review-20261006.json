@@ -292,6 +292,20 @@
         "nm/brain/dispute_verification.py",
         "tests/test_brain_dispute_coverage.py"
       ]
+    },
+    {
+      "slice": "independent-material-omission-review",
+      "owners": [
+        "LB-176",
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Extend existing detail/opening reviewer with optional authorized review_scope, complete original advocate catalogue and full active/held material plus disputes. Independently assess omissions and needed reconciliation even when no candidates are returned. A no-change review of already represented content is valid. Coverage is separate from candidate citations, execution, persistence and fulfillment. Partial/unassessed scopes remain useful; coverage-only failure cannot discard validated peers. Dependency admission changes make final coverage unassessed. Later turn handoff activates this prerequisite.",
+      "validation": "39 new material coverage and existing grounding tests pass, including empty omissions/no-change, held/current ownership, full original sources, strict adapter errors, bounded coverage-only correction, valid partial[]/unassessed and restoration downgrade. Ruff passes; no real-model/browser calls.",
+      "files": [
+        "nm/brain/material_verification.py",
+        "tests/test_brain_material_coverage.py"
+      ]
     }
   ]
 }
