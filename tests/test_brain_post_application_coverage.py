@@ -174,6 +174,25 @@ def test_preserved_history_from_another_owned_source_cannot_fill_this_original_p
     assert "historical_representations" not in result["dispositions"][0]
 
 
+@pytest.mark.parametrize("same_turn", [True, False])
+def test_smaller_owned_span_in_preserved_history_keeps_its_original_turn_identity(same_turn):
+    proof = history_proof()
+    proof["record"]["quoted"] = "Earlier context. " + SOURCES["north"]["quoted"] + " Later context."
+    if not same_turn:
+        proof["record"]["source_turn_id"] = "another-turn-with-identical-words"
+    proof["historical_record"] = deepcopy(proof["record"])
+    proof["effect"]["source_references"] = [{
+        "turn_id": proof["record"]["source_turn_id"], "role": "advocate",
+        "quoted": proof["record"]["quoted"],
+    }]
+    result = applied(assessment(records=("north-old",)), history={"north-old": proof})
+    assert result["state"] == ("complete" if same_turn else "partial")
+    assert result["missing_source_ids"] == ([] if same_turn else ["north"])
+    assert result["dispositions"][0]["record_ids"] == []
+    assert bool(result["dispositions"][0].get("historical_representations")) is same_turn
+    assert result["dispositions"][1]["record_ids"] == ["south-current"]
+
+
 @pytest.mark.parametrize("fault", [
     "changed_archive", "unperformed", "not_retired", "rejected", "not_preserved",
     "wrong_identity", "different_proposal", "missing_target_check", "unsupported_account",

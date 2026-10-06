@@ -555,6 +555,18 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
         record = proof["record"]
         if source["role"] != "advocate" or source["turn_id"] != record["source_turn_id"]:
             return None
+        representation = {"record_id": identity,
+                          "representation_kind": "historical_supersession",
+                          "effect_id": proof["effect"]["id"],
+                          "result_id": proof["effect"]["result_id"],
+                          "relation": proof["effect"]["relation"],
+                          "original_source": {"turn_id": record["source_turn_id"],
+                                              "role": "advocate", "quoted": record["quoted"]}}
+        # A smaller owned source span is also preserved by its longer original
+        # archived quote. Turn, speaker, actual retirement and positive target
+        # review still apply; containment changes no source meaning.
+        if source["quoted"] in record["quoted"]:
+            return representation
         cursor = 0
         while True:
             start = source["quoted"].find(record["quoted"], cursor)
@@ -562,13 +574,7 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
                 return None
             end = start + len(record["quoted"])
             if max(start, portion["start"]) < min(end, portion["end"]):
-                return {"record_id": identity,
-                        "representation_kind": "historical_supersession",
-                        "effect_id": proof["effect"]["id"],
-                        "result_id": proof["effect"]["result_id"],
-                        "relation": proof["effect"]["relation"],
-                        "original_source": {"turn_id": record["source_turn_id"],
-                                            "role": "advocate", "quoted": record["quoted"]}}
+                return representation
             cursor = start + 1
 
     for portion in result["dispositions"]:
