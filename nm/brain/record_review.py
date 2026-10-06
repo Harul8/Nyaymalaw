@@ -867,7 +867,11 @@ def _coverage_candidate_support(decisions, references, choices, admitted) -> dic
                     or check["supports_proposal"] and not check["supplies_account_content"]):
                 raise SchemaViolation("Coverage candidate support contradicts original portions")
             if check["supplies_account_content"] and check["supports_proposal"]:
-                support[source] = portions
+                # Local IDs may alias the same immutable original reference.
+                # This changes dependency choices, never saved IDs or authority.
+                for alias, reference in references.items():
+                    if reference == references[source]:
+                        support.setdefault(alias, []).extend(portions)
         if not support:
             raise SchemaViolation("Coverage candidate support has no positive original dependency")
         result[identity] = support
@@ -940,9 +944,10 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
                 raise SchemaViolation(
                     "Represented coverage selects a candidate not actually admitted")
             if support is not None and any(not any(
-                    max(portion["start"], original["start"])
-                    < min(portion["end"], original["end"])
-                    for original in support.get(candidate, {}).get(identity, []))
+                    max(portion["start"], original["start"], selected["start"])
+                    < min(portion["end"], original["end"], selected["end"])
+                    for original in support.get(candidate, {}).get(identity, [])
+                    for selected in checks[identity]["substantive_spans"])
                     for candidate in candidates):
                 raise SchemaViolation(
                     "Represented coverage selects a candidate without independently checked "

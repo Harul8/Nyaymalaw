@@ -207,3 +207,58 @@ def test_additive_dependency_argument_does_not_silently_change_older_fresh_calle
         output, SOURCES, source_references=SOURCES, candidate_ids=("D1",),
         admitted_candidate_ids=("D1",))
     assert result["state"] == "complete"
+
+
+def alias_output(*, changed=None):
+    references = {"first": deepcopy(SOURCES["first"]), "alias": deepcopy(SOURCES["first"])}
+    references["alias"].update(changed or {})
+    output = coverage([], sources=references)
+    output["dispositions"] = [{
+        "source_id": identity, "start": 0, "end": len(reference["quoted"]),
+        "status": "represented", "record_ids": [], "candidate_ids": ["D1"],
+        "reason": "The independent reviewer declares this particular original portion represented.",
+    } for identity, reference in references.items()]
+    return references, output
+
+
+def test_distinct_local_ids_for_identical_canonical_original_words_are_harmless_aliases():
+    references, output = alias_output()
+    supplied = deepcopy(output)
+    decisions = {"D1": decision("D1")}
+    original_decisions = deepcopy(decisions)
+    result = checked(output, decisions, sources=references)
+    assert result["state"] == "complete" and result["missing_source_ids"] == []
+    assert [row["source_id"] for row in result["dispositions"]] == ["first", "alias"]
+    assert output == supplied and decisions == original_decisions
+
+
+@pytest.mark.parametrize("changed", [
+    {"turn_id": "different-original-turn"},
+    {"quoted": "The north parcel arrived early."},
+    {"quoted": "The opposing party says the north parcel arrived late."},
+])
+def test_equal_topics_or_similar_words_do_not_grant_an_original_source_alias(changed):
+    references, output = alias_output(changed=changed)
+    with pytest.raises(SchemaViolation, match="support for this original source portion"):
+        checked(output, {"D1": decision("D1")}, sources=references)
+
+
+def test_same_words_from_nm_are_not_an_advocate_evidence_alias():
+    references, output = alias_output(changed={"role": "nm"})
+    with pytest.raises(SchemaViolation, match="canonical original advocate words"):
+        checked(output, {"D1": decision("D1")}, sources=references)
+
+
+def test_alias_must_still_be_independently_judged_account_content_at_the_destination():
+    references, output = alias_output()
+    output["source_checks"][1].update(content_purpose="non_account", substantive_spans=[])
+    with pytest.raises(SchemaViolation, match="support for this original source portion"):
+        checked(output, {"D1": decision("D1")}, sources=references)
+
+
+def test_alias_support_and_destination_account_portions_need_common_exact_overlap():
+    references, output = alias_output()
+    output["source_checks"][1]["substantive_spans"] = [{
+        "start": 15, "end": len(references["alias"]["quoted"])}]
+    with pytest.raises(SchemaViolation, match="support for this original source portion"):
+        checked(output, {"D1": decision("D1", bounds=(0, 10))}, sources=references)
