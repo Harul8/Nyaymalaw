@@ -223,7 +223,7 @@ def test_acknowledgement_mode_requires_compatible_typed_deliverable(field, value
     row.update(response_mode="record_acknowledgement")
     row[field] = value
     with pytest.raises(SchemaViolation, match="record_acknowledgement requires"):
-        conversation._turn_plan(response(row), context())
+        conversation._turn_plan(response(row), context(), latest=row["request"])
 
 
 class MultipleBlockModel(PassageModel):

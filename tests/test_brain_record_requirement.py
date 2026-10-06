@@ -43,7 +43,13 @@ def item(message, *, record_requirement=None, purposes=(), intent="request",
             "clarification": "", "intent": intent,
             "response_basis": "conversation_record", "research_question": "",
             "response_mode": "substantive",
-            "material_purposes": list(purposes), "record_requirement": declared}
+            "material_purposes": list(purposes), "record_requirement": declared,
+            "mutation_scopes": ([{
+                "authority_kind": purposes[0], "authority_source_ids": ["L1"],
+                "target_scope": "exact", "target_ids": list(declared["target_ids"]),
+                "permitted_relations": [declared["operation"]],
+            }] if declared["kind"] == "change" and purposes and declared["operation"] != "none"
+                else [])}
 
 
 def response(*items):

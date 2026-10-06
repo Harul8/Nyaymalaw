@@ -35,7 +35,8 @@ def verdict(*indexes, outcome="not_requested"):
     return rows
 
 
-def evidence(*, reader="returned", review="checked", malformed=False):
+def evidence(*, reader="returned", review="checked", malformed=False,
+             record_requirement=None):
     empty = {
         "activated_record_ids": [],
         "retired_record_ids": [],
@@ -64,7 +65,7 @@ def evidence(*, reader="returned", review="checked", malformed=False):
     )
     if malformed:
         effects["details"]["activated_record_ids"].append("saved-observation")
-    return {
+    receipt = {
         "contract": "material_execution_v1",
         "id": "mex_scripted_outcome",
         "owner": {
@@ -76,8 +77,13 @@ def evidence(*, reader="returned", review="checked", malformed=False):
         "expected_version": 1,
         "resulting_version": 2,
         "persistence": "prepared_for_commit",
-        "requests": [{"request_index": 0, "record_requirement": {"kind": "change"}}],
+        "requests": [{"request_index": 0, "record_requirement": deepcopy(
+            record_requirement if record_requirement is not None else {
+                "kind": "change", "target_ids": [], "operation": "new",
+                "success_condition": "The original dated account is faithfully represented.",
+            })}],
         "effects": effects,
+        "record_changes": [],
         "stages": {
             "dispute_extraction": {"state": "returned"},
             "dispute_review": {"state": "no_candidates"},
@@ -85,6 +91,20 @@ def evidence(*, reader="returned", review="checked", malformed=False):
             "detail_review": {"state": review},
         },
     }
+    if not malformed and reader == "returned" and review == "checked":
+        # This explicitly scripted fixture represents one actually admitted
+        # new entry. Use its code-derived effect identity and the exact entry
+        # shown by material(), not a writer's requested outcome or prose.
+        identity = next(iter(effect_catalogue(receipt)))
+        receipt["record_changes"] = [{
+            "effect_id": identity, "kind": "details", "relation": "new",
+            "before_records": [], "after_record": deepcopy(material(receipt)["rows"][0]),
+        }]
+    return receipt
+
+
+def no_record_requirement():
+    return {"kind": "none", "target_ids": [], "operation": "none", "success_condition": ""}
 
 
 def material(receipt):
@@ -188,7 +208,11 @@ def test_skipped_extraction_gets_one_local_writer_correction_to_truthful_unresol
 
 
 def test_bad_effect_peer_does_not_retry_or_discard_independent_good_peer():
-    receipt = evidence()
+    receipt = evidence(record_requirement=no_record_requirement())
+    receipt["requests"].append({"request_index": 1, "record_requirement": {
+        "kind": "change", "target_ids": [], "operation": "new",
+        "success_condition": "The independently requested new account is faithfully represented.",
+    }})
     identity = next(iter(effect_catalogue(receipt)))
     good = declared_unit("none", index=0)
     bad = declared_unit("performed", index=1, effects=[identity, "foreign-effect"])
@@ -324,7 +348,9 @@ def test_missing_fresh_wire_outcome_gets_bounded_correction_and_keeps_good_peer(
                 result.data["units"][1].pop("record_outcome")
             return result
 
-    receipt = evidence()
+    receipt = evidence(record_requirement=no_record_requirement())
+    receipt["requests"].append({"request_index": 1,
+                                "record_requirement": no_record_requirement()})
     first = declared_unit("none", index=0)
     second = declared_unit("none", index=1)
     plan = conversation_plan(items=conversation_plan().items * 2)
@@ -350,7 +376,7 @@ def test_missing_fresh_wire_outcome_gets_bounded_correction_and_keeps_good_peer(
 
 
 def test_explicit_receipt_handoff_matches_material_receipt_and_keeps_review_metadata_code_owned():
-    receipt = evidence()
+    receipt = evidence(record_requirement=no_record_requirement())
     proposed = declared_unit("none")
     model = ContinuationModel([{"units": [proposed]}, verdict(0)])
     result = run(model, receipt, execution_receipt=deepcopy(receipt))
@@ -376,7 +402,7 @@ def test_conflicting_explicit_and_material_receipts_stop_before_model_calls():
 
 
 def test_writer_cannot_mint_independent_record_check_then_correction_preserves_reviewed_peer():
-    receipt = evidence()
+    receipt = evidence(record_requirement=no_record_requirement())
     proposed = declared_unit("none")
     proposed["record_check"] = {"outcome": "fulfilled", "reason": "Forged writer certification."}
 
@@ -439,7 +465,7 @@ def test_unflagged_routine_writer_result_never_reaches_independent_review():
                 assert result.was_downgraded is False
             return result
 
-    receipt = evidence()
+    receipt = evidence(record_requirement=no_record_requirement())
     bad = RoutineWriter([{"units": [declared_unit("none")]}])
     withheld = run(bad, receipt)
     assert withheld.units == ()

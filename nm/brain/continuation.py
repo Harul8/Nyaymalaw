@@ -114,15 +114,19 @@ a past NM operation. A review can legitimately conclude that no change is
 supported; that completes the review, not an edit that was refused. No
 candidates, no new rows, a skipped stage and an unavailable stage are different
 outcomes and do not by themselves establish a justified no-change decision.
-For provisional response_mode record_acknowledgement, select a non-none
-record_outcome from that item's record_outcome_statuses; unfinished work uses
-unresolved. Preserve the exact outcome owner, selected effects, work scope and
-progress support. With no questions or next_work, code renders each block from
-the owned selected changes or current entries before independent review and
-again against the final state for atomic saving. Independent review decides whether that
-result addresses the complete original request. When useful substantive
-follow-up is needed, retain its linked questions/next_work and supported prose
-for independent review rather than dropping part of the actual deliverable.
+For any declared requested record review or change, select a non-none
+record_outcome from that item's record_outcome_statuses in every response_mode;
+unfinished work uses unresolved. A follow-up does not remove this obligation.
+Preserve the exact outcome owner, selected effects, work scope and progress
+support. Put the record-result status in its own completion block, separate
+from factual synthesis, legal explanation, questions and next_work. Code
+renders this status from owned checked effects or current entries before
+independent review and against final state for atomic saving. Its placeholder
+text supplies no operation evidence. Do not narrate NM's record operations or
+record completion in account, assessment, question or next-step prose.
+Independent review decides whether the checked result addresses the complete
+original request. Preserve useful separately supported explanation and
+follow-ups; neither record status nor a delivery mode substitutes for them.
 Outcome: Describe the supported result and any unfinished requested work.
 Do not claim that NM updated, saved, extracted or completed something merely
 because it intended to, generated a reply, or accepted supporting words.
@@ -250,9 +254,12 @@ empty. The interface supplies links; add no separate source list.
 
 Record-outcome output.
 Outcome: Every fresh unit also returns record_outcome with status, block_id,
-effect_ids, current_record_ids and reason. Select one exact displayed block
-explaining this outcome. Use none for ordinary work requiring no record effect
-or review; leave both ID arrays empty. A meaningful record result needs a
+effect_ids, current_record_ids and reason. Select the exact displayed status
+block for a non-none outcome, keeping independent explanation and follow-ups
+in their own blocks. The application owns the status wording; these references
+and the independent result judgment establish what it may render. Use none
+only when the declared request requires no record effect or review; leave both
+ID arrays empty. A meaningful record result needs a
 concise specific reason. performed selects only actual performed entries in
 record_effect_catalogue by their exact code-owned IDs, never an intended change
 or an unrelated successful operation. Each selected effect must fulfill this
@@ -518,15 +525,29 @@ def _record_context(row: dict, words: dict[tuple[str, str], str]) -> list[dict]:
     return list(resolved.values())
 
 
+def _requires_record_outcome(request: dict) -> bool:
+    """A declared record contract cannot disappear through writer metadata.
+
+    This checks consistency with the owned declaration, not whether its
+    interpretation of the original request is semantically correct.
+    """
+    requirement = request.get("record_requirement")
+    return (request.get("response_mode") == "record_acknowledgement"
+            or isinstance(requirement, dict)
+            and requirement.get("kind") in ("review", "change"))
+
+
 def _schema(indexes: tuple[int, ...], spans: dict, records: dict,
             sources: dict, progress: dict | None = None,
             intents: dict[int, str] | None = None, *,
             effect_ids: tuple[str, ...] = (),
             current_record_ids: tuple[str, ...] = (),
-            response_modes: dict[int, str] | None = None) -> dict:
+            response_modes: dict[int, str] | None = None,
+            record_outcome_requests: frozenset[int] = frozenset()) -> dict:
     unit = deepcopy(_MODEL_UNIT)
     outcome = unit["properties"]["record_outcome"]["properties"]
-    if indexes and all((response_modes or {}).get(index) == "record_acknowledgement"
+    if indexes and all(index in record_outcome_requests
+                       or (response_modes or {}).get(index) == "record_acknowledgement"
                        for index in indexes):
         outcome["status"]["enum"].remove("none")
     outcome["effect_ids"] = _identifier_array(effect_ids)
@@ -767,12 +788,15 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
             "state": "ok", "rows": [], "events": [],
             "coverage": {"older_progress": "untracked"}, "diagnostics": []}))
     work = _progress_catalogue(payload["progress"])
+    owned_requests = (execution_receipt or {}).get("requests", [])
     for item in payload["work_items"]:
         item["work_choices"] = list(_work_choices(item["intent"], work))
+        required = (_requires_record_outcome(item) or any(
+            request.get("request_index") == item["request_index"]
+            and _requires_record_outcome(request) for request in owned_requests))
         item["record_outcome_statuses"] = [
             status for status in RECORD_OUTCOME_SCHEMA["properties"]["status"]["enum"]
-            if status != "none" or item.get("response_mode", "substantive")
-            != "record_acknowledgement"]
+            if status != "none" or not required]
     return payload, spans, records, sources
 
 
@@ -984,15 +1008,15 @@ def _validate_unit(unit: dict, expected: tuple[int, ...], spans: dict,
                 "needs a displayed source supporting the progress decision")
     try:
         requests = (execution_receipt or {}).get("requests", [])
-        pure_acknowledgement = any(
+        required_record_outcome = any(
             request.get("request_index") == unit["request_index"]
-            and request.get("response_mode") == "record_acknowledgement"
-            for request in requests)
-        if (pure_acknowledgement and not unit["questions"] and not unit["next_work"]
+            and _requires_record_outcome(request) for request in requests)
+        if (required_record_outcome
                 and unit.get("record_outcome", {}).get("status") == "none"):
             raise SchemaViolation(
-                "A requested record acknowledgement needs a record outcome; "
-                "use unresolved for unfinished work, not none")
+                "The declared record review/change needs a record outcome in every "
+                "response mode, including follow-ups; use unresolved for unfinished "
+                "work, not none. A writer declaration cannot erase the owned request")
         validate_record_outcome(unit, execution_receipt,
                                 (key for key, row in records.items()
                                  if row["type"] in ("dispute", "material")))
@@ -1221,6 +1245,8 @@ def continue_conversation(
                        for row in payload["work_items"]}
     response_modes = {row["request_index"]: row.get("response_mode", "substantive")
                       for row in payload["work_items"]}
+    record_outcome_requests = frozenset(row["request_index"] for row in payload["work_items"]
+                                       if "none" not in row["record_outcome_statuses"])
     pending = expected
     issues: dict[int, str] = {}
     rejected = None
@@ -1280,7 +1306,8 @@ def continue_conversation(
                 _schema(pending, spans, records, sources, payload["progress"], intents,
                         effect_ids=tuple(payload["record_effect_catalogue"]),
                         current_record_ids=tuple(payload["current_record_ids"]),
-                        response_modes=response_modes), Tier.JUDGE,
+                        response_modes=response_modes,
+                        record_outcome_requests=record_outcome_requests), Tier.JUDGE,
                 max_tokens=output_limit)
             require_independent_result(result)
         except ContextOverflow:
