@@ -324,8 +324,12 @@ def retained_independent_review(state: dict | None, *, context: dict,
 
     prior = cache.context["candidates"]
     current = context["candidates"]
-    if (len(current) < len(prior)
-            or [original_proposal(row) for row in current[:len(prior)]]
+    prior_ids = [row["candidate_id"] for row in prior]
+    current_ids = [row["candidate_id"] for row in current]
+    prior_set = set(prior_ids)
+    retained_current = [row for row in current if row["candidate_id"] in prior_set]
+    if (len(prior_ids) != len(prior_set) or len(current_ids) != len(set(current_ids))
+            or [original_proposal(row) for row in retained_current]
             != [original_proposal(row) for row in prior]):
         raise SchemaViolation("Independent review reuse must preserve every original proposal ID")
     if set(cache.source_treatments) != set(source_treatments):

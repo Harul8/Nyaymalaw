@@ -361,6 +361,23 @@ def test_new_independent_proposal_preserves_prior_decisions_and_original_ids():
     assert resume_cache(state, original, sources, accounts, targets) == decisions
 
 
+@pytest.mark.parametrize("position", [0, 1, 3, 4])
+def test_owned_addition_between_original_ids_preserves_exact_ordered_originals(position):
+    state, original, sources, decisions, accounts, targets = review_cache()
+    original["candidates"].insert(position, {
+        "candidate_id": "D5", "statement": "Additional independently supported account."})
+    accounts["D5"] = {"L2"}
+    targets["D5"] = set()
+    assert resume_cache(state, original, sources, accounts, targets) == decisions
+
+
+def test_interleaved_duplicate_original_id_cannot_reuse_independent_decision():
+    state, original, sources, _, accounts, targets = review_cache()
+    original["candidates"].insert(1, dict(original["candidates"][0]))
+    with pytest.raises(SchemaViolation):
+        resume_cache(state, original, sources, accounts, targets)
+
+
 def test_reason_only_source_change_does_not_require_semantic_reapproval():
     state, original, sources, decisions, accounts, targets = review_cache()
     sources["L1"]["reason"] = "Another substantive explanation of the same original purpose."
