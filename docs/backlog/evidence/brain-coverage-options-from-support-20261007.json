@@ -1,0 +1,26 @@
+{
+  "milestone": {
+    "piece": "Shared source-linked coverage choice derivation",
+    "base": "926290e",
+    "production_file": "nm/brain/record_review.py",
+    "prompt_changes": 0,
+    "invariant": "Generation choices must follow owned pending source domains or checked positive original dependencies. Global ID presence, a contextual check and an old negative judgment cannot supply representation authority. Reopened candidates retain the full original source domain needed for legitimate correction.",
+    "observable_pass": "Pending and reopened candidates retain exact original alias eligibility; settled positive candidates and records offer only their checked positive dependencies; negative/held/legacy unproven rows offer none. Native source eligibility still cannot bypass selected-portion admission or actual candidate acceptance.",
+    "baseline": "46 focused cases fail when the helper is absent in an isolated process; production bytes unchanged for baseline.",
+    "verification": "182 focused cases pass:46 new derivation,46 record admission,61 native source-specific generation and29 candidate dependency cases. Ruff passes.0 real-model/browser calls. No producer uses the helper yet.",
+    "canonical_changes": "None. One shared presentation helper reuses existing proof resolvers, validates closed owned domains, returns complete source-keyed record/candidate choice pools and detaches the result. It does not add fields to canonical records, saved proofs or review caches.",
+    "call_impact": "0 additional routine or conditional model calls; this derives choices for existing reviewer calls. Conditional corrections retain their original bound and pending candidates can acquire new valid support in that same correction call.",
+    "remaining": "Historical admission/retirement support with preserved v1 replay; per-verifier native-option/admission wiring; ordinary and recovery handoffs; actual browser coverage and false-rejection qualification. Source purpose/ranges/recovery, requested delivery, legal/UI and other six-activity gaps remain open.",
+    "additional_live_diagnosis": "Independent reread of packets273/274 confirms dispute existence was collapsed into account support and a heading added unsupported intent. The earlier request-meaning-anchoring explanation is NOT supported for this latest run: interpreted_work is already labelled NM interpretation and separated from permission-only scope, and all original source spans are offered. Plan a fresh source-linked issue judgment before deriving the canonical role, preserve whole-formulation/heading checks, retain uncertain supported details without inventing disputes. No wording-specific production condition. The absence-of-conflict defect precedes peer identity/over-splitting."
+  },
+  "owners": ["LB-195", "LB-196", "LB-197", "LB-183"],
+  "proof_name": "coverage-options-from-support-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 shared source-choice derivation:46 absent-API baseline failures;182 focused/Ruff pass. Pending/reopened choices use complete owned account domains; settled positive record/candidate choices use original exact dependencies, negative/contextual/unproved choices excluded. Native source choice is not portion/admission proof.0 prompt/0 calls; NOT live-wired. Live packets273/274 separately confirm dispute existence versus account-support and unsupported-heading defects; cleaned interpreted scope/all-source offering are already present, so older anchoring explanation is not this run's cause.",
+    "current_position": "Source-specific choices, record admission and current saved-proof prerequisites verified; historical proof and verifier handoffs needed before live activation. Separate dispute semantic defects remain open.",
+    "evidence": ["docs/backlog/evidence/brain-coverage-options-from-support-20261007.json"],
+    "tested_version": "926290e plus single-file candidate",
+    "test_environment": "182 offline native-generation/original-dependency checks; actual source-level pass then disjoint-portion rejection demonstrated.0 new live calls; latest semantic diagnosis rereads saved pinned-model packets273/274.",
+    "remaining": "Versioned inherited historical admission/retirement proofs; material/dispute producer and recovery handoffs; whole/mixed coverage range contract; saved/browser qualification. General dispute existence judgment must be distinct from support and must include headings; then peer conflict identity. Remaining delivery/legal/UI safeguards unqualified."
+  }
+}

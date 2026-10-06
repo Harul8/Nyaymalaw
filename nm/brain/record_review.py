@@ -1100,6 +1100,71 @@ def _coverage_supports_portion(support, identity, source, portion, selected) -> 
         for account in selected)
 
 
+def coverage_representation_options(source_references, *, record_ids=(), record_support=None,
+                                    candidate_ids=(), candidate_account_ids=None,
+                                    candidate_support=None, pending_candidate_ids=()) -> dict:
+    """Offer source-linked choices without certifying admission or portion coverage."""
+    if not isinstance(source_references, dict):
+        raise SchemaViolation("Coverage choices require original source references")
+    references = _checked_source_references(
+        tuple(source_references), source_references, exact=True)
+
+    def identities(values):
+        if (not isinstance(values, (list, tuple, set, frozenset))
+                or any(not isinstance(value, str) or not value.strip() for value in values)):
+            raise SchemaViolation("Coverage choices require owned nonempty ID collections")
+        return tuple(dict.fromkeys(sorted(values) if isinstance(values, (set, frozenset))
+                                   else values))
+
+    records, candidates = identities(record_ids), identities(candidate_ids)
+    pending = set(identities(pending_candidate_ids))
+    if not pending <= set(candidates):
+        raise SchemaViolation("Coverage choices select unowned pending candidates")
+    if candidate_account_ids is None:
+        if pending:
+            raise SchemaViolation("Pending coverage choices need their original account domain")
+        accounts = {}
+    else:
+        if (not isinstance(candidate_account_ids, dict)
+                or set(candidate_account_ids) != set(candidates)):
+            raise SchemaViolation("Coverage choices need exact candidate account domains")
+        accounts = {identity: identities(values)
+                    for identity, values in candidate_account_ids.items()}
+        if any(not set(values) <= references.keys() for values in accounts.values()):
+            raise SchemaViolation("Coverage choices select unowned account source IDs")
+    decisions = {} if candidate_support is None else candidate_support
+    if not isinstance(decisions, dict) or not set(decisions) <= set(candidates):
+        raise SchemaViolation("Coverage choices need owned independent candidate decisions")
+    for decision in decisions.values():
+        account = decision.get("account_check") if isinstance(decision, dict) else None
+        selected = account.get("source_ids") if isinstance(account, dict) else None
+        if (not isinstance(selected, list)
+                or any(not isinstance(value, str) or value not in references
+                       for value in selected)):
+            raise SchemaViolation("Coverage choices have unowned decision source references")
+    settled = tuple(identity for identity in candidates if identity not in pending
+                    and isinstance(decisions.get(identity), dict)
+                    and decisions[identity].get("verdict") == "accept")
+    checked = _coverage_candidate_support(decisions, references, candidates, settled)
+    saved = ({} if record_support is None else
+             _coverage_record_support(record_support, references, records))
+    result = {source: {"record_ids": [], "candidate_ids": []} for source in references}
+    for identity in records:
+        for source in saved.get(identity, {}):
+            result[source]["record_ids"].append(identity)
+    for identity in candidates:
+        if identity in pending:
+            eligible = {alias for source in accounts[identity]
+                        for alias, reference in references.items()
+                        if reference == references[source]}
+        else:
+            eligible = checked.get(identity, {})
+        for source in references:
+            if source in eligible:
+                result[source]["candidate_ids"].append(identity)
+    return result
+
+
 def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
                      candidate_ids=(), admitted_candidate_ids=None,
                      candidate_support=None, record_support=None) -> dict:
