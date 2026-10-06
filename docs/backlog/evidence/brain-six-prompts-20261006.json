@@ -380,6 +380,72 @@
         "Activity 2 - Compare legal predicates with the original account.",
         "Activity 3 - Check usefulness, adverse limits and remaining support."
       ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_VERIFY_SYSTEM",
+      "old_sha256": "309fe48553c6f7699e95532e5d3139b5f5db1e5941a4d6f0d1dd5e95478c9591",
+      "new_sha256": "a04f638fcde950843ee0387b8816e34b9525bbbba8148414ecf0c2bdfaac9167",
+      "old_words": 1073,
+      "new_words": 1174,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": 1,
+          "new_parts": [
+            "Message"
+          ],
+          "change": "Same complete conversation and candidate-cited fragments; make absent uncited pool explicit."
+        },
+        {
+          "old_paragraph": 2,
+          "new_parts": [
+            "Purpose"
+          ],
+          "change": "Same independent four decisions and no semantic repairs; add consequential omission checks and distinguish bounded finding admission from complete research."
+        },
+        {
+          "old_paragraph": 3,
+          "new_parts": [
+            "Activity 1"
+          ],
+          "change": "Preserve all ownership/role/treatment/context distinctions and exact source-fragment references; consolidate repeated truth/advice warnings without merging adopted source roles."
+        },
+        {
+          "old_paragraph": 4,
+          "new_parts": [
+            "Activity 2"
+          ],
+          "change": "Preserve rule relation categories and full-finding entailment; make omitted qualifications and legitimate partial findings explicit; exclude stylistic preference from fidelity."
+        },
+        {
+          "old_paragraph": 5,
+          "new_parts": [
+            "Activity 3"
+          ],
+          "change": "Preserve independent source-purpose eligibility, original chronology, scope statuses, premises and exact conditions; forbid invented links while retaining general/conditional outcomes."
+        },
+        {
+          "old_paragraph": 6,
+          "new_parts": [
+            "Activity 4"
+          ],
+          "change": "Preserve mandate versus strengthening and required/none mapping; add bounded purpose/remaining-coverage check without new fields or a completeness verdict."
+        },
+        {
+          "old_paragraph": 7,
+          "new_parts": [
+            "final Outcome"
+          ],
+          "change": "Same candidate-local decision schema and independent acceptance conditions; clarify required-but-empty rejection arrays and existing length caps to reduce malformed retries."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Identify the operative source proposition.",
+        "Activity 2 - Check the complete finding's meaning.",
+        "Activity 3 - Compare each legal predicate with the attributed account.",
+        "Activity 4 - Check force and the supported use."
+      ]
     }
   ]
 }

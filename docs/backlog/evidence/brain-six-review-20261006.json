@@ -194,6 +194,19 @@
       "files": [
         "nm/brain/legal_requirements.py"
       ]
+    },
+    {
+      "slice": "Structure legal review around source entailment application and force",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-181"
+      ],
+      "decision": "Independent legal review follows original source ownership/treatment, complete entailment with limiting qualifications, factual actor/relationship/time premises, then claimed legal force. Preserve reported versus proved satisfaction, conditional/general findings, passage-bounded analogy and partial usefulness; overall verdict cannot override any failed check. Cited source pool cannot certify full research coverage.",
+      "validation": "106 passed in 0.41s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/legal_requirements.py"
+      ]
     }
   ]
 }
