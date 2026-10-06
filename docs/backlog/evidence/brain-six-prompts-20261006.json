@@ -212,6 +212,126 @@
         "Activity 3 - Check the exact record operation and its authority.",
         "Activity 4 - Preserve every underlying account through replacement."
       ]
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "b981e9b25a2d916061207d10b25680393998121532d7250dcbb71c563afbec16",
+      "new_sha256": "04846c9c45bcb2838a9725ad53852fb2661e93add078335f5d91b251e1cbdf49",
+      "old_words": 1411,
+      "new_words": 1235,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": "material_verification.1",
+          "old_line": 31,
+          "new_sections": [
+            "Message"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.2",
+          "old_line": 46,
+          "new_sections": [
+            "Purpose"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.3",
+          "old_line": 51,
+          "new_sections": [
+            "Activity 2"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.4",
+          "old_line": 75,
+          "new_sections": [
+            "Activity 3"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.5",
+          "old_line": 99,
+          "new_sections": [
+            "Activity 1"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.6",
+          "old_line": 119,
+          "new_sections": [
+            "Activity 1",
+            "Activity 4"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.7",
+          "old_line": 154,
+          "new_sections": [
+            "Activity 5"
+          ]
+        },
+        {
+          "old_paragraph": "material_verification.8",
+          "old_line": 170,
+          "new_sections": [
+            "Outcome"
+          ]
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Check the complete detail and its assignment.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement.",
+        "Activity 5 - Check the opening description when supplied."
+      ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_DECOMPOSE_SYSTEM",
+      "old_sha256": "17a254787f14fa5d557d71f6fcb75f91dc4247aa16cfd50b8d97cc929e0adca0",
+      "new_sha256": "03c55916b050f9d9d67701cda3a47e6756a73f6959a8306b765db47bb3f2d1f3",
+      "old_words": 179,
+      "new_words": 240,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": 1,
+          "new_parts": [
+            "Message"
+          ],
+          "change": "Preserve full transcript/owned subject provenance; explicitly distinguish derived record from original words and label inputs as data."
+        },
+        {
+          "old_paragraph": 2,
+          "new_parts": [
+            "Purpose"
+          ],
+          "change": "Same retrieval-only responsibility; clarify that queries do not decide factual application."
+        },
+        {
+          "old_paragraph": 3,
+          "new_parts": [
+            "Activity 1 Look for/Outcome",
+            "Activity 2 Look for/Outcome"
+          ],
+          "change": "Order enquiry boundaries before distinct routes; explicitly include grounded competing/adverse routes without inventing missing facts or setting."
+        },
+        {
+          "old_paragraph": 4,
+          "new_parts": [
+            "Activity 2 Outcome",
+            "final Outcome"
+          ],
+          "change": "Preserve one plan per subject and 1–4 texts; expose existing 300-character cap; explicitly bound query-set sufficiency."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Establish the enquiry and its boundaries.",
+        "Activity 2 - Form distinct grounded search routes."
+      ]
     }
   ]
 }
