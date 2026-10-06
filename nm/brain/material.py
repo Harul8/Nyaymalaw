@@ -477,9 +477,8 @@ def parse_material(rows: object, *, latest: str,
             identification = row.get("identification")
             clarification = row.get("clarification")
             related = row.get("related_dispute_ids")
-            if (not isinstance(label, str) or not label.strip()
-                    or len(label.strip()) > 140):
-                raise SchemaViolation("A dispute needs a short, nonempty label")
+            if not isinstance(label, str) or not label.strip():
+                raise SchemaViolation("A dispute needs a nonempty label")
             if identification not in ("identified", "needs_clarification"):
                 raise SchemaViolation("A dispute needs an identification decision")
             if not isinstance(clarification, str):

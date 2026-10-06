@@ -727,6 +727,21 @@
         "assurance/specification/gates.yaml",
         "assurance/specification/prd/gates.json"
       ]
+    },
+    {
+      "slice": "owned-material-label-width",
+      "owners": [
+        "LB-176",
+        "LB-177",
+        "LB-178",
+        "LB-179"
+      ],
+      "decision": "Meaningful attributed dispute labels no longer fail solely at 141 characters. UI already wraps labels; actual ownership, exact original source, nonempty meaning, identification and permissible owned links remain checked. No prompt change or semantic shortening.",
+      "validation": "16 focused offline material parsing/specialist controls passed; Ruff clean. Long exact label retained; blank labels, foreign source words and unauthorised target links reject. Actual model/browser quality deferred.",
+      "files": [
+        "nm/brain/material.py",
+        "tests/test_brain_material_dispute_label_width.py"
+      ]
     }
   ]
 }
