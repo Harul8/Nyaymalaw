@@ -1119,8 +1119,8 @@
     "pinned_model": "gpt-4.1-mini-2025-04-14",
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
-    "cumulative_charge_usd": 2.005571,
-    "remaining_usd": 2.994429
+    "cumulative_charge_usd": 2.089595,
+    "remaining_usd": 2.910405
   },
   "delivered_work_contract_review": {
     "observed_bypass": "Saved MatterA bundled identification/facts/weaknesses/gathering task declares record_requirement none, then task/sufficiency/fulfillment complete despite quote/effect-only delivery and unfinished detail reading. A completed record result is not completion of general requested work.",
@@ -1201,5 +1201,53 @@
       "outputs\\brain-repair-20261006\\matter-a-reopened.png"
     ]
   },
-  "repair_live_evidence": "docs/backlog/evidence/brain-current-review-20261006-repair-live.json.gz"
+  "repair_live_evidence": "docs/backlog/evidence/brain-current-review-20261006-repair-live.json.gz",
+  "wire_live_acceptance": {
+    "date": "2026-10-07",
+    "version": "2800d07",
+    "fingerprint": "dfe2b61d31e69c19",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "matter_id": "mat_9318cd021f139d6f941696208ddc16fa",
+    "turn_id": "turn_ddbae975-3bb3-446d-aee5-0a5379d63398",
+    "matter_version": 1,
+    "calls": 15,
+    "operations": {
+      "interpret_conversation": 1,
+      "classify_account_sources": 1,
+      "extract_disputes": 1,
+      "verify_disputes": 2,
+      "extract_legal_details": 1,
+      "verify_material_grounding": 2,
+      "reconsider_account_sources": 2,
+      "decompose_disputes": 1,
+      "read_legal_requirements": 2,
+      "continue_conversation": 1,
+      "verify_continuation": 1
+    },
+    "model_seconds": 153.547,
+    "input_tokens": 154431,
+    "output_tokens": 13905,
+    "charge_usd": 0.084024,
+    "unknown_charges": 0,
+    "combined_charge_usd": 2.089595,
+    "combined_remaining_usd": 2.910405,
+    "acceptance": "Source wire/owned bounds exercised live and saved/reopened; overall semantic/useful delivery acceptance FAILED.",
+    "observations": [
+      "Four disputes saved, including an evidence-authentication question incorrectly treated as independent. Draft denial was held after bounded review, not released as a client admission.",
+      "Seven details saved, including uncertainty about screenshot. Distinct acts still grouped in one event; all details assigned matter-wide.",
+      "No legal findings or gathering items delivered: reader force/subject schema failures exhausted bounded recovery before legal verification.",
+      "Opening title remains Matter after unresolved source purpose; reply repetitive and duplicate record status.",
+      "No authored fresh source_ids or out-of-bounds support passage admitted. One repeated check was corrected; source-purpose reconsideration ran twice."
+    ],
+    "browser": [
+      "Start matter opened empty center chat with no board/form",
+      "Single-click opened right-side dispute pane",
+      "My work cleared right pane and reopened the saved reply/board"
+    ],
+    "screenshots": [
+      "outputs/brain-repair-20261006/wire-dispute-pane.png",
+      "outputs/brain-repair-20261006/wire-reopened.png"
+    ]
+  },
+  "wire_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-wire-live.json.gz"
 }
