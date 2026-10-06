@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from typing import Callable, TypeVar
 
 from nm.shared.model_port import (
     ContextOverflow,
     ModelPort,
+    ModelResult,
     Prompt,
     SchemaViolation,
     Tier,
@@ -75,6 +77,311 @@ def checked_read(model: ModelPort, prompt: Prompt, schema: dict,
                     > model.context_budget(tier)):
                 raise ContextOverflow(
                     "The full conversation exceeds the correction context budget") from exc
+            phase = f"{prompt.operation or 'structured_read'}:correction"
+            if not claim_recovery(model, phase):
+                raise SchemaViolation(
+                    f"The shared recovery budget is exhausted for {phase}: {exc}") from exc
             current = Prompt(system=repair_system, user=repair_user,
                              operation=prompt.operation)
     raise AssertionError("The correction loop did not return or raise")
+
+
+def claim_recovery(model: ModelPort, phase: str) -> bool:
+    """Reserve one conditional recovery dispatch in its owning turn ledger.
+
+    Ports without a turn ledger retain the reader's local correction bound.
+    Labels come from internal operations, never from advocate words or prose.
+    """
+    if not isinstance(phase, str) or not phase.strip():
+        raise ValueError("A recovery reservation needs an internal phase")
+    owner = getattr(model, "claim_recovery", None)
+    if owner is None:
+        return True
+    result = owner(phase)
+    if not isinstance(result, bool):
+        raise TypeError("The owning recovery ledger must return a boolean decision")
+    return result
+
+
+def _unit_specs(schema: dict, unit_fields: tuple[str, ...]) -> dict[str, dict]:
+    properties = schema.get("properties", {})
+    if (schema.get("type") != "object" or schema.get("additionalProperties") is not False
+            or not unit_fields
+            or len(unit_fields) != len(set(unit_fields))
+            or any(field not in properties
+                   or properties[field].get("type") != "array"
+                   or not isinstance(properties[field].get("items"), dict)
+                   for field in unit_fields)):
+        raise ValueError("Independent unit fields must name declared array schemas")
+    return {field: properties[field]["items"] for field in unit_fields}
+
+
+def _object_schema(schema: dict, unit_fields: tuple[str, ...], *,
+                   singleton: bool = False) -> dict:
+    result = deepcopy(schema)
+    for field in unit_fields:
+        spec = result["properties"][field]
+        if singleton:
+            spec.pop("minItems", None)
+            spec["maxItems"] = min(spec.get("maxItems", 1), 1)
+        else:
+            spec.pop("items", None)
+            spec.pop("minItems", None)
+            spec.pop("maxItems", None)
+    return result
+
+
+def _completed_object(model: ModelPort, prompt: Prompt, schema: dict,
+                      output_limit: int, tier: Tier) -> tuple[dict | None, str]:
+    """A rejected completed object is evidence, never an accepted model result."""
+    rejection = ""
+    try:
+        result = model.structured(prompt, schema, tier, max_tokens=output_limit)
+    except SchemaViolation as exc:
+        rejection = str(exc)
+        result = getattr(exc, "rejected_result", None)
+    if result is None:
+        return None, rejection or "No completed structured response was received"
+    if not isinstance(result, ModelResult):
+        raise SchemaViolation("A structured response has no normalized model receipt")
+    if tier == Tier.JUDGE:
+        require_independent_result(result)
+    if not result.usable or not isinstance(result.data, dict):
+        return None, "The response was incomplete or not a JSON object"
+    return deepcopy(result.data), rejection
+
+
+def _accepted_row(data: dict, field: str, row: dict, schema: dict,
+                  unit_fields: tuple[str, ...], accept: Callable[[dict], tuple[_T, ...]]
+                  ) -> _T:
+    """Validate and interpret one row without mutating quarantined wire data."""
+    require_schema(row, schema["properties"][field]["items"])
+    envelope = {key: deepcopy(value) for key, value in data.items()
+                if key in schema["properties"] and key not in unit_fields}
+    envelope.update({name: [] for name in unit_fields})
+    envelope[field] = [deepcopy(row)]
+    require_schema(envelope, _object_schema(schema, unit_fields, singleton=True))
+    accepted = accept(envelope)
+    if not isinstance(accepted, tuple) or len(accepted) != 1:
+        raise SchemaViolation("An independent row must yield exactly one proposal")
+    return accepted[0]
+
+
+def _read_units(data: dict | None, schema: dict, unit_fields: tuple[str, ...],
+                accept: Callable[[dict], tuple[_T, ...]], *, prefix: str = ""
+                ) -> tuple[list[dict], list[dict], str]:
+    if data is None:
+        return [], [], "The extraction envelope was not read"
+    shell_issue = ""
+    try:
+        require_schema(data, _object_schema(schema, unit_fields))
+    except SchemaViolation as exc:
+        shell_issue = str(exc)
+    valid, failed = [], []
+    for field in unit_fields:
+        rows = data.get(field)
+        if not isinstance(rows, list):
+            continue
+        for index, row in enumerate(rows, 1):
+            unit = {"unit_id": f"{prefix}{field}:{index}", "field": field,
+                    "proposal": deepcopy(row)}
+            try:
+                unit["accepted"] = _accepted_row(
+                    data, field, row, schema, unit_fields, accept)
+            except SchemaViolation as exc:
+                unit["validation_issue"] = str(exc)
+                failed.append(unit)
+            else:
+                valid.append(unit)
+    if not shell_issue and not failed:
+        try:
+            require_schema(data, schema)
+        except SchemaViolation as exc:
+            shell_issue = str(exc)
+    return valid, failed, shell_issue
+
+
+def _repair_prompt(model: ModelPort, prompt: Prompt, output_limit: int,
+                   tier: Tier, retained: list[dict], failed: list[dict],
+                   issue: str, *, keyed: bool) -> Prompt:
+    instruction = (
+        "Return repairs keyed by the exact supplied unit IDs. Each proposals "
+        "array contains one corrected proposal under that unit's declared row "
+        "schema, or is empty to explicitly omit an unsupported proposal. "
+        "Do not restate, replace, or remove retained proposals."
+        if keyed else
+        "Repair the extraction envelope under the original schema. Independently "
+        "retained proposals remain proposals awaiting review and cannot be "
+        "overwritten by this replacement. Return the complete declared object.")
+    system = (prompt.system or "") + (
+        "\n\nMessage: This is a bounded correction of the same original read.\n"
+        "Purpose: Repair only the stated structural or owned-reference failures.\n"
+        "Look for: The complete original evidence, failed units and retained "
+        "proposal context. Retention is not independent grounding approval.\n"
+        "Outcome: " + instruction)
+    payload = {
+        "original_input": json.loads(prompt.user),
+        "validation_issue": issue,
+        "failed_units": [{key: deepcopy(value) for key, value in unit.items()
+                          if key != "accepted"} for unit in failed],
+        "retained_proposal_context": [
+            {key: deepcopy(value) for key, value in unit.items() if key != "accepted"}
+            for unit in retained],
+    }
+    user = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    if estimate_tokens(system + user) + output_limit > model.context_budget(tier):
+        # Retained content already lives in code and cannot be changed by the
+        # repair. Drop only this duplicate; keep exact original input and all
+        # failed units needed to repair an owned ID.
+        payload["retained_proposal_context"] = [
+            {"unit_id": unit["unit_id"], "field": unit["field"]}
+            for unit in retained]
+        user = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    if estimate_tokens(system + user) + output_limit > model.context_budget(tier):
+        raise ContextOverflow("The full conversation exceeds the correction context budget")
+    return Prompt(system=system, user=user, operation=prompt.operation)
+
+
+def _repair_schema(failed: list[dict], specs: dict[str, dict]) -> dict:
+    properties = {
+        unit["unit_id"]: {"type": "object", "additionalProperties": False,
+                          "required": ["proposals"], "properties": {
+                              "proposals": {"type": "array", "maxItems": 1,
+                                            "items": deepcopy(specs[unit["field"]])}}}
+        for unit in failed}
+    return {"type": "object", "additionalProperties": False,
+            "required": ["repairs"], "properties": {
+                "repairs": {"type": "object", "additionalProperties": False,
+                            "required": list(properties), "properties": properties}}}
+
+
+def _repair_units(data: dict | None, original: dict, schema: dict,
+                  unit_fields: tuple[str, ...], failed: list[dict],
+                  accept: Callable[[dict], tuple[_T, ...]], repair_schema: dict
+                  ) -> tuple[list[dict], list[str], list[dict], str]:
+    expected = {unit["unit_id"]: unit for unit in failed}
+    repair_values = data.get("repairs") if isinstance(data, dict) else None
+    shell_issue = ""
+    if (not isinstance(data, dict) or set(data) != {"repairs"}
+            or not isinstance(repair_values, dict)):
+        shell_issue = "The correction did not return its declared repair envelope"
+        repair_values = {}
+    elif set(repair_values) - set(expected):
+        shell_issue = "The correction names unowned repair unit IDs"
+    valid, omitted, unread = [], [], []
+    for identity, unit in expected.items():
+        repaired = repair_values.get(identity)
+        try:
+            if repaired is None:
+                raise SchemaViolation("The correction omitted a required unit ID")
+            require_schema(repaired, repair_schema["properties"]["repairs"]
+                           ["properties"][identity])
+            if not repaired["proposals"]:
+                omitted.append(identity)
+                continue
+            row = repaired["proposals"][0]
+            accepted = _accepted_row(
+                original, unit["field"], row, schema, unit_fields, accept)
+        except SchemaViolation as exc:
+            unread.append({"unit_id": identity, "field": unit["field"],
+                           "validation_issue": str(exc)})
+        else:
+            valid.append({"unit_id": identity, "field": unit["field"],
+                          "proposal": deepcopy(row), "accepted": accepted})
+    return valid, omitted, unread, shell_issue
+
+
+def checked_unit_read(model: ModelPort, prompt: Prompt, schema: dict,
+                      output_limit: int,
+                      accept: Callable[[dict], tuple[_T, ...]], *,
+                      unit_fields: tuple[str, ...], tier: Tier = Tier.ROUTINE,
+                      diagnostics: dict | None = None,
+                      allow_complete_replacement: bool = False) -> tuple[_T, ...]:
+    """Retain admissible proposals and conditionally correct one failed batch.
+
+    This opt-in is for independent array rows only. Neither retention nor an
+    explicit omission establishes semantic completeness; independent original
+    account review owns that decision. Unread units require a diagnostics owner.
+    A strict adapter may expose a rejected COMPLETE object solely as quarantine.
+    """
+    specs = _unit_specs(schema, unit_fields)
+    original, first_rejection = _completed_object(
+        model, prompt, schema, output_limit, tier)
+    retained, failed, shell_issue = _read_units(
+        original, schema, unit_fields, accept)
+    attempts, repaired, omitted, unread = 1, [], [], []
+    final_shell_issue = shell_issue
+    final_data = original
+    recovery_exhausted = False
+    if failed or shell_issue or first_rejection:
+        keyed = not shell_issue and original is not None and bool(failed)
+        correction_schema = _repair_schema(failed, specs) if keyed else schema
+        repair_prompt = _repair_prompt(
+            model, prompt, output_limit, tier, retained, failed,
+            shell_issue or first_rejection or "Independent proposal units failed validation",
+            keyed=keyed)
+        phase = f"{prompt.operation or 'structured_read'}:correction"
+        if not claim_recovery(model, phase):
+            recovery_exhausted = True
+            unread = [{"unit_id": unit["unit_id"], "field": unit["field"],
+                       "validation_issue": unit["validation_issue"]
+                       + "; the shared recovery budget is exhausted"}
+                      for unit in failed]
+            if not unread:
+                final_shell_issue = (shell_issue or first_rejection
+                                     or "The shared recovery budget is exhausted")
+        else:
+            attempts = 2
+            corrected, correction_rejection = _completed_object(
+                model, repair_prompt, correction_schema, output_limit, tier)
+            if keyed and not (allow_complete_replacement and isinstance(corrected, dict)
+                              and "repairs" not in corrected
+                              and all(field in corrected for field in unit_fields)):
+                repaired, omitted, unread, final_shell_issue = _repair_units(
+                    corrected, original, schema, unit_fields, failed, accept,
+                    correction_schema)
+            else:
+                final_data = corrected
+                repaired, correction_failed, final_shell_issue = _read_units(
+                    corrected, schema, unit_fields, accept, prefix="correction:")
+                # A complete replacement has no correspondence to prior failed IDs.
+                # Preserve its checked proposals without pretending absent original
+                # identities were corrected or explicitly omitted.
+                unread = [{"unit_id": unit["unit_id"], "field": unit["field"],
+                           "validation_issue": "Replacement did not identify this failed unit"}
+                          for unit in failed]
+                unread.extend({key: value for key, value in unit.items()
+                               if key not in ("proposal", "accepted")}
+                              for unit in correction_failed)
+            if correction_rejection and corrected is None:
+                final_shell_issue = correction_rejection
+    values, kept = [], []
+    for unit in [*retained, *repaired]:
+        if not any(unit["accepted"] == previous for previous in values):
+            values.append(unit["accepted"])
+            kept.append(unit)
+    if final_data is not None:
+        aggregate = {key: deepcopy(value) for key, value in final_data.items()
+                     if key in schema["properties"] and key not in unit_fields}
+        aggregate.update({field: [] for field in unit_fields})
+        for unit in kept:
+            aggregate[unit["field"]].append(deepcopy(unit["proposal"]))
+        try:
+            require_schema(aggregate, schema)
+        except SchemaViolation as exc:
+            final_shell_issue = final_shell_issue or str(exc)
+    partial = bool(unread or final_shell_issue)
+    if diagnostics is not None:
+        diagnostics.clear()
+        diagnostics.update({
+            "state": "partial" if partial else "returned", "attempts": attempts,
+            "recovery_exhausted": recovery_exhausted,
+            "proposal_count": len(values),
+            "retained_unit_ids": [unit["unit_id"] for unit in retained],
+            "repaired_unit_ids": [unit["unit_id"] for unit in repaired],
+            "omitted_unit_ids": omitted, "unread_units": deepcopy(unread),
+            "envelope_state": "unread" if final_shell_issue else "checked",
+            "envelope_issue": final_shell_issue})
+    if partial and (diagnostics is None or not values):
+        raise SchemaViolation(final_shell_issue or unread[0]["validation_issue"])
+    return tuple(values)
