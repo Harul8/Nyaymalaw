@@ -18,6 +18,7 @@ from copy import deepcopy
 from nm.shared.model_port import SchemaViolation
 
 AUTHORITY_CONTRACT = "record_mutation_authority_v1"
+SAME_TURN_SOURCE_MATCH = "same_original_advocate_turn_v1"
 BINDING_CONTRACT = "record_mutation_binding_v1"
 RELATIONS = frozenset(("new", "adds", "corrects", "contradicts", "withdraws"))
 _OWNER_FIELDS = frozenset(("matter_id", "advocate_id", "turn_id", "offer_digest"))
@@ -84,7 +85,8 @@ def _catalogues(target_catalogue, source_catalogue):
 
 
 def build_mutation_authorities(*, owner, expected_version, target_catalogue,
-                              source_catalogue, proposals, request_indices=None):
+                              source_catalogue, proposals, request_indices=None,
+                              source_match_contract=None):
     """Bind prior scope decisions to owned sources, targets and a fixed snapshot.
 
     ``proposals`` are scope-owner decisions, not extractor or reviewer output.
@@ -94,6 +96,8 @@ def build_mutation_authorities(*, owner, expected_version, target_catalogue,
     record_requirement. Whole-record examination must be declared explicitly.
     """
     canonical_owner = _owner(owner)
+    if source_match_contract not in (None, SAME_TURN_SOURCE_MATCH):
+        raise SchemaViolation("Mutation authority has an unsupported source match contract")
     version = _version(expected_version)
     targets, sources = _catalogues(target_catalogue, source_catalogue)
     if not isinstance(proposals, (list, tuple)):
@@ -158,13 +162,16 @@ def build_mutation_authorities(*, owner, expected_version, target_catalogue,
         "snapshot_digest": _digest(targets), "source_digest": _digest(sources),
         "target_catalogue": targets, "source_catalogue": sources, "authorities": grants,
     }
+    if source_match_contract is not None:
+        ledger["source_match_contract"] = source_match_contract
     return {**ledger, "seal": _digest(ledger)}
 
 
 def _checked_ledger(ledger):
-    if not isinstance(ledger, dict) or set(ledger) != {
-            "contract", "owner", "expected_version", "snapshot_digest", "source_digest",
-            "target_catalogue", "source_catalogue", "authorities", "seal"}:
+    fields = {"contract", "owner", "expected_version", "snapshot_digest", "source_digest",
+              "target_catalogue", "source_catalogue", "authorities", "seal"}
+    if not isinstance(ledger, dict) or set(ledger) not in (
+            fields, fields | {"source_match_contract"}):
         raise SchemaViolation("Mutation authority ledger is absent or unreadable")
     body = {key: value for key, value in ledger.items() if key != "seal"}
     if ledger["contract"] != AUTHORITY_CONTRACT or ledger["seal"] != _digest(body):
@@ -187,7 +194,8 @@ def _checked_ledger(ledger):
         proposals.append(proposal)
     rebuilt = build_mutation_authorities(
         owner=ledger["owner"], expected_version=ledger["expected_version"],
-        target_catalogue=targets, source_catalogue=sources, proposals=proposals)
+        target_catalogue=targets, source_catalogue=sources, proposals=proposals,
+        source_match_contract=ledger.get("source_match_contract"))
     if rebuilt != ledger:
         raise SchemaViolation("Mutation authority ledger disagrees with its code-assigned scopes")
     return {row["id"]: row for row in ledger["authorities"]}
@@ -240,6 +248,14 @@ def candidate_authority_ids(*, ledger, owner, snapshot_version, relation, target
     if _version(snapshot_version) != ledger["expected_version"]:
         raise SchemaViolation("Mutation authority belongs to a different record snapshot")
     selected_sources = _current_source_ids(current_source_reference, ledger)
+    if ledger.get("source_match_contract") == SAME_TURN_SOURCE_MATCH:
+        # The operation's own exact source was checked above. Work authority
+        # belongs to the original advocate turn, whose instruction and account
+        # may occupy different sentences. Evidence selection stays exact;
+        # targets, relation, owner and snapshot remain separately constrained.
+        selected_sources = {identity for identity, source in ledger["source_catalogue"].items()
+                            if source["turn_id"] == current_source_reference["turn_id"]
+                            and source["role"] == current_source_reference["role"]}
     targets = _ids(target_ids, "target_ids")
     if (not isinstance(relation, str) or relation not in RELATIONS
             or (relation == "new" and targets)
@@ -622,11 +638,14 @@ def model_review_scope(review_scope):
         raise SchemaViolation("Mutation review scope belongs to a different turn owner")
     if "mutation_scopes" in review_scope:
         raise SchemaViolation("Mutation review scope repeats its permission presentation")
-    return {
+    result = {
         **{name: deepcopy(value) for name, value in review_scope.items()
            if name != "mutation_authorities"},
         "mutation_scopes": deepcopy(ledger["authorities"]),
     }
+    if "source_match_contract" in ledger:
+        result["mutation_source_match_contract"] = ledger["source_match_contract"]
+    return result
 
 
 def model_mutation_context(value):
@@ -643,7 +662,8 @@ def model_mutation_context(value):
         if value.get("contract") == AUTHORITY_CONTRACT:
             _checked_ledger(value)
             return {name: deepcopy(value[name]) for name in (
-                "contract", "owner", "expected_version", "authorities")}
+                "contract", "owner", "expected_version", "authorities",
+                *( ("source_match_contract",) if "source_match_contract" in value else () ))}
         return {name: model_mutation_context(item) for name, item in value.items()}
     if isinstance(value, list):
         return [model_mutation_context(item) for item in value]
