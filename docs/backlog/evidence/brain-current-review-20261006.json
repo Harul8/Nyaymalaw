@@ -1709,6 +1709,19 @@
       "canonical_changes": "None. Six schema construction lines enforce the existing owner rule; no prompt, state, ownership, semantic decision, recovery bound or historical contract changed.",
       "call_impact": "0 new routine or conditional stages. Existing material/dispute review calls receive the purpose-specific native shape. Existing turn-owned recovery8 and reply reserve2 unchanged. This establishes generation-shape consistency, not semantic source correctness or a measured false-positive rate.",
       "remaining": "Per-source candidate/record eligibility needs shared API plus producer handoff; coverage still selects unrelated representations and truncated ranges. Bounded recovery, dispute existence/identity, compound delivery and remaining six-activity audit items remain open."
+    },
+    {
+      "piece": "Source-specific coverage representation choices API",
+      "base": "136262d",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "Fresh native coverage may select only server-offered representation IDs and endpoint bounds for the particular owned original source. Eligibility never proves admission, original purpose or semantic support.",
+      "observable_pass": "Native wrong-source record/candidate IDs fail, legitimate source-linked neighbours and shared choices pass, no-eligible source retains truthful missing/unresolved/outside-scope judgments, and actual admission/support gates remain mandatory.",
+      "baseline": "New61 contract cases:59 fail for absent representation_options API;2 unsupplied compatibility cases pass.",
+      "verification": "150 focused declared/strict-wire choice, actual support/admission, compatibility and scripted public save/replay checks pass; Ruff passes. No live calls in this API prerequisite. No producer supplies the new map yet; full feature is explicitly incomplete.",
+      "canonical_changes": "None. New optional generation-only argument validates complete closed source keys and owned ID pools; per-source branches bind exact source bounds. Unsupplied and explicit None callers and historical proof/replay keep their prior contract.",
+      "call_impact": "0 added routine or conditional model calls. This API constrains existing schemas only. Original candidate_account_ids must retain whole current account and cited earlier sources; positive support may narrow settled corrections, with exact immutable alias closure.",
+      "remaining": "Turn-owned saved execution proof adapter and verifier argument handoffs are required before certifying existing/historical record choices. Active row primary quote or prior references are context, not substantive checked support. Existing-record coverage currently lacks admitted source dependency enforcement; historical supersession must remain distinct from current state. Candidate retry choices, purpose/ranges/recovery, dispute existence/identity and remaining six-activity qualifications remain open."
     }
   ],
   "additional_reviewer_input": {

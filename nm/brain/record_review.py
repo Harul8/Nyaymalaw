@@ -894,10 +894,12 @@ def admitted_record_decisions(decisions: dict[str, dict]) -> dict[str, dict]:
 
 
 def coverage_schema(source_ids, *, source_references=None, record_ids=(),
-                    candidate_ids=()) -> dict:
+                    candidate_ids=(), representation_options=None) -> dict:
     """Offer exact choices; fresh coverage describes portions, not duplicate gap IDs."""
     choices = list(dict.fromkeys(source_ids))
     if source_references is None:
+        if representation_options is not None:
+            raise SchemaViolation("Source-specific coverage choices require original references")
         return {
             "type": "object", "additionalProperties": False,
             "required": ["state", "reason", "missing_source_ids"],
@@ -911,6 +913,21 @@ def coverage_schema(source_ids, *, source_references=None, record_ids=(),
             },
         }
     references = _checked_source_references(choices, source_references, exact=True)
+    if representation_options is not None:
+        if (not isinstance(representation_options, dict)
+                or set(representation_options) != set(references)):
+            raise SchemaViolation("Coverage choices must cover the exact owned source catalogue")
+        for identity, options in representation_options.items():
+            if (not isinstance(options, dict)
+                    or set(options) != {"record_ids", "candidate_ids"}):
+                raise SchemaViolation(
+                    f"Coverage choices for {identity} require only owned ID pools")
+            for field, pool in (("record_ids", record_ids), ("candidate_ids", candidate_ids)):
+                values = options[field]
+                if (not isinstance(values, (list, tuple))
+                        or any(not isinstance(value, str) or not value.strip()
+                               or value not in pool for value in values)):
+                    raise SchemaViolation(f"Coverage choices for {identity}.{field} are unowned")
 
     def ids(values):
         selected = list(dict.fromkeys(values))
@@ -944,20 +961,33 @@ def coverage_schema(source_ids, *, source_references=None, record_ids=(),
                            "represented", "missing", "unresolved", "non_account", "outside_scope"]},
                        "record_ids": ids(record_ids), "candidate_ids": ids(candidate_ids),
                        "reason": {"type": "string", "minLength": 1}}}
+    offered = []
+    if representation_options is not None and choices:
+        for identity, reference in references.items():
+            selected = deepcopy(disposition)
+            selected["properties"].update(
+                source_id={"type": "string", "enum": [identity]},
+                **_source_range_schema({identity: reference})["properties"])
+            for field in ("record_ids", "candidate_ids"):
+                selected["properties"][field] = ids(representation_options[identity][field])
+            offered.append(selected)
+    else:
+        offered.append(disposition)
     alternatives = []
-    for field in ("record_ids", "candidate_ids"):
-        if disposition["properties"][field].get("maxItems") == 0:
-            continue
-        represented = deepcopy(disposition)
-        represented["properties"]["status"]["enum"] = ["represented"]
-        represented["properties"][field]["minItems"] = 1
-        alternatives.append(represented)
-    unrepresented = deepcopy(disposition)
-    unrepresented["properties"]["status"]["enum"] = [
-        "missing", "unresolved", "non_account", "outside_scope"]
-    for field in ("record_ids", "candidate_ids"):
-        unrepresented["properties"][field]["maxItems"] = 0
-    alternatives.append(unrepresented)
+    for selected in offered:
+        for field in ("record_ids", "candidate_ids"):
+            if selected["properties"][field].get("maxItems") == 0:
+                continue
+            represented = deepcopy(selected)
+            represented["properties"]["status"]["enum"] = ["represented"]
+            represented["properties"][field]["minItems"] = 1
+            alternatives.append(represented)
+        unrepresented = deepcopy(selected)
+        unrepresented["properties"]["status"]["enum"] = [
+            "missing", "unresolved", "non_account", "outside_scope"]
+        for field in ("record_ids", "candidate_ids"):
+            unrepresented["properties"][field]["maxItems"] = 0
+        alternatives.append(unrepresented)
     disposition = {"anyOf": alternatives}
     return {"type": "object", "additionalProperties": False,
             "required": ["state", "reason", "source_checks", "dispositions"], "properties": {
