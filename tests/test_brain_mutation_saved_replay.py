@@ -199,10 +199,10 @@ def test_saved_mutation_binding_tamper_refuses_public_replay_without_model_or_wr
     assert observed == expected
 
 
-def test_mislabeled_free_account_prose_remains_explicit_semantic_dependency(
+def test_mislabeled_free_account_prose_is_prevented_with_wrong_accepting_review(
     client, wired, monkeypatch
 ):
-    """Characterize the remaining failure rather than claim a renderer detects meaning."""
+    """Wrong semantic acceptance cannot admit authored text outside an expression."""
     identity = "mutation-release-mislabeled-operational-account"
     model, opened, previous, date_target, custody_target = correction_fixture(
         client, wired, monkeypatch, identity=identity, declared_requirement=True
@@ -216,12 +216,30 @@ def test_mislabeled_free_account_prose_remains_explicit_semantic_dependency(
             return {"new_items": [], "changes": []}
         if operation == "continue_conversation":
             for unit in data["units"]:
-                unit["blocks"][0].update(kind="account", text=lie)
+                account_id = unit["blocks"][0]["id"]
+                unit["blocks"] = [{
+                    "id": account_id, "kind": "account", "uncertainty": "reported",
+                    "evidence_expression": {
+                        "operator": "source_account",
+                        "source_ids": [current_model.dossier.details[0]["source_id"]],
+                        "record_ids": [], "focus": "none",
+                    },
+                }, {
+                    "id": "record-status", "kind": "completion", "uncertainty": "none",
+                    "evidence_expression": {
+                        "operator": "record_result", "source_ids": [],
+                        "record_ids": [], "focus": "none",
+                    },
+                }]
+                if current_model.operation_counts[operation] == 1:
+                    # Preserve the adversarial raw field. A strict completed
+                    # provider object is quarantined, then corrected once.
+                    unit["blocks"][0]["text"] = lie
                 unit["sufficiency"] = {
-                    "status": "partial", "block_id": unit["blocks"][0]["id"]
+                    "status": "partial", "block_id": "record-status"
                 }
                 unit["record_outcome"] = {
-                    "status": "unresolved", "block_id": unit["blocks"][0]["id"],
+                    "status": "unresolved", "block_id": "record-status",
                     "effect_ids": [], "current_record_ids": [],
                     "reason": "The selected date correction has no actual effect.",
                 }
@@ -242,11 +260,12 @@ def test_mislabeled_free_account_prose_remains_explicit_semantic_dependency(
     data, saved, current = release(client, wired, monkeypatch, model, identity, opened=opened)
     text = "\n".join(element["text"] for element in data["elements"])
     expected = {
-        "false_free_prose_released": True,
+        "false_free_prose_released": False,
         "truthful_code_status_present": True,
         "unchanged_record": True,
         "typed_fulfillment": "unfinished",
         "saved_exact_reply": True,
+        "writer_calls": 2,
     }
     observed = {
         "false_free_prose_released": lie in text,
@@ -254,13 +273,15 @@ def test_mislabeled_free_account_prose_remains_explicit_semantic_dependency(
         "unchanged_record": current.open_material == previous.open_material,
         "typed_fulfillment": data["material_coverage"]["execution"]["requests"][0]["fulfillment"],
         "saved_exact_reply": saved.brain_chat[-1]["response"]["elements"] == data["elements"],
+        "writer_calls": model.operation_counts["continue_conversation"],
     }
     evidence(
         identity, model, data, saved, expected, observed, scenario="faulty",
-        claim_scope="semantic_dependency", protection_status="gap_demonstrated",
-        notes="An independently scoped plan and code-owned outcome do not certify unrestricted "
-        "prose deliberately mislabeled account. Forced wrong semantic ACCEPT remains a known "
-        "dependency; no production keyword matcher or test-specific exception conceals it.",
+        claim_scope="mechanical", protection_status="recovered",
+        notes="The initial account block contains a forbidden raw authored claim, alongside a "
+        "correct unresolved declaration. The owner rejects that field, then a bounded correction "
+        "selects original account and code record status expressions. Deliberately wrong semantic "
+        "ACCEPT remains configured, but cannot release the rejected authored sentence.",
     )
     assert observed == expected
 

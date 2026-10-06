@@ -115,6 +115,8 @@ def material(receipt):
                 "id": "saved-observation",
                 "label": "Reported handover date",
                 "statement": "The handover was on 4 May.",
+                "quoted": "The handover was on 4 May.",
+                "source_turn_id": "current",
             }
         ],
         "coverage": {"state": "ok", "execution": receipt},

@@ -22,12 +22,24 @@ from tests.test_brain_continuation_service import send
 from tests.test_brain_research_service import QUESTION, route, sourced_reply, wire
 
 
+def direct_passage(payload):
+    """Select the checked passage without manufacturing a finding reference."""
+    result = sourced_reply(payload)
+    key = result["units"][0]["blocks"][0]["legal_source_ids"][0]
+    result["units"][0]["blocks"] = [{
+        "id": "cited-condition", "kind": "assessment", "uncertainty": "conditional",
+        "evidence_expression": {"operator": "checked_legal", "source_ids": [],
+                                "record_ids": [], "legal_source_ids": [key], "focus": "none"}}]
+    return result
+
+
 def test_public_direct_passage_keeps_its_checked_use_and_exact_application_limits(
         client, wired, monkeypatch):
     seen = {}
 
     def review(payload):
         block = payload["units"][0]["blocks"][0]
+        assert block["record_ids"] == []
         source_id = block["legal_source_ids"][0]
         source = payload["input"]["legal_sources"][source_id]
         owner = payload["input"]["record_catalogue"][source["use_record_id"]]
@@ -44,7 +56,7 @@ def test_public_direct_passage_keeps_its_checked_use_and_exact_application_limit
 
     corpus = Corpus()
     model = ResearchModel([route(QUESTION, research_question=QUESTION)],
-                          [sourced_reply], continuation_checks=[review])
+                          [direct_passage], continuation_checks=[review])
     wire(wired, monkeypatch, model, corpus)
 
     answer = send(client, QUESTION, "checked-passage-use-owner")
@@ -52,7 +64,8 @@ def test_public_direct_passage_keeps_its_checked_use_and_exact_application_limit
 
     assert answer["metrics"]["llm_calls"] == 6
     assert replay["metrics"]["llm_calls"] == 0
-    reference = answer["continuation"]["units"][0]["blocks"][0]["references"][0]
+    reference = next(row for row in answer["continuation"]["units"][0]["blocks"][0][
+        "references"] if row["type"] == "legal")
     assert reference["use_record_id"] == seen["source"]["use_record_id"]
     assert reference["source_use_id"] == seen["source"]["source_use_id"]
     assert answer["continuation"]["coverage"][0]["state"] == "ok"
@@ -87,35 +100,37 @@ def test_public_rejected_research_cannot_be_restored_by_citing_a_valid_peer_pass
 
     def overreach(payload):
         result = sourced_reply(payload)
-        result["units"][0]["blocks"][0]["text"] = unsupported
+        block = result["units"][0]["blocks"][0]
+        key = block["legal_source_ids"][0]
+        block.clear()
+        block.update(id="cited-condition", kind="assessment", uncertainty="conditional",
+                     evidence_expression={"operator": "checked_legal", "source_ids": [],
+                                          "record_ids": [], "legal_source_ids": [key],
+                                          "focus": "none"}, text=unsupported)
         return result
 
-    def reject(payload):
+    def check_replacement(payload):
         records = payload["input"]["record_catalogue"]
         assert all(row["record"]["need"] != unsupported for row in records.values())
         assert any(row["coverage"]["withheld_items"] for row in
                    payload["input"]["research_coverage"].values())
-        result = reviewed_verdicts(payload, verdict(0))
-        result["verdicts"][0]["block_checks"][0].update(
-            verdict="reject", requires_legal_support=True,
-            reason="The selected checked use supports its condition, not unconditional remedies.")
-        return result
+        return reviewed_verdicts(payload, verdict(0))
 
     def replacement(payload):
-        assert "unconditional remedies" in payload["correction"]["validation_issues"][0]["issue"]
+        assert "undeclared properties" in payload["correction"]["validation_issues"][0]["issue"]
         assert payload["correction"]["rejected_units"][0]["blocks"][0]["text"] == unsupported
-        return sourced_reply(payload)
+        return direct_passage(payload)
 
     corpus = Corpus()
     model = ResearchModel([route(QUESTION, research_question=QUESTION)],
                           [overreach, replacement], readings=read, checks=research_check,
-                          continuation_checks=[reject, verdict(0)])
+                          continuation_checks=[check_replacement])
     wire(wired, monkeypatch, model, corpus)
 
     answer = send(client, QUESTION, "rejected-proposition-use-owner")
     replay = send(client, QUESTION, "rejected-proposition-use-owner")
 
-    assert answer["metrics"]["llm_calls"] == 9
+    assert answer["metrics"]["llm_calls"] == 8
     assert replay["metrics"]["llm_calls"] == 0
     assert unsupported not in "\n".join(row["text"] for row in answer["elements"])
     assert answer["continuation"]["coverage"][0]["state"] == "ok"

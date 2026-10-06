@@ -436,6 +436,7 @@ class GoldenModel:
 
     def _continuation(self, payload):
         units = []
+        fresh = payload.get("response_expression_contract") == "evidence_expression_v1"
         for item in payload["work_items"]:
             index = item["request_index"]
             block_id = f"golden-block:{index}"
@@ -454,27 +455,30 @@ class GoldenModel:
                     "current_record_ids": [],
                     "reason": "The scripted owner leaves the full record result unresolved.",
                 }
+            source_id = next(identity for identity, role in self.dossier.source_roles.items()
+                             if role == "reported_matter_account")
+            block = {
+                "id": block_id, "kind": "completion", "text": self.reply,
+                "span_ids": [source_id], "record_ids": [], "legal_source_ids": [],
+                "inline_citations": [], "uncertainty": "reported",
+            }
+            if fresh:
+                # Author the valid base object before hook. A hook adding false
+                # prose now leaves a forbidden raw field for the public owner
+                # to reject; no fixture conversion runs after that attack.
+                block = {
+                    "id": block_id, "kind": "completion", "uncertainty": "reported",
+                    "evidence_expression": {
+                        "operator": "record_result" if outcome["status"] != "none"
+                        else "source_account",
+                        "source_ids": [] if outcome["status"] != "none" else [source_id],
+                        "record_ids": [], "focus": "none",
+                    },
+                }
             units.append(
                 {
                     "request_index": index,
-                    "blocks": [
-                        {
-                            "id": block_id,
-                            "kind": "completion",
-                            "text": self.reply,
-                            "span_ids": [
-                                next(
-                                    identity
-                                    for identity, role in self.dossier.source_roles.items()
-                                    if role == "reported_matter_account"
-                                )
-                            ],
-                            "record_ids": [],
-                            "legal_source_ids": [],
-                            "inline_citations": [],
-                            "uncertainty": "reported",
-                        }
-                    ],
+                    "blocks": [block],
                     "questions": [],
                     "next_work": [],
                     "sufficiency": {

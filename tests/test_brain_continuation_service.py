@@ -16,7 +16,13 @@ from tests.brain_continuation_fixture import (
     reviewed_verdicts,
 )
 from tests.brain_reader_fixture import reviewed_record_verdicts, source_treatment_reply
-from tests.test_brain_continuation import mixed_purpose_unit, unit, verdict
+from tests.test_brain_continuation import (
+    expression_block,
+    mixed_purpose_unit,
+    reviewed_units,
+    unit,
+    verdict,
+)
 from tests.test_brain_turn import plan
 
 
@@ -108,20 +114,16 @@ def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_va
     routing["items"].append({**routing["items"][0], "request": "Clarify the missing information",
                              "next_step": "clarify", "reply": "",
                              "clarification": "What should be examined?"})
-    bad = unit(text="The reported agreement creates an enforceable payment obligation.")
-    bad["blocks"] = [bad["blocks"][0]]
+    bad = unit()
+    bad["blocks"] = [{**expression_block("account-0", "account"),
+                     "text": "The reported agreement creates an enforceable payment obligation."}]
     bad.update(questions=[], sufficiency={"status": "needs_input", "block_id": "account-0"})
     good = unit(1, text="You ask what information is needed to examine the reported account.",
                 question="Which part of the account should we examine?")
 
-    def review_with_legal_requirement(payload):
-        result = reviewed_verdicts(payload, verdict(*(row["request_index"]
-                                                      for row in payload["units"])))
-        selected = next(row for row in result["verdicts"] if row["request_index"] == 0)
-        selected["block_checks"][0].update(
-            requires_legal_support=True, verdict="reject",
-            reason="An enforceable obligation states law; the selected user words supply none.")
-        return result
+    def review_valid_peer(payload):
+        assert [row["request_index"] for row in payload["units"]] == [1]
+        return verdict(1)
 
     def repeated_bad(payload):
         assert [row["request_index"] for row in payload["work_items"]] == [0]
@@ -131,18 +133,19 @@ def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_va
 
     model = PublicContinuationModel(
         [routing], [{"units": [bad, good]}, repeated_bad],
-        checks=[review_with_legal_requirement, review_with_legal_requirement])
+        checks=[review_valid_peer])
     monkeypatch.setattr(wired, "_model_for", lambda *args, **kwargs: model)
 
     answer = send(client, message, "structured-legal-account")
     replay = send(client, message, "structured-legal-account")
 
-    assert answer["metrics"]["llm_calls"] == 5
+    assert answer["metrics"]["llm_calls"] == 4
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [1]
     assert [row["state"] for row in answer["continuation"]["coverage"]] == ["unavailable", "ok"]
     visible = "\n".join(row["text"] for row in answer["elements"])
     assert "enforceable payment obligation" not in visible
-    assert "Which part of the account should we examine?" in visible
+    assert "What needs clarification about the meaning of the following account?" in visible
+    assert (f'Your message includes: “{message}”') in visible
     saved = wired.store.load(answer["matter_id"] or chat_matter_id("adv_demo", answer["chat_id"]))
     assert len(saved.brain_chat) == 1 and saved.brain_chat[0]["message"] == message
     assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
@@ -159,6 +162,8 @@ def test_public_hidden_question_purpose_is_rewritten_into_an_actual_visible_ques
     repaired = unit(text="You are unsure which date matters.",
                     question="Which event's date are you unsure about?")
     repaired["questions"][0]["purpose"] = "Identify the event whose date needs clarification."
+    repaired["blocks"][1] = expression_block("question-0", "question", operator="question",
+                                            focus="event", uncertainty="none")
 
     def unexpressed(payload):
         result = reviewed_verdicts(payload, verdict(0))
@@ -174,7 +179,8 @@ def test_public_hidden_question_purpose_is_rewritten_into_an_actual_visible_ques
 
     assert answer["metrics"]["llm_calls"] == 5
     visible = "\n".join(row["text"] for row in answer["elements"])
-    assert "Which event's date are you unsure about?" in visible
+    assert "What needs clarification about the event of the following account?" in visible
+    assert 'Your message includes: “I am unsure which date matters.”' in visible
     metadata = answer["continuation"]["units"][0]["questions"][0]
     assert metadata["block_id"] == "question-0"
     correction = model.calls[3][1]["correction"]["validation_issues"][0]["issue"]
@@ -191,9 +197,10 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     repeated = send(client, message, "continuation-first")
 
     visible = "\n".join(row["text"] for row in first["elements"])
-    assert "You report holding a signed receipt." in visible
-    assert "What outcome would you like to achieve?" in visible
-    assert "The record and applicable legal sources have not been checked." in visible
+    assert ('Your message includes: “I have a signed receipt for the disputed transaction.”'
+            in visible)
+    assert "What needs clarification about the meaning of the following account?" in visible
+    assert "The requested conclusion remains unresolved on the supplied support." in visible
     assert "I will examine your request" not in visible
     assert first["metrics"]["llm_calls"] == 8
     assert [operation for operation, _ in model.calls] == [
@@ -313,10 +320,13 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     assert "".join(row["text"] for row in composition["latest_message_spans"]) == latest
     for prompt, _, schema in model.seen:
         if prompt.operation == "continue_conversation":
-            assert "assessment" not in schema["properties"]["units"]["items"][
-                "properties"]["blocks"]["items"]["properties"]["kind"]["enum"]
+            assert "text" not in schema["properties"]["units"]["items"][
+                "properties"]["blocks"]["items"]["properties"]
     assert second["continuation"]["units"][0]["work"]["progress_id"] == ""
-    assert second["elements"][0]["text"] == continued["blocks"][0]["text"]
+    assert second["elements"][0]["text"] == (
+        'Your message includes: “A written permission was given in 2021.” '
+        'Your message includes: “I do not know when it ended.” '
+        'Your message includes: “The use began in 2019.”')
     saved = wired.store.load(first["matter_id"])
     assert len(saved.brain_chat) == 2
     details = saved.brain_chat[-1]["response"]["material"]
@@ -380,7 +390,7 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert second["metrics"]["llm_calls"] == 8
     assert aside["metrics"]["llm_calls"] == 3
     assert aside["continuation"]["coverage"][0]["state"] == "ok"
-    assert aside["elements"][0]["text"] == "Hello."
+    assert aside["elements"][0]["text"] == 'Your message includes: “Hello again.”'
     assert last["metrics"]["llm_calls"] == 8
     continuation_payloads = [payload for operation, payload in model.calls
                              if operation == "continue_conversation"]
@@ -392,7 +402,7 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert words[::2] == [first_message, correction, greeting]
     assert words[1::2] == ["\n".join(row["text"] for row in response["elements"])
                           for response in (first, second, aside)]
-    assert "signed copy is unavailable" in json.dumps(last["elements"])
+    assert "I cannot obtain a signed copy." in json.dumps(last["elements"])
     saved = wired.store.load(first["matter_id"])
     assert [row["message"] for row in saved.brain_chat] == [
         first_message, correction, greeting, returned]
@@ -408,19 +418,25 @@ def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired
     released = send(client, message, "public-mixed-block")
 
     assert released["metrics"]["llm_calls"] == 8
-    assert released["continuation"]["units"][0]["blocks"][0]["kind"] == "limitation"
+    assert released["continuation"]["units"][0]["blocks"][0]["kind"] == "question"
     assert released["elements"][0]["kind"] == "question"
     assert released["elements"][0]["section"] == "needed"
-    assert released["elements"][0]["text"] == proposed["blocks"][0]["text"]
+    assert released["elements"][0]["text"] == (
+        'What needs clarification about the meaning of the following account? '
+        'Your message includes: “I have a signed receipt for the disputed transaction.”')
     checked = next(payload for operation, payload in model.calls
                    if operation == "verify_continuation")
-    assert checked["units"] == [proposed]
+    writer = next(payload for operation, payload in model.calls
+                  if operation == "continue_conversation")
+    assert checked["units"] == reviewed_units(writer, proposed)
 
 
 def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusation(
         client, wired, monkeypatch):
     message = "I have a signed receipt for the disputed transaction. Please review it."
-    unsupported = unit(text="You deliberately concealed a damaging record.")
+    unsupported = unit()
+    unsupported["blocks"][0] = {**expression_block("account-0", "account"),
+        "text": "You deliberately concealed a damaging record."}
     reason = "The attributed record does not establish deliberate concealment."
     model = PublicContinuationModel(
         [opening_route(message)], [{"units": [unsupported]}, {"units": [unsupported]}],
@@ -433,7 +449,7 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     assert "deliberately concealed" not in json.dumps(response["elements"])
     assert response["continuation"]["units"] == []
     assert response["continuation"]["coverage"][0]["state"] == "unavailable"
-    assert response["metrics"]["llm_calls"] == 10
+    assert response["metrics"]["llm_calls"] == 8
     saved = wired.store.load(response["matter_id"])
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["message"] == message
@@ -598,7 +614,8 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_th
     assert len(model.calls) == previous_calls + 3
     assert model.tiers[-3:] == [Tier.JUDGE] * 3
     assert [row["text"] for row in reply["elements"]] == [
-        "You're welcome.", "No changes were made to the saved record."]
+        'Your message includes: “Thanks, I understand.”',
+        "No changes were made to the saved record."]
     saved = wired.store.load(first["matter_id"])
     assert project_work(saved) == before
     assert [row["message"] for row in saved.brain_chat] == [first_words, acknowledgment]
@@ -639,7 +656,7 @@ def test_public_matter_specific_answer_reaches_checked_composition_without_route
     assert reference["role"] == "advocate"
     assert reference["turn_id"] == "scope-repair-open"
     assert reference["text"] == "I have a signed receipt for the disputed transaction."
-    assert model.calls[-1][1]["units"] == [delivered]
+    assert model.calls[-1][1]["units"] == reviewed_units(model.calls[-2][1], delivered)
     saved = wired.store.load(first["matter_id"])
     assert [row["message"] for row in saved.brain_chat] == [first_words, requested]
 

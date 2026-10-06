@@ -6,7 +6,10 @@ from copy import deepcopy
 
 import pytest
 
+from nm.brain.continuation import _input
 from nm.brain.continuation_verification import verify_continuation
+from nm.brain.conversation import Conversation
+from nm.brain.evidence_rendering import rendered_block
 from nm.brain.work_state import project_work
 from tests.brain_continuation_fixture import citation_units, reviewed_verdicts
 from tests.test_brain_continuation import (
@@ -14,6 +17,9 @@ from tests.test_brain_continuation import (
     _continue,
     _operation_names,
     checked_finding,
+    conversation_plan,
+    expression_block,
+    reviewed_units,
     supplied_law,
     unit,
     verdict,
@@ -27,28 +33,28 @@ DISCLOSURE = (
     "I am worried about explaining the correction.")
 
 
-def block(identity, kind, text, *, source="L1"):
-    return {"id": identity, "kind": kind, "text": text,
-            "span_ids": [source] if source else [], "record_ids": [],
-            "legal_source_ids": [], "inline_citations": [], "uncertainty": "reported"}
-
-
 def mixed(*, structural=False, contribution=False):
+    """Declare evidence selections independently of discarded legacy prose.
+
+    A substantive rejection tests relevance and whole-request sufficiency. The
+    local-failure neighbour selects legal output without a checked passage.
+    The invalid expression must not erase independent attributable account.
+    """
     result = unit()
     result.update(blocks=[
-        block("ack", "acknowledgment", "Thank you for explaining the correction.", source="L3"),
-        block("facts", "account", "You now report an earlier instruction you had omitted."),
-        block("law", "assessment" if structural else "account",
-              "The earlier instruction defeats all opposing claims."),
-        block("limit", "limitation",
-              "The reported note has not been inspected, and the legal effect remains "
-              "unassessed because no supporting authority has been supplied.", source="L2")],
+        expression_block("ack", "acknowledgment", operator="acknowledgment", sources=()),
+        expression_block("facts", "account"),
+        expression_block("limit", "limitation", operator="limitation", sources=("L2",))],
         questions=[], next_work=[],
         sufficiency={"status": "complete", "block_id": "law"},
         work={"existing_id": "", "create": not contribution},
         progress_updates=[] if contribution else [{
-            "target_id": "$work", "status": "complete", "block_id": "law",
+            "target_id": "$work", "status": "complete",
+            "block_id": "facts" if structural else "law",
             "reason": "The entire requested review is complete.", "span_ids": ["L1"]}])
+    result["blocks"].insert(2, expression_block(
+        "law", "assessment" if structural else "account",
+        operator="checked_legal" if structural else "source_account", sources=("L3",)))
     return result
 
 
@@ -57,14 +63,15 @@ def retain_facts(payload):
     row = data["verdicts"][0]
     for check in row["block_checks"]:
         if check["block_id"] == "law":
-            check.update(requires_legal_support=True, verdict="reject",
-                         reason="The attributed words do not establish this legal consequence.")
+            check.update(verdict="reject",
+                         reason="The selected support does not deliver the requested legal "
+                         "conclusion or justify completing the whole review.")
         elif check["block_id"] == "proof":
             check.update(verdict="reject",
-                         reason="A reported uninspected note is not an established fact.")
+                         reason="The reported uninspected note does not establish its contents.")
         elif check["block_id"] == "next":
-            check.update(requires_legal_support=True, verdict="reject",
-                         reason="The proposed legal course exceeds the supplied support.")
+            check.update(verdict="reject",
+                         reason="The proposed work does not deliver the required legal review.")
     row.update(retained_block_ids=["ack", "facts", "limit"],
                retained_reason="These attributed blocks and their explicit limitation "
                "remain coherent without the rejected claims or any progress changes.")
@@ -77,16 +84,18 @@ def assert_limited(result):
     assert [row["id"] for row in saved["blocks"]] == ["ack", "facts", "limit"]
     assert saved["sufficiency"] == {"status": "partial", "block_id": "limit"}
     assert saved["questions"] == saved["next_work"] == saved["progress_updates"] == []
-    assert "defeats all opposing claims" not in json.dumps(saved)
-    assert "uninspected note proves" not in json.dumps(saved)
+    assert saved["blocks"][0]["text"] == "I have your message."
+    assert saved["blocks"][1]["text"] == (
+        "Your message includes: “I omitted an earlier instruction from my account.”")
+    assert saved["blocks"][2]["evidence_expression"]["source_ids"] == ["L2"]
+    assert "its contents have not been inspected" in saved["blocks"][2]["text"]
 
 
 def test_semantic_rejection_keeps_only_a_certified_coherent_subset_after_bounded_repair():
     proposed = mixed()
-    proposed["blocks"].insert(3, block(
-        "proof", "account", "The uninspected note proves the instruction's contents.", source="L2"))
-    proposed["blocks"].insert(4, block(
-        "next", "next_step", "You may pursue every remedy on this record."))
+    proposed["blocks"].insert(3, expression_block("proof", "account", sources=("L2",)))
+    proposed["blocks"].insert(4, expression_block(
+        "next", "next_step", operator="next_work", focus="meaning"))
     proposed["next_work"] = [{"id": "all-remedies", "block_id": "next",
                               "purpose": "Pursue every legal remedy.",
                               "target_ids": [], "existing_id": ""}]
@@ -103,7 +112,7 @@ def test_semantic_rejection_keeps_only_a_certified_coherent_subset_after_bounded
         repair, {"units": [original]})["units"]
     assert result.units[0]["blocks"][1]["references"][0]["text"] == (
         "I omitted an earlier instruction from my account.")
-    assert "legal consequence" in result.coverage[0]["diagnostics"][0]
+    assert "requested legal conclusion" in result.coverage[0]["diagnostics"][0]
 
 
 def test_persistent_local_support_failure_gets_one_final_independent_narrowed_review():
@@ -112,8 +121,11 @@ def test_persistent_local_support_failure_gets_one_final_independent_narrowed_re
     def check_subset(payload):
         assert [row["id"] for row in payload["units"][0]["blocks"]] == ["ack", "facts", "limit"]
         held = payload["input"]["partial_response_review"][0]
-        assert held["unreleased_unit"] == proposed
-        assert "actual supporting checked passage" in held["content_issues"]["law"]
+        held_blocks = {row["id"]: row for row in held["unreleased_unit"]["blocks"]}
+        assert held_blocks["facts"]["text"] == (
+            "Your message includes: “I omitted an earlier instruction from my account.”")
+        assert held_blocks["law"]["evidence_expression"]["operator"] == "limitation"
+        assert "checked legal passage" in held["content_issues"]["law"]
         response = verdict(0)
         response["verdicts"][0]["record_check"] = {
             "outcome": "unfinished",
@@ -141,13 +153,14 @@ def test_valid_factual_coverage_is_not_lost_when_the_conditional_rewrite_is_unav
     assert len(model.calls) == 3
 
 
-def test_a_thin_selected_passage_does_not_legitimise_broader_advice():
+def test_a_thin_selected_passage_does_not_legitimise_broader_completion():
     def propose(payload):
         result = mixed()
         law = result["blocks"][2]
         key = next(iter(payload["legal_sources"]))
-        law.update(kind="assessment", legal_source_ids=[key], inline_citations=[{
-            "text": "defeats all opposing claims", "legal_source_id": key}])
+        law.update(kind="assessment", evidence_expression={
+            "operator": "checked_legal", "source_ids": [], "record_ids": [],
+            "legal_source_ids": [key], "focus": "none"})
         return {"units": [result]}
 
     model = ContinuationModel([propose, retain_facts, propose, retain_facts])
@@ -158,27 +171,31 @@ def test_a_thin_selected_passage_does_not_legitimise_broader_advice():
     assert len(model.calls) == 4
 
 
-def test_a_supported_quote_does_not_validate_other_claims_in_its_block():
+def test_a_supported_quote_does_not_complete_a_broader_review():
     passage = supplied_law()[0]["text"]
 
     def propose(payload):
         result = mixed()
         key = next(iter(payload["legal_sources"]))
         result["blocks"][2].update(
-            kind="assessment", text=f"{passage} Every available remedy is therefore guaranteed.",
-            legal_source_ids=[key], inline_citations=[{
-                "text": passage, "legal_source_id": key}])
+            kind="assessment", evidence_expression={
+                "operator": "checked_legal", "source_ids": [], "record_ids": [],
+                "legal_source_ids": [key], "focus": "none"})
         return {"units": [result]}
 
     def check_entire_block(payload):
         proposed = payload["units"][0]["blocks"][2]
         source = payload["input"]["legal_sources"][proposed["legal_source_ids"][0]]
-        assert proposed["inline_citations"][0]["text"] == source["text"] == passage
+        assert source["text"] == passage
+        assert f"“{passage}”" in proposed["text"]
+        assert proposed["inline_citations"] == [{
+            "text": "Checked legal passage 1", "legal_source_id": source["id"]}]
         data = retain_facts(payload)
         check = next(check for check in data["verdicts"][0]["block_checks"]
                      if check["block_id"] == "law")
-        check.update(reason="The quote is supported, but the separate guarantee of every "
-                     "remedy is not entailed by the selected passage.")
+        check.update(requires_legal_support=True,
+                     reason="The quote is supported, but completion of every requested remedy "
+                     "review is not entailed by the selected conditional passage.")
         return data
 
     model = ContinuationModel([propose, check_entire_block, propose, check_entire_block])
@@ -228,7 +245,7 @@ def test_public_ambiguous_reference_is_clarified_without_repeating_supported_pee
         data = reviewed_verdicts(payload, verdict(0, 1))
         data["verdicts"][0]["block_checks"][0].update(
             verdict="reject", reason="The latest reference could mean either reported item; "
-            "the storage key was silently selected without attributable clarification.")
+            "the proposed complete answer omits the necessary identification question.")
         return data
 
     def clarify_pending(payload):
@@ -255,11 +272,15 @@ def test_public_ambiguous_reference_is_clarified_without_repeating_supported_pee
     assert replay["metrics"]["llm_calls"] == 0
     visible = "\n".join(row["text"] for row in answer["elements"])
     assert "will return the storage key" not in visible
-    assert "Does the planned return concern" in visible
-    assert visible.count("You mentioned a storage key and an appointment token.") == 1
+    assert "What needs clarification about the meaning" in visible
+    assert "She agreed to return it tomorrow." in visible
+    assert visible.count("My colleague has a storage key and an appointment token.") == 2
     units = {unit["request_index"]: unit for unit in answer["continuation"]["units"]}
     assert units[0]["sufficiency"]["status"] == "needs_input"
     assert units[1]["sufficiency"]["status"] == "complete"
+    assert len(units[1]["blocks"]) == 1
+    assert units[1]["blocks"][0]["text"].count(
+        "My colleague has a storage key and an appointment token.") == 1
     assert units[0]["progress_updates"] == units[1]["progress_updates"] == []
     from nm.brain.turn import chat_matter_id
 
@@ -343,9 +364,9 @@ def test_checked_use_refs_share_canonical_catalogue_ids_without_changing_saved_f
 def test_structural_integrity_failure_never_enters_partial_review(fault):
     proposed = mixed(structural=True)
     if fault == "unknown_span":
-        proposed["blocks"][0]["span_ids"] = ["another-source"]
+        proposed["blocks"][0]["evidence_expression"]["source_ids"] = ["another-source"]
     elif fault == "unknown_record":
-        proposed["blocks"][1]["record_ids"] = ["another-record"]
+        proposed["blocks"][1]["evidence_expression"]["record_ids"] = ["another-record"]
     elif fault == "unknown_work":
         proposed["work"] = {"existing_id": "another-task", "create": False}
     elif fault == "missing_owner":
@@ -383,6 +404,8 @@ def test_retention_approval_with_bad_coverage_is_unread_and_cannot_override_reje
             if fault == "legal_block":
                 next(c for c in row["block_checks"] if c["block_id"] == "law")[
                     "verdict"] = "accept"
+                next(c for c in row["block_checks"] if c["block_id"] == "law")[
+                    "requires_legal_support"] = True
         elif fault == "duplicate":
             row["retained_block_ids"].append("facts")
         elif fault == "unknown":
@@ -390,8 +413,13 @@ def test_retention_approval_with_bad_coverage_is_unread_and_cannot_override_reje
         return data
 
     model = ContinuationModel([invalid, invalid])
-    checked = verify_continuation(model, input_payload={
-        "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=(proposed,))
+    input_payload, spans, records, sources = _input(
+        Conversation(()), DISCLOSURE, conversation_plan(), None, None, None,
+        None, (), "latest")
+    rendered = reviewed_units(input_payload, proposed)[0]
+    rendered["blocks"] = [rendered_block(row, spans=spans, records=records, sources=sources)
+                          for row in proposed["blocks"]]
+    checked = verify_continuation(model, input_payload=input_payload, units=(rendered,))
 
     assert checked.decisions == {} and checked.retained == {} and checked.unavailable == (0,)
     assert len(model.calls) == 2
@@ -430,9 +458,9 @@ def test_public_adverse_disclosure_retains_supported_response_context_and_pendin
     assert released["sufficiency"]["status"] == "partial"
     assert released["questions"] == released["next_work"] == released["progress_updates"] == []
     visible = "\n".join(row["text"] for row in answer["elements"])
-    assert "Thank you for explaining the correction." in visible
-    assert "You now report an earlier instruction" in visible
-    assert "legal effect remains unassessed" in visible
+    assert "I have your message." in visible
+    assert "I omitted an earlier instruction from my account." in visible
+    assert "The requested conclusion remains unresolved on the supplied support." in visible
     assert "defeats all opposing claims" not in visible
     assert "I could not finish a checked response" not in visible
     saved = wired.store.load(first["matter_id"])
@@ -452,7 +480,7 @@ def test_public_untrusted_source_or_owner_withholds_instead_of_salvaging(
                   reply="I will examine the attributed correction.")
     proposed = mixed(structural=True)
     if fault == "unknown_source":
-        proposed["blocks"][0]["span_ids"] = ["unowned-source"]
+        proposed["blocks"][0]["evidence_expression"]["source_ids"] = ["unowned-source"]
     else:
         proposed["questions"] = [{"id": "q", "block_id": "unowned-block",
                                   "purpose": "Clarify the correction.",
@@ -499,7 +527,7 @@ def test_public_persistent_local_support_failure_releases_checked_partial_conten
     assert answer["continuation"]["coverage"][0]["state"] == "partial"
     assert answer["continuation"]["units"][0]["progress_updates"] == []
     visible = "\n".join(row["text"] for row in answer["elements"])
-    assert "Thank you for explaining the correction." in visible
+    assert "I have your message." in visible
     assert "defeats all opposing claims" not in visible
     assert [op for op, _ in model.calls] == [
         "interpret_conversation", "continue_conversation", "continue_conversation",

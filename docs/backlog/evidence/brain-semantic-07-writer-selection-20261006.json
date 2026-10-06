@@ -1,0 +1,42 @@
+{
+  "command": [
+    ".venv/bin/pytest",
+    "tests/test_brain_evidence_rendering.py",
+    "tests/test_brain_evidence_rendering_public.py",
+    "tests/test_brain_completion_link_matrix.py",
+    "tests/test_brain_expression_review.py",
+    "tests/test_brain_expression_replay.py",
+    "tests/test_brain_expression_record_outcome.py",
+    "tests/test_brain_continuation.py",
+    "tests/test_brain_continuation_service.py",
+    "tests/test_brain_continuation_record_outcome.py",
+    "tests/test_brain_continuation_mutation_dispatch.py",
+    "tests/test_brain_continuation_retention.py",
+    "tests/test_brain_continuation_use_scope.py",
+    "tests/test_brain_pressure_release.py",
+    "tests/test_brain_mutation_saved_replay.py",
+    "tests/test_brain_golden_pressure.py",
+    "tests/test_brain_record_outcome_nodes.py",
+    "--tb=short",
+    "--junitxml=docs/backlog/evidence/brain-semantic-07-writer-20261006.xml"
+  ],
+  "modules": [
+    "tests/test_brain_evidence_rendering.py",
+    "tests/test_brain_evidence_rendering_public.py",
+    "tests/test_brain_completion_link_matrix.py",
+    "tests/test_brain_expression_review.py",
+    "tests/test_brain_expression_replay.py",
+    "tests/test_brain_expression_record_outcome.py",
+    "tests/test_brain_continuation.py",
+    "tests/test_brain_continuation_service.py",
+    "tests/test_brain_continuation_record_outcome.py",
+    "tests/test_brain_continuation_mutation_dispatch.py",
+    "tests/test_brain_continuation_retention.py",
+    "tests/test_brain_continuation_use_scope.py",
+    "tests/test_brain_pressure_release.py",
+    "tests/test_brain_mutation_saved_replay.py",
+    "tests/test_brain_golden_pressure.py",
+    "tests/test_brain_record_outcome_nodes.py"
+  ],
+  "kind": "explicit offline subset; scripted models; no real model/browser"
+}

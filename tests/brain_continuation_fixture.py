@@ -6,6 +6,92 @@ from copy import deepcopy
 from tests.brain_reader_fixture import source_treatment_reply
 
 
+def expression_units(payload, data):
+    """Author closed expressions for declared ordinary legacy fixture drafts.
+
+    This is test-data migration, not a semantic reader or production repair.
+    The fixture's block kind declares its purpose; owned source/finding IDs
+    declare its evidence. Original fixture prose is deliberately not interpreted.
+    Explicit expressions and malformed attacks stay untouched, including any
+    forbidden display fields appended to an expression by an adversarial hook.
+    Tests for false prose must now fabricate that forbidden field explicitly.
+    """
+    result = deepcopy(data)
+    if not isinstance(result, dict) or not isinstance(result.get("units"), list):
+        return result
+    records = payload.get("record_catalogue", {})
+    legacy_fields = {"id", "kind", "text", "span_ids", "record_ids",
+                     "legal_source_ids", "inline_citations", "uncertainty"}
+    required = legacy_fields - {"inline_citations"}
+    for unit in result["units"]:
+        if not isinstance(unit, dict) or not isinstance(unit.get("blocks"), list):
+            continue
+        outcome = unit.get("record_outcome", {})
+        for index, block in enumerate(unit["blocks"]):
+            if (not isinstance(block, dict) or "evidence_expression" in block
+                    or not required <= block.keys() or not block.keys() <= legacy_fields
+                    or not isinstance(block["text"], str)
+                    or any(not isinstance(block[field], list)
+                           or any(not isinstance(identity, str) for identity in block[field])
+                           for field in ("span_ids", "record_ids", "legal_source_ids"))):
+                continue
+            citations = block.get("inline_citations", [])
+            if (not isinstance(citations, list) or any(
+                    not isinstance(citation, dict)
+                    or set(citation) != {"text", "legal_source_id"}
+                    or not isinstance(citation["text"], str)
+                    or not isinstance(citation["legal_source_id"], str)
+                    or citation["legal_source_id"] not in block["legal_source_ids"]
+                    or citation["text"] not in block["text"]
+                    for citation in citations)):
+                continue
+            source_ids = list(block["span_ids"])
+            record_ids = list(block["record_ids"])
+            legal_ids = list(block["legal_source_ids"])
+            findings = [identity for identity in record_ids
+                        if records.get(identity, {}).get("type") in ("requirement", "research")]
+            if legal_ids:
+                # Both checked findings and individually checked passages are
+                # legitimate owned selections. A standalone passage retains
+                # its checked statement; no finding wrapper is manufactured.
+                selected = set(legal_ids)
+                for identity, row in records.items():
+                    finding = row.get("record", {})
+                    if (row.get("type") in ("requirement", "research")
+                            and set(finding.get("source_ids", [])).intersection(selected)
+                            and identity not in findings):
+                        findings.append(identity)
+                supported_ids = {source for identity in findings
+                                 for source in records[identity]["record"].get("source_ids", [])}
+                supported_ids.update(payload.get("legal_sources", {}))
+                if not selected <= supported_ids:
+                    continue
+            kind, focus = block["kind"], "none"
+            if kind == "completion" and outcome.get("status", "none") != "none":
+                operator, source_ids, record_ids = "record_result", [], []
+            elif kind == "question":
+                operator, focus = "question", "meaning"
+            elif kind == "next_step":
+                operator, focus = "next_work", "meaning"
+            elif findings or legal_ids:
+                operator, record_ids = "checked_legal", findings
+            elif kind in ("account", "assessment", "completion"):
+                operator = "source_account" if source_ids or record_ids else "acknowledgment"
+            elif kind == "limitation":
+                operator = "limitation"
+            else:
+                continue
+            expression = {"operator": operator, "source_ids": source_ids,
+                          "record_ids": record_ids, "focus": focus}
+            if operator == "checked_legal" and legal_ids:
+                expression["legal_source_ids"] = legal_ids
+            unit["blocks"][index] = {
+                "id": block["id"], "kind": kind, "uncertainty": block["uncertainty"],
+                "evidence_expression": expression,
+            }
+    return result
+
+
 def citation_units(payload, data):
     """Supply declared anchors for old offline drafts, preserving explicit invalid anchors."""
     result = deepcopy(data)
@@ -29,6 +115,8 @@ def citation_units(payload, data):
             "status": "none", "block_id": "", "effect_ids": [],
             "current_record_ids": [], "reason": "",
         })
+        if payload.get("response_expression_contract") == "evidence_expression_v1":
+            continue
         for block in unit["blocks"]:
             if not isinstance(block, dict) or "inline_citations" in block:
                 continue
@@ -45,6 +133,8 @@ def citation_units(payload, data):
             block["inline_citations"] = [
                 {"text": phrase, "legal_source_id": identity}
                 for identity, phrase in zip(sources, phrases, strict=False)]
+    if payload.get("response_expression_contract") == "evidence_expression_v1":
+        return expression_units(payload, result)
     return result
 
 
@@ -151,6 +241,7 @@ def continuation_reply(operation, payload, *, scripted_items=()):
     requirements = {key: row for key, row in records.items()
                     if row["type"] == "requirement"}
     units = []
+    fresh = payload.get("response_expression_contract") == "evidence_expression_v1"
     for item in payload["work_items"]:
         index = item["request_index"]
         scripted = scripted_items[index]
@@ -182,12 +273,34 @@ def continuation_reply(operation, payload, *, scripted_items=()):
             if missing:
                 text += (f"\nLegal source checking is incomplete for {missing} "
                          f"dispute{'s' if missing != 1 else ''}.")
+        block = {"id": f"block:{index}", "kind": kind, "text": text,
+                 "span_ids": [latest_id], "record_ids": record_ids,
+                 "legal_source_ids": legal_ids,
+                 "uncertainty": "conditional" if legal_ids else "reported"}
+        if fresh:
+            # These are explicit ordinary fixture purposes. Neither the reply
+            # wording nor a successful effect is interpreted by this helper.
+            if kind == "question":
+                expression = {"operator": "question", "source_ids": [latest_id],
+                              "record_ids": [], "focus": "meaning"}
+            elif kind == "completion" and (
+                    item.get("record_requirement", {}).get("kind", "none") != "none"
+                    or item.get("response_mode") == "record_acknowledgement"
+                    or "none" not in item.get("record_outcome_statuses", ["none"])):
+                expression = {"operator": "record_result", "source_ids": [],
+                              "record_ids": [], "focus": "none"}
+            elif record_ids:
+                expression = {"operator": "checked_legal", "source_ids": [latest_id],
+                              "record_ids": record_ids, "focus": "none"}
+            else:
+                expression = {"operator": "source_account" if kind == "completion"
+                              else "limitation", "source_ids": [latest_id],
+                              "record_ids": [], "focus": "none"}
+            block = {"id": block["id"], "kind": kind, "uncertainty": block["uncertainty"],
+                     "evidence_expression": expression}
         units.append({
             "request_index": index,
-            "blocks": [{"id": f"block:{index}", "kind": kind, "text": text,
-                        "span_ids": [latest_id], "record_ids": record_ids,
-                        "legal_source_ids": legal_ids,
-                        "uncertainty": "conditional" if legal_ids else "reported"}],
+            "blocks": [block],
             "questions": questions, "next_work": [],
             "sufficiency": {"status": status, "block_id": f"block:{index}"},
             "work": {"existing_id": "", "create": item["intent"] == "request"},

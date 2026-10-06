@@ -147,4 +147,5 @@ def test_unadmitted_contract_tag_stays_verbatim_and_only_failed_draft_is_repaire
     assert len(presentations) == 2
     assert [row["request_index"] for row in model.calls[1][1]["units"]] == [0]
     assert all("contract" not in row for row in result.units)
-    assert result.units[0]["blocks"][0]["text"] == good["blocks"][0]["text"]
+    assert result.units[0]["blocks"][0]["text"] == (
+        'Your message includes: “I have a signed receipt.”')
