@@ -100,17 +100,42 @@ def _messages_from_wire(rows):
     )
 
 
-def _known_error(error):
-    if set(error) != {"kind", "message", "usage", "latency_ms", "retries"}:
+def _known_error(error, *, operation=None, tier=None, provider=None, model=None):
+    fields = {"kind", "message", "usage", "latency_ms", "retries"}
+    if not isinstance(error, dict) or set(error) not in (fields, fields | {"rejected_result"}):
         raise port.SchemaViolation("A saved model failure is not a complete error receipt")
-    if error["kind"] not in _ERRORS:
+    if not isinstance(error["kind"], str) or error["kind"] not in _ERRORS:
         raise port.SchemaViolation("A saved failure has no normalized model-error type")
     if not isinstance(error["message"], str) or not error["message"].strip():
         raise port.SchemaViolation("A saved failure has no reason")
     if any(type(error[key]) is not int or error[key] < 0 for key in ("latency_ms", "retries")):
         raise port.SchemaViolation("A saved failure has invalid latency or retry accounting")
     if error["usage"] is not None:
-        _usage_from_wire(error["usage"])
+        try:
+            _usage_from_wire(error["usage"])
+        except (TypeError, ValueError) as exc:
+            raise port.SchemaViolation("A saved failure has invalid usage accounting") from exc
+    if "rejected_result" not in error:
+        return None
+    if error["kind"] != "SchemaViolation" or operation != "structured":
+        raise port.SchemaViolation("Only a failed structured read can carry quarantined proposals")
+    encoded = error["rejected_result"]
+    if (not isinstance(encoded, dict) or set(encoded) != {"kind", "value"}
+            or encoded["kind"] != "ModelResult" or not isinstance(encoded["value"], dict)):
+        raise port.SchemaViolation("A quarantined proposal has no typed result receipt")
+    try:
+        rejected = _decode(encoded)
+        # The port constructor owns completeness, object shape and immutable
+        # JSON snapshot validation; importing a journal cannot weaken it.
+        port.SchemaViolation(error["message"], rejected_result=rejected)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise port.SchemaViolation("A quarantined proposal receipt is malformed") from exc
+    if (rejected.tier is not tier or (rejected.provider, rejected.model) != (provider, model)
+            or error["usage"] is None or rejected.usage != _usage_from_wire(error["usage"])
+            or (rejected.latency_ms, rejected.retries)
+            != (error["latency_ms"], error["retries"])):
+        raise port.SchemaViolation("A quarantined proposal differs from its failed-call receipt")
+    return rejected
 
 
 def _usage_from_wire(row):
@@ -266,7 +291,10 @@ def records_from_loop(record: LoopRecord, tools, *, versions=None):
                     raise port.SchemaViolation(
                         "A saved model failure has no normalized error receipt"
                     )
-                _known_error(error)
+                _known_error(
+                    error, operation="tool_call", tier=tier,
+                    provider=pending["provider"], model=pending["model"],
+                )
                 if not all(
                     isinstance(pending[key], str) and pending[key].strip()
                     for key in ("provider", "model")
@@ -338,6 +366,8 @@ class RecordingModel:
                 "latency_ms": exc.latency_ms,
                 "retries": exc.retries,
             }
+            if isinstance(exc, port.SchemaViolation) and exc.rejected_result is not None:
+                row["error"]["rejected_result"] = _encode(exc.rejected_result)
             row["record_digest"] = _record_digest(row)
             self.records.append(row)
             raise
@@ -426,14 +456,25 @@ class ReplayModel:
             raise port.SchemaViolation("Replay versions or operation differ from its recording")
         if "error" in row:
             error = row["error"]
-            if error["kind"] not in _ERRORS:
-                raise ValueError("Unknown recorded failure type")
+            rejected = _known_error(
+                error, operation=kind, tier=request.get("tier"),
+                provider=row["provider"], model=row["model"],
+            )
+            if rejected is not None:
+                try:
+                    port.require_schema(rejected.data, request["schema"])
+                except port.SchemaViolation:
+                    pass
+                else:
+                    raise port.SchemaViolation("The quarantined result did not fail this schema")
             self.position += 1
+            quarantine = {"rejected_result": rejected} if rejected is not None else {}
             raise _ERRORS[error["kind"]](
                 error["message"],
                 usage=port.Usage(**error["usage"]) if error["usage"] else None,
                 latency_ms=error["latency_ms"],
                 retries=error["retries"],
+                **quarantine,
             )
         result = _decode(row["result"])
         if kind == "tool_call":
