@@ -174,24 +174,27 @@ No verdict closes a matter, proves an account, grants permission, executes an
 operation or promises autonomous future work.
 
 Output contract.
-Outcome: Return exactly one whole-unit verdict per supplied request_index with
-all declared checks. Acceptance requires every check to pass; a general accept
-cannot override a failed subcheck. Do not rewrite prose or add law. Every check
-and whole-unit verdict needs a concise nonempty reason. For accept,
-retained_block_ids is [] and retained_reason is an empty string: retention has
-no meaning when the entire unit is accepted. For a rejected unit consider a
-coherent independently useful factual subset after every rejected block,
-proposal and progress change is removed. retained_block_ids may select only
-accepted source-supported account or acknowledgment blocks and a specific
-displayed limitation, preserving essential attribution/caveats and the actual
-request without implying completion. Retain no proposal owner, legal advice,
-unexpressed limit, incorrect scope or mislinked work. Certify the remaining
-meaning in retained_reason; if no such subset exists, both retention fields are
-empty. Return only verdicts under the declared JSON schema."""
+Outcome: Return accepted_units and rejected_units, placing each supplied
+request_index in exactly one collection exactly once. Both collections are
+present, even when empty. Every row carries all declared block, proposal,
+work, progress and question-resolution checks plus a nonempty reason.
+Acceptance requires every check to pass; placing a row in accepted_units cannot
+override a failed subcheck. The collection determines the whole-unit decision:
+return no whole-unit verdict field. Accepted rows carry no retained_block_ids
+or retained_reason; an accepted unit has no partial subset.
+For a rejected row, consider whether a coherent independently useful factual
+subset remains after every rejected block, proposal and progress change is
+removed. retained_block_ids may select only accepted source-supported account
+or acknowledgment blocks plus a specific displayed limitation, preserving
+essential attribution/caveats and the actual request without implying completion.
+Retain no proposal owner, legal advice, incorrect scope, unexpressed limit or
+mislinked work. Certify the remaining meaning in retained_reason; if no such
+subset exists, return an empty list and empty reason. Do not rewrite prose or
+add law. Return only the declared JSON object."""
 
 _CHECK = {
     "verdict": {"type": "string", "enum": ["accept", "reject"]},
-    "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+    "reason": {"type": "string", "minLength": 1},
 }
 
 _BLOCK_CHECK = {
@@ -255,7 +258,7 @@ _VERDICT = {
         "progress_checks": {"type": "array", "items": _PROGRESS_CHECK},
         "question_resolutions": {"type": "array", "items": _QUESTION_RESOLUTION},
         "retained_block_ids": {"type": "array", "items": {"type": "string"}},
-        "retained_reason": {"type": "string", "maxLength": 500},
+        "retained_reason": {"type": "string"},
     },
 }
 
@@ -265,6 +268,48 @@ class ContinuationVerification:
     decisions: dict[int, tuple[bool, str]]
     unavailable: tuple[int, ...]
     retained: dict[int, tuple[str, ...]]
+
+
+def _transport_shapes(row: dict) -> tuple[dict, dict]:
+    """Verdict collection selects the applicable fields, not a second label."""
+    def shape(removed: frozenset[str]) -> dict:
+        return {**row, "required": [field for field in row["required"] if field not in removed],
+                "properties": {field: spec for field, spec in row["properties"].items()
+                               if field not in removed}}
+    return (shape(frozenset({"verdict", "retained_block_ids", "retained_reason"})),
+            shape(frozenset({"verdict"})))
+
+def _transport_rows(data: object) -> list[tuple[str, dict]]:
+    """Read one declared transport. Each row is validated at its unit boundary.
+
+    Flat rows are an explicitly checked legacy/offline transport, not a live
+    schema option. Never remove populated metadata or merge competing verdicts.
+    """
+    if not isinstance(data, dict):
+        raise SchemaViolation("Return the declared continuation-review object")
+    if set(data) == {"verdicts"}:
+        if not isinstance(data["verdicts"], list):
+            raise SchemaViolation("Legacy verdicts must be a list of complete verdict rows")
+        return [("legacy", row) for row in data["verdicts"]]
+    if set(data) != {"accepted_units", "rejected_units"} or any(
+            not isinstance(data[key], list) for key in ("accepted_units", "rejected_units")):
+        raise SchemaViolation("Return accepted_units and rejected_units lists only")
+    return [(section, row) for section in ("accepted_units", "rejected_units")
+            for row in data[section]]
+
+def _transport_row(section: str, row: dict) -> dict:
+    """Derive whole-unit disposition in code after checking every supplied field."""
+    accepted, rejected = _transport_shapes(_VERDICT)
+    if section == "legacy":
+        require_schema(row, _VERDICT)
+        return dict(row)
+    if section == "accepted_units":
+        require_schema(row, accepted)
+        return {**row, "verdict": "accept", "retained_block_ids": [], "retained_reason": ""}
+    if section == "rejected_units":
+        require_schema(row, rejected)
+        return {**row, "verdict": "reject"}
+    raise SchemaViolation("Unknown continuation-review transport")
 
 
 def _schema(indexes: tuple[int, ...], proposed: dict[int, dict], progress: dict) -> dict:
@@ -298,9 +343,11 @@ def _schema(indexes: tuple[int, ...], proposed: dict[int, dict], progress: dict)
         "retained_block_ids": {"type": "array", "items": {
             "type": "string", "enum": blocks}},
     }}
+    accepted, rejected = _transport_shapes(row)
     return {"type": "object", "additionalProperties": False,
-            "required": ["verdicts"], "properties": {
-                "verdicts": {"type": "array", "items": row}}}
+            "required": ["accepted_units", "rejected_units"], "properties": {
+                "accepted_units": {"type": "array", "items": accepted},
+                "rejected_units": {"type": "array", "items": rejected}}}
 
 
 def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict
@@ -450,23 +497,26 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
             continue
         except ModelError:
             break
-        rows = (result.data.get("verdicts")
-                if result.usable and isinstance(result.data, dict) else None)
-        grouped: dict[int, list[dict]] = {index: [] for index in pending}
-        if isinstance(rows, list):
-            for row in rows:
-                if (isinstance(row, dict)
-                        and type(row.get("request_index")) is int
-                        and row["request_index"] in grouped):
-                    grouped[row["request_index"]].append(row)
+        try:
+            rows = _transport_rows(result.data if result.usable else None)
+        except SchemaViolation as exc:
+            issues = {index: str(exc) for index in pending}
+            continue
+        grouped: dict[int, list[tuple[str, dict]]] = {index: [] for index in pending}
+        for section, row in rows:
+            if (isinstance(row, dict)
+                    and type(row.get("request_index")) is int
+                    and row["request_index"] in grouped):
+                grouped[row["request_index"]].append((section, row))
         for index in pending:
             group = grouped[index]
             if len(group) != 1:
                 issues[index] = "Return exactly one whole-unit verdict with all checks"
                 continue
             try:
+                section, row = group[0]
                 decision, selected = _decision(
-                    group[0], proposed[index], input_payload["legal_sources"],
+                    _transport_row(section, row), proposed[index], input_payload["legal_sources"],
                     input_payload["progress"])
                 decisions[index] = decision
                 if selected:

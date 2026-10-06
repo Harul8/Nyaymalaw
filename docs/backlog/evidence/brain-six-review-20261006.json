@@ -333,6 +333,20 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_source_metadata.py"
       ]
+    },
+    {
+      "slice": "applicable-review-verdict-shapes",
+      "owners": [
+        "LB-187",
+        "LB-191",
+        "LB-192"
+      ],
+      "decision": "Reviewer accepted and rejected collections expose only applicable verdict fields. Server derives the decision from the collection and validates all subchecks. Legacy flat rows stay explicitly checked; populated conflicting retention metadata is never silently removed. Diagnostic reason length no longer causes unnecessary rejection.",
+      "validation": "Offline transport, continuation verification and retained-subset tests passed; legitimate long reasons and strict contradictory fields paired. No model/browser calls.",
+      "files": [
+        "nm/brain/continuation_verification.py",
+        "tests/test_brain_review_transport.py"
+      ]
     }
   ]
 }
