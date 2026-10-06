@@ -929,6 +929,12 @@ def coverage_schema(source_ids, *, source_references=None, record_ids=(),
                      "account", "non_account", "unresolved"]},
                  "substantive_spans": {"type": "array", "items": span},
                  "reason": {"type": "string", "minLength": 1}}}
+    account, other = deepcopy(check), deepcopy(check)
+    account["properties"]["content_purpose"]["enum"] = ["account"]
+    account["properties"]["substantive_spans"]["minItems"] = 1
+    other["properties"]["content_purpose"]["enum"] = ["non_account", "unresolved"]
+    other["properties"]["substantive_spans"]["maxItems"] = 0
+    check = {"anyOf": [account, other]}
     disposition = {"type": "object", "additionalProperties": False,
                    "required": ["source_id", "start", "end", "status", "record_ids",
                                 "candidate_ids", "reason"], "properties": {

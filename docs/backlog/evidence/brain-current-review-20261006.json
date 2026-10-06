@@ -1696,6 +1696,19 @@
       "false_acceptance_observed": "Two unsupported dispute classifications were saved: timing uncertainty and an auditor attributed denial without a described conflict. Reviewer equated material account support with dispute existence; labels are also raw snake_case. No inference of refusal is supported by the message.",
       "useful_delivery_limit": "Two sourced material details saved, but invalid coverage references leave overall work unfinished. Fixed reply truthfully reports saved effects but repeats duplicates from bad disputes and detail records. Legal reading and continuation remain unfinished.",
       "remaining": "Material/dispute coverage still counts unrelated representations and truncates its separate ranges; bounded dependent-review recovery; full material association and atomicity; dispute existence and identity; typed compound requested delivery; legal force/applicability/qualification; retrieval limits; UI diagnostics/closure; full six-activity browser qualification remains incomplete."
+    },
+    {
+      "piece": "Coverage purpose-dependent generation shapes",
+      "base": "2207d77",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "The existing coverage owner requires nonempty substantive portions exactly when content_purpose is account. Native generation must offer that same invariant without guessing purpose or changing evidence.",
+      "observable_pass": "Reject account-with-empty and non-account/unresolved-with-portions; admit genuine neighbouring shapes, exact owned ranges, mixed/overlapping selections and explicit historical coverage; preserve public save/replay and bounded recovery.",
+      "baseline": "Prepared30 cases:24 passed and6 failed because contradictory purpose/portion combinations were accepted by native schema but rejected later by the existing owner.",
+      "verification": "181 focused schema, actual support-dependency, activation and scripted public-boundary save/replay/recovery checks pass; Ruff passes. No real-model calls in this schema-only prerequisite. Browser semantic qualification remains pending after the required coverage-producer handoff.",
+      "canonical_changes": "None. Six schema construction lines enforce the existing owner rule; no prompt, state, ownership, semantic decision, recovery bound or historical contract changed.",
+      "call_impact": "0 new routine or conditional stages. Existing material/dispute review calls receive the purpose-specific native shape. Existing turn-owned recovery8 and reply reserve2 unchanged. This establishes generation-shape consistency, not semantic source correctness or a measured false-positive rate.",
+      "remaining": "Per-source candidate/record eligibility needs shared API plus producer handoff; coverage still selects unrelated representations and truncated ranges. Bounded recovery, dispute existence/identity, compound delivery and remaining six-activity audit items remain open."
     }
   ],
   "additional_reviewer_input": {
