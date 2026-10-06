@@ -1,0 +1,65 @@
+{
+  "candidates": [
+    {
+      "path": "/tmp/nm-golden-tests/brain_golden_pressure_fixture.py",
+      "destination": "tests/brain_golden_pressure_fixture.py",
+      "sha256": "7aa1a13de2dd1227d878aea5b42750ac6ffb54ff99e718285f3741bc7fef0ddd"
+    },
+    {
+      "path": "/tmp/nm-golden-tests/test_brain_golden_pressure.py",
+      "destination": "tests/test_brain_golden_pressure.py",
+      "sha256": "2b81e1dea738c67ef39938457661a797faf9147d6c0b8cee45136a79c0578cf8"
+    }
+  ],
+  "public_case_count": 72,
+  "all_expectations_met": true,
+  "fabricated_dispatches": 712,
+  "conditional_dispatches": 136,
+  "live_model_calls": 0,
+  "repository_sources": 20,
+  "composites": 8,
+  "composite_rule": "4 groups of3,4 groupsof2; independent thread ownership and qualification retained.",
+  "normal_turn_dispatches": 8,
+  "conditional_by_variant": {
+    "good": 0,
+    "average_partial": 2,
+    "malformed_sibling": 1,
+    "persistent_bad": 3,
+    "hallucinated": 2,
+    "foreign_source": 3,
+    "empty_extract": 2,
+    "source_conflict": 3,
+    "owned_threads": 1
+  },
+  "focused_check": "NM_PARTIAL_RUN=1 .venv/bin/python -m pytest /tmp/nm-golden-tests/test_brain_golden_pressure.py -o addopts= -q --tb=line --junitxml=/tmp/nm-golden-frozen72.xml",
+  "focused_result": "72 passed in14.87s; temporarypytestroot warnsaboutclass_a registration; repositorynormalrunusespytest.ini.",
+  "lint": "Both candidates Ruff clean.",
+  "evidence": "/tmp/nm-golden-frozen72",
+  "junit": "/tmp/nm-golden-frozen72.xml",
+  "log": "/tmp/nm-golden-frozen72.log",
+  "construction_observations": [
+    {
+      "artifact": "/tmp/nm-golden-debug3.xml",
+      "result": "46pass2fail",
+      "classification": "fixtureconstruction",
+      "details": "ExcludingGS19purelegalrubric leftoneCOMPOSITE8accountrow; persistentbadremovedonly row, validlyrefusedunsafeunreadturn. Added twoatomic propositions alreadyreportedbyGS20 possessionunderunregisteredagreement."
+    },
+    {
+      "artifact": "/tmp/nm-golden-debug2.log",
+      "classification": "fixtureconstruction",
+      "details": "Initialcoveragefixture markeddetailgap in bothactivityscopes andtargetedreader returnedgoodwhilevariantrequestedpersistentbad. Scope limitedto owned detailreview andrawfailure nowpersists acrossboundedread. No productionchange."
+    },
+    {
+      "artifact": "/tmp/nm-golden-debug5.xml",
+      "result": "72pass",
+      "classification": "verifiedwiring",
+      "details": "Predeclared independent account,source,attribute,coverageandreplyverdicts; finalthreadlabelprojectioncheckedagainstpredispatchauthoredlabels."
+    }
+  ],
+  "limits": [
+    "Exactcuratedrepositoryscenarioquotesanchored toreal namedauthorities, notnewlyacquiredjudgmenttext or one authentic mergedclientfile.",
+    "Allsemanticverdicts fabricatedandindependentlyowned: judgedhallucinationrejectionprovesrejectwiring, notrealmodeldetection.",
+    "Core64 arequote/proposaladmission,recovery,persistence andresponsewiring. Theydo notqualify original20multi-turngoldenscenariolegaloutcomes suchasGS15 advice recomputation or GS25 humanconflictclearance.",
+    "No productionprompts, classifiers or scenario-specificproductionlogic changed."
+  ]
+}

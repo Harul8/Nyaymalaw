@@ -1,0 +1,119 @@
+{
+  "scope": "independent static and direct fixture-oracle audit; no public run re-count or model semantic qualification",
+  "source_file_sha256": "f94f1e572c8dad1f0cb1bcdf5682c43728270ce46e35a016401f043f291749f5",
+  "composites": [
+    {
+      "dossier": "COMPOSITE-01",
+      "golden_ids": [
+        "GS-06",
+        "GS-07",
+        "GS-16"
+      ],
+      "owned_spans": 8,
+      "authored_details": 6,
+      "authored_issues": 4,
+      "authored_supported_issues": 4,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-02",
+      "golden_ids": [
+        "GS-08",
+        "GS-23",
+        "GS-25"
+      ],
+      "owned_spans": 10,
+      "authored_details": 9,
+      "authored_issues": 2,
+      "authored_supported_issues": 1,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-03",
+      "golden_ids": [
+        "GS-09",
+        "GS-11",
+        "GS-22"
+      ],
+      "owned_spans": 8,
+      "authored_details": 7,
+      "authored_issues": 6,
+      "authored_supported_issues": 6,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-04",
+      "golden_ids": [
+        "GS-12",
+        "GS-10",
+        "GS-24"
+      ],
+      "owned_spans": 8,
+      "authored_details": 6,
+      "authored_issues": 4,
+      "authored_supported_issues": 4,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-05",
+      "golden_ids": [
+        "GS-13",
+        "GS-14"
+      ],
+      "owned_spans": 6,
+      "authored_details": 4,
+      "authored_issues": 1,
+      "authored_supported_issues": 1,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-06",
+      "golden_ids": [
+        "GS-15",
+        "GS-17"
+      ],
+      "owned_spans": 4,
+      "authored_details": 2,
+      "authored_issues": 1,
+      "authored_supported_issues": 0,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-07",
+      "golden_ids": [
+        "GS-18",
+        "GS-21"
+      ],
+      "owned_spans": 5,
+      "authored_details": 4,
+      "authored_issues": 1,
+      "authored_supported_issues": 1,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    },
+    {
+      "dossier": "COMPOSITE-08",
+      "golden_ids": [
+        "GS-19",
+        "GS-20"
+      ],
+      "owned_spans": 4,
+      "authored_details": 2,
+      "authored_issues": 1,
+      "authored_supported_issues": 0,
+      "unknown_meaning_guard": "rejects_fixture_definition"
+    }
+  ],
+  "hashes": {
+    "/workspace/Nyaymalaw/tests/test_brain_golden_sources.py": "318669469021d1deb8334b76836b92cf3abc8192d5163099f48b6b9e72ffc684",
+    "/workspace/Nyaymalaw/tests/fixtures/brain_golden_sources_20261006.json": "cdd319ce05a38a6cd06c5227942d34ccab3e74243a6719ac7f785c9e47916a72",
+    "/tmp/nm-golden-tests/brain_golden_pressure_fixture.py": "7aa1a13de2dd1227d878aea5b42750ac6ffb54ff99e718285f3741bc7fef0ddd",
+    "/tmp/nm-golden-tests/test_brain_golden_pressure.py": "2b81e1dea738c67ef39938457661a797faf9147d6c0b8cee45136a79c0578cf8",
+    "/tmp/nm-golden-tests/test_brain_golden_boundaries.py": "2e24e20a517edcb52dfaa79e4bf8b709209881bd376bb2b61e8241f1e5317733"
+  },
+  "new_owned_thread_label_comparison": "Reopened material dispute IDs resolved to reopened dispute labels and compared against assignment_labels authored before provider dispatch.",
+  "signed_audit_scope": "Approved for offline mechanical admission/recovery/save/replay/release wiring with independently declared fake semantic verdicts. Actual model semantic accuracy, legal authority acquisition/application and full original golden multi-turn expectations remain outside qualification.",
+  "intentional_semantic_gaps": [
+    "Wrong semantic reviewer may accept false unrestricted completion prose.",
+    "Wrong identity reviewer may retire an unrelated but owned record; code still withholds claimed fulfillment of the untouched requested target."
+  ]
+}

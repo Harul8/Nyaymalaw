@@ -1,0 +1,21 @@
+...............................F...............F
+=================================== FAILURES ===================================
+E   AssertionError: {"detail":{"code":"brain_refused","why":"NM could not validate the analysis returned by the AI service. Please try again later.","turn_id":"GOLDEN-08-PERSISTENT-BAD","committed":"not_committed","chat_id":null,"retryable":true}}
+------------------------------ Captured log call -------------------------------
+WARNING  nm.brain.turn:turn.py:1439 Conversation analysis was rejected before saving: required property result.proposals[0].kind is missing
+/tmp/nm-golden-tests/brain_golden_pressure_fixture.py:447: AssertionError: {"detail":{"code":"brain_refused","why":"NM could not validate the analysis returned by the AI service. Please try again later.","turn_id":"GOLDEN-08-PERSISTENT-BAD","committed":"not_committed","chat_id":null,"retryable":true}}
+E   AssertionError: {"detail":{"code":"brain_refused","why":"NM could not validate the analysis returned by the AI service. Please try again later.","turn_id":"GOLDEN-08-FOREIGN-SOURCE","committed":"not_committed","chat_id":null,"retryable":true}}
+------------------------------ Captured log call -------------------------------
+WARNING  nm.brain.turn:turn.py:1439 Conversation analysis was rejected before saving: required property result.proposals[0].kind is missing
+/tmp/nm-golden-tests/brain_golden_pressure_fixture.py:447: AssertionError: {"detail":{"code":"brain_refused","why":"NM could not validate the analysis returned by the AI service. Please try again later.","turn_id":"GOLDEN-08-FOREIGN-SOURCE","committed":"not_committed","chat_id":null,"retryable":true}}
+=============================== warnings summary ===============================
+test_brain_golden_pressure.py::test_golden_composite_public_pressure[good-0]
+  /workspace/Nyaymalaw/tests/test_turn_contract.py:42: PytestUnknownMarkWarning: Unknown pytest.mark.class_a - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.class_a
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../tmp/nm-golden-tests/test_brain_golden_pressure.py::test_golden_composite_public_pressure[persistent_bad-7]
+FAILED ../../tmp/nm-golden-tests/test_brain_golden_pressure.py::test_golden_composite_public_pressure[foreign_source-7]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 2 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+2 failed, 46 passed, 1 warning in 11.00s

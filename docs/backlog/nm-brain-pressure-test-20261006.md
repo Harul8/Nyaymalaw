@@ -9,6 +9,15 @@ remains deferred by the user.
 
 ## Current integrated offline verification
 
+The subsequent [golden composite extension](nm-brain-golden-pressure-test-20261006.md)
+uses exact selected passages from twenty repository golden scenarios in eight
+dossiers. At `aaf90cc`, its 91 new cases plus the existing 101 ran in three orders:
+192 distinct cases and 576 passing executions with identical compared outcomes.
+Two new characterization cases explicitly expose false unrestricted prose and
+wrong owned correction lineage under fabricated incorrect Judges. This extension
+changes no NM runtime or prompt and does not replace the broader regression or
+live-qualification limits below.
+
 At production HEAD `f021a5c`, **2,134 affected offline regression tests passed**;
 three journey tests were deliberately deselected. This includes Brain readers,
 independent reviewers, continuation, effects, saved state, historical replay,
