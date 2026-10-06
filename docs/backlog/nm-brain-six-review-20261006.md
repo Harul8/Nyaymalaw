@@ -18,6 +18,12 @@ The captured offline result below verifies the exercised mechanical contracts;
 actual-model API and browser qualification remain deferred by the user.
 No semantic-accuracy or false-rejection-rate claim follows from offline passes.
 
+The later [passage/output pressure test](nm-brain-pressure-test-20261006.md)
+records demonstrated false-prose release, harmless-metadata rejection and
+unfinished extraction recovery. This six-activity source review does not mean
+every earlier proposed follow-up was implemented; Before Build now records
+those remaining structural gaps explicitly.
+
 ## The six responsibilities
 
 | Activity | Owning functions/modules | What is checked; what remains a judgment |

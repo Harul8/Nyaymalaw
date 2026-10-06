@@ -1,0 +1,133 @@
+{
+  "recorded_utc": "2026-10-06T04:18:17.097976+00:00",
+  "tested_base_head": "2236020348d6c1bb9ecdc97a2ec8eaf1c1e7586e",
+  "packet": "docs/backlog/evidence/brain-pressure-test-20261006.json",
+  "packet_sha256": "cee5e064125538d1e5c5a022f12c7bb3efb587feacd2ef8e6cecd2f3b419b87a",
+  "distinct_cases": 79,
+  "ordered_test_executions": 237,
+  "combined_passed": 246,
+  "artifacts": [
+    {
+      "path": "docs/backlog/evidence/brain-pressure-baseline-20261006.xml",
+      "tests": 167,
+      "sha256": "5934ac9cb0b6dfa014e50774b178442178e469683c3965ab778e990085beb81a"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-combined-20261006.xml",
+      "tests": 246,
+      "sha256": "f9b4a851918fd9818320641a53b8ea90325a7ffd29f75cf8c27c67d13c4704b4"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-1-20261006.xml",
+      "sha256": "68ad5fe8870611fe35bd73f530c742c6e428f18f2b7b55d692d623c0ae2d6b1b"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-1-20261006.log",
+      "sha256": "20e6ceebbc3acaad7718a323a133ee532601f266d482fda1351de5a38a7f1213"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-2-20261006.xml",
+      "sha256": "8fd87168a779b34ec94db207462216c5d05c7f83b0e65396b2bad6f9a61c86d1"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-2-20261006.log",
+      "sha256": "1d04ac696b628764f44c2e59b30fab61d4c2d4e91a6744cceed925c140d58455"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-3-20261006.xml",
+      "sha256": "b28cb5a09c2e24f9365599aabb77fbf614cb0542db10952bfebd422c0f1218dc"
+    },
+    {
+      "path": "docs/backlog/evidence/brain-pressure-round-3-20261006.log",
+      "sha256": "1fbea0b462a75af8a5b74dd786b1d97fd3b3d1135668db38b5bfe281cd8d8727"
+    }
+  ],
+  "production_unchanged": true,
+  "source_hashes": {
+    "nm/brain/__init__.py": "bbbaeddb5f2489ff94dd9c963907c10c55f25f8a40fda18d18dc3e4177d342f8",
+    "nm/brain/checked.py": "367e7cc5bd3c081acc3909994df245f9da0bef4d7dce88878fa032e8231073e9",
+    "nm/brain/continuation.py": "821f4a5225e3091ff8bbc3b07949a58f44f8567349f7046950be6bab96441988",
+    "nm/brain/continuation_verification.py": "afb889a2dafc36cdc0566a2b7931a2bbb2a58f5d8e9b980db4b8f1c79f08f570",
+    "nm/brain/conversation.py": "8fbd1e55dd2268ddb96af686d030bd95fbb1a37f74755835e1ff9e6c4cb1948a",
+    "nm/brain/dispute_state.py": "79565140364e7b98361f5aedd1fc1b844ec9a65d90f3caebe8c7efffb9592839",
+    "nm/brain/dispute_verification.py": "bb6ca52681a6f7b81cfe98351955e1ffd57ad90f905169c6f33e0e8f1fc69f88",
+    "nm/brain/disputes.py": "7864ebf0faaf21b6d1d08d72faf989b27445245012e124d82ac25c8e5a852194",
+    "nm/brain/execution_contracts.py": "9d646228b5bf5b335ba0f613a77d01e5c72c17dfeaf316c81c259f7c5f0ade83",
+    "nm/brain/history.py": "fc9670dc498698f450f1ff2c4eaebacc90126c3a0fdc70fc3ff1edc2fd672801",
+    "nm/brain/legal_requirements.py": "08bf2bc7fd6cd7092e26025fdf104ec4e7bdf38c5b923b84b8785cd83b881a73",
+    "nm/brain/material.py": "52741a8d244297202f998d75e6cb57bc96ba32efcee96f34fdd95fb4e1e55ad1",
+    "nm/brain/material_state.py": "cfe700bf88c65d844bb6ec58a8863050f0ef9e2bac84d0cc2559a2c28f9f8711",
+    "nm/brain/material_verification.py": "d5ae5d3cb88339df66ed2970021113a46e99e55a60a53ed5129d7813c6717f76",
+    "nm/brain/record_review.py": "cd43427fd4bdfbe7e5ee5863fb5c126109f28abf3ebccf19e3f5901d586c10cd",
+    "nm/brain/requirements_state.py": "0238de411bb9f3381a0738d5654ac7c9e148e95b7c27c49736061c4fc6051dc6",
+    "nm/brain/retrieval.py": "02ca34e6d3570518c98b61862ba5f798fa02ffca11ccbb7135cdd2fb7d8044ae",
+    "nm/brain/source_snapshots.py": "992fad921a7b531eb882ba866d32047ba19eaf924640821b8e0354f529e5f7b2",
+    "nm/brain/turn.py": "60560ab7e813143e52f274d3417642c7ab0a9da52d20b244656d019fb87947ec",
+    "nm/brain/work_state.py": "d94a71b12bdcf8b2edea3d428ab3fa6b672edb17b4a6bf6137b96ad8656e16e4",
+    "nm/shared/__init__.py": "81a46be472604cac37cf2536995c7967b85d696365a33fde72d3b7d1ee060625",
+    "nm/shared/authority_contracts.py": "71a2531501f9ce4bdd49519abc4b17a948a9086321afcf8be9c48db1ed00f144",
+    "nm/shared/budget_contracts.py": "659075c6dcb910fcf12128ecca78a8123ea7d8a9a7fc6651d112eb0376401a2b",
+    "nm/shared/clock_contracts.py": "fd5ecf2c75afa7c0daea89f8856ab8630e3281acd7cde29f6fdeec15f849291a",
+    "nm/shared/deployment_contracts.py": "b37ff0baafb46552435bb14c019d61f05fb1de57240f1d1ba0e468b3dba6b00f",
+    "nm/shared/egress_contracts.py": "0aadfae93c3880c295ad73f8c9cd9e2f5fb5ac933dfaf03296dab65d333cbb2b",
+    "nm/shared/egress_policy.py": "cb6de45717c7be431f7c60ab6b9a8cebe8d347dd681b6dd3c5acae75adacf2bb",
+    "nm/shared/external_ai_contracts.py": "3428271412b73594e63cca1188f074345c8ff56c603833dce7d38d95b817ca41",
+    "nm/shared/gates_contracts.py": "d78eb4d59deeb76d1b6d917bfcd5ac6ac2e8248acb12adc498fd27ba1a1533e7",
+    "nm/shared/identity_contracts.py": "051421dbdb0b10571a79ff520dd4198fa4eb8584876155c204a0b8a69db8cbf4",
+    "nm/shared/incident_contracts.py": "bcba9a3144e17bca0db0eaeffec599b6e2b3d325c533b39d740bc34e7bf9b4fe",
+    "nm/shared/json_values.py": "8af2d1b82b8cd681b5cff1f658eec247aecfd479203d7c592b2bc7cef8bcd018",
+    "nm/shared/legal_review_contracts.py": "7bc6ad0d5846cb6ec5a6b741ff7b39fdcdb083ac4dc300a99c4dc4f727a91398",
+    "nm/shared/metrics_contracts.py": "66a9000c3bca27508108369dc46f5fbc73580bb6c4c42cacc63b81fb457af093",
+    "nm/shared/model_anthropic_adapter.py": "646b6cb4b66ea9c3f943dfd8f23330f5b060de83cded1201fb204daaabf85a03",
+    "nm/shared/model_budget.py": "21a6036c6475baa0e1bd73c8c1696a53c22cddd73c28a2f2d431abfffe2b3da6",
+    "nm/shared/model_call_budget.py": "fe6ebcb61f0a8ad4913b6ef54003046a64420fb6520a0ac835491c0e28a7b8b8",
+    "nm/shared/model_config.py": "a370594c40dd3c1d0450074037b7f5aa02625c5dc854d142744ad35536f62124",
+    "nm/shared/model_openai_adapter.py": "1c730026ff519ecfc4d77fcfd980639764ea5ac3f3beafb7c1804114da7ae95e",
+    "nm/shared/model_policed.py": "1eb7d6896a5df7d81bfa48f6aa7549450b6ef5185c6f72451b6aeb7825f1c053",
+    "nm/shared/model_port.py": "d87bd059eede3efb4547f63b9aa4fd856f80a9dd4a707c4cc52ea26cd2fe3220",
+    "nm/shared/model_replay.py": "f7063e60faa7de3a5b5255523dcb43e3777037fc54c64fd7306069351bad129f",
+    "nm/shared/model_scripted.py": "f2a14e4d95eed764c4acac595a197aa92e1c21bd874e9e99caf45f754912ed7d",
+    "nm/shared/model_traced.py": "e79b4e20a889276aeaf072512a2efe03599282b57c47dc176c2578d46eb2c618",
+    "nm/shared/model_transport.py": "d4bf2dc3a6f366b344557aeb5d42a8d57b72ff66cbeefb8ea22234c46af61810",
+    "nm/shared/names_contracts.py": "e1ad40939a9578cc74da910c321ccf512fd81ea27fbc8f4206abe9bdb53029fc",
+    "nm/shared/operation_contracts.py": "f78006937e06e0e3fe7cc1ed33942a891585f6727a2baebbfc78faabed527142",
+    "nm/shared/optional_adapter.py": "3520041d78c313e7e3f0e46c251a4cc4f80218f5a8da64f83be2e7ee403257ca",
+    "nm/shared/policed_port_adapter.py": "350df4cef9311fe8535f3c373f30bd44f0b6d4a03d43cfa6753d2d7f2529c668",
+    "nm/shared/release_contracts.py": "50b2d6289ceef9be1501398c0d2b0a3e461c1415cb9eb703af492ea77be4c146",
+    "nm/shared/restore_contracts.py": "94b8c672029577094400ab771f78d2e917efa054a7695af39a63bbad40b6b3c7",
+    "nm/shared/review_contracts.py": "8eaf31f5f23176a8c2a561a2f5ace29f7db679ddec9223de83be694a72a7d55c",
+    "nm/shared/source_layout.py": "89cee116aadc207c88b16f7afc82f27c24e00e57429016b8f4f0bce4c9600736",
+    "nm/shared/spoken_contracts.py": "015542370f07bde5cde45a1b743fd2d8c5d672bda82da8cbcdb43bd896546555",
+    "nm/shared/storage_errors_port.py": "45d4dc27d3c0fff60f2ac33052a47e379ecc7da140e3d06a95b82072b103176c",
+    "nm/shared/store_documents.py": "a228ca45746e54eb3177316f96910c6d616d0036c3791846472e44b75a2af121",
+    "nm/shared/store_envelope.py": "633ff998b5a81243dbeae3ac52bc3838c428513c6e36692ffd315bbff1406c41",
+    "nm/shared/store_file_store.py": "09e91a90ce8fc08103561e8f73446fae02f8cb3ac241755132c3c5b56b4c901f",
+    "nm/shared/store_loop_log.py": "6e1cff2e4c282a58dd29f42f880a51046926131d6d3750b34f6b2ff114978e58",
+    "nm/shared/store_port.py": "f592fd8f7a07582d4c56bdd76b1d37072cd20e3df367dc835bee580cf9379a2f",
+    "nm/shared/store_postgres.py": "c99e1d8ff616dd5b933880012f8cf219773339d188051c2ffdbdafb8634e10f5",
+    "nm/shared/store_sealing.py": "5c7f5819f7bb52de0ea31c9af5c1acc48f7c9c7ddc15141203fa37376ebba16f",
+    "nm/shared/store_uploads.py": "c0143b338dfb41bf426541185534f3142cc510060501a7c9abed2025b7519619",
+    "nm/shared/text_contracts.py": "de5a9ca729ef25a9c35fcd89edcf1414e1cc3be0875ccaf454e600bb0b487e01",
+    "nm/shared/traceability_contracts.py": "d3669d179b856575887415f0ecfebed7a907bfe3c32436f71520256573fb1620",
+    "nm/shared/transactional_port.py": "19a00469ab9d705330728d3faa02bfd387d17ab758ed16cc96b980363213f1aa",
+    "nm/shared/worker.py": "b165658adeaa8272395482cded64332255058c0c202913ff52da2fbe0ebec6bf"
+  },
+  "test_source_hashes": {
+    "tests/test_brain_pressure_sources.py": "4ca306da2e9eae45957fd25d48a62eca9aa0db1fd34d9c2a0d2b4b9a9dc6a64c",
+    "tests/test_brain_pressure_extractor.py": "dfa22261c8310b8eebe1843480ffffcc24ca33762a5bf98ed07744633e317c96",
+    "tests/test_brain_pressure_verification.py": "8b6e8ddf74a961062e98bbd517c60aaba57ddd4b60d4592e81a845a3cb4895a4",
+    "tests/test_brain_pressure_release.py": "298f8fe9390e0e7d5c9168f6a57b780ba310f9f0c437fb849327f3881da8f946",
+    "tests/brain_pressure_support.py": "344b7f12989d2e31620d714a2f2baefcf03a04fb235a4c72f80471857b827b28",
+    "tests/conftest.py": "db1c1eb2b7290a35c6fefd368983edd10288286ef28f3c7af8143f5a9e2d3de6",
+    "tests/test_brain_material.py": "a633890479fa74467786d67f7dd16c2cd5d5fa6d09753b25ef869a48ea345190",
+    "tests/brain_reader_fixture.py": "c62bef6cb4ef70793e9adc957d27aab0e7dacd2c527e2160d5891e8f6bf4a1c3",
+    "tests/brain_continuation_fixture.py": "8cbd28e0fe5ffaf19b9b6389686f8febb4a56dc6a8b14c5e8d0b87c1f329a994",
+    "development_environment/one_off_tools/brain_pressure_test_20261006.py": "e2adb07bedcbfcfb7b4ec01b794e7a8cfd597b78dc3708cd7f41fc7106f12a68"
+  },
+  "workbook_evidence": "docs/backlog/evidence/brain-pressure-workbook-20261006.json",
+  "workbook_evidence_sha256": "610de199b77d0930f4e55a16f18b5c4e6c6f649b4ae4e5d585464220c0c701a3",
+  "live_model_calls": 0,
+  "browser_calls": 0,
+  "qualification": "Scripted passages and outputs exercise shipped mechanical boundaries. Demonstrated gaps remain unprevented even when their characterization assertions pass; scripted semantic judgments prove wiring, not reviewer accuracy. Repeated runs test deterministic behavior and isolation, not unfamiliar-model quality. No population false-positive rate, semantic accuracy, token cost or production latency is established.",
+  "transport_qualification": "Source/extractor tests label permissive Brain-owned validation and strict adapter schema rejection separately. Material-verifier tests use strict adapter schema validation. Public-release tests use the explicit legacy/permissive offline transport. These are scripted transports, not actual provider behavior or semantic quality."
+}
