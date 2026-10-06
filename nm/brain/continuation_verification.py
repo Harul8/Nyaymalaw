@@ -608,10 +608,10 @@ def _decision(row: dict, unit: dict, legal_sources: dict, progress: dict, *,
 
 
 def _check_expressions(input_payload: dict, units: tuple[dict, ...]) -> None:
-    spans = {span["id"]: {**span, "role": message["role"]}
+    spans = {span["id"]: {**span, "text": span["text"].strip(), "role": message["role"]}
              for message in input_payload.get("earlier_conversation", [])
              for span in message["source_spans"]}
-    spans.update({span["id"]: {**span, "role": "advocate"}
+    spans.update({span["id"]: {**span, "text": span["text"].strip(), "role": "advocate"}
                   for span in input_payload.get("latest_message_spans", [])})
     for unit in units:
         for block in unit["blocks"]:

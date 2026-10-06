@@ -54,3 +54,11 @@ def test_independent_review_judges_original_selection_without_an_extra_stage():
     assert len(model.calls) == 1
     assert proposed == original
     assert "not their adoption as fact" in model.calls[0][0].system
+
+
+def test_owned_passage_boundary_whitespace_does_not_reject_correct_rendering():
+    payload, proposed = fixture()
+    payload["latest_message_spans"][0]["text"] = "  I did not confirm that date.\n"
+    result = verify_continuation(ContinuationModel([verdict(0)]),
+                                 input_payload=payload, units=(proposed,))
+    assert result.decisions[0][0]
