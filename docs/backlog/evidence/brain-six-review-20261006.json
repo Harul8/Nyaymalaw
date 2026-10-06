@@ -181,6 +181,19 @@
         "nm/brain/material_verification.py",
         "tests/test_brain_material_verification.py"
       ]
+    },
+    {
+      "slice": "Order legal reading by source proposition predicates and adverse limits",
+      "owners": [
+        "LB-176",
+        "LB-180",
+        "LB-181"
+      ],
+      "decision": "Reader now identifies operative source propositions, compares full actor/relationship/time predicates with original account, then examines useful support and adverse limits. Preserve court versus party attribution, conditions, general/conditional use, mandate versus strengthening and exact subject source ownership. Empty findings are legitimate but cannot certify complete research. Same schema and call count.",
+      "validation": "106 passed in 0.44s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/legal_requirements.py"
+      ]
     }
   ]
 }

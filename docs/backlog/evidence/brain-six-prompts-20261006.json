@@ -332,6 +332,54 @@
         "Activity 1 - Establish the enquiry and its boundaries.",
         "Activity 2 - Form distinct grounded search routes."
       ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REQUIREMENTS_SYSTEM",
+      "old_sha256": "f7e05c6111000722b387a91a246ab0389074aaededf79b1fde5b061be1280314",
+      "new_sha256": "d6b7dbd5a3274c2a2239fd13dea863c40fa3c8aef625c312d18a95199e3c7170",
+      "old_words": 487,
+      "new_words": 670,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": 1,
+          "new_parts": [
+            "Message"
+          ],
+          "change": "Preserve exact supplied candidate/record context and uninspected documents; make derived record provenance and candidate-only authority explicit."
+        },
+        {
+          "old_paragraph": 2,
+          "new_parts": [
+            "Purpose",
+            "Activity 3"
+          ],
+          "change": "Preserve gathering versus legal-work purposes and helpful/adverse findings; clarify proposed findings are not completed requested work."
+        },
+        {
+          "old_paragraph": 3,
+          "new_parts": [
+            "Activity 1",
+            "Activity 2",
+            "Activity 3"
+          ],
+          "change": "Separate operative source purpose, whole predicate/application comparison, then useful supported work/adverse limits and remaining coverage. Preserve temporal/custody/analogy/currency distinctions."
+        },
+        {
+          "old_paragraph": 4,
+          "new_parts": [
+            "Activity 3 Outcome",
+            "final Outcome"
+          ],
+          "change": "Same readings/findings schema, kinds/force and exclusive per-subject IDs; legitimate empty/partial usefulness retained without certifying outcome sufficiency."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Identify separately usable source propositions.",
+        "Activity 2 - Compare legal predicates with the original account.",
+        "Activity 3 - Check usefulness, adverse limits and remaining support."
+      ]
     }
   ]
 }
