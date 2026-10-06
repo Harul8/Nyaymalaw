@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 
-from nm.brain.checked import checked_read
+from nm.brain.checked import checked_unit_read
 from nm.brain.material import (
     MaterialCandidate,
     addressed_item_schema,
     addressed_sources,
+    extraction_recovery_scope,
     fill_empty_link_sources,
     operation_rows,
     operation_schema,
@@ -38,6 +39,13 @@ repairs of sourced formulations during relevant authorised review. Review can
 authorise repair without a new factual assertion; original advocate words
 supply its evidence. This call admits no fact, law, permission, action or
 completed assessment.
+
+When recovery_scope is supplied, its missing source IDs identify independently
+checked incomplete coverage to examine against the complete original account.
+It is investigation context, not evidence or a completion decision. Propose
+only supported missing contributions or repairs, preserving the source's original
+purpose and relevant review authority. Do not repeat retained_proposals; they
+are NM interpretations supplied to preserve work, not factual authority.
 
 Activity 1 - Establish the original account and review authority.
 Look for: The whole latest message and original surrounding conversation,
@@ -144,12 +152,16 @@ def _schema(*, latest_ids: tuple[str, ...], prior_ids: tuple[str, ...],
 
 def extract_disputes(model: ModelPort, *, earlier: tuple[object, ...],
                      latest: str, current_matter_id: str | None,
-                     prior_disputes: tuple[dict, ...] = (), source_treatments=None
+                     prior_disputes: tuple[dict, ...] = (), source_treatments=None,
+                     diagnostics: dict | None = None, recovery_scope: dict | None = None
                      ) -> tuple[MaterialCandidate, ...]:
     """Make one full-context dispute read and validate each source reference."""
     if not latest.strip():
         raise ValueError("The latest message is empty")
     payload, latest_sources, prior_sources = addressed_sources(earlier, latest)
+    if recovery_scope is not None:
+        payload["recovery_scope"] = extraction_recovery_scope(
+            recovery_scope, latest_sources, prior_sources)
     if source_treatments is not None:
         payload["source_treatments"] = owned_source_treatments(
             source_treatments, latest_sources, prior_sources)
@@ -196,4 +208,6 @@ def extract_disputes(model: ModelPort, *, earlier: tuple[object, ...],
                                     current_matter_id=current_matter_id)
         return candidates
 
-    return checked_read(model, prompt, schema, output_limit, accept)
+    return checked_unit_read(
+        model, prompt, schema, output_limit, accept,
+        unit_fields=("new_items", "changes"), diagnostics=diagnostics)

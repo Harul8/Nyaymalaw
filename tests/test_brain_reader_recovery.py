@@ -61,7 +61,7 @@ def envelope(rows):
     return {"new_items": rows, "changes": []}
 
 
-@pytest.mark.parametrize("activity", ["material"])
+@pytest.mark.parametrize("activity", ["material", "disputes"])
 def test_readers_preserve_owned_peer_during_keyed_repair(readers, activity):
     material, disputes = readers
     if activity == "material":
@@ -81,7 +81,7 @@ def test_readers_preserve_owned_peer_during_keyed_repair(readers, activity):
     assert model.calls[1]["schema"]["properties"]["repairs"]["required"] == ["new_items:2"]
 
 
-@pytest.mark.parametrize("activity", ["material"])
+@pytest.mark.parametrize("activity", ["material", "disputes"])
 def test_readers_keep_peer_and_unread_when_shared_budget_exhausted(readers, activity):
     material, disputes = readers
     extract, factory = (material.extract_details, detail) if activity == "material" else (
@@ -94,7 +94,7 @@ def test_readers_keep_peer_and_unread_when_shared_budget_exhausted(readers, acti
     assert len(model.calls) == 1
 
 
-@pytest.mark.parametrize("activity", ["material"])
+@pytest.mark.parametrize("activity", ["material", "disputes"])
 def test_readers_pass_typed_missing_source_context_without_new_prompt_variant(readers, activity):
     material, disputes = readers
     extract = material.extract_details if activity == "material" else disputes.extract_disputes

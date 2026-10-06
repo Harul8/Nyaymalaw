@@ -7,7 +7,7 @@ from nm.brain.conversation import Message
 from nm.brain.disputes import extract_disputes
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelResult, SchemaViolation, Tier, Usage
-from tests.brain_reader_fixture import reader_operations
+from tests.brain_reader_fixture import reader_operations, reader_repairs
 
 
 class Model:
@@ -27,10 +27,10 @@ class Model:
         self.calls.append((prompt, schema, tier, max_tokens))
         disputes = self.repair if len(self.calls) > 1 and self.repair is not None \
             else self.disputes
+        data = reader_operations(disputes, json.loads(prompt.user),
+                                 link_field="related_dispute_ids", infer_targets=False)
         return ModelResult(
-            text=None, data=reader_operations(disputes, json.loads(prompt.user),
-                                             link_field="related_dispute_ids",
-                                             infer_targets=False), tier=tier,
+            text=None, data=reader_repairs(data, schema), tier=tier,
             provider="offline", model="offline", usage=Usage(0, 0, 0),
             latency_ms=0, completion=self.completion,
         )
@@ -234,8 +234,9 @@ def test_withdrawal_needs_an_exact_active_link_and_gets_one_correction():
     assert result[0].relation == "withdraws"
     assert result[0].related_dispute_ids == ("payment",)
     feedback = json.loads(model.calls[1][0].user)
-    assert "related_dispute_ids" in feedback["validation_issue"]
-    assert "changes" in feedback["validation_issue"]
+    failed = feedback["failed_units"][0]
+    assert "related_dispute_ids" in failed["validation_issue"]
+    assert failed["field"] == "changes" and failed["unit_id"] == "changes:1"
 
     persistent = Model([unlinked])
     with pytest.raises(SchemaViolation, match="related_dispute_ids"):
@@ -260,16 +261,21 @@ def test_invalid_source_id_gets_one_feedback_guided_correction():
     repair_prompt, repair_schema, _, _ = model.calls[1]
     feedback = json.loads(repair_prompt.user)
     assert feedback["original_input"] == json.loads(model.calls[0][0].user)
-    assert feedback["rejected_output"] == reader_operations(
+    failed = feedback["failed_units"][0]
+    first_wire = reader_operations(
         [rejected], feedback["original_input"], link_field="related_dispute_ids",
         infer_targets=False)
-    assert "source_id" in feedback["validation_issue"] or "source" in feedback[
+    assert failed["proposal"] == first_wire["new_items"][0]
+    assert failed["unit_id"] == "new_items:1" and failed["field"] == "new_items"
+    assert "source_id" in failed["validation_issue"] or "source" in failed[
         "validation_issue"].lower()
-    assert "source" in feedback["how_to_correct"].lower()
-    assert "input" in feedback["how_to_correct"].lower()
-    assert repair_schema == model.calls[0][1]
+    repairs = repair_schema["properties"]["repairs"]
+    assert repairs["required"] == ["new_items:1"]
+    assert (repairs["properties"]["new_items:1"]["properties"]["proposals"]["items"]
+            == model.calls[0][1]["properties"]["new_items"]["items"])
     assert repair_prompt.operation == "extract_disputes"
-    assert "not saved" in repair_prompt.system
+    assert all(label in repair_prompt.system for label in
+               ("Message:", "Purpose:", "Look for:", "Outcome:"))
 
 
 def test_persistently_invalid_prior_id_or_scope_refuses_after_bounded_retry():
