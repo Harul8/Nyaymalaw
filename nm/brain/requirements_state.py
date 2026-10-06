@@ -12,8 +12,10 @@ from nm.brain.legal_requirements import (
     RESEARCH_VERIFICATION,
     empty_reading_verification_valid,
     finding_verification_valid,
+    retrieved_coverage_verification_valid,
     source_verification_valid,
 )
+from nm.brain.record_review import SOURCE_TREATMENT_CONTRACT
 from nm.work_the_file.matter_contracts import Matter
 
 _SCOPES = ("current", "proposed", "none", "other", "uncertain")
@@ -188,6 +190,10 @@ def _read_valid(read: dict, *, legacy: bool, owner: str) -> bool:
             and (rows or not empty_reading_verification_valid(
                 coverage["empty_reading"], subject_id=subject["id"]))):
         return False
+    if (not legacy and "retrieved_coverage" in coverage
+            and not retrieved_coverage_verification_valid(
+                coverage["retrieved_coverage"], subject_id=subject["id"])):
+        return False
     if len({(row["kind"], row["label"].casefold()) for row in rows}) != len(rows):
         return False
     return True
@@ -202,10 +208,16 @@ def _reuse_evidence(read: dict) -> bool:
             or coverage["unread_items"] != 0
             or coverage["withheld_items"] > coverage["checked_items"]):
         return False
+    if coverage["checked_items"] < len(read["rows"]) + coverage["withheld_items"]:
+        return False
+    pool = coverage.get("retrieved_coverage")
+    if isinstance(pool, dict):
+        return (pool["outcome"] == "complete" and coverage["checked_items"] >= 1
+                and coverage.get("semantic_state", "complete") == "complete")
     if read["rows"]:
-        return coverage["checked_items"] >= len(read["rows"])
-    # _read_valid already checked any advertised receipt against the saved
-    # subject and exact source pool. Older empty reads remain history only.
+        return False
+    # _read_valid checked advertised receipts against the original saved owner.
+    # Unchecked old empty reads remain exact history without implying adequacy.
     receipt = coverage.get("empty_reading")
     return (isinstance(receipt, dict)
             and (receipt["outcome"] == "no_supplied_passages"
@@ -244,11 +256,59 @@ def _account_references_valid(read: dict, words: dict[tuple[str, str], str]) -> 
     return True
 
 
+_SUBSTANTIVE_ACCOUNT_PURPOSES = frozenset({
+    "reported_matter_account", "reported_party_position", "mixed"})
+_KNOWN_ACCOUNT_PURPOSES = _SUBSTANTIVE_ACCOUNT_PURPOSES | {
+    "examination_material", "work_instruction", "nm_interpretation", "uncertain"}
+
+
+def _application_purpose_freshness(read, original_catalogue, current_catalogue):
+    """Compare only the original advocate spans actually used by checked premises."""
+    if read.get("verification") != RESEARCH_VERIFICATION:
+        return "unknown"
+    references = {(ref["turn_id"], ref["role"], ref["quoted"])
+                  for finding in read["rows"]
+                  for premise in finding.get("use_verification", {}).get("application_premises", [])
+                  for ref in premise["account_references"]}
+    if not references:
+        return "not_required"
+
+    def role(catalogue, reference):
+        if not isinstance(catalogue, dict):
+            return None
+        matches = [row.get("content_role") for row in catalogue.values()
+                   if isinstance(row, dict)
+                   and (row.get("turn_id"), row.get("role"), row.get("quoted")) == reference]
+        # Local span IDs and explanatory reasons are not factual dependencies.
+        if not matches or any(not isinstance(value, str) or value not in _KNOWN_ACCOUNT_PURPOSES
+                              for value in matches) or len(set(matches)) != 1:
+            return None
+        return matches[0]
+
+    statuses = set()
+    for reference in references:
+        original, current = role(original_catalogue, reference), role(current_catalogue, reference)
+        if current is None:
+            statuses.add("unknown")
+        elif current not in _SUBSTANTIVE_ACCOUNT_PURPOSES:
+            statuses.add("changed" if original is not None and original != current
+                         else "incompatible")
+        elif original is None:
+            statuses.add("unknown")
+        elif original != current:
+            statuses.add("changed")
+        else:
+            statuses.add("current")
+    return next((status for status in ("changed", "incompatible", "unknown") if status in statuses),
+                "current")
+
+
 def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                     material_by_subject: dict[str, list[dict]],
                     corpus_revision: str | None = None,
                     verification: str = RESEARCH_VERIFICATION,
-                    prior_conversation: tuple[Message, ...] = ()) -> dict:
+                    prior_conversation: tuple[Message, ...] = (),
+                    source_treatments: dict[str, dict] | None = None) -> dict:
     """Retain exact checked work while distinguishing readable history from reusable research."""
     owner = research_owner_id(matter)
     active, contexts, fingerprints = {}, {}, {}
@@ -293,6 +353,7 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
             output["source_turn_id_by_subject"].pop(identity, None)
 
     seen_turns = set()
+    original_purpose_catalogue = None
     owned_records = {row["id"] for context in contexts.values() for row in context}
     for turn in matter.brain_chat:
         if not isinstance(turn, dict):
@@ -312,6 +373,13 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
             continue
         seen_turns.add(turn["turn_id"])
         account_words[(turn_id, "advocate")] = turn["message"]
+        material_coverage = response.get("material_coverage")
+        if (isinstance(material_coverage, dict)
+                and material_coverage.get("source_treatment_contract") is not None):
+            original_purpose_catalogue = (
+                material_coverage.get("source_treatments")
+                if material_coverage["source_treatment_contract"] == SOURCE_TREATMENT_CONTRACT
+                else None)
         proposals = response.get("material", [])
         if (not isinstance(proposals, list)
                 or any(not isinstance(row, dict) or not isinstance(row.get("id"), str)
@@ -378,15 +446,35 @@ def research_record(matter: Matter, *, subjects: tuple[dict, ...],
                            and read.get("corpus_revision") == corpus_revision)
                 verification_current = (not legacy and read.get("verification") == verification
                                         and verification == RESEARCH_VERIFICATION)
+                purpose_freshness = _application_purpose_freshness(
+                    read, original_purpose_catalogue, source_treatments)
+                purpose_current = purpose_freshness in ("current", "not_required")
                 reusable = (not legacy and current and read["state"] == "ok"
-                            and verification_current and _reuse_evidence(read))
+                            and verification_current and purpose_current and _reuse_evidence(read))
                 freshness = "current" if current else (
                     "unknown" if legacy or corpus_revision is None else "stale")
                 coverage = deepcopy(read.get("coverage") or {})
+                pool = coverage.get("retrieved_coverage")
+                empty = coverage.get("empty_reading")
+                if isinstance(pool, dict):
+                    coverage.setdefault("semantic_state", pool["outcome"])
+                    coverage.setdefault("semantic_extent", pool["semantic_extent"])
+                elif isinstance(empty, dict):
+                    bounded_complete = empty["outcome"] in (
+                        "no_supported_finding", "no_supplied_passages")
+                    coverage.setdefault(
+                        "semantic_state", "complete" if bounded_complete else "partial")
+                    coverage.setdefault("semantic_extent", empty["semantic_extent"])
+                else:
+                    coverage.setdefault("semantic_state", "unassessed")
+                    coverage.setdefault("semantic_extent", "cited_candidate_passages"
+                                        if read["rows"] else "unconfirmed")
                 coverage.update(state=read["state"], purpose=subject["purpose"],
                                 source_freshness=freshness, reuse_allowed=reusable, legacy=legacy,
                                 verification_contract=read["verification"],
-                                verification_current=verification_current)
+                                verification_current=verification_current,
+                                account_purpose_freshness=purpose_freshness,
+                                account_purpose_current=purpose_current)
                 output["by_subject"][key] = deepcopy(read["rows"])
                 output["status_by_subject"][key] = read["state"]
                 output["diagnostics_by_subject"][key] = deepcopy(read.get("diagnostics", []))
@@ -419,7 +507,8 @@ def dispute_research_subjects(matter: Matter, *, disputes: dict,
 
 def requirements_record(matter: Matter, *, disputes: dict, material: dict,
                         corpus_revision: str | None = None,
-                        prior_conversation: tuple[Message, ...] = ()) -> dict:
+                        prior_conversation: tuple[Message, ...] = (),
+                        source_treatments: dict[str, dict] | None = None) -> dict:
     """Expose only gathering items owned by identified current disputes."""
     try:
         subjects, contexts = dispute_research_subjects(matter, disputes=disputes, material=material)
@@ -429,7 +518,8 @@ def requirements_record(matter: Matter, *, disputes: dict, material: dict,
                         "the dispute or material record is incomplete"])
     research = research_record(matter, subjects=subjects, material_by_subject=contexts,
                                corpus_revision=corpus_revision,
-                               prior_conversation=prior_conversation)
+                               prior_conversation=prior_conversation,
+                               source_treatments=source_treatments)
     gathering = {identity: [row for row in rows if row["kind"] == "gathering"]
                  for identity, rows in research["by_subject"].items()}
     return dict(state=research["state"], by_dispute=gathering,

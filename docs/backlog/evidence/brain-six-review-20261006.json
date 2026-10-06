@@ -588,6 +588,21 @@
         "tests/test_brain_continuation_record_outcome.py",
         "tests/test_brain_continuation_retention.py"
       ]
+    },
+    {
+      "slice": "Bounded research coverage and exact premise purpose reuse",
+      "owners": [
+        "LB-184",
+        "LB-185",
+        "LB-186"
+      ],
+      "decision": "Readable checked legal history is reusable only with complete independent supplied-passage coverage and coherent retained/rejected counts. Legitimate all-candidate rejection can reuse a bounded complete pool. Actual application premises additionally compare exact historical/current advocate source-purpose references; unrelated new turns, remapped local IDs and changed explanations do not invalidate unaffected research. Unknown or changed purpose preserves checked history while declining automatic reuse.",
+      "validation": "29 focused offline bounded coverage/reuse, all-rejected, source-purpose changes and valid-neighbor checks passed; Ruff passed. Existing positive-reuse fixtures need explicit new evidence before final broad rerun; real-model/browser qualification deferred.",
+      "files": [
+        "nm/brain/requirements_state.py",
+        "tests/test_brain_research_semantic_reuse.py",
+        "tests/test_brain_research_account_purpose_reuse.py"
+      ]
     }
   ]
 }
