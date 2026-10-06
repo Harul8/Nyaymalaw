@@ -484,3 +484,120 @@ def validate_record_outcome(
         raise SchemaViolation(
             "An unresolved declared result cannot complete reply sufficiency or its task"
         )
+
+
+def record_change_lines(changes: list[dict]) -> list[str]:
+    """Describe canonical entry deltas without interpreting requested success."""
+    parts = []
+    for change in changes:
+        before = [row["statement"] for row in change["before_records"]]
+        after = change["after_record"]
+        if change["relation"] == "withdraws":
+            parts.extend("Withdrawn entry: " + text for text in before)
+        elif change["relation"] == "contradicts" and change["kind"] == "details":
+            parts.append("Opposing entry added: " + after["statement"])
+            parts.extend("Earlier entry retained: " + text for text in before)
+        elif change["relation"] == "corrects" or (
+                change["kind"] == "disputes" and before):
+            parts.append("Revised entry: " + " ; ".join(before) + " → " + after["statement"])
+        else:
+            parts.append("New entry: " + after["statement"])
+    return parts
+
+
+def canonical_record_acknowledgements(
+        continuation: dict, execution: dict, *, record_catalogue: dict,
+        require_checked: bool = True) -> dict:
+    """Render checked record-only outcomes before progress and commit sealing.
+
+    The delivery mode is an interpreted proposal, not proof of completion.
+    Before response review, require_checked=False permits only a mechanically
+    admissible proposed outcome. Independent requested-result and progress
+    review still runs. Final rendering and replay require its checked verdict.
+    Outcome, source, target, inherited-goal and persistence checks still own
+    their existing decisions. A reviewed substantive follow-up remains under
+    semantic review instead of being silently removed to force code-only text.
+    """
+    result = deepcopy(continuation)
+    units = {unit["request_index"]: unit for unit in result["units"]}
+    if not any(request.get("response_mode", "substantive") == "record_acknowledgement"
+               or "acknowledgement_delivery" in request for request in execution["requests"]):
+        return result
+    effects = effect_catalogue(execution)
+    changes = {change["effect_id"]: change for change in execution["record_changes"]}
+    expected_check = {"performed": "fulfilled", "already_current": "fulfilled",
+                      "review_no_change": "no_change_justified", "unresolved": "unfinished"}
+    for request in execution["requests"]:
+        if request.get("response_mode", "substantive") != "record_acknowledgement":
+            if "acknowledgement_delivery" in request:
+                raise ExecutionEvidenceInvalid(
+                    "A code acknowledgement has no declared delivery owner")
+            continue
+        index = request["request_index"]
+        unit = units.get(index)
+        if unit is None:
+            # The existing content-free unavailable notice is code-authored;
+            # it does not certify a requested effect or a completed task.
+            request["acknowledgement_delivery"] = "code_only"
+            continue
+        if unit["questions"] or unit["next_work"]:
+            request["acknowledgement_delivery"] = "substantive_followup"
+            continue
+        outcome = unit.get("record_outcome", {})
+        status = outcome.get("status")
+        if (status not in expected_check or require_checked
+                and unit.get("record_check", {}).get("outcome") != expected_check[status]):
+            raise ExecutionEvidenceInvalid("The code acknowledgement has no checked record outcome")
+        selected = list(dict.fromkeys(outcome["effect_ids"]))
+        if any(identity not in effects or not effects[identity]["performed"]
+               or identity not in changes for identity in selected):
+            raise ExecutionEvidenceInvalid("The code acknowledgement selects an unperformed change")
+        current = list(dict.fromkeys(outcome["current_record_ids"]))
+        if any(identity not in record_catalogue for identity in current):
+            raise ExecutionEvidenceInvalid(
+                "The code acknowledgement selects an unowned current entry")
+        lines = record_change_lines([changes[identity] for identity in selected])
+        entries = [record_catalogue[identity]["record"]["statement"] for identity in current]
+        if status == "performed":
+            if not lines:
+                raise ExecutionEvidenceInvalid(
+                    "The code acknowledgement has no actual changed entry")
+            text = "Saved record changes:\n" + "\n".join(lines)
+        elif status == "already_current":
+            if not entries:
+                raise ExecutionEvidenceInvalid("The code acknowledgement has no current entry")
+            # Current state does not establish that NM changed it previously.
+            text = "Current record entries:\n" + "\n".join(entries)
+        elif status == "review_no_change":
+            text = "The requested record review completed without a selected change."
+            if entries:
+                text += "\nCurrent entries:\n" + "\n".join(entries)
+        else:
+            text = "The requested record work remains unfinished."
+            if lines:
+                text += "\nSaved record changes:\n" + "\n".join(lines)
+            if entries:
+                text += "\nCurrent entries:\n" + "\n".join(entries)
+        for block in unit["blocks"]:
+            block["text"] = text
+            # These anchors described the replaced model prose. The fixed
+            # acknowledgement contains no legal proposition; its retained
+            # checked references remain available as context source controls.
+            block["kind"] = "limitation" if status == "unresolved" else "acknowledgment"
+            block["uncertainty"] = "none"
+            # Legal assertions and their anchors belonged to the discarded
+            # prose. Preserve attributable account context and lifecycle IDs,
+            # not citations suggesting the fixed acknowledgement states law.
+            block["legal_source_ids"] = []
+            block["record_ids"] = [identity for identity in block["record_ids"]
+                                   if identity in record_catalogue]
+            if "references" in block:
+                selected_references = set(block["span_ids"] + block["record_ids"])
+                block["references"] = [reference for reference in block["references"]
+                                       if reference["id"] in selected_references]
+            if require_checked:
+                block.pop("inline_citations", None)
+            else:
+                block["inline_citations"] = []
+        request["acknowledgement_delivery"] = "code_only"
+    return result
