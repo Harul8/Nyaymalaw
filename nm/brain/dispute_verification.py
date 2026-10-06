@@ -113,10 +113,20 @@ introduces_legal_analysis is true for new NM legal
 classifications/conclusions, not a faithfully attributed actual party position.
 
 Activity 2 - Identify the issue and preserve its formulation.
-Look for: Compare each proposal with all other proposals, active disputes and
-the latest and cited earlier advocate words. An independent dispute concerns
-reported adverse conduct or a contested position/right needing its own practical
-conclusion. A term or duty forming the basis for that conduct is a supporting
+Look for: First identify from the complete original advocate context the reported
+act or failure presented as adverse, or the competing claim, denial or right
+that makes the issue contestable. Then compare that conflict with all proposals
+and active disputes to decide whether it needs an independent practical conclusion.
+Accuracy, importance and possible legal relevance of a reported event do not
+themselves establish a conflict. Neutral background and developments can remain
+material or support an existing issue without creating another dispute.
+An opposing answer or defence belongs to the issue it answers unless the
+original account also reports independently contested conduct or a different right.
+Preserve genuinely reported adverse conduct or competing positions despite
+uncertain identity, responsibility, proof or legal merit. When original context
+leaves whether any adverse conduct or competing position was reported unresolved,
+retain that uncertainty as a detail or clarification instead of inventing a dispute.
+A term or duty forming the basis for adverse conduct is a supporting
 premise; an unknown legal effect, missing record or proof question is a detail
 to investigate. A formulation already covered by another proposal is a duplicate
 regardless of different legal words. A request to continue, research, explain
@@ -131,7 +141,10 @@ for an earlier act; a continuing condition does not establish breach of a future
 undertaking. Unknown responsibility can remain unknown without losing a dispute.
 Earlier NM formulations are proposals to recheck, not evidence. General knowledge
 or retrieved law cannot supply missing facts.
-Outcome: Give candidate_role independent_dispute, supporting_premise,
+Outcome: Explain the reported conflict before choosing independent_dispute.
+Use supporting_premise for supported non-dispute account/context and
+evidence_gap_or_question for unresolved factual or proof distinctions; rejecting
+the dispute role does not reject the attributed account. Give candidate_role independent_dispute,
 evidence_gap_or_question, duplicate or unsupported. Reject a heading or statement
 that adds an unsupported event, actor, term, position, legal status or other
 matter-affecting proposition. Explain the role and distinction from adjacent
