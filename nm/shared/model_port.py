@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol, runtime_checkable
@@ -100,10 +101,44 @@ class ContentRefused(ModelError):
 class SchemaViolation(ModelError):
     """Structured output did not satisfy the schema after bounded retry.
 
-    NEVER best-effort parsed. Lenient parsing is how an invented vocabulary
-    once entered the system and emptied a charge map; an unrecognised value is
-    treated as absent, never as valid.
+    A rejected object is never an accepted read. An adapter may attach an
+    unambiguous completed structured receipt solely as quarantined evidence.
+    An opt-in owner must validate each independent proposal and still obtain
+    semantic admission before using it; unsupported values remain rejected.
     """
+
+    def __init__(self, message: str, *, usage: Usage | None = None,
+                 latency_ms: int = 0, retries: int = 0,
+                 rejected_result: ModelResult | None = None) -> None:
+        if rejected_result is not None:
+            if (not isinstance(rejected_result, ModelResult)
+                    or rejected_result.completion is not Completion.COMPLETE
+                    or rejected_result.text is not None
+                    or not isinstance(rejected_result.data, dict)
+                    or not isinstance(rejected_result.tier, Tier)
+                    or not isinstance(rejected_result.usage, Usage)
+                    or type(rejected_result.latency_ms) is not int
+                    or rejected_result.latency_ms < 0
+                    or type(rejected_result.retries) is not int
+                    or rejected_result.retries < 0):
+                raise ValueError("Quarantine requires a completed structured model receipt")
+            try:
+                snapshot = json.loads(json.dumps(rejected_result.data, allow_nan=False))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("Quarantine requires unambiguous JSON object data") from exc
+            if snapshot != rejected_result.data:
+                raise ValueError("Quarantine requires unambiguous JSON object data")
+            if (usage is not None and usage != rejected_result.usage
+                    or latency_ms not in (0, rejected_result.latency_ms)
+                    or retries not in (0, rejected_result.retries)):
+                raise ValueError("Quarantine must retain the rejected response accounting")
+            usage = rejected_result.usage
+            latency_ms = rejected_result.latency_ms
+            retries = rejected_result.retries
+        super().__init__(message, usage=usage, latency_ms=latency_ms, retries=retries)
+        # Keep the error boundary and a private snapshot: later correction
+        # cannot mutate what was actually received or turn it into success.
+        self.rejected_result = deepcopy(rejected_result)
 
 
 class TierUnavailable(ModelError):
