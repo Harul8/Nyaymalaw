@@ -145,6 +145,73 @@
         "Activity 3 - Choose an owned creation or explicit revision.",
         "Activity 4 - Select assignment and preserve status."
       ]
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "constant": "_SYSTEM",
+      "old_sha256": "8c1b918ee31f4e9baadc69c482a8ee10299c7bed38e325b11f630bc369d0dc8f",
+      "new_sha256": "44a20b43b0d06d6442ba6445a9a5c2616999431b1546f41b69bb77b772d29f20",
+      "old_words": 1398,
+      "new_words": 1198,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": "dispute_verification.1",
+          "old_line": 30,
+          "new_sections": [
+            "Message"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.2",
+          "old_line": 42,
+          "new_sections": [
+            "Purpose"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.3",
+          "old_line": 48,
+          "new_sections": [
+            "Activity 2"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.4",
+          "old_line": 78,
+          "new_sections": [
+            "Activity 3"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.5",
+          "old_line": 104,
+          "new_sections": [
+            "Activity 1"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.6",
+          "old_line": 124,
+          "new_sections": [
+            "Activity 1",
+            "Activity 4"
+          ]
+        },
+        {
+          "old_paragraph": "dispute_verification.7",
+          "old_line": 161,
+          "new_sections": [
+            "Outcome"
+          ]
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Check original account support.",
+        "Activity 2 - Identify the issue and preserve its formulation.",
+        "Activity 3 - Check the exact record operation and its authority.",
+        "Activity 4 - Preserve every underlying account through replacement."
+      ]
     }
   ]
 }

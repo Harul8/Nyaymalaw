@@ -142,6 +142,19 @@
         "nm/brain/material.py",
         "tests/test_brain_material_specialist.py"
       ]
+    },
+    {
+      "slice": "Order dispute review by evidence operation and preserved account",
+      "owners": [
+        "LB-176",
+        "LB-177",
+        "LB-179"
+      ],
+      "decision": "Reorder independent dispute review: original account support; independent contestability and formulation; exact authorized operation; preservation of every targeted underlying account. Keep mandatory per-source/target checks, full actor/time predicates, same-target successor dependencies and no generic acceptance override. Known source/target IDs alone prove no effect.",
+      "validation": "31 passed in 2.49s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/dispute_verification.py"
+      ]
     }
   ]
 }
