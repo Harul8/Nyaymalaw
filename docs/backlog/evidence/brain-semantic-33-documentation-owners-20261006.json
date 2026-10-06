@@ -1,0 +1,28 @@
+{
+  "source_head": "40c0a52ef4ba2f0959251843c10e89d468ba9615",
+  "cwd": "/workspace/Nyaymalaw",
+  "environment": {
+    "NM_PARTIAL_RUN": "1"
+  },
+  "argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-o",
+    "addopts=",
+    "--tb=short",
+    "-q",
+    "tests/test_defect_register.py",
+    "tests/test_fixture_scope_migration.py",
+    "tests/test_brain_semantic_defect_register.py",
+    "--junitxml=/tmp/nm-final-documentation-owner.xml"
+  ],
+  "exit_code": 0,
+  "passed": 39,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "scope": "Post-documentation register and independently authored fixture checks; not added to the frozen source subset count. Final workbook saved-byte/native-control checks are separately recorded.",
+  "real_model_calls": 0,
+  "browser_calls": 0
+}

@@ -4,18 +4,20 @@
 starts without an invented matter or board. A source-checked opening can reveal
 the board; a greeting or general question can remain a recoverable pending chat.
 Every interpreted item, including `answer`, reaches the response writer and
-independent reviewer. The interpreter's proposed reply is not an unchecked
-release path.
+independent reviewer. The interpreter returns routing and evidence decisions;
+the checked continuation owns response construction.
 
 This document describes the served source review on 6 October 2026. The six
 activity handshakes are active: scoped account coverage, exact research pools,
 current source-purpose reuse, typed record results, saved work seals and atomic
 release/replay. The [six-activity review](../../docs/backlog/nm-brain-six-review-20261006.md)
-records the owning functions and captured offline validation. All production
-changes described here are integrated at source freeze `6bb88d1`. The
+records the initial owning functions and captured offline validation at `6bb88d1`.
+The [semantic-hardening results](../../docs/backlog/nm-brain-semantic-hardening-results-20261006.md)
+record the later production freeze `40c0a52`, exact selected checks and open
+semantic defects. The
 [standing instructions](../../AGENTS.md) govern future changes; the Before Build
 sheet in the [canonical workbook](../../docs/Nyaymalaw_Implementation_Plan.xlsx),
-LB-175–LB-193, remains the work queue. Offline contracts verify the exercised
+LB-175–LB-197, remains the work queue. Offline contracts verify the exercised
 mechanical boundaries. Real-model and browser qualification remain deferred
 by the user.
 
@@ -68,7 +70,7 @@ or `none`; the response Judge independently checks the relevant meaning. Even a
 partial reply cannot positively fulfill a requested review while its whole
 independent account coverage remains partial or unassessed. An unresolved result
 can retain actual checked narrower effects without closing the wider goal.
-Free-prose meaning and whether the outcome satisfies the desired condition
+Selected evidence meaning and whether the outcome satisfies the desired condition
 still require the independent reviewer; mechanical validation does not prove
 semantic accuracy.
 
@@ -124,6 +126,13 @@ passage independently of later corpus availability. Inline links are code-derive
 from checked references; selected legal support must be reachable. Speaker,
 proposition and treatment labels do not create additional legal authority.
 
+Every fresh block selects a closed evidence expression, including accounts,
+assessments, questions, follow-ups and completion. Code renders complete owned
+original words, checked legal propositions/passages and fixed status templates.
+Writer-authored display text and review/seal fields cannot become expressions.
+Completion and record acknowledgements remain code-owned regardless of links.
+Rendering fidelity does not establish correct semantic support or legal use.
+
 ## Calls and bounded recovery
 
 Normal generative calls vary with the work actually due:
@@ -157,6 +166,10 @@ are retained when the owner actually receives valid verdicts. A strict adapter
 can hide all siblings in a schema-invalid envelope; code cannot retain decisions
 it never receives. No per-candidate retry cascade or restarted local review loop
 is introduced. Unread opening `O1` must not restart an exhausted review.
+
+The one turn-owned recovery ledger allows eight conditional reservations and
+reserves two for reply generation/review corrections; upstream repair cannot
+consume that reserve. Recovery does not reset the ledger in nested owners.
 
 A rejected response can receive one replacement generation and another independent
 check; retained subsets must satisfy their own checks. Actual `metrics.llm_calls`

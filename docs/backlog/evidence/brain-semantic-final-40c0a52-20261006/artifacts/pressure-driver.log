@@ -1,0 +1,4 @@
+round-1: 232 tests, forward
+round-2: 232 tests, reverse
+round-3: 232 tests, shuffled-seed-20261008
+{"distinct_tests": 232, "distinct_cases": 232, "total_test_executions": 696, "distinct_pytest_outcome_counts": {"passed": 228, "xfailed": 4}, "total_pytest_outcome_counts": {"passed": 684, "xfailed": 12}, "scenario_counts": {"paired": 27, "mixed": 66, "faulty": 94, "legitimate": 40, "known_good": 5}, "claim_scope_counts": {"mechanical": 217, "semantic_dependency": 15}, "protection_status_counts": {"admitted": 44, "blocked": 63, "partial_preserved": 32, "recovered": 66, "passed": 21, "gap_demonstrated": 2, "open_semantic_defect": 4}}

@@ -1,0 +1,37 @@
+{
+  "cwd": "/workspace/Nyaymalaw",
+  "argv": [
+    ".venv/bin/python",
+    "/tmp/nm-package-final-evidence.py",
+    "--pressure-output",
+    "/tmp/nm-final-paired-pressure-40c0a52-20261006",
+    "--frozen-head",
+    "40c0a52ef4ba2f0959251843c10e89d468ba9615",
+    "--subset-modules",
+    "/tmp/nm-final-offline-modules.txt",
+    "--subset-nodeids",
+    "/tmp/nm-final-offline-nodeids.txt",
+    "--subset-xml",
+    "/tmp/nm-final-offline-results.xml",
+    "--subset-log",
+    "/tmp/nm-final-offline-results.log",
+    "--subset-audit",
+    "/tmp/nm-final-offline-selection-audit.json",
+    "--prompt-inventory",
+    "/tmp/nm-final-prompt-inventory.json",
+    "--commands-json",
+    "/tmp/nm-final-commands.json",
+    "--baseline-failures-json",
+    "/tmp/nm-baseline-plan-guards-failed-nodes.json",
+    "--output",
+    "/tmp/nm-final-evidence-package-40c0a52-20261006"
+  ],
+  "exit_code": 0,
+  "additional_archived_files": [
+    "package-evidence.py",
+    "display-replay-static-audit.json",
+    "artifacts/subset-collection.log",
+    "artifacts/pressure-driver.log"
+  ],
+  "node_identity_qualification": "The archive packager separates only pre-parameter :: delimiters; parameter IDs remain exact, including embedded ::."
+}

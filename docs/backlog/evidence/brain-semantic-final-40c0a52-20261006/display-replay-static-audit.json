@@ -1,0 +1,89 @@
+{
+  "status": "read_only_static_audit; inferred future compatibility risk, no current fault reproduced",
+  "references": {
+    "nm/brain/turn.py::_mutation_catalogues": 296,
+    "nm/brain/turn.py::_record_catalogue": 921,
+    "nm/brain/turn.py::_record_changes": 986,
+    "nm/brain/turn.py::_validate_execution_replay": 1074,
+    "nm/brain/turn.py::_saved_reply": 1290,
+    "nm/brain/work_state.py::record_result_snapshot": 96,
+    "nm/brain/work_state.py::validate_record_result_snapshot": 118,
+    "nm/brain/work_state.py::_seal_record_outcome": 199,
+    "nm/brain/work_state.py::_snapshot_sources": 278,
+    "nm/brain/material.py::recorded": 102,
+    "nm/brain/material_state.py::sourced_detail_for_display": 11,
+    "nm/brain/material_state.py::material_record": 98,
+    "nm/brain/dispute_state.py::_read_identity": 36,
+    "nm/brain/dispute_state.py::proposed_disputes": 61,
+    "nm/brain/mutation_contracts.py::_catalogues": 67,
+    "nm/brain/mutation_contracts.py::build_mutation_authorities": 87,
+    "nm/brain/mutation_contracts.py::validate_record_mutation": 543,
+    "nm/brain/execution_contracts.py::_record_outcome_text": 670
+  },
+  "current_key_contract": {
+    "snapshot_wrapper": [
+      "contract",
+      "receipt_id",
+      "owner",
+      "resulting_version",
+      "record_catalogue"
+    ],
+    "catalogue_entry": [
+      "id",
+      "type",
+      "record"
+    ],
+    "common_record_keys": [
+      "id",
+      "source_turn_id",
+      "state",
+      "kind",
+      "statement",
+      "quoted",
+      "relation",
+      "prior_references",
+      "matter_scope",
+      "basis",
+      "importance",
+      "why_material"
+    ],
+    "optional_common_record_keys": [
+      "source_id",
+      "mutation_authority"
+    ],
+    "dispute_record_keys": [
+      "label",
+      "identification",
+      "clarification",
+      "related_dispute_ids"
+    ],
+    "material_record_keys": [
+      "placement",
+      "dispute_ids",
+      "related_material_ids",
+      "grounding"
+    ],
+    "frozen_semantic_allowlist_exists": false,
+    "note": "Current constructors produce these keys, but saved dictionaries and projection expansion preserve all keys; this inventory is not an enforced allowlist. record_role is prompt-derived only, not inserted by these active record projections."
+  },
+  "exact_comparisons": [
+    "mutation target values compared exactly during projection validate_record_mutation; full target catalogue hashed and rebuilt ledger compared exactly in replay",
+    "full before_records/after_record copied into record_changes; replay compares exact complete list",
+    "record_result_snapshot copies full projected catalogue; replay compares complete saved snapshot to rebuilt snapshot",
+    "saved record outcome seal hashes full execution and saved snapshot; validate_record_result_snapshot compares exact wrapper/version/owner",
+    "canonical acknowledgement, gate diagnostics and display policy/result then compared exactly"
+  ],
+  "safe_smallest_rule": "Add UI display enrichment only to separate presentation copies outside all canonical brain rows/catalogues/change/authority evidence; preserve versioned canonical evidence producer behavior.",
+  "future_versioned_fix": "Use one server-owned canonical_record_projection contract shared by snapshot/change/authority producers and mutation replay consumers. Keep a frozen v1 historical reconstruction, introduce v2 for deliberate new semantic representation, reject unknown versions. Preserve ownership/source/proof/relation/scope/grounding and all existing semantic values; do not drop unknown saved fields or skip exact equality as compatibility repair.",
+  "qualification": "Snapshot-only filtering is incomplete. Legacy v1 means full producer row, so generic ignoring of unknown fields would weaken existing evidence and seals. The safe migration must preserve original saved v1 rows/default semantics and omit only known new presentation enrichment, never re-seal old evidence silently.",
+  "future_tests": [
+    "zero-call historical replay after new display-only decoration",
+    "new semantic field version choice and unsupported-version refusal",
+    "original quote/statement/scope/assignment/lineage/proof tampering still refuses replay",
+    "correction still works on prior targets and replay binds original prefix after supersession"
+  ],
+  "no_model_fields_required": true,
+  "no_repo_edits": true,
+  "no_provider_or_browser_calls": true,
+  "frozen_head": "40c0a52ef4ba2f0959251843c10e89d468ba9615"
+}

@@ -1,0 +1,117 @@
+[
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_current_plan_matches_authored_registry_and_snapshot_sources",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_media_policy_is_part_of_the_checked_reader_view",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_autonomy_contract_is_checked_without_promoting_runtime",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[drop_original_item-Work Items: exact ID population/order differs; missing=['BK-21']]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[duplicate_item-Work Items: exact ID population/order differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_status-Work Items/BK-31: Delivery status differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_wave-Work Items/BK-21: Wave differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_feature-Features/A1: Implementation differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_step_basis-Journey Steps/STEP-A-01: Basis differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_hash-Sources: stale or incorrect hash docs/backlog/status.yaml]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[drop_source-Sources: exact authored snapshot-source population differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[drop_acceptance-Acceptance: exact ID population/order differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[change_instruction-Packet Guide: instruction population or content differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[forge_scenario_pass-Evaluation Specs/EVAL-001: Execution differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[forge_decision-Decisions/CHOICE-01: Current approval differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[formula_error-Reconciliation: saved formula error #REF!]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[missing_formula-Reconciliation!C4: formula or cached value differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[wrong_formula_cache-Reconciliation!C4: formula or cached value differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[forged_zero_reconciliation-Reconciliation/Items: Source count differs from source]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[drop_control_row-Reconciliation: exact control-row population differs]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_current_plan_view",
+    "name": "test_saved_plan_checker_rejects_real_cell_mutations[promote_captured_artifact-Sources: captured execution artifact must remain historical]",
+    "message": "AssertionError: assert ['Work Items/... source', ...] == []\n  \n  Left contains 40 more items, first extra item: 'Work Items/J-7: Next action differs from source'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_prebuild_plan_links",
+    "name": "test_final_review_obligations_have_exact_delivery_and_packet_owners",
+    "message": "AssertionError: assert ['P06: missin...acts.py', ...] == []\n  \n  Left contains 89 more items, first extra item: 'P06: missing existing boundary nm/obs'\n  Use -v to get more diff"
+  },
+  {
+    "class": "tests.test_the_scenarios_come_from_the_plan",
+    "name": "test_requirement_rows_reconcile_both_sheets",
+    "message": "AssertionError: assert ['LB-183: col...e Build', ...] == []\n  \n  Left contains 19 more items, first extra item: 'LB-183: column 33 differs from Before Build'\n  Use -v to get more diff"
+  }
+]

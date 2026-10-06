@@ -1,0 +1,120 @@
+{
+  "baseline": "611b1e8",
+  "current_head": "40c0a52ef4ba2f0959251843c10e89d468ba9615",
+  "method": "AST top-level string assignments whose constant name contains SYSTEM or APPENDIX; whitespace word count; dynamic input/recovery/JSON schema excluded. A constant reused by calls counted once. This inventory is not dispatch tokens or the earlier reviewer baseline ea1253e.",
+  "baseline_words": 15746,
+  "current_words": 15189,
+  "constants": [
+    {
+      "file": "nm/brain/continuation.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 2371,
+      "current_words": 1247
+    },
+    {
+      "file": "nm/brain/continuation_verification.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 2125,
+      "current_words": 2232
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_REPAIR_OPENING_SYSTEM",
+      "baseline_words": 207,
+      "current_words": 207
+    },
+    {
+      "file": "nm/brain/conversation.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 1915,
+      "current_words": 1873
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "baseline_words": 338,
+      "current_words": 454
+    },
+    {
+      "file": "nm/brain/dispute_verification.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 1280,
+      "current_words": 1317
+    },
+    {
+      "file": "nm/brain/disputes.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 966,
+      "current_words": 966
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_DECOMPOSE_SYSTEM",
+      "baseline_words": 247,
+      "current_words": 247
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_EMPTY_VERIFY_SYSTEM",
+      "baseline_words": 367,
+      "current_words": 367
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_POOL_VERIFY_APPENDIX",
+      "baseline_words": 381,
+      "current_words": 381
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REPAIR_SYSTEM",
+      "baseline_words": 116,
+      "current_words": 116
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REQUIREMENTS_SYSTEM",
+      "baseline_words": 683,
+      "current_words": 683
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_VERIFY_SYSTEM",
+      "baseline_words": 1302,
+      "current_words": 1302
+    },
+    {
+      "file": "nm/brain/material.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 1050,
+      "current_words": 1050
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "constant": "_COVERAGE_SYSTEM",
+      "baseline_words": 403,
+      "current_words": 539
+    },
+    {
+      "file": "nm/brain/material_verification.py",
+      "constant": "_SYSTEM",
+      "baseline_words": 1318,
+      "current_words": 1366
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "constant": "_RECONSIDERATION_SYSTEM",
+      "baseline_words": 295,
+      "current_words": 374
+    },
+    {
+      "file": "nm/brain/record_review.py",
+      "constant": "_SOURCE_SYSTEM",
+      "baseline_words": 382,
+      "current_words": 468
+    }
+  ],
+  "real_model_calls": 0,
+  "browser_calls": 0,
+  "change_percent": -3.54
+}

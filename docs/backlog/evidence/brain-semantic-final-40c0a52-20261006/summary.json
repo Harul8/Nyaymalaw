@@ -1,0 +1,144 @@
+{
+  "contract": "nm_offline_evidence_package_v1",
+  "frozen_head": "40c0a52ef4ba2f0959251843c10e89d468ba9615",
+  "packaged_utc": "2026-10-06T12:33:07.568595+00:00",
+  "qualification_status": "subset_has_failures",
+  "subset": {
+    "selected_modules": 165,
+    "collected_executed_nodes": 3267,
+    "pytest_outcome_counts": {
+      "passed": 3241,
+      "xfailed": 4,
+      "failed": 22
+    },
+    "failure_identities_matching_archived_baseline": 22,
+    "failures_without_supplied_baseline_match": 0,
+    "baseline_matching_is_identity_only_not_reverification": true,
+    "failed_tests": [
+      "tests/test_current_plan_view.py::test_saved_current_plan_matches_authored_registry_and_snapshot_sources",
+      "tests/test_current_plan_view.py::test_saved_media_policy_is_part_of_the_checked_reader_view",
+      "tests/test_current_plan_view.py::test_saved_autonomy_contract_is_checked_without_promoting_runtime",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_original_item-Work Items: exact ID population/order differs; missing=['BK-21']]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[duplicate_item-Work Items: exact ID population/order differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_status-Work Items/BK-31: Delivery status differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_wave-Work Items/BK-21: Wave differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_feature-Features/A1: Implementation differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_step_basis-Journey Steps/STEP-A-01: Basis differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_hash-Sources: stale or incorrect hash docs/backlog/status.yaml]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_source-Sources: exact authored snapshot-source population differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_acceptance-Acceptance: exact ID population/order differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_instruction-Packet Guide: instruction population or content differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forge_scenario_pass-Evaluation Specs/EVAL-001: Execution differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forge_decision-Decisions/CHOICE-01: Current approval differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[formula_error-Reconciliation: saved formula error #REF!]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[missing_formula-Reconciliation!C4: formula or cached value differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[wrong_formula_cache-Reconciliation!C4: formula or cached value differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forged_zero_reconciliation-Reconciliation/Items: Source count differs from source]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_control_row-Reconciliation: exact control-row population differs]",
+      "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[promote_captured_artifact-Sources: captured execution artifact must remain historical]",
+      "tests/test_prebuild_plan_links.py::test_final_review_obligations_have_exact_delivery_and_packet_owners"
+    ]
+  },
+  "pressure": {
+    "distinct_cases": 232,
+    "rounds": [
+      {
+        "round": "round-1",
+        "order": "forward",
+        "test_count": 232,
+        "case_count": 232,
+        "pytest_outcome_counts": {
+          "passed": 228,
+          "xfailed": 4
+        },
+        "junit_sha256": "68c1f7270acc712dd6c74dd0eabac0db23c7100d293e3d1d3022adc8ff724955",
+        "log_sha256": "684efe1ee2422988acf9b8ad5bf2091050507b95a982aa26797cbb77e9e07354"
+      },
+      {
+        "round": "round-2",
+        "order": "reverse",
+        "test_count": 232,
+        "case_count": 232,
+        "pytest_outcome_counts": {
+          "passed": 228,
+          "xfailed": 4
+        },
+        "junit_sha256": "d2f20752d96aadb96078589b2c3afd5869468575001d7982f4bbcade90a320fb",
+        "log_sha256": "f3e1e40d51e61eb3d3afcf09a70d130a94b791102f50e63f60a4057dd4428116"
+      },
+      {
+        "round": "round-3",
+        "order": "shuffled-seed-20261008",
+        "test_count": 232,
+        "case_count": 232,
+        "pytest_outcome_counts": {
+          "passed": 228,
+          "xfailed": 4
+        },
+        "junit_sha256": "794bc4f79ff6d1aa958b275fe25f98a9be9a7fe201b8e3a74b937e8578242f1d",
+        "log_sha256": "16ad615575e2c23251ddd7d45d9cfe42ed53e33d67e76f514675ba2bfedf17c5"
+      }
+    ],
+    "distinct_pytest_outcome_counts": {
+      "passed": 228,
+      "xfailed": 4
+    },
+    "total_pytest_outcome_counts": {
+      "passed": 684,
+      "xfailed": 12
+    },
+    "total_test_executions": 696,
+    "passed_case_count_excluding_proposal_only_characterizations": 226,
+    "strict_semantic_desired_rule_xfails": [
+      "material-20-wrong-date-false-judge-acceptance",
+      "source-pressure-16-semantic-mislabel-false-rejection",
+      "source-pressure-17-semantic-mislabel-false-admission",
+      "source-pressure-18-instruction-only-mixed-false-admission"
+    ],
+    "proposal_boundary_characterizations_not_prevention": [
+      "extractor-14-wrong-fact-exact-source",
+      "extractor-17-empty-is-proposal-only"
+    ],
+    "scenario_counts": {
+      "paired": 27,
+      "mixed": 66,
+      "faulty": 94,
+      "legitimate": 40,
+      "known_good": 5
+    },
+    "claim_scope_counts": {
+      "mechanical": 217,
+      "semantic_dependency": 15
+    },
+    "protection_status_counts": {
+      "admitted": 44,
+      "blocked": 63,
+      "partial_preserved": 32,
+      "recovered": 66,
+      "passed": 21,
+      "gap_demonstrated": 2,
+      "open_semantic_defect": 4
+    }
+  },
+  "prompt_inventory": {
+    "baseline": "611b1e8",
+    "baseline_words": 15746,
+    "current_words": 15189,
+    "change_percent": -3.54,
+    "method": "AST top-level string assignments whose constant name contains SYSTEM or APPENDIX; whitespace word count; dynamic input/recovery/JSON schema excluded. A constant reused by calls counted once. This inventory is not dispatch tokens or the earlier reviewer baseline ea1253e."
+  },
+  "live_model_calls": 0,
+  "browser_calls": 0,
+  "false_acceptance_rate": "not_established",
+  "false_rejection_rate": "not_established",
+  "model_semantic_accuracy": "not_established",
+  "dispatch_token_cost": "not_established",
+  "production_latency": "not_established",
+  "full_observations": {
+    "compressed_artifact": "artifacts/observations.json.gz",
+    "original_bytes": 64104842,
+    "original_sha256": "480a45eeb8d4d847a39601c50f54a73120eba458a435002baaf00f4dbc0e6fc4",
+    "compressed_bytes": 4017911,
+    "compressed_sha256": "1aeb0d26811c36051047b8901c94d149dcf8be2bc5b1e880ec7350dccf8a9631"
+  }
+}
