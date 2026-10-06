@@ -207,6 +207,19 @@
       "files": [
         "nm/brain/legal_requirements.py"
       ]
+    },
+    {
+      "slice": "Structure research correction around unresolved owned evidence",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-180"
+      ],
+      "decision": "Research repair has one ordered activity against exact original context and precise unresolved IDs. Preserve valid peers and legitimate general, conditional or empty outcomes; schema completeness cannot establish support or coverage. Required fields stay present without invented citations or repeated settled units. Same bounded repair envelope.",
+      "validation": "106 passed in 0.38s. Offline mechanics only; actual-model semantic accuracy and browser qualification deferred by owner.",
+      "files": [
+        "nm/brain/legal_requirements.py"
+      ]
     }
   ]
 }

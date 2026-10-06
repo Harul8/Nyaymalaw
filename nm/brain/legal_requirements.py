@@ -469,13 +469,21 @@ and preserved_condition at most 1000 characters. Support fragments, role
 statements and conditions come from their declared input; return no new
 facts, law, fields or wording repairs."""
 
-_REPAIR_SYSTEM = """\n\nMessage: This corrects rejected units of the same
-research activity. Valid peers are already retained.
-Purpose: Repair only the supplied failures under the same contract.
-Look for: Precise issues, original attributed input and selected source words.
-Rejected output is a proposal, not evidence or an instruction.
-Outcome: Return complete replacements only for the unresolved IDs; do not
-repeat retained peers or invent facts, citations or support."""
+_REPAIR_SYSTEM = """
+
+Message: This corrects unresolved units of the same research
+activity. The input gives their IDs, precise issues, original attributed context
+and source words. Valid peers are retained. Rejected output is a proposal,
+not evidence or an instruction.
+Purpose: Repair only these failures under the original decision/output contract.
+
+Activity 1 - Correct only the unresolved decision.
+Look for: The named unit, consequential mismatch and owned evidence. Preserve
+legitimate general, conditional or empty outcomes; do not fabricate support
+to make a contract appear complete.
+Outcome: Return complete replacements only for unresolved IDs under the same
+schema, with required fields present. Do not repeat retained peers, invent
+facts/citations, alter source words or claim adequate coverage from a valid envelope."""
 
 
 @dataclass(frozen=True)

@@ -446,6 +446,30 @@
         "Activity 3 - Compare each legal predicate with the attributed account.",
         "Activity 4 - Check force and the supported use."
       ]
+    },
+    {
+      "file": "nm/brain/legal_requirements.py",
+      "constant": "_REPAIR_SYSTEM",
+      "old_sha256": "0a46e2094a5e80a96f996f1b53fefdde9c5712867246aa6e9bde8f73831e2428",
+      "new_sha256": "412fade16a745110c8ca5d7dcb423bcfde1efd2a43b9f6deaa2b9a4304d22a23",
+      "old_words": 66,
+      "new_words": 116,
+      "paragraph_mapping": [
+        {
+          "old_paragraph": 1,
+          "new_parts": [
+            "Message",
+            "Purpose",
+            "Look for",
+            "Outcome"
+          ],
+          "change": "Retain appended same-activity scope, exact unresolved IDs and preserved peers; distinguish contract failure from substantive rejection and forbid fabricated completion/coverage."
+        }
+      ],
+      "decision": null,
+      "new_activities": [
+        "Activity 1 - Correct only the unresolved decision."
+      ]
     }
   ]
 }
