@@ -1241,6 +1241,28 @@
       },
       "call_impact": "Existing independent Judge prompt only; no stage or routine call added. No paid calls before commit.",
       "remaining": "Prompt semantic efficacy unverified until actual pinned browser trial. Material atomicity/association and actual requested-work delivery remain open."
+    },
+    {
+      "piece": "pinned browser dispute-conflict prompt qualification",
+      "owner": "evidence only",
+      "version": "4323fc6",
+      "verdict": "FAILED",
+      "evidence": "docs/backlog/evidence/brain-conflict-review-20261007-live.json.gz",
+      "observed": [
+        "Neutral event still accepted as independent dispute with an accuracy-only reason, despite clearer Activity2.",
+        "Dispute coverage requests all material account; its record domain is only disputes. This conflicts with independently-contestable-issue purpose.",
+        "Event and representation material admitted; generic heading because opening review remained unassessed.",
+        "Independent recap withheld after reviewer called a no-effect recap already fulfilled/current instead of not_requested. This is redundant record-status shape friction, not missing advocate information.",
+        "Fresh expression operator/evidence combination produced no generation-shape failure in this turn. Mixed current v4 status/account survives, but useful independent recap does not.",
+        "No legal gathering; erroneous dispute triggers unnecessary law research. Saved/reopened input/reply retain actual partial scope."
+      ],
+      "next_owners": [
+        "dispute_verification.py::_COVERAGE_SYSTEM domain",
+        "continuation_verification.py accepted-unit record status shape",
+        "material_verification.py atomicity/full association",
+        "legal_requirements.py force alternatives",
+        "delivered outcome and saved completion"
+      ]
     }
   ],
   "additional_reviewer_input": {
@@ -1288,8 +1310,8 @@
     "pinned_model": "gpt-4.1-mini-2025-04-14",
     "no_further_paid_calls_since_baseline": false,
     "no_further_paid_sincebaseline": false,
-    "cumulative_charge_usd": 2.149577,
-    "remaining_usd": 2.850423,
+    "cumulative_charge_usd": 2.202524,
+    "remaining_usd": 2.797476,
     "unknown_attempts": 0
   },
   "delivered_work_contract_review": {
@@ -1522,5 +1544,56 @@
       "Mixed successful v4 status/account composition was not exercised: record unit unavailable. Overall browser acceptance FAILED."
     ]
   },
-  "status_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-status-live.json.gz"
+  "status_live_evidence": "docs/backlog/evidence/brain-current-review-20261007-status-live.json.gz",
+  "conflict_live_acceptance": {
+    "commit": "4323fc6",
+    "verdict": "FAILED",
+    "matter_id": "mat_e35c1286805b9c8463559494aa5ae814",
+    "turn_id": "turn_a4343e47-4623-495d-b403-5b3220a0dca8",
+    "saved_and_reopened": true,
+    "calls": 18,
+    "calls_by_operation": {
+      "interpret_conversation": 1,
+      "classify_account_sources": 1,
+      "extract_disputes": 1,
+      "verify_disputes": 4,
+      "extract_legal_details": 1,
+      "verify_material_grounding": 3,
+      "reconsider_account_sources": 1,
+      "decompose_disputes": 1,
+      "read_legal_requirements": 1,
+      "continue_conversation": 2,
+      "verify_continuation": 2
+    },
+    "model_seconds": 85.048,
+    "charge_usd": 0.052947,
+    "combined_charge_usd": 2.202524,
+    "remaining_usd": 2.797476,
+    "unknown_attempts": 0,
+    "material_details": 2,
+    "disputes": 1,
+    "continuation_coverage": [
+      {
+        "request_index": 0,
+        "state": "ok",
+        "diagnostics": []
+      },
+      {
+        "request_index": 1,
+        "state": "unavailable",
+        "diagnostics": [
+          "Record result differs from the writer's declared outcome: The existing record entries already capture the requested account information; no new record changes required for the summary request."
+        ]
+      }
+    ],
+    "observations": [
+      "Neutral event still accepted as independent dispute with an accuracy-only reason, despite clearer Activity2.",
+      "Dispute coverage requests all material account; its record domain is only disputes. This conflicts with independently-contestable-issue purpose.",
+      "Event and representation material admitted; generic heading because opening review remained unassessed.",
+      "Independent recap withheld after reviewer called a no-effect recap already fulfilled/current instead of not_requested. This is redundant record-status shape friction, not missing advocate information.",
+      "Fresh expression operator/evidence combination produced no generation-shape failure in this turn. Mixed current v4 status/account survives, but useful independent recap does not.",
+      "No legal gathering; erroneous dispute triggers unnecessary law research. Saved/reopened input/reply retain actual partial scope."
+    ]
+  },
+  "conflict_live_evidence": "docs/backlog/evidence/brain-conflict-review-20261007-live.json.gz"
 }
