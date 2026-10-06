@@ -917,6 +917,21 @@ def coverage_schema(source_ids, *, source_references=None, record_ids=(),
                            "represented", "missing", "unresolved", "non_account", "outside_scope"]},
                        "record_ids": ids(record_ids), "candidate_ids": ids(candidate_ids),
                        "reason": {"type": "string", "minLength": 1}}}
+    alternatives = []
+    for field in ("record_ids", "candidate_ids"):
+        if disposition["properties"][field].get("maxItems") == 0:
+            continue
+        represented = deepcopy(disposition)
+        represented["properties"]["status"]["enum"] = ["represented"]
+        represented["properties"][field]["minItems"] = 1
+        alternatives.append(represented)
+    unrepresented = deepcopy(disposition)
+    unrepresented["properties"]["status"]["enum"] = [
+        "missing", "unresolved", "non_account", "outside_scope"]
+    for field in ("record_ids", "candidate_ids"):
+        unrepresented["properties"][field]["maxItems"] = 0
+    alternatives.append(unrepresented)
+    disposition = {"anyOf": alternatives}
     return {"type": "object", "additionalProperties": False,
             "required": ["state", "reason", "source_checks", "dispositions"], "properties": {
                 "state": {"type": "string", "enum": ["complete", "partial", "unassessed"]},

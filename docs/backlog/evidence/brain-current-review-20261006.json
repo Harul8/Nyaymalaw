@@ -1596,6 +1596,19 @@
       "fixture_update": "One allowed-source catalogue assertion changes fromL1 toL1+L2; actual omitted-source/partial-coverage and saved-output assertions retained.",
       "call_impact": "Zero routine stages added. Source-dependent conditional review remains bounded and uses actual selections; unrelated offered sources do not invalidate checked peers. Public fixture8calls, replay0.",
       "remaining": "Source pane displays primary quote while additional proof is durable; useful display of all supported positions needs browser review. Semantic grouping, ownership/opening, typed delivery and other audit gaps remain open."
+    },
+    {
+      "piece": "Applicable native coverage representation shapes",
+      "base": "caaf4aa",
+      "production_file": "nm/brain/record_review.py",
+      "prompt_changes": 0,
+      "invariant": "A represented original portion requires an owned representation; unrepresented judgments cannot carry representation claims. Native generation must reflect existing mandatory admission rather than spend repair on an impossible shape.",
+      "observable_pass": "Native/canonical schemas reject empty represented selections, admit record-only/candidate-only/shared selections and all four empty unrepresented judgments. Foreign and unadmitted selectors remain blocked; historical three-field coverage unchanged.",
+      "baseline": "24 focused cases:16 failed/8 passed before change.",
+      "verification": "160 focused/dependent tests passed including shipped public save/reopen/replay; Ruff passed. Explicit fixture judgments exercise mechanics, not real semantic accuracy.",
+      "canonical_changes": "No fields, source words, disposition meanings, ownership, support checks, replay contract or seals changed. Only native alternatives match the existing mandatory checks.",
+      "call_impact": "Zero new model stages. Invalid structural generation alternatives removed; admission remains mandatory. Conditional repair and false-positive reduction require subsequent browser measurement.",
+      "remaining": "Real reviewer can still select an unrelated eligible record or wrong semantic disposition. Grouping, support completeness, useful delivery and legal material remain unqualified. Browser checkpoint follows coherent applicable-shape repairs."
     }
   ],
   "additional_reviewer_input": {
