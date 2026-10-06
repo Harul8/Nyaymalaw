@@ -427,8 +427,9 @@ complete research, absent adverse law or adequate coverage of the question.
 
 Outcome: Return only readings under the schema, exactly one per subject_id.
 Each finding has kind, label, need, why, force, source_ids and material_ids.
-Use a label no longer than 120 characters, a fuller need stating the proposition
-or work, and why connecting it to cited words and the subject. Kind is gathering,
+Use a concise faithful label that preserves the finding's consequential limits,
+a fuller need stating the proposition or work, and why connecting it to cited
+words and the subject. Do not shorten a label by dropping a material condition. Kind is gathering,
 principle, condition, support or adverse. Gathering force is required only when
 cited law mandates the exact step or element under its preserved conditions;
 otherwise strengthening. Other kinds use force none.
@@ -945,8 +946,8 @@ def _search_hits(ids, searches):
 
 def _finding(row, identifier, hits, material_ids):
     label, need, why = (row[key].strip() for key in ("label", "need", "why"))
-    if not label or len(label) > 120 or not need or not why:
-        raise SchemaViolation("A finding needs a short label and explanation")
+    if not label or not need or not why:
+        raise SchemaViolation("A finding needs a meaningful label and explanation")
     if (row["kind"] == "gathering") != (row["force"] in ("required", "strengthening")):
         raise SchemaViolation(
             "Gathering force is required or strengthening; other findings use none"

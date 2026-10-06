@@ -850,6 +850,21 @@
         "nm/brain/legal_requirements.py",
         "tests/test_brain_legal_query_phrase_width.py"
       ]
+    },
+    {
+      "slice": "legal-finding-meaning-width",
+      "owners": [
+        "LB-176",
+        "LB-179",
+        "LB-181",
+        "LB-187"
+      ],
+      "decision": "Legal reading retains a concise faithful heading with complete consequential conditions instead of rejecting solely above 120 characters. Reader and saved-state rules now agree. Blank meaning, foreign source/material links, incorrect force/use, ownership and complete-evidence resource controls remain mandatory; no semantic truncation.",
+      "validation": "277 focused offline law and saved-long-heading controls passed; Ruff clean. Four reader-heading controls preserve exact long heading in first reader/verifier call and reject blank/foreign evidence. All six production activity handoffs now frozen for final broad scripted regression; actual model/browser deferred.",
+      "files": [
+        "nm/brain/legal_requirements.py",
+        "tests/test_brain_legal_finding_label_width.py"
+      ]
     }
   ]
 }
