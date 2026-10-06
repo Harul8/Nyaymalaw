@@ -1,0 +1,25 @@
+{
+  "milestone": {
+    "piece": "Turn-owned current saved-record support adapter",
+    "base": "23cc967",
+    "production_file": "nm/brain/turn.py",
+    "prompt_changes": 0,
+    "invariant": "Fresh certified record dependencies must come from stage-owned active results whose original committed execution, source catalogue and exact support remain verifiable against their original prefixes. Superseded, withdrawn, scope-held and legacy unattested records are not current support.",
+    "observable_pass": "Actual current material and dispute result IDs resolve to detached canonical saved review and original saved source IDs; resealed result/source/stage/range tampering, foreign ownership, unknown version or missing required modern proof fail. Current corrections exclude their retired predecessors; missing legacy exact proof remains readable and unoffered.",
+    "baseline": "18 focused cases fail when the new helper is absent in an isolated process; no production file was changed for that API-absence baseline.",
+    "verification": "18 new adapter tests and48 existing post-application/public prefix replay cases pass; Ruff passes. Tests use actual committed scripted public-boundary records and real replay validation; no live calls. No producer consumes this adapter yet.",
+    "canonical_changes": "None. The helper strictly validates chronological source ownership first and original execution replay for every modern supplier, then copies active stage-specific saved proof. It retains original local source IDs, does not mutate rows, and requires explicit source support portions before offering a certified entry. Existing ownership exceptions and historical v1 replay remain intact.",
+    "call_impact": "0 added model calls. Original-prefix validation is mechanical and intended to run once per fresh turn when handoffs are wired. No current live call or latency impact until that integration.",
+    "remaining": "Current-only proof cannot yet activate generally complete transcript coverage. Add inherited historical admission plus retirement proof under a versioned receipt, preserving v1 reconstruction and earlier-source authorised repairs. Add shared source-specific generation-option derivation; integrate both verifier producers and ordinary/recovery handoffs; then qualify saved/reopened/browser coverage, false rejection and useful replies. Remaining six-activity semantic/delivery/legal/UI audit work stays open."
+  },
+  "owners": ["LB-195", "LB-196", "LB-197", "LB-183"],
+  "proof_name": "saved-record-support-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 turn-owned current saved-proof adapter:18 absent-API baseline failures;18 new plus48 existing prefix/replay checks pass;Ruff pass. Original chronology/source ownership and committed execution checked before copying active stage-owned exact review proof. Retired/withdrawn/held/legacy unattested records unoffered; resealed tampering refused.0 prompt/0 model calls. Prerequisite only; NOT live-wired/full feature accepted.",
+    "current_position": "Current saved-proof adapter verified. Historical admission/retirement proof and producer handoffs remain prerequisites to safe full-transcript coverage activation.",
+    "evidence": ["docs/backlog/evidence/brain-saved-record-support-20261007.json"],
+    "tested_version": "23cc967 plus single-file candidate",
+    "test_environment": "18 focused scripted-public-record adapter cases and48 existing original-prefix/replay cases;0 real-model/browser calls in this prerequisite.",
+    "remaining": "Inherited history needs separately checked original admission and actual retirement, source-aware applicability and versioned application/replay dependencies. Current proof alone may falsely hold old corrected account ranges; do not activate it without the historical and verifier integration. Other activity gaps remain open."
+  }
+}

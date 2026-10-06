@@ -1735,6 +1735,19 @@
       "canonical_changes": "None. The optional closed proof map reuses existing positive candidate-support validation and remaps only equal turn_id/role/quoted original references. New certified support is rejected under the legacy three-field coverage contract; None and unsupplied historical/fresh callers retain their prior contract. Execution and persistence validation remain turn-owned prerequisites.",
       "call_impact": "0 additional routine or conditional calls. Mechanical owned-dependency validation only. Existing correction bounds and saved canonical proof/replay remain unchanged.",
       "remaining": "Build the turn-owned adapter that validates each supplying saved execution against its original prefix and source ownership; wire both verifier producers and ordinary/recovery handoffs, preserving current versus superseded representation. Then qualify actual browser coverage and false rejection. Source semantic purpose/ranges, dispute existence/identity, requested delivery, legal force/applicability, recovery/UI and six-activity qualification remain open."
+    },
+    {
+      "piece": "Turn-owned current saved-record support adapter",
+      "base": "23cc967",
+      "production_file": "nm/brain/turn.py",
+      "prompt_changes": 0,
+      "invariant": "Fresh certified record dependencies must come from stage-owned active results whose original committed execution, source catalogue and exact support remain verifiable against their original prefixes. Superseded, withdrawn, scope-held and legacy unattested records are not current support.",
+      "observable_pass": "Actual current material and dispute result IDs resolve to detached canonical saved review and original saved source IDs; resealed result/source/stage/range tampering, foreign ownership, unknown version or missing required modern proof fail. Current corrections exclude their retired predecessors; missing legacy exact proof remains readable and unoffered.",
+      "baseline": "18 focused cases fail when the new helper is absent in an isolated process; no production file was changed for that API-absence baseline.",
+      "verification": "18 new adapter tests and48 existing post-application/public prefix replay cases pass; Ruff passes. Tests use actual committed scripted public-boundary records and real replay validation; no live calls. No producer consumes this adapter yet.",
+      "canonical_changes": "None. The helper strictly validates chronological source ownership first and original execution replay for every modern supplier, then copies active stage-specific saved proof. It retains original local source IDs, does not mutate rows, and requires explicit source support portions before offering a certified entry. Existing ownership exceptions and historical v1 replay remain intact.",
+      "call_impact": "0 added model calls. Original-prefix validation is mechanical and intended to run once per fresh turn when handoffs are wired. No current live call or latency impact until that integration.",
+      "remaining": "Current-only proof cannot yet activate generally complete transcript coverage. Add inherited historical admission plus retirement proof under a versioned receipt, preserving v1 reconstruction and earlier-source authorised repairs. Add shared source-specific generation-option derivation; integrate both verifier producers and ordinary/recovery handoffs; then qualify saved/reopened/browser coverage, false rejection and useful replies. Remaining six-activity semantic/delivery/legal/UI audit work stays open."
     }
   ],
   "additional_reviewer_input": {

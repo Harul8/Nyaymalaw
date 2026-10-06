@@ -1467,6 +1467,51 @@ def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict
     return catalogue
 
 
+def _saved_record_support(matter: Matter, conversation: Conversation, *,
+                          prior_conversation=(), disputes=None, details=None) -> dict:
+    """Expose current record dependencies only after original-prefix validation."""
+    _saved_source_treatments(matter, conversation)
+    if disputes is None or details is None:
+        disputes, details = _record_projections(matter, prior_conversation)
+    if disputes.get("state") != "ok" or details.get("state") != "ok":
+        raise IncompleteConversation("The saved record support has no checked projection")
+    active = {"dispute_review": {row["id"] for row in disputes["rows"]},
+              "detail_review": {row["id"] for row in details["rows"]}}
+    result = {stage: {} for stage in active}
+    for saved in matter.brain_chat:
+        coverage = saved["response"].get("material_coverage", {})
+        execution = coverage.get("execution") if isinstance(coverage, dict) else None
+        if not isinstance(execution, dict):
+            continue
+        if ("coverage_application_contract" not in execution
+                and execution.get("coverage_application") is None):
+            # Legacy compatibility is readable context, never fresh certified support.
+            continue
+        if (execution.get("coverage_application_contract")
+                != POST_APPLICATION_COVERAGE_CONTRACT
+                or coverage.get("source_treatment_contract") != SOURCE_TREATMENT_CONTRACT
+                or not isinstance(saved["response"].get("continuation", {}).get(
+                    "record_snapshot"), dict)):
+            raise IncompleteConversation("The saved record support contract is unavailable")
+        _validate_execution_replay(matter, saved, prior_conversation=prior_conversation)
+        original = {identity: {key: row[key] for key in ("turn_id", "role", "quoted")}
+                    for identity, row in coverage["source_treatments"].items()}
+        for binding in execution["coverage_application"]["bindings"]:
+            stage, identity = binding["stage"], binding["result_id"]
+            if identity not in active[stage]:
+                # Supersession/retirement has a separate historical-effect owner.
+                continue
+            checks = binding["review"]["account_check"]["source_checks"]
+            if any("support_spans" not in check for check in checks):
+                # A compatible older attestation did not certify exact portions.
+                continue
+            if identity in result[stage]:
+                raise IncompleteConversation("The saved record support repeats an owner")
+            result[stage][identity] = {"review": deepcopy(binding["review"]),
+                                       "source_references": deepcopy(original)}
+    return result
+
+
 
 def _response_mode(plan) -> tuple[bool, bool]:
     return (any(item.next_step == "legal_work" for item in plan.items),
