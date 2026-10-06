@@ -21,6 +21,25 @@ def checked(model, *units):
         "legal_sources": {}, "progress": {"state": "ok", "rows": []}}, units=units)
 
 
+def test_shared_recovery_exhaustion_preserves_checked_response_peer():
+    class BoundedModel(ContinuationModel):
+        def __init__(self):
+            super().__init__([lambda payload: review(payload, 0)])
+            self.claims = []
+
+        def claim_recovery(self, phase):
+            self.claims.append(phase)
+            return False
+
+    model = BoundedModel()
+    result = checked(model, unit(0), unit(1))
+
+    assert result.decisions[0][0] is True
+    assert result.unavailable == (1,)
+    assert len(model.calls) == 1
+    assert model.claims == ["verify_continuation:correction"]
+
+
 def test_a_legal_premise_in_an_account_overrides_whole_unit_acceptance():
     proposed = unit(text="The reported agreement creates an enforceable payment obligation.")
 

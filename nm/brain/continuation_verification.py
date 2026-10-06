@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
-from nm.brain.checked import require_independent_result
+from nm.brain.checked import claim_recovery, require_independent_result
 from nm.brain.work_state import PROGRESS_STATUSES
 from nm.shared.model_port import (
     ContextOverflow,
@@ -103,6 +103,24 @@ it. Explain relevance and outstanding meaning, not just labels. A truthful
 unfinished unit can be accepted as a limited reply, retaining actual checked
 narrower effect references alongside the expressed outstanding scope. Those
 effects neither disappear nor certify the unfinished whole goal.
+
+Message: The application may mark an execution request's acknowledgement_delivery
+as code_only after rendering its proposed record-result blocks from owned effects
+and current entries. substantive_followup retains model prose and reviewed links.
+Purpose: Review the original requested result and work scope without treating
+application-rendered final-snapshot wording as a model's invented operation.
+Look for: Compare response_mode with the complete original deliverable; a
+provisional acknowledgement classification cannot omit independent substantive
+work the advocate requested. For code_only, compare its exact entries and
+selected outcome with the owned receipt and current record. This proposed reply
+will be saved with the state and released only after persistence confirmation;
+its save acknowledgement is conditional final-snapshot wording, not evidence of
+an earlier successful save. No delivery marker supplies factual truth, semantic
+fulfillment, source ownership, review coverage or progress completion.
+Outcome: Return the same independent record-result, original-goal, progress and
+block checks. Reject a consequential result or scope mismatch. Do not require
+rewriting correct code-owned acknowledgement wording merely because the shared
+reply and state have not yet reached their atomic commit boundary.
 
 Activity 3 - Check the selected legal use and coverage.
 Look for: Each proposition's actual legal dependency, regardless of block kind.
@@ -603,6 +621,10 @@ def verify_continuation(model: ModelPort, *, input_payload: dict,
                 > model.context_budget(Tier.JUDGE)):
             raise ContextOverflow(
                 "The complete context exceeds the continuation checking budget")
+        if attempt and not claim_recovery(model, "verify_continuation:correction"):
+            issues.update((index, "The turn's bounded response-review recovery is exhausted")
+                          for index in pending)
+            break
         try:
             result = model.structured(
                 Prompt(system=_SYSTEM, user=user, operation="verify_continuation"),
