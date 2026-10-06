@@ -13,7 +13,12 @@ import pytest
 from nm.brain import turn as boundary
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
-from tests.brain_reader_fixture import fixture_scoped_coverage, reader_operations, reader_repairs
+from tests.brain_reader_fixture import (
+    fixture_scoped_coverage,
+    fresh_review_reply,
+    reader_operations,
+    reader_repairs,
+)
 from tests.test_brain_continuation_service import send
 from tests.test_brain_evidence_rendering_public import (
     RawExpressionModel,
@@ -122,7 +127,7 @@ class SpanNeighbourModel(RawExpressionModel):
                 dated_candidate_id="D1"
                 if prompt.operation == "verify_material_grounding" and self.selected_source
                 else None)
-            return replace(checked, data=data)
+            return replace(checked, data=fresh_review_reply(payload, data))
         if prompt.operation == "verify_continuation" and self.fulfilled:
             data = deepcopy(checked.data)
             for verdict in data["verdicts"]:

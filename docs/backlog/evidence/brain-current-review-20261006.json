@@ -1661,6 +1661,19 @@
       "canonical_changes": "Fresh per-source schema only. Canonical source-purpose/support checks, historical contracts, renderer, save and replay versions unchanged.",
       "call_impact": "Zero added calls. Same candidate-free classifier and conditional reconsideration use the common helper. May prevent repeated metadata correction; real semantic impact unverified.",
       "remaining": "Material Judge factual-correction semantics, coverage source-purpose metadata, baseline fixture/proof failures and integrated browser correction acceptance remain open."
+    },
+    {
+      "piece": "Correction and retained-review fixtures use actual checked source selections",
+      "base": "aaf704b",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Regression fixtures declare the actual checked source dependencies and fresh wire selections without reinjecting server-owned proof.",
+      "observable_pass": "Legitimate neighboring-source correction saves and exactly replays in eight calls; a changed selected source invalidates only its actual dependent reviews.",
+      "baseline": "Five failing tests reproduce on unchanged d8df870. Cache decisions actually all selected L1; public fixture reinjected forbidden canonical source_ids after wire conversion.",
+      "verification": "88 retained-review/public correction tests pass with unchanged effect, wrong-target, foreign-source, saved supersession, unaffected custody, call-count and zero-call replay assertions.",
+      "canonical_changes": "Two test fixtures only; all production ownership, source, effect and replay gates unchanged.",
+      "call_impact": "Zero model/provider calls; scripted actual public boundary preserves eight-call assertion.",
+      "remaining": "Model material Judge semantics remain unverified; fixture acceptance does not demonstrate real reviewer detection."
     }
   ],
   "additional_reviewer_input": {

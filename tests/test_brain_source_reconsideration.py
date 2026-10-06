@@ -355,8 +355,16 @@ def review_cache():
                 "review_scope": {"requests": [0]},
                 "candidates": [{"candidate_id": identity, "statement": identity}
                                for identity in ids]}
-    decisions = {identity: {**verdict(), "candidate_id": identity} for identity in ids}
     accounts = {"D1": {"L1"}, "D2": {"L2"}, "D3": {"P1S1"}, "D4": {"L2"}}
+    decisions = {identity: {**verdict(), "candidate_id": identity} for identity in ids}
+    for identity, row in decisions.items():
+        # Cache dependencies are the review's actual selections, not the
+        # broader allowed-source catalogue supplied during reuse.
+        selected = sorted(accounts[identity])
+        row["account_check"]["source_ids"] = selected
+        row["account_check"]["source_checks"] = [
+            {**row["account_check"]["source_checks"][0], "source_id": source}
+            for source in selected]
     targets = {"D1": {"a"}, "D2": {"a", "b"}, "D3": {"b"}, "D4": {"c"}}
     state = {}
     candidate.remember_independent_review(
