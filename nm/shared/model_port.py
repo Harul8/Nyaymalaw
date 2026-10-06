@@ -541,6 +541,22 @@ _TYPES = {"string": str, "integer": int, "number": (int, float),
 
 
 def _require_type(key: str, value: Any, spec: Mapping[str, Any]) -> None:
+    if "anyOf" in spec:
+        alternatives = spec["anyOf"]
+        if (not isinstance(alternatives, list) or not alternatives
+                or any(not isinstance(branch, dict) for branch in alternatives)):
+            raise ValueError("Structured alternatives require nonempty declared schemas")
+        failures = []
+        for branch in alternatives:
+            try:
+                _require_type(key, canonical_schema_data(value, branch), branch)
+            except SchemaViolation as exc:
+                failures.append(str(exc))
+            else:
+                break
+        else:
+            raise SchemaViolation(
+                f"property {key!r} matches no declared alternative: " + "; ".join(failures))
     want = spec.get("type")
     choices = want if isinstance(want, list) else [want]
     known = [kind for kind in choices if isinstance(kind, str) and kind in _TYPES]
