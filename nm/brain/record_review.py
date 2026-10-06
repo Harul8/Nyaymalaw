@@ -830,8 +830,53 @@ def _portion_covered(portion, dispositions) -> bool:
     return portion["quoted"][cursor - portion["start"]:].isspace()
 
 
+def _coverage_candidate_support(decisions, references, choices, admitted) -> dict:
+    """Resolve admitted proposal dependencies without judging proposition meaning."""
+    if (not isinstance(decisions, dict) or not set(decisions) <= set(choices)):
+        raise SchemaViolation("Coverage candidate support needs owned independent decisions")
+    result = {}
+    for identity in admitted:
+        row = decisions.get(identity)
+        account = row.get("account_check") if isinstance(row, dict) else None
+        if (not isinstance(account, dict) or row.get("candidate_id") != identity
+                or row.get("verdict") != "accept" or row.get("operation_supported") is not True
+                or account.get("content_role") != "reported_matter_account"
+                or account.get("supported") is not True
+                or account.get("introduces_legal_analysis") is not False):
+            raise SchemaViolation(
+                "Coverage candidate support requires its actual positive independent decision")
+        selected = account.get("source_ids")
+        checks = account.get("source_checks")
+        if (not isinstance(selected, list) or not isinstance(checks, list)
+                or any(not isinstance(value, str) for value in selected)
+                or len(selected) != len(set(selected)) or not set(selected) <= references.keys()
+                or any(not isinstance(check, dict) for check in checks)):
+            raise SchemaViolation("Coverage candidate support selects unowned original sources")
+        checked = [check.get("source_id") for check in checks]
+        if (any(not isinstance(value, str) for value in checked)
+                or len(checked) != len(set(checked)) or set(checked) != set(selected)):
+            raise SchemaViolation(
+                "Coverage candidate support needs exact independent source checks")
+        support = {}
+        for check in checks:
+            source = check["source_id"]
+            portions = owned_source_portions(references[source], check.get("support_spans"))
+            if (type(check.get("supplies_account_content")) is not bool
+                    or type(check.get("supports_proposal")) is not bool
+                    or check["supplies_account_content"] != bool(portions)
+                    or check["supports_proposal"] and not check["supplies_account_content"]):
+                raise SchemaViolation("Coverage candidate support contradicts original portions")
+            if check["supplies_account_content"] and check["supports_proposal"]:
+                support[source] = portions
+        if not support:
+            raise SchemaViolation("Coverage candidate support has no positive original dependency")
+        result[identity] = support
+    return result
+
+
 def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
-                     candidate_ids=(), admitted_candidate_ids=None) -> dict:
+                     candidate_ids=(), admitted_candidate_ids=None,
+                     candidate_support=None) -> dict:
     """Check observable dispositions; semantic sufficiency remains independently judged."""
     schema = coverage_schema(source_ids, source_references=source_references,
                              record_ids=record_ids, candidate_ids=candidate_ids)
@@ -855,6 +900,9 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
         raise SchemaViolation("Coverage selects unowned actual admitted candidate IDs")
     else:
         admitted = set(admitted_candidate_ids)
+    support = (_coverage_candidate_support(
+        candidate_support, references, candidate_ids, admitted)
+        if candidate_support is not None else None)
     checks = {}
     missing = set()
     for check in row["source_checks"]:
@@ -875,6 +923,7 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
         raise SchemaViolation("Coverage source checks must cover the exact owned catalogue")
 
     dispositions = []
+    seen_dispositions = set()
     by_source = {identity: [] for identity in references}
     for disposition in row["dispositions"]:
         identity = disposition["source_id"]
@@ -890,6 +939,14 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
             if not set(candidates) <= admitted:
                 raise SchemaViolation(
                     "Represented coverage selects a candidate not actually admitted")
+            if support is not None and any(not any(
+                    max(portion["start"], original["start"])
+                    < min(portion["end"], original["end"])
+                    for original in support.get(candidate, {}).get(identity, []))
+                    for candidate in candidates):
+                raise SchemaViolation(
+                    "Represented coverage selects a candidate without independently checked "
+                    "support for this original source portion")
         elif records or candidates:
             raise SchemaViolation(
                 "Unrepresented coverage cannot claim record/candidate representation")
@@ -898,8 +955,12 @@ def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
         canonical = {**disposition, **references[identity], **portion,
                      "record_ids": records, "candidate_ids": candidates,
                      "reason": disposition["reason"].strip()}
-        dispositions.append(canonical)
-        by_source[identity].append(canonical)
+        duplicate = (identity, portion["start"], portion["end"], disposition["status"],
+                     tuple(sorted(records)), tuple(sorted(candidates)))
+        if duplicate not in seen_dispositions:
+            seen_dispositions.add(duplicate)
+            dispositions.append(canonical)
+            by_source[identity].append(canonical)
     for identity, check in checks.items():
         if any(item["status"] == "non_account" and any(
                 max(portion["start"], item["start"]) < min(portion["end"], item["end"])
