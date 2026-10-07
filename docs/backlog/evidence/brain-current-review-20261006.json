@@ -1905,6 +1905,37 @@
       "matter_version": 2,
       "browser_feature_complete": false,
       "remaining": "Ordinary source handoff, quantity-only correction, exact history proof and0-call reopen pass. v3 both-failed-coverage path remains qualified by scripted public-boundary tests only; real browser exercised v2. First-turn material coverage retry truncated. Fresh source-purpose/disposition contradictions and wrong prior-task completion association remain open. Dispute existence/retirement, source reaffirmation, material association, requested delivery, legal accuracy, UI and closure still require repair and integrated qualification."
+    },
+    {
+      "piece": "Separate requested outcome identity prompt candidate",
+      "base": "09f5b15",
+      "production_file": "nm/brain/continuation.py",
+      "prompt_changes": 1,
+      "invariant": "Task identity follows the same requested result/scope/operation/targets; related evidence or current-request completion cannot complete a different prior goal.",
+      "verification": "Focused scripted public save/replay neighbours and existing completion gates verified separately; actual browser writer selects $new_task, prior task unchanged, exact truthful fallback reopens0calls. Full requested correction blocked by grounding/recovery prerequisite; candidate is not feature-complete. Eleven stale schema-inspection failures match isolated unchanged baseline11fail/2pass.",
+      "call_impact": "0 new routine calls. Browser11 actual calls:2 continuation attempts (first OutputTruncated),3 other conditional calls; USD0.061682 increment. Combined USD3.202083/5, remaining1.797917.",
+      "packets": [
+        334,
+        345
+      ],
+      "matter_id": "mat_cdf32be008e5e8268d68de8fae33596c",
+      "browser_feature_complete": false,
+      "remaining": "Prompt identity selection improved: actual writer chose $new_task and preserved prior task. Full correction acknowledgement NOT qualified: grounding repeated work_instruction as factual support; reaffirmed source purpose did not trigger dependent recheck. Rejected new request has no durable pending task after fallback, despite accepted exact transcript. Coverage grouping, typed recovery, pending-work preservation and useful delivery remain prerequisites. Reopened UI reports build digest drift after test-file creation; actual captured stable writer prompt exactly matches candidate with existing correction suffix, but runtime digest scope needs separate audit.",
+      "focused_tests": {
+        "public_boundary": {
+          "file": "tests/test_brain_record_work_association_public.py",
+          "passed": 5,
+          "xml": "outputs/brain-repair-20261006/task-association-public.xml"
+        },
+        "existing_regressions_passed": 202,
+        "stale_schema_baseline": {
+          "failed": 11,
+          "passed": 2,
+          "matches_isolated_09f5b15": true
+        },
+        "ruff": "pass",
+        "semantic_qualification": "scoped browser selector only; integrated correction blocked by grounding/recovery"
+      }
     }
   ],
   "additional_reviewer_input": {
@@ -2385,13 +2416,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 3.140401,
-    "remaining_usd": 1.859599,
-    "new_ledger_attempts": 334,
+    "combined_measured_usd": 3.202083,
+    "remaining_usd": 1.797917,
+    "new_ledger_attempts": 345,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus334 measured current attempts; cumulative USD5 unchanged"
+    "basis": "166 frozen prior attempts plus345 measured current attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2651,5 +2682,9 @@
   "independent_admission_browser_evidence": {
     "path": "docs\\backlog\\evidence\\brain-independent-admission-browser-20261007.json.gz",
     "sha256": "5e6309d76589cba3791eb0d78837af243a3ca9fd5907bb147df731e5173f43c4"
+  },
+  "task_identity_browser_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-task-identity-20261007.json.gz",
+    "sha256": "f79961ee5097b913cf0d23e3bacb924a63fcc14190adfef8da2a6069180ba11e"
   }
 }

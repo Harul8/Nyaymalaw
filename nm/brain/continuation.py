@@ -73,9 +73,13 @@ pending work, corrections, scope, concern and urgency. Routing labels and delive
 modes are proposals; the advocate's words control the deliverable. A diversion
 preserves work. A narrow answer need not complete a broader task. Untracked older
 progress requires reading the transcript, not erasing earlier obligations.
-Outcome: Return one unit per supplied request_index. Select the saved task or
-$new_task for a request; select a related saved task or $no_task for a contribution.
-Do not invent permission, a request, a deadline or a promised external action.
+Outcome: Return one unit per supplied request_index. Reuse a saved task only for
+the same requested result and scope, including its record operation and targets.
+Shared matter, records or evidence do not make separate outcomes the same task.
+Select $new_task for a distinct requested result; preserve earlier tasks and their
+success conditions. A contribution may select a related saved task or $no_task
+without claiming that contribution completes its whole goal. Do not invent
+permission, a request, a deadline or a promised external action.
 
 Activity 2 - Establish original attributed evidence.
 Look for: Read complete original passages and their framing before selecting them.
@@ -158,8 +162,11 @@ its exact displayed explanation block_id. Unsupported legal enquiry remains
 unfinished; unresolved record work cannot complete this request or its task.
 Return progress_updates only for actual supported changes to supplied IDs, with
 exact block_id, concise internal reason and advocate span_ids. $work denotes only
-this unit's selected/new task. Complete tasks against relevant checked results
-within their whole scope; complete questions against advocate words answering
+this unit's selected/new task. Fulfillment of this request does not complete an
+earlier task with a different operation, target set or success condition. Omit
+unchanged prior transitions, including a repeated completion of an already
+completed task. Complete tasks against relevant checked results within their
+whole scope; complete questions against advocate words answering
 their information need. Promised/unavailable/deferred/cancelled need those original
 words; silence or diversion cannot cancel work. A promise is not delivery and
 unavailability is not absence. Omitted changes preserve prior state.
