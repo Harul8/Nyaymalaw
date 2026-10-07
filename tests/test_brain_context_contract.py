@@ -107,6 +107,22 @@ def test_record_snapshot_uses_record_origin_not_the_later_reply_contract():
                           {"older", "producer", "current"}, "current")
 
 
+def test_continuation_keeps_old_record_context_separate_from_public_history():
+    from nm.brain.continuation import _context_maps, _record_context
+    messages = (Message("older", "nm", "Public", legacy_text="Finding"),
+                Message("producer", "advocate", "Reported detail"))
+    conversation = Conversation(messages)
+    views, contracts = _context_maps(conversation, "Continue", "current")
+    row = {"source_turn_id": "producer", "prior_references": [
+        {"turn_id": "older", "role": "nm", "quoted": "Finding"}]}
+    assert _record_context(row, views[PUBLIC_CONTEXT], views=views, contracts=contracts)[0][
+        "text"] == "Finding"
+    assert conversation.messages[0].text == "Public"
+    contracts["producer"] = PUBLIC_CONTEXT
+    with pytest.raises(ValueError, match="cannot be attributed"):
+        _record_context(row, views[PUBLIC_CONTEXT], views=views, contracts=contracts)
+
+
 def test_compatibility_metadata_is_not_presented_as_conversation():
     prior = Message("prior", "nm", "The public question.",
                     recorded_at="2026-10-07T09:00:00+05:30",

@@ -31,6 +31,7 @@ from nm.brain.execution_contracts import (
     validate_record_outcome,
     validate_review_completion,
 )
+from nm.brain.history import PUBLIC_CONTEXT, word_views
 from nm.brain.legal_requirements import (
     RESEARCH_VERIFICATION,
     finding_verification_valid,
@@ -419,7 +420,22 @@ def _bind_progress_sources(unit: dict, blocks: dict, spans: dict,
     return checked
 
 
-def _record_context(row: dict, words: dict[tuple[str, str], str]) -> list[dict]:
+def _context_maps(conversation: Conversation, latest: str, turn_id: str) -> tuple[dict, dict]:
+    views = word_views(conversation.messages)
+    for words in views.values():
+        words[(turn_id, "advocate")] = latest
+    contracts = {item.turn_id: item.context_contract for item in conversation.messages}
+    contracts[turn_id] = PUBLIC_CONTEXT
+    return views, contracts
+
+
+def _record_context(row: dict, words: dict[tuple[str, str], str], *,
+                    views: dict | None = None, contracts: dict | None = None) -> list[dict]:
+    if views is not None and row.get("source_turn_id") is not None:
+        origin = row["source_turn_id"]
+        if contracts is None or origin not in contracts:
+            raise IncompleteConversation("A record has no originating context owner")
+        words = views[contracts[origin]]
     references = row.get("prior_references", [])
     if not isinstance(references, list):
         raise IncompleteConversation("A record's earlier source references are unreadable")
@@ -541,9 +557,8 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
         for key, text in current.items()}}
     payload["source_classifications"] = substantive_source_treatments(
         source_treatments or {}, classification_refs, substantive_only=False)
-    words = {(message.turn_id, message.role): message.text
-             for message in conversation.messages}
-    words[(latest_turn_id, "advocate")] = latest
+    views, contracts = _context_maps(conversation, latest, latest_turn_id)
+    words = views[PUBLIC_CONTEXT]
     records: dict[str, dict] = {}
     sources: dict[str, dict] = {}
 
@@ -572,10 +587,10 @@ def _input(conversation: Conversation, latest: str, plan: TurnPlan,
     for row in excluded_scope:
         if not isinstance(row, dict) or row.get("matter_scope") != "uncertain":
             raise IncompleteConversation("A held material observation has no unresolved scope")
-        _record_context(row, words)
+        _record_context(row, words, views=views, contracts=contracts)
 
     def record(row: dict, kind: str, identifier: str | None = None) -> None:
-        _record_context(row, words)
+        _record_context(row, words, views=views, contracts=contracts)
         identifier = identifier or row.get("id")
         if not isinstance(identifier, str) or not identifier.strip():
             raise IncompleteConversation("A continuation record has no identity")
@@ -1124,7 +1139,8 @@ def _limited_unit(unit: dict, *, selected: tuple[str, ...] | None = None,
 
 
 def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
-             words: dict[tuple[str, str], str], *, reviewed: dict | None = None) -> dict:
+             words: dict[tuple[str, str], str], *, reviewed: dict | None = None,
+             views: dict | None = None, contracts: dict | None = None) -> dict:
     result = deepcopy(unit)
     for block in result["blocks"]:
         block["references"] = [
@@ -1138,7 +1154,8 @@ def _resolve(unit: dict, spans: dict, records: dict, sources: dict,
         texts = {(row["turn_id"], row["role"], row["text"])
                  for row in block["references"] if row.get("type") == "conversation"}
         for key in block["record_ids"]:
-            for reference in _record_context(records[key]["record"], words):
+            for reference in _record_context(records[key]["record"], words,
+                                             views=views, contracts=contracts):
                 identity = reference["id"]
                 if identity in existing and existing[identity] != reference:
                     raise IncompleteConversation("Resolved source identities conflict")
@@ -1220,9 +1237,8 @@ def continue_conversation(
         # may retain this content-free diagnostic on its failure audit path.
         exc.gate_events = ({"attempt": 0, **gate_diagnostic("G-CORE", "invalid")},)
         raise
-    words = {(message.turn_id, message.role): message.text
-             for message in conversation.messages}
-    words[(latest_turn_id, "advocate")] = latest
+    views, contracts = _context_maps(conversation, latest, latest_turn_id)
+    words = views[PUBLIC_CONTEXT]
     accepted: dict[int, dict] = {}
     retained: dict[int, dict] = {}
     reviews: dict[int, dict] = {}
@@ -1405,7 +1421,8 @@ def continue_conversation(
                 issues[index] = reason
     released = {**retained, **accepted}
     return ContinuationResult(
-        tuple(_resolve(released[index], spans, records, sources, words, reviewed=reviews.get(index))
+        tuple(_resolve(released[index], spans, records, sources, words, reviewed=reviews.get(index),
+                       views=views, contracts=contracts)
               for index in expected if index in released),
         tuple({"request_index": index,
                "state": ("ok" if index in accepted else
