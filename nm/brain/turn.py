@@ -44,7 +44,7 @@ from nm.brain.material import (
     extract_details,
 )
 from nm.brain.material_state import material_record, sourced_detail_for_display
-from nm.brain.material_verification import verify_material_grounding
+from nm.brain.material_verification import material_review_feedback, verify_material_grounding
 from nm.brain.mutation_contracts import (
     AUTHORITY_CONTRACT,
     SAME_TURN_SOURCE_MATCH,
@@ -2210,6 +2210,20 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
     }
     original_payload, latest_sources, prior_sources = addressed_sources(
         conversation.messages, latest)
+    feedback = material_review_feedback(
+        grounded, candidates=context["detail_proposals"], opening=opening,
+        earlier=conversation.messages, latest=latest, source_treatments=source_treatments)
+    independent_feedback = (material_review_feedback(
+        grounded, candidates=context["detail_proposals"], opening=opening,
+        earlier=conversation.messages, latest=latest, source_treatments=source_treatments,
+        exclude_source_owner_ids=feedback.source_owner_ids)
+        if feedback is not None and feedback.source_owner_ids else feedback)
+    pending_feedback = feedback
+    feedback_attempted = False
+    if feedback is not None:
+        events["failed_review_recovery"] = {
+            "state": "pending", "candidate_ids": list(feedback.candidate_ids),
+            "source_owner_ids": list(feedback.source_owner_ids)}
     initial_assignment_ids = {row["id"] for row in active_disputes}
     changed_sources = ()
     disputes_rechecked = False
@@ -2231,12 +2245,14 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             stages["dispute_review"] = _dispute_review_execution(checked, status, assessed)
         return checked
 
-    def check_details(phase, *, changed=()):
-        nonlocal detail_assignments_changed
+    def check_details(phase, *, changed=(), failed_review=None):
+        nonlocal detail_assignments_changed, feedback_attempted
         # A replacement read must not destroy checked proof before it returns.
         # Failed or denied reads leave original independent peers available for
         # precise dependency holds and admission capture.
         review = {} if detail_assignments_changed else detail_review_state
+        if failed_review is not None:
+            feedback_attempted = True
         checked = _conditional_read(
             model, phase, verify_material_grounding,
             candidates=context["detail_proposals"], opening=opening,
@@ -2247,7 +2263,17 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             active_material=conversation.open_material, coverage=detail_coverage,
             review_state=review,
             recheck_source_ids=changed if review else (),
+            **({"recovery_feedback": failed_review} if failed_review is not None else {}),
             **_coverage_review_inputs("detail_review", coverage_support, coverage_history))
+        if failed_review is not None:
+            event = events["failed_review_recovery"]
+            event["state"] = "reviewed" if checked is not None else "budget_exhausted"
+            if checked is not None:
+                event["unread_candidate_ids"] = [row["candidate_id"]
+                    for row in checked.unread_proposals
+                    if row["candidate_id"] in feedback.candidate_ids]
+                if event["unread_candidate_ids"]:
+                    event["state"] = "partial"
         if checked is not None and detail_assignments_changed:
             detail_review_state.clear()
             detail_review_state.update(review)
@@ -2288,12 +2314,12 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             opening_affected=bool(changed_sources))
         _partial_coverage(detail_coverage, reason)
 
-    if source_disagreements:
+    if source_disagreements or (feedback is not None and feedback.source_owner_ids):
         by_id = {f"C{index}": candidate for index, candidate in enumerate(
             context["dispute_proposals"], 1)}
         by_id.update({f"D{index}": candidate for index, candidate in enumerate(
             context["detail_proposals"], 1)})
-        selected = []
+        selected = list(feedback.source_owner_ids) if feedback is not None else []
         for diagnostic in source_disagreements:
             identity = diagnostic.get("source_id")
             if diagnostic.get("diagnostic_kind") == "coverage_source_purpose":
@@ -2356,6 +2382,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 source_treatments=source_treatments, source_ids=selected)
             if result is None:
                 event["state"] = "budget_exhausted"
+                if feedback is not None:
+                    events["failed_review_recovery"]["state"] = "budget_exhausted"
                 _partial_coverage(stages["dispute_review"]["account_coverage"],
                                   "Source-purpose reconsideration remains unfinished.")
                 _partial_coverage(
@@ -2378,7 +2406,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 if any(row not in active_disputes for row in previous):
                     detail_assignments_changed = True
                 checked_details = check_details(
-                    "source_reconsideration:detail_review", changed=changed_sources)
+                    "source_reconsideration:detail_review", changed=changed_sources,
+                    failed_review=feedback)
                 if checked_details is None:
                     hold_changed(
                         "Source-dependent material review remains unfinished.", hold_disputes=False)
@@ -2396,6 +2425,7 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 recheck_details = bool(_reaffirmed_unread_candidates(
                     grounded.unread_proposals, context["detail_proposals"], selected,
                     latest_sources, prior_sources, prefix="D", opening=opening))
+                recheck_details = recheck_details or feedback is not None
                 if unread_disputes:
                     checked = check_disputes("source_reconsideration:dispute_review")
                     if checked is None:
@@ -2410,7 +2440,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                         detail_assignments_changed = True
                         recheck_details = True
                 if recheck_details:
-                    checked_details = check_details("source_reconsideration:detail_review")
+                    checked_details = check_details(
+                        "source_reconsideration:detail_review", failed_review=feedback)
                     if checked_details is None:
                         hold_changed(
                             "Source-dependent material review remains unfinished.",
@@ -2423,10 +2454,35 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             raise
         except ModelError as exc:
             event.update(state="partial", failure=type(exc).__name__)
+            if feedback is not None:
+                events["failed_review_recovery"].update(state="partial", failure=type(exc).__name__)
             hold_changed(
                 "Source-dependent record review could not be confirmed.",
                 hold_disputes=not disputes_rechecked)
-            return grounded, active_disputes, source_treatments
+            if changed_sources or feedback_attempted or independent_feedback is None:
+                return grounded, active_disputes, source_treatments
+            # The failed source-owner read changed no original purpose/targets.
+            # Supply failure feedback only for independent units; every pending
+            # proposal still needs its own checked verdict under the old purpose.
+            pending_feedback = independent_feedback
+
+    if pending_feedback is not None and not feedback_attempted:
+        # An internal role/support contradiction requires material re-examination,
+        # not an additional source-purpose call or forced semantic acceptance.
+        event = events["failed_review_recovery"]
+        try:
+            checked_details = check_details(
+                "failed_material_review:detail_review", failed_review=pending_feedback)
+            if checked_details is not None:
+                grounded = checked_details
+                _record_slots(slots, grounded.details)
+            else:
+                _partial_coverage(detail_coverage, "Material review remains unfinished.")
+        except (ConfigurationError, TierUnavailable):
+            raise
+        except ModelError as exc:
+            event.update(state="partial", failure=type(exc).__name__)
+            _partial_coverage(detail_coverage, "Material review could not be confirmed.")
 
     for assessment in (stages["dispute_review"]["account_coverage"], detail_coverage):
         _retain_source_purpose_conflicts(

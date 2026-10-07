@@ -1,0 +1,55 @@
+{
+  "piece": "Turn consumes final material feedback and preserves independent recovery",
+  "base": "e96a616",
+  "production_file": "nm/brain/turn.py",
+  "prompt_changes": 0,
+  "invariant": "Current final owned failed checks reach bounded recovery; source-owner failure cannot suppress an independent internal unit, while source-dependent or unread work cannot claim completion.",
+  "verification": "9 raw public /api/turn cases plus39 exact existing public/recovery neighbours pass48. Final typed disagreement hidden by sibling contradiction dispatches existing source owner; unchanged and changed source purposes pass feedback to material re-review before resource guards. Internal-only failure skips source owner. Positive and semantic-negative peers each reviewed once; resolved errors and valid negatives create no new recovery. Denied dispatch marked budget_exhausted. Provider failure changing no source/targets supplies only independent unit feedback to the existing pending review; D4 saves with checked proof while D2 remains unread. Budget-limited neighbour retains D1 without D4 and keeps unassessed coverage. Atomic saved records/reopened projections/replay preserve exact results; replay0calls. Shared recovery bound and reserve2 remain. All meanings are independently fabricated, not real-model detection or legal quality. Additional67-node run58pass/9fail matches isolated old turn:7 failure texts identical, other2 same observed records/source choices/review/conditional counts, changed feedback/bookkeeping only. Those9 remain open, not waived.",
+  "call_impact": "0 new routine model stages. Scripted normal8/resolved9/negative8, pure internal10, reaffirmed owner11, changed owner12. Failed owner plus independent repair12; limited-denial10. Conditional corrections share ledger8/reserve2; exact replay0. No live calls during implementation; cumulative USD3.277582/5, remaining1.722418.",
+  "reports": {
+    "material-feedback-consumer-public-final9.xml": [
+      {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-feedback-consumer-neighbours-final.xml": [
+      {
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-feedback-consumer-public-baseline-e96a616.xml": [
+      {
+        "tests": 9,
+        "failures": 6,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-feedback-consumer-recovery-neighbours.xml": [
+      {
+        "tests": 67,
+        "failures": 9,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-feedback-consumer-recovery-neighbours-baseline-b50a632-legalforce.xml": [
+      {
+        "tests": 67,
+        "failures": 9,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "browser_feature_complete": false,
+  "remaining": "This turn consumer now has a concrete scripted public integration result, not real-model acceptance. Restart pinned acceptance server and retry pending browser correction from accepted earlier account; inspect exact saved quantity, unchanged actor/dates/purpose/recipient, lineage, request outcome, actual reply and reopened replay. Nine older67-node recovery neighbour failures remain unresolved: baseline matching only excludes observed new regression, not false rejection or semantic correctness. Source-owner changed/assignment-dependent failure still follows established dependency holds. Re-review includes all pending proposals under owned sources; filtered feedback alone is not scope authority. Other material association, pending-input, typed delivery, legal interpretation/conditions, retrieval, UI and closure gaps remain; no whole material-activity or production-readiness claim.",
+  "production_sha256": "d4d9b20515b6a5d15c4d8c2b6383fdff00da16e85438e009856acd4fa64d48eb",
+  "test_sha256": "e135417f2f9ff7041f4c72b8b3d69eadc7effb766635d266d4bf02d5b1b372e8"
+}
