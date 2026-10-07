@@ -55,6 +55,36 @@ def test_dispute_sources_use_the_creating_turns_contract(contract, quote, valid)
     assert (result["state"] == "ok") is valid
 
 
+@pytest.mark.parametrize(("contract", "quote", "valid"), [
+    (None, "Internal finding.", True), (PUBLIC_CONTEXT, "The public question.", True),
+    (None, "The public question.", False), (PUBLIC_CONTEXT, "Internal finding.", False),
+])
+def test_saved_work_selects_its_owned_context_without_resealing(contract, quote, valid):
+    from copy import deepcopy
+
+    from nm.brain.work_state import project_work
+    from nm.work_the_file.matter_contracts import Matter
+    from tests.test_brain_work_state import append, proposed
+    matter = Matter(id="work-context", advocate_id="adv", title="Context")
+    continuation = proposed("new", "Continue.", question=False)
+    block = continuation["units"][0]["blocks"][0]
+    block["span_ids"] = ["P1S1"]
+    block["references"] = [dict(type="conversation", id="P1S1", turn_id="older",
+                                 role="nm", text=quote)]
+    matter = append(matter, "new", "Continue.", continuation)
+    if contract is not None:
+        matter.brain_chat[0]["response"]["material_coverage"] = {
+            "execution": {"context_contract": contract}}
+    saved = deepcopy(matter)
+    prior = (Message("older", "nm", "The public question.", legacy_text="Internal finding."),)
+    if valid:
+        assert project_work(matter, prior_conversation=prior)["state"] == "ok"
+    else:
+        with pytest.raises(ValueError, match="attributable saved passage"):
+            project_work(matter, prior_conversation=prior)
+    assert matter == saved
+
+
 def test_compatibility_metadata_is_not_presented_as_conversation():
     prior = Message("prior", "nm", "The public question.",
                     recorded_at="2026-10-07T09:00:00+05:30",

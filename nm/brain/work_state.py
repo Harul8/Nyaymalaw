@@ -14,6 +14,7 @@ from nm.brain.execution_contracts import (
     validate_record_outcome,
     validate_review_completion,
 )
+from nm.brain.history import LEGACY_CONTEXT, PUBLIC_CONTEXT, context_contract, resolve_history
 from nm.brain.material import addressed_sources
 from nm.brain.source_snapshots import inline_source_links, source_snapshots
 from nm.shared.model_port import SchemaViolation
@@ -275,10 +276,14 @@ def _seal_record_outcome(unit: dict, previous: dict, *, receipt: dict | None,
         unit["record_outcome_seal"] = expected
 
 
-def _snapshot_sources(snapshot: dict, words: dict, allowed: set[str], turn_id: str) -> None:
+def _snapshot_sources(snapshot: dict, views: dict, contracts: dict,
+                      allowed: set[str], turn_id: str) -> None:
     for value in snapshot["record_catalogue"].values():
         record = value["record"]
         source = record.get("source_turn_id")
+        if source not in contracts:
+            _fail("a saved result record has no originating context owner")
+        words = views[contracts[source]]
         quoted = record.get("quoted")
         references = record.get("prior_references", [])
         if not isinstance(references, list):
@@ -582,7 +587,7 @@ def _read_words(prior_conversation, turns: tuple) -> dict[tuple[str, str], str]:
 
 
 def _displayed(unit: dict, blocks: dict, row: dict, words: dict,
-               allowed_turn_ids: set[str]) -> None:
+               allowed_turn_ids: set[str], views: dict, contracts: dict) -> None:
     for block in blocks.values():
         expression = block.get("evidence_expression")
         if expression is not None or "expression_contract" in block:
@@ -639,8 +644,23 @@ def _displayed(unit: dict, blocks: dict, row: dict, words: dict,
         for reference in block["references"]:
             if reference["type"] == "conversation":
                 key = (reference["turn_id"], reference["role"])
-                if (key not in words or key[0] not in allowed_turn_ids
-                        or reference["text"] not in words[key]
+                selected_words = [words]
+                if reference["id"].startswith("context:"):
+                    # These code-added dependencies belong to the cited record's
+                    # creating turn, not to this later reply's source catalogue.
+                    owners = [value["record"]["source_turn_id"]
+                              for value in block["references"] if value.get("type") in (
+                                  "material", "dispute", "requirement", "research")
+                              and any(ref.get("turn_id") == key[0]
+                                      and ref.get("role") == key[1]
+                                      and ref.get("quoted") == reference["text"]
+                                      for ref in value["record"].get("prior_references", []))]
+                    if not owners or any(owner not in contracts for owner in owners):
+                        _fail("a record-context passage has no originating record")
+                    selected_words = [views[contracts[owner]] for owner in owners]
+                if (key[0] not in allowed_turn_ids
+                        or any(reference["text"] not in selected.get(key, "")
+                               for selected in selected_words)
                         or (key == (row["turn_id"], "nm"))):
                     _fail("a progress source is not an attributable saved passage")
 
@@ -679,13 +699,17 @@ def project_work(matter, *, prior_conversation=(),
             not isinstance(allow_prepared_turn_id, str) or not turns
             or turns[-1].get("turn_id") != allow_prepared_turn_id):
         _fail("prepared projection is limited to the final constructed current turn")
-    words = _read_words(prior_conversation, turns)
+    views = {contract: _read_words(resolve_history(prior_conversation, contract), turns)
+             for contract in (LEGACY_CONTEXT, PUBLIC_CONTEXT)}
+    contracts = {item.turn_id: item.context_contract for item in prior_conversation}
+    contracts.update({row["turn_id"]: context_contract(row) for row in turns})
     active, events = {}, []
     current_turn_ids = {row["turn_id"] for row in turns}
     allowed_turn_ids = {message.turn_id for message in prior_conversation
                         if message.turn_id not in current_turn_ids}
     untracked = bool(allowed_turn_ids)
     for row in turns:
+        words = views[contracts[row["turn_id"]]]
         if row.get("advocate_id") != matter.advocate_id or row.get("matter_id") != str(matter.id):
             _fail("a saved progress turn belongs to another owner")
         allowed_turn_ids.add(row["turn_id"])
@@ -713,7 +737,7 @@ def project_work(matter, *, prior_conversation=(),
                     _fail("the prepared result does not match its exact current matter version")
             elif hasattr(matter, "version") and receipt["resulting_version"] > matter.version:
                 _fail("the saved result version is later than its durable matter")
-            _snapshot_sources(snapshot, words, allowed_turn_ids, row["turn_id"])
+            _snapshot_sources(snapshot, views, contracts, allowed_turn_ids, row["turn_id"])
         previous = deepcopy(active)
         seen = set()
         updated_ids = set()
@@ -725,7 +749,7 @@ def project_work(matter, *, prior_conversation=(),
                 _fail("saved request identities conflict")
             seen.add(index)
             blocks = _blocks(unit)
-            _displayed(unit, blocks, row, words, allowed_turn_ids)
+            _displayed(unit, blocks, row, words, allowed_turn_ids, views, contracts)
             version = unit.get("progress_version")
             if version is None:
                 if any(field in unit for field in ("work", "progress_updates")):
