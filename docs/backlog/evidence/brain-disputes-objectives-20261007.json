@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-07",
+  "work_queue": "Legal brain 2.1 / 2.2.1",
+  "request": "Extract only disputes and desired matter outcomes from meaningful portions of each latest message in complete conversation context. Keep the results internal.",
+  "start": {
+    "owner": "nm/brain/disputes_objectives.py",
+    "dependencies": ["nm/brain/release.py", "nm/brain/turn.py"],
+    "pass_condition": "Mixed input produces only supported dispute/objective proposals, legitimate absence is accepted, and exact support plus private results survive saving and reopening.",
+    "counterexamples": ["Action label suppresses information", "NM draft substantiates its own statement", "A work request becomes a matter objective", "A missing result looks like reviewed absence", "Historical quotations change during replay"],
+    "scope": "Original text messages. No general fact extraction, action planning, research, execution or public substantive reply.",
+    "archive_reuse": "None. Uses the current model and authenticated storage boundaries."
+  },
+  "pieces": [
+    {
+      "owner": "nm/brain/disputes_objectives.py",
+      "status": "component_verified_not_yet_served",
+      "built": "One focused prompt body with code-selected first/follow-up headers, two independent collections, owned IDs, exact source passages with support/context distinction and code-derived offsets, independently held invalid units, full-context resource checks and replay validation.",
+      "verification": "59 offline extractor/source-layout tests pass. Scripted tests do not establish semantic model quality.",
+      "registry": "Registered the new core module in nm/source_layout.json."
+    }
+  ],
+  "model_calls": {
+    "extractor": 1,
+    "planned_normal_turn": 3,
+    "planned_operations": ["label_message", "extract_disputes_objectives", "review_prepared_response"],
+    "shared_conditional_correction_maximum": 1,
+    "new_routine_calls": 0
+  },
+  "remaining": ["Scoped independent review and legitimate empty release", "Served turn and saved-contract handoff", "Browser semantic validation and Legal brain worksheet update"]
+}
