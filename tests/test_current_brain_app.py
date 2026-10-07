@@ -134,7 +134,7 @@ def test_application_starts_serves_existing_browser_and_account_session(harness)
     assert app.client.get("/static/../../.env").status_code == 404
     assert assert_ok(app.client.get("/api/session"))["advocate"]["id"] == "adv_wiring"
     assert assert_ok(app.client.get("/api/health"))["brain"]["stages"] == [
-        "message_labelling", "response_preparation", "response_review"]
+        "message_labelling", "disputes_objectives", "response_review"]
     assert app.model.calls == []
 
 

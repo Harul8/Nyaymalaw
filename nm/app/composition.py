@@ -101,7 +101,7 @@ class Application:
         routine = self.config.for_tier(Tier.ROUTINE)
         return {'runtime': 'ready', 'provider': routine.provider, 'model': routine.model,
                 'corpus': 'not_connected',
-                'brain': {'stages': ['message_labelling', 'response_preparation', 'response_review']}}
+                'brain': {'stages': ['message_labelling', 'disputes_objectives', 'response_review']}}
 
 def _require_session(check):
     from nm.app.model_permission import ModelPermissionRefused
