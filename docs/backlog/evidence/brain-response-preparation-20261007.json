@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-07",
+  "scope": "Clean-slate second stage after whole-message labelling",
+  "owner": "nm/brain/response_preparation.py",
+  "status": "Standalone component; application integration and semantic acceptance pending",
+  "pass_condition": "Given a label, the complete latest message and complete attributed earlier conversation, make one preparation call and return an explicitly unreviewed reply draft, source-linked material proposals and planned activities without executing, saving or publicly releasing them.",
+  "consequential_counterexample": "A mistaken broad label must not remove original information or requests from the preparation input. An unknown source or NM-only source must not admit a material or action proposal; a rejected independent proposal must not discard supported peers or turn its draft into approved public text.",
+  "input": {
+    "latest_message": "Exact original text with a code-assigned source ID",
+    "earlier_conversation": "Complete ordered messages with original speaker, words and supplied attribution metadata",
+    "label": "Advisory whole-message classification; not execution authority or a content filter",
+    "first_message": "Code selects the opening-message prompt when history is empty",
+    "follow_up": "Code selects the follow-up prompt with complete attributed history"
+  },
+  "output": {
+    "state": "prepared_unreviewed",
+    "reply_draft": "Unreviewed response proposal handling greeting, attributed understanding and proposed activities as applicable",
+    "material": "Proposed understandings with source message IDs and code-owned proposal IDs",
+    "actions": "Planned requested outcomes, constraints, activities and consequential missing information with original source IDs; proposals are not execution permissions",
+    "sources": "Complete original source messages retained separately from derived proposals",
+    "issues": "Explicit held-unit identity and validation reason; supported independent peers retained"
+  },
+  "checks": {
+    "input": "Validate label, nonblank current input, attributed history and explicit history completeness before dispatch; refuse overflow without trimming history",
+    "output": "Validate the envelope once and each independent unit separately, including required text and owned source IDs. Reject support supplied only by earlier NM wording; require the latest message to anchor a current action. Normalize blank optional constraints and missing-information metadata without rejecting a valid action.",
+    "completed_schema_rejection": "Per-unit validation may examine a quarantined provider object only when the existing shared model boundary supplies a complete, unambiguous structured rejected-result receipt. Every unit still requires its own checks; incomplete output is never salvaged.",
+    "limits": "Source identity is not semantic support, extraction completeness, factual proof, authority to execute, persistence or public release approval"
+  },
+  "calls": {
+    "new_normal_calls": 1,
+    "first_two_components_total": 2,
+    "tier": "ROUTINE",
+    "internal_retries": 0,
+    "semantic_reviewer_calls": 0,
+    "live_model_calls_this_slice": 0,
+    "api_cost_this_slice_usd": 0,
+    "recovery": "No private retry. Typed failures remain available to the later shared turn-owned recovery boundary."
+  },
+  "verification": {
+    "offline_tests": {
+      "passed": 55,
+      "failed": 0,
+      "classifier": 26,
+      "preparation": 29,
+      "artifact": "outputs/brain-response-20261007/component-tests.xml",
+      "coverage": "First and follow-up prompts, complete source context, two-call component handoff, advisory labels, source identity, held independent units, harmless empty metadata, quarantined completed objects, unfinished output, resource overflow and no private retries"
+    },
+    "live_model": "Not run",
+    "browser": "Not run; component is not wired into the public application",
+    "semantic_accuracy": "Not established by scripted responses or mechanical source validation"
+  },
+  "remaining": [
+    "Wire complete owned context and the labelling handoff through the application boundary",
+    "Independently review substantive draft, material coverage, source meaning and planned work before admission or public release",
+    "Add shared bounded recovery without re-admitting user input or repeating successful effects",
+    "Save checked material and work through owned atomic persistence and derive completion from actual effects",
+    "Execute authorised planned activities through their owners and retain outcome evidence",
+    "Validate model behaviour and actual saved/reopened browser replies"
+  ],
+  "source_sha256": {
+    "nm/brain/response_preparation.py": "18731535c6557a19387e2196e81fb22b242abd1db153baa648db28c020384ebd",
+    "tests/test_brain_response_preparation.py": "f1ae7cf48d3138e34b1688fbb6b0c6aa35addd303806a6f2e6a93d8d54af7b48"
+  },
+  "workbook": {
+    "path": "docs/Nyaymalaw_Implementation_Plan.xlsx",
+    "sheet": "legal brain",
+    "rows": [22, 25, 45, 53, 61],
+    "before_build": "Historical; unchanged",
+    "other_cells_and_features_unchanged": true,
+    "before_task_sha256": "af858053516edf3c25608d266580102a473bcaf30d3b5cdfd98f94ce9a31138a",
+    "after_sha256": "121e807312c24560025dcf687f6e1c42c6ede13b606e26a1e14d11fee6eee100",
+    "publication_proof": "outputs/brain-response-preparation-20261007/legal-brain-status/publication-proof.json",
+    "visual_review": "Updated status and notes rendered and viewed without clipped text"
+  }
+}
