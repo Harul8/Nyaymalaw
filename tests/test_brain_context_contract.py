@@ -161,6 +161,15 @@ def test_history_and_recording_times_are_read_only_context_not_active_targets():
     assert payload["earlier_conversation"][0]["text"] == "Original account"
 
 
+def test_first_message_context_does_not_imply_documents_or_other_matters_were_read():
+    from nm.brain.conversation import _prompt
+    payload = json.loads(_prompt(Conversation(()), "See the document I mentioned.").user)
+    assert payload["context_boundaries"] == {
+        "conversation": "no_prior_messages",
+        "document_content": "not_loaded_by_this_text_context", "other_matters": "not_loaded"}
+    assert payload["additional_saved_context"] is None
+
+
 @pytest.mark.parametrize("metadata", [dict(legacy_text=12), dict(legacy_order=-1),
                                        dict(legacy_order=True)])
 def test_unreadable_reconstruction_metadata_is_rejected(metadata):
