@@ -70,6 +70,61 @@ def _transcript(saved):
     )]
 
 
+def test_saved_opening_and_file_inventory_reach_public_context_without_document_text(
+        client, wired, monkeypatch):
+    from nm.open_matter.commission_contracts import Commission
+    from nm.open_matter.engagement_contracts import Engagement
+    from tests.test_document_transport_keeps_local_reading_permission_separate import read
+
+    matter_id, instruction, _, _ = read(client, wired, key="brain-context")
+    saved = wired.store.load(matter_id)
+    revised = client.post(f"/api/matters/{matter_id}/opening", json={
+        "request_key": "opening-context", "expected_version": saved.version,
+        "title": "Recorded outside chat", "parties": {"Mira": "client"},
+        "brief": {"objective": "Preserve the original account before advising."},
+    })
+    assert revised.status_code == 200, revised.text
+    saved = wired.store.load(matter_id)
+    uploads = deepcopy(saved.uploads)
+    # A damaged independent inventory item must neither disclose foreign
+    # metadata nor discard the owned conversation and usable file inventory.
+    foreign = deepcopy(uploads[instruction["original_id"]])
+    foreign["receipt"].update(upload_id="foreign", matter_id="another-matter")
+    foreign["offer"]["filename"] = "FOREIGN-SECRET.txt"
+    uploads["foreign"] = foreign
+    commission = Commission(objective="Explain the available choices", recorded_by="adv_demo")
+    wired.store.commit(replace(
+        saved, uploads=uploads, engagement=Engagement(client="Mira"),
+        commission=commission.next_version(objective="Review"), commission_history=(commission,),
+        version=saved.version + 1), expected_version=saved.version)
+    before = wired.store.load(matter_id)
+    model = _model(wired, monkeypatch, [_route("Hello.")])
+    response = client.post("/api/turn", json={
+        "message": "Hello.", "turn_id": "inventory-context", "matter_id": matter_id})
+    assert response.status_code == 200, response.text
+    assert response.json()["metrics"]["llm_calls"] == 3
+    payload = next(value for op, value in model.calls if op == "interpret_conversation")
+    context = payload["additional_saved_context"]
+    assert context["parties"] == {"Mira": "client"}
+    assert context["opening"]["current"]["objective"] == (
+        "Preserve the original account before advising.")
+    assert context["opening"]["corrections"][0]["previous"]["parties"] == {}
+    assert context["engagement"]["client"] == "Mira"
+    assert context["commission"]["objective"] == "Review"
+    assert len(context["commission_history"]) == 1
+    document = context["documents"][0]
+    assert document["filename"] == "private.txt"
+    assert document["local_reading"]["state"] == "recorded"
+    assert document["content_in_model_context"] is False
+    assert context["documents"][1] == {"asset_id": "foreign", "state": "metadata_unavailable"}
+    assert "FOREIGN-SECRET" not in str(payload)
+    assert "The original records payment" not in str(payload)
+    assert payload["target_catalogue"] == []
+    after = wired.store.load(matter_id)
+    assert after.uploads == before.uploads and after.intake_answers == before.intake_answers
+    assert after.commission == before.commission
+
+
 def test_sustained_public_context_keeps_correction_diversions_reopen_and_repair(
         client, wired, monkeypatch):
     correction = "The northern carton arrival was 19 April, correcting the earlier account."
@@ -138,6 +193,7 @@ def test_sustained_public_context_keeps_correction_diversions_reopen_and_repair(
 
 @pytest.mark.parametrize("damage", [
     "missing_turn", "unreadable_reply", "unreleased_reply", "not_held",
+    "unknown_context_contract", "removed_context_contract",
 ])
 def test_bad_saved_context_blocks_public_dispatch_and_save(client, wired, monkeypatch, damage):
     model = _model(wired, monkeypatch, [plan("Hello.")])
@@ -152,6 +208,10 @@ def test_bad_saved_context_blocks_public_dispatch_and_save(client, wired, monkey
         row["elements"] = [{"text": None}]
     elif damage == "unreleased_reply":
         row.update(committed=False, release_state="withheld")
+    elif damage == "unknown_context_contract":
+        row["response"]["material_coverage"]["execution"]["context_contract"] = "unknown"
+    elif damage == "removed_context_contract":
+        row["response"]["material_coverage"]["execution"].pop("context_contract")
     else:
         row["message_source"] = "not_held"
     wired.store.commit(replace(saved, turns_applied=turns, brain_chat=rows,

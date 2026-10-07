@@ -89,6 +89,8 @@ from nm.brain.work_state import (
     seal_progress,
     validate_record_result_snapshot,
 )
+from nm.open_matter.opening_contracts import corrections, current_opening
+from nm.open_matter.uploads_api import UploadService
 from nm.shared.gates_contracts import gate_diagnostic
 from nm.shared.model_port import (
     ConfigurationError,
@@ -1615,6 +1617,75 @@ def _project_research(matter, disputes, material, corpus_revision, plan=None,
     return current, contexts
 
 
+def _additional_context(matter: Matter) -> dict:
+    """Owned saved declarations and file inventory, not admitted account or permission.
+
+    Document reading is a separate authorised boundary. Its metadata can show
+    that a local reading was recorded; it does not put document words here or
+    certify that a derivative is still available, current or externally usable.
+    """
+    documents = []
+    for identity, row in matter.uploads.items():
+        receipt = row.get("receipt") if isinstance(row, dict) else None
+        if (not isinstance(receipt, dict)
+                or receipt.get("upload_id") != identity
+                or receipt.get("matter_id") != str(matter.id)
+                or receipt.get("actor_id") != matter.advocate_id):
+            # Do not expose another owner's name, receipt or reading metadata.
+            documents.append({"asset_id": identity, "state": "metadata_unavailable"})
+            continue
+        try:
+            projected = UploadService.project(row, matter.version)
+        except (KeyError, TypeError, ValueError):
+            documents.append({"asset_id": identity, "state": "metadata_unavailable"})
+            continue
+        reading = row.get("document_reading")
+        reading = reading if isinstance(reading, dict) else {}
+        documents.append({
+            "asset_id": identity, "filename": projected["filename"],
+            "receipt_state": receipt.get("state"),
+            "recorded_by": receipt["actor_id"], "recorded_at": row.get("created_at"),
+            "original_locator": projected["original_locator"],
+            "purpose": projected["purpose"], "authority": projected["authority"],
+            "authority_assessment": projected["authority_assessment"],
+            "local_reading": {
+                "recorded_at": reading.get("recorded_at"),
+                "revoked_at": reading.get("revoked_at"),
+                "state": "recorded" if reading else "not_recorded",
+                "current_validity": "not_rechecked",
+            },
+            "content_in_model_context": False,
+            "external_processing_authority": "not_established_by_local_reading",
+        })
+
+    def stored(value):
+        if hasattr(value, "as_dict"):
+            return deepcopy(value.as_dict())
+        return deepcopy(asdict(value) if hasattr(value, "__dataclass_fields__") else value)
+
+    return {
+        "matter_id": str(matter.id), "matter_version": matter.version,
+        "record_role": "saved_declarations_not_admitted_facts_or_execution_authority",
+        "parties": deepcopy(matter.intake_parties),
+        "opening": {
+            "current": current_opening(matter),
+            "original_offer": deepcopy(matter.intake_opening_offer),
+            "original_answer": deepcopy(matter.intake_answers.get("opening")),
+            "corrections": deepcopy(corrections(matter)),
+        },
+        "engagement": stored(matter.engagement),
+        "commission": stored(matter.commission),
+        "commission_history": [stored(item) for item in matter.commission_history],
+        "documents": documents,
+        "earlier_engine_records": {
+            "state": "not_projected_as_current_brain_records",
+            "collections": {name: len(getattr(matter, name))
+                            for name in ("threads", "facts", "loop_records")
+                            if getattr(matter, name)},
+        },
+    }
+
+
 def _current_records(store: StorePort, matter: Matter,
                      corpus_revision: str | None = None, *,
                      source_treatments=None) -> tuple[Conversation, dict, dict]:
@@ -1648,7 +1719,7 @@ def _current_records(store: StorePort, matter: Matter,
     return (replace(conversation, open_disputes=tuple(disputes["rows"]),
                     open_material=tuple([*details["rows"],
                                          *details.get("excluded_scope", [])]),
-                    progress=progress,
+                    progress=progress, additional_context=_additional_context(matter),
                     research_coverage=coverage,
                     current_work=progress["active_work"]), disputes, details)
 
