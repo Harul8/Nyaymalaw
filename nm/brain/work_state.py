@@ -14,7 +14,7 @@ from nm.brain.execution_contracts import (
     validate_record_outcome,
     validate_review_completion,
 )
-from nm.brain.history import LEGACY_CONTEXT, PUBLIC_CONTEXT, context_contract, resolve_history
+from nm.brain.history import PUBLIC_CONTEXT, context_contract, resolve_history
 from nm.brain.material import addressed_sources
 from nm.brain.source_snapshots import inline_source_links, source_snapshots
 from nm.shared.model_port import SchemaViolation
@@ -699,10 +699,13 @@ def project_work(matter, *, prior_conversation=(),
             not isinstance(allow_prepared_turn_id, str) or not turns
             or turns[-1].get("turn_id") != allow_prepared_turn_id):
         _fail("prepared projection is limited to the final constructed current turn")
-    views = {contract: _read_words(resolve_history(prior_conversation, contract), turns)
-             for contract in (LEGACY_CONTEXT, PUBLIC_CONTEXT)}
     contracts = {item.turn_id: item.context_contract for item in prior_conversation}
     contracts.update({row["turn_id"]: context_contract(row) for row in turns})
+    # Do not require an obsolete representation for a conversation whose saved
+    # work uses only the public contract (e.g. an older paragraph-only answer).
+    required = {PUBLIC_CONTEXT, *(contracts[row["turn_id"]] for row in turns)}
+    views = {contract: _read_words(resolve_history(prior_conversation, contract), turns)
+             for contract in required}
     active, events = {}, []
     current_turn_ids = {row["turn_id"] for row in turns}
     allowed_turn_ids = {message.turn_id for message in prior_conversation

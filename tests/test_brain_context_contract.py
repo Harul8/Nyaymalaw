@@ -107,6 +107,17 @@ def test_record_snapshot_uses_record_origin_not_the_later_reply_contract():
                           {"older", "producer", "current"}, "current")
 
 
+def test_public_only_work_does_not_require_a_legacy_transcript(monkeypatch):
+    from nm.brain import work_state
+    matter, earlier = record_with_context("event", PUBLIC_CONTEXT, "The public question.")
+    resolve = work_state.resolve_history
+    def public_only(messages, contract):
+        assert contract == PUBLIC_CONTEXT
+        return resolve(messages, contract)
+    monkeypatch.setattr(work_state, "resolve_history", public_only)
+    assert work_state.project_work(matter, prior_conversation=earlier)["state"] == "ok"
+
+
 def test_continuation_keeps_old_record_context_separate_from_public_history():
     from nm.brain.continuation import _context_maps, _record_context
     messages = (Message("older", "nm", "Public", legacy_text="Finding"),
