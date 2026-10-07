@@ -50,7 +50,7 @@ def correction_fixture(client, wired, monkeypatch, *, identity, declared_require
             data["items"][0].update(
                 intent="contribution", material_purposes=["account_contribution"]
             )
-            item_fields = schema["properties"]["items"]["items"]["properties"]
+            item_fields = schema["properties"]["items"]["items"]["anyOf"][0]["properties"]
             if "mutation_scopes" in item_fields:
                 data["items"][0]["mutation_scopes"] = [deepcopy(mutation_scope)]
         if operation == "extract_legal_details":

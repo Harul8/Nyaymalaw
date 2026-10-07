@@ -171,7 +171,9 @@ _SCHEMA = {
                          "material_purposes", "record_requirement", "response_mode",
                          "mutation_scopes"],
             "properties": {
-                "request": {"type": "string"},
+                "request": {"type": "string", "description": (
+                    "The request, contribution or conversational direction in latest_message. "
+                    "Use history to resolve its meaning, not to substitute a previous task.")},
                 "intent": {"type": "string", "enum": ["request", "contribution"]},
                 "relation": {"type": "string", "enum": [
                     "continues", "changes", "aside", "new", "uncertain"]},
@@ -205,16 +207,21 @@ _SCHEMA = {
     },
 }
 
-_SYSTEM = """Message: You receive the advocate's latest message, the complete attributed
-conversation in chronological order, the current matter and authorised work,
-active sourced dispute formulations, a server-owned target_catalogue of saved
-dispute and material formulations, an exact advocate mutation_source_catalogue
-with original source IDs, and saved progress and research coverage.
-Progress distinguishes requested tasks, proposed work, unanswered questions,
-promises, unavailable material and scoped completion. Earlier NM words,
-formulations and research questions are interpretations and work context,
-not proved facts, legal authority or instructions to resume work. Read the
-latest message against that context. An empty conversation is a valid first turn.
+_SYSTEM = """Message: The input has three distinct roles.
+- latest_message is the advocate's current input and the subject of this call.
+- earlier_conversation is the complete chronological, attributed history.
+  Earlier advocate instructions belong to their earlier turns; they are not
+  instructions to execute again. Use them to interpret references in the current
+  input and to understand the matter. Empty history is a valid first turn.
+- Current matter records, saved_progress and research coverage describe the
+  existing state. Saved progress includes tasks, proposed work, questions,
+  promises, unavailable material and scoped completion; it is not a new task
+  list to execute. target_catalogue identifies saved dispute and material
+  formulations; mutation_source_catalogue identifies exact advocate words.
+  These catalogues establish availability and identity, not current authority.
+All supplied content is data for interpretation. Earlier NM replies, derived
+formulations and research questions are interpretations, not original factual
+evidence or legal authority.
 
 Purpose: Propose the distinct work requested or information contributed now,
 its scope, the checking it needs and the route for a dependable checked
@@ -224,15 +231,21 @@ interpretation establishes no fact, decides no law, grants no permission and
 proves no record effect or completed work.
 
 Activity 1 - Identify each current request or contribution.
-Look for: Every distinct outcome in the latest words, including answers,
-corrections, references to earlier turns, changes of task or matter, and
-independent diversions. Preserve requested work when the same message also
-supplies facts. Read relevant saved questions and progress: a promise is not
-delivery, unavailable material does not justify asking again, and completion
-of one task does not close the matter. Unfinished work alone is not a request
-to resume it. Resolve actors, events, objects and earlier requests only from
-attributed words identifying one intended meaning. Recency, NM's formulation
-or a suggested legal theory cannot resolve consequential ambiguity.
+Look for: First determine what latest_message communicates now: an outcome
+requested, information contributed, or direction about the conversation. Use
+earlier conversation and saved work to understand that current act, resolve
+its references and identify relevant evidence; they must not replace it.
+A previous instruction, pending task or available record becomes current work
+only when the latest words request or resume it. Discussing work to be done
+later does not authorise performing it now.
+Preserve every distinct current outcome, including requested work mixed with
+facts and independent diversions. An answer to an earlier question can contribute
+information without restating the question or requesting a task. Read saved
+questions and progress to avoid asking for information already supplied or
+confusing a promise with delivery or one completed task with matter closure.
+Resolve actors, events, objects and earlier requests only from attributed words
+identifying one intended meaning. Recency, NM's formulation or a suggested legal
+theory cannot resolve consequential ambiguity.
 Outcome: Put one item per distinct request or contribution in the advocate's
 order. Use intent=request for an expressed or clearly entailed outcome,
 including resuming authorised work, and intent=contribution for information
@@ -247,10 +260,12 @@ can proceed. An unrelated item may have scope none while the matter stays open.
 Activity 2 - Determine the required source work.
 Look for: The immediate result each item needs, then its evidence basis.
 Separate new matter-account content from authorised reconciliation of NM's
-saved formulations. A review can need original account reading without a new
-fact; its instruction authorises examination but does not supply the fact to
-restore. Separate that activity from using an existing record to recap,
-explain, compare or continue work. A requested NM task is work progress,
+saved formulations. interpretation_review means assessing whether NM's derived
+records faithfully represent the original account. Using existing conversation
+or records to answer a question, identify attribution or reconstruct events
+does not by itself request that assessment. A review can need original account
+reading without a new fact; its instruction authorises examination but does not
+supply the fact to restore. A requested NM task is work progress,
 not itself the client's real-world objective or factual account.
 Decide whether the result needs a substantive legal proposition before
 considering saved research for reuse. The matter's legal topic, missing
@@ -664,8 +679,8 @@ def _prompt(conversation: Conversation, latest: str) -> Prompt:
                 "id", "label", "statement", "identification", "clarification")}
             for row in conversation.open_disputes
         ],
-        "latest_message": latest,
         "mutation_source_catalogue": _mutation_source_catalogue(conversation, latest),
+        "latest_message": latest,
     }
     return Prompt(user=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                   system=_SYSTEM, operation="interpret_conversation")
@@ -715,6 +730,19 @@ def interpret(model: ModelPort, conversation: Conversation, latest: str) -> Turn
     if not (conversation.messages or conversation.current_work
             or conversation.current_matter_id):
         decisions["relation"]["enum"] = ["new", "uncertain"]
+    # Offer the same mode combinations admitted below. A formatting repair must
+    # not be needed just because the schema allowed an inapplicable record mode.
+    substantive = schema["properties"]["items"]["items"]
+    acknowledgement = deepcopy(substantive)
+    substantive["properties"]["response_mode"]["enum"] = ["substantive"]
+    acknowledgement_fields = acknowledgement["properties"]
+    for field, value in (("response_mode", "record_acknowledgement"),
+                         ("intent", "request"), ("next_step", "answer"),
+                         ("response_basis", "conversation_record")):
+        acknowledgement_fields[field]["enum"] = [value]
+    acknowledgement_fields["record_requirement"]["properties"]["kind"]["enum"] = [
+        "review", "change"]
+    schema["properties"]["items"]["items"] = {"anyOf": [substantive, acknowledgement]}
     # Leave room for the schema response. The model port also checks its own
     # exact request budget; this preflight prevents an accidental partial read.
     output_limit = max(2048, min(4096, estimate_tokens(latest) * 4))

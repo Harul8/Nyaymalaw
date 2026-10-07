@@ -162,10 +162,12 @@ def test_first_account_creation_has_only_original_sources_and_no_existing_target
         words, scopes=(grant,), purposes=("account_contribution",),
         matter_scope="proposed", relation="new"), conversation=brain.Conversation(()))
     assert plan.items[0].mutation_scopes == (grant,)
-    schema = model.calls[0][1]["properties"]["items"]["items"]["properties"]
-    choices = schema["mutation_scopes"]["items"]["properties"]
-    assert choices["authority_source_ids"]["items"]["enum"] == ["L1"]
-    assert choices["target_ids"]["maxItems"] == 0
+    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+        scopes = branch["properties"]["mutation_scopes"]["items"]["anyOf"]
+        for option in scopes:
+            choices = option["properties"]
+            assert choices["authority_source_ids"]["items"]["enum"] == ["L1"]
+            assert choices["target_ids"]["maxItems"] == 0
 
 
 def test_identical_scopes_and_repeated_references_are_harmless_without_retries():

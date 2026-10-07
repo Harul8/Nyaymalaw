@@ -99,7 +99,7 @@ def offered(*, conversation=None):
 
 
 def scopes_schema(captured):
-    return captured["offered"]["properties"]["items"]["items"]["properties"][
+    return captured["offered"]["properties"]["items"]["items"]["anyOf"][0]["properties"][
         "mutation_scopes"]["items"]
 
 

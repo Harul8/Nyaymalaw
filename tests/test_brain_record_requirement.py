@@ -94,9 +94,10 @@ def test_correction_is_declared_against_owned_material_and_full_target_catalogue
         ("earlier:material:1", "dispute"), ("earlier:material:2", "material")]
     assert payload["target_catalogue"][1]["record"] == {
         **conversation.open_material[0], "record_role": "nm_interpretation"}
-    choices = schema["properties"]["items"]["items"]["properties"][
-        "record_requirement"]["properties"]["target_ids"]["items"]["enum"]
-    assert choices == ["earlier:material:1", "earlier:material:2"]
+    for branch in schema["properties"]["items"]["items"]["anyOf"]:
+        choices = branch["properties"]["record_requirement"]["properties"][
+            "target_ids"]["items"]["enum"]
+        assert choices == ["earlier:material:1", "earlier:material:2"]
 
 
 @pytest.mark.parametrize("targets", [(), ("earlier:material:1", "earlier:material:2")])
@@ -254,9 +255,9 @@ def test_new_record_requirement_has_no_target_choices_on_a_first_turn():
     plan = brain.interpret(model, brain.Conversation(()), request)
 
     assert plan.items[0].record_requirement["target_ids"] == []
-    selections = model.calls[0][1]["properties"]["items"]["items"]["properties"][
-        "record_requirement"]["properties"]["target_ids"]
-    assert selections["maxItems"] == 0
+    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+        selections = branch["properties"]["record_requirement"]["properties"]["target_ids"]
+        assert selections["maxItems"] == 0
     assert json.loads(model.calls[0][0].user)["target_catalogue"] == []
 
 

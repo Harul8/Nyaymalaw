@@ -62,9 +62,9 @@ def test_routes_without_disposable_drafts_need_one_interpretation(step):
     assert item.record_requirement == data["items"][0]["record_requirement"]
     assert item.mutation_scopes == () and not plan.material_review
     assert len(model.calls) == 1 and data == original
-    decisions = model.calls[0][1]["properties"]["items"]["items"]
-    assert not {"reply", "clarification"}.intersection(decisions["properties"])
-    assert not {"reply", "clarification"}.intersection(decisions["required"])
+    for decisions in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+        assert not {"reply", "clarification"}.intersection(decisions["properties"])
+        assert not {"reply", "clarification"}.intersection(decisions["required"])
 
 
 @pytest.mark.parametrize("field", ["reply", "clarification"])

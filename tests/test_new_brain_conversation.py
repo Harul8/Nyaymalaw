@@ -76,10 +76,11 @@ def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
     assert payload["earlier_conversation"] == []
     assert payload["current_matter_id"] is None
     assert payload["current_work"] == ""
-    decisions = model.calls[0][1]["properties"]["items"]["items"]["properties"]
-    assert "current" not in decisions["matter_scope"]["enum"]
-    assert decisions["relation"]["enum"] == ["new", "uncertain"]
-    assert "empty conversation is a valid first turn" in prompt.system
+    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+        decisions = branch["properties"]
+        assert "current" not in decisions["matter_scope"]["enum"]
+        assert decisions["relation"]["enum"] == ["new", "uncertain"]
+    assert "Empty history is a valid first turn" in prompt.system
     assert "opening" in prompt.system
 
 
@@ -483,7 +484,8 @@ def test_fresh_material_purposes_drive_reading_without_a_second_switch(
     assert "material_review" not in data
     schema = model.calls[0][1]
     assert "material_review" not in schema["properties"]
-    assert "material_purposes" in schema["properties"]["items"]["items"]["required"]
+    assert all("material_purposes" in branch["required"]
+               for branch in schema["properties"]["items"]["items"]["anyOf"])
 
 
 def test_mixed_account_and_review_purposes_preserve_an_independent_readonly_item():
