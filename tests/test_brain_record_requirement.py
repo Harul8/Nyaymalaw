@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from collections import deque
 from copy import deepcopy
 
 import pytest
@@ -14,17 +15,23 @@ from tests import brain_continuation_fixture
 
 class Model:
     def __init__(self, *responses):
-        self.responses = iter(responses)
+        self.responses = deque(responses)
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.JUDGE
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 100_000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
-        return ModelResult(text=None, data=brain_continuation_fixture.prepare_interpretation(
-            next(self.responses)), tier=tier,
+        payload = json.loads(prompt.user)
+        original = payload.get("original_input", payload)
+        data = (brain_continuation_fixture.scripted_message_labels(self.responses[0], original)
+                if prompt.operation == "label_message" else
+                brain_continuation_fixture.transport_message_parts(
+                    brain_continuation_fixture.prepare_interpretation(self.responses.popleft()),
+                    original))
+        return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 
@@ -54,7 +61,9 @@ def item(message, *, record_requirement=None, purposes=(), intent="request",
 
 
 def response(*items):
-    return {"items": list(items), "opening": {
+    return {"message_parts": [{"category": "work_request", "selections": [
+                {"source_id": "$message", "whole_source": True}]}],
+            "items": list(items), "opening": {
         "ready": False, "party_name": "", "subject": "", "summary": ""}}
 
 
@@ -85,8 +94,8 @@ def test_correction_is_declared_against_owned_material_and_full_target_catalogue
     assert plan.material_review is True
     assert plan.items[0].record_requirement == declared
     assert json.loads(json.dumps(vars(plan.items[0])))["record_requirement"] == declared
-    assert len(model.calls) == 1
-    prompt, schema = model.calls[0]
+    assert len(model.calls) == 2
+    prompt, schema = model.calls[1]
     payload = json.loads(prompt.user)
     assert payload["earlier_conversation"][0]["text"] == conversation.messages[0].text
     assert payload["open_disputes"][0]["id"] == "earlier:material:1"
@@ -113,7 +122,7 @@ def test_review_can_check_existing_state_without_promising_a_change(targets):
     assert plan.items[0].record_requirement["kind"] == "review"
     assert plan.items[0].record_requirement["operation"] == "none"
     assert plan.items[0].record_requirement["target_ids"] == list(targets)
-    assert plan.material_review is True and len(model.calls) == 1
+    assert plan.material_review is True and len(model.calls) == 2
 
 
 def test_account_contribution_does_not_invent_a_requested_record_effect():
@@ -126,7 +135,7 @@ def test_account_contribution_does_not_invent_a_requested_record_effect():
     assert plan.material_review is True
     assert plan.items[0].record_requirement == requirement()
     assert plan.items[0].intent == "contribution"
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_authorised_restoration_can_request_a_new_record_without_new_account_facts():
@@ -141,7 +150,7 @@ def test_authorised_restoration_can_request_a_new_record_without_new_account_fac
     assert plan.items[0].record_requirement["operation"] == "new"
     assert plan.items[0].record_requirement["target_ids"] == []
     assert plan.items[0].material_purposes == ("interpretation_review",)
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_owned_held_reference_retains_uncertainty_without_admitting_matter_ownership():
@@ -154,7 +163,7 @@ def test_owned_held_reference_retains_uncertainty_without_admitting_matter_owner
     plan = brain.interpret(model, context(held=True), request)
 
     assert plan.items[0].record_requirement["target_ids"] == ["earlier:material:2"]
-    assert json.loads(model.calls[0][0].user)["target_catalogue"][1]["record"][
+    assert json.loads(model.calls[1][0].user)["target_catalogue"][1]["record"][
         "matter_scope"] == "uncertain"
 
 
@@ -193,8 +202,8 @@ def test_consequential_requirement_conflicts_get_only_one_precise_correction(
     with pytest.raises(SchemaViolation, match=generation_fragment):
         brain.interpret(model, context(), request)
 
-    assert len(model.calls) == 2
-    feedback = json.loads(model.calls[1][0].user)
+    assert len(model.calls) == 3
+    feedback = json.loads(model.calls[2][0].user)
     assert generation_fragment in feedback["validation_issue"]
     assert feedback["original_input"]["earlier_conversation"][0]["text"] == (
         context().messages[0].text)
@@ -217,9 +226,9 @@ def test_fresh_missing_or_unowned_requirement_is_repaired_explicitly(fault):
 
     plan = brain.interpret(model, context(), request)
 
-    assert len(model.calls) == 2
+    assert len(model.calls) == 3
     assert plan.items[0].record_requirement["kind"] == "review"
-    assert "record_requirement" in json.loads(model.calls[1][0].user)["validation_issue"]
+    assert "record_requirement" in json.loads(model.calls[2][0].user)["validation_issue"]
 
 
 def test_harmless_duplicate_targets_and_empty_inapplicable_whitespace_need_no_retry():
@@ -233,7 +242,7 @@ def test_harmless_duplicate_targets_and_empty_inapplicable_whitespace_need_no_re
 
     plan = brain.interpret(model, context(), request)
 
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
     assert plan.items[0].record_requirement["target_ids"] == ["earlier:material:2"]
     assert plan.items[0].record_requirement["success_condition"] == "Check date."
     assert plan.items[1].record_requirement["success_condition"] == ""
@@ -255,10 +264,10 @@ def test_new_record_requirement_has_no_target_choices_on_a_first_turn():
     plan = brain.interpret(model, brain.Conversation(()), request)
 
     assert plan.items[0].record_requirement["target_ids"] == []
-    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+    for branch in model.calls[1][1]["properties"]["items"]["items"]["anyOf"]:
         selections = branch["properties"]["record_requirement"]["properties"]["target_ids"]
         assert selections["maxItems"] == 0
-    assert json.loads(model.calls[0][0].user)["target_catalogue"] == []
+    assert json.loads(model.calls[1][0].user)["target_catalogue"] == []
 
 
 def test_conflicting_saved_target_identity_stops_before_model_dispatch():
@@ -281,7 +290,7 @@ def test_record_contract_does_not_allow_answer_to_bypass_legal_authority_route()
 
     with pytest.raises(SchemaViolation, match="requires legal_work"):
         brain.interpret(model, context(), requested["request"])
-    assert len(model.calls) == 2
+    assert len(model.calls) == 3
 
 
 def fixture_adapter():
@@ -338,10 +347,10 @@ def test_change_to_current_owned_target_cannot_use_unrelated_item_scope(scope):
 
     plan = brain.interpret(model, context(), request)
 
-    assert len(model.calls) == 2
+    assert len(model.calls) == 3
     assert plan.items[0].matter_scope == "current"
     assert plan.items[0].record_requirement == declared
-    feedback = json.loads(model.calls[1][0].user)
+    feedback = json.loads(model.calls[2][0].user)
     assert "contradicts matter_scope" in feedback["validation_issue"]
     assert feedback["original_input"]["earlier_conversation"][0]["text"] == (
         context().messages[0].text)

@@ -8,7 +8,7 @@ from nm.brain.history import from_turns
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelResult, SchemaViolation, Tier, Usage
 from tests.brain_continuation_fixture import interpretation as route_contract
-from tests.brain_continuation_fixture import no_record_requirement
+from tests.brain_continuation_fixture import no_record_requirement, scripted_message_labels
 
 
 class Model:
@@ -19,12 +19,17 @@ class Model:
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.JUDGE
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return self.budget
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema, tier, max_tokens))
-        return ModelResult(text=None, data=self.data, tier=tier,
+        from tests.brain_continuation_fixture import transport_message_parts
+        payload = json.loads(prompt.user)
+        original = payload.get("original_input", payload)
+        data = (scripted_message_labels(self.data, original) if prompt.operation == "label_message"
+                else transport_message_parts(self.data, original))
+        return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline",
                            usage=Usage(0, 0, 0), latency_ms=0,
                            completion=self.completion)
@@ -58,7 +63,7 @@ def interpretation(items, *, active_work_after="", opening=None):
     return route_contract({"items": items, "opening": opening})
 
 
-def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
+def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call_per_owner():
     model = Model(interpretation([
         item("Hello", relation="new", scope="none", step="answer",
              reply="Hello. What would you like help with?")]))
@@ -70,13 +75,13 @@ def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
     assert plan.items[0].reply == plan.items[0].clarification == ""
     assert plan.opening.ready is False
     assert plan.active_work_after == ""
-    assert len(model.calls) == 1
-    prompt = model.calls[0][0]
+    assert len(model.calls) == 2
+    prompt = model.calls[1][0]
     payload = json.loads(prompt.user)
     assert payload["earlier_conversation"] == []
     assert payload["current_matter_id"] is None
     assert payload["current_work"] == ""
-    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+    for branch in model.calls[1][1]["properties"]["items"]["items"]["anyOf"]:
         decisions = branch["properties"]
         assert "current" not in decisions["matter_scope"]["enum"]
         assert decisions["relation"]["enum"] == ["new", "uncertain"]
@@ -87,7 +92,8 @@ def test_first_greeting_has_no_prior_work_or_opening_and_takes_one_call():
 def test_adapter_schema_rejection_gets_one_contextual_correction():
     class InitiallyRejected(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
-            if not self.calls:
+            if prompt.operation == "interpret_conversation" and not any(
+                    call[0].operation == "interpret_conversation" for call in self.calls):
                 self.calls.append((prompt, schema, tier, max_tokens))
                 raise SchemaViolation("The provider could not parse its JSON response")
             return super().structured(prompt, schema, tier,
@@ -101,12 +107,12 @@ def test_adapter_schema_rejection_gets_one_contextual_correction():
     assert plan.items[0].request == "Hello"
     assert plan.items[0].next_step == "answer"
     assert plan.items[0].reply == plan.items[0].clarification == ""
-    assert len(model.calls) == 2
-    assert [call[2] for call in model.calls] == [Tier.JUDGE, Tier.JUDGE]
-    correction = json.loads(model.calls[1][0].user)
+    assert len(model.calls) == 3
+    assert [call[2] for call in model.calls] == [Tier.ROUTINE, Tier.JUDGE, Tier.JUDGE]
+    correction = json.loads(model.calls[2][0].user)
     assert correction["original_input"]["latest_message"] == "Hello"
     assert "provider could not parse" in correction["validation_issue"]
-    assert "complete replacement" in model.calls[1][0].system
+    assert "complete replacement" in model.calls[2][0].system
 
 
 def test_first_general_legal_question_does_not_propose_a_matter():
@@ -122,8 +128,8 @@ def test_first_general_legal_question_does_not_propose_a_matter():
     assert plan.items[0].request == "Explain anticipatory bail"
     assert plan.items[0].reply == plan.items[0].clarification == ""
     assert plan.opening.ready is False
-    assert len(model.calls) == 1
-    prompt = model.calls[0][0].system
+    assert len(model.calls) == 2
+    prompt = model.calls[1][0].system
     assert "answer for a conversational or other nonlegal reply" in prompt
     assert "regardless of whether it is general or an aside" in prompt
 
@@ -143,7 +149,7 @@ def test_legal_aside_remains_a_separate_source_dependent_work_item():
     assert plan.items[0].relation == "aside"
     assert plan.items[0].next_step == "legal_work"
     assert plan.active_work_after == "review agreement"
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_first_concrete_account_can_propose_a_grounded_opening():
@@ -167,7 +173,7 @@ def test_first_concrete_account_can_propose_a_grounded_opening():
     assert plan.items[0].request == latest
     assert plan.items[0].material_purposes == ("account_contribution",)
     assert plan.items[0].reply == plan.items[0].clarification == ""
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_one_named_client_and_subject_compose_opening_title():
@@ -186,9 +192,9 @@ def test_one_named_client_and_subject_compose_opening_title():
     assert result.opening.title == "Mira Patel: Return of records"
     assert result.opening.party_name == "Mira Patel"
     assert result.opening.subject == "Return of records"
-    assert "one representative client-side name" in model.calls[0][0].system
-    assert "opposing party or vs in party_name" in model.calls[0][0].system
-    assert "leave it empty if identity or role is uncertain" in model.calls[0][0].system
+    assert "one representative client-side name" in model.calls[1][0].system
+    assert "opposing party or vs in party_name" in model.calls[1][0].system
+    assert "leave it empty if identity or role is uncertain" in model.calls[1][0].system
 
 
 def test_later_clarification_can_complete_opening_from_prior_advocate_words():
@@ -212,7 +218,7 @@ def test_later_clarification_can_complete_opening_from_prior_advocate_words():
 
     assert plan.opening.ready is True
     assert plan.opening.summary == opening["summary"]
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_open_matter_requires_an_empty_opening_decision_on_followup():
@@ -229,7 +235,7 @@ def test_open_matter_requires_an_empty_opening_decision_on_followup():
 
     plan = interpret(model, conversation, latest)
 
-    opening = model.calls[0][1]["properties"]["opening"]["properties"]
+    opening = model.calls[1][1]["properties"]["opening"]["properties"]
     assert opening["ready"]["enum"] == [False]
     assert opening["party_name"]["enum"] == [""]
     assert opening["subject"]["enum"] == [""]
@@ -247,7 +253,7 @@ def test_legal_work_uses_source_contract_without_an_interim_draft():
 
     with pytest.raises(SchemaViolation, match="record_requirement"):
         interpret(invalid, Conversation(()), latest)
-    assert len(invalid.calls) == 2
+    assert len(invalid.calls) == 3
 
     model = Model(interpretation([
         item(latest, relation="new", scope="none",
@@ -257,7 +263,7 @@ def test_legal_work_uses_source_contract_without_an_interim_draft():
     assert plan.items[0].request == latest
     assert plan.items[0].record_requirement == no_record_requirement()
     assert plan.items[0].reply == plan.items[0].clarification == ""
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 @pytest.mark.parametrize("relation,scope", [
@@ -302,7 +308,7 @@ def test_unready_opening_ignores_only_empty_formatting_without_retry(field):
     result = interpret(model, Conversation(()), "Hello")
     assert result.opening.ready is False
     assert result.opening.title == result.opening.summary == ""
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_mixed_message_keeps_each_request_and_the_entire_earlier_exchange():
@@ -321,18 +327,18 @@ def test_mixed_message_keeps_each_request_and_the_entire_earlier_exchange():
     plan = interpret(model, earlier, latest)
 
     assert len(plan.items) == 2
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
     assert plan.items[1].request == "tell me the capital of France"
     assert plan.items[1].next_step == "answer"
     assert plan.items[1].reply == plan.items[1].clarification == ""
     assert [row.relation for row in plan.items] == ["continues", "aside"]
-    payload = json.loads(model.calls[0][0].user)
+    payload = json.loads(model.calls[1][0].user)
     assert payload["earlier_conversation"] == [
         {"turn_id": message.turn_id, "role": message.role, "text": message.text}
         for message in earlier.messages]
     assert payload["latest_message"] == latest
-    assert model.calls[0][0].system.count("Message:") == 2
-    assert all(label in model.calls[0][0].system for label in
+    assert model.calls[1][0].system.count("Message:") == 2
+    assert all(label in model.calls[1][0].system for label in
                ("Purpose:", "Look for:", "Outcome:"))
 
 
@@ -413,7 +419,7 @@ def test_many_distinct_requests_do_not_hit_a_scenario_count_limit():
         active_work_after="review requests"))
     plan = interpret(model, Conversation(()), latest)
     assert len(plan.items) == len(phrases)
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_urgent_and_ordinary_work_remain_distinct_in_one_interpretation():
@@ -425,7 +431,7 @@ def test_urgent_and_ordinary_work_remain_distinct_in_one_interpretation():
         active_work_after="address deadline and review draft"))
     plan = interpret(model, Conversation(()), latest)
     assert [row.priority for row in plan.items] == ["urgent", "ordinary"]
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_no_truncation_or_partial_model_output_is_accepted():
@@ -480,9 +486,9 @@ def test_fresh_material_purposes_drive_reading_without_a_second_switch(
 
     assert planned.items[0].material_purposes == purposes
     assert planned.material_review is bool(purposes)
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
     assert "material_review" not in data
-    schema = model.calls[0][1]
+    schema = model.calls[1][1]
     assert "material_review" not in schema["properties"]
     assert all("material_purposes" in branch["required"]
                for branch in schema["properties"]["items"]["items"]["anyOf"])
@@ -516,7 +522,7 @@ def test_mixed_account_and_review_purposes_preserve_an_independent_readonly_item
     assert [item.material_purposes for item in planned.items] == [
         ("account_contribution", "interpretation_review"), ()]
     assert planned.material_review is True
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 def test_repeated_material_purpose_is_normalized_without_retry_or_lost_meaning():
@@ -537,7 +543,7 @@ def test_repeated_material_purpose_is_normalized_without_retry_or_lost_meaning()
 
     assert planned.items[0].material_purposes == ("interpretation_review",)
     assert planned.material_review is True
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
 
 
 @pytest.mark.parametrize("fault", ["missing", "unknown"])
@@ -565,7 +571,9 @@ def test_invalid_fresh_purpose_gets_one_precise_correction_with_original_context
 
     class CorrectedModel(Model):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
-            self.data = wrong if not self.calls else correct
+            if prompt.operation == "interpret_conversation":
+                self.data = (correct if any(call[0].operation == "interpret_conversation"
+                                           for call in self.calls) else wrong)
             return super().structured(prompt, schema, tier, max_tokens=max_tokens)
 
     model = CorrectedModel(wrong)
@@ -573,10 +581,10 @@ def test_invalid_fresh_purpose_gets_one_precise_correction_with_original_context
     planned = interpret(model, conversation, latest)
 
     assert planned.items[0].material_purposes == ("interpretation_review",)
-    assert len(model.calls) == 2
-    feedback = json.loads(model.calls[1][0].user)
+    assert len(model.calls) == 3
+    feedback = json.loads(model.calls[2][0].user)
     assert "material_purposes" in feedback["validation_issue"]
-    assert feedback["original_input"] == json.loads(model.calls[0][0].user)
+    assert feedback["original_input"] == json.loads(model.calls[1][0].user)
     assert feedback["original_input"]["earlier_conversation"][0]["text"] == (
         "The delivery actor is unknown.")
 
@@ -591,4 +599,4 @@ def test_a_model_global_material_switch_cannot_override_owned_item_purposes():
     with pytest.raises(SchemaViolation, match="undeclared properties"):
         interpret(model, Conversation((), current_matter_id="current-file"), latest)
 
-    assert len(model.calls) == 2
+    assert len(model.calls) == 3

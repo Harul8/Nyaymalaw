@@ -221,7 +221,52 @@ def prepare_interpretation(data):
     return result
 
 
-def interpretation(data, *, record_requirements=None):
+def transport_message_parts(data, payload):
+    """Transport the planning output without the separately scripted labels."""
+    result = deepcopy(data)
+    result.pop("message_parts", None)
+    return result
+
+
+def scripted_message_labels(data, payload):
+    """Transport explicitly authored categories to the separate classifier wire.
+
+    The owning fixture declares the semantic labels. This adapter only resolves
+    its exact source selections and retains their order; it never reads meaning
+    from requests, material purposes, or proposed record changes.
+    """
+    from nm.brain.conversation import _message_sources
+
+    latest = payload["latest_message"]
+    sources = _message_sources(latest)
+    declared = data.get("message_parts", [{"category": "work_request", "selections": [
+        {"source_id": "$message", "whole_source": True}]}])
+    portions = []
+    for part in declared:
+        for selection in part["selections"]:
+            source = sources[selection["source_id"]]
+            if "exact_text" in selection:
+                words = selection["exact_text"]
+                start = source["text"].find(words)
+                if start < 0 or source["text"].find(words, start + 1) >= 0:
+                    raise AssertionError("A scripted label needs an unambiguous exact selection")
+                end = start + len(words)
+            else:
+                start, end = ((0, len(source["text"])) if selection.get("whole_source")
+                              else (selection["start"], selection["end"]))
+            start, end = source["start"] + start, source["start"] + end
+            existing = next((row for row in portions
+                             if row[0:2] == (start, end)), None)
+            if existing is not None:
+                if part["category"] not in existing[2]["labels"]:
+                    existing[2]["labels"].append(part["category"])
+            else:
+                portions.append((start, end, {"text": latest[start:end],
+                                              "labels": [part["category"]]}))
+    return {"parts": [row[2] for row in sorted(portions, key=lambda row: row[0])]}
+
+
+def interpretation(data, *, record_requirements=None, payload=None):
     """Carry only explicit fixture-owned outcomes, including declared no-effect work."""
     result = {**{key: value for key, value in data.items() if key != "active_work_after"},
             "items": [{**item, "intent": item.get("intent", "request"),
@@ -232,6 +277,10 @@ def interpretation(data, *, record_requirements=None):
                        "mutation_scopes": deepcopy(item.get("mutation_scopes", [])),
                        "research_question": item.get("research_question", "")}
                       for item in data["items"]]}
+    # Transport declaration for older scripted fixtures, not a classifier.
+    # Mixed-message and semantic tests must author their actual categories.
+    result.setdefault("message_parts", [{"category": "work_request",
+                       "selections": [{"source_id": "$message", "whole_source": True}]}])
     for index, declared in (record_requirements or {}).items():
         if type(index) is not int or not 0 <= index < len(result["items"]):
             raise ValueError("A scripted record requirement needs its owned item index")
@@ -239,7 +288,8 @@ def interpretation(data, *, record_requirements=None):
         if "record_requirement" in row and row["record_requirement"] != declared:
             raise ValueError("Two fixture owners declared different record requirements")
         row["record_requirement"] = deepcopy(declared)
-    return prepare_interpretation(result)
+    result = prepare_interpretation(result)
+    return transport_message_parts(result, payload) if payload is not None else result
 
 
 def continuation_reply(operation, payload, *, scripted_items=()):

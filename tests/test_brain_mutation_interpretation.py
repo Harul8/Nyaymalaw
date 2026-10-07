@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from collections import deque
 from copy import deepcopy
 
 import pytest
@@ -9,21 +10,30 @@ import pytest
 from nm.brain import conversation as brain
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, SchemaViolation, Tier, Usage
-from tests.brain_continuation_fixture import prepare_interpretation
+from tests.brain_continuation_fixture import (
+    prepare_interpretation,
+    scripted_message_labels,
+    transport_message_parts,
+)
 
 
 class Model:
     def __init__(self, *responses):
-        self.responses = iter(responses)
+        self.responses = deque(responses)
         self.calls = []
 
     def context_budget(self, tier):
-        assert tier is Tier.JUDGE
+        assert tier in (Tier.ROUTINE, Tier.JUDGE)
         return 100_000
 
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         self.calls.append((prompt, schema))
-        return ModelResult(text=None, data=prepare_interpretation(next(self.responses)), tier=tier,
+        payload = json.loads(prompt.user)
+        original = payload.get("original_input", payload)
+        data = (scripted_message_labels(self.responses[0], original)
+                if prompt.operation == "label_message" else transport_message_parts(
+                    prepare_interpretation(self.responses.popleft()), original))
+        return ModelResult(text=None, data=data, tier=tier,
                            provider="offline", model="offline", usage=Usage(0, 0, 0),
                            latency_ms=0, completion=Completion.COMPLETE)
 
@@ -68,14 +78,16 @@ def item(words, *, scopes=(), purposes=(), declared=None, intent="contribution",
 
 
 def response(*items):
-    return {"items": list(items), "opening": {
+    return {"message_parts": [{"category": "work_request", "selections": [
+                {"source_id": "$message", "whole_source": True}]}],
+            "items": list(items), "opening": {
         "ready": False, "party_name": "", "subject": "", "summary": ""}}
 
 
 def interpret(words, *items, conversation=None):
     model = Model(response(*items))
     plan = brain.interpret(model, context() if conversation is None else conversation, words)
-    assert len(model.calls) == 1
+    assert len(model.calls) == 2
     return plan, model
 
 
@@ -86,7 +98,7 @@ def test_implicit_contribution_authorizes_correction_without_inventing_update_re
     assert plan.items[0].intent == "contribution"
     assert plan.items[0].record_requirement == requirement()
     assert plan.items[0].mutation_scopes == (grant,)
-    payload = json.loads(model.calls[0][0].user)
+    payload = json.loads(model.calls[1][0].user)
     assert payload["latest_message"] == words
     assert payload["earlier_conversation"][0]["text"] == ACCOUNT_A + " " + ACCOUNT_B
     assert payload["earlier_conversation"][1]["role"] == "nm"
@@ -162,7 +174,7 @@ def test_first_account_creation_has_only_original_sources_and_no_existing_target
         words, scopes=(grant,), purposes=("account_contribution",),
         matter_scope="proposed", relation="new"), conversation=brain.Conversation(()))
     assert plan.items[0].mutation_scopes == (grant,)
-    for branch in model.calls[0][1]["properties"]["items"]["items"]["anyOf"]:
+    for branch in model.calls[1][1]["properties"]["items"]["items"]["anyOf"]:
         scopes = branch["properties"]["mutation_scopes"]["items"]["anyOf"]
         for option in scopes:
             choices = option["properties"]
@@ -186,9 +198,9 @@ def test_fresh_missing_scope_list_gets_one_explicit_correction():
     del bad["items"][0]["mutation_scopes"]
     model = Model(bad, good)
     plan = brain.interpret(model, context(), words)
-    assert len(model.calls) == 2
+    assert len(model.calls) == 3
     assert plan.items[0].mutation_scopes == ()
-    assert "mutation_scopes" in json.loads(model.calls[1][0].user)["validation_issue"]
+    assert "mutation_scopes" in json.loads(model.calls[2][0].user)["validation_issue"]
 
 
 @pytest.mark.parametrize("fault,fragment", [
@@ -236,10 +248,20 @@ def test_consequential_scope_defects_get_one_precise_bounded_correction(fault, f
         grant["invented_permission"] = True
     bad = response(candidate)
     model = Model(bad, bad)
-    with pytest.raises(SchemaViolation, match=fragment):
+    generation_fragment = {
+        "whole-contribution": "authority_kind",
+        "whole-explicit-target": "target_ids' has too many items",
+        "empty-exact-revision": "target_ids' has too few items",
+    }.get(fault, fragment)
+    if generation_fragment != fragment:
+        # Fresh transport rejects these impossible choices before the semantic
+        # constructor. Retain the original authority invariant assertion too.
+        with pytest.raises(SchemaViolation, match=fragment):
+            brain._turn_plan(prepare_interpretation(bad), context(), latest=words)
+    with pytest.raises(SchemaViolation, match=generation_fragment):
         brain.interpret(model, context(), words)
-    assert len(model.calls) == 2
-    assert fragment in json.loads(model.calls[1][0].user)["validation_issue"]
+    assert len(model.calls) == 3
+    assert generation_fragment in json.loads(model.calls[2][0].user)["validation_issue"]
 
 
 @pytest.mark.parametrize("mode,targets", [("exact", ("material-b",)), ("reviewed_whole", ())])
@@ -278,7 +300,7 @@ def test_original_transcript_and_purpose_remain_visible_in_correction_feedback()
     good = response(item(words, scopes=(scope(),), purposes=("account_contribution",)))
     model = Model(bad, good)
     plan = brain.interpret(model, context(), words)
-    original = json.loads(model.calls[1][0].user)["original_input"]
+    original = json.loads(model.calls[2][0].user)["original_input"]
     assert original["latest_message"] == words
     assert original["earlier_conversation"][0]["text"] == ACCOUNT_A + " " + ACCOUNT_B
     assert original["earlier_conversation"][1]["text"] == context().messages[1].text
