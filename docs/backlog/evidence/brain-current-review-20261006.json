@@ -1966,6 +1966,51 @@
       "browser_feature_complete": false,
       "remaining": "Fresh source-group contract is verified as a mechanical prerequisite only; material and dispute consumers are not yet activated. Consumers must retain actual admitted candidate support and saved original/current/history support, exact full prompt/schema resource checks, bounded recovery and existing save/replay gates. Source purpose remains an independently reviewed semantic judgment. Task acknowledgement remains blocked by grounding/reaffirmation and fallback pending-work gaps. Legal accuracy, association, useful requested delivery, UI and closure remain open.",
       "production_sha256": "0cc34cf4101ed30497bb348047a249c2981b8ae5e9f1fa80544695c7845ba47a"
+    },
+    {
+      "piece": "Reaffirmed original source recovery for final unread units",
+      "base": "437ef58",
+      "production_file": "nm/brain/turn.py",
+      "prompt_changes": 0,
+      "invariant": "An unchanged original-source purpose decision cannot strand final unread owned proposals; eligible unread units receive bounded verification without invalidating checked peers or negatives.",
+      "verification": "12 focused ownership and raw /api/turn save/replay cases and 85 neighbouring cases pass. The five public cases against isolated unchanged 437ef58 yield 3 failures/2 passes: unread review never dispatched in both success variants or the denied-budget variant. Foreign identities, changed proposals and unreadable review units refuse. Checked positive peers and their admission proof persist; denied recovery preserves cache identity. The existing source-treatment fixture was corrected to recognize removal of a sealed v2 dependency as corruption: candidate and unchanged baseline both refuse before model/search, without changing saved state. This is not a legacy-history compatibility test. Assignment-dependent replacement reviews now use a temporary cache and publish it only after a checked result. Changed-source, reaffirmed-source and omission paths share this transaction. A raw public unread withdrawal retires its exact prior dispute, holds only the now-unassigned detail after budget denial, and saves an independent peer with original positive admission proof; the pretransaction snapshot refuses the save. Existing 85 neighbours pass after this change.",
+      "call_impact": "0 new routine stages or prompts. Affected final unread stage adds one conditional existing verification call, with any existing malformed-output correction sharing the same turn ledger and reply reserve. Scripted normal8; unread11/3 conditional; resolved10/2 conditional; checked reject9/1 conditional; denied upstream bound10/2 conditional. Replay0. No paid calls this piece. Combined measured API spend remains $3.202083/$5. Removed-assignment denial public case:11 total calls/3 dispatched recovery, limit5/reserve2; checked unrelated C1 retained, unread C2 reviewed alone, detail retry denied, D2 positive proof saved, replay0. Transaction changes add no calls.",
+      "focused_tests": {
+        "focused_passed": 12,
+        "neighbours_passed": 85,
+        "public_baseline_failed": 3,
+        "public_baseline_passed": 2,
+        "reports": {
+          "reaffirmed-unread-candidate.xml": [
+            {
+              "tests": 12,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          ],
+          "reaffirmed-recovery-neighbours-final.xml": [
+            {
+              "tests": 85,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          ]
+        },
+        "assignment_pretransaction_baseline": {
+          "failed": 1,
+          "candidate_passed": 1,
+          "reports": [
+            "outputs/brain-repair-20261006/reaffirmed-assignment-candidate.xml",
+            "outputs/brain-repair-20261006/reaffirmed-assignment-pretransaction-baseline.xml"
+          ],
+          "observed": "Pretransaction public route refuses with HTTP409/not_committed; candidate saves independent peer and replays with zero calls."
+        }
+      },
+      "browser_feature_complete": false,
+      "remaining": "Grouped coverage consumers and integrated browser acceptance remain pending. Final unread recovery is source eligibility for bounded re-examination, not semantic admission. Checked negative decisions are not forcibly reconsidered. Precise typed final failure dependencies, historical diagnostic cleanup, accepted pending-task preservation after reply fallback, legal accuracy, useful requested delivery, association, UI and closure remain open. Genuinely independently minted unmarked legacy source history remains unqualified.",
+      "production_sha256": "fd53a7bf55283c8b1f4305d6e4cad0275ed2e8fb4ebae321fdd40012195f9c8d"
     }
   ],
   "additional_reviewer_input": {

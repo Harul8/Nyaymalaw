@@ -66,14 +66,32 @@ def test_public_legal_followup_reuses_only_marked_prior_canonical_source_treatme
     assert coverage["source_treatment_contract"] == SOURCE_TREATMENT_CONTRACT
     assert coverage["source_treatments"]["L2"]["turn_id"] == f"treatment-opening-{marked}"
     if not marked:
-        # A legacy source-check-shaped catalogue has no focused-read authority.
+        # Removing a dependency from a freshly sealed admission is corruption,
+        # not an independently minted legacy source-treatment contract.
+        assert coverage["execution"]["coverage_application"]["contract"] == (
+            "owned_coverage_application_v2")
         changed = deepcopy(saved.brain_chat)
         changed[0]["response"]["material_coverage"].pop("source_treatment_contract")
         wired.store.commit(replace(saved, brain_chat=changed, version=saved.version + 1),
                            expected_version=saved.version)
-    before = deepcopy(wired.store.load(first["matter_id"]).brain_chat[0])
+    snapshot = wired.store.load(first["matter_id"])
+    before = deepcopy(snapshot.brain_chat[0])
     corpus.state = "ok"
     call_start = len(model.calls)
+
+    if not marked:
+        search_start = len(corpus.calls)
+        response = client.post("/api/turn", json={
+            "message": legal_route()["items"][0]["request"],
+            "turn_id": f"treatment-followup-{marked}",
+            "matter_id": first["matter_id"], "chat_id": first["chat_id"],
+        })
+        assert response.status_code == 409, response.text
+        refusal = response.json()["detail"]
+        assert refusal["code"] == "brain_refused" and refusal["committed"] == "not_committed"
+        assert len(model.calls) == call_start and len(corpus.calls) == search_start
+        assert wired.store.load(first["matter_id"]) == snapshot
+        return
 
     answer = send(client, legal_route()["items"][0]["request"],
                   f"treatment-followup-{marked}", opened=first)
@@ -81,11 +99,8 @@ def test_public_legal_followup_reuses_only_marked_prior_canonical_source_treatme
     assert answer["metrics"]["llm_calls"] == 6
     assert all(operation != "classify_account_sources" for operation, _ in model.calls[call_start:])
     account_ids = model.account_choices
-    if marked:
-        assert "P1S2" in account_ids["items"]["enum"]
-        assert "P3S1" not in account_ids["items"]["enum"]
-    else:
-        assert account_ids["maxItems"] == 0
+    assert "P1S2" in account_ids["items"]["enum"]
+    assert "P3S1" not in account_ids["items"]["enum"]
     saved = wired.store.load(first["matter_id"])
     assert saved.brain_chat[0] == before
     assert saved.brain_chat[-1]["response"]["material_coverage"][

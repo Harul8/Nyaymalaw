@@ -2086,6 +2086,40 @@ def _unread_proposal(candidate, identity, reason, *, kind="detail") -> dict:
             "validation_issues": [reason], "proposal": asdict(candidate)}
 
 
+def _reaffirmed_unread_candidates(rows, proposals, selected_sources,
+                                  latest_sources, prior_sources, *, prefix, opening=None):
+    """Select final unread units for dependency review, never semantic admission."""
+    keyed = {f"{prefix}{index}": candidate
+             for index, candidate in enumerate(proposals, 1)}
+    selected = set(selected_sources)
+    result = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SchemaViolation("Reaffirmed source recovery has an unreadable review unit")
+        if row.get("verdict") != "unassessed":
+            continue
+        identity = row.get("candidate_id")
+        if identity == "O1" and prefix == "D" and opening is not None and opening.ready:
+            party_name, subject = opening.title_parts()
+            expected = ({"type": "opening", "title": opening.title,
+                         "party_name": party_name, "subject": subject,
+                         "summary": opening.summary}, asdict(opening))
+            candidate = None
+        elif isinstance(identity, str) and identity in keyed:
+            candidate = keyed[identity]
+            expected = (asdict(candidate),)
+        else:
+            raise SchemaViolation("Reaffirmed source recovery has an unowned unread unit")
+        if (row.get("admission_issue") != "review_unavailable"
+                or row.get("proposal") not in expected):
+            raise SchemaViolation("Reaffirmed source recovery changed its unread proposal")
+        # Unread output has no checked selected-source dependencies. These are
+        # owned eligible choices, used only to decide a bounded re-examination.
+        if selected.intersection(candidate_account_ids(candidate, latest_sources, prior_sources)):
+            result.append(identity)
+    return tuple(result)
+
+
 def _hold_affected_grounding(grounded, proposals, affected, opening, reason,
                             *, opening_affected=False):
     ids = {f"D{index}" for index, candidate in enumerate(proposals, 1) if candidate in affected}
@@ -2179,6 +2213,7 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
     initial_assignment_ids = {row["id"] for row in active_disputes}
     changed_sources = ()
     disputes_rechecked = False
+    detail_assignments_changed = False
 
     def check_disputes(phase, *, changed=()):
         assessed, status, audit = {}, {}, []
@@ -2197,7 +2232,12 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
         return checked
 
     def check_details(phase, *, changed=()):
-        return _conditional_read(
+        nonlocal detail_assignments_changed
+        # A replacement read must not destroy checked proof before it returns.
+        # Failed or denied reads leave original independent peers available for
+        # precise dependency holds and admission capture.
+        review = {} if detail_assignments_changed else detail_review_state
+        checked = _conditional_read(
             model, phase, verify_material_grounding,
             candidates=context["detail_proposals"], opening=opening,
             earlier=conversation.messages, latest=latest, active_disputes=active_disputes,
@@ -2205,9 +2245,14 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             current_matter_id=conversation.current_matter_id,
             source_treatments=source_treatments, review_scope=review_scope,
             active_material=conversation.open_material, coverage=detail_coverage,
-            review_state=detail_review_state,
-            recheck_source_ids=changed if detail_review_state else (),
+            review_state=review,
+            recheck_source_ids=changed if review else (),
             **_coverage_review_inputs("detail_review", coverage_support, coverage_history))
+        if checked is not None and detail_assignments_changed:
+            detail_review_state.clear()
+            detail_review_state.update(review)
+            detail_assignments_changed = False
+        return checked
 
     def hold_changed(reason, *, hold_disputes):
         nonlocal grounded, active_disputes
@@ -2331,7 +2376,7 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 previous = active_disputes
                 active_disputes = _preview_disputes(conversation, checked, turn_id, slots)
                 if any(row not in active_disputes for row in previous):
-                    detail_review_state.clear()
+                    detail_assignments_changed = True
                 checked_details = check_details(
                     "source_reconsideration:detail_review", changed=changed_sources)
                 if checked_details is None:
@@ -2344,6 +2389,36 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                 # Both owners now cache the revised purpose catalogue. A later
                 # omission review should only revisit its additional dependencies.
                 changed_sources = ()
+            else:
+                unread_disputes = _reaffirmed_unread_candidates(
+                    dispute_audit, context["dispute_proposals"], selected,
+                    latest_sources, prior_sources, prefix="C")
+                recheck_details = bool(_reaffirmed_unread_candidates(
+                    grounded.unread_proposals, context["detail_proposals"], selected,
+                    latest_sources, prior_sources, prefix="D", opening=opening))
+                if unread_disputes:
+                    checked = check_disputes("source_reconsideration:dispute_review")
+                    if checked is None:
+                        event["state"] = "partial"
+                        _partial_coverage(stages["dispute_review"]["account_coverage"],
+                                          "Source-dependent dispute review remains unfinished.")
+                        return grounded, active_disputes, source_treatments
+                    disputes_rechecked = True
+                    previous = active_disputes
+                    active_disputes = _preview_disputes(conversation, checked, turn_id, slots)
+                    if any(row not in active_disputes for row in previous):
+                        detail_assignments_changed = True
+                        recheck_details = True
+                if recheck_details:
+                    checked_details = check_details("source_reconsideration:detail_review")
+                    if checked_details is None:
+                        hold_changed(
+                            "Source-dependent material review remains unfinished.",
+                            hold_disputes=False)
+                        event["state"] = "partial"
+                        return grounded, active_disputes, source_treatments
+                    grounded = checked_details
+                    _record_slots(slots, grounded.details)
         except (ConfigurationError, TierUnavailable):
             raise
         except ModelError as exc:
@@ -2410,7 +2485,7 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                     previous = active_disputes
                     active_disputes = _preview_disputes(conversation, checked, turn_id, slots)
                     if any(row not in active_disputes for row in previous):
-                        detail_review_state.clear()
+                        detail_assignments_changed = True
             else:
                 checked = check_details("omission_recovery:detail_review", changed=changed_sources)
                 if checked is not None:
