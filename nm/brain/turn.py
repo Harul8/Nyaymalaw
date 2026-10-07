@@ -361,6 +361,10 @@ def _material_effects(before: dict, after: dict, proposals: list[dict], *,
 
 POST_APPLICATION_COVERAGE_CONTRACT = "owned_coverage_application_v1"
 INHERITED_COVERAGE_APPLICATION_CONTRACT = "owned_coverage_application_v2"
+INDEPENDENT_ADMISSION_APPLICATION_CONTRACT = "owned_coverage_application_v3"
+_APPLICATION_CONTRACTS = (POST_APPLICATION_COVERAGE_CONTRACT,
+                          INHERITED_COVERAGE_APPLICATION_CONTRACT,
+                          INDEPENDENT_ADMISSION_APPLICATION_CONTRACT)
 ORIGINAL_HISTORY_SUPPORT_CONTRACT = "original_admission_history_v1"
 
 
@@ -724,7 +728,9 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                    for stage in ("dispute_review", "detail_review")
                    if execution["stages"][stage].get("account_coverage", {}).get(
                        "selection_contract") == COVERAGE_SELECTION_CONTRACT}
-    if not assessments:
+    independent_admission = not assessments and native_record_support and (
+        bool(material) or opening.ready and opening_supported)
+    if not assessments and not independent_admission:
         return None
     receipt = {"contract": POST_APPLICATION_COVERAGE_CONTRACT,
                "owner": deepcopy(execution["owner"]),
@@ -817,7 +823,9 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
         _require_coverage_before_prefix(prefix_matter, execution)
         _resolve_inherited_history(prefix_matter, selected,
                                    prior_conversation=prior_conversation, _memo=_memo)
-        receipt.update(contract=INHERITED_COVERAGE_APPLICATION_CONTRACT,
+        receipt.update(contract=(INDEPENDENT_ADMISSION_APPLICATION_CONTRACT
+                                 if independent_admission else
+                                 INHERITED_COVERAGE_APPLICATION_CONTRACT),
                        inherited_history=selected)
     # Seal the durable JSON form so fresh and saved evidence are identical.
     # Dataclass tuple fields otherwise become lists only when the store serializes.
@@ -831,15 +839,15 @@ def _apply_coverage_application(execution, receipt, *, material, source_treatmen
                                 before_details, disputes, details, opening_result=None,
                                 prefix_matter=None, prior_conversation=(), _memo=None) -> dict:
     """Recompute an owned typed assessment against the actual saved prefix."""
-    contracts = (POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)
-    if (not isinstance(receipt, dict) or receipt.get("contract") not in contracts
+    if (not isinstance(receipt, dict) or receipt.get("contract") not in _APPLICATION_CONTRACTS
             or receipt.get("owner") != execution["owner"]
             or type(receipt.get("expected_version")) is not int
             or receipt.get("expected_version") != execution["expected_version"]
             or receipt.get("seal") != _digest({key: value for key, value in receipt.items()
                                               if key != "seal"})):
         raise ExecutionEvidenceInvalid("Coverage application lost its owned original receipt")
-    inherited = receipt["contract"] == INHERITED_COVERAGE_APPLICATION_CONTRACT
+    independent_admission = receipt["contract"] == INDEPENDENT_ADMISSION_APPLICATION_CONTRACT
+    inherited = receipt["contract"] != POST_APPLICATION_COVERAGE_CONTRACT
     if inherited and execution.get("coverage_application_contract") != receipt["contract"]:
         raise ExecutionEvidenceInvalid("Inherited coverage needs its declared execution version")
     if execution.get("coverage_application_contract", receipt["contract"]) != receipt["contract"]:
@@ -867,11 +875,23 @@ def _apply_coverage_application(execution, receipt, *, material, source_treatmen
     bindings, assessments = receipt.get("bindings"), receipt.get("pre_application_assessments")
     stages = {"dispute_review", "detail_review"}
     if (not isinstance(bindings, list) or not isinstance(assessments, dict)
-            or not assessments or not set(assessments) <= stages
+            or (not assessments and not independent_admission)
+            or (independent_admission and (
+                assessments or not (bindings or receipt.get("opening") is not None)
+                or receipt["inherited_history"]))
+            or not set(assessments) <= stages
             or any(not isinstance(row, dict) or set(row) != {
                 "stage", "candidate_id", "result_id", "review", "proposal"}
                 or row["stage"] not in stages for row in bindings)):
         raise ExecutionEvidenceInvalid("Coverage application lost its captured admissions")
+    if independent_admission and (
+            execution.get("semantic_coverage") == "complete"
+            or any(not isinstance(coverage := execution["stages"][stage].get(
+                "account_coverage"), dict)
+                or coverage.get("state") not in ("partial", "unassessed")
+                or "selection_contract" in coverage for stage in stages)):
+        raise ExecutionEvidenceInvalid(
+            "Independent admission cannot replace a checked coverage assessment")
     actual = {row["id"]: row for row in material}
     if (len(actual) != len(material)
             or len({row["result_id"] for row in bindings}) != len(bindings)
@@ -1344,8 +1364,7 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
     application = execution.get("coverage_application")
     if application is not None or "coverage_application_contract" in execution:
         try:
-            if execution.get("coverage_application_contract") not in (
-                    POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT):
+            if execution.get("coverage_application_contract") not in _APPLICATION_CONTRACTS:
                 raise ExecutionEvidenceInvalid(
                     "Coverage application has an unsupported owner contract")
             original_messages = (*prior_conversation,
@@ -1682,8 +1701,7 @@ def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
                 and execution.get("coverage_application") is None):
             # Legacy compatibility is readable context, never fresh certified support.
             continue
-        if (execution.get("coverage_application_contract") not in (
-                POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)
+        if (execution.get("coverage_application_contract") not in _APPLICATION_CONTRACTS
                 or coverage.get("source_treatment_contract") != SOURCE_TREATMENT_CONTRACT
                 or not isinstance(saved["response"].get("continuation", {}).get(
                     "record_snapshot"), dict)):
@@ -1747,8 +1765,7 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
         coverage = saved["response"].get("material_coverage", {})
         execution = coverage.get("execution") if isinstance(coverage, dict) else None
         if (not isinstance(execution, dict)
-                or execution.get("coverage_application_contract") not in (
-                    POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)):
+                or execution.get("coverage_application_contract") not in _APPLICATION_CONTRACTS):
             continue
         effects = {row["result_id"]: row for row in effect_catalogue(execution).values()}
         for binding in execution["coverage_application"]["bindings"]:
