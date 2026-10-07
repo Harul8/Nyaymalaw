@@ -59,10 +59,10 @@ def test_dispute_sources_use_the_creating_turns_contract(contract, quote, valid)
     (None, "Internal finding.", True), (PUBLIC_CONTEXT, "The public question.", True),
     (None, "The public question.", False), (PUBLIC_CONTEXT, "Internal finding.", False),
 ])
-def test_saved_work_selects_its_owned_context_without_resealing(contract, quote, valid):
+def test_saved_work_display_uses_the_selected_context(contract, quote, valid):
     from copy import deepcopy
 
-    from nm.brain.work_state import project_work
+    from nm.brain.work_state import _blocks, _displayed, _read_words
     from nm.work_the_file.matter_contracts import Matter
     from tests.test_brain_work_state import append, proposed
     matter = Matter(id="work-context", advocate_id="adv", title="Context")
@@ -77,12 +77,34 @@ def test_saved_work_selects_its_owned_context_without_resealing(contract, quote,
             "execution": {"context_contract": contract}}
     saved = deepcopy(matter)
     prior = (Message("older", "nm", "The public question.", legacy_text="Internal finding."),)
+    views = {version: _read_words(resolve_history(prior, version), matter.brain_chat)
+             for version in (LEGACY_CONTEXT, PUBLIC_CONTEXT)}
+    unit = matter.brain_chat[0]["response"]["continuation"]["units"][0]
+    def check():
+        _displayed(unit, _blocks(unit), matter.brain_chat[0],
+                   views[contract or LEGACY_CONTEXT], {"older", "new"}, views,
+                   {"new": contract or LEGACY_CONTEXT})
     if valid:
-        assert project_work(matter, prior_conversation=prior)["state"] == "ok"
+        check()
     else:
         with pytest.raises(ValueError, match="attributable saved passage"):
-            project_work(matter, prior_conversation=prior)
+            check()
     assert matter == saved
+
+
+def test_record_snapshot_uses_record_origin_not_the_later_reply_contract():
+    from nm.brain.work_state import _snapshot_sources
+    messages = (Message("older", "nm", "Public", legacy_text="Finding"),
+                Message("producer", "advocate", "Reported detail"))
+    views = word_views(messages)
+    snapshot = {"record_catalogue": {"r": {"record": {
+        "source_turn_id": "producer", "quoted": "Reported detail", "prior_references": [
+            {"turn_id": "older", "role": "nm", "quoted": "Finding"}]}}}}
+    _snapshot_sources(snapshot, views, {"producer": LEGACY_CONTEXT, "current": PUBLIC_CONTEXT},
+                      {"older", "producer", "current"}, "current")
+    with pytest.raises(ValueError, match="original transcript"):
+        _snapshot_sources(snapshot, views, {"producer": PUBLIC_CONTEXT},
+                          {"older", "producer", "current"}, "current")
 
 
 def test_compatibility_metadata_is_not_presented_as_conversation():
