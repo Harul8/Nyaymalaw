@@ -1,5 +1,6 @@
 """One shared correction allowance through the authenticated current-brain edge."""
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -17,12 +18,14 @@ from tests.test_current_brain_app import (
     WiredModel,
     assert_ok,
     greeting_outputs,
+    mixed_outputs,
+    MIXED_MESSAGE,
 )
 
 
 def invented_review():
     return {"greeting": True, "unit_reviews": [
-        {"unit_id": "current", "verdict": "supported", "source_ids": ["current"],
+        {"unit_id": "current", "verdict": "supported",
          "reason": "none"}], "omissions": []}
 
 
@@ -96,7 +99,7 @@ def test_repair_keeps_the_complete_earlier_conversation_for_followup(tmp_path):
 
 def test_a_second_stage_cannot_reset_the_shared_correction_allowance(tmp_path):
     valid_label, _, _ = greeting_outputs()
-    bad_preparation = {"material": [], "actions": []}  # Required reply_draft is absent.
+    bad_preparation = {"disputes": []}  # Required independent objectives collection is absent.
     model = WiredModel({"label": "undeclared_label"}, valid_label, bad_preparation)
     harness = Harness(tmp_path, model)
     try:
@@ -104,7 +107,7 @@ def test_a_second_stage_cannot_reset_the_shared_correction_allowance(tmp_path):
         assert failed.status_code == 503
         assert failed.json()["detail"]["committed"] == "not_committed"
         assert [call[0].operation for call in model.calls] == [
-            "label_message", "label_message", "prepare_response"]
+            "label_message", "label_message", "extract_disputes_objectives"]
         first_input = json.loads(model.calls[0][0].user)
         correction_input = json.loads(model.calls[1][0].user)
         feedback = correction_input.pop("correction_feedback")
@@ -140,5 +143,73 @@ def test_provider_outage_is_not_a_schema_repair_or_successful_save(tmp_path):
         assert "Synthetic provider outage" not in failed.text
         assert [call[0].operation for call in harness.model.calls] == OPERATIONS[:2]
         assert not harness.store.list_for("adv_wiring").matters
+    finally:
+        harness.client.close()
+
+
+def test_all_held_extraction_uses_one_owned_correction_before_review_and_save(tmp_path):
+    label, prepared, review = mixed_outputs(MIXED_MESSAGE)
+    invalid = deepcopy(prepared)
+    for items in invalid.values():
+        items[0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+    model = WiredModel(label, invalid, prepared, review)
+    harness = Harness(tmp_path, model)
+    try:
+        response = assert_ok(harness.post(MIXED_MESSAGE))
+        assert [call[0].operation for call in model.calls] == [
+            "label_message", "extract_disputes_objectives", "extract_disputes_objectives",
+            "review_prepared_response"]
+        before = json.loads(model.calls[1][0].user)
+        after = json.loads(model.calls[2][0].user)
+        feedback = after.pop("correction_feedback")
+        assert after == before
+        assert feedback["rejected_output"] == invalid
+        assert "dispute:1" in feedback["mismatch"]
+        assert "not exact original text" in feedback["mismatch"]
+        assert response["metrics"]["llm_calls"] == 4
+        saved = harness.held(response["chat_id"]).brain_chat[0]
+        assert saved["preparation"]["issues"] == []
+        assert saved["preparation"]["proposal"]["disputes"]
+        assert saved["preparation"]["proposal"]["objectives"]
+        assert "Unsupported quotation" not in json.dumps(saved)
+        assert [element["text"] for element in response["elements"]] == ["Message received."]
+    finally:
+        harness.client.close()
+
+
+def test_all_held_extraction_cannot_reset_a_correction_spent_by_labeling(tmp_path):
+    label, prepared, _ = mixed_outputs(MIXED_MESSAGE)
+    for items in prepared.values():
+        items[0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+    model = WiredModel({"label": "undeclared_label"}, label, prepared)
+    harness = Harness(tmp_path, model)
+    try:
+        response = harness.post(MIXED_MESSAGE)
+        assert response.status_code == 503
+        assert response.json()["detail"]["committed"] == "not_committed"
+        assert [call[0].operation for call in model.calls] == [
+            "label_message", "label_message", "extract_disputes_objectives"]
+        assert not harness.store.list_for("adv_wiring").matters
+    finally:
+        harness.client.close()
+
+
+def test_held_peer_preserves_supported_extraction_without_repeating_accepted_input(tmp_path):
+    label, prepared, review = mixed_outputs(MIXED_MESSAGE)
+    prepared["objectives"][0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+    review["unit_reviews"] = review["unit_reviews"][:1]
+    harness = Harness(tmp_path, WiredModel(label, prepared, review))
+    try:
+        response = assert_ok(harness.post(MIXED_MESSAGE))
+        saved = harness.held(response["chat_id"]).brain_chat[0]
+        assert saved["release"]["state"] == "partial"
+        assert saved["preparation"]["proposal"]["disputes"]
+        assert saved["preparation"]["proposal"]["objectives"] == []
+        assert saved["preparation"]["issues"][0]["unit"] == "objective:1"
+        assert response["service_status"] is None
+        assert response["metrics"]["llm_calls"] == 3
+        assert [element["text"] for element in response["elements"]] == ["Message received."]
+        again = assert_ok(harness.post(MIXED_MESSAGE))
+        assert again["replayed"] is True and len(harness.model.calls) == 3
     finally:
         harness.client.close()

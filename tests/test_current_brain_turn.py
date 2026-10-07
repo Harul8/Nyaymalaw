@@ -7,7 +7,7 @@ import pytest
 
 from nm.brain.turn import BrainRefused, BrainService, BrainTurn, _digest, saved_rows
 from nm.shared.store_port import StaleWrite
-from tests.test_current_brain_app import WiredModel, greeting_outputs, mixed_outputs
+from tests.test_current_brain_app import MIXED_MESSAGE, WiredModel, greeting_outputs, mixed_outputs
 
 
 class MemoryStore:
@@ -106,7 +106,7 @@ def test_replay_rejects_private_preparation_detached_from_original_context():
 
 
 def test_generic_receipt_does_not_allow_coordinated_internal_source_rewriting():
-    message = "I received only a draft. Explain it privately."
+    message = MIXED_MESSAGE
     brain, _, store = service(WiredModel(*mixed_outputs(message)))
     brain.run(turn(message=message))
     rows = deepcopy(store.value.brain_chat)
@@ -120,7 +120,7 @@ def test_generic_receipt_does_not_allow_coordinated_internal_source_rewriting():
 
 
 def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_history():
-    message = "I received a draft. Please explain it."
+    message = MIXED_MESSAGE
     outputs = mixed_outputs(message)
     outputs[-1]["unit_reviews"][1].update(verdict="unsupported", reason="restriction")
     brain, model, store = service(WiredModel(*outputs))
@@ -138,6 +138,29 @@ def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_h
     context = json.loads(model.calls[3][0].user)["earlier_conversation"]
     assert context[-1] == {"role": "nm", "text": "Message received.", "turn_id": "turn_one"}
     assert store.value.brain_chat[0]["release"]["state"] == "partial"
+
+
+@pytest.mark.parametrize("damage", ["offset", "quote", "source", "contract"])
+def test_private_extraction_references_and_contract_are_checked_on_reopen(damage):
+    brain, model, store = service(WiredModel(*mixed_outputs(MIXED_MESSAGE)))
+    brain.run(turn(message=MIXED_MESSAGE))
+    rows = deepcopy(store.value.brain_chat)
+    if damage == "contract":
+        rows[0]["preparation"]["contract"] = "unknown_extraction_version"
+    else:
+        for proposal in (rows[0]["preparation"]["proposal"]["disputes"][0],
+                         rows[0]["release"]["units"]["dispute:1"]["proposal"]):
+            passage = proposal["passages"][0]
+            if damage == "offset":
+                passage["start"] += 1
+            elif damage == "quote":
+                passage["quote"] = "Invented words that the advocate did not supply."
+            else:
+                passage["source_id"] = "other_matter"
+                proposal["source_ids"] = ["other_matter"]
+    with pytest.raises(BrainRefused, match="saved conversation"):
+        saved_rows(replace(store.value, brain_chat=rows), "adv_owner")
+    assert len(model.calls) == 3
 
 
 def test_wrong_owner_history_is_rejected_before_dispatch():

@@ -23,6 +23,12 @@
       "status": "component_verified_not_yet_served",
       "built": "Independent review now supports the focused extraction contract. It checks original evidence and scoped omissions, derives source bindings from checked extraction instead of asking the reviewer to repeat them, accepts reviewed absence, and preserves partial or withheld outcomes. New rendering version disputes_objectives_release_v1 leaves historical v1/v2 replies unchanged.",
       "verification": "72 focused current/legacy release tests pass. Correct empty extraction is accepted; empty output with omissions is withheld. Saved passage corruption, unknown versions and invalid reviewer IDs are rejected."
+    },
+    {
+      "owner": "nm/brain/turn.py",
+      "status": "served_handoff_verified_with_scripted_models",
+      "built": "The second call now uses only disputes/objectives extraction. Current turn v2 binds its prepared contract to the new release; historical turn v1 remains readable under its original preparation and renderer. All-held source/shape failures can use the same single turn-owned correction allowance; independent valid peers survive partial extraction. No broad response-preparation call occurs in the new turn path.",
+      "verification": "47 authenticated app, turn and recovery tests pass, including exact private source bindings, original complete history, legitimate absence, wrong-label extraction, withheld omission, all-held correction, partial success, save failures, lost acknowledgement and historical replay. Browser semantic acceptance remains next."
     }
   ],
   "model_calls": {
@@ -32,5 +38,5 @@
     "shared_conditional_correction_maximum": 1,
     "new_routine_calls": 0
   },
-  "remaining": ["Served turn and saved-contract handoff", "Browser semantic validation and Legal brain worksheet update", "Paired classifier experiment requested separately; no classifier edit is assumed"]
+  "remaining": ["Runtime stage metadata", "Browser semantic validation and Legal brain worksheet update", "Record paired classifier experiment; production classifier stays unchanged"]
 }

@@ -9,13 +9,14 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
 from nm.brain.message_labels import label_message
-from nm.brain.response_preparation import prepare_response
-from nm.brain.release import prepare_release, render_saved_release
+from nm.brain.disputes_objectives import extract_disputes_objectives, extraction_units
+from nm.brain.release import EXTRACTION_RENDERER, prepare_release, render_saved_release
 from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
-CONTRACT = 'current_brain_turn_v1'
+CONTRACT = 'current_brain_turn_v2'
+LEGACY_CONTRACT = 'current_brain_turn_v1'
 
 
 class BrainRefused(Exception):
@@ -69,7 +70,7 @@ def saved_rows(matter, advocate_id):
         if matter.version != len(matter.brain_chat):
             raise ValueError('saved conversation tail is missing')
         for row in matter.brain_chat:
-            if (row['contract'] != CONTRACT or row['matter_id'] != matter.id
+            if (row['contract'] not in (LEGACY_CONTRACT, CONTRACT) or row['matter_id'] != matter.id
                     or row['advocate_id'] != advocate_id or row['committed'] is not True
                     or row['release_state'] != 'released'
                     or row['request_digest'] != _digest(row['request'])
@@ -80,9 +81,17 @@ def saved_rows(matter, advocate_id):
                 raise ValueError('saved conversation binding')
             release = render_saved_release(row['release'])
             prepared = row['preparation']
-            expected_units = {
-                unit['id']: {'kind': kind, 'proposal': unit}
-                for kind in ('material', 'actions') for unit in prepared['proposal'][kind]}
+            if row['contract'] == CONTRACT:
+                if release['renderer_version'] != EXTRACTION_RENDERER:
+                    raise ValueError('saved extraction rendering contract')
+                expected_units = extraction_units(prepared)
+            else:
+                if (release['renderer_version'] not in ('initial_brain_release_v1', 'initial_brain_release_v2')
+                        or 'contract' in prepared):
+                    raise ValueError('saved legacy preparation contract')
+                expected_units = {
+                    unit['id']: {'kind': kind, 'proposal': unit}
+                    for kind in ('material', 'actions') for unit in prepared['proposal'][kind]}
             if (prepared['state'] != 'prepared_unreviewed'
                     or prepared['sources'] != release['sources']
                     or prepared['issues'] != release['issues']
@@ -246,8 +255,18 @@ class BrainService:
         try:
             history = _history(rows)
             label = checked(lambda: label_message(model, turn.message, history=history, history_complete=True))
-            prepared = checked(lambda: prepare_response(model, turn.message, label=label['label'],
-                                        history=history, history_complete=True))
+
+            def extract_current():
+                prepared = extract_disputes_objectives(model, turn.message, label=label['label'],
+                                                       history=history, history_complete=True)
+                if prepared['issues'] and not any(prepared['proposal'].values()):
+                    # No accepted peer can be lost by this bounded correction.
+                    # Mixed valid/held results retain their independent work.
+                    raise SchemaViolation('All extraction items were held: ' + '; '.join(
+                        f"{issue['unit']}: {issue['reason']}" for issue in prepared['issues']))
+                return prepared
+
+            prepared = checked(extract_current)
             release = checked(lambda: prepare_release(model, prepared, label['label']))
             if not release['elements']:
                 raise BrainRefused('A response could not be prepared for this message. Please retry.',
