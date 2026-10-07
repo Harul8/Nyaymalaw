@@ -1888,6 +1888,23 @@
       "call_impact": "0 prompt changes and0 added model stages. Original positive decisions already exist; capture, validation, history support and replay are mechanical. Shared conditional recovery and reply reserve unchanged. No new live spend since browser evidence; combined measured USD3.051011 of USD5, remaining1.948989. Scripted both-failed coverage10 calls (8 routine/2 existing corrections); one failed scope9; later supported review8; replay0.",
       "remaining": "Actual browser qualification of v3 admission/current/history handoff remains required. Historical turns without the proof remain unoffered; this change does not fabricate earlier receipts. Fresh purpose/disposition grouping, dispute existence/retirement, source reaffirmation, material association, useful requested delivery, legal accuracy/force, UI and closure remain open.",
       "baseline": "Isolated committed4d4e50b turn module, unchanged current consumers/fixture transport:15 cases,11fail/4pass; candidate15pass. Missing new capture prevents some baseline fault cases reaching their guards; this is not evidence old gates released those faults."
+    },
+    {
+      "piece": "Independent admission browser qualification and completion association gap",
+      "base": "462839b",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Saved independent corrections retain original admission and retirement proof without falsely completing unrelated earlier work.",
+      "verification": "Actual IAB shipped application:2 saved turns/20 calls; correction changes only quantity, preserves dates/actor/recipient/purpose; current successor and retired original have checked support. Exact reply reopens with0 calls. Wrong earlier broad task completion rejected despite reviewer acceptance; truthful saved revision released. Browser v3 failure-mode not exercised;15 scripted public tests remain its evidence.",
+      "call_impact": "20 actual pinned mini calls (9,11), including5 conditional calls; USD0.089390 increment; combined USD3.140401/5, remaining USD1.859599. No added routine stage.",
+      "packets": [
+        314,
+        334
+      ],
+      "matter_id": "mat_cdf32be008e5e8268d68de8fae33596c",
+      "matter_version": 2,
+      "browser_feature_complete": false,
+      "remaining": "Ordinary source handoff, quantity-only correction, exact history proof and0-call reopen pass. v3 both-failed-coverage path remains qualified by scripted public-boundary tests only; real browser exercised v2. First-turn material coverage retry truncated. Fresh source-purpose/disposition contradictions and wrong prior-task completion association remain open. Dispute existence/retirement, source reaffirmation, material association, requested delivery, legal accuracy, UI and closure still require repair and integrated qualification."
     }
   ],
   "additional_reviewer_input": {
@@ -2368,13 +2385,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 3.051011,
-    "remaining_usd": 1.948989,
-    "new_ledger_attempts": 314,
+    "combined_measured_usd": 3.140401,
+    "remaining_usd": 1.859599,
+    "new_ledger_attempts": 334,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus314 current measured attempts; cumulative USD5 unchanged"
+    "basis": "166 frozen prior attempts plus334 measured current attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2630,5 +2647,9 @@
   "native_coverage_browser_evidence": {
     "path": "docs\\backlog\\evidence\\brain-native-coverage-browser-20261007.json.gz",
     "sha256": "be283fa528a52f876ef5f818fd9cd6371e6d33a734766de7cbc13b1b211e0ce4"
+  },
+  "independent_admission_browser_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-independent-admission-browser-20261007.json.gz",
+    "sha256": "5e6309d76589cba3791eb0d78837af243a3ca9fd5907bb147df731e5173f43c4"
   }
 }
