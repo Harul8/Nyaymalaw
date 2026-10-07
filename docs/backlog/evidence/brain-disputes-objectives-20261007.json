@@ -60,6 +60,14 @@
       "fix": "Independent reviewer explicitly separates substantive party outcomes from NM deliverables and work restrictions, checks latest-message contribution, and permits original historical support for authorised repair. Focused reviewer input no longer contains the advisory classifier label.",
       "verification": "87 focused and legacy release tests pass. Label-independent input, scope rejection, valid peers, empty turns and legitimate historical repair are covered. Injected verdicts prove wiring, not model semantic detection.",
       "call_impact": "No new calls; same independent review."
+    },
+    {
+      "owner": "nm/brain/disputes_objectives.py",
+      "status": "refined_after_failed_browser_recheck",
+      "observed_failure": "The five-turn rerun still extracted historical items on a work-only request. An all-held correction attached that request as context. The changed objective was captured, but a separate withdrawal was omitted.",
+      "fix": "Interpretation review is now specifically checking accuracy of NM saved understanding. Using existing content for NM work does not assert or reaffirm it. Explicit resolutions and withdrawals are extraction changes. Missing-source correction explicitly permits dropping out-of-scope items or returning empty.",
+      "verification": "89 extractor/turn/recovery checks pass. Real-model semantic recheck pending.",
+      "call_impact": "No new routine or conditional calls."
     }
   ],
   "model_calls": {

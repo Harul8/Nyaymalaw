@@ -18,10 +18,12 @@ _TASK = """Purpose: Identify only the disputes and substantive matter objectives
 communicated or revised by the latest message. Return internal proposals only.
 
 Look for:
-1. Start with what the latest message contributes. Earlier messages resolve its
-   references; they are not a backlog to extract again. A social exchange, neutral
-   background or instruction about NM's work alone contributes neither category.
-   Return empty arrays when the latest message contributes no dispute or objective.
+1. Locate the portions of the latest message that state a dispute or matter
+   objective, or change one already expressed. Use earlier conversation to
+   understand those portions. A request to use existing content for NM's work
+   does not assert, reaffirm or change that content. If there are no such portions,
+   return empty arrays, except for an explicit request to check the accuracy of
+   NM's saved interpretation. Do not produce a recap of historical items.
 2. A dispute is an expressed disagreement, contested conduct, claim, refusal or
    unresolved conflict affecting someone's position in the underlying situation.
    A matter objective is a party's desired substantive result in that situation.
@@ -31,15 +33,19 @@ Look for:
    invent an objective for a dispute, or force the two collections to be paired.
 3. Preserve whose account, position or objective it is, including opposing or
    quoted positions, uncertainty, conditions, negations and hypothetical scope.
-   Capture a correction or withdrawal as such, not as continued affirmative
-   intent. Do not decide legal merit or add facts, remedies or legal conclusions.
+   Include each communicated resolution, correction or withdrawal as a change to
+   the relevant dispute or objective, even when nothing is still sought for it.
+   Do not leave these changes implicit in another item or represent them as
+   continued affirmative intent. Do not decide legal merit or add facts,
+   remedies or legal conclusions.
 4. Select the supplied passage IDs supporting each description. The selected
    current words must communicate, revise or specifically request review of that
    item; mere conversation continuity is insufficient. Include earlier words only
    when needed to understand this contribution. Mark substantive
    original account as support and a reference or review instruction as context.
-   NM's earlier wording is context only. A review request can authorise examining
-   earlier original account; the request itself does not substantiate that account.
+   NM's earlier wording is context only. A request to check the accuracy of NM's
+   saved interpretation can authorise examining earlier original account; it
+   does not substantiate that account.
 
 Outcome: Return disputes and objectives as independent arrays. Each item has a
 concise attributed description, selections and uncertainty (null if no unresolved
@@ -182,7 +188,12 @@ def _check_item(item, catalogue):
             passages.append(checked)
     source_ids = list(dict.fromkeys(row["source_id"] for row in passages))
     if "current" not in source_ids or not support:
-        raise SchemaViolation("An item needs current-message context and original advocate support")
+        raise SchemaViolation(
+            "An item needs current-message context and original advocate support. "
+            "Select sources only if the latest message actually contributes to this "
+            "item or requests checking NM's interpretation. Otherwise remove the "
+            "out-of-scope item; empty arrays are valid. A request to use existing "
+            "content for NM work is not a new contribution.")
     uncertainty = item["uncertainty"]
     if isinstance(uncertainty, str) and not uncertainty.strip():
         uncertainty = None
