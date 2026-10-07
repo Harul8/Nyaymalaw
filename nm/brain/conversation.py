@@ -32,12 +32,24 @@ class Message:
     turn_id: str
     role: Literal["advocate", "nm"]
     text: str
+    # Server-owned reconstruction metadata. Only text is conversational content;
+    # compatibility words/order never enter model-facing transcript fields.
+    recorded_at: str | None = None
+    context_contract: str = "legacy_elements_v1"
+    legacy_text: str | None = None
+    legacy_order: int | None = None
 
     def __post_init__(self) -> None:
         if not self.turn_id or not self.turn_id.strip() or not self.text.strip():
             raise ValueError("A conversation message needs an identity and its words")
         if self.role not in ("advocate", "nm"):
             raise ValueError("Unknown conversation speaker")
+        if self.legacy_text is not None and (
+                not isinstance(self.legacy_text, str) or not self.legacy_text.strip()):
+            raise ValueError("Historical conversation words must be readable")
+        if self.legacy_order is not None and (
+                type(self.legacy_order) is not int or self.legacy_order < 0):
+            raise ValueError("Historical conversation order must be explicit")
 
 
 @dataclass(frozen=True)
