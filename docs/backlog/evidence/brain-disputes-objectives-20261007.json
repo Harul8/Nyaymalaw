@@ -53,6 +53,13 @@
       "fix": "Define objectives as substantive party outcomes, distinct from NM work. Require an actual latest-message contribution and use history only to resolve it. Remove diagnostic label from extractor input; preserve complete original words.",
       "verification": "84 focused extractor and authenticated app tests pass. Wrong labels cannot filter or bias extraction input. This is wiring evidence, not semantic acceptance.",
       "call_impact": "No new calls; same focused extraction call."
+    },
+    {
+      "owner": "nm/brain/release.py",
+      "status": "review_contract_verified_browser_recheck_pending",
+      "fix": "Independent reviewer explicitly separates substantive party outcomes from NM deliverables and work restrictions, checks latest-message contribution, and permits original historical support for authorised repair. Focused reviewer input no longer contains the advisory classifier label.",
+      "verification": "87 focused and legacy release tests pass. Label-independent input, scope rejection, valid peers, empty turns and legitimate historical repair are covered. Injected verdicts prove wiring, not model semantic detection.",
+      "call_impact": "No new calls; same independent review."
     }
   ],
   "model_calls": {

@@ -57,6 +57,33 @@ def test_new_extraction_has_one_independent_review_with_owned_passages_and_no_pu
     assert len(model.calls) == 1
 
 
+def test_focused_review_input_is_identical_under_every_label_while_saved_metadata_is_retained():
+    proposal = prepared(disputes=[item()])
+    dispatched = []
+    for label in ("greeting", "information", "action", "mixed"):
+        model = ReviewModel(review(unit()))
+        saved = prepare_release(model, proposal, label)
+        prompt, schema, tier, limit = model.calls[0]
+        payload = json.loads(prompt.user)
+        assert "proposed_label" not in payload
+        assert payload["original_conversation"] == proposal["sources"]
+        assert payload["preparation"] == proposal["proposal"]
+        assert saved["label"] == label
+        dispatched.append((prompt.system, payload, schema, tier, limit))
+        assert len(model.calls) == 1
+    assert all(call == dispatched[0] for call in dispatched[1:])
+
+
+def test_legacy_material_preparation_keeps_its_label_in_the_unchanged_reviewer_payload():
+    from tests.test_new_brain_release import prepared as legacy_prepared, review as legacy_review
+    proposal = legacy_prepared()
+    model = ReviewModel(legacy_review(greeting=True))
+    saved = prepare_release(model, proposal, "greeting")
+    assert json.loads(model.calls[0][0].user)["proposed_label"] == "greeting"
+    assert saved["renderer_version"] == "initial_brain_release_v2"
+    assert len(model.calls) == 1
+
+
 @pytest.mark.parametrize("label", ["greeting", "information", "action", "mixed"])
 def test_reviewed_empty_extraction_is_valid_without_fabricating_a_dispute_or_objective(label):
     proposal = prepared(message="Please explain the process.")
@@ -81,6 +108,46 @@ def test_objective_is_independent_and_need_not_have_an_associated_dispute():
     assert saved["units"]["objective:1"]["kind"] == "objectives"
     assert saved["state"] == "ready"
     assert [row["text"] for row in saved["elements"]] == ["Message received."]
+
+
+def test_injected_scope_rejection_holds_work_instruction_without_erasing_a_distinct_matter_objective():
+    """Proves handling of reviewer decisions, not detection of the semantic error."""
+    message = "Review the agreement. I want the arrangement to end."
+    proposal = prepared(objectives=[
+        item("Review the agreement", [selection("current:p1")]),
+        item("The user wants the arrangement to end", [selection("current:p2")]),
+    ], message=message)
+    checked = review(unit("objective:1", "unsupported", "scope"), unit("objective:2"))
+    saved = release(proposal, checked, "action")
+    assert saved["state"] == "partial" and saved["service_status"] is None
+    assert saved["proof"]["unit_reviews"] == checked["unit_reviews"]
+    assert set(saved["units"]) == {"objective:1", "objective:2"}
+    assert saved["units"]["objective:2"]["proposal"]["description"] == (
+        "The user wants the arrangement to end")
+    assert [row["text"] for row in saved["elements"]] == ["Message received."]
+    assert render_saved_release(saved) == saved
+
+
+@pytest.mark.parametrize("latest", [
+    "Thank you, that's all for now.",
+    "Tell me how to use the search page.",
+])
+def test_injected_scope_rejection_of_revived_history_does_not_block_a_legitimate_empty_turn(latest):
+    """Injected rejection tests scope handling; a live reviewer must establish meaning."""
+    history = [{"role": "advocate", "text": "I want access restored."},
+               {"role": "nm", "text": "Message received."}]
+    revived = prepared(objectives=[item("Restoration of access", [
+        selection("history_1:p1"), selection("current:p1", "context")])],
+        message=latest, history=history)
+    rejected = release(revived, review(unit("objective:1", "unsupported", "scope")))
+    assert rejected["state"] == "withheld" and rejected["elements"] == []
+    assert rejected["proof"]["unit_reviews"][0]["reason"] == "scope"
+    empty = prepared(message=latest, history=history)
+    accepted = release(empty, review())
+    assert accepted["state"] == "ready" and accepted["units"] == {}
+    assert [row["text"] for row in accepted["elements"]] == ["Message received."]
+    assert accepted["sources"] == rejected["sources"] == empty["sources"]
+    assert render_saved_release(accepted) == accepted
 
 
 def test_review_examines_earlier_original_support_and_nm_context_without_treating_nm_as_evidence():

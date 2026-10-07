@@ -25,27 +25,34 @@ EXTRACTION_RENDERER = "disputes_objectives_release_v2"
 LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v1"
 _EXTRACTION_SYSTEM = """Message: You receive the complete original conversation,
 then private dispute/objective proposals and any held items. Sources retain
-their exact words and speakers. Proposals and message labels are not evidence.
+their exact words and speakers. Proposals are interpretations, not evidence.
 
 Purpose: Independently check the support and completeness of this turn's
 dispute/objective extraction. No general facts, plans or answers are requested.
 
 Look for:
-1. Read the latest message in its full original context before examining the
-   proposals. Identify its expressed disputes and desired matter outcomes.
+1. Read the latest message in its full original context before the proposals.
+   Identify what it contributes, rather than extracting the history again.
    A dispute is an expressed disagreement, contested conduct, claim, refusal or
-   unresolved conflict. An objective is a result someone wants in the matter.
-   A work instruction to NM is not automatically a matter objective. Either
-   collection may be empty. Do not demand unrelated facts or planned activities.
+   unresolved conflict affecting someone's position in the underlying situation.
+   A matter objective is a party's desired substantive result in that situation.
+   Producing an NM output or controlling how NM works is a work instruction, not
+   that result. Where a work request also states a matter objective, review only
+   the separately supported objective. Either collection may be empty.
 2. Check each description and selected exact passage against original words.
+   The latest words must communicate, confirm, revise or withdraw the item, or
+   specifically request review of its interpretation. Mere continuity, social
+   exchange or diversion cannot renew an item from history. Reject that mismatch
+   as scope even when the historical item itself was correctly understood.
    Preserve attribution, scope, conditions, uncertainty, corrections, withdrawals
    and negation. Exact quotation alone does not establish correct interpretation.
-   Earlier NM statements cannot substantiate themselves. Current context may
-   authorise review of an earlier original account without restating that account.
+   A current review request may authorise repair using earlier original account;
+   it supplies context, not the restored fact. NM's wording cannot substantiate
+   itself. Do not demand a fresh factual assertion for an authorised repair.
 3. Mark each item supported, unsupported or unresolved, with the consequential
    reason. Independently report any dispute or objective in the latest message
    that the preparation missed, including when the proposed lists are empty.
-   History resolves references; a diversion does not renew all historical items.
+   Do not demand general facts or work instructions as missing objectives.
 4. Select greeting only if a social acknowledgement is appropriate. Only a fixed
    greeting or receipt is public; all extraction and review remain private.
 
@@ -264,9 +271,11 @@ def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
     version = (EXTRACTION_RENDERER if prepared.get("contract") == EXTRACTION_CONTRACT
                else LEGACY_EXTRACTION_RENDERER if focused else RENDERER_VERSION)
     payload = {"original_conversation": sources, "preparation": prepared["proposal"],
-               "held_preparation_units": issues, "proposed_label": label,
+               "held_preparation_units": issues,
                "permitted_unit_ids": list(units),
                "permitted_source_ids": [row["id"] for row in sources]}
+    if not focused:
+        payload["proposed_label"] = label
     prompt = Prompt(system=_EXTRACTION_SYSTEM if focused else _SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="review_prepared_response")
     schema = _review_schema(focused)
