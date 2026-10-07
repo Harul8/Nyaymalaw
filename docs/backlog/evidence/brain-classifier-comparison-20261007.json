@@ -1,0 +1,2312 @@
+{
+  "experiment": "Paired current exclusive classification versus independent purpose signals",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "scope": "One run of 16 independently prelabelled synthetic cases; 32 direct calls through the application's configured ModelPort and account-permission boundary. No browser or production-classifier changes.",
+  "prelabelled_case_sha256": "33bfa655ecc148b610d2d63603f0ea7e565dc703e917aae1f45aa9ffbed636f9",
+  "observed_result": {
+    "unambiguous_cases": 14,
+    "current_exclusive_correct": 12,
+    "independent_signals_correct": 13,
+    "provider_or_schema_errors": 0,
+    "retries": 0,
+    "charged_usd": 0.004272,
+    "experiment_cap_usd": 0.05,
+    "cumulative_remaining_usd": 0.776095,
+    "all_provider_returned_models_match_pin": true
+  },
+  "consequential_findings": [
+    {
+      "case": "09_hindi_account_task",
+      "expected": "mixed",
+      "current": "action",
+      "signals": "mixed",
+      "interpretation": "The current exclusive decision omitted the information purpose when a reported event and amount preceded a drafting request. This supports the previously reported mixed-content weakness."
+    },
+    {
+      "case": "15_fact_question",
+      "expected": "mixed",
+      "current": "action",
+      "signals": "mixed",
+      "interpretation": "The current exclusive decision treated a reported threatened action plus an advice question as action alone. Independent signals retained both purposes."
+    },
+    {
+      "case": "04_negative_request",
+      "expected": "action",
+      "current": "action",
+      "signals": "mixed",
+      "signal_output": {
+        "greeting": false,
+        "information": true,
+        "request": true
+      },
+      "interpretation": "The signal prompt overcounted a current restriction as a separate account. More fields do not by themselves make semantic classification correct."
+    },
+    {
+      "cases": [
+        "05_social_closing",
+        "07_greeting_account_task"
+      ],
+      "interpretation": "Both variants were correct on this run. The earlier external report's closing-greeting and English mixed-input failures were not reproduced here. This does not disprove the earlier observation."
+    },
+    {
+      "case": "16_no_identifiable_purpose",
+      "current": "action",
+      "signals": null,
+      "interpretation": "The independent signals returned all false; code retained no derived label. The current exclusive schema forced one of four labels. This case was declared ambiguous and not included in accuracy."
+    }
+  ],
+  "cost_and_latency": {
+    "current": {
+      "tokens_in": 4448,
+      "tokens_out": 82,
+      "raw_usage_cost_usd": 0.0019104,
+      "elapsed_s": 16.144
+    },
+    "signals": {
+      "tokens_in": 4968,
+      "tokens_out": 224,
+      "raw_usage_cost_usd": 0.0023456,
+      "elapsed_s": 15.356
+    },
+    "interpretation": "Both variants use one model call. Three booleans used slightly more tokens and about $0.000435 more across these 16 calls. The small latency difference is insufficient to establish a performance advantage. Ledger charges round each call conservatively, hence exceed the raw usage sum slightly."
+  },
+  "recommendation": {
+    "direction": "Prefer independent purpose signals as the next classifier design candidate, followed by a deterministic exclusive-label projection; do not treat this small experiment as a production-acceptance result.",
+    "reason": "It preserved the information purpose in both mixed-content cases missed by the exclusive classifier, without adding a model call, and it can express that no purpose was identifiable.",
+    "general_refinement_needed": "Separate matter/account content from the content of a current command, prohibition or requested output. A restriction can be a request without adding an independent information purpose. This is a general boundary definition, not a keyword exception.",
+    "no_signal_decision_needed": "All-false signals must remain explicitly unresolved or unclassified. Do not coerce them into greeting, action or mixed merely to satisfy the old enum.",
+    "routing_safeguard": "Neither current labels nor proposed signals should suppress reading the complete original message for dispute/objective extraction.",
+    "production_action": "No classifier prompt, schema, routing or storage change was made. Discuss the representation and no-signal handling before a separately versioned, browser-validated classifier slice."
+  },
+  "limitations": [
+    "One run on a small synthetic sample cannot establish broad accuracy, consistency, false-positive rates or statistical superiority.",
+    "Expected labels were set before live calls by the evaluating agent; no independent human adjudication was performed.",
+    "The candidate changes both prompt wording and output representation, so the gain cannot be attributed solely to three booleans.",
+    "Case 11, a quoted rewrite task, and case 16, no identifiable purpose, were excluded from the accuracy denominator before testing.",
+    "No downstream action execution or dispute/objective semantic result was tested by this classifier experiment."
+  ],
+  "decision": {
+    "production": "Keep the existing exclusive classifier unchanged.",
+    "reason": "The candidate improved two mixed-content cases but misclassified a pure restriction. The small single run does not establish a reliable overall advantage.",
+    "next_candidate": "Refine the independent-purpose definitions and explicit no-signal handling, then compare on a new prelabelled sample before any separate production change.",
+    "scope": "Diagnostic classification must not suppress full-message extraction. Neither extractor nor focused reviewer now receives this label."
+  },
+  "cases": [
+    {
+      "id": "01_account",
+      "message": "Dev lives in Jaipur and works as an electrician.",
+      "history": [],
+      "expected_label": "information",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": false
+        }
+      ],
+      "expected_reason": "Supplied personal background; no current request.",
+      "ambiguous": false
+    },
+    {
+      "id": "02_forwarded_instruction",
+      "message": "My client forwarded Dev's message: 'Please do not present the cheque again.'",
+      "history": [],
+      "expected_label": "information",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": false
+        }
+      ],
+      "expected_reason": "Reported instruction is account content, not the current user's instruction to NM.",
+      "ambiguous": false
+    },
+    {
+      "id": "03_summary_task",
+      "message": "Summarise in three bullet points.",
+      "history": [],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        }
+      ],
+      "expected_reason": "A requested output, without a substantive account.",
+      "ambiguous": false
+    },
+    {
+      "id": "04_negative_request",
+      "message": "Do not send anything to the client yet.",
+      "history": [],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        }
+      ],
+      "expected_reason": "A current restriction is a request to refrain from acting.",
+      "ambiguous": false
+    },
+    {
+      "id": "05_social_closing",
+      "message": "Thanks very much, that is all for today.",
+      "history": [],
+      "expected_label": "greeting",
+      "expected_signals": [
+        {
+          "greeting": true,
+          "information": false,
+          "request": false
+        }
+      ],
+      "expected_reason": "Closing social exchange, without substantive account or new task.",
+      "ambiguous": false
+    },
+    {
+      "id": "06_greeting",
+      "message": "Hello, good afternoon.",
+      "history": [],
+      "expected_label": "greeting",
+      "expected_signals": [
+        {
+          "greeting": true,
+          "information": false,
+          "request": false
+        }
+      ],
+      "expected_reason": "Social opening alone.",
+      "ambiguous": false
+    },
+    {
+      "id": "07_greeting_account_task",
+      "message": "Hi! Dev called and promised payment on Friday. Draft a two-line message for him.",
+      "history": [],
+      "expected_label": "mixed",
+      "expected_signals": [
+        {
+          "greeting": true,
+          "information": true,
+          "request": true
+        },
+        {
+          "greeting": false,
+          "information": true,
+          "request": true
+        }
+      ],
+      "expected_reason": "Contains a substantive reported call/promise and a current drafting request; greeting treatment does not change mixed.",
+      "ambiguous": false
+    },
+    {
+      "id": "08_topic_only_task",
+      "message": "Draft a short WhatsApp message to the client.",
+      "history": [],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        }
+      ],
+      "expected_reason": "Requested format/recipient do not constitute a separate factual account.",
+      "ambiguous": false
+    },
+    {
+      "id": "09_hindi_account_task",
+      "message": "Sir, cheque bounce ho gaya kal, 4.5 lakh ka. Notice ka draft bana do.",
+      "history": [],
+      "expected_label": "mixed",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": true
+        }
+      ],
+      "expected_reason": "Hindi/Hinglish account of a reported event followed by a drafting request; honorific is incidental.",
+      "ambiguous": false
+    },
+    {
+      "id": "10_multiple_tasks",
+      "message": "Compare the grounds for interim relief and then prepare a research checklist.",
+      "history": [],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        }
+      ],
+      "expected_reason": "Several requests alone remain action; topic names do not supply a matter account.",
+      "ambiguous": false
+    },
+    {
+      "id": "11_quoted_rewrite",
+      "message": "Rewrite this sentence politely: 'Do not send the papers yet.'",
+      "history": [],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        {
+          "greeting": false,
+          "information": true,
+          "request": true
+        }
+      ],
+      "expected_reason": "Quoted wording is the object of a rewrite request; whether it also counts as information is definition-sensitive.",
+      "ambiguous": true
+    },
+    {
+      "id": "12_authorising_followup",
+      "message": "Yes, please.",
+      "history": [
+        {
+          "role": "advocate",
+          "text": "I have two versions of the agreement."
+        },
+        {
+          "role": "nm",
+          "text": "Would you like me to compare those two versions?"
+        }
+      ],
+      "expected_label": "action",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": true
+        }
+      ],
+      "expected_reason": "The answer accepts the immediately proposed comparison, not a factual question.",
+      "ambiguous": false
+    },
+    {
+      "id": "13_factual_followup",
+      "message": "Yes.",
+      "history": [
+        {
+          "role": "advocate",
+          "text": "The other side says a demand was sent."
+        },
+        {
+          "role": "nm",
+          "text": "Did you receive that demand?"
+        }
+      ],
+      "expected_label": "information",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": false
+        }
+      ],
+      "expected_reason": "Answers a factual question about receipt; does not authorise work.",
+      "ambiguous": false
+    },
+    {
+      "id": "14_qualified_account",
+      "message": "I have not received any notice. The other side says it was served, but I cannot confirm that.",
+      "history": [],
+      "expected_label": "information",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": false
+        }
+      ],
+      "expected_reason": "Reported positions and uncertainty, without a current request.",
+      "ambiguous": false
+    },
+    {
+      "id": "15_fact_question",
+      "message": "He threatened to sell the machinery tomorrow. What can we do?",
+      "history": [],
+      "expected_label": "mixed",
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": true,
+          "request": true
+        }
+      ],
+      "expected_reason": "Reported event plus a direct request for advice.",
+      "ambiguous": false
+    },
+    {
+      "id": "16_no_identifiable_purpose",
+      "message": "...",
+      "history": [],
+      "expected_label": null,
+      "expected_signals": [
+        {
+          "greeting": false,
+          "information": false,
+          "request": false
+        }
+      ],
+      "expected_reason": "No stable purpose can be identified; exclusive schema has no no-signal value. Observe, do not score.",
+      "ambiguous": true
+    }
+  ],
+  "preregistration": {
+    "case_sha256": "33bfa655ecc148b610d2d63603f0ea7e565dc703e917aae1f45aa9ffbed636f9",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "cases": 16,
+    "planned_calls": 32,
+    "experiment_cap_usd": "0.05",
+    "main_cap_usd": "3.122922",
+    "prior_charge_usd": 1.877078,
+    "overall_authorisation_usd": 5,
+    "max_request_bytes": 12000,
+    "framing_token_allowance": 4096,
+    "max_output_tokens": 128,
+    "local_reservation_micro_usd": 6644,
+    "retries_per_case": 0,
+    "order": "alternate current-first and signals-first",
+    "scores": "Ambiguous cases 11 and 16 excluded from exclusive accuracy; no post-hoc expected changes.",
+    "limitations": "Small one-run synthetic experiment; prompt definitions and output shape both differ; not a browser or production routing test."
+  },
+  "results": [
+    {
+      "case_id": "01_account",
+      "mode": "current",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "information"
+      },
+      "derived_label": "information",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Dev lives in Jaipur and works as an electrician."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1530,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "information"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 268,
+          "tokens_out": 5,
+          "cost_usd": 0.00011520000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsDo2C12rygnSbI0cktKkw1PRWa",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 3.562
+      }
+    },
+    {
+      "case_id": "01_account",
+      "mode": "signals",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": false
+      },
+      "derived_label": "information",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Dev lives in Jaipur and works as an electrician."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1764,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 302,
+          "tokens_out": 14,
+          "cost_usd": 0.0001432,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsEIMNCcx3x8bdrf1JWUSmvGpaf",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.141
+      }
+    },
+    {
+      "case_id": "02_forwarded_instruction",
+      "mode": "signals",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": false
+      },
+      "derived_label": "information",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "My client forwarded Dev's message: 'Please do not present the cheque again.'"
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1792,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 308,
+          "tokens_out": 14,
+          "cost_usd": 0.0001456,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsFLN73RgpS1Zh8gUcXxTE33IKs",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.312
+      }
+    },
+    {
+      "case_id": "02_forwarded_instruction",
+      "mode": "current",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "information"
+      },
+      "derived_label": "information",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "My client forwarded Dev's message: 'Please do not present the cheque again.'"
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1558,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "information"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 274,
+          "tokens_out": 5,
+          "cost_usd": 0.00011760000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsGEWRUfTBWQzVPWESKFIbU9xuC",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.813
+      }
+    },
+    {
+      "case_id": "03_summary_task",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Summarise in three bullet points."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1515,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 266,
+          "tokens_out": 5,
+          "cost_usd": 0.0001144,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsHUQD8k6iqrmuajbjJmEPOcccJ",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.844
+      }
+    },
+    {
+      "case_id": "03_summary_task",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": true
+      },
+      "derived_label": "action",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Summarise in three bullet points."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1749,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 300,
+          "tokens_out": 14,
+          "cost_usd": 0.00014240000000000002,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsIpUShcpps9UpD3L4Jgspy6Ymk",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.89
+      }
+    },
+    {
+      "case_id": "04_negative_request",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": true
+      },
+      "derived_label": "mixed",
+      "signals_match_expected": false,
+      "exclusive_correct": false,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Do not send anything to the client yet."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1755,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 301,
+          "tokens_out": 14,
+          "cost_usd": 0.0001428,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsJ32VlUAvGKK2tNlEw7Jis06gu",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.25
+      }
+    },
+    {
+      "case_id": "04_negative_request",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Do not send anything to the client yet."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1521,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 267,
+          "tokens_out": 5,
+          "cost_usd": 0.00011480000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsKMPMWdkSVGcMhbFQ8qCktGIlj",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.735
+      }
+    },
+    {
+      "case_id": "05_social_closing",
+      "mode": "current",
+      "expected_label": "greeting",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "greeting"
+      },
+      "derived_label": "greeting",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Thanks very much, that is all for today."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1522,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "greeting"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 268,
+          "tokens_out": 6,
+          "cost_usd": 0.0001168,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsLhPhXYi9eE2kiNHM3NjgWh8UU",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.781
+      }
+    },
+    {
+      "case_id": "05_social_closing",
+      "mode": "signals",
+      "expected_label": "greeting",
+      "ambiguous": false,
+      "output": {
+        "greeting": true,
+        "information": false,
+        "request": false
+      },
+      "derived_label": "greeting",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Thanks very much, that is all for today."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1756,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": true,
+          "information": false,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 302,
+          "tokens_out": 14,
+          "cost_usd": 0.0001432,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsM0PU5nhEEQRSrvTSMaARBe3gE",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.828
+      }
+    },
+    {
+      "case_id": "06_greeting",
+      "mode": "signals",
+      "expected_label": "greeting",
+      "ambiguous": false,
+      "output": {
+        "greeting": true,
+        "information": false,
+        "request": false
+      },
+      "derived_label": "greeting",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Hello, good afternoon."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1738,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": true,
+          "information": false,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 297,
+          "tokens_out": 14,
+          "cost_usd": 0.00014120000000000002,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsN0UH4vJGiHWms4pLsQakKnphX",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.203
+      }
+    },
+    {
+      "case_id": "06_greeting",
+      "mode": "current",
+      "expected_label": "greeting",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "greeting"
+      },
+      "derived_label": "greeting",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Hello, good afternoon."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1504,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "greeting"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 263,
+          "tokens_out": 6,
+          "cost_usd": 0.00011480000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsO8uZVFGqKWlzGWdIRhFuJHvdk",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.719
+      }
+    },
+    {
+      "case_id": "07_greeting_account_task",
+      "mode": "current",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "mixed"
+      },
+      "derived_label": "mixed",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Hi! Dev called and promised payment on Friday. Draft a two-line message for him."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1562,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "mixed"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 276,
+          "tokens_out": 5,
+          "cost_usd": 0.0001184,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsPGjZbDA6FNVgV2CAzTrxgYrgn",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.797
+      }
+    },
+    {
+      "case_id": "07_greeting_account_task",
+      "mode": "signals",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "greeting": true,
+        "information": true,
+        "request": true
+      },
+      "derived_label": "mixed",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Hi! Dev called and promised payment on Friday. Draft a two-line message for him."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1796,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": true,
+          "information": true,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 310,
+          "tokens_out": 14,
+          "cost_usd": 0.0001464,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsPyUUi7jAQcGGnHFjQ862QBUvH",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.797
+      }
+    },
+    {
+      "case_id": "08_topic_only_task",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": true
+      },
+      "derived_label": "action",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Draft a short WhatsApp message to the client."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1761,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 302,
+          "tokens_out": 14,
+          "cost_usd": 0.0001432,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsQyAFVHx3mwB693En3DFxdmHS0",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.046
+      }
+    },
+    {
+      "case_id": "08_topic_only_task",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Draft a short WhatsApp message to the client."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1527,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 268,
+          "tokens_out": 5,
+          "cost_usd": 0.00011520000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsRN4k4MPMLXAHletNgrXfDp2f0",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.75
+      }
+    },
+    {
+      "case_id": "09_hindi_account_task",
+      "mode": "current",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": false,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Sir, cheque bounce ho gaya kal, 4.5 lakh ka. Notice ka draft bana do."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1551,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 279,
+          "tokens_out": 5,
+          "cost_usd": 0.00011960000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsSFWkKlF3m1ATSyEfQSzQKtmNT",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.766
+      }
+    },
+    {
+      "case_id": "09_hindi_account_task",
+      "mode": "signals",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": true
+      },
+      "derived_label": "mixed",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Sir, cheque bounce ho gaya kal, 4.5 lakh ka. Notice ka draft bana do."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1785,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 313,
+          "tokens_out": 14,
+          "cost_usd": 0.00014759999999999998,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsT4HLigAxoXlPgJk6wqJ7OkICr",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.781
+      }
+    },
+    {
+      "case_id": "10_multiple_tasks",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": true
+      },
+      "derived_label": "action",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Compare the grounds for interim relief and then prepare a research checklist."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1793,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 305,
+          "tokens_out": 14,
+          "cost_usd": 0.0001444,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsUNmgArLrhDevyPMyv9amD4f3H",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.938
+      }
+    },
+    {
+      "case_id": "10_multiple_tasks",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Compare the grounds for interim relief and then prepare a research checklist."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1559,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 271,
+          "tokens_out": 5,
+          "cost_usd": 0.00011640000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsUHqz3jS3W8EmnX8HYTHO1GhSa",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.719
+      }
+    },
+    {
+      "case_id": "11_quoted_rewrite",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": true,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": null,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Rewrite this sentence politely: 'Do not send the papers yet.'"
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1543,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 271,
+          "tokens_out": 5,
+          "cost_usd": 0.00011640000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsVqaPbqng14OyijaOJg38lW5Tf",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.688
+      }
+    },
+    {
+      "case_id": "11_quoted_rewrite",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": true,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": true
+      },
+      "derived_label": "action",
+      "signals_match_expected": true,
+      "exclusive_correct": null,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Rewrite this sentence politely: 'Do not send the papers yet.'"
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1777,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 305,
+          "tokens_out": 14,
+          "cost_usd": 0.0001444,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsWDDsZTSjeLrLEItHOZTBSfuZr",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.828
+      }
+    },
+    {
+      "case_id": "12_authorising_followup",
+      "mode": "signals",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": true
+      },
+      "derived_label": "action",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's latest message and complete earlier conversation, with each speaker identified. Earlier messages give context; classify only the latest words.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Yes, please.",
+          "earlier_conversation": [
+            {
+              "role": "advocate",
+              "text": "I have two versions of the agreement."
+            },
+            {
+              "role": "nm",
+              "text": "Would you like me to compare those two versions?"
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 2023,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 359,
+          "tokens_out": 14,
+          "cost_usd": 0.000166,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsXvotds7S50tlpvTFONfy9EuhL",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.906
+      }
+    },
+    {
+      "case_id": "12_authorising_followup",
+      "mode": "current",
+      "expected_label": "action",
+      "ambiguous": false,
+      "output": {
+        "message_position": "follow_up",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's latest message and the\ncomplete earlier conversation, with each speaker identified. Use that context\nto understand replies, references and the purpose of the latest message.\nClassify only the latest message; earlier messages are context, not new work.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Yes, please.",
+          "earlier_conversation": [
+            {
+              "role": "advocate",
+              "text": "I have two versions of the agreement."
+            },
+            {
+              "role": "nm",
+              "text": "Would you like me to compare those two versions?"
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1848,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 337,
+          "tokens_out": 5,
+          "cost_usd": 0.0001428,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsXqPdwkuDmNpi8Imur5R5Gt2Yr",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.906
+      }
+    },
+    {
+      "case_id": "13_factual_followup",
+      "mode": "current",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "message_position": "follow_up",
+        "label": "information"
+      },
+      "derived_label": "information",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's latest message and the\ncomplete earlier conversation, with each speaker identified. Use that context\nto understand replies, references and the purpose of the latest message.\nClassify only the latest message; earlier messages are context, not new work.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "Yes.",
+          "earlier_conversation": [
+            {
+              "role": "advocate",
+              "text": "The other side says a demand was sent."
+            },
+            {
+              "role": "nm",
+              "text": "Did you receive that demand?"
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1821,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "information"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 332,
+          "tokens_out": 5,
+          "cost_usd": 0.0001408,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsYBB85BnZOhJFRsEsMkbKyrgBW",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.282
+      }
+    },
+    {
+      "case_id": "13_factual_followup",
+      "mode": "signals",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": false
+      },
+      "derived_label": "information",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's latest message and complete earlier conversation, with each speaker identified. Earlier messages give context; classify only the latest words.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "Yes.",
+          "earlier_conversation": [
+            {
+              "role": "advocate",
+              "text": "The other side says a demand was sent."
+            },
+            {
+              "role": "nm",
+              "text": "Did you receive that demand?"
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1996,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 354,
+          "tokens_out": 14,
+          "cost_usd": 0.000164,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsaY3e57opBw15O0IEawElQIN6P",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.89
+      }
+    },
+    {
+      "case_id": "14_qualified_account",
+      "mode": "signals",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": false
+      },
+      "derived_label": "information",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "I have not received any notice. The other side says it was served, but I cannot confirm that."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1809,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 313,
+          "tokens_out": 14,
+          "cost_usd": 0.00014759999999999998,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsbAnmFJkpB3gQuhzwMkUCgjIXN",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.906
+      }
+    },
+    {
+      "case_id": "14_qualified_account",
+      "mode": "current",
+      "expected_label": "information",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "information"
+      },
+      "derived_label": "information",
+      "exclusive_correct": true,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "I have not received any notice. The other side says it was served, but I cannot confirm that."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1575,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "information"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 279,
+          "tokens_out": 5,
+          "cost_usd": 0.00011960000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsbnDPBsa2u0XWaB4e8QcWMkvHU",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.719
+      }
+    },
+    {
+      "case_id": "15_fact_question",
+      "mode": "current",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": false,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "He threatened to sell the machinery tomorrow. What can we do?"
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1543,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 271,
+          "tokens_out": 5,
+          "cost_usd": 0.00011640000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNscS4HeyCnHeEfq9pReHR0NEk2b",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.891
+      }
+    },
+    {
+      "case_id": "15_fact_question",
+      "mode": "signals",
+      "expected_label": "mixed",
+      "ambiguous": false,
+      "output": {
+        "greeting": false,
+        "information": true,
+        "request": true
+      },
+      "derived_label": "mixed",
+      "signals_match_expected": true,
+      "exclusive_correct": true,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "He threatened to sell the machinery tomorrow. What can we do?"
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1777,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": true,
+          "request": true
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 305,
+          "tokens_out": 14,
+          "cost_usd": 0.0001444,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsddqNpdSpwc6OHanfgynkdbFu1",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.859
+      }
+    },
+    {
+      "case_id": "16_no_identifiable_purpose",
+      "mode": "signals",
+      "expected_label": null,
+      "ambiguous": true,
+      "output": {
+        "greeting": false,
+        "information": false,
+        "request": false
+      },
+      "derived_label": null,
+      "signals_match_expected": true,
+      "exclusive_correct": null,
+      "call": {
+        "operation": "experimental_message_signals",
+        "system": "Message: You receive the user's opening message in a new conversation.\n\nPurpose: Identify the purposes present in the latest user message.\n\nLook for:\n- greeting: a social opening, courtesy exchange or closing. Incidental polite\n  wording inside another purpose does not by itself add a greeting purpose.\n- information: an account, background or answer the user supplies. Preserve\n  attribution: reported or quoted instructions are information, not authority\n  for NM to act. Merely naming the topic or format of a requested task is not\n  a substantive account.\n- request: a current request for NM to answer, explain, act or refrain from\n  acting. Use context to distinguish a reply authorising work from an answer\n  supplying information. Do not renew earlier requests automatically.\nExamine the complete latest message and mark every purpose present, including\nwhen information and a request occur together. Preserve conditions and negation.\n\nOutcome: Return greeting, information and request as three independent booleans.\nReturn true only when that purpose is present. More than one may be true; all\nmay be false if no purpose can be identified. Do not answer or execute work.",
+        "input": {
+          "latest_message": "..."
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "greeting",
+            "information",
+            "request"
+          ],
+          "properties": {
+            "greeting": {
+              "type": "boolean"
+            },
+            "information": {
+              "type": "boolean"
+            },
+            "request": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request_bytes": 1719,
+        "max_output_tokens": 128,
+        "output": {
+          "greeting": false,
+          "information": false,
+          "request": false
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 292,
+          "tokens_out": 14,
+          "cost_usd": 0.00013920000000000002,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNse5eyyHUoGIgvuAmmnjhDoWHTa",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 0.781
+      }
+    },
+    {
+      "case_id": "16_no_identifiable_purpose",
+      "mode": "current",
+      "expected_label": null,
+      "ambiguous": true,
+      "output": {
+        "message_position": "first",
+        "label": "action"
+      },
+      "derived_label": "action",
+      "exclusive_correct": null,
+      "call": {
+        "operation": "label_message",
+        "system": "Message: You receive the user's opening message in a\nnew conversation. Classify what the user has written in this message.\n\nPurpose: Classify the user's message with exactly one label.\n\nLabels:\n- greeting: only a greeting, courtesy or social exchange.\n- information: supplies an account, background or answer, without asking NM\n  to perform an action.\n- action: asks NM to answer, explain, do or refrain from doing something,\n  without also supplying a substantive account.\n- mixed: combines two or more of these purposes. Several requested actions\n  alone remain action; mixed does not mean uncertain.\n\nLook for: The meaning of the whole message. Incidental polite wording is not\na separate purpose. Distinguish the user's request from instructions merely\nquoted as content. Preserve the meaning of conditions, uncertainty and negation.\n\nOutcome: Return only {\"label\": \"greeting|information|action|mixed\"}, selecting\none value. Do not answer the message, extract facts or execute work.",
+        "input": {
+          "latest_message": "..."
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "greeting",
+                "information",
+                "action",
+                "mixed"
+              ]
+            }
+          }
+        },
+        "request_bytes": 1485,
+        "max_output_tokens": 128,
+        "output": {
+          "label": "action"
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "completion": "complete",
+        "usage": {
+          "tokens_in": 258,
+          "tokens_out": 5,
+          "cost_usd": 0.0001112,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EWNsfhpj1KrIqjplozPPrZsM38J2s",
+            "usage_established": true
+          }
+        },
+        "retries": 0,
+        "elapsed_s": 1.172
+      }
+    }
+  ]
+}

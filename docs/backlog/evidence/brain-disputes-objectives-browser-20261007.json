@@ -1,0 +1,3008 @@
+{
+  "model": "gpt-4.1-mini-2025-04-14",
+  "method": "Real browser typing and clicks through authenticated shipped /api/turn; sealed saved rows inspected independently. Browser reopened saved chat after page reload.",
+  "acceptance": "not_accepted",
+  "attempts": [
+    {
+      "source_sha256": "6fe479af03a227a10b00ab9ac1a56b3505472014619862b06ea089d7e5dac382",
+      "assessment": "quote_copy_failures_and_bounded_recovery",
+      "turns": [
+        {
+          "case": "sustained_mixed",
+          "index": 1,
+          "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+          "expect": "Capture retention of ledgers, contested fees and denied office access; capture return of ledgers, resolution of fees and restored access. Do not turn the summary request or no-contact restriction into a matter objective. Combining closely related retention/fee aspects is acceptable only if both remain clear.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_7707983b-5ead-43cc-a475-e8fd3d8e1082",
+            "matter_id": null,
+            "chat_id": "new_c88f82f13cf56670b9ff0f78b0f0b0c8",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1391,
+                  "tokens_in": 346,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0001464,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2922,
+                  "tokens_in": 755,
+                  "tokens_out": 231,
+                  "cost_usd": 0.0006716000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1484,
+                  "tokens_in": 1156,
+                  "tokens_out": 70,
+                  "cost_usd": 0.0005744000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0013924000000000002,
+              "tokens_in": 2257,
+              "tokens_out": 306
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 1,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:35:06.620944+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Former accountant refuses to return original business ledgers after engagement ended, claiming unpaid fees which the client disputes.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": "My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes.",
+                      "purpose": "support",
+                      "start": 42,
+                      "end": 197
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client wants the original business ledgers returned and the disputed unpaid fees resolved.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": "She wants the ledgers returned and the disputed fees resolved.",
+                      "purpose": "support",
+                      "start": 198,
+                      "end": 260
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person."
+                }
+              }
+            ],
+            "issues": [
+              {
+                "unit": "dispute:2",
+                "reason": "Quote in current is not exact original text: 'A co-owner changed the lock and denied her access to their jointly used office.'",
+                "rejected_proposal": {
+                  "description": "Co-owner changed the lock on a jointly used office, denying the client access.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": "A co-owner changed the lock and denied her access to their jointly used office.",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "objective:2",
+                "reason": "Quote in current is not exact original text: 'She wants access restored.'",
+                "rejected_proposal": {
+                  "description": "Client wants access to their jointly used office restored.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": "She wants access restored.",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              }
+            ]
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": [
+              {
+                "source_id": "current",
+                "kind": "disputes"
+              },
+              {
+                "source_id": "current",
+                "kind": "objectives"
+              }
+            ]
+          },
+          "internal_state": "partial"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 2,
+          "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+          "expect": "Attribute the conditional refusal and demand for payment to the accountant. No user authorisation to pay or contact; no independent plan. Do not adopt the opponent's desired payment as the client's objective.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_a931055c-18ae-458a-b357-40322fcd70b8",
+            "matter_id": null,
+            "chat_id": "new_c88f82f13cf56670b9ff0f78b0f0b0c8",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 4,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1266,
+                  "tokens_in": 507,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0002108,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2406,
+                  "tokens_in": 938,
+                  "tokens_out": 139,
+                  "cost_usd": 0.0005976,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2765,
+                  "tokens_in": 1189,
+                  "tokens_out": 199,
+                  "cost_usd": 0.000794,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1407,
+                  "tokens_in": 1227,
+                  "tokens_out": 31,
+                  "cost_usd": 0.0005404,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0021428,
+              "tokens_in": 3861,
+              "tokens_out": 374
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 2,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:35:15.058270+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          }
+        }
+      ]
+    },
+    {
+      "source_sha256": "71dfec29de0beb5b0d120198accf9bdd60a36ca49e0aa754999878de58ae253b",
+      "assessment": "source_ids_correct_semantic_overextraction",
+      "turns": [
+        {
+          "case": "sustained_mixed",
+          "index": 1,
+          "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+          "expect": "Capture retention of ledgers, contested fees and denied office access; capture return of ledgers, resolution of fees and restored access. Do not turn the summary request or no-contact restriction into a matter objective. Combining closely related retention/fee aspects is acceptable only if both remain clear.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d",
+            "matter_id": null,
+            "chat_id": "new_8a616eaa2d03a287c79b07e26443a638",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 3172,
+                  "tokens_in": 346,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0001464,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3047,
+                  "tokens_in": 957,
+                  "tokens_out": 232,
+                  "cost_usd": 0.000754,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1875,
+                  "tokens_in": 1405,
+                  "tokens_out": 114,
+                  "cost_usd": 0.0007444,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0016448,
+              "tokens_in": 2708,
+              "tokens_out": 351
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 1,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:41:55.175490+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute over unpaid fees claimed by the former accountant and disputed by the client.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "current:p4",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Former accountant's refusal to return client's original business ledgers after engagement ended.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "current:p3",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:2",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Co-owner changing lock and denying client access to their jointly used office.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                      "start": 260,
+                      "end": 352,
+                      "passage_id": "current:p6",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:3",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client wants her original business ledgers returned.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "current:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client wants disputed fees resolved.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "current:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client wants access restored to the jointly used office.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "current:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:3",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "dispute:2",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "dispute:3",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:3",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 2,
+          "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+          "expect": "Attribute the conditional refusal and demand for payment to the accountant. No user authorisation to pay or contact; no independent plan. Do not adopt the opponent's desired payment as the client's objective.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9",
+            "matter_id": null,
+            "chat_id": "new_8a616eaa2d03a287c79b07e26443a638",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 938,
+                  "tokens_in": 511,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0002124,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2765,
+                  "tokens_in": 1275,
+                  "tokens_out": 239,
+                  "cost_usd": 0.0008924000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1000,
+                  "tokens_in": 1421,
+                  "tokens_out": 32,
+                  "cost_usd": 0.0006196,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0017244,
+              "tokens_in": 3207,
+              "tokens_out": 276
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 2,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:42:00.440262+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "The accountant refuses to return the client's original business ledgers until the disputed unpaid fees are paid, and the client disputes these unpaid fees.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "history_1:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "history_1:p4",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers.",
+                      "start": 0,
+                      "end": 112,
+                      "passage_id": "current:p1",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": []
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone."
+                }
+              }
+            ],
+            "issues": [
+              {
+                "unit": "dispute:2",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "The client has been denied access to their jointly used office due to a co-owner changing the lock, and she wants access restored.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p6",
+                      "purpose": "support"
+                    },
+                    {
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "objective:1",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "The client wants the original business ledgers returned and the disputed fees resolved.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "objective:2",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "The client wants access to the jointly used office restored.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              }
+            ]
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "partial"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 3,
+          "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+          "expect": "No newly expressed dispute or matter objective. Both arrays empty; prior disputes must not be re-extracted merely because a summary was requested.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_3a0c9661-979c-440e-ba19-778ac8265ce1",
+            "matter_id": null,
+            "chat_id": "new_8a616eaa2d03a287c79b07e26443a638",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 891,
+                  "tokens_in": 613,
+                  "tokens_out": 5,
+                  "cost_usd": 0.00025320000000000003,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3391,
+                  "tokens_in": 1490,
+                  "tokens_out": 320,
+                  "cost_usd": 0.001108,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1328,
+                  "tokens_in": 1689,
+                  "tokens_out": 31,
+                  "cost_usd": 0.0007252000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0020864,
+              "tokens_in": 3792,
+              "tokens_out": 356
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 3,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:42:06.500866+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [],
+              "objectives": [
+                {
+                  "description": "Advocate requests a summary of the discussion in three bullet points without contacting either the accountant or co-owner yet.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " Please summarise this;",
+                      "start": 379,
+                      "end": 402,
+                      "passage_id": "history_1:p8",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " do not contact either person.",
+                      "start": 402,
+                      "end": 432,
+                      "passage_id": "history_1:p9",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Summarise our discussion in three bullet points.",
+                      "start": 0,
+                      "end": 48,
+                      "passage_id": "current:p1",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": " Don't send anything to the client yet.",
+                      "start": 48,
+                      "end": 87,
+                      "passage_id": "current:p2",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "objective:3",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet."
+                }
+              }
+            ],
+            "issues": [
+              {
+                "unit": "dispute:1",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "Dispute over unpaid fees claimed by the former accountant, which the client disputes, affecting the return of original business ledgers.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "passage_id": "history_1:p4",
+                      "purpose": "support"
+                    },
+                    {
+                      "passage_id": "history_3:p1",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "dispute:2",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "Dispute regarding access to a jointly used office after a co-owner changed the lock and denied client access.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p6",
+                      "purpose": "support"
+                    },
+                    {
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "objective:1",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "Client wants the original business ledgers returned and resolution of the disputed fees.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              },
+              {
+                "unit": "objective:2",
+                "reason": "An item needs current-message context and original advocate support",
+                "rejected_proposal": {
+                  "description": "Client wants access restored to the jointly used office.",
+                  "selections": [
+                    {
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null
+                }
+              }
+            ]
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "objective:3",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "partial"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 4,
+          "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear.",
+          "expect": "Preserve resolution/withdrawal of return request, continuing fee disagreement and changed office objective. Do not represent return of ledgers or ongoing access as current desired outcomes. Earlier original context may be cited.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_c2e03653-ac37-4c1b-82e5-ca535e631647",
+            "matter_id": null,
+            "chat_id": "new_8a616eaa2d03a287c79b07e26443a638",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1063,
+                  "tokens_in": 747,
+                  "tokens_out": 5,
+                  "cost_usd": 0.00030680000000000003,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2968,
+                  "tokens_in": 1773,
+                  "tokens_out": 239,
+                  "cost_usd": 0.0010916,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1329,
+                  "tokens_in": 1979,
+                  "tokens_out": 64,
+                  "cost_usd": 0.000894,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0022924,
+              "tokens_in": 4499,
+              "tokens_out": 308
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 4,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:42:12.356056+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Client disputes the unpaid fees claimed by the accountant despite original ledgers now being returned.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " My client no longer seeks their return, but still disputes the fees.",
+                      "start": 65,
+                      "end": 134,
+                      "passage_id": "current:p2",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "history_1:p4",
+                      "purpose": "context"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "history_1:p5",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current",
+                    "history_1"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client no longer seeks the return of original ledgers but wants the unpaid fees dispute resolved.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": "Correction: the accountant has now returned all original ledgers.",
+                      "start": 0,
+                      "end": 65,
+                      "passage_id": "current:p1",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": " My client no longer seeks their return, but still disputes the fees.",
+                      "start": 65,
+                      "end": 134,
+                      "passage_id": "current:p2",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "history_1:p3",
+                      "purpose": "context"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "history_1:p5",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current",
+                    "history_1"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client wants only a supervised visit to collect her equipment from the office, not ongoing access to it.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " For the office, she now wants only a supervised visit to collect her equipment, not ongoing access.",
+                      "start": 134,
+                      "end": 234,
+                      "passage_id": "current:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                      "start": 260,
+                      "end": 352,
+                      "passage_id": "history_1:p6",
+                      "purpose": "context"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "history_1:p7",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current",
+                    "history_1"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "history_5",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+                  "turn_id": "turn_3a0c9661-979c-440e-ba19-778ac8265ce1"
+                }
+              },
+              {
+                "id": "history_6",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_3a0c9661-979c-440e-ba19-778ac8265ce1"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 5,
+          "text": "Thanks a lot, that's all for today.",
+          "expect": "No disputes or objectives extracted from the social closing, despite the earlier matter history.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_8d6a2fc5-2ba7-4c2a-8bb5-53bd986c7266",
+            "matter_id": null,
+            "chat_id": "new_8a616eaa2d03a287c79b07e26443a638",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 4,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1062,
+                  "tokens_in": 836,
+                  "tokens_out": 5,
+                  "cost_usd": 0.00034240000000000003,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2172,
+                  "tokens_in": 1960,
+                  "tokens_out": 122,
+                  "cost_usd": 0.0009792,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 2203,
+                  "tokens_in": 2198,
+                  "tokens_out": 146,
+                  "cost_usd": 0.0011128000000000002,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1297,
+                  "tokens_in": 1760,
+                  "tokens_out": 47,
+                  "cost_usd": 0.0007792000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0032136,
+              "tokens_in": 6754,
+              "tokens_out": 320
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 5,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:42:19.533025+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v1",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [],
+              "objectives": [
+                {
+                  "description": "Advocate's client no longer seeks return of original business ledgers but still disputes the accountant's fees",
+                  "passages": [
+                    {
+                      "source_id": "history_7",
+                      "quote": "Correction: the accountant has now returned all original ledgers.",
+                      "start": 0,
+                      "end": 65,
+                      "passage_id": "history_7:p1",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_7",
+                      "quote": " My client no longer seeks their return, but still disputes the fees.",
+                      "start": 65,
+                      "end": 134,
+                      "passage_id": "history_7:p2",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Thanks a lot, that's all for today.",
+                      "start": 0,
+                      "end": 35,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_7",
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Advocate's client seeks a supervised visit to the jointly used office to collect equipment, but not ongoing access",
+                  "passages": [
+                    {
+                      "source_id": "history_7",
+                      "quote": " For the office, she now wants only a supervised visit to collect her equipment, not ongoing access.",
+                      "start": 134,
+                      "end": 234,
+                      "passage_id": "history_7:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Thanks a lot, that's all for today.",
+                      "start": 0,
+                      "end": 35,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_7",
+                    "current"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_2efbeb6c-f166-4109-93c3-f3d6fac39f0d"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_b7fa3623-2538-42b8-a439-3c04853d51e9"
+                }
+              },
+              {
+                "id": "history_5",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+                  "turn_id": "turn_3a0c9661-979c-440e-ba19-778ac8265ce1"
+                }
+              },
+              {
+                "id": "history_6",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_3a0c9661-979c-440e-ba19-778ac8265ce1"
+                }
+              },
+              {
+                "id": "history_7",
+                "message": {
+                  "role": "advocate",
+                  "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear.",
+                  "turn_id": "turn_c2e03653-ac37-4c1b-82e5-ca535e631647"
+                }
+              },
+              {
+                "id": "history_8",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_c2e03653-ac37-4c1b-82e5-ca535e631647"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Thanks a lot, that's all for today."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready",
+          "reopened_same_display": true
+        }
+      ]
+    },
+    {
+      "source_sha256": "26e551085f2456ff1569eebb3eec1fcfedc4efc044dc5c7e77d0e7496e761465",
+      "assessment": "historical_reextraction_and_withdrawal_omission",
+      "turns": [
+        {
+          "case": "sustained_mixed",
+          "index": 1,
+          "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+          "expect": "Capture retention of ledgers, contested fees and denied office access; capture return of ledgers, resolution of fees and restored access. Do not turn the summary request or no-contact restriction into a matter objective. Combining closely related retention/fee aspects is acceptable only if both remain clear.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1",
+            "matter_id": null,
+            "chat_id": "new_f0494807210212ec58b742639d11a007",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1765,
+                  "tokens_in": 346,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0001464,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3625,
+                  "tokens_in": 994,
+                  "tokens_out": 232,
+                  "cost_usd": 0.0007688,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 2204,
+                  "tokens_in": 1417,
+                  "tokens_out": 98,
+                  "cost_usd": 0.0007236000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0016388000000000002,
+              "tokens_in": 2757,
+              "tokens_out": 335
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 1,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:53:57.853748+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute over unpaid fees claimed by the former accountant, which the client disputes.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "current:p4",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Refusal by the former accountant to return the client's original business ledgers after the engagement ended.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "current:p3",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:2",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Co-owner changed the lock and denied the client access to their jointly used office.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                      "start": 260,
+                      "end": 352,
+                      "passage_id": "current:p6",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:3",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client wants her original business ledgers returned from the former accountant and the disputed unpaid fees resolved.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "current:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client wants access restored to the jointly used office locked by the co-owner.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "current:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "dispute:2",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "dispute:3",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 2,
+          "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+          "expect": "Attribute the conditional refusal and demand for payment to the accountant. No user authorisation to pay or contact; no independent plan. Do not adopt the opponent's desired payment as the client's objective.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8",
+            "matter_id": null,
+            "chat_id": "new_f0494807210212ec58b742639d11a007",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1062,
+                  "tokens_in": 515,
+                  "tokens_out": 5,
+                  "cost_usd": 0.000214,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 1672,
+                  "tokens_in": 1319,
+                  "tokens_out": 94,
+                  "cost_usd": 0.000678,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1688,
+                  "tokens_in": 1263,
+                  "tokens_out": 32,
+                  "cost_usd": 0.0005564000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0014484,
+              "tokens_in": 3097,
+              "tokens_out": 131
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 2,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:54:02.887377+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute between client and former accountant over unpaid fees and return of original business ledgers, with accountant demanding payment of disputed balance before returning ledgers.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "history_1:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "history_1:p4",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers.",
+                      "start": 0,
+                      "end": 112,
+                      "passage_id": "current:p1",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": []
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 3,
+          "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+          "expect": "No newly expressed dispute or matter objective. Both arrays empty; prior disputes must not be re-extracted merely because a summary was requested.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_bc94f0cb-0a54-40a6-aa1e-d13fc6be7ad6",
+            "matter_id": null,
+            "chat_id": "new_f0494807210212ec58b742639d11a007",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 4,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 844,
+                  "tokens_in": 619,
+                  "tokens_out": 5,
+                  "cost_usd": 0.00025560000000000003,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3125,
+                  "tokens_in": 1536,
+                  "tokens_out": 216,
+                  "cost_usd": 0.0009600000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3125,
+                  "tokens_in": 1914,
+                  "tokens_out": 269,
+                  "cost_usd": 0.001196,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1781,
+                  "tokens_in": 1954,
+                  "tokens_out": 81,
+                  "cost_usd": 0.0009112,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0033228000000000003,
+              "tokens_in": 6023,
+              "tokens_out": 571
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 3,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:54:12.158449+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute over unpaid fees claimed by the former accountant, which the client disputes, impacting the return of original business ledgers.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "history_1:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "history_1:p4",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Summarise our discussion in three bullet points.",
+                      "start": 0,
+                      "end": 48,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Co-owner changed the lock and denied client access to their shared office, which the client wants reversed.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                      "start": 260,
+                      "end": 352,
+                      "passage_id": "history_1:p6",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Summarise our discussion in three bullet points.",
+                      "start": 0,
+                      "end": 48,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "dispute:2",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client wants original business ledgers returned and the disputed fees resolved.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "history_1:p5",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Summarise our discussion in three bullet points.",
+                      "start": 0,
+                      "end": 48,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client wants access restored to the jointly used office where the lock was changed.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "history_1:p7",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "Summarise our discussion in three bullet points.",
+                      "start": 0,
+                      "end": 48,
+                      "passage_id": "current:p1",
+                      "purpose": "context"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "dispute:2",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 4,
+          "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear.",
+          "expect": "Preserve resolution/withdrawal of return request, continuing fee disagreement and changed office objective. Do not represent return of ledgers or ongoing access as current desired outcomes. Earlier original context may be cited.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_50789d3a-497f-4378-a2f2-ab892d91986a",
+            "matter_id": null,
+            "chat_id": "new_f0494807210212ec58b742639d11a007",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 985,
+                  "tokens_in": 757,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0003108,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 1609,
+                  "tokens_in": 1823,
+                  "tokens_out": 106,
+                  "cost_usd": 0.0008988000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1344,
+                  "tokens_in": 1569,
+                  "tokens_out": 48,
+                  "cost_usd": 0.0007044000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0019140000000000001,
+              "tokens_in": 4149,
+              "tokens_out": 159
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 4,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:54:16.559155+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "The client continues to dispute the fees claimed by the former accountant despite the return of the original ledgers.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " My client no longer seeks their return, but still disputes the fees.",
+                      "start": 65,
+                      "end": 134,
+                      "passage_id": "current:p2",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "The client wants only a supervised visit to the office to collect her equipment, not ongoing access.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " For the office, she now wants only a supervised visit to collect her equipment, not ongoing access.",
+                      "start": 134,
+                      "end": 234,
+                      "passage_id": "current:p3",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "history_5",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+                  "turn_id": "turn_bc94f0cb-0a54-40a6-aa1e-d13fc6be7ad6"
+                }
+              },
+              {
+                "id": "history_6",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_bc94f0cb-0a54-40a6-aa1e-d13fc6be7ad6"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 5,
+          "text": "Thanks a lot, that's all for today.",
+          "expect": "No disputes or objectives extracted from the social closing, despite the earlier matter history.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_6ea66460-9f08-402d-8062-0a343ca1a55f",
+            "matter_id": null,
+            "chat_id": "new_f0494807210212ec58b742639d11a007",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1218,
+                  "tokens_in": 848,
+                  "tokens_out": 5,
+                  "cost_usd": 0.00034720000000000004,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 860,
+                  "tokens_in": 2012,
+                  "tokens_out": 10,
+                  "cost_usd": 0.0008208000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1047,
+                  "tokens_in": 1449,
+                  "tokens_out": 14,
+                  "cost_usd": 0.000602,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.00177,
+              "tokens_in": 4309,
+              "tokens_out": 29
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 5,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:54:20.095978+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [],
+              "objectives": []
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_c3bacef1-c0c8-4c8e-98fb-52a190bd59f1"
+                }
+              },
+              {
+                "id": "history_3",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "history_4",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_dd587b28-3a65-4af4-8149-8ef2e0910ba8"
+                }
+              },
+              {
+                "id": "history_5",
+                "message": {
+                  "role": "advocate",
+                  "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+                  "turn_id": "turn_bc94f0cb-0a54-40a6-aa1e-d13fc6be7ad6"
+                }
+              },
+              {
+                "id": "history_6",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_bc94f0cb-0a54-40a6-aa1e-d13fc6be7ad6"
+                }
+              },
+              {
+                "id": "history_7",
+                "message": {
+                  "role": "advocate",
+                  "text": "Correction: the accountant has now returned all original ledgers. My client no longer seeks their return, but still disputes the fees. For the office, she now wants only a supervised visit to collect her equipment, not ongoing access. Please keep those changes clear.",
+                  "turn_id": "turn_50789d3a-497f-4378-a2f2-ab892d91986a"
+                }
+              },
+              {
+                "id": "history_8",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_50789d3a-497f-4378-a2f2-ab892d91986a"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "Thanks a lot, that's all for today."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [],
+            "omissions": []
+          },
+          "internal_state": "ready",
+          "reopened_same_display": true
+        }
+      ]
+    },
+    {
+      "source_sha256": "b42fcecbb837750f17a55352eebbcc9c50d7957945d8ce5d79747c82fea54d4b",
+      "assessment": "final_attempt_not_accepted",
+      "turns": [
+        {
+          "case": "sustained_mixed",
+          "index": 1,
+          "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+          "expect": "Capture retention of ledgers, contested fees and denied office access; capture return of ledgers, resolution of fees and restored access. Do not turn the summary request or no-contact restriction into a matter objective. Combining closely related retention/fee aspects is acceptable only if both remain clear.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_43492b58-5240-4ebb-8334-4e15d2c1b08f",
+            "matter_id": null,
+            "chat_id": "new_462e64655ffb6a49f47f5cc2b9efc3c2",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 1391,
+                  "tokens_in": 346,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0001464,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 3296,
+                  "tokens_in": 1071,
+                  "tokens_out": 220,
+                  "cost_usd": 0.0007804000000000001,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1422,
+                  "tokens_in": 1556,
+                  "tokens_out": 80,
+                  "cost_usd": 0.0007504000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0016772000000000002,
+              "tokens_in": 2973,
+              "tokens_out": 305
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 1,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:58:16.940197+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute between the client and her former accountant about unpaid fees claimed by the accountant, which the client disputes.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "current:p4",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": [
+                {
+                  "description": "Client's objective to have her original business ledgers returned by her former accountant.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "current:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "current:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:1",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client's objective to resolve the disputed accountant fees issue.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "current:p4",
+                      "purpose": "context"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                      "start": 197,
+                      "end": 260,
+                      "passage_id": "current:p5",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:2",
+                  "state": "proposed"
+                },
+                {
+                  "description": "Client's objective to regain access to the jointly used office after a co-owner changed the lock and denied her access.",
+                  "passages": [
+                    {
+                      "source_id": "current",
+                      "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                      "start": 260,
+                      "end": 352,
+                      "passage_id": "current:p6",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": " she wants access restored.",
+                      "start": 352,
+                      "end": 379,
+                      "passage_id": "current:p7",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "current"
+                  ],
+                  "id": "objective:3",
+                  "state": "proposed"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported",
+                "reason": "none"
+              },
+              {
+                "unit_id": "objective:3",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 2,
+          "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone.",
+          "expect": "Attribute the conditional refusal and demand for payment to the accountant. No user authorisation to pay or contact; no independent plan. Do not adopt the opponent's desired payment as the client's objective.",
+          "status": 200,
+          "response": {
+            "turn_id": "turn_822ed616-a4ff-4aa8-a01b-ab39cc7fb201",
+            "matter_id": null,
+            "chat_id": "new_462e64655ffb6a49f47f5cc2b9efc3c2",
+            "route": "current_brain",
+            "mode": "conversation",
+            "mode_statement": "",
+            "blocked": false,
+            "blocked_reason": null,
+            "elements": [
+              {
+                "kind": "finding",
+                "text": "Message received.",
+                "thread": null,
+                "by_when": null,
+                "no_deadline_reason": null,
+                "signal": "none",
+                "collapsible": false,
+                "disclosure": false,
+                "refs": [],
+                "source": null,
+                "section": "answer"
+              }
+            ],
+            "material": [],
+            "material_coverage": {},
+            "metrics": {
+              "llm_calls": 3,
+              "calls": [
+                {
+                  "operation": "label_message",
+                  "latency_ms": 812,
+                  "tokens_in": 513,
+                  "tokens_out": 5,
+                  "cost_usd": 0.0002132,
+                  "retries": 0
+                },
+                {
+                  "operation": "extract_disputes_objectives",
+                  "latency_ms": 1656,
+                  "tokens_in": 1394,
+                  "tokens_out": 90,
+                  "cost_usd": 0.0007016,
+                  "retries": 0
+                },
+                {
+                  "operation": "review_prepared_response",
+                  "latency_ms": 1141,
+                  "tokens_in": 1363,
+                  "tokens_out": 32,
+                  "cost_usd": 0.0005964000000000001,
+                  "retries": 0
+                }
+              ],
+              "cost_usd": 0.0015112,
+              "tokens_in": 3270,
+              "tokens_out": 127
+            },
+            "replayed": false,
+            "committed": "committed",
+            "input_admitted": true,
+            "matter_version": 2,
+            "briefing": {},
+            "board_changes": [],
+            "at": "2026-10-07T15:58:21.176128+00:00",
+            "composed": [],
+            "continuation": {},
+            "service_status": null
+          },
+          "private_preparation": {
+            "contract": "disputes_objectives_v2",
+            "state": "prepared_unreviewed",
+            "proposal": {
+              "disputes": [
+                {
+                  "description": "Dispute over the unpaid fees that the former accountant claims are owed before returning the original business ledgers, which the client disputes.",
+                  "passages": [
+                    {
+                      "source_id": "history_1",
+                      "quote": " My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                      "start": 41,
+                      "end": 154,
+                      "passage_id": "history_1:p3",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "history_1",
+                      "quote": " He claims unpaid fees, which she disputes.",
+                      "start": 154,
+                      "end": 197,
+                      "passage_id": "history_1:p4",
+                      "purpose": "support"
+                    },
+                    {
+                      "source_id": "current",
+                      "quote": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers.",
+                      "start": 0,
+                      "end": 112,
+                      "passage_id": "current:p1",
+                      "purpose": "support"
+                    }
+                  ],
+                  "uncertainty": null,
+                  "source_ids": [
+                    "history_1",
+                    "current"
+                  ],
+                  "id": "dispute:1",
+                  "state": "proposed"
+                }
+              ],
+              "objectives": []
+            },
+            "sources": [
+              {
+                "id": "history_1",
+                "message": {
+                  "role": "advocate",
+                  "text": "SYNTHETIC EXTRACTION ACCEPTANCE A. Hello. My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person.",
+                  "turn_id": "turn_43492b58-5240-4ebb-8334-4e15d2c1b08f"
+                }
+              },
+              {
+                "id": "history_2",
+                "message": {
+                  "role": "nm",
+                  "text": "Message received.",
+                  "turn_id": "turn_43492b58-5240-4ebb-8334-4e15d2c1b08f"
+                }
+              },
+              {
+                "id": "current",
+                "message": {
+                  "role": "advocate",
+                  "text": "The client forwarded the accountant's message: 'Pay the disputed balance before asking me to return the ledgers. Do not contact my assistant.' I am passing on his words, not instructing NM to pay or contact anyone."
+                }
+              }
+            ],
+            "issues": []
+          },
+          "private_review": {
+            "greeting": false,
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported",
+                "reason": "none"
+              }
+            ],
+            "omissions": []
+          },
+          "internal_state": "ready"
+        },
+        {
+          "case": "sustained_mixed",
+          "index": 3,
+          "text": "Summarise our discussion in three bullet points. Don't send anything to the client yet.",
+          "expect": "No newly expressed dispute or matter objective. Both arrays empty; prior disputes must not be re-extracted merely because a summary was requested.",
+          "status": 503,
+          "response": {
+            "detail": {
+              "why": "A response could not be prepared for this message. Please retry.",
+              "code": "response_unavailable",
+              "committed": "not_committed",
+              "turn_id": "turn_ccecfc10-32f6-488c-b180-a1dc508f5d7a",
+              "chat_id": "new_462e64655ffb6a49f47f5cc2b9efc3c2",
+              "retryable": true
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "final_findings": [
+    "Opening extraction omitted retention of records and denied office access from disputes, although related objectives were captured. Reviewer incorrectly reported no omissions.",
+    "Quoted opposing position was attributed without becoming permission for NM to act.",
+    "Work-only turn initially re-extracted historical items. The shared conditional correction returned the appropriate empty arrays.",
+    "Reviewer falsely marked missing current disputes/objectives on that empty result. The gate withheld it with 503 response_unavailable and not_committed.",
+    "Only two final-attempt turns saved. The rejected third is absent from durable history. The unsaved retry card remained in local UI until reload, with an explicit not-saved warning.",
+    "Final withdrawal/closing turns and five planned fresh-chat cases were not run after the failed third turn."
+  ],
+  "reopen": {
+    "chat_id": "new_462e64655ffb6a49f47f5cc2b9efc3c2",
+    "saved_turns": 2,
+    "contracts": [
+      "current_brain_turn_v3",
+      "current_brain_turn_v3"
+    ],
+    "reopened_via_browser_after_reload": true,
+    "rejected_input_absent_from_saved_history": true,
+    "model_calls_for_reopening": 0,
+    "note": "Before page reload, local unsaved retry card remained visible. Durable history contains only two confirmed turns."
+  },
+  "final_attempt_budget": {
+    "calls": 10,
+    "charged_usd": 0.006095
+  },
+  "overall_authorisation": {
+    "cap_usd": 5,
+    "prior_ledger_charge_usd": 1.877078,
+    "current_ledger_charge_usd": 2.377528,
+    "combined_charge_usd": 4.254606,
+    "remaining_usd": 0.745394
+  },
+  "limits": "No empirical general false-positive rate or production-readiness claim. Correct source IDs, valid JSON and positive review do not establish semantic completeness."
+}

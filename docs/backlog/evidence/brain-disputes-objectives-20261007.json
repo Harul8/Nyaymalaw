@@ -78,19 +78,89 @@
     }
   ],
   "model_calls": {
-    "extractor": 1,
-    "planned_normal_turn": 3,
-    "planned_operations": [
-      "label_message",
-      "extract_disputes_objectives",
-      "review_prepared_response"
+    "normal_turn": 3,
+    "operations": [
+      {
+        "name": "label_message",
+        "input": "Exact current message and full attributed history for follow-ups",
+        "output": "Diagnostic exclusive label"
+      },
+      {
+        "name": "extract_disputes_objectives",
+        "input": "Complete original messages as owned selectable passages; no classifier label",
+        "output": "Private dispute/objective descriptions and source selections"
+      },
+      {
+        "name": "review_prepared_response",
+        "input": "Complete original messages and private proposals; no classifier label",
+        "output": "Per-unit support verdicts, scoped omissions and greeting selection"
+      }
     ],
     "shared_conditional_correction_maximum": 1,
-    "new_routine_calls": 0
+    "maximum_turn_calls": 4,
+    "reopening_calls": 0,
+    "additional_routine_calls": 0
   },
   "remaining": [
-    "Tighten latest-message contribution and distinguish substantive matter outcomes from NM work in extraction/review",
-    "Repeat browser semantic validation and update Legal brain",
-    "Record paired classifier experiment; production classifier stays unchanged"
-  ]
+    "Extraction misses independently expressed disputes when related content appears in objectives.",
+    "Independent reviewer both accepts omissions and falsely rejects a legitimate empty extraction.",
+    "Verify correction/withdrawal coverage under the final prompt; final browser run stopped before these turns.",
+    "Do not gate extraction on diagnostic labels. Three independent signals remain an evaluated candidate, not a production change.",
+    "Structured links between disputes/objectives, material facts, actions, uploads/OCR, research, execution and useful substantive replies are outside this narrow slice."
+  ],
+  "checkpoint": {
+    "status": "implemented_internal_only_semantic_acceptance_failed",
+    "production_commit": "8950b29",
+    "source_hashes": {
+      "nm/brain/disputes_objectives.py": "9c2e5fe1053565a47ee9fa9c60cc3e33cb526ade9b32b6af5d3b13e21812c6de",
+      "nm/brain/release.py": "ecc89387732bb4ccd46f4ccf881670b4001c2e82c070072faf7d860cca4255b7",
+      "nm/brain/turn.py": "fe7cba970528fd6ac40f431dadffcb55c722a68dfc35063e64e21d82a84f15b2",
+      "nm/brain/message_labels.py": "4173d732c464aa908007fea49651cd87a03396e94eac635017873929cf787c70"
+    },
+    "browser_evidence": "brain-disputes-objectives-browser-20261007.json",
+    "classifier_evidence": "brain-classifier-comparison-20261007.json",
+    "judgment": "Source identity, durable versions, bounded correction, private/public separation and replay are implemented. Semantic coverage and independent reviewer precision are not accepted. Stop this prompt iteration; do not advance to broader extraction or classifier replacement."
+  },
+  "verification": {
+    "integrated-tests.xml": {
+      "tests": 399,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "contribution-correction-tests.xml": {
+      "tests": 89,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "reviewer-contribution-tests.xml": {
+      "tests": 87,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "interpretation": "399 integrated checks preceded the final prompt-only refinements. After those refinements, 89 extraction/turn/recovery and 87 current/legacy review checks passed. These establish mechanics, not semantic acceptance."
+  },
+  "legal_brain_update": {
+    "updated": [
+      "E22",
+      "E23",
+      "E25",
+      "E45",
+      "E53",
+      "E61",
+      "F22",
+      "F23",
+      "F25",
+      "F45",
+      "F53",
+      "F61"
+    ],
+    "before_build_unchanged": true,
+    "other_cells_and_features_unchanged": true,
+    "before_sha256": "5ccc5e44269f03d5ebfcc622e00235329270049e7c22df481aa6fd27035fe66c",
+    "after_sha256": "b1a0c5da4f62f5c34fe6d63c1257a5b2844cc36b8704c06959684de2fcda9613",
+    "preview": "C:\\Users\\rahul\\Nyaymalaw\\outputs\\brain-disputes-objectives-20261007\\legal-brain-status\\after.png"
+  }
 }
