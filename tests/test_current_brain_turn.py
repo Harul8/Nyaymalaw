@@ -105,13 +105,30 @@ def test_replay_rejects_private_preparation_detached_from_original_context():
         saved_rows(changed, "adv_owner")
 
 
-def test_partial_release_service_status_survives_save_and_replay():
+def test_generic_receipt_does_not_allow_coordinated_internal_source_rewriting():
+    message = "I received only a draft. Explain it privately."
+    brain, _, store = service(WiredModel(*mixed_outputs(message)))
+    brain.run(turn(message=message))
+    rows = deepcopy(store.value.brain_chat)
+    for field in ("preparation", "release"):
+        rows[0][field]["sources"][-1]["message"]["text"] = "An unrelated substituted account."
+    # The generic public acknowledgement is unchanged. Original-turn binding,
+    # rather than quotation display, must still detect this tampering.
+    changed = replace(store.value, brain_chat=rows)
+    with pytest.raises(BrainRefused, match="saved conversation"):
+        saved_rows(changed, "adv_owner")
+
+
+def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_history():
     message = "I received a draft. Please explain it."
     outputs = mixed_outputs(message)
     outputs[-1]["unit_reviews"][1].update(verdict="unsupported", reason="restriction")
     brain, model, store = service(WiredModel(*outputs))
     first = brain.run(turn(message=message)).as_dict()
-    assert first["service_status"] == "Some of this message could not be prepared for a response."
+    assert first["service_status"] is None
+    assert [row["text"] for row in first["elements"]] == ["Message received."]
+    assert store.value.brain_chat[0]["release"]["state"] == "partial"
+    assert store.value.brain_chat[0]["release"]["proof"]["unit_reviews"][1]["verdict"] == "unsupported"
     assert store.value.brain_chat[0]["response"]["service_status"] == first["service_status"]
     again = brain.run(turn(message=message)).as_dict()
     assert again["service_status"] == first["service_status"] and again["replayed"] is True
@@ -119,7 +136,8 @@ def test_partial_release_service_status_survives_save_and_replay():
     model.outputs.extend(greeting_outputs())
     brain.run(turn(turn_id="turn_next", message="Thank you.", chat_id=first["chat_id"], expected_version=1))
     context = json.loads(model.calls[3][0].user)["earlier_conversation"]
-    assert context[-1]["role"] == "nm" and context[-1]["service_status"] == first["service_status"]
+    assert context[-1] == {"role": "nm", "text": "Message received.", "turn_id": "turn_one"}
+    assert store.value.brain_chat[0]["release"]["state"] == "partial"
 
 
 def test_wrong_owner_history_is_rejected_before_dispatch():

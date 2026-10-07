@@ -1,0 +1,86 @@
+{
+  "checkpoint": "internal-preparation-public-acknowledgement",
+  "date": "2026-10-07",
+  "status": "verified_for_new_turns",
+  "production_owner": "nm/brain/release.py",
+  "request": "Keep extracted details, source quotations and proposed work internal; show only a greeting or brief acknowledgement for this stage.",
+  "observable_pass_condition": "New browser replies and reopened replies show the same code-owned greeting or receipt. Source-linked preparation and review remain saved privately, and future context contains the exact acknowledgement actually displayed.",
+  "consequential_counterexamples": [
+    "A draft claiming completed work or a planned activity must not become public text.",
+    "Changing only the HTTP response would leave different NM words in saved history; publication is therefore owned by the canonical release renderer.",
+    "An all-rejected preparation without a greeting still yields a truthful withheld service result, not a false successful answer.",
+    "Unknown versions or changed saved response fields cannot be replayed; original source ownership is checked by the turn boundary even when the acknowledgement has no quotations."
+  ],
+  "logic": {
+    "new_contract": "initial_brain_release_v2",
+    "public": "Fixed greeting when selected; otherwise Message received. when at least one unit has passed existing review.",
+    "internal": "Source text, material proposals, actions, drafts, proof, omissions and partial review state remain private.",
+    "meaning": "The acknowledgement confirms receipt only. It does not certify complete extraction, fact admission, research, execution or requested-task completion.",
+    "history": "Existing v1 source-quotation replies reconstruct under their unchanged original renderer. They are not rewritten."
+  },
+  "prompt_change": "The single independent-review prompt now states that preparation is private and only a greeting or receipt is displayed. Its per-unit source, attribution, scope and omission review remains in place.",
+  "model_calls": {
+    "normal_new_turn": 3,
+    "conditional_correction_maximum_shared_per_turn": 1,
+    "saved_reopen_or_replay": 0,
+    "added_by_this_change": 0,
+    "operations": {
+      "label_message": "Full original latest input and prior conversation to one proposed message label.",
+      "prepare_response": "Complete original input to private material, action plans and a draft.",
+      "review_prepared_response": "Original conversation plus proposals to per-unit support decisions, omissions and greeting selection."
+    }
+  },
+  "verification": {
+    "offline": {
+      "tests": 270,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "browser_turns": 3,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "chat_id": "new_1aba0f0ada71c7a84ecf88bdd9298618",
+    "browser_method": "Real Chrome page clicks and typing through Playwright CDP using the existing synthetic account.",
+    "reply_sequence": [
+      [
+        "Hello. How can I help?"
+      ],
+      [
+        "Message received."
+      ],
+      [
+        "Message received."
+      ]
+    ],
+    "reopen_matches": true,
+    "browser_errors": [],
+    "private_records_inspected": true,
+    "follow_up_contains_actual_acknowledgement": true,
+    "cost": {
+      "new_model_calls": 9,
+      "raw_usage_usd": 0.0043232,
+      "ledger_charge_usd": 0.004327,
+      "remaining_cumulative_five_dollar_authorization_usd": 0.786447
+    }
+  },
+  "remaining_work": [
+    "The existing broad response-preparation extractor is unchanged. This checkpoint does not establish its semantic accuracy.",
+    "The live greeting was still extracted as a material proposal and accepted by review. Keeping it private fixes display only; identifying meaningful disputes and objectives remains a separate extraction task.",
+    "Next extraction piece: identify only disputes and desired matter outcomes from coherent portions of mixed input, in full context. Either list may be empty; do not invent an objective for a dispute or confuse a requested NM task with a desired matter outcome. Preserve supporting original words and uncertainty. No new extraction contract or model call has been implemented in this piece.",
+    "Natural summaries, action execution, research and historical matter processing remain outside the currently connected flow.",
+    "Original v1 messages remain visible as previously delivered when their historical chats reopen."
+  ],
+  "source_sha256": {
+    "nm/brain/release.py": "dd6c279043e9204acd611621a968565926e2f48976c8751bd95f3d383d1cc230",
+    "tests/test_new_brain_release.py": "0f673c41b6cfc06669ceeec8e64643f32820962514725a88ff1c24a6768a8a6a",
+    "tests/test_current_brain_app.py": "26d5e7fcb40e5b92ad4480d39d02ea73b8f9f8957cbec11e928d6b5787a255d5",
+    "tests/test_current_brain_turn.py": "ccaf03311b8c1e8d9239eefe22e1bc81cbd51ae1128650c464dcf558fd391990"
+  },
+  "evidence_sha256": {
+    "outputs/brain-internal-preparation-20261007/browser-turns.json": "11ceca0d9bb5e8d4af601b3d846370ef649c2aeaa3dc839c6f7b4fec8a412275",
+    "outputs/brain-internal-preparation-20261007/browser-reopen.json": "a24ad78b0c4be360f1fd20fab57c030ff6f5dc8f6a4fa18c3af87a26844aaa77",
+    "outputs/brain-internal-preparation-20261007/browser-reopen.png": "08cb450663c2fcf56ab710fb58484f874ec4dd89c907f0afadc5d93da92fa74b",
+    "outputs/brain-internal-preparation-20261007/saved-internal-inspection.json": "c6a9608ab7c7040e897b384ce59f15e19603e53ffb49666004a8e3da2d365cb1",
+    "outputs/brain-internal-preparation-20261007/integrated-tests.xml": "ebc42e971312331e1ffb82e6d0d7235c66dc35c8ce10a4b89f9684820a8de4a3"
+  }
+}

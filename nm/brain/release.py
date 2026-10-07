@@ -1,4 +1,4 @@
-"""Review prepared work and render only owned, original-source expressions.
+"""Review prepared work privately and release only a greeting or receipt.
 
 This initial release owner does not publish model-authored draft prose, execute
 activities, admit facts, or certify that the user's requested task is complete.
@@ -16,14 +16,14 @@ from nm.shared.model_port import (
 )
 
 
-RENDERER_VERSION = "initial_brain_release_v1"
+RENDERER_VERSION = "initial_brain_release_v2"
 _SYSTEM = """Message: You receive the complete original conversation in order,
 ending with the user's current message, followed by unreviewed preparation.
 Sources retain their speaker and exact words. Preparation, its draft and its
 labels are proposals, not evidence, permissions or completed work.
 
-Purpose: Independently review what the current message means in context and
-select supported original-source expressions for this initial response.
+Purpose: Independently review the internal preparation against the original
+conversation and decide whether a social acknowledgement is appropriate.
 
 Look for:
 1. Read original messages first. Identify current information and requests,
@@ -37,12 +37,10 @@ Look for:
    plausible. Report significant current information or requests the preparation
    omitted, even if a label suggested otherwise.
 3. Select greeting only when a social acknowledgement is appropriate. The code
-   can render a fixed greeting, complete selected advocate messages attributed
-   as reported account or requested work, and a fixed notice that activities
-   are proposed and have not been performed by this step. It cannot provide a
-   legal conclusion, paraphrased account, answer, completed action or task result.
-   Evaluate the relevance and framing of those exact public expressions. The
-   private reply_draft and model-written activity descriptions are never shown.
+   displays only a fixed greeting or receipt acknowledgement. Source quotations,
+   extracted details, proposed activities, drafts and review findings remain
+   internal. The acknowledgement does not claim that the requested work was
+   performed, that extraction is complete, or that the account is proved.
 
 Outcome: Return greeting, unit_reviews and omissions using only the supplied
 IDs and permitted verdict/reason values. Review every supplied unit once. A
@@ -153,7 +151,7 @@ def _element(text: str) -> dict:
             "disclosure": False, "refs": [], "source": None, "section": "answer"}
 
 
-def _render(sources: list[dict], units: dict, issues: list, proof: dict) -> tuple[list, str | None, str]:
+def _render_v1(sources: list[dict], units: dict, issues: list, proof: dict) -> tuple[list, str | None, str]:
     originals = {source["id"]: source["message"] for source in sources}
     elements = [_element("Hello. How can I help?")] if proof["greeting"] else []
     rendered = set()
@@ -179,6 +177,20 @@ def _render(sources: list[dict], units: dict, issues: list, proof: dict) -> tupl
     if not elements:
         return [], "A response could not be prepared for this message.", "withheld"
     return elements, status, "partial" if incomplete else "ready"
+
+
+def _render_v2(sources: list[dict], units: dict, issues: list, proof: dict) -> tuple[list, str | None, str]:
+    supported = any(row["verdict"] == "supported" for row in proof["unit_reviews"])
+    if not proof["greeting"] and not supported:
+        return [], "A response could not be prepared for this message.", "withheld"
+    incomplete = bool(issues or proof["omissions"] or any(
+        row["verdict"] != "supported" for row in proof["unit_reviews"]))
+    text = "Hello. How can I help?" if proof["greeting"] else "Message received."
+    return [_element(text)], None, "partial" if incomplete else "ready"
+
+
+_RENDERERS = {"initial_brain_release_v1": _render_v1,
+              "initial_brain_release_v2": _render_v2}
 
 
 def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
@@ -215,7 +227,7 @@ def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
     except SchemaViolation as exc:
         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
                               retries=result.retries) from exc
-    elements, status, state = _render(sources, units, issues, proof)
+    elements, status, state = _RENDERERS[RENDERER_VERSION](sources, units, issues, proof)
     return {"renderer_version": RENDERER_VERSION, "label": label, "sources": sources,
             "units": units, "issues": issues, "proof": proof, "elements": elements,
             "service_status": status, "state": state}
@@ -232,7 +244,8 @@ def render_saved_release(saved: dict) -> dict:
               "elements", "service_status", "state"}
     if not isinstance(saved, dict) or set(saved) != fields:
         raise SchemaViolation("Saved release has an unknown envelope")
-    if saved["renderer_version"] != RENDERER_VERSION:
+    version = saved["renderer_version"]
+    if not isinstance(version, str) or version not in _RENDERERS:
         raise SchemaViolation("Saved response rendering version is unsupported")
     label = validate_label({"label": saved["label"]})
     if not isinstance(saved["units"], dict):
@@ -248,8 +261,8 @@ def render_saved_release(saved: dict) -> dict:
     sources, units, issues = _inputs({"state": "prepared_unreviewed", "sources": saved["sources"],
                                      "proposal": proposal, "issues": saved["issues"]})
     proof = _checked_proof(saved["proof"], sources, units)
-    elements, status, state = _render(sources, units, issues, proof)
-    reconstructed = {"renderer_version": RENDERER_VERSION, "label": label, "sources": sources,
+    elements, status, state = _RENDERERS[version](sources, units, issues, proof)
+    reconstructed = {"renderer_version": version, "label": label, "sources": sources,
                      "units": units, "issues": issues, "proof": proof, "elements": elements,
                      "service_status": status, "state": state}
     if reconstructed != saved:

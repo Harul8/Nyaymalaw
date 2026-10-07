@@ -173,20 +173,75 @@ def test_first_followup_full_context_saved_reopened_and_replay_without_calls(har
     assert len(app.model.calls) == 6
 
 
-def test_mixed_material_and_work_are_proposed_not_a_draft_or_completion(harness):
+def test_mixed_material_and_work_remain_private_without_losing_saved_proposals(harness):
     message = "I received only a draft. Explain its terms; do not send anything."
     app = harness(*mixed_outputs(message))
     response = assert_ok(app.post(message))
     text = "\n".join(row["text"] for row in response["elements"])
-    assert message in text
+    assert text == "Message received."
     assert "UNREVIEWED" not in text and "I filed" not in text
-    assert "does not carry out" in text
+    assert "does not carry out" not in text
     held = app.held(response["chat_id"])
     proposed = held.brain_chat[0]["preparation"]["proposal"]
     assert proposed["material"][0]["state"] == "proposed"
     assert proposed["actions"][0]["state"] == "planned"
     assert held.facts == () and held.threads == ()
     assert response["board_changes"] == [] and response["material"] == []
+
+
+def test_internal_material_stays_private_through_followup_reopen_and_idempotent_replay(harness):
+    message = "I received only a draft. Explain its terms; do not send anything."
+    app = harness(*mixed_outputs(message), *greeting_outputs())
+    first = assert_ok(app.post(message))
+    chat_id = first["chat_id"]
+    snapshot = app.held(chat_id)
+    assert snapshot.brain_chat[0]["response"]["elements"] == first["elements"]
+    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "initial_brain_release_v2"
+    assert snapshot.brain_chat[0]["preparation"]["proposal"]["material"]
+    assert snapshot.brain_chat[0]["preparation"]["proposal"]["actions"]
+    second = assert_ok(app.post("Thank you.", "turn_second", chat_id=chat_id, expected_version=1))
+    history = json.loads(app.model.calls[3][0].user)["earlier_conversation"]
+    assert [(row["role"], row["text"]) for row in history] == [
+        ("advocate", message), ("nm", "Message received.")]
+    assert app.held(chat_id).brain_chat[0] == snapshot.brain_chat[0]
+    reopened = assert_ok(app.client.get("/api/chats/" + chat_id))
+    assert [row["elements"] for row in reopened["turns"]] == [first["elements"], second["elements"]]
+    for row in reopened["turns"]:
+        assert not ({"preparation", "release", "proof", "units", "issues"} & set(row))
+    replayed = assert_ok(app.post(message))
+    assert replayed == {**first, "replayed": True}
+    assert len(app.model.calls) == 6
+
+
+def test_historical_v1_read_replay_and_followup_preserve_the_original_transcript(harness):
+    from nm.brain.turn import _digest
+    from tests.test_new_brain_release import historical_v1_release
+    message = "I received a draft."
+    outputs = mixed_outputs(message)
+    outputs[0]["label"] = "information"
+    outputs[1]["actions"] = []
+    outputs[-1]["unit_reviews"] = outputs[-1]["unit_reviews"][:1]
+    app = harness(*outputs, *greeting_outputs())
+    first = assert_ok(app.post(message))
+    held = app.held(first["chat_id"])
+    rows = deepcopy(held.brain_chat)
+    historical = historical_v1_release(message, information=True)
+    historical["units"]["material:1"]["proposal"] = deepcopy(rows[0]["preparation"]["proposal"]["material"][0])
+    rows[0]["release"] = historical
+    rows[0]["response"]["elements"] = deepcopy(historical["elements"])
+    rows[0]["response_digest"] = _digest(rows[0]["response"])
+    app.store.commit(replace(held, brain_chat=rows), expected_version=held.version)
+    persisted = app.held(first["chat_id"])
+    reopened = assert_ok(app.client.get("/api/chats/" + first["chat_id"]))
+    assert reopened["turns"][0]["elements"] == historical["elements"]
+    replayed = assert_ok(app.post(message))
+    assert replayed["elements"] == historical["elements"] and replayed["replayed"] is True
+    assert len(app.model.calls) == 3 and app.held(first["chat_id"]) == persisted
+    assert_ok(app.post("Thank you.", "turn_second", chat_id=first["chat_id"], expected_version=1))
+    history = json.loads(app.model.calls[3][0].user)["earlier_conversation"]
+    assert [(row["role"], row["text"]) for row in history] == [
+        ("advocate", message), ("nm", f"You reported: “{message}”")]
+    assert app.held(first["chat_id"]).brain_chat[0] == persisted.brain_chat[0]
 
 
 def test_missing_login_csrf_and_foreign_owner_do_not_dispatch_models(harness):
