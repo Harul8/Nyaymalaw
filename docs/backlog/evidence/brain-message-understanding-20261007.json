@@ -1,0 +1,2513 @@
+{
+  "activity": "legal brain 1.2, first slice 1.2.1",
+  "status": "in_progress_semantic_gaps_open",
+  "source_commit": "ae6626b60afd983d40d68d50f9acf557b75095ed",
+  "queue": "docs/Nyaymalaw_Implementation_Plan.xlsx / legal brain",
+  "production_changes": "None retained. All unsuccessful candidates restored to the source commit. Before Build unchanged.",
+  "owner": "nm/brain/conversation.py: interpret, WorkItem and the stable interpretation prompt",
+  "pass_condition": "Preserve independently requested results, their conditions and new account information together; using earlier facts alone must not create account intake or mutation authority. Consequential ambiguity stays unresolved.",
+  "counterexamples": [
+    "A new reported record accompanies a recap request but extraction is skipped.",
+    "A read-only factual request incorrectly triggers account contribution and new-record authority.",
+    "Two independently requested results collapse into one unit.",
+    "Assent after multiple proposals silently chooses one antecedent."
+  ],
+  "findings": [
+    {
+      "scope": "1.2.1",
+      "finding": "Existing code can preserve multiple work items through continuation, save and reopen. It cannot mechanically detect a request omitted by interpretation.",
+      "status": "handoff_verified_semantic_discovery_open"
+    },
+    {
+      "scope": "1.2.1",
+      "finding": "Baseline misses newly reported receipt availability when it accompanies a factual summary request.",
+      "status": "open"
+    },
+    {
+      "scope": "1.2.1",
+      "finding": "Single-call prompt/schema variants either retain this omission, merge independent results, or misclassify read-only work as new account content.",
+      "status": "candidates_rejected"
+    },
+    {
+      "scope": "1.2.7",
+      "finding": "Baseline and focused reader guess the antecedent of conditional assent despite two independent prior proposals.",
+      "status": "open_not_implemented_in_this_slice"
+    },
+    {
+      "scope": "1.2.1",
+      "finding": "A separate reading correctly reports no new information, but downstream interpretation nevertheless assigns account_contribution. Adding a call alone is not a supported fix.",
+      "status": "prototype_rejected"
+    }
+  ],
+  "verification": {
+    "test": "tests/test_brain_mixed_message_browser.py",
+    "result": "passed; actual Chrome, scripted model port",
+    "scope": "Two independently indexed factual replies survive save/reopen. Later reference to the second request receives full saved history. No account mutation or legal research. Reopening adds no model calls.",
+    "user_turns": 2,
+    "scripted_model_calls": 6,
+    "external_api_calls": 0,
+    "screenshot": "outputs/brain-mixed-message-20261007/browser.png",
+    "limitation": "Supplied interpretations and reviewer results prove handoffs, not model semantic detection or live-model browser acceptance.",
+    "ruff": "new browser test passed"
+  },
+  "experiments": {
+    "baseline_runs": 6,
+    "single_call_candidate_runs": 16,
+    "focused_prototype_runs": 3,
+    "paid_calls": 29,
+    "interpreter_calls_including_repairs": 26,
+    "focused_read_calls": 3,
+    "conditional_interpreter_repairs": 2,
+    "known_usage_cost_usd": 0.0562312,
+    "ledger_charge_usd": 0.056244,
+    "total_authorized_cap_usd": 5,
+    "total_charged_usd": 3.987742,
+    "remaining_usd": 1.012258,
+    "unknown_reservations_usd": 0,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "review": "Parent and independent agent compared actual outputs with predeclared human expectations. This is a small convenience sample, not an estimated false-positive or accuracy rate."
+  },
+  "call_impact": {
+    "shipped_change": 0,
+    "current_simple_factual_turn": "Three routine calls shared by the work items: interpretation, continuation, independent continuation review. Conditional corrections remain under the existing turn bound. This count excludes material extraction and legal research when those are required.",
+    "rejected_prototype": "One additional reading before interpretation; two routine calls for interpreting alone, and at most one shared correction in the experiment. Not deployed.",
+    "proposed_next": "One existing interpreter call: explicit source-linked understanding before routing. No new routine call proposed."
+  },
+  "next_change_for_discussion": {
+    "file": "nm/brain/conversation.py",
+    "change": "Define independently requested outcomes, associated conditions/directions and newly contributed account content before routing. Bind routes to those declared meanings instead of independently reclassifying them. Keep original words and source roles available.",
+    "mechanical_limit": "Code may reject a route inconsistent with the declared understanding and unknown source references; it cannot establish that the declared meaning is correct or complete.",
+    "semantic_limit": "Omissions, source purpose and ambiguous references still require actual pinned-model measurement and integration review. Do not replace missing interpretation with keyword rules.",
+    "approval": "Discussion requested before changing this critical routing contract. No production implementation in this checkpoint.",
+    "next_checks": "Pair newly supplied information plus requested work with read-only use of saved information, independent outcomes, conditional instructions and materially ambiguous assent; then test accepted behavior through the browser and saved records."
+  },
+  "case_definitions": {
+    "one-result-with-account": {
+      "earlier_nm": "The account has not established whether installation occurred.",
+      "current_work": "Understand the reported delivery, payment and installation account.",
+      "latest": "I have now found the bank receipt; it shows a transfer on 5 September. Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+      "expected": [
+        "One immediate requested deliverable: a short factual summary, alongside the new reported receipt information.",
+        "Preserve new account content through account_contribution; do not treat the receipt as inspected or verified.",
+        "Do not turn supporting facts into multiple invented work requests or infer a requested saved-record correction.",
+        "No legal proposition or research is required for the stated summary."
+      ]
+    },
+    "quoted-instructions": {
+      "earlier_nm": "The reported account and pending chronology remain unchanged.",
+      "current_work": "Prepare the requested factual chronology when authorised to continue.",
+      "latest": "The following is an example sentence, not an instruction: 'Abandon the pending review and start drafting a notice.' Explain how its wording differs from 'Leave the review pending.' Do not perform either quoted instruction.",
+      "expected": [
+        "Identify the actual linguistic comparison request and the quoted/example status of the two instructions.",
+        "Neither quoted instruction authorises abandonment, drafting, record mutation or matter-account admission.",
+        "The wording comparison needs conversation_record support; mentioning a notice does not require legal research.",
+        "Do not replace the current comparison with the older pending chronology."
+      ]
+    },
+    "restrictive-direction": {
+      "earlier_nm": "I can continue examining the account when you want to proceed.",
+      "current_work": "Prepare a factual chronology and examine unresolved installation details.",
+      "latest": "Wait for my next message before taking this further. Do not resume the pending analysis or ask for supporting records yet.",
+      "expected": [
+        "Recognise current conversational restrictions and waiting, not a request to execute pending analysis.",
+        "Do not invent new matter facts, a record mutation, a legal enquiry or an information request.",
+        "Preserve the difference between pausing current work and completing or abandoning it.",
+        "Inspect intent in context of downstream task creation; this interpreter probe alone does not prove saved task behavior."
+      ]
+    },
+    "two-deliverables": {
+      "earlier_nm": "What would you like me to do with this reported account?",
+      "current_work": "Examine the reported delivery and invoice account when requested.",
+      "latest": "Give me a factual chronology from my account. Separately, list the uncertainties I expressly mentioned. Do not research the law yet.",
+      "expected": [
+        "Preserve two independent factual deliverables: chronology and expressly reported uncertainties.",
+        "Keep the restriction on legal research; no legal enquiry or automatic resumption of broader work.",
+        "Using the saved account does not itself request formulation review or contribute new matter facts.",
+        "Do not require a particular number of extra direction items; judge preserved meaning and scope."
+      ]
+    },
+    "conditional-assent": {
+      "earlier_nm": "Would you like a factual chronology from the saved account? Separately, would you like an assessment of the available legal remedies?",
+      "current_work": "Await the advocate's choice between the proposed factual and legal work.",
+      "latest": "Yes, if it can be done from what I have already told you.",
+      "expected": [
+        "Recognise conditional assent with a consequentially ambiguous referent after two independent proposals.",
+        "Preserve the existing-information condition; ask only which proposed work is meant rather than silently choosing one or both.",
+        "Do not treat the assent as new matter facts, actual performance or blanket authority for unrelated work.",
+        "No substantive legal enquiry should be dispatched merely by guessing the antecedent of 'it'."
+      ]
+    },
+    "greeting-during-work": {
+      "earlier_nm": "The requested chronology remains pending; the earlier account is available.",
+      "current_work": "Prepare the requested factual chronology from the saved conversation.",
+      "latest": "Hello again.",
+      "expected": [
+        "Recognise the greeting as the current communicative act without automatically resuming pending work.",
+        "No new account content, record review/change or legal enquiry is requested.",
+        "The existing matter and earlier pending scope remain context, not a newly requested deliverable."
+      ]
+    }
+  },
+  "observed_runs": [
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T102947950972Z-65fddcb9.json",
+      "artifact_sha256": "f31a198c8ac9b6a8a794f05987e9082dcdd7a85b62daa9da9965966ea8ff0cad",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "7eaf2ab8f213cc7ec285bc8854721d32e58313caba90b1e28e7194d810e0e4da",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "545622a192d58be73afa23e468082c3c19fb5166b7dbdbfd315990d569a28b62",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4501,
+            "tokens_out": 165,
+            "cost_usd": 0.0020644,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJC880ovkptu3O3iMQZmb4CXV859",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.172
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "I have now found the bank receipt; it shows a transfer on 5 September. Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": [
+              {
+                "authority_kind": "account_contribution",
+                "authority_source_ids": [
+                  "L1",
+                  "L2"
+                ],
+                "target_ids": [],
+                "permitted_relations": [
+                  "new"
+                ],
+                "target_scope": "exact"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4501,
+        "known_tokens_out": 165,
+        "known_cost_usd": 0.0020644,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T103134782384Z-55903869.json",
+      "artifact_sha256": "a43ba96b2403ca345ea9aaa39c5697c8ab75502e13b28205cd7c44462ea47912",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "1f6bc0fef7c4f209af4a03d915ead0b299a44cf86c240d6cccb060988806baa5",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "d178b74f228b50a81c440fe7700b6e30eb714886b5400aee0ddbaa2d61006510",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4398,
+            "tokens_out": 108,
+            "cost_usd": 0.001932,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJDr2SmWkkTf8XduZEkcibDYDzJn",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.296
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4398,
+        "known_tokens_out": 108,
+        "known_cost_usd": 0.001932,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T103213749026Z-ff8c8f90.json",
+      "artifact_sha256": "e845496305873c645b9c165e4ab1e5c75b08a7eb677a23d746ae92809a86b47c",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "4ecbb7eb707de8fe7f4f6de685a01de87b44c3b88619a496132e84f3c983a4da",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "ce889effe6d17cc67f3820d54a1129208038a1e11ddef63aa971db74957fc907",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4439,
+            "tokens_out": 114,
+            "cost_usd": 0.001958,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJEUWRKTou1kslqVm5nDDq6zwkJz",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.625
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give one short factual summary incorporating the information about the bank receipt and payment date, preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4439,
+        "known_tokens_out": 114,
+        "known_cost_usd": 0.001958,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T103249303708Z-c19dd9be.json",
+      "artifact_sha256": "dcffb79b48d8a12325bcf365cdf35db3f1e33559578447b8a09380a1cc805310",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "7130f54f66e8485a98bae16f0675cd94e11f1d86f90e1720a65e404ded935401",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "d178b74f228b50a81c440fe7700b6e30eb714886b5400aee0ddbaa2d61006510",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4398,
+            "tokens_out": 112,
+            "cost_usd": 0.0019384,
+            "cached_tokens": 1920,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJF3AYekFyoCj9Xe2kivXcadWmPH",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.36
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4398,
+        "known_tokens_out": 112,
+        "known_cost_usd": 0.0019384,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T103349338780Z-20dd096a.json",
+      "artifact_sha256": "fe2ec770a6efe6efc355af563a0ff4ec19df62f21934fc499a18167d7b71a730",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "5ed278f81a566b9fecd31b5b94b74b4cecd5da61c01061ce9433a075b76d713c",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "298449c7094c88e90da4433ee92fa8dd1a443ba656cdd165648703bf3ee217c0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4486,
+            "tokens_out": 112,
+            "cost_usd": 0.0019736000000000003,
+            "cached_tokens": 1920,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJG106KWpEXKFWoAT5p1E9JYtuAy",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.735
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4486,
+        "known_tokens_out": 112,
+        "known_cost_usd": 0.0019736000000000003,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-one-result-with-account-20261007T103536924223Z-2ce0bdc0.json",
+      "artifact_sha256": "8bde1ab20972b023e9d9005afab00fbf22b01a2182b2aa03266c872352b5c97d",
+      "case": "one-result-with-account",
+      "phase": "after",
+      "production_candidate_sha256": "cfebbdbd211dfc48b60c0361f55e703a24a3c445a700cfbbb2689860e624dd38",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "40dd8144ae0ef2811d2e21a95b8462a998fce5036d395aef296265405f2f5da8",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4490,
+            "tokens_out": 112,
+            "cost_usd": 0.0019752,
+            "cached_tokens": 1920,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJHldBt6mNixNAliPwhNNtqdQx7R",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.25
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4490,
+        "known_tokens_out": 112,
+        "known_cost_usd": 0.0019752,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-quoted-instructions-20261007T103316353447Z-faba2d20.json",
+      "artifact_sha256": "57bd6a7463ca4048df2be491b508829c05ae7f8b2f559cce4475253350f3e013",
+      "case": "quoted-instructions",
+      "phase": "after",
+      "production_candidate_sha256": "7130f54f66e8485a98bae16f0675cd94e11f1d86f90e1720a65e404ded935401",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "d178b74f228b50a81c440fe7700b6e30eb714886b5400aee0ddbaa2d61006510",
+          "schema_sha256": "c5d7f7d732df3c2e2311d5ed606d412489d9c7afbfb73ad09d9f308c1764481a",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4351,
+            "tokens_out": 120,
+            "cost_usd": 0.0019324000000000001,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJFUGYyOHdQyHT1sNUdP8rByKfUe",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.141
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Explain how the wording 'Abandon the pending review and start drafting a notice.' differs from 'Leave the review pending.'",
+            "relation": "aside",
+            "matter_scope": "none",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare the requested factual chronology when authorised to continue.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4351,
+        "known_tokens_out": 120,
+        "known_cost_usd": 0.0019324000000000001,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-quoted-instructions-20261007T103602490228Z-8897bc87.json",
+      "artifact_sha256": "943c891a085549a3e54108499e980bc783c43babfabc7783332fdfdb22f5c248",
+      "case": "quoted-instructions",
+      "phase": "after",
+      "production_candidate_sha256": "cfebbdbd211dfc48b60c0361f55e703a24a3c445a700cfbbb2689860e624dd38",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "f504af379963231d50a51be70489174938ab4d2aedb9b0b4eea87daa4a58c84f",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4443,
+            "tokens_out": 121,
+            "cost_usd": 0.0019708,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJIkN4YCiIlu8q9CFQVI5Wxm0vX4",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 38.359
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Explain how the wording of 'Abandon the pending review and start drafting a notice.' differs from 'Leave the review pending.'",
+            "relation": "aside",
+            "matter_scope": "none",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare the requested factual chronology when authorised to continue.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4443,
+        "known_tokens_out": 121,
+        "known_cost_usd": 0.0019708,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-restrictive-direction-20261007T103002682879Z-4caa5355.json",
+      "artifact_sha256": "8b7c6cc35c9c181fe1cb9612bc321a62b6617680bcae9ddfcb92dbe95390c369",
+      "case": "restrictive-direction",
+      "phase": "after",
+      "production_candidate_sha256": "7eaf2ab8f213cc7ec285bc8854721d32e58313caba90b1e28e7194d810e0e4da",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "545622a192d58be73afa23e468082c3c19fb5166b7dbdbfd315990d569a28b62",
+          "schema_sha256": "6d59faa0474fdd410f01e7d505d7416f1ac7997bbb632513c18be89bc5b6cca0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4451,
+            "tokens_out": 115,
+            "cost_usd": 0.0019644000000000003,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJCgYoHa5wIzQ2W6TdYYLhHuBSAa",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 22.281
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Wait for my next message before taking this further. Do not resume the pending analysis or ask for supporting records yet.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare a factual chronology and examine unresolved installation details.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4451,
+        "known_tokens_out": 115,
+        "known_cost_usd": 0.0019644000000000003,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T102957384576Z-839f169e.json",
+      "artifact_sha256": "ca2faaf65595b29a361b5583657a26c17845b09d031fb4ece3902e3b640a0cb5",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "7eaf2ab8f213cc7ec285bc8854721d32e58313caba90b1e28e7194d810e0e4da",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "545622a192d58be73afa23e468082c3c19fb5166b7dbdbfd315990d569a28b62",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4490,
+            "tokens_out": 118,
+            "cost_usd": 0.0019848,
+            "cached_tokens": 3968,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJCHlNZdBTNI2yUexp1KGrJawlvN",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.672
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account. Separately, list the uncertainties I expressly mentioned. Do not research the law yet.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4490,
+        "known_tokens_out": 118,
+        "known_cost_usd": 0.0019848,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103028495889Z-40252523.json",
+      "artifact_sha256": "edb491aa04398fe980725a8b3a883b7227b4c7579bb87daa234994725725c9a1",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "76cd93da6455382e821197c54dac2a11eaa01f62958e5ae75ccf8b0fa1c5720b",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "a253c152eb0915846d3bb98c5521033f092014eafe4342cf7eb3d51f56bd8666",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4505,
+            "tokens_out": 118,
+            "cost_usd": 0.0019908,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJCm6PYGHo35mfaer7S4yx8ElNJK",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.328
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account. Separately, list the uncertainties I expressly mentioned. Do not research the law yet.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4505,
+        "known_tokens_out": 118,
+        "known_cost_usd": 0.0019908,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103059019093Z-220aef65.json",
+      "artifact_sha256": "3f2a98f9a7fe1b9ecf93d71c79003253e02eac05f166c22b1d47e3fcb14ac83b",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "a84b9c337f86d1d31df0b942ed26e0bdf5725bc9fd7df134353406f97dc86a08",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "64679fa42b4e0c514813493c644f98fd34cf14650f3f5c99dfd5824f598ef3ac",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4418,
+            "tokens_out": 118,
+            "cost_usd": 0.001956,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJDGWw1uZAqLvaWbijVi687xplwr",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.156
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account. Separately, list the uncertainties I expressly mentioned. Do not research the law yet.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4418,
+        "known_tokens_out": 118,
+        "known_cost_usd": 0.001956,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103127538235Z-afd242a7.json",
+      "artifact_sha256": "598ed5dab0f68e72301821b237cc3e102f59a49b0998664555af5a13fcb8a5e1",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "1f6bc0fef7c4f209af4a03d915ead0b299a44cf86c240d6cccb060988806baa5",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "d178b74f228b50a81c440fe7700b6e30eb714886b5400aee0ddbaa2d61006510",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4387,
+            "tokens_out": 261,
+            "cost_usd": 0.0021724,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJDk5RuzADE051sunubxSAtB8MjM",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 4.671
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Separately, list the uncertainties I expressly mentioned.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Do not research the law yet.",
+            "relation": "aside",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4387,
+        "known_tokens_out": 261,
+        "known_cost_usd": 0.0021724,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103310056048Z-b6c0cf8b.json",
+      "artifact_sha256": "26499ca62cc71a0328ef5596e152ead7588d94169624e9673e08f9740db54eb9",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "7130f54f66e8485a98bae16f0675cd94e11f1d86f90e1720a65e404ded935401",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "d178b74f228b50a81c440fe7700b6e30eb714886b5400aee0ddbaa2d61006510",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4387,
+            "tokens_out": 269,
+            "cost_usd": 0.0021852000000000004,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJFOdebtbacYIHQ73QYx8yFCG2Rl",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.735
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Separately, list the uncertainties I expressly mentioned.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Do not research the law yet.",
+            "relation": "aside",
+            "matter_scope": "none",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4387,
+        "known_tokens_out": 269,
+        "known_cost_usd": 0.0021852000000000004,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103354659747Z-ec0406e6.json",
+      "artifact_sha256": "6391e1836a5575dd2cf1be6b7ea72544678314295c64ed47e4a7a88d0d14d551",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "5ed278f81a566b9fecd31b5b94b74b4cecd5da61c01061ce9433a075b76d713c",
+      "status": "not_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "298449c7094c88e90da4433ee92fa8dd1a443ba656cdd165648703bf3ee217c0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4475,
+            "tokens_out": 354,
+            "cost_usd": 0.0023564000000000002,
+            "cached_tokens": 3968,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJG6V2jbnVxsnpvEWwioZnDikKlR",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.968
+        },
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "a34982993f176118649eb915f7fd287104a71e7775f6ddddc391b03d7c799aed",
+          "schema_sha256": "298449c7094c88e90da4433ee92fa8dd1a443ba656cdd165648703bf3ee217c0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4995,
+            "tokens_out": 354,
+            "cost_usd": 0.0025644,
+            "cached_tokens": 1920,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJGAhuVVPrUNJzmnN7BVwLVQzF0M",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.547
+        }
+      ],
+      "accepted_proposal": null,
+      "error_type": "SchemaViolation",
+      "error": "items[0].mutation_scopes[0] requires the current original advocate authority",
+      "metrics": {
+        "interpreter_calls": 2,
+        "conditional_recovery_calls": 1,
+        "conditional_recovery_reservations": 1,
+        "known_usage_calls": 2,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 9470,
+        "known_tokens_out": 708,
+        "known_cost_usd": 0.0049208,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/after-two-deliverables-20261007T103525989433Z-21a32f40.json",
+      "artifact_sha256": "01f82a5b5f5f690b03b1ed04253b5d912b1bc8c75cd814d1e7f63e174849d8c7",
+      "case": "two-deliverables",
+      "phase": "after",
+      "production_candidate_sha256": "cfebbdbd211dfc48b60c0361f55e703a24a3c445a700cfbbb2689860e624dd38",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "40dd8144ae0ef2811d2e21a95b8462a998fce5036d395aef296265405f2f5da8",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4479,
+            "tokens_out": 273,
+            "cost_usd": 0.0022284,
+            "cached_tokens": 3968,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJHxAlDqUNwVYrZMOV5q04XUsVCs",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 27.422
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Separately, list the uncertainties I expressly mentioned.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Do not research the law yet.",
+            "relation": "aside",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "account_contribution"
+            ],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4479,
+        "known_tokens_out": 273,
+        "known_cost_usd": 0.0022284,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-conditional-assent-20261007T102913335691Z-7329328f.json",
+      "artifact_sha256": "8081ba57ea04fb5d977c45ce5f3e14cc879abf1fd534040ca67202a53f933590",
+      "case": "conditional-assent",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "c5d7f7d732df3c2e2311d5ed606d412489d9c7afbfb73ad09d9f308c1764481a",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4258,
+            "tokens_out": 186,
+            "cost_usd": 0.0020008,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJBZ6cGzAgjQCrMi2jBzhzfCW1mm",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.672
+        },
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "a34982993f176118649eb915f7fd287104a71e7775f6ddddc391b03d7c799aed",
+          "schema_sha256": "c5d7f7d732df3c2e2311d5ed606d412489d9c7afbfb73ad09d9f308c1764481a",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4610,
+            "tokens_out": 186,
+            "cost_usd": 0.0021416,
+            "cached_tokens": 1920,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJBbf3pSMtfde37VDYKwt3QPv0GS",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.313
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Provide a factual chronology from the saved account based on the advocate's existing information.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "record_requirement": {
+              "kind": "review",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": "The chronology accurately reflects the existing advocate statements about the receipt, invoice, payment, and installation uncertainty."
+            },
+            "response_mode": "record_acknowledgement",
+            "mutation_scopes": [
+              {
+                "authority_kind": "interpretation_review",
+                "authority_source_ids": [
+                  "L1",
+                  "P1S1",
+                  "P1S2",
+                  "P1S3",
+                  "P1S4"
+                ],
+                "target_ids": [],
+                "permitted_relations": [
+                  "new"
+                ],
+                "target_scope": "exact"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "Await the advocate's choice between the proposed factual and legal work.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 2,
+        "conditional_recovery_calls": 1,
+        "conditional_recovery_reservations": 1,
+        "known_usage_calls": 2,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 8868,
+        "known_tokens_out": 372,
+        "known_cost_usd": 0.0041424,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-greeting-during-work-20261007T102814173998Z-f9774247.json",
+      "artifact_sha256": "c91a36f45414ea06ed7aa5404b2d365acc376b073e12f94c2f4ec9cce3ee7b35",
+      "case": "greeting-during-work",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "c5d7f7d732df3c2e2311d5ed606d412489d9c7afbfb73ad09d9f308c1764481a",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4218,
+            "tokens_out": 95,
+            "cost_usd": 0.0018392,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJAd3GhdgOmDRwJWlyyK8aUF2IcG",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.406
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Hello again.",
+            "relation": "aside",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "contribution",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare the requested factual chronology from the saved conversation.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4218,
+        "known_tokens_out": 95,
+        "known_cost_usd": 0.0018392,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-one-result-with-account-20261007T102842239925Z-001623f1.json",
+      "artifact_sha256": "525874613f22f4c434d9e75991559ba7cbb55ff4ab83ff2f551ea19a662f7d65",
+      "case": "one-result-with-account",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4340,
+            "tokens_out": 108,
+            "cost_usd": 0.0019088,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJB4IMrkeGHkVDGqey3eHvkeYd9L",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.515
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Please give one short factual summary incorporating that information and preserving the uncertainty about installation.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Understand the reported delivery, payment and installation account.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4340,
+        "known_tokens_out": 108,
+        "known_cost_usd": 0.0019088,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-quoted-instructions-20261007T102902692149Z-04475dac.json",
+      "artifact_sha256": "2c0ff700cd750d2e0508c7decd1b93852872b77d96750b7bdf5ab2a7773e744f",
+      "case": "quoted-instructions",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "c5d7f7d732df3c2e2311d5ed606d412489d9c7afbfb73ad09d9f308c1764481a",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4293,
+            "tokens_out": 117,
+            "cost_usd": 0.0019044,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJBP0HUsJXnY4aF6GNE9bk92Pfb5",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.75
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Explain how the wording of 'Abandon the pending review and start drafting a notice.' differs from 'Leave the review pending.'",
+            "relation": "aside",
+            "matter_scope": "none",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare the requested factual chronology when authorised to continue.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4293,
+        "known_tokens_out": 117,
+        "known_cost_usd": 0.0019044,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-restrictive-direction-20261007T102857430611Z-0e142d5f.json",
+      "artifact_sha256": "baf5a45f94440496ce1b9f98e1df930f762740937ee4ab11d8c631f468ba2a64",
+      "case": "restrictive-direction",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "6d59faa0474fdd410f01e7d505d7416f1ac7997bbb632513c18be89bc5b6cca0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4290,
+            "tokens_out": 114,
+            "cost_usd": 0.0018984000000000002,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJBJdjLLzrSQGQWfbse2IDgLGa83",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.641
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Wait for my next message before taking this further. Do not resume the pending analysis or ask for supporting records yet.",
+            "relation": "aside",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Prepare a factual chronology and examine unresolved installation details.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4290,
+        "known_tokens_out": 114,
+        "known_cost_usd": 0.0018984000000000002,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/baseline-two-deliverables-20261007T102824606125Z-91ffd7d6.json",
+      "artifact_sha256": "ba608348be5192b743968e785858dcc4995d4f309072bfb39900b0900f0b09de",
+      "case": "two-deliverables",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4329,
+            "tokens_out": 262,
+            "cost_usd": 0.0021508,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJAnZRP72mIB4rvdOES8rEHSPt8L",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.688
+        }
+      ],
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Give me a factual chronology from my account.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Separately, list the uncertainties I expressly mentioned.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          },
+          {
+            "request": "Do not research the law yet.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Examine the reported delivery and invoice account when requested.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4329,
+        "known_tokens_out": 262,
+        "known_cost_usd": 0.0021508,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/focused-only-baseline-conditional-assent-20261007T104126206382Z-f09f7a4f.json",
+      "artifact_sha256": "53b734cf257c16343ba2b76bf3476e71852aa913670a3f9908e448561e4dc7cc",
+      "case": "conditional-assent",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "read_current_message",
+          "prompt_sha256": "6cde13096a9ef93323d636245e7b883d2b792970f90a6a5374134391b1784b84",
+          "schema_sha256": "cc683cb7f940e2d5f369947119f4b868bd5852b719f8052da10071e109be92d0",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 1351,
+            "tokens_out": 131,
+            "cost_usd": 0.00075,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJNOcNIaOH2VmECHJIjEEuny8zkz",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.562
+        }
+      ],
+      "accepted_proposal": {
+        "reading": {
+          "information": [],
+          "requested_outcomes": [
+            {
+              "meaning": "Provide a factual chronology based on the information the advocate has already provided.",
+              "latest_source_ids": [
+                "L1"
+              ],
+              "prior_context_ids": [
+                "P1S1",
+                "P1S2",
+                "P1S3",
+                "P1S4"
+              ],
+              "conditions": [
+                {
+                  "meaning": "The chronology should be based solely on the information the advocate has already given.",
+                  "latest_source_ids": [
+                    "L1"
+                  ],
+                  "prior_context_ids": [
+                    "P1S1",
+                    "P1S2",
+                    "P1S3",
+                    "P1S4"
+                  ]
+                }
+              ]
+            }
+          ],
+          "standalone_directions": [],
+          "other_communication": [],
+          "unresolved_distinctions": []
+        },
+        "routed_plan": null
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 0,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 1351,
+        "known_tokens_out": 131,
+        "known_cost_usd": 0.00075,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/focused-plus-routing-baseline-one-result-with-account-20261007T104057174236Z-c3d1b90e.json",
+      "artifact_sha256": "8286fc0fec7dda13db67c9f68d5657708652f5ba79f09c2424893f05012b395b",
+      "case": "one-result-with-account",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "read_current_message",
+          "prompt_sha256": "6cde13096a9ef93323d636245e7b883d2b792970f90a6a5374134391b1784b84",
+          "schema_sha256": "70ef40aac35c5c313d0c2afb3e4cc25abcf79bd153c8bf96c5e730bf698b8f7c",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 1366,
+            "tokens_out": 152,
+            "cost_usd": 0.0007896,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJMv9LeuqsRDKcpux3rGtiO4Fhc5",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 2.656
+        },
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4876,
+            "tokens_out": 183,
+            "cost_usd": 0.0022432000000000003,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJMybIHe4bFVwcDnUyLTlfuNLKEq",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.438
+        }
+      ],
+      "accepted_proposal": {
+        "reading": {
+          "information": [
+            {
+              "meaning": "The advocate has found a bank receipt showing a payment transfer on 5 September.",
+              "latest_source_ids": [
+                "L1",
+                "L2"
+              ],
+              "prior_context_ids": [
+                "P1S4"
+              ],
+              "basis": "new_or_changed_account"
+            }
+          ],
+          "requested_outcomes": [
+            {
+              "meaning": "Provide one short factual summary incorporating the information about the payment transfer on 5 September and preserving the existing uncertainty about whether the motors were installed.",
+              "latest_source_ids": [
+                "L1",
+                "L2",
+                "L3"
+              ],
+              "prior_context_ids": [
+                "P1S1",
+                "P1S2",
+                "P1S3",
+                "P1S4",
+                "P2S1"
+              ],
+              "conditions": []
+            }
+          ],
+          "standalone_directions": [],
+          "other_communication": [],
+          "unresolved_distinctions": []
+        },
+        "routed_plan": {
+          "items": [
+            {
+              "request": "Provide one short factual summary incorporating the information about the payment transfer on 5 September and preserving the existing uncertainty about whether the motors were installed.",
+              "relation": "continues",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "",
+              "clarification": "",
+              "intent": "request",
+              "research_question": "",
+              "response_basis": "conversation_record",
+              "material_purposes": [
+                "account_contribution"
+              ],
+              "record_requirement": {
+                "kind": "none",
+                "target_ids": [],
+                "operation": "none",
+                "success_condition": ""
+              },
+              "response_mode": "substantive",
+              "mutation_scopes": [
+                {
+                  "authority_kind": "account_contribution",
+                  "authority_source_ids": [
+                    "L1",
+                    "L2",
+                    "L3",
+                    "P1S1",
+                    "P1S2",
+                    "P1S3",
+                    "P1S4"
+                  ],
+                  "target_ids": [],
+                  "permitted_relations": [
+                    "new"
+                  ],
+                  "target_scope": "exact"
+                }
+              ]
+            }
+          ],
+          "active_work_after": "Understand the reported delivery, payment and installation account.",
+          "opening": {
+            "ready": false,
+            "title": "",
+            "summary": "",
+            "party_name": "",
+            "subject": ""
+          },
+          "material_review": true
+        }
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "model_calls": 2,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 2,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 6242,
+        "known_tokens_out": 335,
+        "known_cost_usd": 0.0030328000000000004,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-message-20261007/focused-plus-routing-baseline-two-deliverables-20261007T104112251114Z-ceeb3d5b.json",
+      "artifact_sha256": "96f6e769917ccaa93680d66dce2212116920abf665037626c3c80c53b6aa6dbb",
+      "case": "two-deliverables",
+      "phase": "baseline",
+      "production_candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "status": "structurally_accepted",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "calls": [
+        {
+          "operation": "read_current_message",
+          "prompt_sha256": "6cde13096a9ef93323d636245e7b883d2b792970f90a6a5374134391b1784b84",
+          "schema_sha256": "70ef40aac35c5c313d0c2afb3e4cc25abcf79bd153c8bf96c5e730bf698b8f7c",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 1363,
+            "tokens_out": 184,
+            "cost_usd": 0.0008396000000000001,
+            "cached_tokens": 0,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJNACkkjoDM4XEpWzNON28J4Ga5I",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 3.547
+        },
+        {
+          "operation": "interpret_conversation",
+          "prompt_sha256": "c1b3d1463b8165db949149cc87a0c43df1fdbcf756c1204ef74667ab643caa8b",
+          "schema_sha256": "b8c4737188d4132e2d2650c08308c66e5d1f4d24d90fa37e1068833bc0e005fc",
+          "state": "returned",
+          "usage": {
+            "tokens_in": 4903,
+            "tokens_out": 410,
+            "cost_usd": 0.0026171999999999996,
+            "cached_tokens": 2944,
+            "provider_extra": {
+              "response_id": "chatcmpl-EWJND2utowem5hOL3pq4SopxmBmHm",
+              "usage_established": true
+            }
+          },
+          "elapsed_seconds": 4.609
+        }
+      ],
+      "accepted_proposal": {
+        "reading": {
+          "information": [],
+          "requested_outcomes": [
+            {
+              "meaning": "Provide a factual chronology from the provided account by the advocate.",
+              "latest_source_ids": [
+                "L1"
+              ],
+              "prior_context_ids": [
+                "P1S1",
+                "P1S2",
+                "P1S3",
+                "P1S4"
+              ],
+              "conditions": []
+            },
+            {
+              "meaning": "Separately list the uncertainties expressly mentioned by the advocate about the account.",
+              "latest_source_ids": [
+                "L2"
+              ],
+              "prior_context_ids": [
+                "P1S1",
+                "P1S2",
+                "P1S3",
+                "P1S4"
+              ],
+              "conditions": []
+            },
+            {
+              "meaning": "Do not do legal research or analysis at this stage as requested by the advocate.",
+              "latest_source_ids": [
+                "L3"
+              ],
+              "prior_context_ids": [
+                "P1S1",
+                "P1S2",
+                "P1S3",
+                "P1S4"
+              ],
+              "conditions": []
+            }
+          ],
+          "standalone_directions": [],
+          "other_communication": [],
+          "unresolved_distinctions": []
+        },
+        "routed_plan": {
+          "items": [
+            {
+              "request": "Give me a factual chronology from my account.",
+              "relation": "new",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "",
+              "clarification": "",
+              "intent": "request",
+              "research_question": "",
+              "response_basis": "conversation_record",
+              "material_purposes": [
+                "account_contribution"
+              ],
+              "record_requirement": {
+                "kind": "none",
+                "target_ids": [],
+                "operation": "none",
+                "success_condition": ""
+              },
+              "response_mode": "substantive",
+              "mutation_scopes": [
+                {
+                  "authority_kind": "account_contribution",
+                  "authority_source_ids": [
+                    "L1",
+                    "P1S1",
+                    "P1S2",
+                    "P1S3",
+                    "P1S4"
+                  ],
+                  "target_ids": [],
+                  "permitted_relations": [
+                    "new"
+                  ],
+                  "target_scope": "exact"
+                }
+              ]
+            },
+            {
+              "request": "Separately, list the uncertainties I expressly mentioned.",
+              "relation": "new",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "",
+              "clarification": "",
+              "intent": "request",
+              "research_question": "",
+              "response_basis": "conversation_record",
+              "material_purposes": [
+                "account_contribution"
+              ],
+              "record_requirement": {
+                "kind": "none",
+                "target_ids": [],
+                "operation": "none",
+                "success_condition": ""
+              },
+              "response_mode": "substantive",
+              "mutation_scopes": [
+                {
+                  "authority_kind": "account_contribution",
+                  "authority_source_ids": [
+                    "L2",
+                    "P1S1",
+                    "P1S2",
+                    "P1S3",
+                    "P1S4"
+                  ],
+                  "target_ids": [],
+                  "permitted_relations": [
+                    "new"
+                  ],
+                  "target_scope": "exact"
+                }
+              ]
+            },
+            {
+              "request": "Do not research the law yet.",
+              "relation": "new",
+              "matter_scope": "current",
+              "priority": "ordinary",
+              "next_step": "answer",
+              "reply": "",
+              "clarification": "",
+              "intent": "request",
+              "research_question": "",
+              "response_basis": "conversation_record",
+              "material_purposes": [
+                "account_contribution"
+              ],
+              "record_requirement": {
+                "kind": "none",
+                "target_ids": [],
+                "operation": "none",
+                "success_condition": ""
+              },
+              "response_mode": "substantive",
+              "mutation_scopes": [
+                {
+                  "authority_kind": "account_contribution",
+                  "authority_source_ids": [
+                    "L3"
+                  ],
+                  "target_ids": [],
+                  "permitted_relations": [
+                    "new"
+                  ],
+                  "target_scope": "exact"
+                }
+              ]
+            }
+          ],
+          "active_work_after": "Examine the reported delivery and invoice account when requested.",
+          "opening": {
+            "ready": false,
+            "title": "",
+            "summary": "",
+            "party_name": "",
+            "subject": ""
+          },
+          "material_review": true
+        }
+      },
+      "error_type": null,
+      "error": null,
+      "metrics": {
+        "model_calls": 2,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 2,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 6266,
+        "known_tokens_out": 594,
+        "known_cost_usd": 0.0034568,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    }
+  ]
+}
