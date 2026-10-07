@@ -2,8 +2,49 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 
 from nm.brain.conversation import Conversation, IncompleteConversation, Message
+
+LEGACY_CONTEXT = "legacy_elements_v1"
+PUBLIC_CONTEXT = "public_reply_v2"
+
+
+def context_contract(turn: Mapping) -> str:
+    """The execution owner selects reconstruction, never a matching quotation."""
+    response = turn.get("response", {})
+    coverage = response.get("material_coverage", {}) if isinstance(response, Mapping) else {}
+    execution = coverage.get("execution", {}) if isinstance(coverage, Mapping) else {}
+    contract = (execution.get("context_contract", LEGACY_CONTEXT)
+                if isinstance(execution, Mapping) else LEGACY_CONTEXT)
+    if contract not in (LEGACY_CONTEXT, PUBLIC_CONTEXT):
+        raise IncompleteConversation("The saved context contract is unsupported")
+    return contract
+
+
+def resolve_history(messages: Sequence[Message], contract: str) -> tuple[Message, ...]:
+    """Reconstruct a declared historical view from canonical public messages.
+
+    Compatibility metadata is ephemeral and server-owned. It preserves earlier
+    exact source identities without rewriting durable records or their seals.
+    """
+    if contract == PUBLIC_CONTEXT:
+        return tuple(messages)
+    if contract != LEGACY_CONTEXT:
+        raise IncompleteConversation("The saved context contract is unsupported")
+    numbered = [item for item in messages if item.legacy_order is not None]
+    if len({item.legacy_order for item in numbered}) != len(numbered):
+        raise IncompleteConversation("Historical conversation order is ambiguous")
+    ordered = sorted(numbered, key=lambda item: item.legacy_order)
+    ordered.extend(item for item in messages if item.legacy_order is None)
+    return tuple(replace(item, text=item.legacy_text or item.text) for item in ordered)
+
+
+def word_views(messages: Sequence[Message]) -> dict[str, dict[tuple[str, str], str]]:
+    """Two bounded source maps; no alternative is tried after a failed match."""
+    return {contract: {(item.turn_id, item.role): item.text
+                       for item in resolve_history(messages, contract)}
+            for contract in (LEGACY_CONTEXT, PUBLIC_CONTEXT)}
 
 
 def released_older_turns(store, matter) -> list[dict]:
@@ -21,7 +62,8 @@ def released_older_turns(store, matter) -> list[dict]:
 
 
 def from_turns(turns: Sequence[Mapping], *, state: str,
-               matter_id: str | None = None, current_work: str = "") -> Conversation:
+               matter_id: str | None = None, current_work: str = "",
+               contract: str = LEGACY_CONTEXT) -> Conversation:
     """Accept chronological saved turns only when every side can be recovered.
 
     ``turns`` is the authorised transcript projection. Its text is context,
@@ -33,6 +75,8 @@ def from_turns(turns: Sequence[Mapping], *, state: str,
     messages: list[Message] = []
     seen: set[str] = set()
     for turn in turns:
+        if not isinstance(turn, Mapping):
+            raise IncompleteConversation("A saved turn is unreadable")
         turn_id = turn.get("turn_id")
         words = turn.get("message")
         if (not isinstance(turn_id, str) or not turn_id.strip() or turn_id in seen
@@ -64,7 +108,23 @@ def from_turns(turns: Sequence[Mapping], *, state: str,
             lines.append(explanation)
         if not lines:
             raise IncompleteConversation("A released reply has no readable text")
-        messages.extend((Message(turn_id, "advocate", words),
-                         Message(turn_id, "nm", "\n".join(lines))))
-    return Conversation(tuple(messages), current_matter_id=matter_id,
+        legacy_text = "\n".join(lines)
+        composed = turn.get("composed", [])
+        if (not isinstance(composed, list)
+                or any(not isinstance(item, Mapping) or not isinstance(item.get("text"), str)
+                       or not item["text"].strip() for item in composed)
+                or (withheld and composed)):
+            raise IncompleteConversation("A saved public reply is unreadable")
+        public_text = "\n".join(item["text"] for item in composed) if composed else legacy_text
+        order = turn.get("_legacy_order")
+        if order is not None and (type(order) is not int or order < 0):
+            raise IncompleteConversation("Historical conversation order is unreadable")
+        metadata = dict(recorded_at=turn.get("at"), context_contract=context_contract(turn))
+        messages.extend((Message(turn_id, "advocate", words,
+                                 legacy_order=order * 2 if order is not None else None,
+                                 **metadata),
+                         Message(turn_id, "nm", public_text, legacy_text=legacy_text,
+                                 legacy_order=order * 2 + 1 if order is not None else None,
+                                 **metadata)))
+    return Conversation(resolve_history(messages, contract), current_matter_id=matter_id,
                         current_work=current_work)

@@ -4,6 +4,14 @@ import json
 import pytest
 
 from nm.brain.conversation import Conversation, Message, interpret
+from nm.brain.history import (
+    LEGACY_CONTEXT,
+    PUBLIC_CONTEXT,
+    context_contract,
+    from_turns,
+    resolve_history,
+    word_views,
+)
 from tests.test_new_brain_conversation import Model, interpretation, item
 
 
@@ -24,4 +32,43 @@ def test_compatibility_metadata_is_not_presented_as_conversation():
 def test_unreadable_reconstruction_metadata_is_rejected(metadata):
     with pytest.raises(ValueError):
         Message("prior", "nm", "Readable", **metadata)
+
+
+def saved_turn(identity="prior", **changes):
+    return dict(turn_id=identity, message="Original question.", committed=True,
+                release_state="released", elements=[{"text": "Internal finding."}],
+                **changes)
+
+
+def test_public_reply_and_declared_historical_sources_remain_distinct():
+    row = saved_turn(composed=[{"text": "The public question.\n  Exact words."}])
+    public = from_turns([row], state="ok", contract=PUBLIC_CONTEXT).messages
+    assert public[1].text == "The public question.\n  Exact words."
+    assert resolve_history(public, LEGACY_CONTEXT)[1].text == "Internal finding."
+    assert public[1].text != public[1].legacy_text
+    assert word_views(public)[PUBLIC_CONTEXT][("prior", "nm")] == public[1].text
+    assert context_contract(row) == LEGACY_CONTEXT
+    assert row["elements"] == [{"text": "Internal finding."}]
+
+
+def test_historical_order_uses_owned_positions_not_source_match_or_identifier():
+    public = from_turns([saved_turn("z", _legacy_order=1),
+                         saved_turn("a", _legacy_order=0)],
+                        state="ok", contract=PUBLIC_CONTEXT).messages
+    assert [m.turn_id for m in public] == ["z", "z", "a", "a"]
+    assert [m.turn_id for m in resolve_history(public, LEGACY_CONTEXT)] == ["a", "a", "z", "z"]
+
+
+@pytest.mark.parametrize("composed", [None, [{"text": ""}], [{"text": None}]])
+def test_malformed_public_reply_does_not_fall_back_to_findings(composed):
+    with pytest.raises(ValueError):
+        from_turns([saved_turn(composed=composed)], state="ok", contract=PUBLIC_CONTEXT)
+
+
+def test_unknown_context_contract_cannot_fall_back_to_legacy():
+    row = saved_turn(response={"material_coverage": {"execution": {"context_contract": "future"}}})
+    with pytest.raises(ValueError):
+        from_turns([row], state="ok")
+    with pytest.raises(ValueError):
+        resolve_history((), "future")
 
