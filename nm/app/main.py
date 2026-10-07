@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     health = application.health()
     if args.check:
         print(json.dumps(health, indent=2))
-        return 0 if health["corpus"] == "readable" else 1
+        return 0 if health["runtime"] == "ready" else 1
 
     create_app(application)
     import uvicorn

@@ -15,6 +15,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Mapping
 
+from nm.shared.source_layout import active_source_files, archived_source
+
 ROOT = Path(__file__).resolve().parents[2]
 ROLES = frozenset({"domain", "ports", "core", "adapters", "knowledge",
                    "infrastructure", "edge", "drafting", "obs", "bootstrap"})
@@ -88,8 +90,7 @@ def source_files(*, root: Path = ROOT) -> tuple[Path, ...]:
     source = root / "nm"
     if not source.is_dir():
         raise LayoutError("product source tree is missing")
-    files = tuple(sorted(path for path in source.rglob("*.py")
-                         if path.is_file() and "__pycache__" not in path.parts))
+    files = active_source_files(root=root)
     if not files:
         raise LayoutError("product source tree is empty")
     return files
@@ -123,6 +124,8 @@ def classify_sources(*, root: Path = ROOT, roles: Mapping[str, str]) -> ModuleRo
         if (not isinstance(module, str) or not _MODULE.fullmatch(module)
                 or not isinstance(role, str) or role not in ROLES):
             raise LayoutError(f"invalid source role: {module!r} -> {role!r}")
+        if archived_source(root.joinpath(*module.split(".")), root=root):
+            raise LayoutError("archived sources cannot be declared as active modules")
     paths: dict[str, Path] = {}
     for path in source_files(root=root):
         if path.is_symlink() or root.resolve() not in path.resolve().parents:
@@ -158,6 +161,7 @@ def load_module_roles(*, root: Path = ROOT) -> ModuleRoles:
         not isinstance(name, str) or not name or "/" in name or "\\" in name
         or not isinstance(path, str) or not path.startswith("nm/")
         or ".." in Path(path).parts or "\\" in path or Path(path).is_absolute()
+        or archived_source(root / path, root=root)
         for name, path in assets.items()
     ):
         raise LayoutError("invalid browser asset identities")
@@ -167,15 +171,18 @@ def load_module_roles(*, root: Path = ROOT) -> ModuleRoles:
     )
     changed = sorted(_archived_module(relocated.get(row["module"], row["module"]))
                      for row in historical["modules"]
+                     if not _archived_module(relocated.get(row["module"], row["module"])).startswith("nm.Archives.")
                      if roles.get(_archived_module(relocated.get(row["module"], row["module"]))) != row["role"])
     if changed:
         raise LayoutError(f"migrated source owners missing or reclassified: {changed}")
     changed = sorted(_archived_module(module) for module, role in relocation_roles.items()
+                     if not _archived_module(module).startswith("nm.Archives.")
                      if roles.get(_archived_module(module)) != role)
     if changed:
         raise LayoutError(f"relocated source owners missing or reclassified: {changed}")
     if any(assets.get(name) != _archived_path(path)
-           for name, path in relocation_assets.items()):
+           for name, path in relocation_assets.items()
+           if not archived_source(root / _archived_path(path), root=root)):
         raise LayoutError("relocated browser owners differ from the served asset map")
     layout = classify_sources(root=root, roles=roles)
     owned_assets = {name: root / path for name, path in assets.items()}

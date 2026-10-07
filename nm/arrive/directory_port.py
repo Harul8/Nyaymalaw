@@ -28,7 +28,7 @@ from nm.arrive.advocate_contracts import (
 )
 from nm.arrive.attempts_contracts import Verdict
 from nm.arrive.professional_access_contracts import ProfessionalApproval
-from nm.Archives.legal_brain.understand.advocate_memory_contracts import AdvocateMemory
+from nm.arrive.advocate_memory_contracts import AdvocateMemory
 from nm.shared.external_ai_contracts import ModelPermission
 
 

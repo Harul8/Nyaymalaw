@@ -28,12 +28,26 @@ def _unique(pairs):
     return values
 
 
+def archived_source(path: Path, *, root: Path = ROOT) -> bool:
+    """Only the repository's owned archive tree is outside the active product."""
+    return path.is_relative_to(root / "nm" / "Archives")
+
+
+def active_source_files(*, root: Path = ROOT) -> tuple[Path, ...]:
+    """Keep one scan population for runtime and build-time reconciliation."""
+    return tuple(sorted(path for path in (root / "nm").rglob("*.py")
+                        if "__pycache__" not in path.parts
+                        and not archived_source(path, root=root)))
+
+
 def module_path(name: str, *, root: Path = ROOT) -> Path:
     if not isinstance(name, str) or (name != "nm" and not name.startswith("nm.")):
         raise LayoutRefused("A source module must belong to nm")
     if any(not part.isidentifier() for part in name.split(".")):
         raise LayoutRefused("A source module name is not an exact Python identity")
     base = root.joinpath(*name.split("."))
+    if archived_source(base, root=root):
+        raise LayoutRefused("An archived module cannot belong to the active source population")
     return base / "__init__.py" if base.is_dir() else base.with_suffix(".py")
 
 
@@ -61,8 +75,7 @@ def load_layout(root: Path = ROOT, *, reconcile: bool = True) -> dict:
     if len(declared) != len(modules):
         raise LayoutRefused("Two source identities name the same file")
     if reconcile:
-        observed = {path for path in (root / "nm").rglob("*.py")
-                    if "__pycache__" not in path.parts}
+        observed = set(active_source_files(root=root))
         if not observed or observed != declared:
             raise LayoutRefused("The actual Python population differs from its declared roles")
         if any(path.is_symlink() or root.resolve() not in path.resolve().parents
@@ -91,6 +104,8 @@ def browser_assets(*, root: Path = ROOT) -> dict[str, Path]:
             raise LayoutRefused("Only exact named browser assets may be served")
         path = root / relative
         if (not relative.startswith("nm/") or not path.is_file() or path.is_symlink()
+                or ".." in Path(relative).parts
+                or archived_source(path, root=root)
                 or root.resolve() not in path.resolve().parents):
             raise LayoutRefused("A browser asset is unavailable or escapes its repository")
         result[name] = path

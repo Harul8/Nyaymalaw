@@ -72,7 +72,6 @@ let outcomeReturn = 'register';
 let resetToken = null;
 let activeDelivery = null;
 let retiringSession = null;
-let advocatePreferences = null;
 
 // In-memory work belongs to an advocate, workspace and file (or one unsaved
 // opening), not to the composer DOM. The immutable pending request belongs to
@@ -406,8 +405,6 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
-  advocatePreferences?.clear();
-  closeSourceReader(false);
   closeDisputeReader(false);
   window.NmBrainSources?.close(false);
   if (draftVault) draftVault.lock();
@@ -738,10 +735,6 @@ async function api(path, options, { sessionBound = true } = {}) {
   return body;
 }
 
-advocatePreferences = NMAdvocatePreferences.create({document, api,
-  session: () => ({account: state.advocate, generation: state.sessionGeneration}),
-  menuClose: () => setAccountMenu(false)});
-
 /* --------------------------------------------------------------- health --- */
 
 async function loadHealth() {
@@ -761,11 +754,16 @@ async function loadHealth() {
     // tell them. The rest moves to the title, where it is one hover away for
     // whoever needs it and out of the reading line for everyone else.
     const readable = h.corpus === 'readable';
-    el.textContent = readable
-      ? 'Legal library available · check the scope of each result'
-      : 'Legal library unavailable · authority-backed research is limited';
-    el.title = 'Library availability does not establish legal coverage or currency.';
-    el.classList.toggle('bad', !readable);
+    const chatOnly = h.corpus === 'not_connected' && h.runtime === 'ready';
+    el.textContent = chatOnly
+      ? 'Chat available · legal research is not connected'
+      : readable
+        ? 'Legal library available · check the scope of each result'
+        : 'Legal library unavailable · authority-backed research is limited';
+    el.title = chatOnly
+      ? 'Message labelling, response preparation and response review are connected.'
+      : 'Library availability does not establish legal coverage or currency.';
+    el.classList.toggle('bad', !readable && !chatOnly);
     $('rehearsal-warning').hidden = h.provider !== 'scripted';
   } catch (e) {
     if (e.obsolete) return;
@@ -1593,14 +1591,6 @@ function renderRequirements(item, row) {
     span.className = 'requirement-span';
     span.textContent = need.span;
     line.appendChild(span);
-    if (need.citation) {
-      const cited = document.createElement('button');
-      cited.type = 'button'; cited.className = 'citation-link';
-      cited.textContent = 'Read the supporting passage';
-      cited.addEventListener('click', () => openSourceReader(need.citation,
-        {source: need.citation.source}, need.citation.element_index, cited));
-      line.appendChild(cited);
-    }
     list.appendChild(line);
   }
   item.appendChild(list);
@@ -1743,6 +1733,7 @@ function restoredTurn(turn) {
     matter_id: turn.matter_id, chat_id: turn.chat_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
+    service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     at: turn.at || '',
     board_changes: Array.isArray(turn.board_changes) ? turn.board_changes : [],
     composed: Array.isArray(turn.composed) ? turn.composed : [],
@@ -2353,12 +2344,7 @@ function renderTurn(entry) {
   if (!entry.answer) {
     const pending = document.createElement('div');
     pending.className = 'el ground';
-    // LB-82. Words chosen by the stage this turn's own recorded work has
-    // reached; its saved stage label beneath them (owner, 28 September 2026).
-    window.NMLoopProgress.working(pending, {
-      matterId: entry.request?.matter_id || state.matterId, turnId: entry.turnId, read: api,
-      isCurrent: () => !state.ended && Boolean(state.advocate) && pending.isConnected,
-    });
+    pending.textContent = 'Preparing a response…';
     wrap.appendChild(pending);
     return wrap;
   }
@@ -2369,6 +2355,12 @@ function renderTurn(entry) {
   if (entry.answer.replayed) {
     wrap.appendChild(stateBlock('quiet',
       'Earlier recorded response recovered. This is not a new assessment; the file may have changed since it was prepared.'));
+  }
+
+  if (typeof entry.answer.service_status === 'string' && entry.answer.service_status.trim()) {
+    const status = stateBlock('quiet service-status', entry.answer.service_status);
+    status.setAttribute('role', 'status');
+    wrap.appendChild(status);
   }
 
   // WHAT FOLDS AND WHAT MAY NEVER FOLD.
@@ -2516,40 +2508,26 @@ function renderTurn(entry) {
     const bound = el && el.source && el.refs.includes(el.source.locator)
       && (entry.answer.matter_id || (el.source.brain && entry.answer.chat_id))
       && entry.answer.turn_id;
-    if (!bound) return document.createTextNode(label);
+    if (!bound || !el.source.brain || !window.NmBrainSources) {
+      return document.createTextNode(label);
+    }
     const link = document.createElement('button');
     link.type = 'button'; link.className = 'citation-link';
     link.textContent = label;
     link.setAttribute('aria-label', `Open saved passage: ${label}`);
-    link.addEventListener('click', () => el.source.brain
-      ? window.NmBrainSources.open(entry.answer, el, entry.answer.elements.indexOf(el), 0, link)
-      : openSourceReader(entry.answer, el, entry.answer.elements.indexOf(el), link));
+    link.addEventListener('click', () => window.NmBrainSources.open(
+      entry.answer, el, entry.answer.elements.indexOf(el), 0, link));
     return link;
   }
 
   function fillReferences(row, el) {
     if (el.source?.brain) return;
-    const bound = el.source && el.refs.includes(el.source.locator)
-      && entry.answer.matter_id && entry.answer.turn_id;
-    if (bound) {
-      const link = document.createElement('button');
-      link.type = 'button'; link.className = 'citation-link';
-      link.textContent = el.source.label;
-      link.setAttribute('aria-label', `Open saved passage: ${el.source.label}`);
-      link.addEventListener('click', () => openSourceReader(entry.answer, el,
-        entry.answer.elements.indexOf(el), link));
-      row.appendChild(link);
-      const others = el.refs.filter(ref => ref !== el.source.locator);
-      if (others.length) row.appendChild(document.createTextNode(
-        ` · ${others.join(' · ')} — saved source inspection unavailable`));
-    } else {
-      // Preserve historical references. Never manufacture a clickable identity.
-      const label = document.createElement('span'); label.textContent = el.refs.join(' · ');
-      row.appendChild(label);
-      const note = document.createElement('span'); note.className = 'source-unavailable';
-      note.textContent = ' — saved source inspection unavailable';
-      row.appendChild(note);
-    }
+    // Preserve historical references without linking a retired source reader.
+    const label = document.createElement('span'); label.textContent = el.refs.join(' · ');
+    row.appendChild(label);
+    const note = document.createElement('span'); note.className = 'source-unavailable';
+    note.textContent = ' · saved source inspection unavailable';
+    row.appendChild(note);
   }
 
   // Support is visible by default. The advocate may collapse ordinary support,
@@ -2631,7 +2609,6 @@ function showConversationFromStart() {
 }
 
 function repaint() {
-  window.NMLoopProgress.stopAll();
   const t = $('thread');
   const follow = t.scrollHeight - t.scrollTop - t.clientHeight < 48;
   const top = t.scrollTop;
@@ -3677,8 +3654,6 @@ function openTab(name) {
 }
 
 function showTab(name) {
-  closeSourceReader(false);
-  window.NMLoopProgress.stopAll();
   document.body.dataset.pane = name;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
   const tab = tabFor(name);
@@ -5385,7 +5360,6 @@ async function loadHistoryMatters() {
 }
 
 async function showHistory(matterId) {
-  window.NMLoopProgress.stopAll();
   const generation = ++state.historyGeneration;
   const st = $('history-state');
   const body = $('history-body');
@@ -5483,7 +5457,6 @@ function showGate(message) {
 }
 
 function showApplication(advocate, workspace, professionalApproval) {
-  advocatePreferences?.clear();
   if (!workspace || !workspace.id || !workspace.label) {
     clearPrivileged();
     showGate('I could not establish the active workspace. Matter content '

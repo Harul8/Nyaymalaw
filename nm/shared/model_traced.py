@@ -51,7 +51,6 @@ import time
 from dataclasses import dataclass, field, replace
 from typing import Any, Mapping
 
-from nm.Archives.legal_brain.common.reads_contracts import is_decisive
 from nm.shared.model_port import (
     EmbeddingResult,
     ModelPort,
@@ -187,15 +186,6 @@ def _is_empty(result: ModelResult, schema: Mapping[str, Any] | None = None
     return not any(v not in (None, "", [], {}, ()) for v in result.data.values())
 
 
-def _decisive(read: str) -> bool:
-    """Does being wrong about this read change a number the advocate acts on?
-
-    Asked of `nm.Archives.legal_brain.common.reads_contracts`, which is the ONE table that decides it. A list
-    here would be a second owner for one truth.
-    """
-    return is_decisive(read)
-
-
 @dataclass
 class TracedModel:
     """Any `ModelPort`, with every call kept.
@@ -210,6 +200,10 @@ class TracedModel:
     inner: ModelPort
     calls: list[Call] = field(default_factory=list)
     dropped: int = 0
+    # Composition may explicitly identify reads whose outputs establish a
+    # number. The current brain produces proposals only; tracing must not load
+    # a retired engine's semantic registry to decide dispatch metadata.
+    decisive_reads: frozenset[str] = frozenset()
     """Calls this failed to RECORD. Not calls that failed.
 
     Counted and reported rather than logged and forgotten: a tracer that has
@@ -336,7 +330,7 @@ class TracedModel:
         the one that resets is the later of them.
         """
         return tuple(sorted({c.read for c in self.calls
-                             if c.empty and _decisive(c.read)}))
+                             if c.empty and c.read in self.decisive_reads}))
 
     def refused_reads(self) -> tuple[str, ...]:
         """The reads that COULD NOT RUN this turn, by name.
@@ -376,7 +370,7 @@ class TracedModel:
             # an empty answer there is indistinguishable from "that thing is
             # not present" and the arithmetic proceeds from the wrong value.
             "empty_decisive": sorted({c.read for c in calls if c.empty
-                                      and _decisive(c.read)}),
+                                      and c.read in self.decisive_reads}),
             # WHICH READS COULD NOT RUN. The neighbouring fact, and the
             # one G-MODEL fires on at nine separate sites -- kept here so
             # the transcript carries it once rather than nine times or

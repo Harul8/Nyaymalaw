@@ -21,7 +21,7 @@ from enum import Enum, nonmember
 from typing import Literal
 
 from nm.advise.turn_receipt_contracts import TurnReceipt
-from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopRecord
+from nm.work_the_file.loop_record_contracts import LoopRecord
 from nm.open_matter.intake_contracts import ReadQuality
 from nm.shared.spoken_contracts import Spoken
 from nm.shared.text_contracts import fold, refuses_blank_text

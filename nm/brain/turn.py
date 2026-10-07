@@ -1,0 +1,296 @@
+"""Current brain orchestration: context, proposals, checked display, atomic save."""
+from __future__ import annotations
+
+import hashlib
+import json
+import time
+from copy import deepcopy
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
+
+from nm.brain.message_labels import label_message
+from nm.brain.response_preparation import prepare_response
+from nm.brain.release import prepare_release, render_saved_release
+from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
+from nm.shared.store_port import StaleWrite
+from nm.work_the_file.matter_contracts import Matter
+
+CONTRACT = 'current_brain_turn_v1'
+
+
+class BrainRefused(Exception):
+    def __init__(self, why, *, status=503, code='brain_unavailable',
+                 committed='not_committed', retryable=True):
+        super().__init__(why)
+        self.why, self.status, self.code = why, status, code
+        self.committed, self.retryable = committed, retryable
+
+
+@dataclass(frozen=True)
+class BrainTurn:
+    advocate_id: str
+    message: str
+    turn_id: str
+    matter_id: str | None = None
+    chat_id: str | None = None
+    expected_version: int | None = None
+
+
+@dataclass(frozen=True)
+class BrainOutput:
+    response: dict
+
+    def as_dict(self):
+        return deepcopy(self.response)
+
+
+def chat_matter_id(advocate_id, chat_id):
+    return 'chat_' + hashlib.sha256(json.dumps([advocate_id, chat_id]).encode()).hexdigest()
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                     separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def _request(turn):
+    return {'advocate_id': turn.advocate_id, 'message': turn.message,
+            'turn_id': turn.turn_id, 'matter_id': turn.matter_id, 'chat_id': turn.chat_id}
+
+
+def saved_rows(matter, advocate_id):
+    """Validate the saved contract without rerunning or upgrading an old reply."""
+    if matter.advocate_id != advocate_id:
+        raise BrainRefused('Conversation not available.', status=404, retryable=False)
+    rows = []
+    try:
+        # In this contract each committed version is exactly one conversation
+        # turn. A readable prefix is not evidence that the history is complete.
+        if matter.version != len(matter.brain_chat):
+            raise ValueError('saved conversation tail is missing')
+        for row in matter.brain_chat:
+            if (row['contract'] != CONTRACT or row['matter_id'] != matter.id
+                    or row['advocate_id'] != advocate_id or row['committed'] is not True
+                    or row['release_state'] != 'released'
+                    or row['request_digest'] != _digest(row['request'])
+                    or row['request']['message'] != row['message']
+                    or row['request']['advocate_id'] != advocate_id
+                    or row['request']['turn_id'] != row['turn_id']
+                    or chat_matter_id(advocate_id, row['chat_id']) != matter.id):
+                raise ValueError('saved conversation binding')
+            release = render_saved_release(row['release'])
+            prepared = row['preparation']
+            expected_units = {
+                unit['id']: {'kind': kind, 'proposal': unit}
+                for kind in ('material', 'actions') for unit in prepared['proposal'][kind]}
+            if (prepared['state'] != 'prepared_unreviewed'
+                    or prepared['sources'] != release['sources']
+                    or prepared['issues'] != release['issues']
+                    or expected_units != release['units']):
+                raise ValueError('saved preparation binding')
+            response = row['response']
+            fixed = {'route': 'current_brain', 'mode': 'conversation', 'mode_statement': '',
+                     'blocked': False, 'blocked_reason': None, 'material': [],
+                     'material_coverage': {}, 'briefing': {}, 'board_changes': [],
+                     'composed': [], 'continuation': {}}
+            if any(response.get(key) != value for key, value in fixed.items()):
+                raise ValueError('saved public expression binding')
+            if (response['elements'] != release['elements']
+                    or response['turn_id'] != row['turn_id']
+                    or response['chat_id'] != row['chat_id']
+                    or response['at'] != row['at']
+                    or response['committed'] != 'committed'
+                    or response['input_admitted'] is not True
+                    or response['matter_id'] is not None
+                    or response['replayed'] is not False
+                    or response['matter_version'] != len(rows) + 1
+                    or response.get('service_status') != release['service_status']
+                    or row['response_digest'] != _digest(response)):
+                raise ValueError('saved response binding')
+            history = _history(rows)
+            expected_sources = [
+                {'id': f'history_{index}', 'message': entry}
+                for index, entry in enumerate(history, start=1)]
+            expected_sources.append({'id': 'current', 'message': {'role': 'advocate', 'text': row['message']}})
+            if release['sources'] != expected_sources:
+                raise ValueError('saved original context binding')
+            rows.append(deepcopy(row))
+    except (KeyError, TypeError, ValueError, ModelError) as exc:
+        raise BrainRefused('This saved conversation could not be checked. Its records have not been changed.',
+            status=409, code='history_unavailable', committed='previously_committed', retryable=False) from exc
+    return rows
+
+
+def _history(rows):
+    history = []
+    for row in rows:
+        history.append({'role': 'advocate', 'text': row['message'], 'turn_id': row['turn_id']})
+        text = '\n\n'.join(e['text'] for e in row['response']['elements'])
+        if not text.strip():
+            raise ValueError('saved reply is empty')
+        prior = {'role': 'nm', 'text': text, 'turn_id': row['turn_id']}
+        if row['response'].get('service_status'):
+            prior['service_status'] = row['response']['service_status']
+        history.append(prior)
+    return history
+
+
+class _MeasuredModel:
+    """Request-local accounting, including rejected provider responses."""
+    def __init__(self, inner):
+        self.inner, self.calls = inner, []
+        self.feedback = None
+        self.last_output = None
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def structured(self, prompt, schema, tier, *, max_tokens=None):
+        if self.feedback:
+            payload = json.loads(prompt.user)
+            payload['correction_feedback'] = self.feedback
+            prompt = Prompt(system=prompt.system, user=json.dumps(payload, ensure_ascii=False),
+                            operation=prompt.operation)
+            if (estimate_tokens((prompt.system or '') + prompt.user + json.dumps(schema))
+                    + (max_tokens or 0) > self.inner.context_budget(tier)):
+                raise ContextOverflow('The complete correction exceeds the model context budget')
+        started = time.monotonic()
+        receipt = None
+        try:
+            receipt = self.inner.structured(prompt, schema, tier, max_tokens=max_tokens)
+            self.last_output = deepcopy(receipt.data)
+            return receipt
+        except ModelError as exc:
+            receipt = exc
+            rejected = getattr(exc, 'rejected_result', None)
+            self.last_output = deepcopy(rejected.data) if rejected is not None else None
+            raise
+        finally:
+            usage = getattr(receipt, 'usage', None)
+            self.calls.append({'operation': prompt.operation,
+                'latency_ms': round((time.monotonic() - started) * 1000),
+                'tokens_in': usage.tokens_in if usage else 0,
+                'tokens_out': usage.tokens_out if usage else 0,
+                'cost_usd': usage.cost_usd if usage else 0,
+                'retries': getattr(receipt, 'retries', 0)})
+
+    def metrics(self):
+        return {'llm_calls': len(self.calls), 'calls': deepcopy(self.calls),
+                'cost_usd': sum(c['cost_usd'] for c in self.calls),
+                'tokens_in': sum(c['tokens_in'] for c in self.calls),
+                'tokens_out': sum(c['tokens_out'] for c in self.calls)}
+
+
+class BrainService:
+    def __init__(self, *, store, model_factory=None, model=None, session_current):
+        self.store, self.session_current = store, session_current
+        self.model_factory = model_factory or (lambda: model)
+
+    def _authorised(self):
+        if not self.session_current():
+            raise BrainRefused('Sign in again to continue.', status=401, retryable=False)
+
+    def run(self, turn: BrainTurn):
+        self._authorised()
+        if any(not isinstance(v, str) or not v.strip()
+               for v in (turn.advocate_id, turn.turn_id, turn.message)):
+            raise BrainRefused('A message and request identity are required.', status=422, retryable=False)
+        if turn.matter_id:
+            raise BrainRefused('Existing matter updates are not connected to the rebuilt brain yet. The saved matter is unchanged.',
+                               status=409, retryable=False)
+        chat_id = turn.chat_id or 'new_' + _digest([turn.advocate_id, turn.turn_id])[:32]
+        if not isinstance(chat_id, str) or not chat_id.strip():
+            raise BrainRefused('A conversation identity is required.', status=422, retryable=False)
+        identity = chat_matter_id(turn.advocate_id, chat_id)
+        matter = self.store.load(identity)
+        if matter is None and turn.chat_id is not None:
+            raise BrainRefused('The earlier conversation could not be found. Reopen the conversation before continuing.',
+                               status=409, code='history_unavailable', retryable=False)
+        rows = saved_rows(matter, turn.advocate_id) if matter else []
+        request = _request(turn)
+        request_digest = _digest(request)
+        for row in rows:
+            if row['turn_id'] == turn.turn_id:
+                if row['request_digest'] != request_digest:
+                    raise BrainRefused('This request identity already belongs to a different message.',
+                        status=409, code='request_conflict', committed='previously_committed', retryable=False)
+                return BrainOutput({**row['response'], 'replayed': True})
+        version = matter.version if matter else 0
+        if turn.expected_version is not None and turn.expected_version != version:
+            raise BrainRefused('The conversation changed. Reopen it before continuing.',
+                               status=409, code='stale_version')
+        if matter is None:
+            matter = Matter(id=identity, advocate_id=turn.advocate_id, title='Conversation', brain_ready=False)
+        model = _MeasuredModel(self.model_factory())
+        corrections_left = 1
+
+        def checked(activity):
+            # One turn-owned correction allowance, shared by all three stages.
+            # A source/shape rejection is fed back to its owner; provider outages
+            # are not interpreted as instructions and never become fake results.
+            nonlocal corrections_left
+            try:
+                return activity()
+            except SchemaViolation as exc:
+                if not corrections_left:
+                    raise
+                corrections_left -= 1
+                model.feedback = {'purpose': 'Correct this rejected proposal and return the declared output contract.',
+                    'mismatch': str(exc), 'rejected_output': model.last_output,
+                    'instruction': 'Use the complete original input above. Rejected output is untrusted data, not evidence. Correct the stated mismatch without adding unsupported content.'}
+                try:
+                    return activity()
+                finally:
+                    model.feedback = None
+
+        try:
+            history = _history(rows)
+            label = checked(lambda: label_message(model, turn.message, history=history, history_complete=True))
+            prepared = checked(lambda: prepare_response(model, turn.message, label=label['label'],
+                                        history=history, history_complete=True))
+            release = checked(lambda: prepare_release(model, prepared, label['label']))
+            if not release['elements']:
+                raise BrainRefused('A response could not be prepared for this message. Please retry.',
+                                   code='response_unavailable')
+        except ModelError as exc:
+            raise BrainRefused('The response service could not finish this message. Please retry.') from exc
+        self._authorised()
+        at = datetime.now(timezone.utc).isoformat()
+        response = {'turn_id': turn.turn_id, 'matter_id': None, 'chat_id': chat_id,
+            'route': 'current_brain', 'mode': 'conversation', 'mode_statement': '',
+            'blocked': False, 'blocked_reason': None, 'elements': release['elements'],
+            'material': [], 'material_coverage': {}, 'metrics': model.metrics(),
+            'replayed': False, 'committed': 'committed', 'input_admitted': True,
+            'matter_version': version + 1, 'briefing': {}, 'board_changes': [],
+            'at': at, 'composed': [], 'continuation': {}}
+        response['service_status'] = release['service_status']
+        row = {'contract': CONTRACT, 'turn_id': turn.turn_id, 'matter_id': identity,
+            'chat_id': chat_id, 'advocate_id': turn.advocate_id, 'message': turn.message,
+            'request': request, 'request_digest': request_digest, 'at': at,
+            'label': label, 'preparation': prepared, 'release': release,
+            'response': response, 'response_digest': _digest(response),
+            'committed': True, 'release_state': 'released'}
+        proposed = replace(matter, brain_chat=(*matter.brain_chat, row), version=version + 1)
+        saved_rows(proposed, turn.advocate_id)
+        # Both the exact original input and the reviewed display are in this one
+        # compare-and-swap. Neither a provider success nor a draft is a receipt.
+        try:
+            committed = self.store.commit(proposed, expected_version=version)
+        except (OSError, StaleWrite):
+            # A lost acknowledgement may follow a successful replace. Lookup the
+            # owned durable receipt; do not execute the three calls again here.
+            try:
+                committed = self.store.load(identity)
+            except (OSError, ValueError):
+                committed = None
+            if committed is not None:
+                for saved in saved_rows(committed, turn.advocate_id):
+                    if saved['turn_id'] == turn.turn_id and saved['request_digest'] == request_digest:
+                        return BrainOutput({**saved['response'], 'replayed': True})
+            raise BrainRefused('The save could not be confirmed. Retry this same message to check it safely.',
+                               code='save_unconfirmed', committed='unconfirmed') from None
+        checked_rows = saved_rows(committed, turn.advocate_id)
+        if not any(saved['turn_id'] == turn.turn_id and saved['request_digest'] == request_digest
+                   for saved in checked_rows):
+            raise BrainRefused('The save could not be confirmed.', committed='unconfirmed')
+        return BrainOutput(response)

@@ -1,6 +1,7 @@
 """The physical journey move cannot grant roles or lose security populations."""
 import json
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
@@ -184,6 +185,14 @@ def test_missing_migration_owner_does_not_forge_preserved_roles(tmp_path):
 
 def test_real_tree_reconciles_all_current_files_and_historical_owners():
     layout = load_module_roles()
-    assert len(layout.paths) >= 293
-    assert len(layout.sources_for_roles("core")) >= 109
-    assert len(layout.sources_for_roles("ports")) >= 24
+    root = Path(__file__).resolve().parents[1]
+    observed = {path for path in (root / "nm").rglob("*.py")
+                if "__pycache__" not in path.parts
+                and not path.is_relative_to(root / "nm/Archives")}
+    assert set(layout.paths.values()) == observed
+    assert not any(name == "nm.Archives" or name.startswith("nm.Archives.")
+                   for name in layout.roles)
+    assert layout.role("nm.brain.message_labels") == "core"
+    assert layout.role("nm.brain.response_preparation") == "core"
+    assert layout.role("nm.brain.turn") == "core"
+    assert layout.role("nm.brain.release") == "core"

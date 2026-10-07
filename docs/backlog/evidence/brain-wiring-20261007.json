@@ -1,0 +1,214 @@
+{
+  "checkpoint": "current-brain-application-wiring",
+  "date": "2026-10-07",
+  "status": "current_application_wired_with_limited_public_response",
+  "request": "Start the application using the latest nm/brain components and remove active dependencies on the archived engines.",
+  "owning_boundaries": {
+    "application": "nm/app/composition.py and nm/app/api.py",
+    "turn": "nm/brain/turn.py",
+    "release": "nm/brain/release.py",
+    "source_layout": "nm/source_layout.json and nm/shared/source_layout.py",
+    "durable_storage": "Existing authenticated sealed StorePort commit boundary"
+  },
+  "observable_pass_conditions": [
+    "The application starts, serves account/static/chat paths and processes a turn while archived-engine imports are blocked.",
+    "A new turn calls the current label, preparation and independent review components with the complete original context.",
+    "Only owned original-source expressions become public. Draft prose and proposed activities cannot imply completed actions.",
+    "Exact input, private proposals, checked public display and their bindings save atomically and reopen without a model call.",
+    "Missing context, wrong ownership, altered source/display bindings and unconfirmed persistence cannot produce a success receipt."
+  ],
+  "issues_and_fixes": [
+    {
+      "issue": "The active composition still depended on removed brain modules and archived engine routes.",
+      "fix": "Compose the rebuilt brain directly, retain authenticated account and sealed storage adapters, and remove archived engine routes from the serving surface.",
+      "scope": "Current application startup, authenticated chat and saved-chat reading. Historical matters remain unchanged and unavailable to the rebuilt processing path."
+    },
+    {
+      "issue": "The preparation result is unreviewed prose and cannot itself establish a public answer or completed effect.",
+      "fix": "Add an independent original-evidence review and a closed code-owned renderer. Public output contains a fixed greeting, selected complete original advocate messages, and a scoped notice that proposed work has not been performed.",
+      "counterexample": "A malicious draft claiming filing or completed corrections is retained privately but cannot be rendered."
+    },
+    {
+      "issue": "Display fields outside the selected release could reopen a public prose path during replay.",
+      "fix": "Bind the entire supported response envelope to owned fixed values and the saved release. Forbid added composed prose, admitted material, board changes or continuation output in this initial contract.",
+      "counterexample": "A changed composed paragraph remains refused even if a local response digest was recomputed."
+    },
+    {
+      "issue": "A readable history prefix or an unknown explicit chat ID could be mistaken for a complete new-message context.",
+      "fix": "Validate the contract-specific turn/version sequence, exact source reconstruction and preparation bindings. Require an explicitly referenced chat to exist under its authenticated owner.",
+      "counterexample": "Removing the last saved turn or requesting a missing chat cannot start a model call with empty history."
+    },
+    {
+      "issue": "Partial failure status could disappear after reopening or when assembling follow-up context.",
+      "fix": "Persist service status separately from the reply, validate it against release evidence, render it separately and preserve it as NM context metadata.",
+      "counterexample": "An unsupported action peer does not erase supported information or appear silently complete."
+    },
+    {
+      "issue": "A lost save acknowledgement cannot prove either successful saving or rollback.",
+      "fix": "Read the owned durable receipt after a save exception. Reuse a matching saved result without repeating the model stages; otherwise retain an unconfirmed status.",
+      "counterexample": "Failure injected after the atomic write returns the single saved response and leaves one stored input."
+    },
+    {
+      "issue": "The first live greeting failed because the reviewer selected a unit identity that did not exist in the supplied preparation.",
+      "fix": "Provide applicable owned IDs in the response schema and permit one turn-owned conditional correction carrying the precise rejection and original context. No scenario-specific greeting exception is added.",
+      "counterexample": "One failed stage can use the shared allowance; later stages cannot reset it or acquire private retry loops."
+    }
+  ],
+  "model_calls": {
+    "normal_new_turn": 3,
+    "operations": [
+      "label_message",
+      "prepare_response",
+      "review_prepared_response"
+    ],
+    "conditional_correction_maximum_per_turn": 1,
+    "stage_private_retries": 0,
+    "saved_reopen_or_replay": 0,
+    "purposes": {
+      "label_message": "Original latest message and complete prior context where present; one exclusive greeting/information/action/mixed proposal.",
+      "prepare_response": "Complete original context and proposed label; private reply draft, source-linked material proposals and planned activities.",
+      "review_prepared_response": "Complete original evidence before the unreviewed preparation; owned selectors, per-unit support decisions and omissions. No public prose."
+    }
+  },
+  "verification": {
+    "offline": {
+      "results": {
+        "tests": 260,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "junit": "outputs/brain-wiring-20261007/integrated-tests.xml",
+      "warning": "One external deprecation warning; no skipped cases.",
+      "scope": "Current components, release, turn ownership/recovery, sealed storage, source layout and authenticated HTTP application."
+    },
+    "browser": {
+      "method": "Real Chrome user-interface journey through Playwright CDP after the CUA driver failed twice.",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "url": "http://127.0.0.2:8175/",
+      "turns": [
+        {
+          "message": "Hello.",
+          "http_status": 200,
+          "turn_id": "turn_44df5f57-2ee2-42f4-8f8b-02acc90e8280",
+          "version": 1,
+          "model_calls": 3,
+          "raw_model_usage_usd": 0.0007748
+        },
+        {
+          "message": "SYNTHETIC WIRING CHECK. Our client says the delivery was due on 18 November 2026. The other party denies agreeing to that date. Please plan how to compare their two accounts; do not contact either party.",
+          "http_status": 200,
+          "turn_id": "turn_112ff7c2-bdbe-421b-b10a-c09d3c69ad88",
+          "version": 2,
+          "model_calls": 3,
+          "raw_model_usage_usd": 0.0015636
+        },
+        {
+          "message": "Correction: our client now says 19 November, not 18 November. The other party still denies agreeing to a delivery date. Keep the earlier account visible as a correction, not as an established fact.",
+          "http_status": 200,
+          "turn_id": "turn_6f4f49af-ca18-40cd-b2d1-c638cbe1dc77",
+          "version": 3,
+          "model_calls": 3,
+          "raw_model_usage_usd": 0.0019184000000000002
+        }
+      ],
+      "chat_id": "new_143eaae4770d4a53a58fbf0fa2c51315",
+      "browser_errors": [],
+      "saved_conversation_reopened": true,
+      "evidence": [
+        "outputs/brain-wiring-20261007/browser-turns.json",
+        "outputs/brain-wiring-20261007/browser-conversation.json",
+        "outputs/brain-wiring-20261007/browser-reopen.json",
+        "outputs/brain-wiring-20261007/browser-turn-1.png",
+        "outputs/brain-wiring-20261007/browser-turn-2.png",
+        "outputs/brain-wiring-20261007/browser-turn-3.png"
+      ],
+      "initial_failure": "outputs/brain-wiring-20261007/browser-initial-failure.json",
+      "semantic_acceptance": "Incomplete. The greeting was also extracted as material. Full messages repeat under account/request and historical correction context. The browser shows no natural summary, detailed plan or executed task.",
+      "cost": {
+        "live_calls_including_initial_failure": 12,
+        "ledger_charge_usd": 0.004977,
+        "successful_turns_raw_usage_usd": 0.0042568,
+        "remaining_existing_five_dollar_cap_usd": 0.790774
+      },
+      "final_server_reopen": "Passed after final restart. No stale build banner and no browser errors."
+    },
+    "interpretation_limit": "Scripted tests prove the exercised mechanics. Small live samples do not establish semantic accuracy, false-positive rates or production readiness."
+  },
+  "remaining_work": [
+    "Live preparation/review admitted a greeting as material and repeats full source messages. These semantic and conversational quality gaps are recorded, not patched with greeting keywords or case-specific rules.",
+    "Natural checked summaries and detailed activity plans are not yet published by this restricted renderer.",
+    "Facts remain proposals; admitted material records, correction reconciliation and exact relevant passage selection are not connected.",
+    "Legal research, checked legal analysis, document production and external execution are not connected.",
+    "Historical matters and retired engine routes are not reopened through the rebuilt brain.",
+    "Selective internal repair of held independent units remains separate from the single shared schema-correction allowance.",
+    "Sustained live semantic quality and production readiness remain unverified."
+  ],
+  "workbook": {
+    "path": "docs/Nyaymalaw_Implementation_Plan.xlsx",
+    "sheet": "legal brain",
+    "rows": [
+      22,
+      23,
+      25,
+      45,
+      53,
+      61
+    ],
+    "before_build_unchanged": true,
+    "preservation_proof": {
+      "updated": [
+        "E22",
+        "E23",
+        "E25",
+        "E45",
+        "E53",
+        "E61",
+        "F22",
+        "F23",
+        "F25",
+        "F45",
+        "F53",
+        "F61"
+      ],
+      "before_build_unchanged": true,
+      "other_cells_and_features_unchanged": true,
+      "before_sha256": "121e807312c24560025dcf687f6e1c42c6ede13b606e26a1e14d11fee6eee100",
+      "after_sha256": "4ee84abd6b8cf915072ebeb95e167e40acbaa0e0c5b9d53227196bf65f53bacc",
+      "preview": "C:\\Users\\rahul\\Nyaymalaw\\outputs\\brain-wiring-20261007\\legal-brain-status\\after.png"
+    }
+  },
+  "archive_scope": {
+    "served_path": "Startup and authenticated turn/reopen tests pass with nm.Archives imports forcibly blocked.",
+    "remaining_inactive_references": "75 archive imports remain in 37 inactive legacy files outside the served application path. Archived records and code were not deleted.",
+    "claim_limit": "This checkpoint removes archive dependencies from the running application, not every historical reference from the repository."
+  },
+  "source_sha256": {
+    "nm/brain/message_labels.py": "4173d732c464aa908007fea49651cd87a03396e94eac635017873929cf787c70",
+    "nm/brain/response_preparation.py": "18731535c6557a19387e2196e81fb22b242abd1db153baa648db28c020384ebd",
+    "nm/brain/release.py": "9e1273a38803559aea6d762d354f83443e98fee476ccf5ab9651a8f76c025e06",
+    "nm/brain/turn.py": "203d29cd23ef466df79d71db1dbaedf6e18d75b0d1554773a35626358b4bceae",
+    "nm/app/api.py": "6163bc4e73573dbb929aa487f041be1bc9cc66d968c3075588c62da68322727a",
+    "nm/app/composition.py": "a02a2b01defc7c0390158e159168ed4be57bf45105e5f07ecdcaae7004b0983b",
+    "nm/app/main.py": "5f5fea423c1b2f6d23c9ea21f5696b1bf8631fd36a193b5ed494d65e3a473026",
+    "nm/app/app.js": "7893630f1be6100a6a61508752b1219a902a1a8ba43d2dfc6a3bb6082c4c23ee",
+    "nm/app/index.html": "2f0962eee794360bd8f93cc951536adfa260111f9a22a540ecf431f182e28dee",
+    "nm/shared/source_layout.py": "772898656d173a0c5ae53809cb550225b112d37a3cee563c6ee72fe081f192a1",
+    "nm/source_layout.json": "c4d288491b31205624325f787753d163d90d7cfe59b2c3ede60cb2e837de6980",
+    "nm/shared/model_traced.py": "0222673948d0f1695c9af30cd55f57d2f9f8ba78332476165d61d2c20351b9bd",
+    "nm/shared/source_excerpt_contracts.py": "f579dc1e3c3d9f993f8b02acb6e7f38c347363fe2abf47e38afb8a787c5eef40",
+    "nm/work_the_file/loop_record_contracts.py": "694583121c1e9db6f63845cf82c3dd5934a9261f4f06afe1dec5b63f44831d3a",
+    "nm/work_the_file/matter_contracts.py": "7a44f4ee320b38e7f18fb679e5dfa1e4353418a448c9e39c66830fb83ffc44e9",
+    "nm/advise/answer_contracts.py": "efbbdf7f5930aba81f12c39aa32442f05fcd43fd37499132590cb970d4864243",
+    "nm/arrive/advocate_memory_contracts.py": "baf781a026244c84075c6127bef48fa61d16f9d91520f7dd98d893ca1b060996",
+    "nm/arrive/advocate_memory_codec.py": "3f6eb4313eb13aba69654aff78e9b853da9b332cd12476e750d7e15f7c5edeff",
+    "nm/arrive/directory_port.py": "ed12a77e9052c9a0cd63f913754db60da3cae3535aaee641cd527ecda41c9fd2",
+    "nm/arrive/store_directory.py": "a0c8bb5f3280d45518763e49b5cbc4353c419e5a73d8232768221be074907965",
+    "tests/test_new_brain_release.py": "b30188a35f5e7596ace3c6c110915d0df6dee924ee2aedd328d0dfb5d4bd4ab4",
+    "tests/test_current_brain_turn.py": "4fdf7e421590e95da6ac60ac69e36cfee8eac60e4ffde31b836c056bac0214c9",
+    "tests/test_current_brain_app.py": "720b5aaea34606f7c9cab46bc360f0d5ae4dca7540cc3be178e32e67328182c6",
+    "tests/test_turn_recovery.py": "0026e3eda05ae277e6be4d5d7d1251b14b4ac940554ae9475f3c8a3660d14e46",
+    "tests/test_active_brain_source_layout.py": "e5baf925afc11076be8262a64b354bb334e4673c615096625ed1722ea2a69cf9",
+    "tests/test_active_saved_contracts.py": "0390073e611e5710bcba39a8a835e06e6d833cb946a42a4806ea1c213fd36cc4"
+  }
+}

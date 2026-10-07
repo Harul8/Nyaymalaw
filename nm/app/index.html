@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nyaymalaw</title>
 <link rel="stylesheet" href="/static/app.css">
-<link rel="stylesheet" href="/static/matter-workspace.css">
 <link rel="stylesheet" href="/static/intake-materials.css">
 </head>
 <body>
@@ -323,7 +322,7 @@
                control has to be reachable from the one they are holding. -->
           <button id="devices" type="button" class="ghost">Signed-in devices</button>
           <button id="ai-sharing" type="button" class="ghost">AI data sharing</button>
-          <button id="advocate-preferences" type="button" class="ghost">Advice preferences</button>
+          <button id="advocate-preferences" type="button" class="ghost" hidden>Advice preferences</button>
           <button id="signout" type="button" class="ghost">Sign out</button>
         </div>
       </div>
@@ -335,10 +334,10 @@
   <nav class="tabs" id="tabs" aria-label="Workspace navigation">
     <button class="tab is-on" data-tab="home" aria-current="page">Home</button>
     <button class="tab" data-tab="advise">My work</button>
-    <button class="tab" data-tab="search">Legal library</button>
+    <button class="tab" data-tab="search" disabled title="Not connected to the rebuilt brain yet">Legal library</button>
     <!-- P36. THE PREPARATION SURFACE. A capability with no surface is not
          shipped, and the four steps are a sequence an advocate walks. -->
-    <button class="tab" data-tab="prepare">Preparation</button>
+    <button class="tab" data-tab="prepare" disabled title="Not connected to the rebuilt brain yet">Preparation</button>
   </nav>
   <div id="sidebar-board" class="sidebar-board"></div>
 </header>
@@ -355,7 +354,7 @@
 <main id="pane-home" class="home" hidden>
   <section class="home-intro" aria-labelledby="home-title">
     <h1 id="home-title">Nyaymalaw is a legal research and matter workspace for advocates practising Telangana and Union of India law.</h1>
-    <p class="home-lede">Every answer shows the Act, section or judgment it rests on.</p>
+    <p class="home-lede">Start a conversation to share information or describe the work you need. Legal research and action execution are not connected in this build.</p>
     <button type="button" id="home-start" class="primary">Start a matter</button>
   </section>
 </main>
@@ -1014,13 +1013,9 @@
   <button type="button" id="advocate-preferences-delete" class="ghost" disabled>Delete all preferences</button>
   <button type="button" id="advocate-preferences-reload" class="ghost">Reload</button>
 </dialog>
-<script src="/static/advocate-preferences.js"></script>
 <script src="/static/draft-vault.js"></script>
-<script src="/static/source-reader.js"></script>
 <script src="/static/brain-sources.js"></script>
-<script src="/static/loop-progress.js"></script>
 <script src="/static/app.js"></script>
-<script src="/static/matter-workspace.js"></script>
 <script src="/static/intake-materials.js"></script>
 </body>
 </html>
