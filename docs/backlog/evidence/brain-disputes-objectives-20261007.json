@@ -17,6 +17,12 @@
       "built": "One focused prompt body with code-selected first/follow-up headers, two independent collections, owned IDs, exact source passages with support/context distinction and code-derived offsets, independently held invalid units, full-context resource checks and replay validation.",
       "verification": "59 offline extractor/source-layout tests pass. Scripted tests do not establish semantic model quality.",
       "registry": "Registered the new core module in nm/source_layout.json."
+    },
+    {
+      "owner": "nm/brain/release.py",
+      "status": "component_verified_not_yet_served",
+      "built": "Independent review now supports the focused extraction contract. It checks original evidence and scoped omissions, derives source bindings from checked extraction instead of asking the reviewer to repeat them, accepts reviewed absence, and preserves partial or withheld outcomes. New rendering version disputes_objectives_release_v1 leaves historical v1/v2 replies unchanged.",
+      "verification": "72 focused current/legacy release tests pass. Correct empty extraction is accepted; empty output with omissions is withheld. Saved passage corruption, unknown versions and invalid reviewer IDs are rejected."
     }
   ],
   "model_calls": {
@@ -26,5 +32,5 @@
     "shared_conditional_correction_maximum": 1,
     "new_routine_calls": 0
   },
-  "remaining": ["Scoped independent review and legitimate empty release", "Served turn and saved-contract handoff", "Browser semantic validation and Legal brain worksheet update"]
+  "remaining": ["Served turn and saved-contract handoff", "Browser semantic validation and Legal brain worksheet update", "Paired classifier experiment requested separately; no classifier edit is assumed"]
 }

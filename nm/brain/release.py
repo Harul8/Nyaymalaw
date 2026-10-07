@@ -10,6 +10,7 @@ from copy import deepcopy
 import json
 
 from nm.brain.message_labels import validate_label
+from nm.brain.disputes_objectives import CONTRACT as EXTRACTION_CONTRACT, extraction_units
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
     estimate_tokens, require_schema,
@@ -17,6 +18,39 @@ from nm.shared.model_port import (
 
 
 RENDERER_VERSION = "initial_brain_release_v2"
+EXTRACTION_RENDERER = "disputes_objectives_release_v1"
+_EXTRACTION_SYSTEM = """Message: You receive the complete original conversation,
+then private dispute/objective proposals and any held items. Sources retain
+their exact words and speakers. Proposals and message labels are not evidence.
+
+Purpose: Independently check the support and completeness of this turn's
+dispute/objective extraction. No general facts, plans or answers are requested.
+
+Look for:
+1. Read the latest message in its full original context before examining the
+   proposals. Identify its expressed disputes and desired matter outcomes.
+   A dispute is an expressed disagreement, contested conduct, claim, refusal or
+   unresolved conflict. An objective is a result someone wants in the matter.
+   A work instruction to NM is not automatically a matter objective. Either
+   collection may be empty. Do not demand unrelated facts or planned activities.
+2. Check each description and selected exact passage against original words.
+   Preserve attribution, scope, conditions, uncertainty, corrections, withdrawals
+   and negation. Exact quotation alone does not establish correct interpretation.
+   Earlier NM statements cannot substantiate themselves. Current context may
+   authorise review of an earlier original account without restating that account.
+3. Mark each item supported, unsupported or unresolved, with the consequential
+   reason. Independently report any dispute or objective in the latest message
+   that the preparation missed, including when the proposed lists are empty.
+   History resolves references; a diversion does not renew all historical items.
+4. Select greeting only if a social acknowledgement is appropriate. Only a fixed
+   greeting or receipt is public; all extraction and review remain private.
+
+Outcome: Return greeting, unit_reviews and omissions. Review every supplied
+unit exactly once using its owned ID, verdict and reason. Supported items use
+reason=none; other verdicts identify the mismatch. An omission names its original
+source_id and kind=disputes or objectives. Empty arrays are valid where nothing
+applies. Return no response text, source rewrites, plans or completion claims.
+This review checks extraction, not factual proof, legal merit or execution."""
 _SYSTEM = """Message: You receive the complete original conversation in order,
 ending with the user's current message, followed by unreviewed preparation.
 Sources retain their speaker and exact words. Preparation, its draft and its
@@ -79,7 +113,20 @@ _SCHEMA = {
 }
 
 
+def _review_schema(focused=False):
+    schema = deepcopy(_SCHEMA)
+    if focused:
+        item = schema["properties"]["unit_reviews"]["items"]
+        item["required"].remove("source_ids")
+        del item["properties"]["source_ids"]
+        schema["properties"]["omissions"]["items"]["properties"]["kind"]["enum"] = ["disputes", "objectives"]
+    return schema
+
+
 def _inputs(prepared: dict) -> tuple[list[dict], dict, list]:
+    if isinstance(prepared, dict) and "contract" in prepared:
+        units = extraction_units(prepared)
+        return deepcopy(prepared["sources"]), units, deepcopy(prepared["issues"])
     if not isinstance(prepared, dict) or prepared.get("state") != "prepared_unreviewed":
         raise SchemaViolation("Release needs the owned unreviewed preparation")
     sources, proposal, issues = (prepared.get(key) for key in ("sources", "proposal", "issues"))
@@ -112,8 +159,8 @@ def _inputs(prepared: dict) -> tuple[list[dict], dict, list]:
     return deepcopy(sources), units, deepcopy(issues)
 
 
-def _checked_proof(proof: dict, sources: list[dict], units: dict) -> dict:
-    require_schema(proof, _SCHEMA)
+def _checked_proof(proof: dict, sources: list[dict], units: dict, *, focused=False) -> dict:
+    require_schema(proof, _review_schema(focused))
     originals = {source["id"]: source["message"] for source in sources}
     seen = set()
     checked = deepcopy(proof)
@@ -123,7 +170,9 @@ def _checked_proof(proof: dict, sources: list[dict], units: dict) -> dict:
             raise SchemaViolation("Review must name every owned unit exactly once")
         seen.add(identity)
         unit = units[identity]
-        selected = list(dict.fromkeys(review["source_ids"]))
+        selected = ([identity for identity in unit["proposal"]["source_ids"]
+                     if originals[identity]["role"] == "advocate"] if focused
+                    else list(dict.fromkeys(review["source_ids"])))
         if any(source not in unit["proposal"]["source_ids"] for source in selected):
             raise SchemaViolation(f"Review {identity} selected a source outside its unit")
         if any(originals[source]["role"] != "advocate" for source in selected):
@@ -135,7 +184,8 @@ def _checked_proof(proof: dict, sources: list[dict], units: dict) -> dict:
                 raise SchemaViolation(f"Action review {identity} must include its current request")
         elif review["reason"] == "none":
             raise SchemaViolation(f"Unaccepted review {identity} needs its consequential mismatch")
-        review["source_ids"] = selected
+        if not focused:
+            review["source_ids"] = selected
     if seen != set(units):
         raise SchemaViolation("Review omitted a supplied preparation unit")
     for omission in checked["omissions"]:
@@ -189,28 +239,39 @@ def _render_v2(sources: list[dict], units: dict, issues: list, proof: dict) -> t
     return [_element(text)], None, "partial" if incomplete else "ready"
 
 
+def _render_extraction(sources: list[dict], units: dict, issues: list, proof: dict) -> tuple[list, str | None, str]:
+    # Reviewed absence is different from held proposals or missed extraction.
+    if not units and not issues and not proof["omissions"] and not proof["greeting"]:
+        return [_element("Message received.")], None, "ready"
+    return _render_v2(sources, units, issues, proof)
+
+
 _RENDERERS = {"initial_brain_release_v1": _render_v1,
-              "initial_brain_release_v2": _render_v2}
+              "initial_brain_release_v2": _render_v2,
+              EXTRACTION_RENDERER: _render_extraction}
 
 
 def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
     """One independent review. The caller owns correction, saving and release."""
     label = validate_label({"label": label})
     sources, units, issues = _inputs(prepared)
+    focused = prepared.get("contract") == EXTRACTION_CONTRACT
+    version = EXTRACTION_RENDERER if focused else RENDERER_VERSION
     payload = {"original_conversation": sources, "preparation": prepared["proposal"],
                "held_preparation_units": issues, "proposed_label": label,
                "permitted_unit_ids": list(units),
                "permitted_source_ids": [row["id"] for row in sources]}
-    prompt = Prompt(system=_SYSTEM, user=json.dumps(payload, ensure_ascii=False),
+    prompt = Prompt(system=_EXTRACTION_SYSTEM if focused else _SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="review_prepared_response")
-    schema = deepcopy(_SCHEMA)
+    schema = _review_schema(focused)
     reviews = schema['properties']['unit_reviews']
     if units:
         reviews['items']['properties']['unit_id']['enum'] = list(units)
     else:
         reviews['maxItems'] = 0
     originals = [row['id'] for row in sources if row['message']['role'] == 'advocate']
-    reviews['items']['properties']['source_ids']['items']['enum'] = originals
+    if not focused:
+        reviews['items']['properties']['source_ids']['items']['enum'] = originals
     schema['properties']['omissions']['items']['properties']['source_id']['enum'] = originals
     limit = max(2048, len(units) * 160 + len(sources) * 80)
     size = estimate_tokens(prompt.system + prompt.user + json.dumps(schema))
@@ -223,12 +284,12 @@ def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
     try:
         if result.text is not None:
             raise SchemaViolation("Response review requires owned selectors, not public prose")
-        proof = _checked_proof(result.data, sources, units)
+        proof = _checked_proof(result.data, sources, units, focused=focused)
     except SchemaViolation as exc:
         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
                               retries=result.retries) from exc
-    elements, status, state = _RENDERERS[RENDERER_VERSION](sources, units, issues, proof)
-    return {"renderer_version": RENDERER_VERSION, "label": label, "sources": sources,
+    elements, status, state = _RENDERERS[version](sources, units, issues, proof)
+    return {"renderer_version": version, "label": label, "sources": sources,
             "units": units, "issues": issues, "proof": proof, "elements": elements,
             "service_status": status, "state": state}
 
@@ -250,7 +311,8 @@ def render_saved_release(saved: dict) -> dict:
     label = validate_label({"label": saved["label"]})
     if not isinstance(saved["units"], dict):
         raise SchemaViolation("Saved release unit catalogue is unreadable")
-    proposal = {"material": [], "actions": []}
+    focused = version == EXTRACTION_RENDERER
+    proposal = {"disputes": [], "objectives": []} if focused else {"material": [], "actions": []}
     for identity, row in saved["units"].items():
         if (not isinstance(row, dict) or set(row) != {"kind", "proposal"}
                 or not isinstance(row["kind"], str) or row["kind"] not in proposal
@@ -258,9 +320,12 @@ def render_saved_release(saved: dict) -> dict:
                 or row["proposal"].get("id") != identity):
             raise SchemaViolation("Saved release unit catalogue is inconsistent")
         proposal[row["kind"]].append(row["proposal"])
-    sources, units, issues = _inputs({"state": "prepared_unreviewed", "sources": saved["sources"],
-                                     "proposal": proposal, "issues": saved["issues"]})
-    proof = _checked_proof(saved["proof"], sources, units)
+    prepared = {"state": "prepared_unreviewed", "sources": saved["sources"],
+                "proposal": proposal, "issues": saved["issues"]}
+    if focused:
+        prepared["contract"] = EXTRACTION_CONTRACT
+    sources, units, issues = _inputs(prepared)
+    proof = _checked_proof(saved["proof"], sources, units, focused=focused)
     elements, status, state = _RENDERERS[version](sources, units, issues, proof)
     reconstructed = {"renderer_version": version, "label": label, "sources": sources,
                      "units": units, "issues": issues, "proof": proof, "elements": elements,
