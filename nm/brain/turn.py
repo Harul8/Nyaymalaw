@@ -56,6 +56,8 @@ from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
     SOURCE_TREATMENT_CONTRACT,
+    _coverage_record_support,
+    _coverage_supports_portion,
     admitted_record_decisions,
     candidate_account_ids,
     classify_account_sources,
@@ -358,13 +360,16 @@ def _material_effects(before: dict, after: dict, proposals: list[dict], *,
 
 
 POST_APPLICATION_COVERAGE_CONTRACT = "owned_coverage_application_v1"
+INHERITED_COVERAGE_APPLICATION_CONTRACT = "owned_coverage_application_v2"
+ORIGINAL_HISTORY_SUPPORT_CONTRACT = "original_admission_history_v1"
 
 
 def _post_application_coverage(coverage: dict, *, active_record_ids,
                                candidate_result_ids: dict,
                                historical_record_results: dict | None = None,
                                retirement_candidate_results: dict | None = None,
-                               durable_opening_result: dict | None = None) -> dict:
+                               durable_opening_result: dict | None = None,
+                               historical_support_contract: str | None = None) -> dict:
     """Bind a fresh checked reading to active results and preserved source history.
 
     Inputs are code-owned projection/result proofs, never model declarations.
@@ -374,6 +379,8 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
     """
     if not isinstance(coverage, dict):
         raise ExecutionEvidenceInvalid("Post-application coverage has no owned assessment")
+    if historical_support_contract not in (None, ORIGINAL_HISTORY_SUPPORT_CONTRACT):
+        raise ExecutionEvidenceInvalid("Historical support has an unsupported contract")
     result = deepcopy(coverage)
     version = coverage.get("selection_contract")
     if version is None:
@@ -445,7 +452,7 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
             raise ExecutionEvidenceInvalid(
                 "Historical representation changed its admitted proposal")
         references = effect.get("source_references")
-        if (not isinstance(references, list) or not any(
+        if historical_support_contract is None and (not isinstance(references, list) or not any(
                 isinstance(ref, dict) and ref.get("role") == "advocate"
                 and ref.get("turn_id") == before["source_turn_id"]
                 and isinstance(ref.get("quoted"), str)
@@ -477,6 +484,19 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
             or len({row["source_id"] for row in source_rows}) != len(source_rows)):
         raise ExecutionEvidenceInvalid("Post-application coverage lost original source checks")
     sources = {row["source_id"]: row for row in source_rows}
+    admission_support = {}
+    if historical_support_contract == ORIGINAL_HISTORY_SUPPORT_CONTRACT:
+        original = {identity: {key: row[key] for key in ("turn_id", "role", "quoted")}
+                    for identity, row in sources.items()}
+        # Reuse the same exact positive dependency/alias rules as fresh coverage.
+        # A legacy record without such proof stays unrepresented.
+        try:
+            admission_support = _coverage_record_support(
+                {identity: proof["original_record_support"] for identity, proof in proofs.items()
+                 if "original_record_support" in proof}, original, tuple(proofs))
+        except SchemaViolation as exc:
+            raise ExecutionEvidenceInvalid(
+                "Historical representation lost original admission support") from exc
     missing = set(coverage.get("missing_source_ids", []))
     if not missing <= sources.keys():
         raise ExecutionEvidenceInvalid("Post-application coverage has unowned missing sources")
@@ -553,6 +573,16 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
                 or proof["effect"]["relation"] != "withdraws")):
             return None
         record = proof["record"]
+        if historical_support_contract == ORIGINAL_HISTORY_SUPPORT_CONTRACT:
+            if not _coverage_supports_portion(
+                    admission_support, identity, portion["source_id"], portion,
+                    source["substantive_spans"]):
+                return None
+            return {"record_id": identity, "representation_kind": "historical_supersession",
+                    "effect_id": proof["effect"]["id"],
+                    "result_id": proof["effect"]["result_id"],
+                    "relation": proof["effect"]["relation"],
+                    "original_source": {key: source[key] for key in ("turn_id", "role", "quoted")}}
         if source["role"] != "advocate" or source["turn_id"] != record["source_turn_id"]:
             return None
         representation = {"record_id": identity,
@@ -631,7 +661,10 @@ def _post_application_coverage(coverage: dict, *, active_record_ids,
                                                    if key in candidate_result_ids},
                           "historically_preserved_record_ids": list(preserved)})
     if holds:
-        result.update(post_application_contract=POST_APPLICATION_COVERAGE_CONTRACT,
+        contract = (INHERITED_COVERAGE_APPLICATION_CONTRACT
+                    if historical_support_contract is not None else
+                    POST_APPLICATION_COVERAGE_CONTRACT)
+        result.update(post_application_contract=contract,
                       representation_dependencies=holds)
         if any(row["status"] == "unresolved" for row in result["dispositions"]):
             result.update(state="partial", reason=(
@@ -680,7 +713,9 @@ def _application_proposal_payload(candidate: MaterialCandidate, *, stage: str) -
 
 def _capture_coverage_application(execution, *, states, proposals, candidates, material,
                                   opening, opening_supported, sources, latest_sources,
-                                  prior_sources, opening_result) -> dict | None:
+                                  prior_sources, opening_result,
+                                  inherited_history=None, prefix_matter=None,
+                                  prior_conversation=(), _memo=None) -> dict | None:
     """Freeze pre-application assessments and original code-issued admissions."""
     assessments = {stage: deepcopy(execution["stages"][stage]["account_coverage"])
                    for stage in ("dispute_review", "detail_review")
@@ -760,6 +795,27 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                                       "result": deepcopy(opening_result)}
     if {row["result_id"] for row in receipt["bindings"]} != {row["id"] for row in material}:
         raise ExecutionEvidenceInvalid("Coverage application cannot bind every admitted result")
+    if inherited_history is not None:
+        stages = {"dispute_review", "detail_review"}
+        if (not isinstance(inherited_history, dict) or not set(inherited_history) <= stages
+                or any(not isinstance(rows, dict) for rows in inherited_history.values())):
+            raise ExecutionEvidenceInvalid("Inherited history has another stage owner")
+        selected = {}
+        for stage, assessment in assessments.items():
+            identities = {identity for portion in assessment["dispositions"]
+                          if portion["status"] == "represented"
+                          for identity in portion["record_ids"]}
+            for identity in identities.intersection(inherited_history.get(stage, {})):
+                entry = inherited_history[stage][identity]
+                selector = entry.get("selector") if isinstance(entry, dict) else None
+                _checked_history_selector(selector)
+                selected.setdefault(stage, {})[identity] = deepcopy(selector)
+        if selected:
+            _require_coverage_before_prefix(prefix_matter, execution)
+            _resolve_inherited_history(prefix_matter, selected,
+                                       prior_conversation=prior_conversation, _memo=_memo)
+            receipt.update(contract=INHERITED_COVERAGE_APPLICATION_CONTRACT,
+                           inherited_history=selected)
     # Seal the durable JSON form so fresh and saved evidence are identical.
     # Dataclass tuple fields otherwise become lists only when the store serializes.
     receipt = json.loads(json.dumps(receipt, ensure_ascii=False))
@@ -769,15 +825,42 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
 
 def _apply_coverage_application(execution, receipt, *, material, source_treatments,
                                 latest_sources, prior_sources, before_disputes,
-                                before_details, disputes, details, opening_result=None) -> dict:
+                                before_details, disputes, details, opening_result=None,
+                                prefix_matter=None, prior_conversation=(), _memo=None) -> dict:
     """Recompute an owned typed assessment against the actual saved prefix."""
-    if (not isinstance(receipt, dict)
-            or receipt.get("contract") != POST_APPLICATION_COVERAGE_CONTRACT
+    contracts = (POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)
+    if (not isinstance(receipt, dict) or receipt.get("contract") not in contracts
             or receipt.get("owner") != execution["owner"]
+            or type(receipt.get("expected_version")) is not int
             or receipt.get("expected_version") != execution["expected_version"]
             or receipt.get("seal") != _digest({key: value for key, value in receipt.items()
                                               if key != "seal"})):
         raise ExecutionEvidenceInvalid("Coverage application lost its owned original receipt")
+    inherited = receipt["contract"] == INHERITED_COVERAGE_APPLICATION_CONTRACT
+    if inherited and execution.get("coverage_application_contract") != receipt["contract"]:
+        raise ExecutionEvidenceInvalid("Inherited coverage needs its declared execution version")
+    if execution.get("coverage_application_contract", receipt["contract"]) != receipt["contract"]:
+        raise ExecutionEvidenceInvalid("Coverage application differs from its execution version")
+    keys = {"contract", "owner", "expected_version", "pre_application_assessments",
+            "bindings", "opening", "seal"}
+    if inherited:
+        keys.add("inherited_history")
+    if set(receipt) != keys:
+        raise ExecutionEvidenceInvalid("Coverage application has unknown saved fields")
+    inherited_results, admissions = {}, {}
+    if inherited:
+        _require_coverage_before_prefix(prefix_matter, execution)
+        memo = _saved_execution_memo(_memo, prefix_matter, prior_conversation)
+        if (before_disputes, before_details) != _record_projections(
+                prefix_matter, prior_conversation):
+            raise ExecutionEvidenceInvalid("Inherited history changed its owned before-projections")
+        inherited_results = _resolve_inherited_history(
+            prefix_matter, receipt["inherited_history"],
+            prior_conversation=prior_conversation, _memo=memo)
+        original = Conversation((*prior_conversation,
+                                 *from_turns(prefix_matter.brain_chat, state="ok").messages))
+        admissions, _ = _saved_record_admissions(
+            prefix_matter, original, prior_conversation=prior_conversation, _memo=memo)
     bindings, assessments = receipt.get("bindings"), receipt.get("pre_application_assessments")
     stages = {"dispute_review", "detail_review"}
     if (not isinstance(bindings, list) or not isinstance(assessments, dict)
@@ -857,6 +940,8 @@ def _apply_coverage_application(execution, receipt, *, material, source_treatmen
                 historical[old] = {"record": before[old], "historical_record": archive[old],
                                    "effect": effect, "proposal": binding["proposal"],
                                    "review": review}
+                if inherited and old in admissions[binding["stage"]]:
+                    historical[old]["original_record_support"] = admissions[binding["stage"]][old]
         if effect["relation"] == "withdraws" and archive.get(result_id) == record:
             retirement[identity] = {"record": record, "historical_record": archive[result_id],
                                     "effect": effect, "proposal": binding["proposal"],
@@ -883,10 +968,35 @@ def _apply_coverage_application(execution, receipt, *, material, source_treatmen
                            for key in ("turn_id", "role", "quoted"))
                        for row in assessment["source_checks"])):
             raise ExecutionEvidenceInvalid("Coverage application changed original sources or scope")
+        if inherited:
+            selected = {identity for portion in assessment["dispositions"]
+                        for identity in portion["record_ids"]}
+            if not set(inherited_results.get(stage, {})) <= selected:
+                raise ExecutionEvidenceInvalid("Inherited history was not selected by its stage")
+        local_history = (historical if not inherited else
+                         {identity: proof for identity, proof in historical.items()
+                          if proof["effect"]["kind"] == (
+                              "disputes" if stage == "dispute_review" else "details")})
+        stage_history = {**local_history, **inherited_results.get(stage, {})}
+        if set(local_history).intersection(inherited_results.get(stage, {})):
+            raise ExecutionEvidenceInvalid("Inherited and local history repeat a retirement owner")
+        stage_active = (active if not inherited else {row["id"] for row in (
+            disputes["rows"] if stage == "dispute_review" else details["rows"])})
+        stage_results = (results if not inherited else
+                         {binding["candidate_id"]: binding["result_id"] for binding in bindings
+                          if binding["stage"] == stage})
+        stage_retirement = (retirement if not inherited else
+                            {identity: proof for identity, proof in retirement.items()
+                             if proof["effect"]["kind"] == (
+                                 "disputes" if stage == "dispute_review" else "details")})
         applied[stage] = _post_application_coverage(
-            assessment, active_record_ids=active, candidate_result_ids=results,
-            historical_record_results=historical, retirement_candidate_results=retirement,
-            durable_opening_result=opening_proof)
+            assessment, active_record_ids=stage_active, candidate_result_ids=stage_results,
+            historical_record_results=stage_history, retirement_candidate_results=stage_retirement,
+            durable_opening_result=(opening_proof
+                                    if not inherited or stage == "detail_review" else None),
+            historical_support_contract=ORIGINAL_HISTORY_SUPPORT_CONTRACT if inherited else None)
+    if not set(inherited_results) <= set(assessments):
+        raise ExecutionEvidenceInvalid("Inherited history has no owning assessment")
     return applied
 
 
@@ -1231,7 +1341,8 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
     application = execution.get("coverage_application")
     if application is not None or "coverage_application_contract" in execution:
         try:
-            if execution.get("coverage_application_contract") != POST_APPLICATION_COVERAGE_CONTRACT:
+            if execution.get("coverage_application_contract") not in (
+                    POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT):
                 raise ExecutionEvidenceInvalid(
                     "Coverage application has an unsupported owner contract")
             original_messages = (*prior_conversation,
@@ -1245,7 +1356,8 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
                 source_treatments=treatments, latest_sources=latest_sources,
                 prior_sources=prior_sources, before_disputes=before_disputes,
                 before_details=before_details, disputes=disputes, details=details,
-                opening_result=row.get("opening_result"))
+                opening_result=row.get("opening_result"), prefix_matter=before,
+                prior_conversation=prior_conversation, _memo=_memo)
             if any(execution["stages"][stage].get("account_coverage") != assessment
                    for stage, assessment in rebuilt.items()):
                 raise ExecutionEvidenceInvalid(
@@ -1567,8 +1679,8 @@ def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
                 and execution.get("coverage_application") is None):
             # Legacy compatibility is readable context, never fresh certified support.
             continue
-        if (execution.get("coverage_application_contract")
-                != POST_APPLICATION_COVERAGE_CONTRACT
+        if (execution.get("coverage_application_contract") not in (
+                POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)
                 or coverage.get("source_treatment_contract") != SOURCE_TREATMENT_CONTRACT
                 or not isinstance(saved["response"].get("continuation", {}).get(
                     "record_snapshot"), dict)):
@@ -1632,8 +1744,8 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
         coverage = saved["response"].get("material_coverage", {})
         execution = coverage.get("execution") if isinstance(coverage, dict) else None
         if (not isinstance(execution, dict)
-                or execution.get("coverage_application_contract")
-                != POST_APPLICATION_COVERAGE_CONTRACT):
+                or execution.get("coverage_application_contract") not in (
+                    POST_APPLICATION_COVERAGE_CONTRACT, INHERITED_COVERAGE_APPLICATION_CONTRACT)):
             continue
         effects = {row["result_id"]: row for row in effect_catalogue(execution).values()}
         for binding in execution["coverage_application"]["bindings"]:
@@ -1665,6 +1777,50 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
                                            "selector": {**selector, "proof_digest": digest},
                                            "historical_result": historical}
     memo.put(key, result)
+    return result
+
+
+def _require_coverage_before_prefix(prefix_matter, execution):
+    if (not isinstance(prefix_matter, Matter)
+            or str(prefix_matter.id) != execution["owner"]["matter_id"]
+            or prefix_matter.advocate_id != execution["owner"]["advocate_id"]
+            or type(prefix_matter.version) is not int
+            or prefix_matter.version != execution["expected_version"]
+            or any(row["turn_id"] == execution["owner"]["turn_id"]
+                   for row in prefix_matter.brain_chat)):
+        raise ExecutionEvidenceInvalid("Inherited history needs its owned before-prefix")
+
+
+def _checked_history_selector(selector):
+    keys = {"admission_turn_id", "admission_candidate_id", "retirement_turn_id",
+            "retirement_result_id", "proof_digest"}
+    if (not isinstance(selector, dict) or set(selector) != keys
+            or any(not isinstance(value, str) or not value.strip() for value in selector.values())):
+        raise ExecutionEvidenceInvalid("Inherited history needs a closed original proof selector")
+
+
+def _resolve_inherited_history(prefix_matter, selectors, *, prior_conversation=(), _memo=None):
+    """Reconstruct history from original before-prefix suppliers, never offered proof objects."""
+    stages = {"dispute_review", "detail_review"}
+    if (not isinstance(prefix_matter, Matter) or not isinstance(selectors, dict)
+            or not set(selectors) <= stages
+            or any(not isinstance(rows, dict) for rows in selectors.values())):
+        raise ExecutionEvidenceInvalid("Inherited history has no owned original prefix or stages")
+    memo = _saved_execution_memo(_memo, prefix_matter, prior_conversation)
+    original = Conversation((*prior_conversation,
+                             *from_turns(prefix_matter.brain_chat, state="ok").messages))
+    owned = _saved_historical_support(prefix_matter, original,
+                                      prior_conversation=prior_conversation, _memo=memo)
+    result = {}
+    for stage, rows in selectors.items():
+        result[stage] = {}
+        for identity, selector in rows.items():
+            _checked_history_selector(selector)
+            entry = owned[stage].get(identity)
+            if entry is None or entry["selector"] != selector:
+                raise ExecutionEvidenceInvalid(
+                    "Inherited history differs from its original admission and retirement")
+            result[stage][identity] = deepcopy(entry["historical_result"])
     return result
 
 
@@ -2727,7 +2883,7 @@ class BrainService:
                                  if entry.get("admission_issue") == "review_unavailable"],
                     "details": [entry["candidate_id"] for entry in grounded.unread_proposals]}
                 if coverage_application is not None:
-                    execution["coverage_application_contract"] = POST_APPLICATION_COVERAGE_CONTRACT
+                    execution["coverage_application_contract"] = coverage_application["contract"]
                     applied = _apply_coverage_application(
                         execution, coverage_application, material=material,
                         source_treatments=source_treatments, latest_sources=latest_sources,
