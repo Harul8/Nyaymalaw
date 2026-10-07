@@ -1,32 +1,168 @@
 {
   "activity": "legal brain 1.1 Assemble the context",
-  "owner": "LB-175",
-  "piece": "API preservation of exact incoming words",
-  "production_file": "nm/app/api.py",
-  "failed_invariant": "Nonblank validation must not alter the source string supplied for interpretation, persistence and future conversation context.",
-  "observed_baseline": "Two public-boundary regressions failed: TurnRequest's identifier-oriented NonBlank validator stripped CRLF/tabs/outer spaces and Unicode whitespace before model dispatch.",
-  "change": "Use a message-specific field validator to reject blank input and return the original string. Retain shared identifier normalization unchanged.",
-  "verification": {
-    "command": ".venv-arrive/Scripts/python.exe -X utf8 -m pytest tests/test_brain_sustained_context.py tests/test_new_brain_conversation.py -q",
-    "passed": 52,
-    "meaning": "Mechanical public-boundary context, persistence, recovery and replay checks with fabricated model decisions. This does not establish semantic model accuracy.",
-    "paired_cases": ["CRLF, tabs and outer spaces", "Unicode whitespace and punctuation", "legitimate first-message empty history", "exact follow-up and saved earlier words", "same-turn zero-call replay", "empty and whitespace-only rejection"],
-    "fixture_correction": "The fabricated writer now excludes blank source spans from its account selectors, matching the existing offered choices. Full blank-containing transcript text is still checked exactly; no production source rules changed.",
-    "lint": "Ruff passed for changed production/tests; diff check passed."
+  "status": "completed_context_assembly",
+  "queue": "docs/Nyaymalaw_Implementation_Plan.xlsx / legal brain / 1.1 through 1.1.6",
+  "scope": "Assemble exact current words, complete released attributed conversation, current brain records, revision history and saved work. Separate supplementary declarations and document inventory from admitted sources, and identify unavailable context.",
+  "before_build": "Historical; unchanged. Legal brain is now the active queue.",
+  "observed_baseline_and_fixes": [
+    {
+      "invariant": "Nonblank validation must not alter original words.",
+      "baseline": "Composer and API stripped outer whitespace before interpretation and saving.",
+      "owners": [
+        "nm/app/app.js",
+        "nm/app/api.py"
+      ],
+      "fix": "Send and retain exact input; trim only for blank detection. Retain changed drafts and exact retry envelopes.",
+      "commits": [
+        "98ce776",
+        "3cf4817"
+      ]
+    },
+    {
+      "invariant": "Current interpretation receives actual released words; historical proof retains the words/order originally checked.",
+      "baseline": "Element text replaced composed replies; lexical timestamp sorting could misorder history. Blanket reconstruction changes would invalidate old source IDs and proof.",
+      "owners": [
+        "nm/brain/conversation.py",
+        "nm/brain/history.py",
+        "nm/open_matter/transcripts_api.py",
+        "nm/brain/material_state.py",
+        "nm/brain/dispute_state.py",
+        "nm/brain/work_state.py",
+        "nm/brain/continuation.py",
+        "nm/brain/turn.py",
+        "nm/app/api.py"
+      ],
+      "fix": "Version public and legacy context. Reconstruct replies and record references under their originating contracts. Use owned sequence or unambiguous parsed times, reject unknown contracts/uncertain order. Preserve rows/seals and explicitly represent absent legacy rendition.",
+      "commits": [
+        "ad73544",
+        "c4b3bee",
+        "61c2098",
+        "9a32443",
+        "fe3f6bd",
+        "8238b71",
+        "50953e0",
+        "86f17a6",
+        "d08ab6f",
+        "64f2015",
+        "e56e503",
+        "036d629",
+        "6728e4c",
+        "58d8956"
+      ]
+    },
+    {
+      "invariant": "Current records, historical formulations, recording times and work remain distinguishable.",
+      "owners": [
+        "nm/brain/conversation.py",
+        "nm/brain/turn.py"
+      ],
+      "fix": "Read-only inactive material/disputes and checked retirement lineage sit outside active mutation targets. Separate recording times from exact text; keep saved tasks, proposals, questions and transitions.",
+      "commits": [
+        "f7e3541",
+        "d08ab6f"
+      ]
+    },
+    {
+      "invariant": "Held declarations/documents are visible without becoming admitted facts or processing permission.",
+      "baseline": "Outside-chat parties/opening corrections, engagement, commission and documents did not reach interpretation.",
+      "owners": [
+        "nm/brain/conversation.py",
+        "nm/brain/turn.py"
+      ],
+      "fix": "Separate owned parties, original/amended opening, engagement, current/historical commission and document receipt/read metadata. Exclude document contents; withhold foreign/malformed metadata independently. Identify earlier-engine collections not projected into current records.",
+      "commits": [
+        "24586c4",
+        "736bece"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "owner": "History and saved execution reconstruction",
+      "scope": "whole conversation",
+      "mismatch": "Missing/unreadable/unreleased history, unknown contract, invalid source ownership or uncertain chronology",
+      "outcome": "Stop before dispatch/save, retain prior records; no empty-history substitute or silent proof upgrade."
+    },
+    {
+      "owner": "Existing model resource boundary",
+      "scope": "full context",
+      "mismatch": "Complete input exceeds configured budget",
+      "outcome": "Refuse without trimming or saving unread input; complete under-budget input remains accepted."
+    },
+    {
+      "owner": "Saved context inventory",
+      "scope": "individual optional document metadata",
+      "mismatch": "Foreign receipt ownership or unusable projection",
+      "outcome": "Only owned inventory key and unavailable state; retain valid peers. No document content admitted here."
+    }
+  ],
+  "final_verification": {
+    "production_commit": "736bece",
+    "command": ".venv-arrive/Scripts/python.exe -X utf8 -m pytest tests/test_brain_context_contract.py tests/test_brain_sustained_context.py tests/test_brain_public_history_integration.py tests/test_new_brain_conversation.py tests/test_brain_work_state.py tests/test_brain_continuation.py tests/test_brain_saved_execution_memo.py tests/test_brain_inherited_coverage_replay.py tests/test_brain_dispute_mutation_projection.py -q --junitxml=outputs/brain-context-20261007/final-context-results.xml",
+    "passed": 272,
+    "failed": 0,
+    "skipped": 0,
+    "paired_cases": [
+      "Exact CRLF, tabs, outer and Unicode whitespace versus blank input",
+      "First message versus returning and damaged history",
+      "Correction, greeting, diversion, return, repair and reopening",
+      "Composed/paragraph-only old replies and mixed legacy/current reference IDs",
+      "Offsets and absent/equal times with owned order versus unresolved order",
+      "Old seals/source dependencies unchanged after fresh save and replay",
+      "Current versus retired formulations with checked lineage",
+      "Complete context under budget versus overflow with no dispatch/save",
+      "Owned outside-chat party/scope declarations versus foreign document metadata",
+      "Local-read inventory without document contents or inferred processing authority",
+      "Idempotent zero-call replay and immutable prior rows"
+    ],
+    "browser": {
+      "test_file": "tests/test_brain_context_browser.py",
+      "passed": 2,
+      "browser": "Actual Chrome against served application, temporary store and scripted model responses",
+      "user_turns": 5,
+      "scripted_model_calls": 15,
+      "external_api_calls": 0,
+      "verified": [
+        "Empty central chat, no form/empty board",
+        "Exact composer input reaches saved and later context",
+        "Greetings/diversions/return retain records/history/work",
+        "Actual browser reply matches saved/reopened public reply",
+        "Fresh chat inherits no previous matter",
+        "Reload/reopen zero calls, no page errors"
+      ],
+      "visual_review": "Refreshed empty/reopened/fresh-chat screenshots inspected after final bridge.",
+      "limitation": "Scripted meanings/reviewer decisions prove context integration, not real-model semantics."
+    },
+    "static": "Changed Python passes Ruff; composer checks and JS syntax passed; diff check passes."
   },
-  "calls": {"new_routine": 0, "new_conditional": 0, "synthetic_simple_turn_total": 3, "replay": 0, "live_api_calls": 0},
-  "browser_handoff_piece": {
-    "api_commit": "98ce776",
-    "production_file": "nm/app/app.js",
-    "observed_baseline": "The actual composer/send functions sent Hello. instead of the submitted string with surrounding CRLF, spaces and tab.",
-    "change": "Use the original textarea value for the message and trim only to detect blank input. Consume a composer draft only if it exactly equals the submitted string.",
-    "verified": "The actual composer, send, receipt-envelope and consume functions pass offline VM checks for blank refusal, exact text, stable retry identity/envelope and preservation of a subsequently edited draft. Four existing UI harness scripts passed, including the extended handoff script. JavaScript syntax and diff checks passed.",
-    "limitation": "The DOM and network delivery are substitutes. Actual browser acceptance remains with the user; no live application or model calls were made."
+  "model_call_impact": {
+    "new_routine": 0,
+    "new_conditional": 0,
+    "simple_turn": {
+      "total": 3,
+      "purposes": [
+        "Interpret context",
+        "Select evidence-backed response",
+        "Independently review response"
+      ]
+    },
+    "malformed_interpretation_test": "4 total, including one existing bounded correction with identical original context",
+    "replay_or_reopen": 0,
+    "external_api_spend_usd": 0
   },
-  "remaining": [
-    "Before Build update is prepared but the open Excel workbook denied replacement; publish after its file lock is released.",
-    "Older saved composed replies displayed in the UI are replaced with element text by history reconstruction. Fix requires version-aware historical binding analysis.",
-    "Older transcript projection sorts timestamp strings, which can misorder equivalent valid offset formats.",
-    "No new browser or pinned-model semantic acceptance. Existing live semantic recall/routing issues remain open."
+  "workbook_publication": {
+    "status": "1.1 and 1.1.1 through 1.1.6 marked Completed",
+    "before_sha256": "35daae4bb12de7f03aa1702fbcbbd048f6c0d4a1795a1574e31650b202de381a",
+    "after_sha256": "76e83682cf02f3644295d7c0b414fea4ec72c5d4541050ec06144e9fdeee4546",
+    "before_build_unchanged": true,
+    "implementation_plan_unchanged": true,
+    "other_legal_brain_feature_content_unchanged": true,
+    "verification": "Reopened XLSX checked for values, styles, row/column features, formulas and semantic hyperlink destinations. Package-local relationship renumbering is ignored; an altered destination is correctly rejected. Before/after previews inspected without clipped text."
+  },
+  "scope_limits_and_later_work": [
+    "Document inventory is implemented; authorised document content ingestion and passage analysis remain in legal brain 2.2.4. Local reading does not grant permission to send document text to a model.",
+    "Earlier-engine facts/threads/work are explicitly not projected into current brain records; they are not silently treated as newly admitted records.",
+    "Semantic recall, request coverage/routing, legal analysis and real-model acceptance are not established by this context milestone. No overall production-readiness claim.",
+    "Three checks were independently reproduced with all production nm modules from starting commit 3cf4817: test_first_turn_links_shared_details_and_preserves_other_placements and test_public_material_change_needs_latest_support_and_retains_valid_mixed_content[mixed] return 413; test_linked_original_sources_and_selected_context_reach_independent_check[False] reports 9 calls versus expected 10. These pre-existing resource/call-accounting gaps remain unresolved outside this slice; causes are not certified as fixture-only."
   ]
 }

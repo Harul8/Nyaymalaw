@@ -5,7 +5,7 @@ tool, recovery path and completion claim. For the affected flow, identify the
 owning boundary, observable pass condition and consequential counterexample
 before implementation. Record any unmet requirement as remaining work; these
 instructions are obligations, not evidence that the current code implements
-them. Use the existing build guide, gate contracts and Before Build records
+them. Use the existing build guide, gate contracts and legal brain sheet records
 rather than creating competing policy or status owners.
 
 The advocate's latest message is interpreted in the context of the whole saved
@@ -269,7 +269,8 @@ account is sufficient, carry out the authorised work. Repair malformed internal
 steps within their recovery bound, preserving independently valid decisions and
 results; do not make the advocate restart accepted work.
 
-Use Before Build as the work queue and take one feature or slice at a time.
+Use the legal brain sheet as the work queue and take one feature or slice at a time.
+Before Build is historical; do not update it for new legal-brain work.
 Keep each repair atomic: change at most one model prompt and one production
 code file in a piece, with only the focused tests and documentation needed to
 prove it. Name the observable pass condition before editing. Do not move to
@@ -292,7 +293,7 @@ browser-observed behaviour as the primary acceptance evidence: judge the actual
 reply, source panes and saved matter against the complete conversation and
 requested work. Keep automated checks focused on regression protection; passing
 counts are not a completion criterion and must not displace browser evaluation.
-Record the evidence, call impact and remaining limits in Before Build. At each logical
+Record the evidence, call impact and remaining limits in legal brain. At each logical
 milestone, complete the relevant checks and browser review, then commit and
 push that coherent change to the working branch before moving to the next
 milestone. Report the commit and any remaining limitations.
