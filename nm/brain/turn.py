@@ -16,6 +16,8 @@ from nm.brain.conversation import (
     IncompleteConversation,
     Message,
     OpeningCandidate,
+    MESSAGE_UNDERSTANDING_CONTRACT,
+    checked_message_parts,
     interpret,
     repair_opening,
 )
@@ -1317,6 +1319,25 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
     original_messages = resolve_history(
         (*prior_conversation, *from_turns(before.brain_chat, state="ok").messages),
         selected_context)
+    understanding = execution.get("message_understanding")
+    if understanding is not None:
+        try:
+            if (not isinstance(understanding, dict) or set(understanding) != {
+                    "contract", "position", "parts"}
+                    or understanding["contract"] != MESSAGE_UNDERSTANDING_CONTRACT
+                    or understanding["position"] != (
+                        "follow_up" if original_messages else "first")
+                    or not isinstance(understanding["parts"], list)):
+                raise SchemaViolation("Saved message understanding has an unsupported owner or version")
+            rebuilt_parts = checked_message_parts([{
+                "category": part["category"], "selections": [
+                    {"source_id": "$message", "start": source["start"], "end": source["end"]}
+                    for source in part["sources"]]}
+                for part in understanding["parts"]], row["message"])
+            if list(rebuilt_parts) != understanding["parts"]:
+                raise SchemaViolation("Saved message labels lost their original words")
+        except (SchemaViolation, KeyError, TypeError) as exc:
+            raise IncompleteConversation("The saved message understanding could not be verified") from exc
     before_disputes, before_details = _record_projections(before, prior_conversation)
     disputes, details = _record_projections(after, prior_conversation)
     if "review_scope" in execution:
@@ -2877,6 +2898,10 @@ class BrainService:
                 before_disputes, before_details, coverage_history))
             plan = interpret(counted_model, conversation, turn.message)
             execution = _material_execution(turn, matter, offer_digest, plan)
+            execution["message_understanding"] = {
+                "contract": MESSAGE_UNDERSTANDING_CONTRACT,
+                "position": "follow_up" if conversation.messages else "first",
+                "parts": deepcopy(list(plan.message_parts))}
             _mutation_authorities(execution, conversation, plan, turn.message)
             dispute_audit: list[dict] = []
             review_scope = _execution_review_scope(execution, conversation.progress)

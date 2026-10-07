@@ -22,6 +22,7 @@ from tests.brain_continuation_fixture import (
     continuation_reply,
     interpretation,
     no_record_requirement,
+    scripted_message_labels,
 )
 from tests.brain_reader_fixture import (
     fixture_scoped_coverage,
@@ -71,6 +72,7 @@ class Model:
 
     def __init__(self, replies, *, source_purposes=None):
         self.replies = iter(replies)
+        self.pending_reply = None
         self.source_purposes = {**SOURCE_PURPOSES, **(source_purposes or {})}
         self.current_response_expressions = {}
         self.current_material = []
@@ -90,7 +92,12 @@ class Model:
         self.all_calls.append(prompt.operation)
         continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
                                           scripted_items=self.current_items)
-        if prompt.operation == "classify_account_sources":
+        if prompt.operation == "label_message":
+            if self.pending_reply is None:
+                self.pending_reply = deepcopy(next(self.replies))
+            payload = json.loads(prompt.user)
+            data = scripted_message_labels(self.pending_reply, payload.get("original_input", payload))
+        elif prompt.operation == "classify_account_sources":
             payload = json.loads(prompt.user)
             original = payload.get("original_input", payload)
             data = source_portion_reply(payload, {"source_treatments": {identity: {
@@ -124,14 +131,16 @@ class Model:
                  "reason": "The proposal is attributable."}
                 for row in payload["candidates"]]}
         else:
-            data = deepcopy(next(self.replies))
+            data = (self.pending_reply if self.pending_reply is not None
+                    else deepcopy(next(self.replies)))
+            self.pending_reply = None
             self.current_response_expressions = data.pop("_response_expressions", {})
             self.current_material = data.pop("_material", [])
             self.current_record_disposition = data.pop("_record_disposition", None)
             self.source_purposes.update(data.pop("_source_purposes", {}))
             self.calls.append(json.loads(prompt.user))
             if prompt.operation == "interpret_conversation":
-                data = interpretation(data)
+                data = interpretation(data, payload=json.loads(prompt.user).get("original_input", json.loads(prompt.user)))
                 self.current_items = data["items"]
         if prompt.operation in ("verify_disputes", "verify_material_grounding"):
             data = reviewed_record_verdicts(
@@ -221,7 +230,7 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     greeting = brain.run(first).as_dict()
     assert greeting["matter_id"] is None
     assert greeting["chat_id"] == "turn-one"
-    assert greeting["metrics"]["llm_calls"] == 3
+    assert greeting["metrics"]["llm_calls"] == 4
     assert len(model.calls) == 1
     assert model.calls[0]["earlier_conversation"] == []
     assert matter_list_projection(store.list_for("adv"), registers={})["matters"] == []
@@ -231,14 +240,14 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     opened = brain.run(second).as_dict()
     assert opened["matter_id"] == chat_matter_id("adv", "turn-one")
     assert len(model.calls) == 2
-    assert model.all_calls[:4] == [
-        "interpret_conversation", "continue_conversation", "verify_continuation",
-        "interpret_conversation"]
-    assert set(model.all_calls[4:]) == {
+    assert model.all_calls[:6] == [
+        "label_message", "interpret_conversation", "continue_conversation", "verify_continuation",
+        "label_message", "interpret_conversation"]
+    assert set(model.all_calls[6:]) == {
         "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert opened["metrics"]["llm_calls"] == 8
+    assert opened["metrics"]["llm_calls"] == 9
     assert [row["text"] for row in model.calls[1]["earlier_conversation"]] == [
         "Hello", rendered_account("Hello")]
     matter = store.load(opened["matter_id"])
@@ -250,7 +259,7 @@ def test_first_greeting_stays_chat_and_later_concrete_message_opens_board(tmp_pa
     assert opened["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
 
 
-def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(tmp_path):
+def test_first_substantive_message_uses_nine_calls_and_exact_replay_uses_none(tmp_path):
     text = "Our client disputes the invoice issued on 3 March."
     brain, store, model = service(tmp_path, [
         plan(text, scope="proposed", step="legal_work",
@@ -265,12 +274,12 @@ def test_first_substantive_message_uses_seven_calls_and_exact_replay_uses_none(t
     assert replayed["replayed"] is True
     assert replayed["metrics"]["llm_calls"] == 0
     assert len(model.calls) == 1
-    assert model.all_calls[0] == "interpret_conversation"
-    assert set(model.all_calls[1:]) == {
+    assert model.all_calls[:2] == ["label_message", "interpret_conversation"]
+    assert set(model.all_calls[2:]) == {
         "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
-    assert first["metrics"]["llm_calls"] == 8
+    assert first["metrics"]["llm_calls"] == 9
     assert model.all_calls.count("classify_account_sources") == 1
     assert first["elements"][0]["text"] == rendered_account(text, limitation=True)
     assert len(store.load(first["matter_id"]).brain_chat) == 1
@@ -293,7 +302,7 @@ def test_multi_party_opening_repairs_only_heading_then_checks_it(tmp_path):
 
     assert store.load(result["matter_id"]).title == "Mira Patel: Return of records"
     assert result["material_coverage"]["opening_fallback"] is False
-    assert result["metrics"]["llm_calls"] == 10
+    assert result["metrics"]["llm_calls"] == 11
     assert model.all_calls.count("verify_material_grounding") == 2
     assert model.all_calls.count("repair_opening") == 1
     repair = model.calls[1]
@@ -356,10 +365,10 @@ def test_turn_metrics_separate_logical_calls_from_provider_retries(tmp_path):
 
     model.structured = with_provider_retries
     response = brain.run(BrainTurn("adv", "Hello", "retry-metrics")).as_dict()
-    assert response["metrics"]["llm_calls"] == 3
-    assert response["metrics"]["provider_retries"] == 6
+    assert response["metrics"]["llm_calls"] == 4
+    assert response["metrics"]["provider_retries"] == 8
     assert [row["operation"] for row in response["metrics"]["model_calls"]] == [
-        "interpret_conversation", "continue_conversation", "verify_continuation"]
+        "label_message", "interpret_conversation", "continue_conversation", "verify_continuation"]
 
 
 @pytest.mark.parametrize("usage", [None, Usage(21, 8, 0.002)])
@@ -457,14 +466,14 @@ def test_unchecked_legal_draft_from_interpretation_is_not_released(tmp_path):
     assert rendered_account("The supplier missed delivery.", limitation=True) in visible
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 10
+    assert response["metrics"]["llm_calls"] == 11
     assert [row["request_index"] for row in response["continuation"]["units"]] == [1]
     assert [row["state"] for row in response["continuation"]["coverage"]] == [
         "unavailable", "ok"]
     assert model.all_calls.count("continue_conversation") == 2
     assert model.all_calls.count("verify_continuation") == 2
-    assert model.all_calls[0] == "interpret_conversation"
-    assert set(model.all_calls[1:]) == {
+    assert model.all_calls[:2] == ["label_message", "interpret_conversation"]
+    assert set(model.all_calls[2:]) == {
         "classify_account_sources", "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding",
         "continue_conversation", "verify_continuation"}
@@ -576,7 +585,7 @@ def test_legal_work_and_unrelated_aside_each_get_a_response(tmp_path):
         rendered_account("also, what is the capital of France?"),
     ]
     assert reply["continuation"]["units"][0]["sufficiency"]["status"] == "not_completed"
-    assert reply["metrics"]["llm_calls"] == 3
+    assert reply["metrics"]["llm_calls"] == 4
 
     brain.run(BrainTurn("adv", "Please continue with the deposit review.",
                         "deposit-continue", matter_id=opened["matter_id"],
@@ -641,7 +650,7 @@ def test_served_urgent_work_is_addressed_before_ordinary_work(client, wired,
     assert [row["continuation_request_index"] for row in response["elements"][:2]] == [1, 0]
     assert all(unit["sufficiency"]["status"] == "not_completed"
                for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
 
 
 def test_served_factual_correction_keeps_its_direct_reply_and_source(
@@ -724,7 +733,7 @@ def test_served_factual_correction_keeps_its_direct_reply_and_source(
     assert response["material"][0]["quoted"] == correction
     assert response["material"][0]["prior_references"][0]["quoted"] == (
         "the hearing is on Tuesday.")
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     proposal, = response["material"]
     assert proposal["related_material_ids"] == ["correction-account:material:1"]
     assert proposal["mutation_authority"]["target_ids"] == ["correction-account:material:1"]
@@ -825,7 +834,7 @@ def test_unattributed_detail_and_opening_are_withheld_without_losing_good_detail
     response = BrainService(store, model).run(
         BrainTurn("adv", latest, "grounding-turn")).as_dict()
 
-    assert response["metrics"]["llm_calls"] == 13
+    assert response["metrics"]["llm_calls"] == 14
     recovery = response["metrics"]["recovery"]
     assert recovery["reserved_calls"] == recovery["dispatched_calls"] == 5
     assert [row["phase"] for row in recovery["events"]] == [
@@ -884,4 +893,4 @@ def test_source_bound_legal_reply_preserves_distinct_clarification(tmp_path):
     assert ("What needs clarification about the meaning of the following account? "
             'Your message includes: “Please check the law for that order.”') in visible
     assert any(unit["questions"] for unit in response["continuation"]["units"])
-    assert response["metrics"]["llm_calls"] == 3
+    assert response["metrics"]["llm_calls"] == 4

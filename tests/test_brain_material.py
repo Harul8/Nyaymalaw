@@ -12,6 +12,7 @@ from tests.brain_continuation_fixture import (
     continuation_reply,
     interpretation,
     no_record_requirement,
+    scripted_message_labels,
 )
 from tests.brain_reader_fixture import (
     fixture_scoped_coverage,
@@ -47,6 +48,7 @@ def fixture_scope_judgment(payload, reviewed, *, source_purposes=None,
 class Model:
     def __init__(self, plans, *, source_purposes=None):
         self.plans = iter(plans)
+        self.pending_plan = None
         self.source_purposes = dict(source_purposes or {})
         self.dispute_scope = {}
         self.coverage_links = {}
@@ -64,7 +66,12 @@ class Model:
     def structured(self, prompt, schema, tier, *, max_tokens=None):
         continuation = continuation_reply(prompt.operation, json.loads(prompt.user),
                                           scripted_items=self.current_items)
-        if prompt.operation == "classify_account_sources":
+        if prompt.operation == "label_message":
+            if self.pending_plan is None:
+                self.pending_plan = next(self.plans)
+            payload = json.loads(prompt.user)
+            data = scripted_message_labels(self.pending_plan, payload.get("original_input", payload))
+        elif prompt.operation == "classify_account_sources":
             payload = json.loads(prompt.user)
             original = payload.get("original_input", payload)
             data = source_portion_reply(payload, {"source_treatments": {identity: {
@@ -114,7 +121,9 @@ class Model:
                         if prompt.operation == "verify_material_grounding" else None))
         else:
             self.calls.append(prompt)
-            planned = next(self.plans)
+            planned = (self.pending_plan if self.pending_plan is not None
+                       else next(self.plans))
+            self.pending_plan = None
             self.next_material = planned["material"]
             self.source_purposes.update(planned.get("_source_purposes", {}))
             self.dispute_scope.update(planned.get("_dispute_scope", {}))
@@ -125,7 +134,7 @@ class Model:
                     if key not in ("material", "_record_disposition", "_response_expressions",
                                    "_source_purposes", "_dispute_scope", "_coverage_links")}
             if prompt.operation == "interpret_conversation":
-                data = interpretation(data)
+                data = interpretation(data, payload=json.loads(prompt.user).get("original_input", json.loads(prompt.user)))
                 data = scripted_request_scope_transport(
                     data, json.loads(prompt.user), scripted_items=planned["items"])
                 self.current_items = data["items"]
@@ -396,7 +405,7 @@ def test_first_account_retains_distinct_sourced_material_without_admission(
     assert saved.facts == ()
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     payload = json.loads(model.calls[0].user)
     assert payload["earlier_conversation"] == []
     assert payload["latest_message"] == message
@@ -485,7 +494,7 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
     changed = send(client, correction, "second", opened=opened.json())
 
     assert changed.status_code == 200, changed.text
-    assert changed.json()["metrics"]["llm_calls"] == 8
+    assert changed.json()["metrics"]["llm_calls"] == 9
     matter = wired.store.load(opened.json()["matter_id"])
     from nm.brain.dispute_state import proposed_disputes
     from nm.brain.material_state import material_record
@@ -495,7 +504,7 @@ def test_reported_correction_is_read_when_interpretation_marks_material_content(
 
 
 @pytest.mark.parametrize("relation", ("new", "changes"))
-def test_work_request_without_new_material_preserves_record_with_three_calls(
+def test_work_request_without_new_material_preserves_record_with_four_calls(
         client, wired, monkeypatch, relation):
     first = "The reported delivery date is disputed. We have an unsigned note."
     request = "Please assess the account already on this file."
@@ -527,9 +536,9 @@ def test_work_request_without_new_material_preserves_record_with_three_calls(
 
     assert response.status_code == 200, response.text
     released = response.json()
-    assert released["metrics"]["llm_calls"] == 3
+    assert released["metrics"]["llm_calls"] == 4
     assert [row["operation"] for row in released["metrics"]["model_calls"]] == [
-        "interpret_conversation", "continue_conversation", "verify_continuation"]
+        "label_message", "interpret_conversation", "continue_conversation", "verify_continuation"]
     assert released["material"] == []
     assert len(model.material_calls) == reader_count
     after = client.get(f"/api/matters/{matter_id}").json()
@@ -585,9 +594,9 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
     result = response.json()
     replay = send(client, request, "review", opened=opened).json()
 
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 9
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
+        "label_message", "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
     assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
@@ -605,8 +614,9 @@ def test_public_authorised_formulation_review_reads_saved_account_without_new_fa
                and row["prior_references"] == list(lineage) for row in result["material"])
     assert len(disputes["history"]) == len(records["history"]) == 2
     interpreter = model.calls[-1]
-    assert "review can need original account reading without a new" in interpreter.system
-    assert "instruction authorises examination but does not supply the fact" in interpreter.system
+    instruction = " ".join(interpreter.system.split())
+    assert "review can need original account reading without a new" in instruction
+    assert "instruction authorises examination but does not supply the fact" in instruction
     assert review_plan["items"][0]["material_purposes"] == ["interpretation_review"]
     assert json.loads(interpreter.user)["latest_message"] == request
     assert [row["text"] for row in json.loads(interpreter.user)["earlier_conversation"]
@@ -639,9 +649,9 @@ def test_authorised_formulation_review_may_leave_the_record_unchanged(
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["material"] == []
-    assert result["metrics"]["llm_calls"] == 8
+    assert result["metrics"]["llm_calls"] == 9
     assert [row["operation"] for row in result["metrics"]["model_calls"]] == [
-        "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
+        "label_message", "interpret_conversation", "classify_account_sources", "extract_disputes", "verify_disputes",
         "extract_legal_details", "verify_material_grounding",
         "continue_conversation", "verify_continuation"]
     assert client.get(f"/api/matters/{matter_id}").json()["proposed_disputes"] == before
@@ -741,7 +751,7 @@ def test_one_message_keeps_separate_disputes_and_work_in_two_focused_calls(
         f"{first};", f"separately, {second}."]
     assert len(model.calls) == 1
     assert len(model.material_calls) == 2
-    assert served.json()["metrics"]["llm_calls"] == 8
+    assert served.json()["metrics"]["llm_calls"] == 9
 
 
 @pytest.mark.parametrize("invalid_candidate", [
@@ -819,7 +829,7 @@ def test_invalid_first_source_selection_is_repaired_once_before_commit(
 
     assert served.status_code == 200, served.text
     assert served.json()["material"][0]["quoted"] == message
-    assert served.json()["metrics"]["llm_calls"] == 9
+    assert served.json()["metrics"]["llm_calls"] == 10
     repair = [json.loads(prompt.user) for prompt in model.material_calls
               if "original_input" in json.loads(prompt.user)]
     assert len(repair) == 1

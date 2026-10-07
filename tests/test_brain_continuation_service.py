@@ -13,6 +13,7 @@ from nm.shared.model_port import ModelResult, SchemaViolation, Tier, TierUnavail
 from tests.brain_continuation_fixture import (
     citation_units,
     interpretation,
+    scripted_message_labels,
     reviewed_verdicts,
 )
 from tests.brain_reader_fixture import (
@@ -91,6 +92,7 @@ class PublicContinuationModel:
 
     def __init__(self, routes, continuations, *, checks=None, detail_reads=None):
         self.routes = iter(routes)
+        self.pending_route = None
         self.continuations = iter(continuations)
         self.checks = iter(checks) if checks is not None else None
         self.detail_reads = iter(detail_reads) if detail_reads is not None else None
@@ -110,11 +112,20 @@ class PublicContinuationModel:
         self.schemas.append((prompt.operation, deepcopy(schema)))
         self.tiers.append(tier)
         treatment = fixture_source_treatment(prompt.operation, payload)
-        if treatment is not None:
+        if prompt.operation == "label_message":
+            if self.pending_route is None:
+                self.pending_route = next(self.routes)
+            # Callable legacy routes choose work state from planner context;
+            # their label remains the fixture's explicit default request label.
+            route = {} if callable(self.pending_route) else self.pending_route
+            data = scripted_message_labels(route, payload.get("original_input", payload))
+        elif treatment is not None:
             data = treatment
         elif prompt.operation == "interpret_conversation":
-            planned = next(self.routes)
-            data = interpretation(planned(payload) if callable(planned) else deepcopy(planned))
+            planned = (self.pending_route if self.pending_route is not None
+                       else next(self.routes))
+            self.pending_route = None
+            data = interpretation(planned(payload) if callable(planned) else deepcopy(planned), payload=payload.get("original_input", payload))
         elif prompt.operation == "extract_disputes":
             data = {"new_items": [], "changes": []}
         elif prompt.operation == "extract_legal_details":
@@ -222,7 +233,7 @@ def test_public_legal_claim_disguised_as_account_is_withheld_without_losing_a_va
     answer = send(client, message, "structured-legal-account")
     replay = send(client, message, "structured-legal-account")
 
-    assert answer["metrics"]["llm_calls"] == 4
+    assert answer["metrics"]["llm_calls"] == 5
     assert [row["request_index"] for row in answer["continuation"]["units"]] == [1]
     assert [row["state"] for row in answer["continuation"]["coverage"]] == ["unavailable", "ok"]
     visible = "\n".join(row["text"] for row in answer["elements"])
@@ -269,16 +280,16 @@ def test_public_hidden_question_purpose_is_rewritten_into_an_actual_visible_ques
 
     answer = send(client, message, "structured-visible-question")
 
-    assert answer["metrics"]["llm_calls"] == 4
+    assert answer["metrics"]["llm_calls"] == 5
     assert [operation for operation, _ in model.calls] == [
-        "interpret_conversation", "continue_conversation", "continue_conversation",
+        "label_message", "interpret_conversation", "continue_conversation", "continue_conversation",
         "verify_continuation"]
     visible = "\n".join(row["text"] for row in answer["elements"])
     assert "What needs clarification about the event of the following account?" in visible
     assert 'Your message includes: “I am unsure which date matters.”' in visible
     metadata = answer["continuation"]["units"][0]["questions"][0]
     assert metadata["block_id"] == "question-0"
-    correction = model.calls[2][1]["correction"]["validation_issues"][0]["issue"]
+    correction = model.calls[3][1]["correction"]["validation_issues"][0]["issue"]
     assert "questions[0].block_id" in correction and "account-0" in correction
 
 
@@ -298,12 +309,12 @@ def test_public_first_turn_uses_checked_conversation_reply_and_replay_is_free(
     assert "What needs clarification about the meaning of the following account?" in visible
     assert "The requested conclusion remains unresolved on the supplied support." in visible
     assert "I will examine your request" not in visible
-    assert first["metrics"]["llm_calls"] == 8
+    assert first["metrics"]["llm_calls"] == 9
     assert [operation for operation, _ in model.calls] == [
-        "interpret_conversation", "classify_account_sources",
+        "label_message", "interpret_conversation", "classify_account_sources",
         "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
-    assert model.tiers == [Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE, Tier.JUDGE,
+    assert model.tiers == [Tier.ROUTINE, Tier.JUDGE, Tier.ROUTINE, Tier.ROUTINE, Tier.JUDGE,
                            Tier.ROUTINE, Tier.JUDGE, Tier.JUDGE, Tier.JUDGE]
     composition = next(payload for operation, payload in model.calls
                        if operation == "continue_conversation")
@@ -401,12 +412,12 @@ def test_public_contributor_keeps_chronology_and_material_review_without_request
     second = send(client, latest, "contribution-later", opened=first)
     replay = send(client, latest, "contribution-later", opened=first)
 
-    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 8
+    assert first["metrics"]["llm_calls"] == second["metrics"]["llm_calls"] == 9
     assert replay["metrics"]["llm_calls"] == 0
     assert corpus.calls == []
-    last_calls = model.seen[8:]
+    last_calls = model.seen[9:]
     assert [prompt.operation for prompt, _, _ in last_calls] == [
-        "interpret_conversation", "classify_account_sources",
+        "label_message", "interpret_conversation", "classify_account_sources",
         "extract_disputes", "verify_disputes", "extract_legal_details",
         "verify_material_grounding", "continue_conversation", "verify_continuation"]
     composition = next(payload for prompt, payload, _ in last_calls
@@ -521,11 +532,11 @@ def test_public_substantive_return_has_all_history_and_diversion_preserves_work(
     assert after_aside == before_aside
     last = send(client, returned, "public-return", opened=aside)
 
-    assert second["metrics"]["llm_calls"] == 8
-    assert aside["metrics"]["llm_calls"] == 3
+    assert second["metrics"]["llm_calls"] == 9
+    assert aside["metrics"]["llm_calls"] == 4
     assert aside["continuation"]["coverage"][0]["state"] == "ok"
     assert aside["elements"][0]["text"] == 'Your message includes: “Hello again.”'
-    assert last["metrics"]["llm_calls"] == 8
+    assert last["metrics"]["llm_calls"] == 9
     continuation_payloads = [payload for operation, payload in model.calls
                              if operation == "continue_conversation"]
     earlier = continuation_payloads[-1]["earlier_conversation"]
@@ -556,7 +567,7 @@ def test_public_mixed_purpose_block_uses_question_link_for_display(client, wired
 
     released = send(client, message, "public-mixed-block")
 
-    assert released["metrics"]["llm_calls"] == 8
+    assert released["metrics"]["llm_calls"] == 9
     assert released["continuation"]["units"][0]["blocks"][0]["kind"] == "question"
     assert released["elements"][0]["kind"] == "question"
     assert released["elements"][0]["section"] == "needed"
@@ -590,7 +601,7 @@ def test_public_rejected_assessment_keeps_input_once_and_does_not_release_accusa
     assert "deliberately concealed" not in json.dumps(response["elements"])
     assert response["continuation"]["units"] == []
     assert response["continuation"]["coverage"][0]["state"] == "unavailable"
-    assert response["metrics"]["llm_calls"] == 8
+    assert response["metrics"]["llm_calls"] == 9
     saved = wired.store.load(response["matter_id"])
     assert len(saved.brain_chat) == 1
     assert saved.brain_chat[0]["message"] == message
@@ -683,9 +694,10 @@ def test_public_interpreter_downgrade_stops_before_saving_or_followup_calls(
     assert refused.status_code == 503, refused.text
     assert refused.json()["detail"]["committed"] == "not_committed"
     assert inner.dispatched == [
+        ("label_message", Tier.ROUTINE),
         ("interpret_conversation", Tier.JUDGE), ("interpret_conversation", Tier.ROUTINE)]
-    assert len(traced.calls) == 1
-    assert traced.calls[0].downgraded_from == Tier.JUDGE.value
+    assert len(traced.calls) == 2
+    assert traced.calls[1].downgraded_from == Tier.JUDGE.value
     assert wired.store.list_for("adv_demo").matters == ()
 
 
@@ -695,7 +707,8 @@ def test_public_interpreter_correction_keeps_configured_tier_and_saves_input_onc
 
     class InitialParseFailure(PublicContinuationModel):
         def structured(self, prompt, schema, tier, *, max_tokens=None):
-            if prompt.operation == "interpret_conversation" and not self.calls:
+            if (prompt.operation == "interpret_conversation" and
+                    not any(operation == "interpret_conversation" for operation, _ in self.calls)):
                 self.calls.append((prompt.operation, json.loads(prompt.user)))
                 self.tiers.append(tier)
                 raise SchemaViolation("The synthetic response omitted the declared items.")
@@ -713,20 +726,20 @@ def test_public_interpreter_correction_keeps_configured_tier_and_saves_input_onc
 
     greeting = send(client, "Hello", "repaired-interpretation")
 
-    assert greeting["metrics"]["llm_calls"] == 4
+    assert greeting["metrics"]["llm_calls"] == 5
     assert greeting["matter_id"] is None
     assert [operation for operation, _ in model.calls] == [
-        "interpret_conversation", "interpret_conversation",
+        "label_message", "interpret_conversation", "interpret_conversation",
         "continue_conversation", "verify_continuation"]
-    assert model.tiers == [Tier.JUDGE] * 4
-    correction = model.calls[1][1]
+    assert model.tiers == [Tier.ROUTINE] + [Tier.JUDGE] * 4
+    correction = model.calls[2][1]
     assert correction["original_input"]["latest_message"] == "Hello"
     assert "omitted the declared items" in correction["validation_issue"]
     saved = wired.store.load(chat_matter_id("adv_demo", "repaired-interpretation"))
     assert [turn["message"] for turn in saved.brain_chat] == ["Hello"]
 
 
-def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_three_calls(
+def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_four_calls(
         client, wired, monkeypatch):
     from nm.brain.work_state import project_work
 
@@ -750,11 +763,11 @@ def test_public_source_free_acknowledgment_in_open_matter_preserves_work_with_th
 
     reply = send(client, acknowledgment, "sourcefree-acknowledgment", opened=first)
 
-    assert reply["metrics"]["llm_calls"] == 3
+    assert reply["metrics"]["llm_calls"] == 4
     assert [operation for operation, _ in model.calls[previous_calls:]] == [
-        "interpret_conversation", "continue_conversation", "verify_continuation"]
-    assert len(model.calls) == previous_calls + 3
-    assert model.tiers[-3:] == [Tier.JUDGE] * 3
+        "label_message", "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert len(model.calls) == previous_calls + 4
+    assert model.tiers[-4:] == [Tier.ROUTINE] + [Tier.JUDGE] * 3
     assert [row["text"] for row in reply["elements"]] == [
         'Your message includes: “Thanks, I understand.”']
     saved = wired.store.load(first["matter_id"])
@@ -787,11 +800,11 @@ def test_public_matter_specific_answer_reaches_checked_composition_without_route
 
     summary = send(client, requested, "scope-repair-summary", opened=first)
 
-    assert summary["metrics"]["llm_calls"] == 3
+    assert summary["metrics"]["llm_calls"] == 4
     assert [operation for operation, _ in model.calls[prior_calls:]] == [
-        "interpret_conversation",
+        "label_message", "interpret_conversation",
         "continue_conversation", "verify_continuation"]
-    assert model.tiers[prior_calls:] == [Tier.JUDGE] * 3
+    assert model.tiers[prior_calls:] == [Tier.ROUTINE] + [Tier.JUDGE] * 3
     assert "UNREVIEWED_ROUTER_ACCOUNT" not in json.dumps(summary["elements"])
     reference = summary["continuation"]["units"][0]["blocks"][0]["references"][0]
     assert reference["role"] == "advocate"
@@ -855,7 +868,7 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
     saved_id = chat_matter_id("adv_demo", first["chat_id"])
     first_saved = wired.store.load(saved_id)
 
-    assert first["metrics"]["llm_calls"] == 8
+    assert first["metrics"]["llm_calls"] == 9
     assert first["matter_id"] is None
     assert first["material"] == []
     assert first["material_coverage"]["rejected_details"] == 1
@@ -868,9 +881,9 @@ def test_public_rejected_material_notice_is_the_exact_saved_reply_on_next_turn(
 
     second = send(client, greeting, "rejected-notice-second", opened=first)
 
-    assert second["metrics"]["llm_calls"] == 3
-    assert [operation for operation, _ in model.calls[-3:]] == [
-        "interpret_conversation", "continue_conversation", "verify_continuation"]
+    assert second["metrics"]["llm_calls"] == 4
+    assert [operation for operation, _ in model.calls[-4:]] == [
+        "label_message", "interpret_conversation", "continue_conversation", "verify_continuation"]
     prior = model.calls[-3][1]["earlier_conversation"]
     assert [(row["role"], row["text"]) for row in prior] == [
         ("advocate", first_words), ("nm", "\n".join(row["text"] for row in first["elements"]))]
@@ -918,7 +931,7 @@ def test_public_actual_version_conflict_is_typed_without_reclassifying_source_fa
     assert stale.status_code == 409, stale.text
     assert stale.json()["detail"]["code"] == "stale_version"
     assert stale.json()["detail"]["committed"] == "not_committed"
-    assert len(model.calls) - prior_calls == (0 if conflict == "preflight" else 3)
+    assert len(model.calls) - prior_calls == (0 if conflict == "preflight" else 4)
     saved = wired.store.load(first["matter_id"])
     assert saved.brain_chat == before.brain_chat
     assert saved.version == before.version + (conflict == "commit")
