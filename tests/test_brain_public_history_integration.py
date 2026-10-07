@@ -42,7 +42,7 @@ def _receipt(identity, words, working, visible, at):
         route=Route.NON_MATTER,
         mode=Mode.EXPLANATION,
         mode_statement="A released historical explanation.",
-        elements=(Element(ElementKind.GROUND, working),),
+        elements=(Element(ElementKind.GROUND, working),) if working else (),
         composed=(ReplyParagraph(visible),),
     )
     return TurnReceipt(identity, "0" * 64, at, answer_payload(answer), words, True)
@@ -141,6 +141,25 @@ def _visible_transcript(body):
              "text": "\n".join(element["text"] for element in shown if element["text"].strip())},
         ))
     return result
+
+
+def test_public_paragraph_only_history_survives_turn_save_and_replay(client, wired, monkeypatch):
+    receipt = _receipt(OLDER, ORIGINAL, "", PUBLIC, "2026-09-07T10:00:00+05:30")
+    matter = Matter(id=MATTER, advocate_id="adv_demo", title="Public paragraph history",
+                    turns_applied=(OLDER,), turn_receipts=(receipt,), version=1)
+    wired.store.commit(matter, expected_version=0)
+    model = _wire(wired, monkeypatch, NEW_REQUEST)
+    opened = {"matter_id": MATTER, "chat_id": None}
+    answer = send(client, NEW_REQUEST, "paragraph-only", opened=opened)
+    assert answer["blocked"] is False
+    assert _reference(answer)["text"] == PUBLIC
+    assert _input(model, "interpret_conversation")["earlier_conversation"][1]["text"] == PUBLIC
+    before_calls = len(model.calls)
+    saved = deepcopy(wired.store.load(MATTER))
+    assert client.get(f"/api/matters/{MATTER}/transcript").json()["state"] == "ok"
+    replay = send(client, NEW_REQUEST, "paragraph-only", opened=opened)
+    assert replay["replayed"] is True and len(model.calls) == before_calls
+    assert wired.store.load(MATTER) == saved
 
 
 @pytest.mark.parametrize("mixed_offsets", [False, True], ids=["composed", "order-and-composed"])

@@ -34,6 +34,8 @@ def resolve_history(messages: Sequence[Message], contract: str) -> tuple[Message
         return tuple(messages)
     if contract != LEGACY_CONTEXT:
         raise IncompleteConversation("The saved context contract is unsupported")
+    if any(item.legacy_text == "" for item in messages):
+        raise IncompleteConversation("This public reply has no legacy transcript representation")
     numbered = [item for item in messages if item.legacy_order is not None]
     if len({item.legacy_order for item in numbered}) != len(numbered):
         raise IncompleteConversation("Historical conversation order is ambiguous")
@@ -43,9 +45,15 @@ def resolve_history(messages: Sequence[Message], contract: str) -> tuple[Message
 
 
 def word_views(messages: Sequence[Message]) -> dict[str, dict[tuple[str, str], str]]:
-    """Two bounded source maps; no alternative is tried after a failed match."""
+    """Source lookups, not transcripts: unavailable legacy words have no entry.
+
+    Public context stays complete. Full legacy replay still requires every
+    message via resolve_history; a source lookup never invents missing words.
+    """
     return {contract: {(item.turn_id, item.role): item.text
-                       for item in resolve_history(messages, contract)}
+                       for item in resolve_history(
+                           [item for item in messages if contract == PUBLIC_CONTEXT
+                            or item.legacy_text != ""], contract)}
             for contract in (LEGACY_CONTEXT, PUBLIC_CONTEXT)}
 
 
@@ -112,8 +120,6 @@ def from_turns(turns: Sequence[Mapping], *, state: str,
             if not isinstance(explanation, str) or not explanation.strip():
                 raise IncompleteConversation("A saved turn has no readable reply")
             lines.append(explanation)
-        if not lines:
-            raise IncompleteConversation("A released reply has no readable text")
         legacy_text = "\n".join(lines)
         composed = turn.get("composed", [])
         if (not isinstance(composed, list)
@@ -122,6 +128,8 @@ def from_turns(turns: Sequence[Mapping], *, state: str,
                 or (withheld and composed)):
             raise IncompleteConversation("A saved public reply is unreadable")
         public_text = "\n".join(item["text"] for item in composed) if composed else legacy_text
+        if not public_text:
+            raise IncompleteConversation("A released reply has no readable text")
         order = turn.get("_legacy_order")
         if order is not None and (type(order) is not int or order < 0):
             raise IncompleteConversation("Historical conversation order is unreadable")

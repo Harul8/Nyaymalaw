@@ -191,6 +191,17 @@ def test_public_reply_and_declared_historical_sources_remain_distinct():
     assert row["elements"] == [{"text": "Internal finding."}]
 
 
+def test_paragraph_only_reply_is_valid_public_context_without_invented_legacy_words():
+    row = saved_turn(composed=[{"text": "The complete public answer."}])
+    row["elements"] = []
+    public = from_turns([row], state="ok").messages
+    assert public[1].text == "The complete public answer."
+    assert public[1].legacy_text == ""
+    assert ("prior", "nm") not in word_views(public)[LEGACY_CONTEXT]
+    with pytest.raises(ValueError, match="no legacy transcript"):
+        resolve_history(public, LEGACY_CONTEXT)
+
+
 def test_historical_order_uses_owned_positions_not_source_match_or_identifier():
     public = from_turns([saved_turn("z", _legacy_order=1),
                          saved_turn("a", _legacy_order=0)],
