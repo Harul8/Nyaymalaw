@@ -1,6 +1,7 @@
 """Check model-written material and opening words against attributed input."""
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from dataclasses import asdict, dataclass, fields
@@ -284,6 +285,161 @@ _VERDICT = {
 
 _STATEMENT_SUPPORT_CONTRACT = "ordered_original_account_support_v1"
 _UNREAD_SOURCE_PURPOSE_CONTRACT = "unread_material_source_purpose_v1"
+_MATERIAL_FEEDBACK_CONTRACT = "material_failed_review_feedback_v1"
+
+
+@dataclass(frozen=True)
+class MaterialReviewFeedback:
+    """Code-issued failed checks for this original read, never checked decisions."""
+    original_binding: str
+    failed_units: str
+    source_owner_ids: tuple[str, ...]
+    candidate_ids: tuple[str, ...]
+    seal: str
+
+
+def _feedback_words(value) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _feedback_seal(binding, failures, sources, candidates) -> str:
+    return hashlib.sha256(_feedback_words([
+        _MATERIAL_FEEDBACK_CONTRACT, binding, failures, sources, candidates
+    ]).encode("utf-8")).hexdigest()
+
+
+def _feedback_originals(candidates, opening, earlier, latest, source_treatments):
+    conversation, current, prior = addressed_sources(earlier, latest)
+    treatments = owned_source_treatments(source_treatments, current, prior)
+    if any(row.get("selection_contract") != SOURCE_SELECTION_CONTRACT
+           for row in treatments.values()):
+        raise SchemaViolation("Material recovery feedback needs exact original source references")
+    references = {key: {field: row[field] for field in ("turn_id", "role", "quoted")}
+                  for key, row in treatments.items()}
+    details = tuple(candidate for candidate in candidates if candidate.kind != "dispute")
+    proposals = {f"D{index}": asdict(candidate)
+                 for index, candidate in enumerate(details, start=1)}
+    eligible = {f"D{index}": candidate_account_ids(candidate, current, prior)
+                for index, candidate in enumerate(details, start=1)}
+    if opening.ready:
+        party_name, subject = opening.title_parts()
+        proposals["O1"] = {"type": "opening", "title": opening.title,
+                           "party_name": party_name, "subject": subject,
+                           "summary": opening.summary}
+        eligible["O1"] = candidate_account_ids(None, current, prior)
+    binding = _feedback_words({"conversation": conversation, "latest": latest,
+                               "sources": references, "proposals": proposals})
+    return binding, proposals, eligible, references, treatments
+
+
+def material_review_feedback(grounded: GroundingResult, *, candidates, opening,
+                             earlier, latest, source_treatments
+                             ) -> MaterialReviewFeedback | None:
+    """Validate final unread selections once at their owner before recovery dispatch.
+
+    Typed role/support contradictions select re-examination, not semantic truth.
+    Historical dictionaries and failed-check wording cannot authorise this handoff.
+    """
+    if type(grounded) is not GroundingResult:
+        raise SchemaViolation("Material recovery requires the current grounding result")
+    if (not isinstance(grounded.unread_proposals, tuple)
+            or any(not isinstance(row, dict) for row in grounded.unread_proposals)):
+        raise SchemaViolation("Material recovery requires owned unread proposal rows")
+    if not any("source_purpose_failure" in row for row in grounded.unread_proposals):
+        return None
+    binding, proposals, eligible, references, treatments = _feedback_originals(
+        candidates, opening, earlier, latest, source_treatments)
+    failures, owner_ids, candidate_ids, seen = [], set(), [], set()
+    for unread in grounded.unread_proposals:
+        if "source_purpose_failure" not in unread:
+            continue
+        identity = unread.get("candidate_id")
+        failure = unread["source_purpose_failure"]
+        if (not isinstance(identity, str) or identity not in proposals or identity in seen
+                or unread.get("candidate_type") != ("opening" if identity == "O1" else "detail")
+                or unread.get("verdict") != "unassessed"
+                or unread.get("admission_issue") != "review_unavailable"
+                or _feedback_words(unread.get("proposal")) != _feedback_words(proposals[identity])
+                or not isinstance(failure, dict) or set(failure) != {
+                    "contract", "candidate_id", "proposal", "failed_checks", "sources",
+                    "disagreement_source_ids"}
+                or failure["contract"] != _UNREAD_SOURCE_PURPOSE_CONTRACT
+                or failure["candidate_id"] != identity
+                or _feedback_words(failure["proposal"]) != _feedback_words(proposals[identity])
+                or not isinstance(failure["failed_checks"], list) or not failure["failed_checks"]
+                or any(not isinstance(issue, str) or not issue.strip()
+                       for issue in failure["failed_checks"])
+                or failure["failed_checks"] != unread.get("validation_issues")
+                or not isinstance(failure["sources"], dict)):
+            raise SchemaViolation(
+                "Material recovery feedback has no intact final proposal/check binding")
+        seen.add(identity)
+        selected, disagreements, internal_conflict = {}, [], False
+        for source_id, source in failure["sources"].items():
+            if (source_id not in eligible[identity] or not isinstance(source, dict)
+                    or set(source) != {"reference", "owner_content_role", "reading", "selection"}
+                    or source["reference"] != references[source_id]
+                    or source["owner_content_role"] != treatments[source_id]["content_role"]):
+                raise SchemaViolation(
+                    "Material recovery feedback changed a selected original source")
+            require_schema(source["reading"], _source_readings_schema(
+                (source_id,))["properties"][source_id])
+            selection = source["selection"]
+            if (not source["reading"]["reason"].strip() or not isinstance(selection, dict)
+                    or set(selection) != {"supports_statement", "reason", "support_spans"}
+                    or type(selection["supports_statement"]) is not bool
+                    or not isinstance(selection["reason"], str) or not selection["reason"].strip()
+                    or not isinstance(selection["support_spans"], list)
+                    or selection["supports_statement"] and not selection["support_spans"]
+                    or any(not isinstance(span, dict) or set(span) != {
+                        "anchor_id", "start", "end", "quoted"}
+                           for span in selection["support_spans"])):
+                raise SchemaViolation("Material recovery feedback has malformed selected support")
+            portions = owned_source_portions(references[source_id], [
+                {"start": span["start"], "end": span["end"]}
+                for span in selection["support_spans"]], source_id=source_id)
+            if portions != selection["support_spans"]:
+                raise SchemaViolation("Material recovery feedback changed its exact selected words")
+            supplies = source["reading"]["content_role"] in _ACCOUNT_CONTENT_ROLES
+            if supplies != (source["owner_content_role"] in _ACCOUNT_CONTENT_ROLES):
+                disagreements.append(source_id)
+            internal_conflict |= selection["supports_statement"] and not supplies
+            selected[source_id] = {field: deepcopy(source[field])
+                                   for field in ("reference", "reading", "selection")}
+        if failure["disagreement_source_ids"] != disagreements:
+            raise SchemaViolation("Material recovery feedback changed the owned role disagreement")
+        if disagreements or internal_conflict:
+            candidate_ids.append(identity)
+            owner_ids.update(disagreements)
+            failures.append({"candidate_id": identity, "proposal": proposals[identity],
+                             "failed_checks": failure["failed_checks"], "sources": selected})
+    if not candidate_ids:
+        return None
+    units, sources, ids = _feedback_words(failures), tuple(sorted(owner_ids)), tuple(candidate_ids)
+    return MaterialReviewFeedback(binding, units, sources, ids,
+                                  _feedback_seal(binding, units, sources, ids))
+
+
+def _checked_recovery_feedback(feedback, *, candidates, opening, earlier, latest,
+                               source_treatments) -> list[dict]:
+    if feedback is None:
+        return []
+    if (type(feedback) is not MaterialReviewFeedback
+            or not isinstance(feedback.original_binding, str)
+            or not isinstance(feedback.failed_units, str)
+            or type(feedback.source_owner_ids) is not tuple
+            or type(feedback.candidate_ids) is not tuple
+            or any(not isinstance(identity, str) or not identity
+                   for identity in (*feedback.source_owner_ids, *feedback.candidate_ids))
+            or feedback.seal != _feedback_seal(
+                feedback.original_binding, feedback.failed_units,
+                feedback.source_owner_ids, feedback.candidate_ids)):
+        raise SchemaViolation("Material recovery has no intact code-issued feedback")
+    binding, *_ = _feedback_originals(candidates, opening, earlier, latest, source_treatments)
+    if feedback.original_binding != binding:
+        raise SchemaViolation(
+            "Material recovery feedback changed original conversation or proposals")
+    return json.loads(feedback.failed_units)
 
 
 def _source_readings_schema(source_ids) -> dict:
@@ -582,11 +738,15 @@ def verify_material_grounding(
         review_scope: dict | None = None, active_material: tuple[dict, ...] = (),
         coverage: dict | None = None, source_disagreements: list[dict] | None = None,
         review_state: dict | None = None, recheck_source_ids: tuple[str, ...] = (),
-        coverage_record_support: dict | None = None, historical_material: tuple[dict, ...] = ()
+        coverage_record_support: dict | None = None, historical_material: tuple[dict, ...] = (),
+        recovery_feedback: MaterialReviewFeedback | None = None
         ) -> GroundingResult:
     """Keep checked peers and distinguish unread proposals after bounded correction."""
     details = tuple(candidate for candidate in candidates
                     if candidate.kind != "dispute")
+    feedback_units = _checked_recovery_feedback(
+        recovery_feedback, candidates=candidates, opening=opening, earlier=earlier,
+        latest=latest, source_treatments=source_treatments)
     requested_coverage = review_scope is not None
     if historical_material and coverage_record_support is None:
         raise SchemaViolation("Historical material coverage requires original admission support")
@@ -759,16 +919,33 @@ def verify_material_grounding(
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
                 for row in proposed if row["candidate_id"] in decisions]
-        if attempt:
-            if rejected_review_context is not None:
+        initial_feedback = [row for row in feedback_units
+                            if row["candidate_id"] in candidate_ids] if not attempt else []
+        if attempt or initial_feedback:
+            if attempt and rejected_review_context is not None:
                 current["rejected_review_context"] = {
                     "source_readings": deepcopy(rejected_review_context.get("source_readings")),
                     "verdicts": [row for row in rejected_review_context["verdicts"]
                                  if row["candidate_id"] in candidate_ids],
                     **({"coverage": rejected_review_context.get("coverage")}
                        if read_coverage and "$coverage" in issues else {})}
+            elif initial_feedback:
+                # Original words and proposals are already supplied in full.
+                # Keep their complete binding in the token, not duplicate proof
+                # quotations in the model presentation before resource checks.
+                current["rejected_review_context"] = {"unread_proposals": [
+                    {"candidate_id": row["candidate_id"], "failed_checks": row["failed_checks"],
+                     "sources": {identity: {
+                         "reading": source["reading"], "selection": {
+                             **source["selection"], "support_spans": [
+                                 {field: span[field] for field in ("start", "end")}
+                                 for span in source["selection"]["support_spans"]]}}
+                         for identity, source in row["sources"].items()}}
+                    for row in initial_feedback]}
+            feedback_issues = ({row["candidate_id"]: tuple(row["failed_checks"])
+                                for row in initial_feedback} if initial_feedback else issues)
             current["validation_issue"] = (
-                review_issues_text(issues) + ". "
+                review_issues_text(feedback_issues) + ". "
                 "Correct the named review checks against the original sources; a rejected "
                 "review field is not evidence against an otherwise supported proposal. "
                 "Return one complete verdict per listed ID. Decide acceptance from the "

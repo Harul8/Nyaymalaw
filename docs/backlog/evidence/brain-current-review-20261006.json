@@ -2415,6 +2415,46 @@
       "remaining": "This is a producer prerequisite, not a completed recovery feature. turn.py must consume only the freshly produced current GroundingResult diagnostic, validate exact proposal/source/failure bindings, distinguish source-owner disagreement from pure internal inconsistency, preserve checked peers and use the shared bound. Historical saved rejected-review metadata must never be imported as a ledger or proof. Integrated browser correction remains failed. A later role-dependent fresh material grammar can prevent internally inconsistent role/support combinations without proving semantic role accuracy; it increases schema size and needs separate measured qualification. Other material association, pending-input, requested delivery, legal, retrieval, UI and closure gaps remain in Before Build. No production-ready claim.",
       "false_rejection_observation": "Intermediate full-map helper produced5fail/32pass on local diagnostic neighbours. Its loaded-source SHA was not captured and disk changed concurrently; this is a behaviour observation, not immutable whole-checkout causal evidence. Final scoped checker and exact git-owner baseline above are the qualifying evidence.",
       "production_sha256": "8a4bae0238f8bab1a09b6faaced03567cf08f365a325ed8f2cf8ef037b880568"
+    },
+    {
+      "piece": "Owned material failed-review feedback handoff",
+      "base": "575a2e4",
+      "production_file": "nm/brain/material_verification.py",
+      "prompt_changes": 0,
+      "invariant": "Only code-issued final unread feedback bound to exact original conversation, proposals, selected sources and failed checks may reach re-review; failed judgments are not facts, authority or admission proof.",
+      "verification": "39 focused raw API cases and187 exact existing neighbours pass226 total. Factory validates final closed diagnostic, original proposal/source identities, exact canonical portions and failed-check equality. Typed source-role differences and internal support contradictions derive dispatch IDs without examining error text. Historical dictionaries, altered token/source/proposal/words/speaker reject before any model call. Reclassification with unchanged original words remains permitted. Already checked positive/negative peers remain cached; only pending failures appear in the input. Full proof stays in the sealed token; duplicate original quotes/proposals and seals are omitted only from model presentation before the actual resource guard. Existing conditional correction uses the same turn ledger. Both stable prompts, default schema/input, canonical admission and replay remain unchanged. This verifies the producer API, not shipped turn recovery or real-model detection.",
+      "call_impact": "0 added routine or conditional stages. Feedback input applies only to existing explicitly invoked re-review; raw valid re-review1call, bounded malformed2calls; omitted/None defaults unchanged. No live calls; cumulative USD3.277582/5, remaining1.722418.",
+      "reports": {
+        "material-recovery-feedback-final.xml": [
+          {
+            "tests": 39,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "material-feedback-neighbours.xml": [
+          {
+            "tests": 187,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "material-recovery-feedback-owner-baseline-575a2e4-final39.xml": [
+          {
+            "tests": 39,
+            "failures": 38,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      "browser_feature_complete": false,
+      "remaining": "This is the feedback-owner prerequisite only. The next turn.py slice must obtain the token from the current GroundingResult, dispatch typed source-owner disagreement separately from an internal support contradiction, pass feedback into bounded re-review, preserve checked peers and the shared ledger, and verify public save/replay. The grouped browser correction remains unfinished until that consumer and actual pinned-model browser acceptance. Joint role/support grammar, material association, pending-input, requested delivery, legal source force/conditions, retrieval, UI, closure and measured six-activity semantic qualification remain in Before Build. No production-ready claim.",
+      "baseline_interpretation": "Isolated unchanged575a2e4 on final39:38fail/1pass.36 failures are missing factory API,2 missing optional verifier keyword; omitted-default compatibility passes. These demonstrate the absent new handoff, not38 existing broken safety gates.",
+      "production_sha256": "bb41710f7802a13382cb3a12feb32569c55530ddc6f0b2f7420a0b3717423eae",
+      "test_sha256": "a6b72f67275dbfaf9e26e256bc4cf892b7aed0d65144a9c4562f592b8452c191"
     }
   ],
   "additional_reviewer_input": {
