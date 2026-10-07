@@ -135,6 +135,21 @@ def test_compatibility_metadata_is_not_presented_as_conversation():
     assert "legacy_order" not in model.calls[0][0].user
 
 
+def test_history_and_recording_times_are_read_only_context_not_active_targets():
+    from nm.brain.conversation import _prompt
+    history = {"id": "retired", "record_status": "historical", "record": {
+        "record_role": "nm_interpretation", "statement": "An earlier formulation"}}
+    conversation = Conversation((Message("first", "advocate", "Original account",
+                                         recorded_at="2026-10-07T10:00:00Z"),),
+                                record_history=(history,))
+    payload = json.loads(_prompt(conversation, "What changed?").user)
+    assert payload["record_history"] == [history]
+    assert payload["conversation_times"] == [
+        {"turn_id": "first", "recorded_at": "2026-10-07T10:00:00Z"}]
+    assert payload["target_catalogue"] == []
+    assert payload["earlier_conversation"][0]["text"] == "Original account"
+
+
 @pytest.mark.parametrize("metadata", [dict(legacy_text=""), dict(legacy_order=-1),
                                        dict(legacy_order=True)])
 def test_unreadable_reconstruction_metadata_is_rejected(metadata):
