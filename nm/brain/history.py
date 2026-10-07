@@ -8,6 +8,8 @@ from nm.brain.conversation import Conversation, IncompleteConversation, Message
 
 LEGACY_CONTEXT = "legacy_elements_v1"
 PUBLIC_CONTEXT = "public_reply_v2"
+# Activate only after all saved-evidence consumers select their owned version.
+CURRENT_CONTEXT = LEGACY_CONTEXT
 
 
 def context_contract(turn: Mapping) -> str:
@@ -52,18 +54,22 @@ def released_older_turns(store, matter) -> list[dict]:
     from nm.open_matter.transcripts_api import project
 
     archived = store.transcripts_for(matter.id)
-    older, problems = project(matter, archived)
+    older, problems = project(matter, archived, chronology_contract=CURRENT_CONTEXT)
     if (problems or any(row.get("unreadable") for row in archived)
             or not set(matter.turns_applied).issubset(
                 {row.get("turn_id") for row in older})):
         raise IncompleteConversation("The saved matter conversation is incomplete")
+    legacy = sorted(older, key=lambda row: (str(row.get("at") or ""), str(row["turn_id"])))
+    positions = {row["turn_id"]: index for index, row in enumerate(legacy)}
+    # Presentation copies only: receipt/archive rows and their seals stay intact.
+    older = [{**row, "_legacy_order": positions[row["turn_id"]]} for row in older]
     from_turns(older, state="ok")
     return older
 
 
 def from_turns(turns: Sequence[Mapping], *, state: str,
                matter_id: str | None = None, current_work: str = "",
-               contract: str = LEGACY_CONTEXT) -> Conversation:
+               contract: str = CURRENT_CONTEXT) -> Conversation:
     """Accept chronological saved turns only when every side can be recovered.
 
     ``turns`` is the authorised transcript projection. Its text is context,
