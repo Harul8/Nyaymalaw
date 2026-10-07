@@ -140,7 +140,7 @@ def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_h
     assert store.value.brain_chat[0]["release"]["state"] == "partial"
 
 
-@pytest.mark.parametrize("damage", ["offset", "quote", "source", "contract"])
+@pytest.mark.parametrize("damage", ["offset", "quote", "source", "contract", "missing_passage_id"])
 def test_private_extraction_references_and_contract_are_checked_on_reopen(damage):
     brain, model, store = service(WiredModel(*mixed_outputs(MIXED_MESSAGE)))
     brain.run(turn(message=MIXED_MESSAGE))
@@ -155,6 +155,8 @@ def test_private_extraction_references_and_contract_are_checked_on_reopen(damage
                 passage["start"] += 1
             elif damage == "quote":
                 passage["quote"] = "Invented words that the advocate did not supply."
+            elif damage == "missing_passage_id":
+                del passage["passage_id"]
             else:
                 passage["source_id"] = "other_matter"
                 proposal["source_ids"] = ["other_matter"]

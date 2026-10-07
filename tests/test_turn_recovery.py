@@ -151,7 +151,7 @@ def test_all_held_extraction_uses_one_owned_correction_before_review_and_save(tm
     label, prepared, review = mixed_outputs(MIXED_MESSAGE)
     invalid = deepcopy(prepared)
     for items in invalid.values():
-        items[0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+        items[0]["selections"][0]["passage_id"] = "other_matter:p1"
     model = WiredModel(label, invalid, prepared, review)
     harness = Harness(tmp_path, model)
     try:
@@ -165,13 +165,13 @@ def test_all_held_extraction_uses_one_owned_correction_before_review_and_save(tm
         assert after == before
         assert feedback["rejected_output"] == invalid
         assert "dispute:1" in feedback["mismatch"]
-        assert "not exact original text" in feedback["mismatch"]
+        assert "Unknown selected passage other_matter:p1" in feedback["mismatch"]
         assert response["metrics"]["llm_calls"] == 4
         saved = harness.held(response["chat_id"]).brain_chat[0]
         assert saved["preparation"]["issues"] == []
         assert saved["preparation"]["proposal"]["disputes"]
         assert saved["preparation"]["proposal"]["objectives"]
-        assert "Unsupported quotation" not in json.dumps(saved)
+        assert "other_matter:p1" not in json.dumps(saved)
         assert [element["text"] for element in response["elements"]] == ["Message received."]
     finally:
         harness.client.close()
@@ -180,7 +180,7 @@ def test_all_held_extraction_uses_one_owned_correction_before_review_and_save(tm
 def test_all_held_extraction_cannot_reset_a_correction_spent_by_labeling(tmp_path):
     label, prepared, _ = mixed_outputs(MIXED_MESSAGE)
     for items in prepared.values():
-        items[0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+        items[0]["selections"][0]["passage_id"] = "other_matter:p1"
     model = WiredModel({"label": "undeclared_label"}, label, prepared)
     harness = Harness(tmp_path, model)
     try:
@@ -196,7 +196,7 @@ def test_all_held_extraction_cannot_reset_a_correction_spent_by_labeling(tmp_pat
 
 def test_held_peer_preserves_supported_extraction_without_repeating_accepted_input(tmp_path):
     label, prepared, review = mixed_outputs(MIXED_MESSAGE)
-    prepared["objectives"][0]["passages"][0]["quote"] = "Unsupported quotation absent from the original message."
+    prepared["objectives"][0]["selections"][0]["passage_id"] = "other_matter:p1"
     review["unit_reviews"] = review["unit_reviews"][:1]
     harness = Harness(tmp_path, WiredModel(label, prepared, review))
     try:

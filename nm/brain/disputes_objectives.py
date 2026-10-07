@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import re
 
 from nm.brain.message_labels import validate_label
 from nm.shared.model_port import (
@@ -10,7 +11,8 @@ from nm.shared.model_port import (
     estimate_tokens, require_schema,
 )
 
-CONTRACT = "disputes_objectives_v1"
+CONTRACT = "disputes_objectives_v2"
+LEGACY_CONTRACT = "disputes_objectives_v1"
 COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
 _TASK = """Purpose: Identify only the disputes and desired matter outcomes
 expressed in the latest message. These are internal proposals, not proved facts.
@@ -30,17 +32,19 @@ Look for:
    quoted positions, uncertainty, conditions, negations and hypothetical scope.
    Capture a correction or withdrawal as such, not as continued affirmative
    intent. Do not decide legal merit or add facts, remedies or legal conclusions.
-4. Select exact continuous passages supporting each description. Include the
+4. Select the supplied passage IDs supporting each description. Include the
    current words and earlier words needed to understand them. Mark substantive
    original account as support and a reference or review instruction as context.
    NM's earlier wording is context only. A review request can authorise examining
    earlier original account; the request itself does not substantiate that account.
 
 Outcome: Return disputes and objectives as independent arrays. Each item has a
-concise attributed description, passages and uncertainty (null if no unresolved
-interpretation needs recording). Each passage contains a supplied source_id,
-an exact quote and purpose=support or context. Choose enough words to identify
-one unambiguous occurrence while preserving relevant qualifications. Use empty
+concise attributed description, selections and uncertainty (null if no unresolved
+interpretation needs recording). Each selection contains a supplied passage_id
+and purpose=support or context. The complete original messages are shown as
+ordered selectable passages. These boundaries are navigation aids, not units of
+meaning; select several when needed to preserve context and qualifications.
+Code retains their exact words; do not copy or rewrite quotations. Use empty
 arrays when neither category is expressed. Return no general fact catalogue,
 action plan, reply draft, execution status or forced pairing of the two lists."""
 _FIRST_PROMPT = """Message: You receive the user's opening message, its proposed
@@ -57,7 +61,9 @@ _TEXT = {"type": "string", "minLength": 1}
 _PASSAGE = {"type": "object", "additionalProperties": False,
     "required": ["source_id", "quote", "purpose"], "properties": {
         "source_id": _TEXT, "quote": _TEXT,
-        "purpose": {"type": "string", "enum": ["support", "context"]}}}
+        "purpose": {"type": "string", "enum": ["support", "context"]},
+        "start": {"type": "integer", "minimum": 0},
+        "end": {"type": "integer", "minimum": 1}, "passage_id": _TEXT}}
 _ITEM = {"type": "object", "additionalProperties": False,
     "required": ["description", "passages", "uncertainty"], "properties": {
         "description": _TEXT,
@@ -67,6 +73,54 @@ _SCHEMA = {"type": "object", "additionalProperties": False,
     "required": list(COLLECTIONS), "properties": {
         kind: {"type": "array", "items": _ITEM} for kind in COLLECTIONS}}
 _ENVELOPE = {**_SCHEMA, "properties": {kind: {"type": "array"} for kind in COLLECTIONS}}
+_SELECTION = {"type": "object", "additionalProperties": False,
+    "required": ["passage_id", "purpose"], "properties": {
+        "passage_id": _TEXT, "purpose": _PASSAGE["properties"]["purpose"]}}
+_SELECTED_ITEM = {"type": "object", "additionalProperties": False,
+    "required": ["description", "selections", "uncertainty"], "properties": {
+        "description": _TEXT,
+        "selections": {"type": "array", "minItems": 1, "items": _SELECTION},
+        "uncertainty": {"type": ["string", "null"]}}}
+_SELECTED_SCHEMA = {**_SCHEMA, "properties": {
+    kind: {"type": "array", "items": _SELECTED_ITEM} for kind in COLLECTIONS}}
+
+
+def _passage_input(sources):
+    """Present all original words once; code, not the model, owns exact spans."""
+    presented, choices = [], {}
+    for source in sources:
+        original = source["message"]
+        parts = []
+        for part in re.split(r"(?<=[.!?;\n])", original["text"]):
+            if part:
+                if not part.strip() and parts:
+                    parts[-1] += part
+                else:
+                    parts.append(part)
+        offset, passages = 0, []
+        for index, part in enumerate(parts, 1):
+            identity = f"{source['id']}:p{index}"
+            choices[identity] = {"source_id": source["id"], "quote": part,
+                                 "start": offset, "end": offset + len(part)}
+            passages.append({"id": identity, "text": part})
+            offset += len(part)
+        presented.append({"id": source["id"], "message": {
+            **{key: deepcopy(value) for key, value in original.items() if key != "text"},
+            "passages": passages}})
+    return presented, choices
+
+
+def _resolve_selections(item, choices):
+    require_schema(item, _SELECTED_ITEM)
+    passages = []
+    for selection in item["selections"]:
+        choice = choices.get(selection["passage_id"])
+        if choice is None:
+            raise SchemaViolation(f"Unknown selected passage {selection['passage_id']}")
+        passages.append({**deepcopy(choice), "passage_id": selection["passage_id"],
+                         "purpose": selection["purpose"]})
+    return {"description": item["description"], "passages": passages,
+            "uncertainty": item["uncertainty"]}
 
 
 def _sources(sources):
@@ -99,11 +153,23 @@ def _check_item(item, catalogue):
             raise SchemaViolation(f"Passage selected unknown source {identity}")
         if not quote.strip():
             raise SchemaViolation(f"Passage in {identity} is blank")
-        start = source["text"].find(quote)
-        if start < 0:
-            raise SchemaViolation(f"Quote in {identity} is not exact original text: {quote!r}")
-        if source["text"].find(quote, start + 1) >= 0:
-            raise SchemaViolation(f"Quote in {identity} occurs more than once; select a wider unique passage: {quote!r}")
+        if "passage_id" in passage:
+            _, owned = _passage_input([{"id": identity, "message": source}])
+            choice = owned.get(passage["passage_id"])
+            if choice is None or any(passage.get(key) != value for key, value in choice.items()):
+                raise SchemaViolation(f"Selected passage in {identity} differs from its owned identity")
+        if "start" in passage or "end" in passage:
+            start, end = passage.get("start"), passage.get("end")
+            if (start is None or end is None or end > len(source["text"])
+                    or source["text"][start:end] != quote):
+                raise SchemaViolation(f"Passage endpoints in {identity} differ from the original words")
+        else:
+            # Historical quote-selected records retain their original check.
+            start = source["text"].find(quote)
+            if start < 0:
+                raise SchemaViolation(f"Quote in {identity} is not exact original text: {quote!r}")
+            if source["text"].find(quote, start + 1) >= 0:
+                raise SchemaViolation(f"Quote in {identity} occurs more than once; select a wider unique passage: {quote!r}")
         if passage["purpose"] == "support":
             if source["role"] != "advocate":
                 raise SchemaViolation(f"NM source {identity} cannot substantiate its own interpretation")
@@ -121,7 +187,7 @@ def _check_item(item, catalogue):
             "uncertainty": uncertainty, "source_ids": source_ids}
 
 
-def _prepare(data, sources):
+def _prepare(data, sources, *, choices=None):
     require_schema(data, _ENVELOPE)
     catalogue = _sources(sources)
     proposal, issues = {kind: [] for kind in COLLECTIONS}, []
@@ -129,13 +195,15 @@ def _prepare(data, sources):
         for index, item in enumerate(data[kind], 1):
             identity = f"{prefix}:{index}"
             try:
-                checked = _check_item(item, catalogue)
+                selected = _resolve_selections(item, choices) if choices is not None else item
+                checked = _check_item(selected, catalogue)
             except SchemaViolation as exc:
                 issues.append({"unit": identity, "reason": str(exc),
                                "rejected_proposal": deepcopy(item)})
             else:
                 proposal[kind].append({**checked, "id": identity, "state": "proposed"})
-    return {"contract": CONTRACT, "state": "prepared_unreviewed", "proposal": proposal,
+    return {"contract": CONTRACT if choices is not None else LEGACY_CONTRACT,
+            "state": "prepared_unreviewed", "proposal": proposal,
             "sources": deepcopy(sources), "issues": issues}
 
 
@@ -143,7 +211,7 @@ def extraction_units(prepared):
     """Check the owned saved projection without asking a model to re-interpret it."""
     if (not isinstance(prepared, dict)
             or set(prepared) != {"contract", "state", "proposal", "sources", "issues"}
-            or prepared["contract"] != CONTRACT or prepared["state"] != "prepared_unreviewed"
+            or prepared["contract"] not in (CONTRACT, LEGACY_CONTRACT) or prepared["state"] != "prepared_unreviewed"
             or not isinstance(prepared["proposal"], dict)
             or set(prepared["proposal"]) != set(COLLECTIONS)
             or not isinstance(prepared["issues"], list)):
@@ -161,10 +229,12 @@ def extraction_units(prepared):
                     or item["state"] != "proposed" or not isinstance(item["passages"], list)):
                 raise SchemaViolation("Extraction item has an inconsistent owned identity or shape")
             raw = {key: deepcopy(item[key]) for key in ("description", "passages", "uncertainty")}
+            passage_fields = {"source_id", "quote", "purpose", "start", "end"}
+            if prepared["contract"] == CONTRACT:
+                passage_fields.add("passage_id")
             for passage in raw["passages"]:
-                if not isinstance(passage, dict) or set(passage) != {"source_id", "quote", "purpose", "start", "end"}:
+                if not isinstance(passage, dict) or set(passage) != passage_fields:
                     raise SchemaViolation("Saved extraction passage has an unknown shape")
-                del passage["start"], passage["end"]
             checked = {**_check_item(raw, catalogue), "id": item["id"], "state": "proposed"}
             if checked != item:
                 raise SchemaViolation("Saved extraction differs from its exact original passage")
@@ -193,13 +263,14 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
         catalogue = _sources(sources)
     except SchemaViolation as exc:
         raise ValueError(str(exc)) from exc
-    payload = {"proposed_label": label, "current_message": current}
+    presented, choices = _passage_input(sources)
+    payload = {"proposed_label": label, "current_message": presented[-1]}
     if earlier:
-        payload["earlier_conversation"] = earlier
-    schema = deepcopy(_SCHEMA)
+        payload["earlier_conversation"] = presented[:-1]
+    schema = deepcopy(_SELECTED_SCHEMA)
     for kind in COLLECTIONS:
-        schema["properties"][kind]["items"]["properties"]["passages"]["items"]["properties"]["source_id"] = {
-            **_TEXT, "enum": list(catalogue)}
+        schema["properties"][kind]["items"]["properties"]["selections"]["items"]["properties"]["passage_id"] = {
+            **_TEXT, "enum": list(choices)}
     prompt = Prompt(system=_FOLLOW_UP_PROMPT if earlier else _FIRST_PROMPT,
                     user=json.dumps(payload, ensure_ascii=False), operation="extract_disputes_objectives")
     limit = max(2048, estimate_tokens(message) * 4)
@@ -217,7 +288,7 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
     try:
         if result.text is not None:
             raise SchemaViolation("Extraction requires structured proposals, not response prose")
-        return _prepare(result.data, sources)
+        return _prepare(result.data, sources, choices=choices)
     except SchemaViolation as exc:
         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
                               retries=result.retries) from exc

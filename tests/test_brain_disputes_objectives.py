@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from nm.brain.disputes_objectives import extract_disputes_objectives, extraction_units
+from nm.brain.disputes_objectives import _prepare, extract_disputes_objectives, extraction_units
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage,
@@ -32,10 +32,21 @@ class ExtractionModel:
 
 
 def passage(quote="The supplier refuses delivery.", source="current", purpose="support"):
+    """Legacy quote-selected internal record fixture, never a new model reply."""
     return {"source_id": source, "quote": quote, "purpose": purpose}
 
 
-def item(description="Supplier's refusal to deliver", passages=None, uncertainty=None):
+def selection(passage_id="current:p1", purpose="support"):
+    return {"passage_id": passage_id, "purpose": purpose}
+
+
+def item(description="Supplier's refusal to deliver", selections=None, uncertainty=None):
+    return {"description": description,
+            "selections": [selection()] if selections is None else selections,
+            "uncertainty": uncertainty}
+
+
+def legacy_item(description="Supplier's refusal to deliver", passages=None, uncertainty=None):
     return {"description": description,
             "passages": [passage()] if passages is None else passages,
             "uncertainty": uncertainty}
@@ -56,6 +67,10 @@ def extracted():
     return extract(ExtractionModel(output(disputes=[item()])))
 
 
+def legacy_prepare(response, message):
+    return _prepare(response, [{"id": "current", "message": {"role": "advocate", "text": message}}])
+
+
 def test_first_input_makes_one_call_and_returns_only_private_extraction():
     message = "  Good evening.  "
     model = ExtractionModel(output())
@@ -67,20 +82,23 @@ def test_first_input_makes_one_call_and_returns_only_private_extraction():
     assert set(schema["properties"]) == {"disputes", "objectives"}
     for kind in ("disputes", "objectives"):
         item_schema = schema["properties"][kind]["items"]["properties"]
-        passage_schema = item_schema["passages"]["items"]["properties"]
-        assert passage_schema["source_id"]["enum"] == ["current"]
+        assert set(item_schema) == {"description", "selections", "uncertainty"}
+        passage_schema = item_schema["selections"]["items"]["properties"]
+        assert set(passage_schema) == {"passage_id", "purpose"}
+        assert passage_schema["passage_id"]["enum"] == ["current:p1"]
         assert "enum" not in item_schema["description"]
-        assert "enum" not in passage_schema["quote"]
     for section in ("Message:", "Purpose:", "Look for:", "Outcome:"):
         assert section in prompt.system
     payload = json.loads(prompt.user)
     assert payload["current_message"] == {
-        "id": "current", "message": {"role": "advocate", "text": message}}
+        "id": "current", "message": {"role": "advocate",
+            "passages": [{"id": "current:p1", "text": message}]}}
     assert payload["proposed_label"] == "greeting"
     assert "earlier_conversation" not in payload
     assert prepared == {
-        "contract": "disputes_objectives_v1", "state": "prepared_unreviewed",
-        "proposal": output(), "sources": [payload["current_message"]], "issues": []}
+        "contract": "disputes_objectives_v2", "state": "prepared_unreviewed",
+        "proposal": output(), "sources": [{"id": "current",
+            "message": {"role": "advocate", "text": message}}], "issues": []}
     assert extraction_units(prepared) == {}
 
 
@@ -101,8 +119,14 @@ def test_followup_preserves_complete_attributed_history_and_has_its_own_header()
     earlier = [{"id": f"history_{index}", "message": entry}
                for index, entry in enumerate(history, 1)]
     payload = json.loads(followup.user)
-    assert payload["earlier_conversation"] == earlier
-    assert result["sources"] == [*earlier, payload["current_message"]]
+    for shown, expected in zip(payload["earlier_conversation"], earlier):
+        assert shown["id"] == expected["id"]
+        assert "text" not in shown["message"]
+        assert {key: value for key, value in shown["message"].items() if key != "passages"} == {
+            key: value for key, value in expected["message"].items() if key != "text"}
+        assert "".join(part["text"] for part in shown["message"]["passages"]) == expected["message"]["text"]
+    assert result["sources"] == [*earlier, {"id": "current",
+        "message": {"role": "advocate", "text": "Thanks."}}]
     assert history == original
 
 
@@ -129,14 +153,105 @@ def test_each_collection_is_independent_and_gets_owned_proposal_ids(collection, 
 
 def test_code_resolves_exact_words_with_unicode_and_original_whitespace():
     message = "Hello.\n  She said ‘access denied’—I disagree.  Please research it."
-    quote = "She said ‘access denied’—I disagree."
-    result = extract(ExtractionModel(output(disputes=[item(passages=[passage(quote)])])),
+    quote = "  She said ‘access denied’—I disagree."
+    result = extract(ExtractionModel(output(disputes=[item(selections=[selection("current:p2")])])),
                      message, "mixed")
     resolved = result["proposal"]["disputes"][0]["passages"][0]
-    assert resolved == {**passage(quote), "start": message.index(quote),
+    assert resolved == {**passage(quote), "passage_id": "current:p2", "start": message.index(quote),
                         "end": message.index(quote) + len(quote)}
     assert message[resolved["start"]:resolved["end"]] == quote
     assert result["sources"][-1]["message"]["text"] == message
+
+
+def test_presentation_keeps_each_original_character_once_across_navigation_boundaries():
+    message = "  First line.\n\nSecond line; amount 4.5 lakh! ‘नमस्ते?’\r\n  Last clause without punctuation  "
+    model = ExtractionModel(output())
+    prepared = extract(model, message, "mixed")
+    shown = json.loads(model.calls[0][0].user)["current_message"]["message"]
+    assert "text" not in shown
+    assert "".join(part["text"] for part in shown["passages"]) == message
+    assert [part["id"] for part in shown["passages"]] == [
+        f"current:p{index}" for index in range(1, len(shown["passages"]) + 1)]
+    assert prepared["sources"][-1]["message"]["text"] == message
+
+
+@pytest.mark.parametrize("passage_id,start", [("current:p1", 0), ("current:p2", 3)])
+def test_repeated_identical_words_have_distinct_owned_occurrences(passage_id, start):
+    prepared = extract(ExtractionModel(output(disputes=[item(selections=[selection(passage_id)])])),
+                       "No.No.")
+    assert prepared["issues"] == []
+    saved = prepared["proposal"]["disputes"][0]["passages"][0]
+    assert saved == {"passage_id": passage_id, "source_id": "current", "quote": "No.",
+                     "purpose": "support", "start": start, "end": start + 3}
+    assert extraction_units(prepared)["dispute:1"]["proposal"]["passages"] == [saved]
+
+
+def test_saved_passage_id_cannot_shift_to_an_identical_different_occurrence():
+    prepared = extract(ExtractionModel(output(disputes=[item(selections=[selection("current:p2")])])),
+                       "No.No.")
+    prepared["proposal"]["disputes"][0]["passages"][0].update(start=0, end=3)
+    with pytest.raises(SchemaViolation):
+        extraction_units(prepared)
+
+
+def test_item_can_select_multiple_navigation_parts_without_inventing_a_joined_quote():
+    message = "I want payment; only after checking the account."
+    supplied = item("Payment subject to checking the account", [selection("current:p1"), selection("current:p2")])
+    prepared = extract(ExtractionModel(output(objectives=[supplied])), message)
+    stored = prepared["proposal"]["objectives"][0]
+    assert prepared["issues"] == [] and stored["source_ids"] == ["current"]
+    assert [part["quote"] for part in stored["passages"]] == [
+        "I want payment;", " only after checking the account."]
+    assert "".join(part["quote"] for part in stored["passages"]) == message
+
+
+def test_new_model_contract_rejects_copied_quotes_without_losing_an_id_selected_peer():
+    wrong = legacy_item(passages=[passage("the supplier refuses delivery")])
+    supplied = output(disputes=[wrong, item()])
+    prepared = extract(ExtractionModel(supplied))
+    assert [row["id"] for row in prepared["proposal"]["disputes"]] == ["dispute:2"]
+    assert prepared["issues"][0]["rejected_proposal"] == wrong
+    assert prepared["proposal"]["disputes"][0]["passages"][0]["quote"] == "The supplier refuses delivery."
+
+
+def test_unknown_selected_id_is_held_without_removing_a_valid_selected_peer():
+    bad = item(selections=[selection("current:p999")])
+    prepared = extract(ExtractionModel(output(disputes=[bad, item()])))
+    assert [row["id"] for row in prepared["proposal"]["disputes"]] == ["dispute:2"]
+    assert prepared["issues"][0]["unit"] == "dispute:1"
+    assert "current:p999" in prepared["issues"][0]["reason"]
+
+
+def test_legacy_exact_quote_snapshot_remains_readable_without_selectable_id_metadata():
+    prepared = legacy_prepare(output(disputes=[legacy_item()]), "The supplier refuses delivery.")
+    old_passage = prepared["proposal"]["disputes"][0]["passages"][0]
+    assert prepared["contract"] == "disputes_objectives_v1"
+    assert "passage_id" not in old_passage
+    assert extraction_units(prepared)["dispute:1"]["proposal"]["passages"] == [old_passage]
+
+
+@pytest.mark.parametrize("alter", [
+    lambda saved: saved["proposal"]["disputes"][0]["passages"][0].pop("passage_id"),
+    lambda saved: saved.update(contract="disputes_objectives_v1"),
+])
+def test_new_snapshot_cannot_drop_owned_selection_or_silently_downgrade_to_legacy(alter):
+    saved = extracted()
+    assert saved["contract"] == "disputes_objectives_v2"
+    alter(saved)
+    with pytest.raises(SchemaViolation):
+        extraction_units(saved)
+
+
+@pytest.mark.parametrize("alter", [
+    lambda saved: saved["proposal"]["disputes"][0]["passages"][0].update(passage_id="current:p1"),
+    lambda saved: saved.update(contract="disputes_objectives_v2"),
+])
+def test_legacy_snapshot_cannot_claim_new_selection_metadata_or_silently_upgrade(alter):
+    saved = legacy_prepare(output(disputes=[legacy_item()]), "The supplier refuses delivery.")
+    assert saved["contract"] == "disputes_objectives_v1"
+    alter(saved)
+    with pytest.raises(SchemaViolation):
+        extraction_units(saved)
 
 
 def test_authorised_review_can_use_earlier_original_support_and_current_context():
@@ -144,9 +259,8 @@ def test_authorised_review_can_use_earlier_original_support_and_current_context(
         {"role": "advocate", "text": "I want access restored, not ownership."},
         {"role": "nm", "text": "You seek ownership."},
     ]
-    supporting = [passage("I want access restored, not ownership.", "history_1"),
-                  passage("You seek ownership.", "history_2", "context"),
-                  passage("Review your earlier interpretation.", "current", "context")]
+    supporting = [selection("history_1:p1"), selection("history_2:p1", "context"),
+                  selection("current:p1", "context")]
     proposal = item("Restoration of access", supporting,
                     "The earlier NM interpretation does not match the reported objective.")
     result = extract(ExtractionModel(output(objectives=[proposal])),
@@ -159,16 +273,16 @@ def test_authorised_review_can_use_earlier_original_support_and_current_context(
     assert [p["purpose"] for p in actual["passages"]] == ["support", "context", "context"]
 
 
-@pytest.mark.parametrize("passages", [
-    [passage("You seek ownership.", "history_2"), passage("Review it.", purpose="context")],
-    [passage("I want access.", "history_1")],
-    [passage("Review it.", purpose="context")],
-    [passage("Review it.", "absent")],
+@pytest.mark.parametrize("selections", [
+    [selection("history_2:p1"), selection("current:p1", "context")],
+    [selection("history_1:p1")],
+    [selection("current:p1", "context")],
+    [selection("absent:p1")],
 ])
-def test_nm_support_missing_current_missing_support_or_foreign_source_is_held(passages):
+def test_nm_support_missing_current_missing_support_or_foreign_source_is_held(selections):
     history = [{"role": "advocate", "text": "I want access."},
                {"role": "nm", "text": "You seek ownership."}]
-    supplied = item(passages=passages)
+    supplied = item(selections=selections)
     result = extract(ExtractionModel(output(objectives=[supplied])), "Review it.", "action", history)
     assert result["proposal"]["objectives"] == []
     assert result["issues"][0]["unit"] == "objective:1"
@@ -182,24 +296,24 @@ def test_nm_support_missing_current_missing_support_or_foreign_source_is_held(pa
     ("No. No.", "No."),
     ("aaaa", "aa"),
 ])
-def test_changed_or_ambiguous_quotes_are_held_without_fuzzy_repair(message, quote):
-    supplied = item(passages=[passage(quote)])
-    result = extract(ExtractionModel(output(disputes=[supplied])), message)
+def test_legacy_changed_or_ambiguous_quotes_remain_held_without_fuzzy_repair(message, quote):
+    supplied = legacy_item(passages=[passage(quote)])
+    result = legacy_prepare(output(disputes=[supplied]), message)
     assert result["proposal"]["disputes"] == []
     assert result["issues"][0]["rejected_proposal"] == supplied
 
 
-def test_longer_unique_passage_resolves_repeated_wording_without_choosing_arbitrarily():
+def test_legacy_longer_unique_passage_resolves_repeated_wording_without_choosing_arbitrarily():
     message = "No. No. The second answer concerns access."
     quote = "No. The second answer concerns access."
-    result = extract(ExtractionModel(output(disputes=[item(passages=[passage(quote)])])), message)
+    result = legacy_prepare(output(disputes=[legacy_item(passages=[passage(quote)])]), message)
     assert result["issues"] == []
     assert result["proposal"]["disputes"][0]["passages"][0]["start"] == 4
 
 
 @pytest.mark.parametrize("invalid", [
-    {}, item(description="  "), item(passages=[]),
-    item(passages=[passage(purpose="proof")]),
+    {}, item(description="  "), item(selections=[]),
+    item(selections=[selection(purpose="proof")]),
     {**item(), "activities": ["Send a notice."]},
     {**item(), "id": "dispute:99"},
 ])

@@ -10,7 +10,10 @@ from copy import deepcopy
 import json
 
 from nm.brain.message_labels import validate_label
-from nm.brain.disputes_objectives import CONTRACT as EXTRACTION_CONTRACT, extraction_units
+from nm.brain.disputes_objectives import (
+    CONTRACT as EXTRACTION_CONTRACT, LEGACY_CONTRACT as LEGACY_EXTRACTION_CONTRACT,
+    extraction_units,
+)
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
     estimate_tokens, require_schema,
@@ -18,7 +21,8 @@ from nm.shared.model_port import (
 
 
 RENDERER_VERSION = "initial_brain_release_v2"
-EXTRACTION_RENDERER = "disputes_objectives_release_v1"
+EXTRACTION_RENDERER = "disputes_objectives_release_v2"
+LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v1"
 _EXTRACTION_SYSTEM = """Message: You receive the complete original conversation,
 then private dispute/objective proposals and any held items. Sources retain
 their exact words and speakers. Proposals and message labels are not evidence.
@@ -248,6 +252,7 @@ def _render_extraction(sources: list[dict], units: dict, issues: list, proof: di
 
 _RENDERERS = {"initial_brain_release_v1": _render_v1,
               "initial_brain_release_v2": _render_v2,
+              LEGACY_EXTRACTION_RENDERER: _render_extraction,
               EXTRACTION_RENDERER: _render_extraction}
 
 
@@ -255,8 +260,9 @@ def prepare_release(model: ModelPort, prepared: dict, label: str) -> dict:
     """One independent review. The caller owns correction, saving and release."""
     label = validate_label({"label": label})
     sources, units, issues = _inputs(prepared)
-    focused = prepared.get("contract") == EXTRACTION_CONTRACT
-    version = EXTRACTION_RENDERER if focused else RENDERER_VERSION
+    focused = prepared.get("contract") in (EXTRACTION_CONTRACT, LEGACY_EXTRACTION_CONTRACT)
+    version = (EXTRACTION_RENDERER if prepared.get("contract") == EXTRACTION_CONTRACT
+               else LEGACY_EXTRACTION_RENDERER if focused else RENDERER_VERSION)
     payload = {"original_conversation": sources, "preparation": prepared["proposal"],
                "held_preparation_units": issues, "proposed_label": label,
                "permitted_unit_ids": list(units),
@@ -311,7 +317,7 @@ def render_saved_release(saved: dict) -> dict:
     label = validate_label({"label": saved["label"]})
     if not isinstance(saved["units"], dict):
         raise SchemaViolation("Saved release unit catalogue is unreadable")
-    focused = version == EXTRACTION_RENDERER
+    focused = version in (EXTRACTION_RENDERER, LEGACY_EXTRACTION_RENDERER)
     proposal = {"disputes": [], "objectives": []} if focused else {"material": [], "actions": []}
     for identity, row in saved["units"].items():
         if (not isinstance(row, dict) or set(row) != {"kind", "proposal"}
@@ -323,7 +329,8 @@ def render_saved_release(saved: dict) -> dict:
     prepared = {"state": "prepared_unreviewed", "sources": saved["sources"],
                 "proposal": proposal, "issues": saved["issues"]}
     if focused:
-        prepared["contract"] = EXTRACTION_CONTRACT
+        prepared["contract"] = (EXTRACTION_CONTRACT if version == EXTRACTION_RENDERER
+                                else LEGACY_EXTRACTION_CONTRACT)
     sources, units, issues = _inputs(prepared)
     proof = _checked_proof(saved["proof"], sources, units, focused=focused)
     elements, status, state = _RENDERERS[version](sources, units, issues, proof)

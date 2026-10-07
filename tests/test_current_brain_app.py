@@ -36,12 +36,13 @@ def greeting_outputs():
 
 
 def mixed_outputs(message):
+    assert message == MIXED_MESSAGE, "This fixture's two selectors belong to its two supplied sentences"
     return [{"label": "mixed"}, {
         "disputes": [{"description": "The advocate reports the supplier refusing to return their deposit.",
-                      "passages": [{"source_id": "current", "quote": message, "purpose": "support"}],
+                      "selections": [{"passage_id": "current:p1", "purpose": "support"}],
                       "uncertainty": None}],
         "objectives": [{"description": "The advocate wants the deposit returned.",
-                        "passages": [{"source_id": "current", "quote": message, "purpose": "support"}],
+                        "selections": [{"passage_id": "current:p2", "purpose": "support"}],
                         "uncertainty": None}]},
         {"greeting": False, "unit_reviews": [
             {"unit_id": identity, "verdict": "supported", "reason": "none"}
@@ -155,7 +156,9 @@ def test_first_followup_full_context_saved_reopened_and_replay_without_calls(har
     assert [(row["role"], row["text"]) for row in original_history] == [
         ("advocate", first_message), ("nm", "Hello. How can I help?")]
     prepared_history = json.loads(app.model.calls[4][0].user)["earlier_conversation"]
-    assert [row["message"] for row in prepared_history] == original_history
+    assert [{**{key: value for key, value in row["message"].items() if key != "passages"},
+             "text": "".join(passage["text"] for passage in row["message"]["passages"])}
+            for row in prepared_history] == original_history
     held = app.held(chat_id)
     assert [row["message"] for row in held.brain_chat] == [first_message, follow_message]
     assert [row["label"]["message_position"] for row in held.brain_chat] == ["first", "follow_up"]
@@ -185,13 +188,18 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
     held = app.held(response["chat_id"])
     proposed = held.brain_chat[0]["preparation"]["proposal"]
     assert set(proposed) == {"disputes", "objectives"}
-    for collection in proposed.values():
+    selected_words = {"disputes": "The supplier refuses to return my deposit.",
+                      "objectives": " I want the deposit returned."}
+    for kind, collection in proposed.items():
         assert collection[0]["state"] == "proposed"
         assert collection[0]["source_ids"] == ["current"]
-        assert collection[0]["passages"] == [{"source_id": "current", "quote": message,
-            "purpose": "support", "start": 0, "end": len(message)}]
-    assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v1"
-    assert held.brain_chat[0]["contract"] == "current_brain_turn_v2"
+        quote = selected_words[kind]
+        start = message.index(quote)
+        assert collection[0]["passages"] == [{"source_id": "current", "quote": quote,
+            "passage_id": "current:p1" if kind == "disputes" else "current:p2",
+            "purpose": "support", "start": start, "end": start + len(quote)}]
+    assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v2"
+    assert held.brain_chat[0]["contract"] == "current_brain_turn_v3"
     assert held.facts == () and held.threads == ()
     assert response["board_changes"] == [] and response["material"] == []
 
@@ -203,7 +211,7 @@ def test_internal_material_stays_private_through_followup_reopen_and_idempotent_
     chat_id = first["chat_id"]
     snapshot = app.held(chat_id)
     assert snapshot.brain_chat[0]["response"]["elements"] == first["elements"]
-    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v1"
+    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v2"
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["disputes"]
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["objectives"]
     second = assert_ok(app.post("Thank you.", "turn_second", chat_id=chat_id, expected_version=1))
@@ -255,6 +263,59 @@ def test_legacy_preparation_read_replay_and_followup_preserve_the_original_trans
     assert app.held(first["chat_id"]).brain_chat[0] == persisted.brain_chat[0]
 
 
+def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_saved_records(harness):
+    from nm.brain.disputes_objectives import _prepare
+    from nm.brain.turn import _digest
+
+    app = harness(*mixed_outputs(MIXED_MESSAGE), *greeting_outputs())
+    first = assert_ok(app.post(MIXED_MESSAGE))
+    held = app.held(first["chat_id"])
+    rows = deepcopy(held.brain_chat)
+    original_sources = [{"id": "current", "message": {"role": "advocate", "text": MIXED_MESSAGE}}]
+    # The historical writer copied original quotations; it did not select
+    # passage IDs. Build that old projection from its actual raw contract.
+    historical = _prepare({
+        "disputes": [{"description": "The advocate reports the supplier refusing to return their deposit.",
+            "passages": [{"source_id": "current", "quote": "The supplier refuses to return my deposit.",
+                          "purpose": "support"}], "uncertainty": None}],
+        "objectives": [{"description": "The advocate wants the deposit returned.",
+            "passages": [{"source_id": "current", "quote": "I want the deposit returned.",
+                          "purpose": "support"}], "uncertainty": None}],
+    }, original_sources)
+    assert historical["contract"] == "disputes_objectives_v1"
+    assert historical["issues"] == []
+    assert all("passage_id" not in passage for collection in historical["proposal"].values()
+               for item in collection for passage in item["passages"])
+    rows[0]["contract"] = "current_brain_turn_v2"
+    rows[0]["preparation"] = historical
+    rows[0]["release"] = {
+        "renderer_version": "disputes_objectives_release_v1", "label": "mixed",
+        "sources": deepcopy(original_sources), "issues": [],
+        "units": {item["id"]: {"kind": kind, "proposal": deepcopy(item)}
+                  for kind, collection in historical["proposal"].items() for item in collection},
+        "proof": {"greeting": False, "unit_reviews": [
+            {"unit_id": identity, "verdict": "supported", "reason": "none"}
+            for identity in ("dispute:1", "objective:1")], "omissions": []},
+        "elements": deepcopy(first["elements"]), "service_status": None, "state": "ready",
+    }
+    rows[0]["response_digest"] = _digest(rows[0]["response"])
+    app.store.commit(replace(held, brain_chat=rows), expected_version=held.version)
+    persisted = app.held(first["chat_id"])
+    reopened = assert_ok(app.client.get("/api/chats/" + first["chat_id"]))
+    assert reopened["turns"][0]["elements"] == first["elements"]
+    replay = assert_ok(app.post(MIXED_MESSAGE))
+    assert replay == {**first, "replayed": True}
+    assert len(app.model.calls) == 3 and app.held(first["chat_id"]) == persisted
+    assert_ok(app.post("Thank you.", "turn_second", chat_id=first["chat_id"], expected_version=1))
+    history = json.loads(app.model.calls[3][0].user)["earlier_conversation"]
+    assert [(row["role"], row["text"]) for row in history] == [
+        ("advocate", MIXED_MESSAGE), ("nm", "Message received.")]
+    final_rows = app.held(first["chat_id"]).brain_chat
+    assert final_rows[0] == persisted.brain_chat[0]
+    assert final_rows[1]["contract"] == "current_brain_turn_v3"
+    assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v2"
+
+
 @pytest.mark.parametrize("label,message", [
     ("information", "My client moved office last month."),
     ("action", "Summarise our conversation."),
@@ -277,7 +338,8 @@ def test_advisory_label_does_not_filter_dispute_or_objective_extraction(harness,
     app = harness(*outputs)
     response = assert_ok(app.post(MIXED_MESSAGE))
     payload = json.loads(app.model.calls[1][0].user)
-    assert payload["current_message"]["message"]["text"] == MIXED_MESSAGE
+    assert "".join(passage["text"] for passage in
+                   payload["current_message"]["message"]["passages"]) == MIXED_MESSAGE
     assert payload["proposed_label"] == label
     proposal = app.held(response["chat_id"]).brain_chat[0]["preparation"]["proposal"]
     assert proposal["disputes"] and proposal["objectives"]

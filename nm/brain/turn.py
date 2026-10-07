@@ -9,13 +9,19 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
 from nm.brain.message_labels import label_message
-from nm.brain.disputes_objectives import extract_disputes_objectives, extraction_units
-from nm.brain.release import EXTRACTION_RENDERER, prepare_release, render_saved_release
+from nm.brain.disputes_objectives import (
+    CONTRACT as EXTRACTION_RECORD, LEGACY_CONTRACT as LEGACY_EXTRACTION_RECORD,
+    extract_disputes_objectives, extraction_units,
+)
+from nm.brain.release import (
+    EXTRACTION_RENDERER, LEGACY_EXTRACTION_RENDERER, prepare_release, render_saved_release,
+)
 from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
-CONTRACT = 'current_brain_turn_v2'
+CONTRACT = 'current_brain_turn_v3'
+EXTRACTION_LEGACY_CONTRACT = 'current_brain_turn_v2'
 LEGACY_CONTRACT = 'current_brain_turn_v1'
 
 
@@ -70,7 +76,7 @@ def saved_rows(matter, advocate_id):
         if matter.version != len(matter.brain_chat):
             raise ValueError('saved conversation tail is missing')
         for row in matter.brain_chat:
-            if (row['contract'] not in (LEGACY_CONTRACT, CONTRACT) or row['matter_id'] != matter.id
+            if (row['contract'] not in (LEGACY_CONTRACT, EXTRACTION_LEGACY_CONTRACT, CONTRACT) or row['matter_id'] != matter.id
                     or row['advocate_id'] != advocate_id or row['committed'] is not True
                     or row['release_state'] != 'released'
                     or row['request_digest'] != _digest(row['request'])
@@ -81,10 +87,16 @@ def saved_rows(matter, advocate_id):
                 raise ValueError('saved conversation binding')
             release = render_saved_release(row['release'])
             prepared = row['preparation']
-            if row['contract'] == CONTRACT:
-                if release['renderer_version'] != EXTRACTION_RENDERER:
+            if row['contract'] in (CONTRACT, EXTRACTION_LEGACY_CONTRACT):
+                expected_renderer = (EXTRACTION_RENDERER if row['contract'] == CONTRACT
+                                     else LEGACY_EXTRACTION_RENDERER)
+                if release['renderer_version'] != expected_renderer:
                     raise ValueError('saved extraction rendering contract')
                 expected_units = extraction_units(prepared)
+                expected_contract = (EXTRACTION_RECORD if row['contract'] == CONTRACT
+                                     else LEGACY_EXTRACTION_RECORD)
+                if prepared['contract'] != expected_contract:
+                    raise ValueError('saved extraction projection contract')
             else:
                 if (release['renderer_version'] not in ('initial_brain_release_v1', 'initial_brain_release_v2')
                         or 'contract' in prepared):
