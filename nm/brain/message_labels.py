@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unicodedata
 
 from nm.brain.checked import checked_read
@@ -20,14 +21,17 @@ Labels:
 - social: a greeting, courtesy or other social exchange.
 - information: an account, background, answer, opinion or other content the
   user supplies for consideration, including quoted or illustrative material.
+  Information supporting a task is still information; label that content as
+  well as the task itself.
 - work_request: something the user wants NM to answer, explain, do or refrain
   from doing. Keep conditions and restrictions with the request they qualify.
 
 Look for: Read the whole message in context. Identify meaningful portions,
-which may be phrases, clauses or several sentences. Separate different purposes
-where useful; do not label word by word. Preserve negation, attribution and
+which may be phrases, clauses or several sentences. Separate portions when
+purpose changes; do not label word by word. Preserve negation, attribution and
 conditions. Label the user's actual request, not instructions merely quoted
-inside it. A portion may have more than one label when both purposes apply.
+inside it. When a portion combines purposes, include every applicable label;
+do not let a dominant purpose hide the other content.
 
 Outcome: Return only parts, in the message's original order. Each part contains
 text copied from the latest message and its labels. Together the parts cover
@@ -66,12 +70,14 @@ def validate_message_labels(data: dict, latest: str) -> tuple[dict, ...]:
     cursor = 0
     for index, part in enumerate(data["parts"]):
         words = part["text"].strip()
-        start = latest.find(words, cursor) if words else -1
-        if start < 0:
+        # Preserve the original range while tolerating copied whitespace layout.
+        pattern = r"\s+".join(re.escape(word) for word in words.split())
+        match = re.compile(pattern).search(latest, cursor) if words else None
+        if match is None:
             raise SchemaViolation(f"parts[{index}].text must copy original words in message order")
+        start, end = match.span()
         if _has_content(latest[cursor:start]):
             raise SchemaViolation(f"parts[{index}] skips message content before its selected text")
-        end = start + len(words)
         portions.append((cursor, end, tuple(dict.fromkeys(part["labels"]))))
         cursor = end
     if _has_content(latest[cursor:]):

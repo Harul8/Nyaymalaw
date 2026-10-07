@@ -84,6 +84,12 @@ def test_valid_shape_does_not_claim_semantic_judgment_or_enforce_a_part_count():
         assert validate_message_labels({"parts": [part(message, label)]}, message)
 
 
+@pytest.mark.parametrize("original", ["Please  wait.", "Please\nwait."])
+def test_copied_whitespace_layout_is_not_a_false_rejection(original):
+    result = validate_message_labels({"parts": [part("Please wait.", "work_request")]}, original)
+    assert result[0]["sources"] == [{"start": 0, "end": len(original), "text": original}]
+
+
 def test_bad_original_words_receive_one_precise_correction_with_original_context():
     model = LabelModel({"parts": [part("Changed words", "information")]},
                        {"parts": [part("Original words", "information")]})
