@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, fields
 
 from nm.brain.checked import (
     abandon_recovery,
@@ -16,6 +16,7 @@ from nm.brain.material import MaterialCandidate, addressed_sources
 from nm.brain.mutation_contracts import model_review_scope, scoped_record_decisions
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
+    COVERAGE_EXTENT_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
     REVIEW_SELECTION_CONTRACT,
     SOURCE_SELECTION_CONTRACT,
@@ -24,6 +25,7 @@ from nm.brain.record_review import (
     candidate_account_ids,
     canonical_review_from_wire,
     checked_coverage,
+    coverage_representation_options,
     coverage_schema,
     derived_record,
     owned_source_treatments,
@@ -47,6 +49,7 @@ from nm.shared.model_port import (
     SchemaViolation,
     Tier,
     estimate_tokens,
+    on_the_wire,
     require_schema,
 )
 
@@ -223,8 +226,12 @@ proposals, add facts or decide legal merit."""
 
 _COVERAGE_SYSTEM = """Message: You receive the complete original transcript and
 exact sources in coverage_source_ids and source_treatments, the code-owned
-authorised review_scope, current disputes, proposed operations and candidate
+authorised review_scope, current or held active_disputes, separately offered
+historical_disputes, proposed operations and candidate
 decisions. Original words, NM interpretations and proposals are separate data.
+Historical disputes preserve earlier accounts; they are not current values or
+revision targets. coverage_representation_options, when supplied, gives each
+original source its own eligible record_ids and candidate_ids, not evidence.
 On correction, retained_candidate_context contains settled same-turn decisions;
 use them for comparison without repeating or overriding them.
 
@@ -252,11 +259,17 @@ for genuine account that neither reports an independent conflict nor supports
 an authorised dispute repair, with a source-linked reason. Do not infer scope
 from what extraction returned. Missing proof or actor identity does not put an
 actually reported conflict outside scope.
-3. Compare each in-scope conflict or repair with the original support for current
-records and admitted proposals. These records are NM interpretations, not their
-own evidence. represented requires a faithful current dispute or an accepted
+3. Compare each in-scope conflict or repair with the original support for current,
+held or historical records and admitted proposals. These records are NM
+interpretations, not their own evidence. Historical representation preserves an
+earlier account without establishing a current value or completed repair. Held
+records retain their actual scope. represented requires a faithful eligible dispute
+record or an accepted
 proposal with checked support for this account portion. Select its owned record
-or candidate IDs. Rejected, held, unread or dependency-unavailable proposals and
+or candidate IDs from this source's supplied choices when offered. Eligibility
+alone does not establish admission or faithful representation. Pending candidates
+may be offered before your verdict; rejection leaves them unable to represent
+content. Rejected, held, unread or dependency-unavailable proposals and
 acceptance for another source or unrelated portion cannot represent it. If no
 supported representation exists, use missing or unresolved; an empty ID list
 cannot certify represented. Existing faithful records can suffice without a
@@ -273,15 +286,21 @@ neutral account outside_scope. This does not certify the material reader's work.
 These are legitimate decisions; do not force an incomplete assessment to complete.
 Under coverage_selection_contract, return source_checks for EVERY
 coverage_source_id: source_id, content_purpose account/non_account/unresolved,
-substantive_spans as exact start/end offsets, and reason. account selects actual
+substantive_spans and reason. account selects actual
 substantive portions; non_account and unresolved select none. Keep original
 purpose independent from this stage's scope and from candidate acceptance.
 Give dispositions for every selected account portion, allowing overlapping
-context and several propositions per source: source_id, start, end, status,
+context and several propositions per source: source_id, selected extent, status,
 record_ids, candidate_ids and reason. represented selects supported owned IDs;
 missing, unresolved, non_account and outside_scope select no representation IDs.
+When coverage_extent_contract is supplied, select extent=whole_source for the
+complete exact owned source without counting characters. Use extent=exact_subrange
+with inclusive start/exclusive end only for a genuinely smaller portion, preserving
+necessary qualifiers. Use these descriptors for substantive_spans and dispositions.
+Without that extent marker, select exact start/end under the offered schema.
 Code resolves original words and derives missing_source_ids; do not return that
-derived field with this marker. Without the marker, return historical
+derived field under coverage_selection_contract. Without coverage_selection_contract,
+return historical
 missing_source_ids selected only from coverage_source_ids; the list may be empty
 when a gap cannot be localized. On correction, return verdicts only for pending
 candidates plus coverage, preserving settled decisions and complete originals."""
@@ -305,7 +324,8 @@ _VERDICT = {
 
 def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
             coverage_ids=None, source_references=None,
-            coverage_record_ids=(), coverage_candidate_ids=(), wire=False) -> dict:
+            coverage_record_ids=(), coverage_candidate_ids=(), wire=False,
+            coverage_representation_options=None, native_coverage_extents=False) -> dict:
     item = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
         **review_properties(source_ids, target_ids, peer_ids,
@@ -325,7 +345,9 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
     if coverage_ids is not None:
         properties["coverage"] = coverage_schema(
             coverage_ids, source_references=source_references,
-            record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids)
+            record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
+            representation_options=coverage_representation_options,
+            native_extents=native_coverage_extents)
         required.append("coverage")
     return {"type": "object", "additionalProperties": False,
             "required": required, "properties": properties}
@@ -414,11 +436,15 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     source_disagreements: list[dict] | None = None,
                     review_state: dict | None = None,
                     recheck_source_ids: tuple[str, ...] = (),
+                    coverage_record_support: dict | None = None,
+                    historical_disputes: tuple[dict, ...] = (),
                     ) -> tuple[MaterialCandidate, ...]:
     """Check independent proposals, keeping unread units out of accepted effects."""
     if review_status is not None:
         review_status.clear()
     requested = review_scope is not None
+    if historical_disputes and coverage_record_support is None:
+        raise SchemaViolation("Historical dispute coverage requires original admission support")
     if requested and not isinstance(review_scope, dict):
         raise SchemaViolation("Independent account review needs a code-owned scope")
     if not candidates and not requested:
@@ -442,16 +468,28 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     source_references = (payload["source_treatments"] if all(
         row.get("selection_contract") == SOURCE_SELECTION_CONTRACT
         for row in source_treatments.values()) else None)
+    if coverage_record_support is not None and source_references is None:
+        raise SchemaViolation("Dispute coverage support requires exact original source references")
+    native_coverage_extents = requested and coverage_record_support is not None
     if source_references is not None:
         payload["source_support_contract"] = SOURCE_SUPPORT_CONTRACT
     # Candidate recovery requires a trustworthy canonical target catalogue.
-    active = {}
-    for record in active_disputes:
-        if (not isinstance(record, dict) or not isinstance(record.get("id"), str)
-                or not record["id"].strip()
-                or (record["id"] in active and active[record["id"]] != record)):
-            raise SchemaViolation("The dispute review catalogue has conflicting identities")
-        active[record["id"]] = record
+    def catalogue(rows):
+        if not isinstance(rows, (list, tuple)):
+            raise SchemaViolation("The dispute review catalogue must contain owned records")
+        records = {}
+        for record in rows:
+            if (not isinstance(record, dict) or not isinstance(record.get("id"), str)
+                    or not record["id"].strip()
+                    or (record["id"] in records and records[record["id"]] != record)):
+                raise SchemaViolation("The dispute review catalogue has conflicting identities")
+            records[record["id"]] = record
+        return records
+
+    active = catalogue(active_disputes)
+    historical = catalogue(historical_disputes)
+    if active.keys() & historical.keys():
+        raise SchemaViolation("Current and historical dispute coverage identities overlap")
     payload["active_disputes"] = [derived_record(row) for row in active.values()]
     coverage_ids = tuple(source_treatments) if requested else None
     if requested:
@@ -467,6 +505,13 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                  if field in row} for row in requests]
         payload["review_scope"] = scope_presentation
         payload["coverage_source_ids"] = list(coverage_ids)
+        if historical:
+            # Detached account presentation; the complete proof stays code-owned.
+            account_fields = {field.name for field in fields(MaterialCandidate)} | {
+                "id", "source_turn_id", "state"}
+            payload["historical_disputes"] = [derived_record({
+                key: deepcopy(value) for key, value in row.items() if key in account_fields})
+                for row in historical.values()]
     keyed = {f"C{index}": candidate
              for index, candidate in enumerate(candidates, start=1)}
     account_ids = {key: candidate_account_ids(candidate, latest_sources, prior_sources)
@@ -486,7 +531,7 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
          "cited_earlier_passages": [vars(ref) for ref in candidate.prior_references],
          "related_dispute_ids": list(candidate.related_dispute_ids)}
         for key, candidate in keyed.items()]
-    coverage_record_ids = tuple(active)
+    coverage_record_ids = (*active, *historical)
     coverage_candidate_ids = tuple(keyed)
     if requested and source_references is not None:
         payload.update(coverage_selection_contract=COVERAGE_SELECTION_CONTRACT,
@@ -527,6 +572,15 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
         current = {**payload,
                    "candidates": [row for row in payload["candidates"]
                                   if row["candidate_id"] in pending]}
+        representation_options = None
+        if native_coverage_extents:
+            representation_options = coverage_representation_options(
+                source_references, record_ids=coverage_record_ids,
+                record_support=coverage_record_support, candidate_ids=coverage_candidate_ids,
+                candidate_account_ids=account_ids, candidate_support=decisions,
+                pending_candidate_ids=pending)
+            current.update(coverage_representation_options=representation_options,
+                           coverage_extent_contract=COVERAGE_EXTENT_CONTRACT)
         if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
@@ -552,8 +606,20 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
         user = json.dumps(current, ensure_ascii=False, separators=(",", ":"))
         output_limit = max(4096, min(16384, 512 * len(pending)
                            + (384 * len(source_treatments) if requested else 0)))
+        offered_schema = _schema(
+            pending, tuple(sorted(set().union(*account_ids.values()))),
+            tuple(sorted(set().union(*targets.values()))),
+            tuple(sorted({peer for key in pending
+                          for peer in restoration_peer_ids(key, targets)})),
+            coverage_ids=coverage_ids, source_references=source_references,
+            coverage_record_ids=coverage_record_ids,
+            coverage_candidate_ids=coverage_candidate_ids, wire=True,
+            coverage_representation_options=representation_options,
+            native_coverage_extents=native_coverage_extents)
         try:
-            if (estimate_tokens(system + user) + output_limit
+            schema_words = json.dumps(on_the_wire(offered_schema), ensure_ascii=False,
+                                      separators=(",", ":"))
+            if (estimate_tokens(system + user + schema_words) + output_limit
                     > model.context_budget(Tier.JUDGE)):
                 if attempt:
                     abandon_recovery(model, recovery_phase)
@@ -562,13 +628,7 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             try:
                 result = model.structured(
                     Prompt(system=system, user=user, operation="verify_disputes"),
-                    _schema(pending, tuple(sorted(set().union(*account_ids.values()))),
-                            tuple(sorted(set().union(*targets.values()))),
-                            tuple(sorted({peer for key in pending
-                                          for peer in restoration_peer_ids(key, targets)})),
-                            coverage_ids=coverage_ids, source_references=source_references,
-                            coverage_record_ids=coverage_record_ids,
-                            coverage_candidate_ids=coverage_candidate_ids, wire=True),
+                    offered_schema,
                     Tier.JUDGE, max_tokens=output_limit)
             except SchemaViolation as exc:
                 result = quarantined_independent_result(exc)
@@ -615,7 +675,9 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                     record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
                     admitted_candidate_ids=[identity for identity, row in decisions.items()
                                             if row["verdict"] == "accept"],
-                    candidate_support=decisions if source_references is not None else None)
+                    candidate_support=decisions if source_references is not None else None,
+                    record_support=coverage_record_support,
+                    native_extents=native_coverage_extents)
                 last_valid_coverage = deepcopy(coverage_decision)
                 coverage_issue = None
             except SchemaViolation as exc:

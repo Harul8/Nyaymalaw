@@ -1,0 +1,27 @@
+{
+  "milestone": {
+    "piece": "Dispute reviewer consumes original-linked coverage choices and history",
+    "base": "bd2cb25",
+    "production_file": "nm/brain/dispute_verification.py",
+    "prompt_changes": 1,
+    "prompt_owner": "_COVERAGE_SYSTEM only; _SYSTEM and candidate-role logic unchanged",
+    "invariant": "Dispute coverage must select owned interpretations or admitted proposals with actual original support for the selected source portion. Historical and held accounts retain their scope and cannot establish current values, revise retired targets or certify completion. Original account purpose is distinct from whether it identifies a dispute.",
+    "observable_pass": "Explicit modern proof offers source-specific record/candidate choices and fresh whole/exact extents. Pending proposals have their owned account domains; settled positives retain exact original support and settled negatives cannot fill coverage. Current/history collisions and malformed/foreign saved proofs refuse before dispatch. Detached history omits proof metadata, stays outside active mutation targets and binds comparison cache. Exact actual strict schema plus full prompt and output reserve fit before dispatch.",
+    "baseline": "31 initial direct cases against bd2cb25:30 absent new API/schema-option failures and1 unchanged default pass.",
+    "verification": "31 new native-choice/source/proof/history/cache/resource cases and161 existing dispute verification/quarantine/coverage/domain/role/transition/source-purpose/support/public save-replay cases pass; Ruff passes. Budget neighbor admits exact estimated request capacity and refuses one token below before dispatch. Scripted review meanings remain independent authored fixtures, not pinned-model accuracy evidence. No new real-model/browser calls; ordinary public consumers do not yet supply these proof arguments.",
+    "prompt_change": "Coverage extension distinguishes current/held/historical interpretations, source-specific eligibility and actual represented original support. Extent output is explicitly controlled by coverage_extent_contract; missing-source output is separately controlled by coverage_selection_contract. All account purpose, independent-conflict scope, qualifiers, partial/unassessed states and retained decisions remain explicit. Dispute identity's main semantic prompt is not changed in this transport piece.",
+    "canonical_changes": "None. Validated fresh extents derive the existing canonical ranges. Historical model presentation selects existing candidate account fields plus ID/source turn/state; durable proof and canonical rows are unchanged. History remains out of active target catalogues. Existing omitted/None and unrequested coverage wire shapes remain compatible.",
+    "call_impact": "0 added routine stages. Existing dispute review remains1 Judge call and at most1 local conditional correction under the turn-owned ledger, preserving valid peers. Actual schema enters resource accounting before provider dispatch. No new live spend; combined measured USD2.938001 of USD5.",
+    "remaining": "Activate original current/history proof and source-specific native choices in ordinary/recovery public turns with one shared memo. Fresh v2 coverage must explicitly activate even without selected inherited IDs to preserve legitimate newly retired original-account repair. Preserve default saved-v1 replay. Public/browser qualification of complete coverage remains required. Separate neutral-dispute identity/retirement, source reaffirmation, association, useful delivery, legal, UI and closure defects remain open."
+  },
+  "owners": ["LB-195", "LB-196", "LB-197", "LB-183"],
+  "proof_name": "dispute-coverage-choices-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 dispute coverage consumer:30 absent-API baseline failures/1 default pass;31 new plus161 existing checks pass,Ruff passes. Per-source original proof, detached history/target exclusion, pending/settled peer reuse and exact schema budget verified. Only_COVERAGE_SYSTEM updated; dispute identity logic unchanged.0 new stages,review1+conditional1. Ordinary/recovery/v2 public handoff and browser qualification pending. Evidence:brain-dispute-coverage-choices-20261007.json.",
+    "current_position": "Both native coverage reviewer consumers are mechanically verified. Public turn/recovery proof handoff and v2 fresh activation remain before complete coverage acceptance.",
+    "evidence": ["docs/backlog/evidence/brain-dispute-coverage-choices-20261007.json"],
+    "tested_version": "bd2cb25 plus single-file dispute coverage consumer candidate",
+    "test_environment": "31 new scripted consumer checks and161 existing dispute/source/public save-replay regressions; Ruff. No new pinned-model/browser calls. Combined measured spend USD2.938001 of USD5.",
+    "remaining": "Ordinary and recovery current/history original support, one memo and fresh v2 activation with exact before-prefix; integrated public and browser coverage/save/reopen qualification. Semantic dispute identity/retirement, source reaffirmation, association, delivery, legal, UI and closure gaps remain open."
+  }
+}
