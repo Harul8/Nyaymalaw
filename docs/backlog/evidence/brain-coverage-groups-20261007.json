@@ -1,0 +1,30 @@
+{
+  "piece": "Fresh source-group coverage contract prerequisite",
+  "base": "02baa05",
+  "production_file": "nm/brain/record_review.py",
+  "prompt_changes": 0,
+  "invariant": "One fresh source-purpose decision derives original substantive portions and their dispositions; only exact owned references and admitted independent support may represent account content.",
+  "verification": "80 new closed-shape/exact-reference/support/overlap/default/strict-wire cases pass;427 neighbouring source, proof and public save/replay tests pass. Two existing public fixture failures match isolated unchanged02baa05 exactly; their broken fixtures remain unqualified evidence, not waived behavior. Grouping requires explicit native extents; default and extents-only paths remain unchanged. Existing durable flat coverage contract remains canonical; no historical receipt upgrade.",
+  "call_impact": "0 new routine or conditional calls,0 prompts. Opt-in helper only. Production estimate_tokens on strict-wire coverage schemas at1/6/13/30 sources: extents1332/7570/16325/37621; groups1134/6419/13832/31860,14.86-15.31% reduction. Estimates are chars//4, not API usage;31.9k schema at30 sources still requires complete prompt resource accounting.",
+  "focused_tests": {
+    "new_passed": 80,
+    "neighbours_passed": 427,
+    "neighbour_failures": 2,
+    "baseline_verification": {
+      "candidate_failed": 2,
+      "isolated_02baa05_failed": 2,
+      "matched": true,
+      "roots": [
+        "stale verdict item properties introspection on anyOf",
+        "scripted recovery exhausts planning fixture"
+      ],
+      "reports": [
+        "outputs/brain-repair-20261006/coverage-group-two-neighbours-candidate.xml",
+        "outputs/brain-repair-20261006/coverage-group-two-neighbours-baseline-02baa05.xml"
+      ]
+    }
+  },
+  "browser_feature_complete": false,
+  "remaining": "Fresh source-group contract is verified as a mechanical prerequisite only; material and dispute consumers are not yet activated. Consumers must retain actual admitted candidate support and saved original/current/history support, exact full prompt/schema resource checks, bounded recovery and existing save/replay gates. Source purpose remains an independently reviewed semantic judgment. Task acknowledgement remains blocked by grounding/reaffirmation and fallback pending-work gaps. Legal accuracy, association, useful requested delivery, UI and closure remain open.",
+  "production_sha256": "0cc34cf4101ed30497bb348047a249c2981b8ae5e9f1fa80544695c7845ba47a"
+}

@@ -29,6 +29,7 @@ SOURCE_SELECTION_CONTRACT = "owned_substantive_spans_v2"
 SOURCE_SUPPORT_CONTRACT = "independent_original_source_support_v2"
 COVERAGE_SELECTION_CONTRACT = "owned_account_dispositions_v2"
 COVERAGE_EXTENT_CONTRACT = "coverage_source_extents_v1"
+COVERAGE_GROUP_CONTRACT = "coverage_source_groups_v1"
 REVIEW_SELECTION_CONTRACT = "checked_source_selection_v1"
 _WHOLE_SOURCE_SCHEMA = {"type": "object", "additionalProperties": False,
                         "required": ["whole_source"], "properties": {
@@ -895,11 +896,16 @@ def admitted_record_decisions(decisions: dict[str, dict]) -> dict[str, dict]:
 
 
 def coverage_schema(source_ids, *, source_references=None, record_ids=(),
-                    candidate_ids=(), representation_options=None, native_extents=False) -> dict:
+                    candidate_ids=(), representation_options=None, native_extents=False,
+                    native_groups=False) -> dict:
     """Offer exact choices; fresh coverage describes portions, not duplicate gap IDs."""
     choices = list(dict.fromkeys(source_ids))
     if type(native_extents) is not bool:
         raise SchemaViolation("Coverage extent mode must be an explicit owned boolean")
+    if type(native_groups) is not bool:
+        raise SchemaViolation("Coverage group mode must be an explicit owned boolean")
+    if native_groups and not native_extents:
+        raise SchemaViolation("Fresh coverage groups require native extents")
     if source_references is None:
         if native_extents:
             raise SchemaViolation("Fresh coverage extents require original references")
@@ -1002,7 +1008,8 @@ def coverage_schema(source_ids, *, source_references=None, record_ids=(),
                                   **({"maxItems": 0} if not choices else {})},
                 "dispositions": {"type": "array", "items": disposition,
                                  **({"maxItems": 0} if not choices else {})}}}
-    return _coverage_extent_schema(result, references) if native_extents else result
+    result = _coverage_extent_schema(result, references) if native_extents else result
+    return _coverage_group_schema(result, references) if native_groups else result
 
 
 def _coverage_extent_span(reference):
@@ -1045,6 +1052,86 @@ def _coverage_extent_schema(schema, references):
     result["properties"]["source_checks"]["items"] = {"anyOf": checks}
     result["properties"]["dispositions"]["items"] = {"anyOf": dispositions}
     return result
+
+
+def _coverage_group_schema(schema, references):
+    """Offer one purpose decision per source, without changing saved proof."""
+    groups = {}
+    for identity, reference in references.items():
+        portions = []
+        for branch in schema["properties"]["dispositions"]["items"]["anyOf"]:
+            if identity not in branch["properties"]["source_id"]["enum"]:
+                continue
+            portion = deepcopy(branch)
+            portion["required"].remove("source_id")
+            del portion["properties"]["source_id"]
+            statuses = portion["properties"]["status"]["enum"]
+            portion["properties"]["status"]["enum"] = [
+                status for status in statuses if status != "non_account"]
+            portions.append(portion)
+        non_account = [{**extent, "required": [*extent["required"], "reason"],
+                        "properties": {**extent["properties"],
+                                       "reason": {"type": "string", "minLength": 1}}}
+                       for extent in _coverage_extent_span(reference)["anyOf"]]
+        groups[identity] = {"anyOf": [
+            {"type": "object", "additionalProperties": False,
+             "required": ["content_purpose", "reason", "account_portions",
+                          "non_account_portions"], "properties": {
+                 "content_purpose": {"type": "string", "enum": ["account"]},
+                 "reason": {"type": "string", "minLength": 1},
+                 "account_portions": {"type": "array", "minItems": 1,
+                                      "items": {"anyOf": portions}},
+                 "non_account_portions": {"type": "array",
+                                          "items": {"anyOf": non_account}}}},
+            {"type": "object", "additionalProperties": False,
+             "required": ["content_purpose", "reason"], "properties": {
+                 "content_purpose": {"type": "string",
+                                     "enum": ["non_account", "unresolved"]},
+                 "reason": {"type": "string", "minLength": 1}}}]}
+    return {"type": "object", "additionalProperties": False,
+            "required": ["state", "reason", "source_groups"], "properties": {
+                "state": deepcopy(schema["properties"]["state"]),
+                "reason": deepcopy(schema["properties"]["reason"]),
+                "source_groups": {"type": "object", "additionalProperties": False,
+                                  "required": list(groups), "properties": groups}}}
+
+
+def _canonical_coverage_groups(row, schema, references):
+    """Resolve fresh selections into the existing flat proposal, without judgment."""
+    groups = row.get("source_groups") if isinstance(row, dict) else None
+    if isinstance(groups, dict):
+        for identity, reference in references.items():
+            group = groups.get(identity)
+            if not isinstance(group, dict):
+                continue
+            for field in ("account_portions", "non_account_portions"):
+                portions = group.get(field)
+                for index, portion in enumerate(portions if isinstance(portions, list) else ()):
+                    selection = ({key: portion[key] for key in ("extent", "start", "end")
+                                  if key in portion} if isinstance(portion, dict) else portion)
+                    _coverage_extent_range(selection, reference, identity,
+                                           f"coverage.source_groups.{identity}.{field}[{index}]")
+    require_schema(row, schema)
+    checks, dispositions = [], []
+    for identity, group in row["source_groups"].items():
+        purpose = group["content_purpose"]
+        account = group.get("account_portions", [])
+        checks.append({"source_id": identity, "content_purpose": purpose,
+                       "reason": group["reason"], "substantive_spans": [
+                           {key: portion[key] for key in ("extent", "start", "end")
+                            if key in portion} for portion in account]})
+        if purpose == "account":
+            dispositions.extend({"source_id": identity, **deepcopy(portion)}
+                                for portion in account)
+            dispositions.extend({"source_id": identity, **deepcopy(portion),
+                                 "status": "non_account", "record_ids": [], "candidate_ids": []}
+                                for portion in group["non_account_portions"])
+        else:
+            dispositions.append({"source_id": identity, "extent": "whole_source",
+                                 "status": purpose, "record_ids": [], "candidate_ids": [],
+                                 "reason": group["reason"]})
+    return {"state": row["state"], "reason": row["reason"],
+            "source_checks": checks, "dispositions": dispositions}
 
 
 def _coverage_extent_range(selection, reference, identity, location):
@@ -1261,15 +1348,23 @@ def coverage_representation_options(source_references, *, record_ids=(), record_
 
 def checked_coverage(row, source_ids, *, source_references=None, record_ids=(),
                      candidate_ids=(), admitted_candidate_ids=None,
-                     candidate_support=None, record_support=None, native_extents=False) -> dict:
+                     candidate_support=None, record_support=None, native_extents=False,
+                     native_groups=False) -> dict:
     """Check observable dispositions; semantic sufficiency remains independently judged."""
     if source_references is None and record_support is not None:
         raise SchemaViolation("Coverage record support requires original source references")
+    if type(native_groups) is not bool:
+        raise SchemaViolation("Coverage group mode must be an explicit owned boolean")
+    if native_groups and not native_extents:
+        raise SchemaViolation("Fresh coverage groups require native extents")
     if native_extents:
         fresh = coverage_schema(source_ids, source_references=source_references,
                                 record_ids=record_ids, candidate_ids=candidate_ids,
                                 native_extents=native_extents)
         references = _checked_source_references(source_ids, source_references, exact=True)
+        if native_groups:
+            row = _canonical_coverage_groups(
+                row, _coverage_group_schema(fresh, references), references)
         row = _canonical_coverage_extents(row, fresh, references)
     elif type(native_extents) is not bool:
         raise SchemaViolation("Coverage extent mode must be an explicit owned boolean")
