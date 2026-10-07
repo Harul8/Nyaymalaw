@@ -1858,6 +1858,23 @@
       "call_impact": "0 added routine stages and0 prompt changes. Support/history reconstruction, native activation and receipts are code-owned. Public scripted ordinary/repair review8 calls; omission recovery10 (2 conditional); changed source-purpose recovery12 (4 conditional, including existing malformed-response correction); idempotent replay0. Shared recovery ledger and reply reserve unchanged. No new live spend; combined measured USD2.938001 of USD5.",
       "remaining": "Pinned-model browser coverage, correction, source panes and reopening still require qualification. Dispute existence/retirement, source reaffirmation, material association, useful requested delivery, legal entailment/application/force, UI diagnostics and closure remain separate open owners. Mechanical passing counts do not complete those behaviours.",
       "baseline": "13 focused raw-public tests using isolated committed3803b12 turn module with current consumers and faithful fixture transport:11 fail/2 existing owner-prefix rejection neighbours pass. No working production files rewritten; candidate13pass."
+    },
+    {
+      "piece": "Public native coverage browser qualification and independent admission gap",
+      "base": "4d4e50b",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Useful independently checked record effects and their original grounding survive incomplete peer coverage; no incomplete review becomes a completed task.",
+      "verification": "Actual IAB signed-in shipped application:3 saved turns (10,11,10 calls), zero invented disputes, quantity alone corrected, previous quantity retained, review no state change, exact replies reopened with0 additional model calls. Effects are truthfully rendered. Full coverage/useful review FAIL; original admission receipt for successful correction absent after both assessments fail. No unchecked inference or completion was released.",
+      "call_impact": "31 actual pinned GPT-4.1 mini calls; cumulative ledger now314 measured attempts, USD3.051011 combined, USD1.948989 remaining. No unknown charges and no added stages. Duplicate coverage selectors already normalize meaning-preservingly; no new duplicate fix needed.",
+      "packets": [
+        283,
+        314
+      ],
+      "matter_id": "mat_416eb9fbf711e90b4eaa7c447444340b",
+      "matter_version": 3,
+      "browser_feature_complete": false,
+      "remaining": "Full coverage/useful review FAIL. Dispute coverage repeats account/non_account contradictions. Successful correction has no durable original admission binding when both coverage assessments fail; therefore current successor and superseded original cannot be offered as certified support on later turns. Preserve positive independent admission despite coverage failure using an explicitly versioned owned receipt. Then simplify fresh purpose/disposition dependency without weakening independent meaning or save gates. Dispute existence/retirement, source reaffirmation, association, requested delivery, legal accuracy, UI and closure remain open."
     }
   ],
   "additional_reviewer_input": {
@@ -2338,13 +2355,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 2.938001,
-    "remaining_usd": 2.061999,
-    "new_ledger_attempts": 283,
+    "combined_measured_usd": 3.051011,
+    "remaining_usd": 1.948989,
+    "new_ledger_attempts": 314,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus current measured attempts; cumulative USD5 unchanged"
+    "basis": "166 frozen prior attempts plus314 current measured attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2596,5 +2613,9 @@
   "source_extent_evidence": {
     "path": "docs\\backlog\\evidence\\brain-source-extent-20261007.json.gz",
     "sha256": "b836b98e606447442d5192901700a6c6b97065e9aa47c051841b5659d73a0a47"
+  },
+  "native_coverage_browser_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-native-coverage-browser-20261007.json.gz",
+    "sha256": "be283fa528a52f876ef5f818fd9cd6371e6d33a734766de7cbc13b1b211e0ce4"
   }
 }
