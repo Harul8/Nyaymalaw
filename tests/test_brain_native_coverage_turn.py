@@ -177,11 +177,21 @@ def assert_native_reviews(model, *, count=1):
             assert payload["coverage_extent_contract"] == "coverage_source_extents_v1"
             assert set(payload["coverage_representation_options"]) == set(
                 payload["source_treatments"])
-            assert all(portion["extent"] == "whole_source"
-                       for check in data["coverage"]["source_checks"]
-                       for portion in check["substantive_spans"])
-            assert all(portion["extent"] == "whole_source"
-                       for portion in data["coverage"]["dispositions"])
+            if operation == "verify_material_grounding":
+                assert payload["coverage_group_contract"] == "coverage_source_groups_v1"
+                groups = data["coverage"]["source_groups"]
+                assert set(groups) == set(payload["coverage_source_ids"])
+                assert all(portion["extent"] == "whole_source"
+                           for group in groups.values()
+                           for field in ("account_portions", "non_account_portions")
+                           for portion in group.get(field, []))
+            else:
+                assert "coverage_group_contract" not in payload
+                assert all(portion["extent"] == "whole_source"
+                           for check in data["coverage"]["source_checks"]
+                           for portion in check["substantive_spans"])
+                assert all(portion["extent"] == "whole_source"
+                           for portion in data["coverage"]["dispositions"])
 
 
 def assert_replay(client, wired, model, opened, message, identity, first, saved):

@@ -20,6 +20,7 @@ from nm.brain.record_review import (
     _SOURCE_ROLES,
     ACCOUNT_COVERAGE_CONTRACT,
     COVERAGE_EXTENT_CONTRACT,
+    COVERAGE_GROUP_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
     REVIEW_SELECTION_CONTRACT,
     SOURCE_SELECTION_CONTRACT,
@@ -199,7 +200,24 @@ Pending proposals may be offered before your verdict; reject leaves them unable
 to represent content. Retained decisions remain in force and are not repeated.
 
 Outcome: Return coverage with state, source-linked reason and the declared fields.
-Under coverage_selection_contract, give one source_check per coverage_source_id:
+When coverage_group_contract is supplied, return source_groups with EVERY owned
+coverage_source_id as a key. Decide content_purpose and its source-linked reason
+once per source. An account group contains account_portions and
+non_account_portions. Each account portion selects its exact extent, status,
+record_ids, candidate_ids and reason. represented requires faithful eligible
+material records or accepted detail proposals with checked support for that
+portion. missing, unresolved and outside_scope select no representation IDs.
+Select every significant account proposition with its attribution and qualifiers;
+shared context and overlapping account portions are legitimate. For genuinely
+non-account content within the same source, select non_account_portions with
+their extent and reason. Do not overlap them with account portions. A wholly
+non_account or unresolved source group contains only content_purpose and reason;
+the server derives its complete-source disposition. Do not repeat source_id,
+substantive_spans or dispositions: the server derives these canonical fields
+from the grouped selections without adding semantic judgments.
+
+Without the group marker, under coverage_selection_contract give one
+source_check per coverage_source_id:
 source_id, content_purpose (account/non_account/unresolved), substantive_spans
 and reason. account selects substantive portions; the other purposes select [].
 Give dispositions for every selected account portion, allowing shared context
@@ -212,7 +230,7 @@ processing failure. Explain a missing proposition or unresolved distinction.
 When coverage_extent_contract is supplied, select extent=whole_source for the
 complete owned source without counting characters; use extent=exact_subrange
 with inclusive start/exclusive end only for a genuinely smaller portion. Use
-the same descriptor in substantive_spans and dispositions. Preserve qualifiers.
+the same descriptor wherever that portion is selected. Preserve qualifiers.
 Without that extent marker, select exact start/end under the offered schema.
 Code resolves original words and derives missing_source_ids; do not supply that
 field under coverage_selection_contract. Without that selection marker, return
@@ -369,7 +387,8 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
             *, coverage_ids: tuple[str, ...] | None = None, source_references=None,
             coverage_record_ids=(), coverage_candidate_ids=(), wire=False,
             account_source_ids=None, source_reading_ids=None,
-            coverage_representation_options=None, native_coverage_extents=False) -> dict:
+            coverage_representation_options=None, native_coverage_extents=False,
+            native_coverage_groups=False) -> dict:
     review = review_properties(source_ids, target_ids, peer_ids,
                               source_references=source_references, wire=wire)
     if wire:
@@ -406,7 +425,7 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
             coverage_ids, source_references=source_references,
             record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
             representation_options=coverage_representation_options,
-            native_extents=native_coverage_extents)
+            native_extents=native_coverage_extents, native_groups=native_coverage_groups)
         required.append("coverage")
     return {"type": "object", "additionalProperties": False,
             "required": required, "properties": properties}
@@ -519,6 +538,7 @@ def verify_material_grounding(
     if coverage_record_support is not None and source_references is None:
         raise SchemaViolation("Material coverage support requires exact original source references")
     native_coverage_extents = requested_coverage and coverage_record_support is not None
+    native_coverage_groups = native_coverage_extents
     if source_references is not None:
         payload["source_support_contract"] = SOURCE_SUPPORT_CONTRACT
     payload["current_matter_id"] = current_matter_id
@@ -666,7 +686,8 @@ def verify_material_grounding(
                 pending_candidate_ids=tuple(key for key in candidate_ids
                                             if key in coverage_candidate_ids))
             current.update(coverage_representation_options=representation_options,
-                           coverage_extent_contract=COVERAGE_EXTENT_CONTRACT)
+                           coverage_extent_contract=COVERAGE_EXTENT_CONTRACT,
+                           coverage_group_contract=COVERAGE_GROUP_CONTRACT)
         if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
@@ -704,7 +725,8 @@ def verify_material_grounding(
             coverage_candidate_ids=coverage_candidate_ids, wire=True,
             account_source_ids=account_ids, source_reading_ids=tuple(source_treatments),
             coverage_representation_options=representation_options,
-            native_coverage_extents=read_coverage and native_coverage_extents)
+            native_coverage_extents=read_coverage and native_coverage_extents,
+            native_coverage_groups=read_coverage and native_coverage_groups)
         try:
             schema_words = json.dumps(on_the_wire(offered_schema), ensure_ascii=False,
                                       separators=(",", ":"))
@@ -797,7 +819,8 @@ def verify_material_grounding(
                                        if identity in coverage_candidate_ids}
                     if source_references is not None else None,
                     record_support=coverage_record_support,
-                    native_extents=native_coverage_extents)
+                    native_extents=native_coverage_extents,
+                    native_groups=native_coverage_groups)
             except SchemaViolation as exc:
                 assessed_coverage = None
                 issues["$coverage"] = (review_contract_issue(exc),)

@@ -38,6 +38,123 @@ def _fresh_coverage_extents(payload, result):
                                     for portion in dispositions]
 
 
+def _fresh_coverage_groups(payload, result):
+    """Group only equivalent, explicitly authored purpose and range judgments.
+
+    No source-owner label, candidate acceptance or representation permission
+    supplies a missing judgment. Contradictory and incomplete flat proposals
+    stay flat; already grouped proposals are never repaired.
+    """
+    if (payload.get("coverage_group_contract") != "coverage_source_groups_v1"
+            or payload.get("coverage_extent_contract") != "coverage_source_extents_v1"
+            or not isinstance(result, dict)):
+        return
+    coverage = result.get("coverage")
+    if (not isinstance(coverage, dict)
+            or set(coverage) != {"state", "reason", "source_checks", "dispositions"}):
+        return
+    checks, portions = coverage["source_checks"], coverage["dispositions"]
+    identities = payload.get("coverage_source_ids")
+    references = payload.get("source_treatments")
+    if (not isinstance(checks, list) or not isinstance(portions, list)
+            or not isinstance(identities, list) or not isinstance(references, dict)
+            or any(not isinstance(identity, str) for identity in identities)
+            or len(identities) != len(set(identities))):
+        return
+    owned = set(identities)
+
+    def interval(part, identity, fields):
+        if not isinstance(part, dict):
+            return None
+        reference = references.get(identity)
+        words = reference.get("quoted") if isinstance(reference, dict) else None
+        if not isinstance(words, str) or not words.strip():
+            return None
+        if part.get("extent") == "whole_source" and set(part) == fields | {"extent"}:
+            return 0, len(words)
+        if (part.get("extent") == "exact_subrange"
+                and set(part) == fields | {"extent", "start", "end"}
+                and type(part.get("start")) is int and type(part.get("end")) is int
+                and 0 <= part["start"] < part["end"] <= len(words)):
+            return part["start"], part["end"]
+        return None
+
+    def union(ranges):
+        merged = []
+        for start, end in sorted(ranges):
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+            else:
+                merged.append((start, end))
+        return merged
+
+    by_source = {identity: [] for identity in identities}
+    for part in portions:
+        if (not isinstance(part, dict) or not isinstance(part.get("source_id"), str)
+                or part["source_id"] not in owned
+                or not isinstance(part.get("reason"), str)
+                or not isinstance(part.get("record_ids"), list)
+                or not isinstance(part.get("candidate_ids"), list)
+                or any(not isinstance(value, str) for value in
+                       [*part["record_ids"], *part["candidate_ids"]])
+                or interval(part, part["source_id"], {
+                    "source_id", "status", "record_ids", "candidate_ids", "reason"}) is None):
+            return
+        represented = part.get("status") == "represented"
+        if (part.get("status") not in {
+                "represented", "missing", "unresolved", "outside_scope", "non_account"}
+                or represented != bool(part["record_ids"] or part["candidate_ids"])):
+            return
+        by_source[part["source_id"]].append(part)
+    groups = {}
+    for check in checks:
+        if (not isinstance(check, dict)
+                or set(check) != {"source_id", "content_purpose", "substantive_spans", "reason"}
+                or not isinstance(check.get("source_id"), str)
+                or check["source_id"] not in owned or check["source_id"] in groups
+                or not isinstance(check.get("content_purpose"), str)
+                or not isinstance(check.get("reason"), str)
+                or not isinstance(check.get("substantive_spans"), list)):
+            return
+        identity, purpose = check["source_id"], check["content_purpose"]
+        selected = by_source[identity]
+        group = {"content_purpose": purpose, "reason": check["reason"]}
+        if purpose == "account":
+            account = [part for part in selected if part["status"] != "non_account"]
+            context = [part for part in selected if part["status"] == "non_account"]
+            spans = [interval(span, identity, set()) for span in check["substantive_spans"]]
+            ranges = [interval(part, identity, {
+                "source_id", "status", "record_ids", "candidate_ids", "reason"})
+                for part in account]
+            contexts = [interval(part, identity, {
+                "source_id", "status", "record_ids", "candidate_ids", "reason"})
+                for part in context]
+            if (not spans or not account or None in spans or union(spans) != union(ranges)
+                    or len(spans) != len(set(spans)) and spans != ranges
+                    or any(start < other_end and other_start < end
+                           for start, end in ranges for other_start, other_end in contexts)):
+                return
+            group.update(account_portions=[{key: value for key, value in part.items()
+                                            if key != "source_id"} for part in account],
+                         non_account_portions=[{key: value for key, value in part.items()
+                                                if key not in {"source_id", "status",
+                                                               "record_ids", "candidate_ids"}}
+                                               for part in context])
+        elif purpose in {"non_account", "unresolved"}:
+            if (check["substantive_spans"] or len(selected) > 1
+                    or selected and (selected[0]["status"] != purpose
+                                     or selected[0]["extent"] != "whole_source")):
+                return
+            if selected and selected[0]["reason"] != group["reason"]:
+                group["reason"] += "\n" + selected[0]["reason"]
+        else:
+            return
+        groups[identity] = group
+    if set(groups) == owned:
+        result["coverage"] = {"state": coverage["state"], "reason": coverage["reason"],
+                              "source_groups": groups}
+
+
 def fresh_review_reply(payload, data):
     """Transport only faithful old selections to the explicit fresh wire shape.
 
@@ -49,9 +166,11 @@ def fresh_review_reply(payload, data):
     original = payload.get("original_input", payload)
     _fresh_coverage_extents(original, result)
     if original.get("review_selection_contract") != "checked_source_selection_v1":
+        _fresh_coverage_groups(original, result)
         return result
     rows = result.get("verdicts") if isinstance(result, dict) else None
     if not isinstance(rows, list):
+        _fresh_coverage_groups(original, result)
         return result
     candidates = {row["candidate_id"]: row for row in original.get("candidates", [])
                   if isinstance(row, dict) and isinstance(row.get("candidate_id"), str)}
@@ -98,12 +217,12 @@ def fresh_review_reply(payload, data):
             if (isinstance(check, dict)
                     and check.get("content_purpose") in ("account", "non_account")):
                 purposes.setdefault(check["source_id"], check["content_purpose"] == "account")
-        result["source_readings"] = {
+        result.setdefault("source_readings", {
             identity: {"content_role": ("reported_matter_account" if purposes.get(identity)
                                        else "work_instruction" if identity in purposes
                                        else "uncertain"),
                        "reason": "The scripted review's declared original-source purpose."}
-            for identity in original.get("source_treatments", {})}
+            for identity in original.get("source_treatments", {})})
         for row in rows:
             account = row.get("account_check") if isinstance(row, dict) else None
             if not isinstance(account, dict) or "source_ids" in account:
@@ -137,6 +256,7 @@ def fresh_review_reply(payload, data):
             if valid:
                 del account["source_checks"]
                 account["source_selections"] = selections
+    _fresh_coverage_groups(original, result)
     return result
 
 

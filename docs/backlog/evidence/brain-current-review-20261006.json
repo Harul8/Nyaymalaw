@@ -2011,6 +2011,90 @@
       "browser_feature_complete": false,
       "remaining": "Grouped coverage consumers and integrated browser acceptance remain pending. Final unread recovery is source eligibility for bounded re-examination, not semantic admission. Checked negative decisions are not forcibly reconsidered. Precise typed final failure dependencies, historical diagnostic cleanup, accepted pending-task preservation after reply fallback, legal accuracy, useful requested delivery, association, UI and closure remain open. Genuinely independently minted unmarked legacy source history remains unqualified.",
       "production_sha256": "fd53a7bf55283c8b1f4305d6e4cad0275ed2e8fb4ebae321fdd40012195f9c8d"
+    },
+    {
+      "piece": "Material reviewer fresh source-group activation",
+      "base": "6384079",
+      "production_file": "nm/brain/material_verification.py",
+      "prompt_changes": 1,
+      "prompt": "_COVERAGE_SYSTEM only; main grounding prompt unchanged",
+      "invariant": "Fresh supported material coverage decides purpose once per exact source and derives canonical dispositions only from owned portions and actually checked representation; grouping never supplies missing admission or semantic proof.",
+      "verification": "38 focused and245 exact existing neighbours pass; same38cases with isolated unchanged6384079 material consumer17fail/21pass. Defaults and extent-only private generation stay unchanged. Explicit actual support map, including{}, activates groups. Raw fresh wire tests admit valid new/current/historical original support, reject wrong words/ownership/omissions/overlap, retain checked peers across bounded correction, and save canonical v2 proof. Public opening and no-change review each use8calls and replay0. No historical canonical fields, receipt upgrades or new semantic stage. Test transport now preserves already authored source_readings verbatim on repeated conversion, even malformed values; whole-source nonaccount/unresolved declarations need no redundant disposition. Contradictory/missing account judgments remain uncorrected. Marker-specific test inspection preserves exact ownership/extents and canonical save/replay assertions.",
+      "call_impact": "0 new routine or conditional stages. Coverage shares the existing material verification call; existing malformed-output correction bound unchanged. Raw public opening8/review8/replay0; scoped review-only calls1. Strict whole prompt/input/wire schema plus output-reserve preflight retained. Scripted schema/resource estimates below are not actual tokenizer/API usage or universal batching/cost predictions. No paid calls; combined measured spend unchanged $3.202083/$5.",
+      "reports": {
+        "material-group-focused-final.xml": [
+          {
+            "tests": 38,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "material-group-neighbours-final.xml": [
+          {
+            "tests": 245,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "material-group-baseline-6384079.xml": [
+          {
+            "tests": 38,
+            "failures": 17,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      "resource_measurement": {
+        "baseline": "6384079",
+        "comparison": "Exact stable prompts, same input/proof choices, complete strict wire schema; no candidates or record choices in this scoped coverage-only measurement.",
+        "estimator": "Production estimate_tokens, chars//4. Not a tokenizer measurement, real API usage, price or latency.",
+        "rows": [
+          {
+            "sources": 1,
+            "output_reserve": 4096,
+            "old_input_estimate": 4830,
+            "new_input_estimate": 4655,
+            "old_input_chars": 19323,
+            "new_input_chars": 18623,
+            "actual_scripted_calls": 1
+          },
+          {
+            "sources": 6,
+            "output_reserve": 4096,
+            "old_input_estimate": 10557,
+            "new_input_estimate": 8015,
+            "old_input_chars": 42228,
+            "new_input_chars": 32063,
+            "actual_scripted_calls": 1
+          },
+          {
+            "sources": 13,
+            "output_reserve": 5504,
+            "old_input_estimate": 18587,
+            "new_input_estimate": 12729,
+            "old_input_chars": 74351,
+            "new_input_chars": 50919,
+            "actual_scripted_calls": 1
+          },
+          {
+            "sources": 30,
+            "output_reserve": 12032,
+            "old_input_estimate": 38116,
+            "new_input_estimate": 24196,
+            "old_input_chars": 152466,
+            "new_input_chars": 96785,
+            "actual_scripted_calls": 1
+          }
+        ],
+        "paid_calls": 0
+      },
+      "previous_recovery_baseline_precision": "The exact pretransaction public assignment regression refuses at _current_records with IncompleteConversation(\"The saved material context is incomplete\") for vanished D1 assignment before coverage capture. Cache-erasure consequence is independently established by source inspection; the baseline is not claimed to have reached a missing-cache capture gate.",
+      "browser_feature_complete": false,
+      "remaining": "Dispute group consumer and integrated browser acceptance remain pending. Source purpose and semantic sufficiency remain independent judgments; these scripted tests do not qualify the pinned model. Material association context, precise typed final-negative dependencies, redundant historical diagnostics, pending request indexing after withheld reply, legal applicability/conditions, useful requested delivery, retrieval performance, UI and closure remain open. No production-ready claim.",
+      "production_sha256": "f8b666f95770557d5fec88a77a495014906e87b2599c036e0351e3c684de7d11"
     }
   ],
   "additional_reviewer_input": {

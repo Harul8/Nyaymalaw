@@ -136,7 +136,11 @@ def test_original_proof_remaps_exact_alias_without_a_new_detail_or_model_stage(h
         [] if historical else [record.derived_record(row)])
     if historical:
         assert call["payload"]["historical_material"] == [record.derived_record(row)]
-    assert call["output"]["coverage"]["dispositions"][0]["extent"] == "whole_source"
+    selected = (call["output"]["coverage"]["source_groups"]["P1S1"]["account_portions"][0]
+                if call["payload"].get("coverage_group_contract") == record.COVERAGE_GROUP_CONTRACT
+                else call["output"]["coverage"]["dispositions"][0])
+    assert selected["extent"] == "whole_source"
+    assert selected["record_ids"] == [row["id"]] and selected["candidate_ids"] == []
     assert "extent" not in repr(assessed)
     assert assessed["dispositions"][0]["quoted"] == ACCOUNT
     require_schema(call["output"], call["schema"])
