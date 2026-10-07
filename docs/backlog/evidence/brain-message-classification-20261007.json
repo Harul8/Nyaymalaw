@@ -1,0 +1,195 @@
+{
+  "activity": "legal brain 1.2 / 1.2.1",
+  "status": "partial_candidate_not_a_completed_milestone",
+  "owner": "nm/brain/conversation.py: _prompt, interpret, checked_message_parts",
+  "atomic_update": "Only the existing conversation prompt and focused tests changed in this first-message clarification. Broader earlier uncommitted classification/persistence changes remain a candidate.",
+  "pass_condition": "Code supplies first/follow_up from complete history. Model labels coherent original portions using declared definitions, preserving mixed purposes, negation and restrictions without invented prior context.",
+  "counterexample": "Quoted sample instructions accompany a current comparison request; quoted content must not hide the actual request or authorise executing the samples.",
+  "changes": [
+    "Explicit code-owned position, independent of matter existence and wording; missing history still fails before model use.",
+    "Separate label definitions and purposes, coherent portions rather than words, explicit outcome and exact-source checks.",
+    "Removed contradictory instructions that requested copied exact_text and also prohibited copying into selections."
+  ],
+  "mechanical_checks": {
+    "passed": 135,
+    "scope": "Six focused classification/routing/authority test files; includes source identity, ambiguous exact wording, coverage, history, saved labels and replay.",
+    "semantic_proof": false,
+    "other_failures": "Twelve failures in the previous broader 188-test run were reproduced unchanged at dfb1b03; see head-baseline-results.json."
+  },
+  "probes": [
+    {
+      "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-mixed-20261007T122055523152Z-fa4d2e89.json",
+      "case": "first-mixed",
+      "meaningful_labels": [
+        {
+          "id": "part_1",
+          "category": "social",
+          "sources": [
+            {
+              "start": 0,
+              "end": 6,
+              "text": "Hello."
+            }
+          ]
+        },
+        {
+          "id": "part_2",
+          "category": "information",
+          "sources": [
+            {
+              "start": 7,
+              "end": 46,
+              "text": "I only have a draft, not a signed copy;"
+            }
+          ]
+        },
+        {
+          "id": "part_3",
+          "category": "work_request",
+          "sources": [
+            {
+              "start": 47,
+              "end": 136,
+              "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 5200,
+        "known_tokens_out": 177,
+        "known_cost_usd": 0.0023631999999999998,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      },
+      "semantic_result": "pass",
+      "reason": "Greeting, negated account and restricted request remain distinct."
+    },
+    {
+      "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-quoted-20261007T122119962479Z-f165a5a7.json",
+      "case": "first-quoted",
+      "meaningful_labels": [
+        {
+          "id": "part_1",
+          "category": "information",
+          "sources": [
+            {
+              "start": 0,
+              "end": 177,
+              "text": "Compare these two sample instructions: 'Proceed with the review' and 'Wait for my confirmation.' I am asking about their wording, not asking you to carry out either instruction."
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 5124,
+        "known_tokens_out": 151,
+        "known_cost_usd": 0.0022911999999999997,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      },
+      "semantic_result": "fail",
+      "reason": "Actual comparison request is incorrectly covered only by information; downstream planning preserves its restriction."
+    }
+  ],
+  "browser": {
+    "artifact": "outputs\\brain-classification-20261007\\browser-first-saved.json",
+    "matter_id": "mat_fd9da6375dc9830ba5f76d4e7deeaf38",
+    "understanding": {
+      "contract": "attributed_message_parts_v1",
+      "position": "first",
+      "parts": [
+        {
+          "id": "part_1",
+          "category": "social",
+          "sources": [
+            {
+              "start": 0,
+              "end": 6,
+              "text": "Hello."
+            }
+          ]
+        },
+        {
+          "id": "part_2",
+          "category": "information",
+          "sources": [
+            {
+              "start": 7,
+              "end": 46,
+              "text": "I only have a draft, not a signed copy;"
+            }
+          ]
+        },
+        {
+          "id": "part_3",
+          "category": "work_request",
+          "sources": [
+            {
+              "start": 47,
+              "end": 136,
+              "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
+            }
+          ]
+        }
+      ]
+    },
+    "calls": 10,
+    "screenshot": "outputs\\brain-classification-20261007\\browser-first-message.jpg",
+    "result": "First flag and three meaningful parts saved correctly. Reply only echoed the draft account and reported unfinished record reading. Requested distinction was not delivered.",
+    "accepted_end_to_end": false
+  },
+  "remaining_work": [
+    "Separate the focused understanding responsibility from downstream planning, without inventing authority from labels or adding an unmeasured redundant stage.",
+    "Mixed quoted content can still receive one dominant information label. Mechanical validity does not establish semantic coverage.",
+    "Conditional assent after multiple proposals can still select an antecedent and overstate record-review scope.",
+    "Information labels trigger source reading but do not establish intake authority. Current planning can omit that authority.",
+    "Conversational directions can become executable tasks, and ordinary replies can fail or become bookkeeping notices.",
+    "When source reading runs without extraction, its decisions reach continuation but are absent from saved material_coverage source_treatments; preserve this evidence at its owner before calling the broader routing candidate complete."
+  ],
+  "call_impact": {
+    "new_routine_classification_calls": 0,
+    "normal_interpreter_calls": 1,
+    "conditional_calls": "Existing bounded correction on typed contract rejection; no added semantic checker.",
+    "simple_full_turn": "Previously observed three calls: interpretation, composition, independent review.",
+    "this_browser_turn": "Ten calls across interpretation, source reading, extraction/review/recovery and response; this latency and failure remain unresolved."
+  },
+  "budget": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "authorized_usd": 5,
+    "earlier_charge_usd": 1.877078,
+    "ledger_charge_usd": 2.250034,
+    "combined_charge_usd": 4.127112,
+    "remaining_usd": 0.872888
+  },
+  "source_hashes": {
+    "nm/brain/conversation.py": "14076c136db70aeb47e5eb4a567a9ff1067533f5fde902eb1348b1645c03037b",
+    "nm/brain/turn.py": "4c85b41a0ef5c7d24a1bd34d92cd7eaad9c7b625c5a4c66f395af4ba6add7439"
+  },
+  "dedicated_label_call": {
+    "status": "component_verified_integration_pending",
+    "owner": "nm/brain/message_labels.py",
+    "prompt_responsibility": "Label current content only using social, information and work_request. No planning, research, mutation or response generation.",
+    "validator": "Declared shape/labels and ordered original text; retains separators; accepts multiple labels, repeated wording and flexible portion lengths. Does not certify semantic meaning.",
+    "offline_tests": 12,
+    "probe": "outputs/brain-classification-20261007/labels-only-after-first-quoted-20261007T123817639938Z-5abe25d6.json",
+    "observation": "One call identifies the actual comparison request. The scope explanation remains original information, not an executable quoted instruction.",
+    "calls": {
+      "normal": 1,
+      "conditional": "Existing shared bounded shape/source repair only",
+      "semantic_reviewer": 0
+    }
+  }
+}
