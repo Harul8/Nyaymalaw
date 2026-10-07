@@ -44,3 +44,63 @@ async function refused(code, expectedState, expectedReloads) {
 await refused('brain_refused', 'not_committed', 0);
 await refused('stale_version', 'stale', 1);
 await refused(undefined, 'not_committed', 0);
+
+// Run the shipped composer and send functions through their actual envelope
+// construction. The DOM and delivery are offline substitutes, not browser QA.
+const sendStart = app.indexOf('function newTurnId() {');
+const wireStart = app.indexOf("$('composer').addEventListener('submit',");
+const wireEnd = app.indexOf("$('message').addEventListener('keydown',", wireStart);
+assert.ok(sendStart >= 0 && wireStart >= 0 && wireEnd > wireStart);
+
+async function composed(text) {
+  const handlers = new Map();
+  const box = {value: text};
+  const outgoing = [];
+  const intent = {pending: [], text, chatId: null};
+  const context = vm.createContext({
+    window: {crypto: null}, activeDelivery: null, activeIntent: intent,
+    state: {matterId: null, matterReady: false, disputeFocus: null,
+      matterVersion: null, intake: {}, turns: []},
+    $: (id) => id === 'message' ? box : {
+      addEventListener: (event, handler) => handlers.set(event, handler),
+    },
+    snapshotIntent() {}, sizeComposer() {}, repaint() {},
+    matchesIntake: () => true,
+    deliver: async (entry) => { outgoing.push(entry); },
+  });
+  vm.runInContext(app.slice(sendStart, start) + app.slice(wireStart, wireEnd), context);
+  handlers.get('submit')({preventDefault() {}});
+  await Promise.resolve();
+  if (!text.trim()) {
+    assert.equal(outgoing.length, 0);
+    assert.equal(box.value, text);
+    return;
+  }
+  assert.equal(outgoing.length, 1);
+  const entry = outgoing[0];
+  assert.equal(entry.brief, text);
+  assert.equal(JSON.parse(entry.envelope).message, text);
+  assert.equal(box.value, '');
+  assert.equal(intent.text, '');
+
+  // Retrying the same unresolved request keeps both its identity and words.
+  box.value = text;
+  intent.text = text;
+  entry.state = 'not_committed';
+  const envelope = entry.envelope;
+  await context.send(text);
+  assert.equal(outgoing[1], entry);
+  assert.equal(entry.envelope, envelope);
+
+  // A different draft must not be consumed merely because trimming matches.
+  box.value = text + ' ';
+  intent.text = box.value;
+  context.consumeComposer(entry);
+  assert.equal(box.value, text + ' ');
+  assert.equal(intent.text, text + ' ');
+}
+
+for (const text of ['', ' \t\r\n', '\u2003\u00a0',
+  '\n  Hello.\t\r\n', '\u2003My note: ‘A’ and ‘B’ differ.\u00a0']) {
+  await composed(text);
+}

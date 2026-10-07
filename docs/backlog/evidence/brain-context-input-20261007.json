@@ -15,8 +15,16 @@
     "lint": "Ruff passed for changed production/tests; diff check passed."
   },
   "calls": {"new_routine": 0, "new_conditional": 0, "synthetic_simple_turn_total": 3, "replay": 0, "live_api_calls": 0},
+  "browser_handoff_piece": {
+    "api_commit": "98ce776",
+    "production_file": "nm/app/app.js",
+    "observed_baseline": "The actual composer/send functions sent Hello. instead of the submitted string with surrounding CRLF, spaces and tab.",
+    "change": "Use the original textarea value for the message and trim only to detect blank input. Consume a composer draft only if it exactly equals the submitted string.",
+    "verified": "The actual composer, send, receipt-envelope and consume functions pass offline VM checks for blank refusal, exact text, stable retry identity/envelope and preservation of a subsequently edited draft. Four existing UI harness scripts passed, including the extended handoff script. JavaScript syntax and diff checks passed.",
+    "limitation": "The DOM and network delivery are substitutes. Actual browser acceptance remains with the user; no live application or model calls were made."
+  },
   "remaining": [
-    "Browser composer still trims the submitted string; next separate production-file piece.",
+    "Before Build update is prepared but the open Excel workbook denied replacement; publish after its file lock is released.",
     "Older saved composed replies displayed in the UI are replaced with element text by history reconstruction. Fix requires version-aware historical binding analysis.",
     "Older transcript projection sorts timestamp strings, which can misorder equivalent valid offset formats.",
     "No new browser or pinned-model semantic acceptance. Existing live semantic recall/routing issues remain open."

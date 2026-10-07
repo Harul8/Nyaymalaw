@@ -2686,7 +2686,7 @@ function newTurnId() {
 function consumeComposer(entry) {
   // Only explicit Send consumes the field. A receipt retry preserves even an
   // identical follow-up draft typed since the original submission.
-  if ($('message').value.trim() !== entry.brief.trim()) return;
+  if ($('message').value !== entry.brief) return;
   $('message').value = '';
   entry.context.text = '';
   sizeComposer();
@@ -2859,8 +2859,8 @@ async function deliver(entry) {
 $('composer').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const box = $('message');
-  const text = box.value.trim();
-  if (!text) return;
+  const text = box.value;
+  if (!text.trim()) return;
   // deliver clears the typing field after minting the retry receipt, and
   // refuses network dispatch unless that receipt has been protected locally.
   send(text);
