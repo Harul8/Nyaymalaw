@@ -68,6 +68,13 @@
       "fix": "Interpretation review is now specifically checking accuracy of NM saved understanding. Using existing content for NM work does not assert or reaffirm it. Explicit resolutions and withdrawals are extraction changes. Missing-source correction explicitly permits dropping out-of-scope items or returning empty.",
       "verification": "89 extractor/turn/recovery checks pass. Real-model semantic recheck pending.",
       "call_impact": "No new routine or conditional calls."
+    },
+    {
+      "owner": "nm/brain/release.py",
+      "status": "review_refined_browser_recheck_pending",
+      "fix": "Review requires selected support for the whole description, recognises withdrawals as independent contributions, and distinguishes checking NM interpretation accuracy from using earlier content for work.",
+      "verification": "87 focused and legacy release checks pass. Real-model detection is not inferred from these checks.",
+      "call_impact": "No new calls."
     }
   ],
   "model_calls": {

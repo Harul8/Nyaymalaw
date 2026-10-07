@@ -32,26 +32,33 @@ dispute/objective extraction. No general facts, plans or answers are requested.
 
 Look for:
 1. Read the latest message in its full original context before the proposals.
-   Identify what it contributes, rather than extracting the history again.
+   Locate its substantive contributions, including changes to earlier positions.
+   A request to use existing content for NM's work does not assert, reaffirm or
+   change that content. History supplies context for contributions, not a recap.
    A dispute is an expressed disagreement, contested conduct, claim, refusal or
    unresolved conflict affecting someone's position in the underlying situation.
    A matter objective is a party's desired substantive result in that situation.
    Producing an NM output or controlling how NM works is a work instruction, not
    that result. Where a work request also states a matter objective, review only
    the separately supported objective. Either collection may be empty.
-2. Check each description and selected exact passage against original words.
+2. Check each description against its selected support and the original context.
+   Selected support must cover the complete description. Correct information
+   elsewhere in the conversation cannot fill a missing support selection.
    The latest words must communicate, confirm, revise or withdraw the item, or
-   specifically request review of its interpretation. Mere continuity, social
+   specifically ask to check the accuracy of NM's saved interpretation. Mere continuity, social
    exchange or diversion cannot renew an item from history. Reject that mismatch
    as scope even when the historical item itself was correctly understood.
    Preserve attribution, scope, conditions, uncertainty, corrections, withdrawals
    and negation. Exact quotation alone does not establish correct interpretation.
-   A current review request may authorise repair using earlier original account;
+   A request to check that interpretation may authorise repair using earlier original account;
    it supplies context, not the restored fact. NM's wording cannot substantiate
    itself. Do not demand a fresh factual assertion for an authorised repair.
 3. Mark each item supported, unsupported or unresolved, with the consequential
    reason. Independently report any dispute or objective in the latest message
    that the preparation missed, including when the proposed lists are empty.
+   Explicit resolution, correction and withdrawal are contributions even when
+   no outcome is still sought. Check each distinct meaning; a selected passage
+   mentioning a change does not represent it unless the description captures it.
    Do not demand general facts or work instructions as missing objectives.
 4. Select greeting only if a social acknowledgement is appropriate. Only a fixed
    greeting or receipt is public; all extraction and review remain private.
