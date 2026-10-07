@@ -1,6 +1,7 @@
 """Project current dispute readings from their attributed conversation history."""
 from __future__ import annotations
 
+from nm.brain.history import context_contract, word_views
 from nm.brain.material import SCOPES
 from nm.brain.mutation_contracts import validate_record_mutation
 from nm.shared.model_port import SchemaViolation
@@ -67,11 +68,12 @@ def proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
     active: dict[str, dict] = {}
     history: list[dict] = []
     problems: list[str] = []
-    prior_words = {(item.turn_id, item.role): item.text
-                   for item in prior_conversation}
+    views = word_views(prior_conversation)
+    current_words = {}
     seen_ids: set[str] = set()
     matter_opened = False
     for turn_index, entry in enumerate(matter.brain_chat):
+        prior_words = {**views[context_contract(entry)], **current_words}
         message = entry.get("message")
         response = entry.get("response")
         proposals = response.get("material") if isinstance(response, dict) else None
@@ -177,10 +179,10 @@ def proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
                     active[row["id"]] = row
         turn_id = entry.get("turn_id")
         if isinstance(turn_id, str):
-            prior_words[(turn_id, "advocate")] = message
+            current_words[(turn_id, "advocate")] = message
             elements = response.get("elements")
             if isinstance(elements, list):
-                prior_words[(turn_id, "nm")] = "\n".join(
+                current_words[(turn_id, "nm")] = "\n".join(
                     item.get("text", "") for item in elements
                     if isinstance(item, dict) and isinstance(item.get("text"), str)
                     and item["text"].strip())

@@ -44,6 +44,17 @@ def test_material_sources_use_the_creating_turns_contract(contract, quote, valid
     assert (result["state"] == "ok") is valid
 
 
+@pytest.mark.parametrize(("contract", "quote", "valid"), [
+    (None, "Internal finding.", True), (PUBLIC_CONTEXT, "The public question.", True),
+    (None, "The public question.", False), (PUBLIC_CONTEXT, "Internal finding.", False),
+])
+def test_dispute_sources_use_the_creating_turns_contract(contract, quote, valid):
+    from nm.brain.dispute_state import proposed_disputes
+    matter, earlier = record_with_context("dispute", contract, quote)
+    result = proposed_disputes(matter, prior_conversation=earlier)
+    assert (result["state"] == "ok") is valid
+
+
 def test_compatibility_metadata_is_not_presented_as_conversation():
     prior = Message("prior", "nm", "The public question.",
                     recorded_at="2026-10-07T09:00:00+05:30",
