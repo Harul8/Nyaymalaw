@@ -40,6 +40,12 @@ def _route(message, *, relation="continues", preserve=False, contribution=False)
 
 def _reply(payload):
     unit = raw_unit(payload)
+    # The fabricated writer must respect offered source choices: whitespace
+    # remains in the transcript but is not an assertion to select as an account.
+    nonblank = {row["id"] for row in payload["latest_message_spans"] if row["text"].strip()}
+    for block in unit["blocks"]:
+        selected = block["evidence_expression"]["source_ids"]
+        block["evidence_expression"]["source_ids"] = [i for i in selected if i in nonblank]
     if "$no_task" in payload["work_items"][0]["work_choices"]:
         unit["work_selector"] = "$no_task"
     return {"units": [unit]}
@@ -179,3 +185,42 @@ def test_complete_long_context_is_preserved_but_overflow_never_dispatches_or_sav
     interpreted = [payload for op, payload in model.calls if op == "interpret_conversation"][-1]
     assert interpreted["earlier_conversation"] == _transcript(saved)
     assert interpreted["earlier_conversation"][0]["text"] == message
+
+
+@pytest.mark.parametrize(("first", "followup"), [
+    ("\n  Hello.\t\r\n", " \tPlease retain my original wording.\n"),
+    ("\u2003My note: ‘A’ and ‘B’ are different.\u00a0",
+     "\nKeep the quoted wording, punctuation and spacing.  "),
+])
+def test_public_context_preserves_exact_submitted_words_and_replay(
+        client, wired, monkeypatch, first, followup):
+    model = _model(wired, monkeypatch, [plan(first), _route(followup)])
+    opened = send(client, first, "exact-input-first")
+    first_saved = deepcopy(_saved(wired, opened))
+    first_input = next(payload for op, payload in model.calls
+                       if op == "interpret_conversation")
+    assert first_input["latest_message"] == first
+    assert first_input["earlier_conversation"] == []
+    assert first_saved.brain_chat[0]["message"] == first
+
+    answer = send(client, followup, "exact-input-followup", opened=opened)
+    interpreted = [payload for op, payload in model.calls
+                   if op == "interpret_conversation"][-1]
+    assert interpreted["latest_message"] == followup
+    assert interpreted["earlier_conversation"] == _transcript(first_saved)
+    saved = deepcopy(_saved(wired, answer))
+    assert saved.brain_chat[-1]["message"] == followup
+    assert answer["metrics"]["llm_calls"] == opened["metrics"]["llm_calls"] == 3
+    calls = len(model.calls)
+    replay = send(client, followup, "exact-input-followup", opened=opened)
+    assert replay["replayed"] is True and replay["metrics"]["llm_calls"] == 0
+    assert replay["elements"] == answer["elements"]
+    assert len(model.calls) == calls and _saved(wired, answer) == saved
+
+
+@pytest.mark.parametrize("message", ["", " \t\r\n", "\u2003\u00a0"])
+def test_blank_public_input_is_refused_before_model_use(client, wired, monkeypatch, message):
+    model = _model(wired, monkeypatch, [])
+    response = client.post("/api/turn", json={"message": message, "turn_id": "empty-input"})
+    assert response.status_code == 422
+    assert model.calls == []

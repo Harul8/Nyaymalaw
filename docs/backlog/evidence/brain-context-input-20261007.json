@@ -1,0 +1,24 @@
+{
+  "activity": "legal brain 1.1 Assemble the context",
+  "owner": "LB-175",
+  "piece": "API preservation of exact incoming words",
+  "production_file": "nm/app/api.py",
+  "failed_invariant": "Nonblank validation must not alter the source string supplied for interpretation, persistence and future conversation context.",
+  "observed_baseline": "Two public-boundary regressions failed: TurnRequest's identifier-oriented NonBlank validator stripped CRLF/tabs/outer spaces and Unicode whitespace before model dispatch.",
+  "change": "Use a message-specific field validator to reject blank input and return the original string. Retain shared identifier normalization unchanged.",
+  "verification": {
+    "command": ".venv-arrive/Scripts/python.exe -X utf8 -m pytest tests/test_brain_sustained_context.py tests/test_new_brain_conversation.py -q",
+    "passed": 52,
+    "meaning": "Mechanical public-boundary context, persistence, recovery and replay checks with fabricated model decisions. This does not establish semantic model accuracy.",
+    "paired_cases": ["CRLF, tabs and outer spaces", "Unicode whitespace and punctuation", "legitimate first-message empty history", "exact follow-up and saved earlier words", "same-turn zero-call replay", "empty and whitespace-only rejection"],
+    "fixture_correction": "The fabricated writer now excludes blank source spans from its account selectors, matching the existing offered choices. Full blank-containing transcript text is still checked exactly; no production source rules changed.",
+    "lint": "Ruff passed for changed production/tests; diff check passed."
+  },
+  "calls": {"new_routine": 0, "new_conditional": 0, "synthetic_simple_turn_total": 3, "replay": 0, "live_api_calls": 0},
+  "remaining": [
+    "Browser composer still trims the submitted string; next separate production-file piece.",
+    "Older saved composed replies displayed in the UI are replaced with element text by history reconstruction. Fix requires version-aware historical binding analysis.",
+    "Older transcript projection sorts timestamp strings, which can misorder equivalent valid offset formats.",
+    "No new browser or pinned-model semantic acceptance. Existing live semantic recall/routing issues remain open."
+  ]
+}

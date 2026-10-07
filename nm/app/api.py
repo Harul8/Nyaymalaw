@@ -37,7 +37,7 @@ from fastapi import (
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from nm.app.static_assets import browser_assets_router
 from nm.Archives.legal_brain.retrieve.search_port import ResolutionState
@@ -492,7 +492,15 @@ class TurnRequest(BaseModel):
     # NO `advocate_id`. It came from the body, which means the caller asserted
     # who they were and the product recorded that assertion on the file. It now
     # comes from the session, and there is no field here to override it with.
-    message: NonBlank = Field(min_length=1)
+    message: str = Field(min_length=1)
+
+    @field_validator("message")
+    @classmethod
+    def preserve_original_message(cls, value: str) -> str:
+        """Reject blank input without normalising the advocate's source words."""
+        _not_blank(value)
+        return value
+
     matter_id: str | None = None
     chat_id: str | None = None
     thread_id: str | None = None
