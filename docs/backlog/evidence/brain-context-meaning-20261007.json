@@ -1,0 +1,650 @@
+{
+  "activity": "legal brain 1.3 Resolve its meaning in context",
+  "status": "not_completed_candidate_rejected",
+  "queue": "docs/Nyaymalaw_Implementation_Plan.xlsx / legal brain / 1.3 through 1.3.5",
+  "source_commit": "6e71127",
+  "production_change_retained": false,
+  "before_build_changed": false,
+  "audit": [
+    {
+      "step": "1.3.1",
+      "owner": [
+        "nm/brain/conversation.py",
+        "nm/brain/continuation_verification.py"
+      ],
+      "existing": "Full history, referent instructions and independent reply review.",
+      "gap": "No explicit durable source-linked reference resolution or alternatives.",
+      "attempt": "Per-item context_links with owned latest/prior source IDs, proposed understanding and resolved/preserved_uncertainty/needs_clarification. Mechanical ownership and dependent-route checks.",
+      "result": "Rejected: source links did not prevent wrongful review authority; some selected sources did not support the stated referents."
+    },
+    {
+      "step": "1.3.2",
+      "owner": [
+        "nm/brain/continuation_verification.py",
+        "nm/brain/work_state.py"
+      ],
+      "existing": "Scoped question transitions and checks against treating silence or diversion as completion.",
+      "gap": "Interpreting a partial answer correctly remains semantic.",
+      "result": "Candidate linked the answer to the second consignment but invented review/acknowledgement requests instead of account contributions. Question-state and browser acceptance not established."
+    },
+    {
+      "step": "1.3.3",
+      "owner": [
+        "nm/brain/conversation.py",
+        "nm/brain/mutation_contracts.py"
+      ],
+      "existing": "Relation and matter-scope decisions, source ownership, restrictions on cross-matter mutation.",
+      "gap": "Need live sustained diversion, comparison and return-to-work acceptance.",
+      "result": "Code reviewed; no completion claim or live acceptance in this attempt."
+    },
+    {
+      "step": "1.3.4",
+      "owner": [
+        "nm/brain/conversation.py",
+        "nm/brain/material.py"
+      ],
+      "existing": "Earlier saved-message timestamps are separated from event dates; material extraction owns correction/development relations.",
+      "gap": "Latest-message recording time and an applicable timezone are not provided as a reliable temporal anchor. Relative time must remain unresolved where the speaker frame is missing.",
+      "result": "Gap recorded; no date inference or implementation added."
+    },
+    {
+      "step": "1.3.5",
+      "owner": [
+        "nm/brain/conversation.py"
+      ],
+      "existing": "Prompt explicitly distinguishes recall from reviewing NM interpretations.",
+      "gap": "Actual model behavior conflates read-only recall and partial answers with review authority.",
+      "result": "Dependency on unresolved request/authority interpretation from step 1.2 reproduced."
+    }
+  ],
+  "boundary": {
+    "owner": "nm/brain/conversation.py / interpret",
+    "pass_condition": "Link clear current references to relevant original earlier words; preserve unresolved alternatives and choose clarification only where needed. Do not turn contextual recall into authority to review/change records.",
+    "consequential_counterexample": "A read-only recall has a correct referent but is assigned whole-record review and mutation scope.",
+    "false_rejection_neighbour": "A request to compare possible meanings may proceed while uncertainty remains; unresolved meaning alone must not force clarification.",
+    "recovery": "Existing checked_read correction under the same bounded shared ledger; no new recovery owner or call stage."
+  },
+  "live_observations": [
+    "Baseline ambiguous-reference case safely selected clarify. Baseline clear-reference case wrongly requested record review and failed current-authority validation twice.",
+    "Candidate clear-reference case correctly identified sealed samples/date/no receipt but declared whole-record review with every mutation relation and effect-only acknowledgement. Valid IDs made the semantic error admissible.",
+    "Candidate ambiguous-reference case chose clarify, but selected NM/indirect context rather than the original actor/document passages and labelled the unresolved meaning preserved_uncertainty.",
+    "Candidate first-message case safely requested clarification with no invented prior source or matter, but used preserved_uncertainty rather than needs_clarification.",
+    "Candidate partial-answer case retained relative sequence and inability to obtain a receipt in its wording, yet invented review requests and skipped account_contribution."
+  ],
+  "mechanical_checks": {
+    "method": "Read-only inline checks against candidate _turn_plan; independent agent, no extra paid calls.",
+    "results": [
+      "Unknown prior ID rejected",
+      "Latest ID supplied as prior rejected",
+      "needs_clarification with answer route rejected",
+      "NM source as mutation authority rejected",
+      "Legitimate clarification with no mutation admitted"
+    ],
+    "scope_limit": "These establish exercised ownership/route checks, not semantic correctness.",
+    "ruff": "Two line-length errors in rejected candidate. No production code retained."
+  },
+  "handoff_design_not_implemented": "Writer and reviewer already receive vars(WorkItem), so proposed context links can reach them without a new prompt or call. Durable retention would require a versioned execution-request field in turn.py, replay validation against the original prefix, and existing receipt sealing. Do not add a second owner in saved task rows. This expansion was not made because the first candidate failed live checks.",
+  "decision": "Cannot safely complete step 1.3 with this candidate. Restore production and retain the unresolved request/authority dependency and source-link gaps. This does not establish that the model or every possible design is incapable. Do not bypass the problem with scenario-specific code, forced purposes or keyword rules.",
+  "browser": "Candidate failed narrower real-model checks; it was not deployed to live-browser acceptance or saved into a test matter. No browser completion claim.",
+  "candidate": "outputs/brain-reference-20261007/rejected-context-links.patch",
+  "cost": {
+    "runs": 6,
+    "paid_calls": 7,
+    "conditional_correction_calls": 1,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "known_usage_usd": 0.0154288,
+    "approved_total_usd": 5,
+    "total_charged_usd": 4.015105,
+    "remaining_usd": 0.984895,
+    "unknown_reserved_usd": 0.0
+  },
+  "call_impact": "No change to shipped call count. Candidate kept one routine interpreter call and existing conditional correction; no additional call per reference.",
+  "case_definitions": {
+    "ambiguous-reference": {
+      "history": [
+        [
+          "t1",
+          "advocate",
+          "Our client is Saira Joshi. Arvind took the signed lease. Later, Kunal took the original survey map. Neither has reported returning either document."
+        ],
+        [
+          "t1",
+          "nm",
+          "The account mentions two people holding different documents."
+        ],
+        [
+          "t2",
+          "advocate",
+          "I need to establish where those records are."
+        ],
+        [
+          "t2",
+          "nm",
+          "Which person and document should we address first?"
+        ]
+      ],
+      "latest": "Did he return it?",
+      "current_work": "Clarify which person and document the advocate means.",
+      "expected": [
+        "Both person and document remain consequentially ambiguous. Do not choose Kunal or the map merely because they appear last.",
+        "Clarify the intended person/document; no factual return, mutation, legal enquiry or performed work is established.",
+        "Retain the prior account that neither person has reported a return without treating lack of a report as proof of non-return."
+      ]
+    },
+    "clear-reference": {
+      "history": [
+        [
+          "t1",
+          "advocate",
+          "Our client is Saira Joshi. The survey bundle reached the western office on 14 May. The sealed samples reached the eastern office on 21 May. The samples had no delivery receipt."
+        ],
+        [
+          "t1",
+          "nm",
+          "The account contains two different deliveries."
+        ],
+        [
+          "t2",
+          "advocate",
+          "The inspection took place on 23 May. I do not yet know who inspected the samples."
+        ],
+        [
+          "t2",
+          "nm",
+          "Both the delivery account and the uncertainty about the inspection are retained as reported."
+        ]
+      ],
+      "latest": "For the second delivery, repeat what I said about its date and receipt. Leave the saved account unchanged.",
+      "current_work": "Await instructions about the reported deliveries and inspection.",
+      "expected": [
+        "The second delivery means the sealed samples at the eastern office, 21 May, with no reported receipt.",
+        "Read-only recall: no new account contribution, interpretation review, record change or legal enquiry.",
+        "Preserve the condition that the saved account is unchanged."
+      ]
+    },
+    "first-message": {
+      "history": [],
+      "latest": "Can you explain what he meant by that?",
+      "current_work": "",
+      "expected": [
+        "No earlier speaker or statement is available. Ask for the missing statement/context without inventing a referent or matter.",
+        "No account, record mutation or legal enquiry is established."
+      ]
+    },
+    "partial-answer": {
+      "history": [
+        [
+          "t1",
+          "advocate",
+          "Our client is Saira Joshi. Two consignments arrived before an inspection. I am still checking their records."
+        ],
+        [
+          "t1",
+          "nm",
+          "When did the second consignment arrive, and is its delivery receipt available?"
+        ]
+      ],
+      "latest": "I only know that it arrived before the inspection. I cannot obtain that receipt.",
+      "current_work": "Establish the second consignment arrival date and receipt availability.",
+      "expected": [
+        "The answer concerns the second consignment and its delivery receipt.",
+        "Capture relative sequence and reported inability to obtain the receipt, not an invented date or proof that no receipt exists.",
+        "The date remains uncertain; receipt availability has been answered. Do not ask both questions again as though unread."
+      ]
+    }
+  },
+  "observed_runs": [
+    {
+      "artifact": "outputs/brain-reference-20261007/after-ambiguous-reference-20261007T112656618060Z-a81be700.json",
+      "sha256": "518100a7903e93c15d5d7d85769b2146955b8273ac0549818d865d6522ba4059",
+      "case": "ambiguous-reference",
+      "phase": "after",
+      "status": "structurally_accepted",
+      "candidate_sha256": "c95558917e405690dd190c7be6155f59f208c0062c08edcfe08ebf2537b507a8",
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Did he return it?",
+            "relation": "uncertain",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "clarify",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": [],
+            "context_links": [
+              {
+                "latest_source_ids": [
+                  "L1"
+                ],
+                "prior_source_ids": [
+                  "P3S1",
+                  "P2S1",
+                  "P4S1"
+                ],
+                "understanding": "The advocate's question 'Did he return it?' refers to whether either Arvind returned the signed lease or Kunal returned the original survey map, as previously mentioned.",
+                "status": "preserved_uncertainty"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "Clarify which person and document the advocate means.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4846,
+        "known_tokens_out": 176,
+        "known_cost_usd": 0.00222,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-reference-20261007/after-clear-reference-20261007T112632420164Z-afa7593e.json",
+      "sha256": "b71c087018b8da007be67723c8d26fea05c1e7755fa9d5c75aa35a02a2338531",
+      "case": "clear-reference",
+      "phase": "after",
+      "status": "structurally_accepted",
+      "candidate_sha256": "c95558917e405690dd190c7be6155f59f208c0062c08edcfe08ebf2537b507a8",
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "For the second delivery, repeat what I said about its date and receipt. Leave the saved account unchanged.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "record_requirement": {
+              "kind": "review",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": "The second delivery details are acknowledged as previously reported: date 21 May and no delivery receipt, with no change to the saved account."
+            },
+            "response_mode": "record_acknowledgement",
+            "mutation_scopes": [
+              {
+                "authority_kind": "interpretation_review",
+                "authority_source_ids": [
+                  "L1",
+                  "L2",
+                  "P1S1",
+                  "P1S2",
+                  "P1S3",
+                  "P1S4",
+                  "P3S1",
+                  "P3S2"
+                ],
+                "target_ids": [],
+                "permitted_relations": [
+                  "adds",
+                  "contradicts",
+                  "corrects",
+                  "new",
+                  "withdraws"
+                ],
+                "target_scope": "reviewed_whole"
+              }
+            ],
+            "context_links": [
+              {
+                "latest_source_ids": [
+                  "L1"
+                ],
+                "prior_source_ids": [
+                  "P1S3",
+                  "P1S4"
+                ],
+                "understanding": "The second delivery refers to the sealed samples reaching the eastern office on 21 May with no delivery receipt.",
+                "status": "resolved"
+              },
+              {
+                "latest_source_ids": [
+                  "L2"
+                ],
+                "prior_source_ids": [
+                  "P2S1",
+                  "P4S1"
+                ],
+                "understanding": "The instruction is to leave the previously saved account and uncertainties unchanged.",
+                "status": "resolved"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "Await instructions about the reported deliveries and inspection.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 5009,
+        "known_tokens_out": 335,
+        "known_cost_usd": 0.0025396000000000004,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-reference-20261007/after-first-message-20261007T112734148534Z-301f6998.json",
+      "sha256": "4d3b695e4d3be79082d8a18730b4b1c857fa9279fdf71683858657b32ff176fe",
+      "case": "first-message",
+      "phase": "after",
+      "status": "structurally_accepted",
+      "candidate_sha256": "c95558917e405690dd190c7be6155f59f208c0062c08edcfe08ebf2537b507a8",
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Can you explain what he meant by that?",
+            "relation": "uncertain",
+            "matter_scope": "none",
+            "priority": "ordinary",
+            "next_step": "clarify",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": [],
+            "context_links": [
+              {
+                "latest_source_ids": [
+                  "L1"
+                ],
+                "prior_source_ids": [],
+                "understanding": "The phrase 'that' refers to a prior statement or expression by a male subject not provided in the current conversation.",
+                "status": "preserved_uncertainty"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4304,
+        "known_tokens_out": 155,
+        "known_cost_usd": 0.0019696,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-reference-20261007/after-partial-answer-20261007T112742186678Z-8cf60a2e.json",
+      "sha256": "cf6a8dcb2e62aee2eb672ea78b1a3b400a3b764b664291299e2ae01641517f60",
+      "case": "partial-answer",
+      "phase": "after",
+      "status": "structurally_accepted",
+      "candidate_sha256": "c95558917e405690dd190c7be6155f59f208c0062c08edcfe08ebf2537b507a8",
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Confirm the arrival timing of the second consignment as only before the inspection is known.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "record_requirement": {
+              "kind": "review",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": "It is established in the record that the second consignment arrived before the inspection, with no more precise date known."
+            },
+            "response_mode": "record_acknowledgement",
+            "mutation_scopes": [
+              {
+                "authority_kind": "interpretation_review",
+                "authority_source_ids": [
+                  "L1",
+                  "P1S2"
+                ],
+                "target_ids": [],
+                "permitted_relations": [
+                  "new"
+                ],
+                "target_scope": "exact"
+              }
+            ],
+            "context_links": [
+              {
+                "latest_source_ids": [
+                  "L1"
+                ],
+                "prior_source_ids": [
+                  "P1S2"
+                ],
+                "understanding": "The second consignment arrived before the inspection as per advocate's knowledge only.",
+                "status": "resolved"
+              }
+            ]
+          },
+          {
+            "request": "Acknowledge that the delivery receipt for the second consignment cannot be obtained.",
+            "relation": "continues",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "answer",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [
+              "interpretation_review"
+            ],
+            "record_requirement": {
+              "kind": "review",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": "It is recorded that the delivery receipt for the second consignment is unavailable as confirmed by the advocate."
+            },
+            "response_mode": "record_acknowledgement",
+            "mutation_scopes": [
+              {
+                "authority_kind": "interpretation_review",
+                "authority_source_ids": [
+                  "L2",
+                  "P1S2",
+                  "P1S3"
+                ],
+                "target_ids": [],
+                "permitted_relations": [
+                  "new"
+                ],
+                "target_scope": "exact"
+              }
+            ],
+            "context_links": [
+              {
+                "latest_source_ids": [
+                  "L2"
+                ],
+                "prior_source_ids": [
+                  "P2S1"
+                ],
+                "understanding": "The receipt for the second consignment cannot be obtained by the advocate.",
+                "status": "resolved"
+              }
+            ]
+          }
+        ],
+        "active_work_after": "Establish the second consignment arrival date and receipt availability.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": true
+      },
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4697,
+        "known_tokens_out": 422,
+        "known_cost_usd": 0.002554,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-reference-20261007/baseline-ambiguous-reference-20261007T112447345932Z-953c457d.json",
+      "sha256": "d647c78749bfa7929e3683ca1debe47b68733df3fb0cfea43ef77ebedcedb803",
+      "case": "ambiguous-reference",
+      "phase": "baseline",
+      "status": "structurally_accepted",
+      "candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "accepted_proposal": {
+        "items": [
+          {
+            "request": "Did he return it?",
+            "relation": "aside",
+            "matter_scope": "current",
+            "priority": "ordinary",
+            "next_step": "clarify",
+            "reply": "",
+            "clarification": "",
+            "intent": "request",
+            "research_question": "",
+            "response_basis": "conversation_record",
+            "material_purposes": [],
+            "record_requirement": {
+              "kind": "none",
+              "target_ids": [],
+              "operation": "none",
+              "success_condition": ""
+            },
+            "response_mode": "substantive",
+            "mutation_scopes": []
+          }
+        ],
+        "active_work_after": "Clarify which person and document the advocate means.",
+        "opening": {
+          "ready": false,
+          "title": "",
+          "summary": "",
+          "party_name": "",
+          "subject": ""
+        },
+        "material_review": false
+      },
+      "error": null,
+      "metrics": {
+        "model_calls": 1,
+        "interpreter_calls": 1,
+        "conditional_recovery_calls": 0,
+        "conditional_recovery_reservations": 0,
+        "known_usage_calls": 1,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 4296,
+        "known_tokens_out": 98,
+        "known_cost_usd": 0.0018752,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    },
+    {
+      "artifact": "outputs/brain-reference-20261007/baseline-clear-reference-20261007T112459094414Z-485627d1.json",
+      "sha256": "86f3ebb7d12d27a59aa82d6d481733b1a38133eb482ababde48c86cb2603440c",
+      "case": "clear-reference",
+      "phase": "baseline",
+      "status": "not_accepted",
+      "candidate_sha256": "dc2b5031ef0437611b0dd0066720cbea60598c97a147ae97b04d0d118b0a8989",
+      "accepted_proposal": null,
+      "error": "items[0].mutation_scopes[0] requires the current original advocate authority",
+      "metrics": {
+        "model_calls": 2,
+        "interpreter_calls": 2,
+        "conditional_recovery_calls": 1,
+        "conditional_recovery_reservations": 1,
+        "known_usage_calls": 2,
+        "unestablished_usage_calls": 0,
+        "known_tokens_in": 9228,
+        "known_tokens_out": 362,
+        "known_cost_usd": 0.0042704,
+        "provider_retries": 0,
+        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+      }
+    }
+  ]
+}
