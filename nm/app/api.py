@@ -1149,13 +1149,15 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     store = application().store
     turns = store.transcripts_for(matter_id)
     unreadable = [t for t in turns if t.get("unreadable")]
+    from nm.brain.history import CURRENT_CONTEXT
     from nm.open_matter.opening_contracts import correction_notes
     from nm.open_matter.transcripts_api import project, ratings
 
-    projected, release_problems = project(m, turns)
+    projected, release_problems = project(m, turns, chronology_contract=CURRENT_CONTEXT)
     brain_rows, brain_problems = _brain_chat_rows(m)
-    projected = sorted([*projected, *brain_rows],
-                       key=lambda row: (str(row.get("at") or ""), str(row["turn_id"])))
+    # brain_chat is the atomic append sequence. Wall-clock drift or tied times
+    # cannot reorder the conversation the interpreter has already read.
+    projected = [*projected, *brain_rows]
     release_problems.extend(brain_problems)
     if len({row["turn_id"] for row in projected}) != len(projected):
         release_problems.append("conversation turn identities overlap")

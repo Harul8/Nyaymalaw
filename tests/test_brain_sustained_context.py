@@ -192,6 +192,28 @@ def test_complete_long_context_is_preserved_but_overflow_never_dispatches_or_sav
     assert interpreted["earlier_conversation"][0]["text"] == message
 
 
+def test_browser_transcript_preserves_native_append_order_when_clock_moves_back(
+        client, wired, monkeypatch):
+    install(wired, monkeypatch, [initial_plan()], [{}])
+    opened = send(client, ORIGINAL, BASE_TURN)
+    model = _model(wired, monkeypatch, [_route("Continue."), _route("Keep the sequence.")])
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    with monkeypatch.context() as clock:
+        clock.setattr(boundary, "datetime", SimpleNamespace(
+            now=lambda tz: datetime(2000, 1, 1, tzinfo=timezone.utc)))
+        send(client, "Continue.", "a-earlier-lexical-id", opened=opened)
+    readback = client.get(f"/api/matters/{opened['matter_id']}/transcript")
+    assert readback.status_code == 200, readback.text
+    assert readback.json()["state"] == "ok", readback.text
+    assert [row["turn_id"] for row in readback.json()["turns"]] == [
+        BASE_TURN, "a-earlier-lexical-id"]
+    send(client, "Keep the sequence.", "next", opened=opened)
+    interpreted = [payload for op, payload in model.calls if op == "interpret_conversation"][-1]
+    assert [row["turn_id"] for row in interpreted["earlier_conversation"]
+            if row["role"] == "advocate"] == [BASE_TURN, "a-earlier-lexical-id"]
+
+
 @pytest.mark.parametrize(("first", "followup"), [
     ("\n  Hello.\t\r\n", " \tPlease retain my original wording.\n"),
     ("\u2003My note: ‘A’ and ‘B’ are different.\u00a0",
