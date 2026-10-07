@@ -340,7 +340,7 @@ def test_advisory_label_does_not_filter_dispute_or_objective_extraction(harness,
     payload = json.loads(app.model.calls[1][0].user)
     assert "".join(passage["text"] for passage in
                    payload["current_message"]["message"]["passages"]) == MIXED_MESSAGE
-    assert payload["proposed_label"] == label
+    assert "proposed_label" not in payload
     proposal = app.held(response["chat_id"]).brain_chat[0]["preparation"]["proposal"]
     assert proposal["disputes"] and proposal["objectives"]
     assert [call[0].operation for call in app.model.calls] == OPERATIONS

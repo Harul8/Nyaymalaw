@@ -14,26 +14,29 @@ from nm.shared.model_port import (
 CONTRACT = "disputes_objectives_v2"
 LEGACY_CONTRACT = "disputes_objectives_v1"
 COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
-_TASK = """Purpose: Identify only the disputes and desired matter outcomes
-expressed in the latest message. These are internal proposals, not proved facts.
+_TASK = """Purpose: Identify only the disputes and substantive matter objectives
+communicated or revised by the latest message. Return internal proposals only.
 
 Look for:
-1. Read the complete message in context. Examine meaningful portions, preserving
-   their qualifications. The proposed label never excludes content from reading.
-   Earlier conversation resolves references; do not repeat earlier items merely
-   because they exist in the history.
+1. Start with what the latest message contributes. Earlier messages resolve its
+   references; they are not a backlog to extract again. A social exchange, neutral
+   background or instruction about NM's work alone contributes neither category.
+   Return empty arrays when the latest message contributes no dispute or objective.
 2. A dispute is an expressed disagreement, contested conduct, claim, refusal or
-   unresolved conflict affecting someone's position. An objective is a desired
-   result in the matter: what someone wants to achieve, prevent or resolve.
-   Extract each independently. Do not infer a dispute from an ordinary event or
-   invent an objective for a dispute. A request for NM to perform work is not
-   itself a matter objective, although it may also express one.
+   unresolved conflict affecting someone's position in the underlying situation.
+   A matter objective is a party's desired substantive result in that situation.
+   Producing an NM output or controlling how NM works is a work instruction, not
+   that substantive result. If a work request also states a matter objective,
+   extract only that objective. Do not infer a conflict from an ordinary event,
+   invent an objective for a dispute, or force the two collections to be paired.
 3. Preserve whose account, position or objective it is, including opposing or
    quoted positions, uncertainty, conditions, negations and hypothetical scope.
    Capture a correction or withdrawal as such, not as continued affirmative
    intent. Do not decide legal merit or add facts, remedies or legal conclusions.
-4. Select the supplied passage IDs supporting each description. Include the
-   current words and earlier words needed to understand them. Mark substantive
+4. Select the supplied passage IDs supporting each description. The selected
+   current words must communicate, revise or specifically request review of that
+   item; mere conversation continuity is insufficient. Include earlier words only
+   when needed to understand this contribution. Mark substantive
    original account as support and a reference or review instruction as context.
    NM's earlier wording is context only. A review request can authorise examining
    earlier original account; the request itself does not substantiate that account.
@@ -47,13 +50,13 @@ meaning; select several when needed to preserve context and qualifications.
 Code retains their exact words; do not copy or rewrite quotations. Use empty
 arrays when neither category is expressed. Return no general fact catalogue,
 action plan, reply draft, execution status or forced pairing of the two lists."""
-_FIRST_PROMPT = """Message: You receive the user's opening message, its proposed
-label and a code-assigned source ID. The original words are supplied separately.
+_FIRST_PROMPT = """Message: You receive the user's opening message as ordered
+original passages with code-assigned IDs and the original speaker.
 
 """ + _TASK
-_FOLLOW_UP_PROMPT = """Message: You receive the user's latest message, its proposed
-label and the complete earlier conversation in order, with source IDs, speakers
-and original words. Prior NM interpretations are not original evidence.
+_FOLLOW_UP_PROMPT = """Message: You receive the complete earlier conversation,
+followed by the user's latest message. Ordered original passages have code-assigned
+IDs and speakers. Prior NM interpretations are not original evidence.
 
 """ + _TASK
 
@@ -252,7 +255,7 @@ def extraction_units(prepared):
 def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
                                history: list[dict], history_complete: bool) -> dict:
     """One focused call; the turn owns correction, independent review and saving."""
-    label = validate_label({"label": label})
+    validate_label({"label": label})  # Diagnostic label never supplies extraction meaning.
     if history_complete is not True or not isinstance(history, list):
         raise ValueError("Complete conversation history is required")
     earlier = [{"id": f"history_{index}", "message": deepcopy(entry)}
@@ -260,13 +263,12 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
     current = {"id": "current", "message": {"role": "advocate", "text": message}}
     sources = [*earlier, current]
     try:
-        catalogue = _sources(sources)
+        _sources(sources)
     except SchemaViolation as exc:
         raise ValueError(str(exc)) from exc
     presented, choices = _passage_input(sources)
-    payload = {"proposed_label": label, "current_message": presented[-1]}
-    if earlier:
-        payload["earlier_conversation"] = presented[:-1]
+    payload = {"earlier_conversation": presented[:-1]} if earlier else {}
+    payload["current_message"] = presented[-1]
     schema = deepcopy(_SELECTED_SCHEMA)
     for kind in COLLECTIONS:
         schema["properties"][kind]["items"]["properties"]["selections"]["items"]["properties"]["passage_id"] = {

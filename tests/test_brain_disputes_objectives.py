@@ -93,7 +93,7 @@ def test_first_input_makes_one_call_and_returns_only_private_extraction():
     assert payload["current_message"] == {
         "id": "current", "message": {"role": "advocate",
             "passages": [{"id": "current:p1", "text": message}]}}
-    assert payload["proposed_label"] == "greeting"
+    assert "proposed_label" not in payload
     assert "earlier_conversation" not in payload
     assert prepared == {
         "contract": "disputes_objectives_v2", "state": "prepared_unreviewed",

@@ -4,9 +4,18 @@
   "request": "Extract only disputes and desired matter outcomes from meaningful portions of each latest message in complete conversation context. Keep the results internal.",
   "start": {
     "owner": "nm/brain/disputes_objectives.py",
-    "dependencies": ["nm/brain/release.py", "nm/brain/turn.py"],
+    "dependencies": [
+      "nm/brain/release.py",
+      "nm/brain/turn.py"
+    ],
     "pass_condition": "Mixed input produces only supported dispute/objective proposals, legitimate absence is accepted, and exact support plus private results survive saving and reopening.",
-    "counterexamples": ["Action label suppresses information", "NM draft substantiates its own statement", "A work request becomes a matter objective", "A missing result looks like reviewed absence", "Historical quotations change during replay"],
+    "counterexamples": [
+      "Action label suppresses information",
+      "NM draft substantiates its own statement",
+      "A work request becomes a matter objective",
+      "A missing result looks like reviewed absence",
+      "Historical quotations change during replay"
+    ],
     "scope": "Original text messages. No general fact extraction, action planning, research, execution or public substantive reply.",
     "archive_reuse": "None. Uses the current model and authenticated storage boundaries."
   },
@@ -37,14 +46,29 @@
       "fix": "Supply complete original messages once as ordered code-owned selectable passages. Model chooses IDs and purpose only; code supplies exact words and endpoints. Partition boundaries are navigation aids, not semantic classifications. Repeated passages have distinct owned IDs.",
       "durable_versions": "New extraction disputes_objectives_v2, release disputes_objectives_release_v2 and turn current_brain_turn_v3 bind the new passage-ID projection together. Historical raw-quote extraction v1/turn v2 and original preparation/turn v1 retain their explicit formats. Missing new IDs cannot silently turn a new snapshot into an old one.",
       "verification": "71 extractor/source-layout, 82 current/legacy release and 49 handoff checks pass. A second sustained browser conversation removed quote-copy failures but exposed semantic over-extraction from historical context and NM-work instructions; those findings are not marked accepted."
+    },
+    {
+      "owner": "nm/brain/disputes_objectives.py",
+      "status": "prompt_contract_verified_browser_recheck_pending",
+      "fix": "Define objectives as substantive party outcomes, distinct from NM work. Require an actual latest-message contribution and use history only to resolve it. Remove diagnostic label from extractor input; preserve complete original words.",
+      "verification": "84 focused extractor and authenticated app tests pass. Wrong labels cannot filter or bias extraction input. This is wiring evidence, not semantic acceptance.",
+      "call_impact": "No new calls; same focused extraction call."
     }
   ],
   "model_calls": {
     "extractor": 1,
     "planned_normal_turn": 3,
-    "planned_operations": ["label_message", "extract_disputes_objectives", "review_prepared_response"],
+    "planned_operations": [
+      "label_message",
+      "extract_disputes_objectives",
+      "review_prepared_response"
+    ],
     "shared_conditional_correction_maximum": 1,
     "new_routine_calls": 0
   },
-  "remaining": ["Tighten latest-message contribution and distinguish substantive matter outcomes from NM work in extraction/review", "Repeat browser semantic validation and update Legal brain", "Record paired classifier experiment; production classifier stays unchanged"]
+  "remaining": [
+    "Tighten latest-message contribution and distinguish substantive matter outcomes from NM work in extraction/review",
+    "Repeat browser semantic validation and update Legal brain",
+    "Record paired classifier experiment; production classifier stays unchanged"
+  ]
 }
