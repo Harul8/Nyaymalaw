@@ -1,0 +1,31 @@
+{
+  "piece": "Final unread material source-purpose diagnostic producer",
+  "base": "3b826ac",
+  "production_file": "nm/brain/material_verification.py",
+  "prompt_changes": 0,
+  "invariant": "A completed final unread review may carry independently readable selected original-source judgments for bounded re-examination; rejected drafts never become admission proof, and unrelated unselected defects cannot erase owned local dispatch evidence.",
+  "verification": "37 raw focused cases plus124 exact existing neighbours pass161 total. Isolated c50d221 unchanged owner on final37:14fail/23pass, all missing typed diagnostic. Final candidate/proposal/failed checks, non-null selected IDs, exact original reference and resolved support portions validated. Same-role internal contradiction carries no source-owner disagreement. Resolved earlier drafts excluded; provider unavailable/refused/incomplete/filtered/truncated replacement clears stale evidence. Denied correction retains last completed rejected context without admission. Both accepted and negative independently checked peers survive. Selected malformed/foreign readings/selections/endpoints reject diagnostic; unselected map defects preserve exact local diagnostic while original envelope and candidate remain rejected. No new source_disagreements/cache acceptance or canonical admission/replay changes. Existing turn ignores new field until a separate consumer piece. Source-failure metadata may persist with unread proposal diagnostics; it is not reusable source/admission proof.",
+  "call_impact": "0 additional routine or conditional calls; both existing prompts byte-identical. Raw checked accept/reject1call, malformed review2calls, denied correction1call, terminal unavailable replacement2calls. No API/browser call; cumulative spend unchanged USD3.277582/5, remaining1.722418. Later conditional dispatch will be counted separately.",
+  "reports": {
+    "material-final-source-failure-neighbours-final.xml": [
+      {
+        "tests": 161,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-final-source-failure-owner-baseline-c50d221-final37.xml": [
+      {
+        "tests": 37,
+        "failures": 14,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "browser_feature_complete": false,
+  "remaining": "This is a producer prerequisite, not a completed recovery feature. turn.py must consume only the freshly produced current GroundingResult diagnostic, validate exact proposal/source/failure bindings, distinguish source-owner disagreement from pure internal inconsistency, preserve checked peers and use the shared bound. Historical saved rejected-review metadata must never be imported as a ledger or proof. Integrated browser correction remains failed. A later role-dependent fresh material grammar can prevent internally inconsistent role/support combinations without proving semantic role accuracy; it increases schema size and needs separate measured qualification. Other material association, pending-input, requested delivery, legal, retrieval, UI and closure gaps remain in Before Build. No production-ready claim.",
+  "false_rejection_observation": "Intermediate full-map helper produced5fail/32pass on local diagnostic neighbours. Its loaded-source SHA was not captured and disk changed concurrently; this is a behaviour observation, not immutable whole-checkout causal evidence. Final scoped checker and exact git-owner baseline above are the qualifying evidence.",
+  "production_sha256": "8a4bae0238f8bab1a09b6faaced03567cf08f365a325ed8f2cf8ef037b880568"
+}

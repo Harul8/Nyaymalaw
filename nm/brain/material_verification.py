@@ -283,6 +283,7 @@ _VERDICT = {
 }
 
 _STATEMENT_SUPPORT_CONTRACT = "ordered_original_account_support_v1"
+_UNREAD_SOURCE_PURPOSE_CONTRACT = "unread_material_source_purpose_v1"
 
 
 def _source_readings_schema(source_ids) -> dict:
@@ -381,6 +382,70 @@ def _canonical_statement_selection(row: dict, properties: dict, *, readings: dic
                        "supplies_account_content": supplies, "supports_proposal": supports})
     result["account_check"]["source_checks"] = checks
     return result
+
+
+def _unread_source_purpose_failure(identity: str, proposal: dict, failed_checks: list[str],
+                                   draft: dict | None, *, account_ids: dict,
+                                   targets: dict, source_treatments: dict,
+                                   source_references: dict | None) -> dict | None:
+    """Retain a final owned failed review for re-examination, never admission.
+
+    The rejected candidate's selected source readings can remain independently
+    readable even when a sibling selection contradicts its reading. Keep the
+    completed final draft only after per-unit shape and exact ownership checks;
+    an unavailable replacement or an earlier resolved draft supplies no signal.
+    Unselected reading defects remain envelope failures, not a reason to erase
+    independently readable local dispatch evidence.
+    """
+    if source_references is None or not isinstance(draft, dict):
+        return None
+    rows = draft.get("verdicts")
+    readings = draft.get("source_readings")
+    if not isinstance(rows, list) or not isinstance(readings, dict):
+        return None
+    selected_rows = [row for row in rows if isinstance(row, dict)
+                     and row.get("candidate_id") == identity]
+    if len(selected_rows) != 1:
+        return None
+    row = selected_rows[0]
+    properties = review_properties(
+        tuple(account_ids[identity]), tuple(targets[identity]),
+        restoration_peer_ids(identity, targets), source_references=source_references,
+        wire=True)
+    schema = {**_VERDICT, "required": [*_VERDICT["required"], "account_check", "target_checks"],
+              "properties": {**_VERDICT["properties"], **_statement_selection(properties)}}
+    schema["properties"]["candidate_id"] = {"type": "string", "enum": [identity]}
+    try:
+        require_schema(row, schema)
+        sources, disagreements = {}, []
+        for source_id, selection in row["account_check"]["source_selections"].items():
+            if selection is None:
+                continue
+            require_schema(readings.get(source_id), _source_readings_schema(
+                (source_id,))["properties"][source_id])
+            reading = readings[source_id]
+            if not reading["reason"].strip() or not selection["reason"].strip():
+                return None
+            reference = source_references[source_id]
+            endpoints = [{"start": 0, "end": len(reference["quoted"])}
+                         if span["extent"] == "whole_source" else
+                         {"start": span["start"], "end": span["end"]}
+                         for span in selection["support_spans"]]
+            portions = owned_source_portions(reference, endpoints, source_id=source_id)
+            owner_role = source_treatments[source_id]["content_role"]
+            sources[source_id] = {
+                "reference": deepcopy(reference), "owner_content_role": owner_role,
+                "reading": deepcopy(reading), "selection": {
+                    "supports_statement": selection["supports_statement"],
+                    "reason": selection["reason"], "support_spans": portions}}
+            if ((reading["content_role"] in _ACCOUNT_CONTENT_ROLES)
+                    != (owner_role in _ACCOUNT_CONTENT_ROLES)):
+                disagreements.append(source_id)
+    except SchemaViolation:
+        return None
+    return {"contract": _UNREAD_SOURCE_PURPOSE_CONTRACT, "candidate_id": identity,
+            "proposal": deepcopy(proposal), "failed_checks": list(failed_checks),
+            "sources": sources, "disagreement_source_ids": disagreements}
 
 
 def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(),
@@ -655,12 +720,14 @@ def verify_material_grounding(
     previous_assessment = None
     observed_disagreements: list[dict] = []
     rejected_review_context = None
+    final_review_draft = None
     recovery_phase = "verify_material_grounding:correction"
     for attempt in range(2 if pending or requested_coverage else 0):
         if attempt and not claim_recovery(model, recovery_phase):
             issues = {key: (*value, "The shared recovery budget is exhausted")
                       for key, value in issues.items()}
             break
+        final_review_draft = None
         candidate_ids = tuple(identity for identity in pending
                               if identity not in {"$coverage", "$envelope"})
         read_coverage = requested_coverage and (
@@ -757,6 +824,7 @@ def verify_material_grounding(
                                  and row.get("candidate_id") in candidate_ids],
                     "coverage": deepcopy(result.data.get("coverage")),
                     "source_readings": deepcopy(result.data.get("source_readings"))}
+                final_review_draft = rejected_review_context
             envelope = result.data
             reading_issue = ""
             if isinstance(envelope, dict) and "source_readings" in envelope:
@@ -867,6 +935,13 @@ def verify_material_grounding(
             if key not in ("candidate_id", "allowed_account_source_ids",
                            "allowed_restoration_peer_ids")}),
     } for identity in unresolved_candidates)
+    for row in unread:
+        failure = _unread_source_purpose_failure(
+            row["candidate_id"], row["proposal"], row["validation_issues"], final_review_draft,
+            account_ids=account_ids, targets=targets, source_treatments=source_treatments,
+            source_references=source_references)
+        if failure is not None:
+            row["source_purpose_failure"] = failure
     remember_independent_review(
         review_state, context=cache_context, source_treatments=source_treatments,
         decisions=decisions)
