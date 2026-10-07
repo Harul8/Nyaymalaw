@@ -1,227 +1,314 @@
 {
   "activity": "legal brain 1.2 / 1.2.1",
-  "status": "dedicated_label_stage_implemented_broader_understanding_incomplete",
-  "owner": "nm/brain/message_labels.py: label_message, validate_message_labels; conversation.py planning handoff; turn.py durable labels",
-  "atomic_update": "Separate label-only model call and basic code validator; planner no longer generates labels. Turn saves and checks labels on replay. The unfinished automatic source-dispatch candidate is preserved separately, not shipped.",
-  "pass_condition": "Code supplies first/follow_up from complete history. Model labels coherent original portions using declared definitions, preserving mixed purposes, negation and restrictions without invented prior context.",
-  "counterexample": "Quoted sample instructions accompany a current comparison request; quoted content must not hide the actual request or authorise executing the samples.",
-  "changes": [
-    "Explicit code-owned position, independent of matter existence and wording; missing history still fails before model use.",
-    "Separate label definitions and purposes, coherent portions rather than words, explicit outcome and exact-source checks.",
-    "Removed contradictory instructions that requested copied exact_text and also prohibited copying into selections."
-  ],
-  "mechanical_checks": {
-    "passed": 135,
-    "scope": "Six focused classification/routing/authority test files; includes source identity, ambiguous exact wording, coverage, history, saved labels and replay.",
-    "semantic_proof": false,
-    "other_failures": "Twelve failures in the previous broader 188-test run were reproduced unchanged at dfb1b03; see head-baseline-results.json."
+  "status": "clean_slate_standalone_component_built_not_integrated",
+  "owner": "nm/brain/message_labels.py: label_message and validate_label",
+  "reset": {
+    "user_action": "The previous nm/brain was moved to nm/Archives/brain and an empty brain folder was created.",
+    "scope": "Rebuild only a separate message-label module. No archived implementation copied or imported.",
+    "shared_dependency": "Active nm.shared.model_port supplies the existing provider interface, schema checks, token estimates and typed failures.",
+    "historical_evidence": "All previous integration, browser, cost and semantic observations below refer to the archived implementation, not the new component."
   },
-  "probes": [
-    {
-      "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-mixed-20261007T122055523152Z-fa4d2e89.json",
-      "case": "first-mixed",
-      "meaningful_labels": [
-        {
-          "id": "part_1",
-          "category": "social",
-          "sources": [
-            {
-              "start": 0,
-              "end": 6,
-              "text": "Hello."
-            }
-          ]
-        },
-        {
-          "id": "part_2",
-          "category": "information",
-          "sources": [
-            {
-              "start": 7,
-              "end": 46,
-              "text": "I only have a draft, not a signed copy;"
-            }
-          ]
-        },
-        {
-          "id": "part_3",
-          "category": "work_request",
-          "sources": [
-            {
-              "start": 47,
-              "end": 136,
-              "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
-            }
-          ]
-        }
-      ],
-      "metrics": {
-        "model_calls": 1,
-        "interpreter_calls": 1,
-        "conditional_recovery_calls": 0,
-        "conditional_recovery_reservations": 0,
-        "known_usage_calls": 1,
-        "unestablished_usage_calls": 0,
-        "known_tokens_in": 5200,
-        "known_tokens_out": 177,
-        "known_cost_usd": 0.0023631999999999998,
-        "provider_retries": 0,
-        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
-      },
-      "semantic_result": "pass",
-      "reason": "Greeting, negated account and restricted request remain distinct."
+  "pass_condition": "Code chooses the first-message or follow-up prompt before dispatch. One model call receives the exact latest message, and full attributed history only for a follow-up, then returns exactly one permitted whole-message label.",
+  "counterexample": "The provider returns an unknown label, a list of several labels, an incomplete result or extra decision fields. Basic validation must not admit these as the requested whole-message label, while harmless case and whitespace variations remain accepted.",
+  "prompt": {
+    "words_by_prompt": {
+      "_FIRST_MESSAGE_PROMPT": 145,
+      "_FOLLOW_UP_PROMPT": 167
     },
-    {
-      "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-quoted-20261007T122119962479Z-f165a5a7.json",
-      "case": "first-quoted",
-      "meaningful_labels": [
-        {
-          "id": "part_1",
-          "category": "information",
-          "sources": [
-            {
-              "start": 0,
-              "end": 177,
-              "text": "Compare these two sample instructions: 'Proceed with the review' and 'Wait for my confirmation.' I am asking about their wording, not asking you to carry out either instruction."
-            }
-          ]
-        }
-      ],
-      "metrics": {
-        "model_calls": 1,
-        "interpreter_calls": 1,
-        "conditional_recovery_calls": 0,
-        "conditional_recovery_reservations": 0,
-        "known_usage_calls": 1,
-        "unestablished_usage_calls": 0,
-        "known_tokens_in": 5124,
-        "known_tokens_out": 151,
-        "known_cost_usd": 0.0022911999999999997,
-        "provider_retries": 0,
-        "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
-      },
-      "semantic_result": "fail",
-      "reason": "Actual comparison request is incorrectly covered only by information; downstream planning preserves its restriction."
-    }
+    "sections": [
+      "Message",
+      "Purpose",
+      "Labels",
+      "Look for",
+      "Outcome"
+    ],
+    "labels": [
+      "greeting",
+      "information",
+      "action",
+      "mixed"
+    ],
+    "responsibility": "Return one label for the whole latest message. No splitting, source-part selection, extraction, answer, planning, execution or saving.",
+    "selection": "Code chooses one prompt before the call. Neither a position field nor instructions for both first and follow-up messages are sent together."
+  },
+  "input": {
+    "first": [
+      "exact latest_message"
+    ],
+    "follow_up": [
+      "exact latest_message",
+      "complete attributed earlier_conversation"
+    ]
+  },
+  "output": {
+    "model": "Exactly one label: greeting, information, action or mixed.",
+    "component": "The checked label plus code-owned message_position, which is not sent for the model to decide."
+  },
+  "mechanical_validation": {
+    "checks": [
+      "Output is the declared object with exactly one permitted label",
+      "Nonblank latest message, attributed history and explicit completeness confirmation",
+      "Full input, schema and output capacity fit without trimming",
+      "Provider result is complete and usable"
+    ],
+    "normalization": "Meaning-preserving case and surrounding whitespace variations in the label are accepted.",
+    "limits": "The validator cannot establish semantic correctness or detect history withheld by the caller. Labels are proposals, not permission or factual findings.",
+    "recovery": "Typed errors preserve available usage metrics. No internal retry or recovery ledger is introduced; an eventual turn controller must own bounded recovery."
+  },
+  "mechanical_checks": {
+    "passed": 26,
+    "failures": 0,
+    "errors": 0,
+    "artifact": "outputs/brain-restart-20261007/label-tests.xml",
+    "scope": "Standalone component contract with scripted provider outputs, distinct first/follow-up prompt selection, complete follow-up history, four allowed whole-message labels, harmless formatting, invalid shape, missing context, budget and incomplete-result cases.",
+    "semantic_proof": false
+  },
+  "call_impact": {
+    "normal_model_calls": 1,
+    "validator_model_calls": 0,
+    "internal_semantic_retries": 0,
+    "purpose": "Classify the latest message in context only.",
+    "whole_turn_call_count": "Not established: the new turn pipeline is not rebuilt.",
+    "provider_transport_retries": "Remain an existing ModelPort/provider concern and are not a second semantic stage."
+  },
+  "live_validation": {
+    "performed": false,
+    "api_cost_usd_this_rebuild": 0,
+    "browser_accepted": false
+  },
+  "remaining_work": [
+    "Rebuild and verify the context assembly boundary that certifies complete saved history.",
+    "Wire the separate label component into the rebuilt application without letting labels authorize work, change records or hide source text from downstream readers.",
+    "Rebuild the necessary routing, persistence, response and recovery boundaries before claiming an integrated feature.",
+    "Evaluate actual pinned-model labels and observe saved/reopened browser conversations for this new implementation. Synthetic checks do not establish semantic accuracy."
   ],
-  "browser": {
-    "artifact": "outputs/brain-classification-20261007/browser-label-only-saved.json",
-    "matter_id": "mat_47302177ccddcbe7d8b3a5ea4dba296f",
-    "turns": [
+  "source_hashes": {
+    "nm/brain/message_labels.py": "4173d732c464aa908007fea49651cd87a03396e94eac635017873929cf787c70"
+  },
+  "workbook_update": {
+    "sheet": "legal brain",
+    "cells": [
+      "E22",
+      "E23",
+      "F22",
+      "F23"
+    ],
+    "before_build_unchanged": true,
+    "proof": "outputs/brain-label-reset-20261007/legal-brain-status/publication-proof.json"
+  },
+  "historical_archived_implementation": {
+    "activity": "legal brain 1.2 / 1.2.1",
+    "status": "dedicated_label_stage_implemented_broader_understanding_incomplete",
+    "owner": "nm/brain/message_labels.py: label_message, validate_message_labels; conversation.py planning handoff; turn.py durable labels",
+    "atomic_update": "Separate label-only model call and basic code validator; planner no longer generates labels. Turn saves and checks labels on replay. The unfinished automatic source-dispatch candidate is preserved separately, not shipped.",
+    "pass_condition": "Code supplies first/follow_up from complete history. Model labels coherent original portions using declared definitions, preserving mixed purposes, negation and restrictions without invented prior context.",
+    "counterexample": "Quoted sample instructions accompany a current comparison request; quoted content must not hide the actual request or authorise executing the samples.",
+    "changes": [
+      "Explicit code-owned position, independent of matter existence and wording; missing history still fails before model use.",
+      "Separate label definitions and purposes, coherent portions rather than words, explicit outcome and exact-source checks.",
+      "Removed contradictory instructions that requested copied exact_text and also prohibited copying into selections."
+    ],
+    "mechanical_checks": {
+      "passed": 135,
+      "scope": "Six focused classification/routing/authority test files; includes source identity, ambiguous exact wording, coverage, history, saved labels and replay.",
+      "semantic_proof": false,
+      "other_failures": "Twelve failures in the previous broader 188-test run were reproduced unchanged at dfb1b03; see head-baseline-results.json."
+    },
+    "probes": [
       {
-        "message": "Good evening. Please repeat my complete message exactly and do nothing else.",
-        "understanding": {
-          "contract": "attributed_message_parts_v1",
-          "position": "first",
-          "parts": [
-            {
-              "id": "part_1",
-              "category": "social",
-              "sources": [
-                {
-                  "start": 0,
-                  "end": 13,
-                  "text": "Good evening."
-                }
-              ]
-            },
-            {
-              "id": "part_2",
-              "category": "work_request",
-              "sources": [
-                {
-                  "start": 13,
-                  "end": 76,
-                  "text": " Please repeat my complete message exactly and do nothing else."
-                }
-              ]
-            }
-          ]
-        },
-        "metrics": {
-          "llm_calls": 4,
-          "provider_retries": 0,
-          "model_calls": [
-            {
-              "operation": "label_message",
-              "latency_ms": 2283,
-              "tier": "routine",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 429,
-              "tokens_out": 34,
-              "usage_recorded": true,
-              "cost_usd": 0.00022600000000000002
-            },
-            {
-              "operation": "interpret_conversation",
-              "latency_ms": 2059,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 4424,
-              "tokens_out": 105,
-              "usage_recorded": true,
-              "cost_usd": 0.0019376
-            },
-            {
-              "operation": "continue_conversation",
-              "latency_ms": 2216,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 4372,
-              "tokens_out": 131,
-              "usage_recorded": true,
-              "cost_usd": 0.0019584
-            },
-            {
-              "operation": "verify_continuation",
-              "latency_ms": 2781,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 5539,
-              "tokens_out": 178,
-              "usage_recorded": true,
-              "cost_usd": 0.0025004000000000003
-            }
-          ],
-          "recovery": {
-            "limit": 8,
-            "reserved_calls": 0,
-            "reply_reserve": 2,
-            "reply_reserved_calls": 0,
-            "dispatched_calls": 0,
-            "events": []
-          }
-        },
-        "reply": [
+        "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-mixed-20261007T122055523152Z-fa4d2e89.json",
+        "case": "first-mixed",
+        "meaningful_labels": [
           {
-            "kind": "finding",
-            "text": "Your message includes: “Good evening.” Your message includes: “Please repeat my complete message exactly and do nothing else.”",
-            "thread": null,
-            "by_when": null,
-            "no_deadline_reason": null,
-            "signal": "none",
-            "collapsible": false,
-            "disclosure": false,
-            "refs": [
-              "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
-              "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc"
-            ],
-            "source": {
-              "brain": true,
-              "id": "L1",
-              "kind": "conversation",
-              "label": "Your saved words",
-              "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
-              "text": "Good evening.",
-              "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
-              "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
-            },
+            "id": "part_1",
+            "category": "social",
             "sources": [
               {
+                "start": 0,
+                "end": 6,
+                "text": "Hello."
+              }
+            ]
+          },
+          {
+            "id": "part_2",
+            "category": "information",
+            "sources": [
+              {
+                "start": 7,
+                "end": 46,
+                "text": "I only have a draft, not a signed copy;"
+              }
+            ]
+          },
+          {
+            "id": "part_3",
+            "category": "work_request",
+            "sources": [
+              {
+                "start": 47,
+                "end": 136,
+                "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
+              }
+            ]
+          }
+        ],
+        "metrics": {
+          "model_calls": 1,
+          "interpreter_calls": 1,
+          "conditional_recovery_calls": 0,
+          "conditional_recovery_reservations": 0,
+          "known_usage_calls": 1,
+          "unestablished_usage_calls": 0,
+          "known_tokens_in": 5200,
+          "known_tokens_out": 177,
+          "known_cost_usd": 0.0023631999999999998,
+          "provider_retries": 0,
+          "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+        },
+        "semantic_result": "pass",
+        "reason": "Greeting, negated account and restricted request remain distinct."
+      },
+      {
+        "artifact": "outputs\\brain-classification-20261007\\first-message-after-first-quoted-20261007T122119962479Z-f165a5a7.json",
+        "case": "first-quoted",
+        "meaningful_labels": [
+          {
+            "id": "part_1",
+            "category": "information",
+            "sources": [
+              {
+                "start": 0,
+                "end": 177,
+                "text": "Compare these two sample instructions: 'Proceed with the review' and 'Wait for my confirmation.' I am asking about their wording, not asking you to carry out either instruction."
+              }
+            ]
+          }
+        ],
+        "metrics": {
+          "model_calls": 1,
+          "interpreter_calls": 1,
+          "conditional_recovery_calls": 0,
+          "conditional_recovery_reservations": 0,
+          "known_usage_calls": 1,
+          "unestablished_usage_calls": 0,
+          "known_tokens_in": 5124,
+          "known_tokens_out": 151,
+          "known_cost_usd": 0.0022911999999999997,
+          "provider_retries": 0,
+          "ledger_delta_is_shared": "Other users of this ledger may run concurrently; per-call usage is separate."
+        },
+        "semantic_result": "fail",
+        "reason": "Actual comparison request is incorrectly covered only by information; downstream planning preserves its restriction."
+      }
+    ],
+    "browser": {
+      "artifact": "outputs/brain-classification-20261007/browser-label-only-saved.json",
+      "matter_id": "mat_47302177ccddcbe7d8b3a5ea4dba296f",
+      "turns": [
+        {
+          "message": "Good evening. Please repeat my complete message exactly and do nothing else.",
+          "understanding": {
+            "contract": "attributed_message_parts_v1",
+            "position": "first",
+            "parts": [
+              {
+                "id": "part_1",
+                "category": "social",
+                "sources": [
+                  {
+                    "start": 0,
+                    "end": 13,
+                    "text": "Good evening."
+                  }
+                ]
+              },
+              {
+                "id": "part_2",
+                "category": "work_request",
+                "sources": [
+                  {
+                    "start": 13,
+                    "end": 76,
+                    "text": " Please repeat my complete message exactly and do nothing else."
+                  }
+                ]
+              }
+            ]
+          },
+          "metrics": {
+            "llm_calls": 4,
+            "provider_retries": 0,
+            "model_calls": [
+              {
+                "operation": "label_message",
+                "latency_ms": 2283,
+                "tier": "routine",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 429,
+                "tokens_out": 34,
+                "usage_recorded": true,
+                "cost_usd": 0.00022600000000000002
+              },
+              {
+                "operation": "interpret_conversation",
+                "latency_ms": 2059,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 4424,
+                "tokens_out": 105,
+                "usage_recorded": true,
+                "cost_usd": 0.0019376
+              },
+              {
+                "operation": "continue_conversation",
+                "latency_ms": 2216,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 4372,
+                "tokens_out": 131,
+                "usage_recorded": true,
+                "cost_usd": 0.0019584
+              },
+              {
+                "operation": "verify_continuation",
+                "latency_ms": 2781,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 5539,
+                "tokens_out": 178,
+                "usage_recorded": true,
+                "cost_usd": 0.0025004000000000003
+              }
+            ],
+            "recovery": {
+              "limit": 8,
+              "reserved_calls": 0,
+              "reply_reserve": 2,
+              "reply_reserved_calls": 0,
+              "dispatched_calls": 0,
+              "events": []
+            }
+          },
+          "reply": [
+            {
+              "kind": "finding",
+              "text": "Your message includes: “Good evening.” Your message includes: “Please repeat my complete message exactly and do nothing else.”",
+              "thread": null,
+              "by_when": null,
+              "no_deadline_reason": null,
+              "signal": "none",
+              "collapsible": false,
+              "disclosure": false,
+              "refs": [
+                "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
+                "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc"
+              ],
+              "source": {
                 "brain": true,
                 "id": "L1",
                 "kind": "conversation",
@@ -231,137 +318,137 @@
                 "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
                 "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
               },
-              {
-                "brain": true,
-                "id": "L2",
-                "kind": "conversation",
-                "label": "Your saved words",
-                "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
-                "text": "Please repeat my complete message exactly and do nothing else.",
-                "digest": "684da1c87ebf48fc1b4d3ee64d064d2335d632d3732ef5913e429a0029dedf56",
-                "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
-              }
-            ],
-            "section": "answer",
-            "continuation_request_index": 0,
-            "continuation_block_id": "block_1",
-            "inline_citations": []
-          }
-        ]
-      },
-      {
-        "message": "Thanks. Please repeat only my first greeting.",
-        "understanding": {
-          "contract": "attributed_message_parts_v1",
-          "position": "follow_up",
-          "parts": [
-            {
-              "id": "part_1",
-              "category": "social",
               "sources": [
                 {
-                  "start": 0,
-                  "end": 7,
-                  "text": "Thanks."
-                }
-              ]
-            },
-            {
-              "id": "part_2",
-              "category": "work_request",
-              "sources": [
+                  "brain": true,
+                  "id": "L1",
+                  "kind": "conversation",
+                  "label": "Your saved words",
+                  "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
+                  "text": "Good evening.",
+                  "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
+                  "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+                },
                 {
-                  "start": 7,
-                  "end": 45,
-                  "text": " Please repeat only my first greeting."
+                  "brain": true,
+                  "id": "L2",
+                  "kind": "conversation",
+                  "label": "Your saved words",
+                  "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
+                  "text": "Please repeat my complete message exactly and do nothing else.",
+                  "digest": "684da1c87ebf48fc1b4d3ee64d064d2335d632d3732ef5913e429a0029dedf56",
+                  "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
                 }
-              ]
+              ],
+              "section": "answer",
+              "continuation_request_index": 0,
+              "continuation_block_id": "block_1",
+              "inline_citations": []
             }
           ]
         },
-        "metrics": {
-          "llm_calls": 4,
-          "provider_retries": 0,
-          "model_calls": [
-            {
-              "operation": "label_message",
-              "latency_ms": 1708,
-              "tier": "routine",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 539,
-              "tokens_out": 29,
-              "usage_recorded": true,
-              "cost_usd": 0.000262
-            },
-            {
-              "operation": "interpret_conversation",
-              "latency_ms": 7454,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 5255,
-              "tokens_out": 101,
-              "usage_recorded": true,
-              "cost_usd": 0.0022635999999999997
-            },
-            {
-              "operation": "continue_conversation",
-              "latency_ms": 2812,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 5064,
-              "tokens_out": 190,
-              "usage_recorded": true,
-              "cost_usd": 0.0023296000000000002
-            },
-            {
-              "operation": "verify_continuation",
-              "latency_ms": 2791,
-              "tier": "judge",
-              "model": "gpt-4.1-mini-2025-04-14",
-              "state": "ok",
-              "tokens_in": 6155,
-              "tokens_out": 231,
-              "usage_recorded": true,
-              "cost_usd": 0.0028316
-            }
-          ],
-          "recovery": {
-            "limit": 8,
-            "reserved_calls": 0,
-            "reply_reserve": 2,
-            "reply_reserved_calls": 0,
-            "dispatched_calls": 0,
-            "events": []
-          }
-        },
-        "reply": [
-          {
-            "kind": "finding",
-            "text": "Your message includes: “Good evening.”",
-            "thread": null,
-            "by_when": null,
-            "no_deadline_reason": null,
-            "signal": "none",
-            "collapsible": false,
-            "disclosure": false,
-            "refs": [
-              "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc"
-            ],
-            "source": {
-              "brain": true,
-              "id": "P1S1",
-              "kind": "conversation",
-              "label": "Your saved words",
-              "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
-              "text": "Good evening.",
-              "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
-              "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
-            },
-            "sources": [
+        {
+          "message": "Thanks. Please repeat only my first greeting.",
+          "understanding": {
+            "contract": "attributed_message_parts_v1",
+            "position": "follow_up",
+            "parts": [
               {
+                "id": "part_1",
+                "category": "social",
+                "sources": [
+                  {
+                    "start": 0,
+                    "end": 7,
+                    "text": "Thanks."
+                  }
+                ]
+              },
+              {
+                "id": "part_2",
+                "category": "work_request",
+                "sources": [
+                  {
+                    "start": 7,
+                    "end": 45,
+                    "text": " Please repeat only my first greeting."
+                  }
+                ]
+              }
+            ]
+          },
+          "metrics": {
+            "llm_calls": 4,
+            "provider_retries": 0,
+            "model_calls": [
+              {
+                "operation": "label_message",
+                "latency_ms": 1708,
+                "tier": "routine",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 539,
+                "tokens_out": 29,
+                "usage_recorded": true,
+                "cost_usd": 0.000262
+              },
+              {
+                "operation": "interpret_conversation",
+                "latency_ms": 7454,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 5255,
+                "tokens_out": 101,
+                "usage_recorded": true,
+                "cost_usd": 0.0022635999999999997
+              },
+              {
+                "operation": "continue_conversation",
+                "latency_ms": 2812,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 5064,
+                "tokens_out": 190,
+                "usage_recorded": true,
+                "cost_usd": 0.0023296000000000002
+              },
+              {
+                "operation": "verify_continuation",
+                "latency_ms": 2791,
+                "tier": "judge",
+                "model": "gpt-4.1-mini-2025-04-14",
+                "state": "ok",
+                "tokens_in": 6155,
+                "tokens_out": 231,
+                "usage_recorded": true,
+                "cost_usd": 0.0028316
+              }
+            ],
+            "recovery": {
+              "limit": 8,
+              "reserved_calls": 0,
+              "reply_reserve": 2,
+              "reply_reserved_calls": 0,
+              "dispatched_calls": 0,
+              "events": []
+            }
+          },
+          "reply": [
+            {
+              "kind": "finding",
+              "text": "Your message includes: “Good evening.”",
+              "thread": null,
+              "by_when": null,
+              "no_deadline_reason": null,
+              "signal": "none",
+              "collapsible": false,
+              "disclosure": false,
+              "refs": [
+                "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc"
+              ],
+              "source": {
                 "brain": true,
                 "id": "P1S1",
                 "kind": "conversation",
@@ -370,135 +457,147 @@
                 "text": "Good evening.",
                 "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
                 "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
-              }
-            ],
-            "section": "answer",
-            "continuation_request_index": 0,
-            "continuation_block_id": "block_1",
-            "inline_citations": []
-          }
-        ]
-      }
-    ],
-    "result": "First and follow-up social/task labels persisted. First reply quoted the complete original message; follow-up quoted the original greeting only. Existing renderer adds attribution wrappers.",
-    "reopened_in_browser": true,
-    "reopen_model_calls": 0,
-    "screenshot": "outputs/brain-classification-20261007/browser-label-split-reopened.jpg",
-    "accepted_scope": "Separate labeling, original context handoff, saved categories, replay and requested source quotation; not general legal-work quality."
-  },
-  "remaining_work": [
-    "Measure general semantic accuracy on broader first/follow-up conversations. A small live sample is not an accuracy or false-positive rate.",
-    "Downstream planning still has its existing responsibilities and known conditional-assent, source-intake and response-quality gaps; they are not solved by labels.",
-    "The automatic source-reading-by-category candidate remains deferred until independently checked source-reading decisions have durable evidence. Current routing retains the earlier plan-owned selection.",
-    "Eleven previously identified extraction/continuation failures remain in broader tests. The scoped labeling suite has no failures."
-  ],
-  "call_impact": {
-    "normal_label_calls": 1,
-    "code_validator_model_calls": 0,
-    "normal_simple_turn_calls": 4,
-    "sequence": [
-      "label_message",
-      "interpret_conversation",
-      "continue_conversation",
-      "verify_continuation"
-    ],
-    "added_routine_calls": 1,
-    "conditional_calls": "One classification correction only on an invalid shape/source response within the existing shared recovery bound. Existing downstream work and recovery depend on the request.",
-    "observed_label_latency_ms": [
-      2283,
-      1708
-    ],
-    "observed_label_cost_usd": [
-      0.00022600000000000002,
-      0.000262
-    ]
-  },
-  "budget": {
-    "model": "gpt-4.1-mini-2025-04-14",
-    "authorized_usd": 5,
-    "earlier_charge_usd": 1.877078,
-    "ledger_charge_usd": 2.26562,
-    "combined_charge_usd": 4.142698,
-    "remaining_usd": 0.857302
-  },
-  "source_hashes": {
-    "nm/brain/message_labels.py": "82781cfa0af513acf510679da289b50043f8c63a89d110ab94a05a26dea64d4f",
-    "nm/brain/conversation.py": "8cc2c9e507ea8eeaa125995be0d6a90b5a92b0967a16ded01e045f0c9e014611",
-    "nm/brain/turn.py": "cdc6aecfd56c27fcacf3b41f9ee7f47607f9df36833196ff565ef1b2acf70646"
-  },
-  "dedicated_label_call": {
-    "status": "implemented_and_integrated",
-    "prompt_words": 246,
-    "input": [
-      "code-owned message_position",
-      "exact latest_message",
-      "complete attributed earlier_conversation"
-    ],
-    "output": "Ordered text portions with one or more of social, information and work_request; no plan or work execution.",
-    "validation": "Declared shape and labels, original word sequence and coverage. Tolerates spaces, line breaks, boundary punctuation, repeated wording and duplicate labels. Resolves durable exact original ranges. Does not certify semantic label accuracy.",
-    "recovery": "At most one typed shape/source correction for this call under the existing shared turn recovery ledger.",
-    "planning_ownership": "Planner input receives labels as proposals. Its schema cannot generate or overwrite them; original source and authority checks remain separate.",
-    "mechanical_tests": {
-      "passed": 148,
-      "failures": 0,
-      "artifact": "outputs/brain-classification-20261007/separate-label-tests.xml"
-    },
-    "live_probes": [
-      {
-        "artifact": "outputs/brain-classification-20261007/labels-only-after-first-mixed-20261007T124451938138Z-a2d388e1.json",
-        "observation": "Social portion and a coherent combined portion with both information and work_request. Negation and task restrictions preserved. Granularity remains model-selected."
-      },
-      {
-        "artifact": "outputs/brain-classification-20261007/labels-only-after-first-quoted-20261007T124640743199Z-15ca625a.json",
-        "observation": "Actual comparison request labelled work_request; scope explanation preserved separately. Quoted sample instructions were not planned or executed by this call."
-      }
-    ]
-  },
-  "previous_browser_checkpoint": {
-    "artifact": "outputs\\brain-classification-20261007\\browser-first-saved.json",
-    "matter_id": "mat_fd9da6375dc9830ba5f76d4e7deeaf38",
-    "understanding": {
-      "contract": "attributed_message_parts_v1",
-      "position": "first",
-      "parts": [
-        {
-          "id": "part_1",
-          "category": "social",
-          "sources": [
-            {
-              "start": 0,
-              "end": 6,
-              "text": "Hello."
-            }
-          ]
-        },
-        {
-          "id": "part_2",
-          "category": "information",
-          "sources": [
-            {
-              "start": 7,
-              "end": 46,
-              "text": "I only have a draft, not a signed copy;"
-            }
-          ]
-        },
-        {
-          "id": "part_3",
-          "category": "work_request",
-          "sources": [
-            {
-              "start": 47,
-              "end": 136,
-              "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
+              },
+              "sources": [
+                {
+                  "brain": true,
+                  "id": "P1S1",
+                  "kind": "conversation",
+                  "label": "Your saved words",
+                  "locator": "turn_9a20c532-5ce2-4c5d-bbb8-66607ebda2cc",
+                  "text": "Good evening.",
+                  "digest": "da545bd154e7c63011ee605a38eaddd90e1474e602837ff6e6f01a5da34b060a",
+                  "qualification": "Exact saved conversation passage. A reported account is not proof; an earlier NM response is not an independent legal source."
+                }
+              ],
+              "section": "answer",
+              "continuation_request_index": 0,
+              "continuation_block_id": "block_1",
+              "inline_citations": []
             }
           ]
         }
+      ],
+      "result": "First and follow-up social/task labels persisted. First reply quoted the complete original message; follow-up quoted the original greeting only. Existing renderer adds attribution wrappers.",
+      "reopened_in_browser": true,
+      "reopen_model_calls": 0,
+      "screenshot": "outputs/brain-classification-20261007/browser-label-split-reopened.jpg",
+      "accepted_scope": "Separate labeling, original context handoff, saved categories, replay and requested source quotation; not general legal-work quality."
+    },
+    "remaining_work": [
+      "Measure general semantic accuracy on broader first/follow-up conversations. A small live sample is not an accuracy or false-positive rate.",
+      "Downstream planning still has its existing responsibilities and known conditional-assent, source-intake and response-quality gaps; they are not solved by labels.",
+      "The automatic source-reading-by-category candidate remains deferred until independently checked source-reading decisions have durable evidence. Current routing retains the earlier plan-owned selection.",
+      "Eleven previously identified extraction/continuation failures remain in broader tests. The scoped labeling suite has no failures."
+    ],
+    "call_impact": {
+      "normal_label_calls": 1,
+      "code_validator_model_calls": 0,
+      "normal_simple_turn_calls": 4,
+      "sequence": [
+        "label_message",
+        "interpret_conversation",
+        "continue_conversation",
+        "verify_continuation"
+      ],
+      "added_routine_calls": 1,
+      "conditional_calls": "One classification correction only on an invalid shape/source response within the existing shared recovery bound. Existing downstream work and recovery depend on the request.",
+      "observed_label_latency_ms": [
+        2283,
+        1708
+      ],
+      "observed_label_cost_usd": [
+        0.00022600000000000002,
+        0.000262
       ]
     },
-    "calls": 10,
-    "screenshot": "outputs\\brain-classification-20261007\\browser-first-message.jpg",
-    "result": "First flag and three meaningful parts saved correctly. Reply only echoed the draft account and reported unfinished record reading. Requested distinction was not delivered.",
-    "accepted_end_to_end": false
+    "budget": {
+      "model": "gpt-4.1-mini-2025-04-14",
+      "authorized_usd": 5,
+      "earlier_charge_usd": 1.877078,
+      "ledger_charge_usd": 2.26562,
+      "combined_charge_usd": 4.142698,
+      "remaining_usd": 0.857302
+    },
+    "source_hashes": {
+      "nm/brain/message_labels.py": "82781cfa0af513acf510679da289b50043f8c63a89d110ab94a05a26dea64d4f",
+      "nm/brain/conversation.py": "8cc2c9e507ea8eeaa125995be0d6a90b5a92b0967a16ded01e045f0c9e014611",
+      "nm/brain/turn.py": "cdc6aecfd56c27fcacf3b41f9ee7f47607f9df36833196ff565ef1b2acf70646"
+    },
+    "dedicated_label_call": {
+      "status": "implemented_and_integrated",
+      "prompt_words": 246,
+      "input": [
+        "code-owned message_position",
+        "exact latest_message",
+        "complete attributed earlier_conversation"
+      ],
+      "output": "Ordered text portions with one or more of social, information and work_request; no plan or work execution.",
+      "validation": "Declared shape and labels, original word sequence and coverage. Tolerates spaces, line breaks, boundary punctuation, repeated wording and duplicate labels. Resolves durable exact original ranges. Does not certify semantic label accuracy.",
+      "recovery": "At most one typed shape/source correction for this call under the existing shared turn recovery ledger.",
+      "planning_ownership": "Planner input receives labels as proposals. Its schema cannot generate or overwrite them; original source and authority checks remain separate.",
+      "mechanical_tests": {
+        "passed": 148,
+        "failures": 0,
+        "artifact": "outputs/brain-classification-20261007/separate-label-tests.xml"
+      },
+      "live_probes": [
+        {
+          "artifact": "outputs/brain-classification-20261007/labels-only-after-first-mixed-20261007T124451938138Z-a2d388e1.json",
+          "observation": "Social portion and a coherent combined portion with both information and work_request. Negation and task restrictions preserved. Granularity remains model-selected."
+        },
+        {
+          "artifact": "outputs/brain-classification-20261007/labels-only-after-first-quoted-20261007T124640743199Z-15ca625a.json",
+          "observation": "Actual comparison request labelled work_request; scope explanation preserved separately. Quoted sample instructions were not planned or executed by this call."
+        }
+      ]
+    },
+    "previous_browser_checkpoint": {
+      "artifact": "outputs\\brain-classification-20261007\\browser-first-saved.json",
+      "matter_id": "mat_fd9da6375dc9830ba5f76d4e7deeaf38",
+      "understanding": {
+        "contract": "attributed_message_parts_v1",
+        "position": "first",
+        "parts": [
+          {
+            "id": "part_1",
+            "category": "social",
+            "sources": [
+              {
+                "start": 0,
+                "end": 6,
+                "text": "Hello."
+              }
+            ]
+          },
+          {
+            "id": "part_2",
+            "category": "information",
+            "sources": [
+              {
+                "start": 7,
+                "end": 46,
+                "text": "I only have a draft, not a signed copy;"
+              }
+            ]
+          },
+          {
+            "id": "part_3",
+            "category": "work_request",
+            "sources": [
+              {
+                "start": 47,
+                "end": 136,
+                "text": "explain the distinction I just made without giving legal advice or suggesting next steps."
+              }
+            ]
+          }
+        ]
+      },
+      "calls": 10,
+      "screenshot": "outputs\\brain-classification-20261007\\browser-first-message.jpg",
+      "result": "First flag and three meaningful parts saved correctly. Reply only echoed the draft account and reported unfinished record reading. Requested distinction was not delivered.",
+      "accepted_end_to_end": false
+    }
   }
 }
