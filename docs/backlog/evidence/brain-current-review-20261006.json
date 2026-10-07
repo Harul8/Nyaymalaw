@@ -2178,6 +2178,212 @@
       "browser_feature_complete": false,
       "remaining": "Integrated browser acceptance of material/dispute grouping and reaffirmed unread recovery remains pending. Source purpose, conflict identity and semantic sufficiency remain independent judgments; scripted tests do not qualify the pinned model. Material association context, final typed negative dependencies, redundant historical diagnostics, pending request indexing after withheld reply, legal applicability/conditions, useful requested delivery, retrieval performance, UI and closure remain open. No production-ready claim.",
       "production_sha256": "4ade52673e958a3518d435c35ae5ac2e0960ce0728dcb382b50ee314558340e0"
+    },
+    {
+      "piece": "Integrated grouped correction browser observation",
+      "base": "c50d221",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Earlier accepted original account can support authorised pending repair; source authority cannot replace facts, unread proposal cannot be admitted, and failed work cannot be released as completed.",
+      "verification": "Pinned mini real-user IAB request from saved conversation without fresh quantity assertion; both grouped wire consumers observed. Exact prior record/proof/history and successful task retained. Requested correction remains unfinished; truthful no-change reply and pending task saved, reopened with zero calls. Explicit live feature failure retained, no success inferred from saved turn or gate counts.",
+      "call_impact": "13 actual calls,0provider retries,4ledger conditional dispatches;8original activity calls plus5additional conditional/dependent calls. USD0.075499; combined USD3.277582/5, remaining1.722418. No new routine stage from groups. Real mini semantic admission/usefulness remain unqualified.",
+      "metrics": {
+        "llm_calls": 13,
+        "provider_retries": 0,
+        "model_calls": [
+          {
+            "operation": "interpret_conversation",
+            "latency_ms": 4643,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 7261,
+            "tokens_out": 310,
+            "usage_recorded": true,
+            "cost_usd": 0.0034004
+          },
+          {
+            "operation": "classify_account_sources",
+            "latency_ms": 3915,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 4908,
+            "tokens_out": 532,
+            "usage_recorded": true,
+            "cost_usd": 0.0028144
+          },
+          {
+            "operation": "extract_disputes",
+            "latency_ms": 1184,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 4570,
+            "tokens_out": 13,
+            "usage_recorded": true,
+            "cost_usd": 0.0018488
+          },
+          {
+            "operation": "verify_disputes",
+            "latency_ms": 5824,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 10619,
+            "tokens_out": 764,
+            "usage_recorded": true,
+            "cost_usd": 0.00547
+          },
+          {
+            "operation": "verify_disputes",
+            "latency_ms": 5143,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 10724,
+            "tokens_out": 656,
+            "usage_recorded": true,
+            "cost_usd": 0.0053392000000000005,
+            "recovery_phase": "verify_disputes:correction"
+          },
+          {
+            "operation": "extract_legal_details",
+            "latency_ms": 1899,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 5514,
+            "tokens_out": 169,
+            "usage_recorded": true,
+            "cost_usd": 0.002476
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 9673,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 15597,
+            "tokens_out": 1623,
+            "usage_recorded": true,
+            "cost_usd": 0.0088356
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 9593,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 17371,
+            "tokens_out": 1645,
+            "usage_recorded": true,
+            "cost_usd": 0.009580400000000001,
+            "recovery_phase": "verify_material_grounding:correction"
+          },
+          {
+            "operation": "continue_conversation",
+            "latency_ms": 3119,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16007,
+            "tokens_out": 337,
+            "usage_recorded": true,
+            "cost_usd": 0.006942
+          },
+          {
+            "operation": "verify_continuation",
+            "latency_ms": 3398,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16326,
+            "tokens_out": 434,
+            "usage_recorded": true,
+            "cost_usd": 0.007224800000000001
+          },
+          {
+            "operation": "continue_conversation",
+            "latency_ms": 3298,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16598,
+            "tokens_out": 334,
+            "usage_recorded": true,
+            "cost_usd": 0.0071736000000000005,
+            "recovery_phase": "continue_conversation:correction"
+          },
+          {
+            "operation": "verify_continuation",
+            "latency_ms": 3057,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16326,
+            "tokens_out": 422,
+            "usage_recorded": true,
+            "cost_usd": 0.0072056
+          },
+          {
+            "operation": "verify_continuation",
+            "latency_ms": 2921,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16362,
+            "tokens_out": 399,
+            "usage_recorded": true,
+            "cost_usd": 0.007183200000000001,
+            "recovery_phase": "verify_continuation:correction"
+          }
+        ],
+        "recovery": {
+          "limit": 8,
+          "reserved_calls": 4,
+          "reply_reserve": 2,
+          "reply_reserved_calls": 2,
+          "dispatched_calls": 4,
+          "events": [
+            {
+              "phase": "verify_disputes:correction",
+              "state": "completed",
+              "scope": "initial",
+              "reservation": 1,
+              "call": 5
+            },
+            {
+              "phase": "verify_material_grounding:correction",
+              "state": "completed",
+              "scope": "initial",
+              "reservation": 2,
+              "call": 8
+            },
+            {
+              "phase": "continue_conversation:correction",
+              "state": "completed",
+              "scope": "initial",
+              "reservation": 3,
+              "call": 11
+            },
+            {
+              "phase": "verify_continuation:correction",
+              "state": "completed",
+              "scope": "initial",
+              "reservation": 4,
+              "call": 13
+            }
+          ]
+        }
+      },
+      "packets": [
+        345,
+        358
+      ],
+      "matter_id": "mat_cdf32be008e5e8268d68de8fae33596c",
+      "browser_feature_complete": false,
+      "remaining": "Live grouped generation and no-false-completion/save/reopen protections work, but the requested repair is NOT complete. Repeated L2 work-instruction/support contradiction makes D1 unread; the separately shape-valid L1 reading disagrees with the source owner but is lost before source-role diagnostics. Both recovery branches report not_needed with budget available. Retained unfinished reply now creates a pending task, preserving prior successful task; earlier empty-fallback pending-input indexing remains open. Duplicated quotations/status are not useful delivery. Typed final source recovery and semantic repair remain prerequisites, alongside remaining legal, routing, retrieval, UI, closure and qualification queue."
     }
   ],
   "additional_reviewer_input": {
@@ -2658,13 +2864,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 3.202083,
-    "remaining_usd": 1.797917,
-    "new_ledger_attempts": 345,
+    "combined_measured_usd": 3.277582,
+    "remaining_usd": 1.722418,
+    "new_ledger_attempts": 358,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus345 measured current attempts; cumulative USD5 unchanged"
+    "basis": "166 frozen prior attempts plus358 measured current attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -2928,5 +3134,9 @@
   "task_identity_browser_evidence": {
     "path": "docs\\backlog\\evidence\\brain-task-identity-20261007.json.gz",
     "sha256": "f79961ee5097b913cf0d23e3bacb924a63fcc14190adfef8da2a6069180ba11e"
+  },
+  "grouped_browser_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-grouped-browser-20261007.json.gz",
+    "sha256": "f990f93f130e78d408b3a3a14be61e1c761a199cb76b7ecb399e7a0dc1aaa750"
   }
 }
