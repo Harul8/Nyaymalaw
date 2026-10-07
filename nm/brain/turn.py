@@ -31,7 +31,13 @@ from nm.brain.execution_contracts import (
     reader_admission_checked,
     record_change_lines,
 )
-from nm.brain.history import from_turns, released_older_turns
+from nm.brain.history import (
+    CURRENT_CONTEXT,
+    context_contract,
+    from_turns,
+    released_older_turns,
+    resolve_history,
+)
 from nm.brain.legal_requirements import (
     decompose_subjects,
     read_findings,
@@ -270,6 +276,7 @@ def _material_execution(turn: BrainTurn, matter: Matter, offer_digest: str,
              "turn_id": turn.turn_id, "offer_digest": offer_digest}
     return {
         "contract": MATERIAL_EXECUTION_CONTRACT,
+        "context_contract": CURRENT_CONTEXT,
         "scope_outcome_contract": SCOPED_RECORD_OUTCOME_CONTRACT,
         "display_policy": "requested_record_work_v2",
         "id": "mex_" + _digest(owner)[:32], "owner": owner,
@@ -1288,6 +1295,7 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
     if not isinstance(execution, dict):
         return False
     _check_execution_owner(execution, matter, row["turn_id"], row["offer_digest"])
+    selected_context = context_contract(row)
     requests = _checked_execution_requests(execution)
     snapshot = response.get("continuation", {}).get("record_snapshot")
     if snapshot is None and "display" not in execution:
@@ -1304,6 +1312,9 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
                      version=execution["expected_version"])
     after = replace(matter, brain_chat=matter.brain_chat[:index + 1],
                     version=execution["resulting_version"])
+    original_messages = resolve_history(
+        (*prior_conversation, *from_turns(before.brain_chat, state="ok").messages),
+        selected_context)
     before_disputes, before_details = _record_projections(before, prior_conversation)
     disputes, details = _record_projections(after, prior_conversation)
     if "review_scope" in execution:
@@ -1317,8 +1328,6 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
     if contract is not None or ledger is not None:
         if contract != AUTHORITY_CONTRACT or not isinstance(ledger, dict):
             raise IncompleteConversation("The saved mutation scope is absent or unsupported")
-        original_messages = (*prior_conversation,
-                             *from_turns(before.brain_chat, state="ok").messages)
         original = Conversation(original_messages,
                                 open_disputes=tuple(before_disputes["rows"]),
                                 open_material=tuple([*before_details["rows"],
@@ -1367,8 +1376,6 @@ def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversa
             if execution.get("coverage_application_contract") not in _APPLICATION_CONTRACTS:
                 raise ExecutionEvidenceInvalid(
                     "Coverage application has an unsupported owner contract")
-            original_messages = (*prior_conversation,
-                                 *from_turns(before.brain_chat, state="ok").messages)
             _, latest_sources, prior_sources = addressed_sources(original_messages, row["message"])
             treatments = owned_source_treatments(
                 response.get("material_coverage", {}).get("source_treatments"),
@@ -1659,7 +1666,8 @@ def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict
         index = positions.get((saved["turn_id"], "advocate"))
         if index is None or conversation.messages[index].text != saved["message"]:
             raise IncompleteConversation("A saved source-treatment read has no source turn")
-        _, latest, prior = addressed_sources(conversation.messages[:index], saved["message"])
+        original = resolve_history(conversation.messages[:index], context_contract(saved))
+        _, latest, prior = addressed_sources(original, saved["message"])
         expected = {key: (ref.turn_id, ref.role, ref.quoted)
                     for key, ref in prior.items() if ref.role == "advocate"}
         expected.update({key: (saved["turn_id"], "advocate", text)
@@ -1798,6 +1806,32 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
                                            "historical_result": historical}
     memo.put(key, result)
     return result
+
+
+def _historical_context(disputes, details, checked_history):
+    """Read-only saved formulations; current mutation targets remain separate."""
+    result = []
+    fields = ("id", "kind", "statement", "label", "quoted", "source_turn_id",
+              "prior_references", "relation", "related_dispute_ids", "related_material_ids",
+              "matter_scope", "basis", "importance", "grounding", "why_material")
+    for kind, stage, projection in (("dispute", "dispute_review", disputes),
+                                     ("material", "detail_review", details)):
+        current = {row["id"] for row in [*projection["rows"],
+                                         *projection.get("excluded_scope", [])]}
+        for row in projection["history"]:
+            if row["id"] in current:
+                continue
+            record = {key: deepcopy(row[key]) for key in fields if key in row}
+            value = {"id": row["id"], "type": kind, "record_status": "historical",
+                     "record": {**record, "record_role": "nm_interpretation"}}
+            support = checked_history[stage].get(row["id"])
+            if support is not None:
+                selector = support["selector"]
+                value["checked_retirement"] = {
+                    "turn_id": selector["retirement_turn_id"],
+                    "result_id": selector["retirement_result_id"]}
+            result.append(value)
+    return tuple(result)
 
 
 def _coverage_review_inputs(stage, support, history):
@@ -2768,6 +2802,8 @@ class BrainService:
             coverage_history = _saved_historical_support(
                 matter, conversation, prior_conversation=prior_conversation,
                 disputes=before_disputes, details=before_details, _memo=coverage_memo)
+            conversation = replace(conversation, record_history=_historical_context(
+                before_disputes, before_details, coverage_history))
             plan = interpret(counted_model, conversation, turn.message)
             execution = _material_execution(turn, matter, offer_digest, plan)
             _mutation_authorities(execution, conversation, plan, turn.message)

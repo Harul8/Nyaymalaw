@@ -106,6 +106,11 @@ def test_sustained_public_context_keeps_correction_diversions_reopen_and_repair(
         original = interpretations[0]
         assert original["earlier_conversation"] == expected
         assert original["saved_progress"] == before_work
+        historical = {row["id"]: row for row in original["record_history"]}
+        assert historical[DATE_ID]["record"]["statement"] == OLD_DATE
+        assert historical[DATE_ID]["record"]["record_role"] == "nm_interpretation"
+        assert historical[DATE_ID]["checked_retirement"]["turn_id"] == "context-correction-91"
+        assert DATE_ID not in {row["id"] for row in original["target_catalogue"]}
         assert [row["record"]["statement"] for row in original["target_catalogue"]
                 if row["type"] == "material"] == [row["statement"] for row in expected_records]
         assert len(interpretations) == (2 if index == 3 else 1)
