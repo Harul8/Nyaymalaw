@@ -134,9 +134,9 @@ def test_source_catalogue_is_checked_first_and_execution_uses_original_prefix(
         calls.append(("sources",))
         return source_check(*args, **kwargs)
 
-    def replay(matter, row, *, prior_conversation):
+    def replay(matter, row, *, prior_conversation, **kwargs):
         calls.append(("replay", row["turn_id"], prior_conversation))
-        return replay_check(matter, row, prior_conversation=prior_conversation)
+        return replay_check(matter, row, prior_conversation=prior_conversation, **kwargs)
 
     monkeypatch.setattr(owner, "_saved_source_treatments", sources)
     monkeypatch.setattr(owner, "_validate_execution_replay", replay)

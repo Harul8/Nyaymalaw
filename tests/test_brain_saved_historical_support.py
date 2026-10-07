@@ -179,9 +179,9 @@ def test_historical_supplier_validation_keeps_original_prefix_and_source_check_o
         calls.append(("sources",))
         return sources(*args, **kwargs)
 
-    def replay_check(matter, row, *, prior_conversation):
+    def replay_check(matter, row, *, prior_conversation, **kwargs):
         calls.append(("replay", row["turn_id"], prior_conversation))
-        return replay(matter, row, prior_conversation=prior_conversation)
+        return replay(matter, row, prior_conversation=prior_conversation, **kwargs)
 
     monkeypatch.setattr(owner, "_saved_source_treatments", source_check)
     monkeypatch.setattr(owner, "_validate_execution_replay", replay_check)

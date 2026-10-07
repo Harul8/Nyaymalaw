@@ -1071,12 +1071,89 @@ def _canonical_record_acknowledgements(
         continuation, execution, record_catalogue=record_catalogue, replay=replay)
 
 
-def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation) -> None:
+class _SavedExecutionMemo:
+    """Ephemeral mechanical evidence under one authenticated committed snapshot."""
+
+    def __init__(self, matter, *, prior_conversation=()):
+        self.snapshot = deepcopy(matter)
+        self.prior = deepcopy(tuple(prior_conversation))
+        self.validated = set()
+        self.in_progress = set()
+        self.catalogues = {}
+
+    def require(self, matter, prior_conversation):
+        length = len(matter.brain_chat)
+        rows = self.snapshot.brain_chat
+        if (tuple(prior_conversation) != self.prior or length > len(rows)
+                or tuple(matter.brain_chat) != tuple(rows[:length])
+                or replace(matter, brain_chat=rows,
+                           version=self.snapshot.version) != self.snapshot):
+            raise IncompleteConversation("The saved-proof memo has another original snapshot")
+        versions = {self.snapshot.version} if length == len(rows) else set()
+        if length < len(rows):
+            for index, field in ((length - 1, "resulting_version"), (length, "expected_version")):
+                if 0 <= index < len(rows):
+                    execution = rows[index]["response"].get("material_coverage", {}).get(
+                        "execution")
+                    if isinstance(execution, dict) and type(execution.get(field)) is int:
+                        versions.add(execution[field])
+        if type(matter.version) is not int or matter.version not in versions:
+            raise IncompleteConversation("The saved-proof memo has another prefix version")
+        return length, matter.version
+
+    def get(self, key):
+        entry = self.catalogues.get(key)
+        if entry is None:
+            return None
+        value, seal = entry
+        if _digest(value) != seal:
+            raise IncompleteConversation("A saved-proof memo catalogue has changed")
+        return deepcopy(value)
+
+    def put(self, key, value):
+        self.catalogues[key] = (deepcopy(value), _digest(value))
+
+
+def _saved_execution_memo(memo, matter, prior_conversation):
+    if memo is None:
+        memo = _SavedExecutionMemo(matter, prior_conversation=prior_conversation)
+    if not isinstance(memo, _SavedExecutionMemo):
+        raise IncompleteConversation("Saved-proof reuse needs its code-owned memo")
+    memo.require(matter, prior_conversation)
+    return memo
+
+
+def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation,
+                               _memo=None) -> None:
+    memo = _saved_execution_memo(_memo, matter, prior_conversation)
+    indices = [index for index, saved in enumerate(matter.brain_chat)
+               if saved.get("turn_id") == row.get("turn_id")]
+    if len(indices) != 1 or matter.brain_chat[indices[0]] != row:
+        raise IncompleteConversation("Saved execution replay has no unique original row")
+    execution = row["response"].get("material_coverage", {}).get("execution")
+    if isinstance(execution, dict):
+        _check_execution_owner(execution, matter, row["turn_id"], row["offer_digest"])
+    key = indices[0]
+    if key in memo.validated:
+        return
+    if key in memo.in_progress:
+        raise IncompleteConversation("Saved execution dependencies contain a cycle")
+    memo.in_progress.add(key)
+    try:
+        if _validate_execution_replay_body(
+                matter, row, prior_conversation=prior_conversation, _memo=memo) is True:
+            memo.validated.add(key)
+    finally:
+        memo.in_progress.remove(key)
+
+
+def _validate_execution_replay_body(matter: Matter, row: dict, *, prior_conversation,
+                                    _memo) -> bool:
     """Compare the receipt with its original prefix, never today's superseded state."""
     response = row["response"]
     execution = response.get("material_coverage", {}).get("execution")
     if not isinstance(execution, dict):
-        return
+        return False
     _check_execution_owner(execution, matter, row["turn_id"], row["offer_digest"])
     requests = _checked_execution_requests(execution)
     snapshot = response.get("continuation", {}).get("record_snapshot")
@@ -1085,7 +1162,7 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
             raise IncompleteConversation("A scoped record result has no saved snapshot")
         # Older receipts have no result snapshot/display binding. They remain
         # readable compatibility evidence, never new certified result proof.
-        return
+        return False
     if snapshot is None:
         raise IncompleteConversation("The saved record-result snapshot is missing")
     index = next(index for index, item in enumerate(matter.brain_chat)
@@ -1204,6 +1281,7 @@ def _validate_execution_replay(matter: Matter, row: dict, *, prior_conversation)
              if item.get("material_execution_id") == execution["id"]]
     if bound != ([display["element"]] if display is not None else []):
         raise IncompleteConversation("The execution receipt and displayed result disagree")
+    return True
 
 
 def _checked_execution_requests(execution: dict) -> list[dict]:
@@ -1468,8 +1546,16 @@ def _saved_source_treatments(matter: Matter, conversation: Conversation) -> dict
 
 
 def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
-                             prior_conversation=()) -> tuple[dict, dict]:
+                             prior_conversation=(), _memo=None) -> tuple[dict, dict]:
     """Resolve exact admission dependencies under their original execution owners."""
+    memo = _saved_execution_memo(_memo, matter, prior_conversation)
+    expected = (*prior_conversation, *from_turns(matter.brain_chat, state="ok").messages)
+    if tuple(conversation.messages) != expected:
+        raise IncompleteConversation("Saved record support requires the complete original context")
+    key = ("admissions", *memo.require(matter, prior_conversation))
+    cached = memo.get(key)
+    if cached is not None:
+        return cached
     _saved_source_treatments(matter, conversation)
     result, locators = {"dispute_review": {}, "detail_review": {}}, {}
     for saved in matter.brain_chat:
@@ -1487,7 +1573,7 @@ def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
                 or not isinstance(saved["response"].get("continuation", {}).get(
                     "record_snapshot"), dict)):
             raise IncompleteConversation("The saved record support contract is unavailable")
-        _validate_execution_replay(matter, saved, prior_conversation=prior_conversation)
+        _validate_execution_replay(matter, saved, prior_conversation=prior_conversation, _memo=memo)
         original = {identity: {key: row[key] for key in ("turn_id", "role", "quoted")}
                     for identity, row in coverage["source_treatments"].items()}
         for binding in execution["coverage_application"]["bindings"]:
@@ -1502,14 +1588,16 @@ def _saved_record_admissions(matter: Matter, conversation: Conversation, *,
                                        "source_references": deepcopy(original)}
             locators[identity] = {"admission_turn_id": saved["turn_id"],
                                   "admission_candidate_id": binding["candidate_id"]}
-    return result, locators
+    value = result, locators
+    memo.put(key, value)
+    return value
 
 
 def _saved_record_support(matter: Matter, conversation: Conversation, *,
-                          prior_conversation=(), disputes=None, details=None) -> dict:
+                          prior_conversation=(), disputes=None, details=None, _memo=None) -> dict:
     """Expose current record dependencies only after original-prefix validation."""
     admissions, _ = _saved_record_admissions(
-        matter, conversation, prior_conversation=prior_conversation)
+        matter, conversation, prior_conversation=prior_conversation, _memo=_memo)
     if disputes is None or details is None:
         disputes, details = _record_projections(matter, prior_conversation)
     if disputes.get("state") != "ok" or details.get("state") != "ok":
@@ -1520,14 +1608,21 @@ def _saved_record_support(matter: Matter, conversation: Conversation, *,
 
 
 def _saved_historical_support(matter: Matter, conversation: Conversation, *,
-                              prior_conversation=(), disputes=None, details=None) -> dict:
+                              prior_conversation=(), disputes=None, details=None,
+                              _memo=None) -> dict:
     """Keep original admission support distinct from checked historical preservation."""
+    memo = _saved_execution_memo(_memo, matter, prior_conversation)
     admissions, locators = _saved_record_admissions(
-        matter, conversation, prior_conversation=prior_conversation)
+        matter, conversation, prior_conversation=prior_conversation, _memo=memo)
     if disputes is None or details is None:
         disputes, details = _record_projections(matter, prior_conversation)
     if disputes.get("state") != "ok" or details.get("state") != "ok":
         raise IncompleteConversation("The historical record support has no checked projection")
+    key = ("history", *memo.require(matter, prior_conversation),
+           _digest({"disputes": disputes, "details": details}))
+    cached = memo.get(key)
+    if cached is not None:
+        return cached
     projections = {"dispute_review": disputes, "detail_review": details}
     active = {row["id"] for projection in projections.values() for row in projection["rows"]}
     archive = {stage: {row["id"]: row for row in projection["history"]}
@@ -1569,6 +1664,7 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
                 result[stage][identity] = {"record_support": deepcopy(support),
                                            "selector": {**selector, "proof_digest": digest},
                                            "historical_result": historical}
+    memo.put(key, result)
     return result
 
 

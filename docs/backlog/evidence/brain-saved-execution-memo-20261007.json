@@ -1,0 +1,25 @@
+{
+  "milestone": {
+    "piece": "Snapshot-bound mechanical saved-execution memo",
+    "base": "751f174",
+    "production_file": "nm/brain/turn.py",
+    "prompt_changes": 0,
+    "invariant": "Only complete original-prefix mechanical validation may be reused under the exact authenticated snapshot, earlier conversation and applicable prefix version. A partial or truthy non-True return cannot certify validation; failed, cyclic and legacy unproved rows remain uncertified.",
+    "observable_pass": "Modern replay body runs once per original row across current/history/admission helpers sharing one private memo. Changed words, metadata, ownership, earlier context and stale full-root version refuse before cache hits. Returned catalogues are detached, mutation is detected, independent success survives a peer failure and a failed unit can retry without resetting other proof.",
+    "baseline": "Committed751f174 loaded in an isolated process:30 failures and1 existing v1 replay pass across the final31-case suite. An intermediate memo candidate additionally failed3 truthy non-bool completion cases; the owner now requires explicit True.",
+    "verification": "31 new memo cases pass;97 existing saved-current, saved-history and post-application/public replay cases pass. Ruff passes. Scripted semantic decisions prove mechanical wiring only.0 live-model/browser calls.",
+    "canonical_changes": "None. Private per-read snapshot/memo and sealed detached catalogues are ephemeral. Complete conversation is required by the admission adapter. Existing v1 receipts, local IDs, result snapshots, seals and exact public replay remain unchanged.",
+    "call_impact": "0 added routine or conditional model calls. Each modern saved execution is fully checked once per shared memo; unchanged current and historical adapters reuse its checked original admissions.",
+    "remaining": "Add v2 inherited-history selectors and before-prefix reconstruction with the same memo; preserve v1 and reject unknown saved fields/versions. Wire native representation choices and original-proof admission into material/dispute and recovery consumers, then browser qualify the integrated coverage feature. Other six-activity semantic, delivery, legal and UI gaps remain open."
+  },
+  "owners": ["LB-195", "LB-196", "LB-197", "LB-183"],
+  "proof_name": "saved-execution-memo-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 snapshot-bound saved-execution memo:30 baseline failures/1 v1 replay pass;31 new plus97 existing checks pass;Ruff passes. Only full True caches, changed original snapshot/prefix/version refuses, detached catalogues and cycle/failure cleanup verified.0 prompt/0 calls; v1 durable proof unchanged. Prerequisite only, v2/live consumers and browser acceptance unfinished. Evidence:brain-saved-execution-memo-20261007.json.",
+    "current_position": "Current/history proof adapters and exact per-read memo verified; inherited receipt/replay and producer handoffs remain before live coverage activation.",
+    "evidence": ["docs/backlog/evidence/brain-saved-execution-memo-20261007.json"],
+    "tested_version": "751f174 plus one-file memo candidate",
+    "test_environment": "31 new scripted memo cases and97 existing current/history/public replay checks;0 new live-model/browser calls. Combined API spend unchanged USD2.938001 of USD5;283 calls in current ledger.",
+    "remaining": "Versioned inherited receipt plus exact original admission applicability; native options and reviewer/admission handoffs including recovery; browser inspect saved/reopened coverage, neutral disputes and useful grounded replies. Broader six-activity gaps remain open."
+  }
+}
