@@ -127,24 +127,38 @@ def test_source_catalogue_is_checked_first_and_execution_uses_original_prefix(
         client, wired, monkeypatch):
     _, _, _, _, saved = saved_revision(client, wired, monkeypatch, "corrects")
     context = current(wired, saved)
-    calls = []
-    source_check, replay_check = owner._saved_source_treatments, owner._validate_execution_replay
+    calls, applied_prefixes = [], []
+    source_check = owner._saved_source_treatments
+    replay_check = owner._validate_execution_replay_body
+    apply = owner._apply_coverage_application
 
     def sources(*args, **kwargs):
         calls.append(("sources",))
         return source_check(*args, **kwargs)
 
-    def replay(matter, row, *, prior_conversation, **kwargs):
+    def replay(matter, row, *, prior_conversation, _memo):
         calls.append(("replay", row["turn_id"], prior_conversation))
-        return replay_check(matter, row, prior_conversation=prior_conversation, **kwargs)
+        result = replay_check(matter, row, prior_conversation=prior_conversation, _memo=_memo)
+        assert result is True
+        return result
+
+    def applied(execution, receipt, **kwargs):
+        applied_prefixes.append((execution["owner"]["turn_id"], kwargs["prefix_matter"]))
+        return apply(execution, receipt, **kwargs)
 
     monkeypatch.setattr(owner, "_saved_source_treatments", sources)
-    monkeypatch.setattr(owner, "_validate_execution_replay", replay)
+    monkeypatch.setattr(owner, "_validate_execution_replay_body", replay)
+    monkeypatch.setattr(owner, "_apply_coverage_application", applied)
     result = read(saved, context)
     assert result["detail_review"] and calls[0] == ("sources",)
     assert [row[1] for row in calls if row[0] == "replay"] == [
         row["turn_id"] for row in saved.brain_chat]
     assert all(row[2] == () for row in calls if row[0] == "replay")
+    assert applied_prefixes == [
+        (row["turn_id"], replace(
+            saved, brain_chat=saved.brain_chat[:index],
+            version=row["response"]["material_coverage"]["execution"]["expected_version"]))
+        for index, row in enumerate(saved.brain_chat)]
 
 
 @pytest.mark.parametrize("fault", (

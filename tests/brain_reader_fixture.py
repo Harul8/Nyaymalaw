@@ -5,6 +5,39 @@ from copy import deepcopy
 from functools import wraps
 
 
+def _fresh_coverage_extents(payload, result):
+    """Project offered fixture syntax without repairing a substantive decision."""
+    if (payload.get("coverage_extent_contract") != "coverage_source_extents_v1"
+            or not isinstance(result, dict) or not isinstance(result.get("coverage"), dict)):
+        return
+    references = payload.get("source_treatments")
+    references = references if isinstance(references, dict) else {}
+
+    def selected(portion, identity):
+        if not isinstance(portion, dict) or "extent" in portion:
+            return portion
+        source = references.get(identity) if isinstance(identity, str) else None
+        words = source.get("quoted") if isinstance(source, dict) else None
+        if (isinstance(words, str) and bool(words.strip())
+                and type(portion.get("start")) is int and type(portion.get("end")) is int
+                and portion["start"] == 0 and portion["end"] == len(words)):
+            return {**{key: value for key, value in portion.items()
+                       if key not in ("start", "end")}, "extent": "whole_source"}
+        return {**portion, "extent": "exact_subrange"}
+
+    coverage = result["coverage"]
+    checks = coverage.get("source_checks")
+    for check in checks if isinstance(checks, list) else ():
+        if isinstance(check, dict) and isinstance(check.get("substantive_spans"), list):
+            check["substantive_spans"] = [selected(portion, check.get("source_id"))
+                                          for portion in check["substantive_spans"]]
+    dispositions = coverage.get("dispositions")
+    if isinstance(dispositions, list):
+        coverage["dispositions"] = [selected(portion, portion.get("source_id"))
+                                    if isinstance(portion, dict) else portion
+                                    for portion in dispositions]
+
+
 def fresh_review_reply(payload, data):
     """Transport only faithful old selections to the explicit fresh wire shape.
 
@@ -14,6 +47,7 @@ def fresh_review_reply(payload, data):
     """
     result = deepcopy(data)
     original = payload.get("original_input", payload)
+    _fresh_coverage_extents(original, result)
     if original.get("review_selection_contract") != "checked_source_selection_v1":
         return result
     rows = result.get("verdicts") if isinstance(result, dict) else None

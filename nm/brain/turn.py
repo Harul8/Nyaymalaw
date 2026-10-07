@@ -715,8 +715,11 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                                   opening, opening_supported, sources, latest_sources,
                                   prior_sources, opening_result,
                                   inherited_history=None, prefix_matter=None,
-                                  prior_conversation=(), _memo=None) -> dict | None:
+                                  prior_conversation=(), _memo=None,
+                                  native_record_support=False) -> dict | None:
     """Freeze pre-application assessments and original code-issued admissions."""
+    if type(native_record_support) is not bool:
+        raise ExecutionEvidenceInvalid("Fresh coverage support activation must be explicit")
     assessments = {stage: deepcopy(execution["stages"][stage]["account_coverage"])
                    for stage in ("dispute_review", "detail_review")
                    if execution["stages"][stage].get("account_coverage", {}).get(
@@ -795,12 +798,12 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                                       "result": deepcopy(opening_result)}
     if {row["result_id"] for row in receipt["bindings"]} != {row["id"] for row in material}:
         raise ExecutionEvidenceInvalid("Coverage application cannot bind every admitted result")
+    selected = {}
     if inherited_history is not None:
         stages = {"dispute_review", "detail_review"}
         if (not isinstance(inherited_history, dict) or not set(inherited_history) <= stages
                 or any(not isinstance(rows, dict) for rows in inherited_history.values())):
             raise ExecutionEvidenceInvalid("Inherited history has another stage owner")
-        selected = {}
         for stage, assessment in assessments.items():
             identities = {identity for portion in assessment["dispositions"]
                           if portion["status"] == "represented"
@@ -810,12 +813,12 @@ def _capture_coverage_application(execution, *, states, proposals, candidates, m
                 selector = entry.get("selector") if isinstance(entry, dict) else None
                 _checked_history_selector(selector)
                 selected.setdefault(stage, {})[identity] = deepcopy(selector)
-        if selected:
-            _require_coverage_before_prefix(prefix_matter, execution)
-            _resolve_inherited_history(prefix_matter, selected,
-                                       prior_conversation=prior_conversation, _memo=_memo)
-            receipt.update(contract=INHERITED_COVERAGE_APPLICATION_CONTRACT,
-                           inherited_history=selected)
+    if selected or native_record_support:
+        _require_coverage_before_prefix(prefix_matter, execution)
+        _resolve_inherited_history(prefix_matter, selected,
+                                   prior_conversation=prior_conversation, _memo=_memo)
+        receipt.update(contract=INHERITED_COVERAGE_APPLICATION_CONTRACT,
+                       inherited_history=selected)
     # Seal the durable JSON form so fresh and saved evidence are identical.
     # Dataclass tuple fields otherwise become lists only when the store serializes.
     receipt = json.loads(json.dumps(receipt, ensure_ascii=False))
@@ -1780,6 +1783,24 @@ def _saved_historical_support(matter: Matter, conversation: Conversation, *,
     return result
 
 
+def _coverage_review_inputs(stage, support, history):
+    """Keep immutable before-state proof outside each model's account presentation."""
+    if support is None and history is None:
+        return {}  # Preserve direct legacy helper callers.
+    stages = {"dispute_review", "detail_review"}
+    if (stage not in stages or not isinstance(support, dict) or not isinstance(history, dict)
+            or set(support) != stages or set(history) != stages
+            or any(not isinstance(rows, dict) for rows in (*support.values(), *history.values()))
+            or support[stage].keys() & history[stage].keys()):
+        raise ExecutionEvidenceInvalid("Coverage review inputs lost their stage-owned proof")
+    historical = history[stage]
+    records = tuple(entry["historical_result"]["record"] for entry in historical.values())
+    proof = {**support[stage], **{identity: entry["record_support"]
+                                for identity, entry in historical.items()}}
+    field = "historical_disputes" if stage == "dispute_review" else "historical_material"
+    return {"coverage_record_support": deepcopy(proof), field: deepcopy(records)}
+
+
 def _require_coverage_before_prefix(prefix_matter, execution):
     if (not isinstance(prefix_matter, Matter)
             or str(prefix_matter.id) != execution["owner"]["matter_id"]
@@ -1926,7 +1947,8 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
                    audit: list[dict] | None = None, *, source_treatments=None,
                    execution: dict | None = None, review_scope: dict | None = None,
                    recovery_context: dict | None = None,
-                   source_disagreements: list[dict] | None = None):
+                   source_disagreements: list[dict] | None = None,
+                   coverage_support=None, coverage_history=None):
     """Read ordered proposals and independently assess the original account."""
     arguments = {"earlier": conversation.messages, "latest": latest,
                  "current_matter_id": conversation.current_matter_id}
@@ -1944,7 +1966,8 @@ def _read_material(model, conversation: Conversation, latest: str, turn_id: str,
         active_disputes=conversation.open_disputes, audit=audit,
         source_treatments=source_treatments, review_scope=review_scope,
         coverage=account_coverage, review_status=review_status,
-        source_disagreements=source_disagreements, review_state=dispute_review_state)
+        source_disagreements=source_disagreements, review_state=dispute_review_state,
+        **_coverage_review_inputs("dispute_review", coverage_support, coverage_history))
     if execution is not None:
         # A checked admitted peer keeps its execution evidence even when the
         # broader reading has unread/held peers. Full coverage is separate.
@@ -2122,7 +2145,7 @@ def _localized_omission(coverage, review_scope, source_treatments) -> tuple[str,
 def _recover_material(model, *, conversation, latest, turn_id, opening, context,
                       source_treatments, source_disagreements, detail_review_state,
                       detail_coverage, grounded, active_disputes, dispute_audit,
-                      execution, review_scope):
+                      execution, review_scope, coverage_support=None, coverage_history=None):
     """Recover owned source conflicts and localized omissions once before any effects."""
     if not context:
         return grounded, active_disputes, source_treatments
@@ -2148,7 +2171,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             latest=latest, active_disputes=conversation.open_disputes,
             audit=audit, source_treatments=source_treatments, review_scope=review_scope,
             coverage=assessed, review_status=status, review_state=context["dispute_review_state"],
-            recheck_source_ids=changed if context["dispute_review_state"] else ())
+            recheck_source_ids=changed if context["dispute_review_state"] else (),
+            **_coverage_review_inputs("dispute_review", coverage_support, coverage_history))
         if checked is not None:
             context["accepted_disputes"] = checked
             dispute_audit[:] = audit
@@ -2165,7 +2189,8 @@ def _recover_material(model, *, conversation, latest, turn_id, opening, context,
             source_treatments=source_treatments, review_scope=review_scope,
             active_material=conversation.open_material, coverage=detail_coverage,
             review_state=detail_review_state,
-            recheck_source_ids=changed if detail_review_state else ())
+            recheck_source_ids=changed if detail_review_state else (),
+            **_coverage_review_inputs("detail_review", coverage_support, coverage_history))
 
     def hold_changed(reason, *, hold_disputes):
         nonlocal grounded, active_disputes
@@ -2580,6 +2605,21 @@ class BrainService:
                 conversation = Conversation((), progress=project_work(matter))
                 before_disputes, before_details = _record_projections(matter, ())
             source_treatments = _saved_source_treatments(matter, conversation)
+            stored_messages = from_turns(matter.brain_chat, state="ok").messages
+            prior_length = len(conversation.messages) - len(stored_messages)
+            if prior_length < 0:
+                raise IncompleteConversation("Saved support lost the original conversation prefix")
+            prior_conversation = conversation.messages[:prior_length]
+            if (*prior_conversation, *stored_messages) != tuple(conversation.messages):
+                raise IncompleteConversation(
+                    "Saved support changed the original conversation prefix")
+            coverage_memo = _SavedExecutionMemo(matter, prior_conversation=prior_conversation)
+            coverage_support = _saved_record_support(
+                matter, conversation, prior_conversation=prior_conversation,
+                disputes=before_disputes, details=before_details, _memo=coverage_memo)
+            coverage_history = _saved_historical_support(
+                matter, conversation, prior_conversation=prior_conversation,
+                disputes=before_disputes, details=before_details, _memo=coverage_memo)
             plan = interpret(counted_model, conversation, turn.message)
             execution = _material_execution(turn, matter, offer_digest, plan)
             _mutation_authorities(execution, conversation, plan, turn.message)
@@ -2601,7 +2641,8 @@ class BrainService:
                     counted_model, conversation, turn.message, turn.turn_id, dispute_audit,
                     source_treatments=source_treatments, execution=execution["stages"],
                     review_scope=review_scope, recovery_context=recovery_context,
-                    source_disagreements=source_disagreements)
+                    source_disagreements=source_disagreements,
+                    coverage_support=coverage_support, coverage_history=coverage_history)
                 if any(not reader_admission_checked(execution["stages"][stage]) for stage in (
                         "dispute_extraction", "detail_extraction")):
                     raise BrainRefused(
@@ -2618,7 +2659,9 @@ class BrainService:
                 source_treatments=source_treatments,
                 review_scope=review_scope if source_reviewed else None,
                 active_material=conversation.open_material, coverage=detail_account_coverage,
-                source_disagreements=source_disagreements, review_state=detail_review_state)
+                source_disagreements=source_disagreements, review_state=detail_review_state,
+                **(_coverage_review_inputs("detail_review", coverage_support, coverage_history)
+                   if source_reviewed else {}))
             if source_reviewed:
                 grounded, active_disputes, source_treatments = _recover_material(
                     counted_model, conversation=conversation, latest=turn.message,
@@ -2627,7 +2670,8 @@ class BrainService:
                     detail_review_state=detail_review_state,
                     detail_coverage=detail_account_coverage,
                     grounded=grounded, active_disputes=active_disputes,
-                    dispute_audit=dispute_audit, execution=execution, review_scope=review_scope)
+                    dispute_audit=dispute_audit, execution=execution, review_scope=review_scope,
+                    coverage_support=coverage_support, coverage_history=coverage_history)
             requested_review = source_reviewed
             # The coverage owner adds validation_issue only when no valid
             # independent assessment survives. A valid unassessed judgment
@@ -2861,7 +2905,10 @@ class BrainService:
                     opening_supported=grounded.opening_supported, sources=source_treatments,
                     latest_sources=latest_sources, prior_sources=prior_sources,
                     opening_result={"ready": ready, "title": title, "summary": summary,
-                                    "result_id": str(matter.id)})
+                                    "result_id": str(matter.id)},
+                    inherited_history=coverage_history, prefix_matter=matter,
+                    prior_conversation=prior_conversation, _memo=coverage_memo,
+                    native_record_support=source_reviewed)
                 if (coverage_application is not None
                         and coverage_application["opening"] is not None):
                     row["opening_result"] = {
@@ -2889,7 +2936,8 @@ class BrainService:
                         source_treatments=source_treatments, latest_sources=latest_sources,
                         prior_sources=prior_sources, before_disputes=before_disputes,
                         before_details=before_details, disputes=disputes, details=details,
-                        opening_result=row.get("opening_result"))
+                        opening_result=row.get("opening_result"), prefix_matter=matter,
+                        prior_conversation=prior_conversation, _memo=coverage_memo)
                     for stage, assessment in applied.items():
                         execution["stages"][stage]["account_coverage"] = assessment
                     states = [execution["stages"][name].get("account_coverage", {}).get("state")

@@ -76,7 +76,7 @@ def receipt_handoff(wired, monkeypatch, matter_id, *, original_records=(TARGET,)
     def authored_capture(execution, **kwargs):
         before = wired.store.load(matter_id)
         conversation, disputes, details = current(wired, before)
-        memo = owner._SavedExecutionMemo(before)
+        memo = kwargs.get("_memo") or owner._SavedExecutionMemo(before)
         active = owner._saved_record_support(
             before, conversation, disputes=disputes, details=details, _memo=memo)
         history = owner._saved_historical_support(
@@ -137,8 +137,8 @@ def receipt_handoff(wired, monkeypatch, matter_id, *, original_records=(TARGET,)
             )
             execution["stages"][stage]["account_coverage"] = assessment
         fresh_contexts[execution["owner"]["turn_id"]] = before, memo
-        return capture(
-            execution, **kwargs, inherited_history=history, prefix_matter=before, _memo=memo)
+        kwargs.update(inherited_history=history, prefix_matter=before, _memo=memo)
+        return capture(execution, **kwargs)
 
     def fresh_apply(execution, receipt, **kwargs):
         if receipt["contract"] == V2 and "prefix_matter" not in kwargs:
@@ -151,8 +151,25 @@ def receipt_handoff(wired, monkeypatch, matter_id, *, original_records=(TARGET,)
     monkeypatch.setattr(owner, "_apply_coverage_application", fresh_apply)
 
 
+def saved_legacy_revision(client, wired, monkeypatch):
+    """Mint the two original v1 rows before saving, never downgrade stored proof."""
+    capture = owner._capture_coverage_application
+
+    def legacy_capture(execution, **kwargs):
+        assert execution["owner"]["turn_id"] in ("application-original", "application-revision")
+        assert not any(kwargs.get("inherited_history", {}).values())
+        kwargs["native_record_support"] = False
+        return capture(execution, **kwargs)
+
+    monkeypatch.setattr(owner, "_capture_coverage_application", legacy_capture)
+    try:
+        return saved_revision(client, wired, monkeypatch, "corrects")
+    finally:
+        monkeypatch.setattr(owner, "_capture_coverage_application", capture)
+
+
 def saved_chain(client, wired, monkeypatch, readings):
-    model, opened, _, _, initial = saved_revision(client, wired, monkeypatch, "corrects")
+    model, opened, _, _, initial = saved_legacy_revision(client, wired, monkeypatch)
     original_rows = deepcopy(initial.brain_chat)
     receipt_handoff(wired, monkeypatch, initial.id)
     model.plans = iter(review_plan(message) for _, message in READINGS[:readings])
@@ -219,7 +236,7 @@ class OriginalRepairModel(PurposeModel):
 
 
 def saved_local_retirement(client, wired, monkeypatch):
-    _, opened, _, _, initial = saved_revision(client, wired, monkeypatch, "corrects")
+    _, opened, _, _, initial = saved_legacy_revision(client, wired, monkeypatch)
     restored = material(
         "circumstance", ORIGINAL, REPAIR, relation="corrects", scope="current", placement="matter",
         references=(
@@ -244,6 +261,9 @@ def saved_local_retirement(client, wired, monkeypatch):
         }],
     )
     reading = review_plan(READINGS[1][1], target=REPAIRED)
+    # The new current row supports ORIGINAL, while the retired predecessor's
+    # own admission preserves CHANGED. Comparison in the repair is not support.
+    reading["_coverage_links"][CHANGED] = {"record_ids": [REVISION], "candidate_ids": []}
     # This fixture explicitly declares that the correction instruction is not
     # substantive account, even when it appears as an earlier source later.
     model = OriginalRepairModel([repair, reading])

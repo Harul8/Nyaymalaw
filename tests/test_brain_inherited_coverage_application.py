@@ -402,6 +402,16 @@ def test_empty_known_v2_history_is_harmless_and_does_not_invent_representations(
 
 def test_saved_v1_public_replay_remains_exact_without_inherited_fields_or_new_calls(
         client, wired, monkeypatch):
+    capture = owner._capture_coverage_application
+
+    def legacy_capture(execution, **kwargs):
+        # Mint the explicit old contract before the first durable save. The
+        # ordinary producer remains native; saved rows and seals are untouched.
+        assert not any(kwargs.get("inherited_history", {}).values())
+        kwargs["native_record_support"] = False
+        return capture(execution, **kwargs)
+
+    monkeypatch.setattr(owner, "_capture_coverage_application", legacy_capture)
     model, opened, latest, reply, saved = saved_revision(client, wired, monkeypatch, "corrects")
     receipt = reply["material_coverage"]["execution"]["coverage_application"]
     assert receipt["contract"] == V1 and "inherited_history" not in receipt

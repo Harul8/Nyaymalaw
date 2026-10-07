@@ -6,11 +6,13 @@ or activation of inherited history in fresh coverage or durable replay.
 """
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
 from nm.brain import turn as owner
 from nm.brain.conversation import IncompleteConversation
+from tests import test_brain_post_application_coverage_public as application_fixture
 from tests.test_brain_board_proposals import dispute
 from tests.test_brain_dispute_transitions import TransitionModel
 from tests.test_brain_material import mutation_scope, plan, send
@@ -172,30 +174,68 @@ def test_historical_and_current_support_remain_separate_and_do_not_mutate_saved_
 def test_historical_supplier_validation_keeps_original_prefix_and_source_check_order(
         client, wired, monkeypatch):
     _, _, _, _, saved = saved_revision(client, wired, monkeypatch, "corrects")
-    context, calls = current(wired, saved), []
-    sources, replay = owner._saved_source_treatments, owner._validate_execution_replay
+    context, calls, applied_prefixes = current(wired, saved), [], []
+    sources, replay = owner._saved_source_treatments, owner._validate_execution_replay_body
+    apply = owner._apply_coverage_application
 
     def source_check(*args, **kwargs):
         calls.append(("sources",))
         return sources(*args, **kwargs)
 
-    def replay_check(matter, row, *, prior_conversation, **kwargs):
+    def replay_check(matter, row, *, prior_conversation, _memo):
         calls.append(("replay", row["turn_id"], prior_conversation))
-        return replay(matter, row, prior_conversation=prior_conversation, **kwargs)
+        result = replay(matter, row, prior_conversation=prior_conversation, _memo=_memo)
+        assert result is True
+        return result
+
+    def applied(execution, receipt, **kwargs):
+        applied_prefixes.append((execution["owner"]["turn_id"], kwargs["prefix_matter"]))
+        return apply(execution, receipt, **kwargs)
 
     monkeypatch.setattr(owner, "_saved_source_treatments", source_check)
-    monkeypatch.setattr(owner, "_validate_execution_replay", replay_check)
+    monkeypatch.setattr(owner, "_validate_execution_replay_body", replay_check)
+    monkeypatch.setattr(owner, "_apply_coverage_application", applied)
     assert read(saved, context)["detail_review"]
     assert calls[0] == ("sources",)
     assert [row[1] for row in calls if row[0] == "replay"] == [
         row["turn_id"] for row in saved.brain_chat]
     assert all(row[2] == () for row in calls if row[0] == "replay")
+    assert applied_prefixes == [
+        (row["turn_id"], replace(
+            saved, brain_chat=saved.brain_chat[:index],
+            version=row["response"]["material_coverage"]["execution"]["expected_version"]))
+        for index, row in enumerate(saved.brain_chat)]
 
 
 @pytest.mark.parametrize("legacy", ("absent_admission", "no_original_portions"))
 def test_successor_preservation_cannot_invent_missing_original_admission_support(
         client, wired, monkeypatch, legacy):
     capture = owner._capture_coverage_application
+    application_coverage = application_fixture.coverage
+
+    class LegacySuccessorModel(application_fixture.RawApplicationModel):
+        def __init__(self, plans):
+            declared = deepcopy(plans)
+            # Candidate-free conditional coverage must preserve the same
+            # authored gap; it cannot fall back to the unproved current TARGET.
+            declared[1]["_coverage_links"] = {
+                ORIGINAL: {"record_ids": [], "candidate_ids": []},
+                CHANGED: {"record_ids": [], "candidate_ids": ["D1"]},
+            }
+            super().__init__(declared)
+
+    def partial_coverage(references, *, dispositions):
+        # This scenario expressly lacks the predecessor's certified admission.
+        # Its original account remains examined, but TARGET cannot represent it.
+        # The separately checked new successor still represents its own account.
+        portions = deepcopy(dispositions)
+        for portion in portions:
+            if portion["record_ids"] == [TARGET]:
+                assert references[portion["source_id"]]["turn_id"] == "application-original"
+                portion.update(
+                    status="missing", record_ids=[], candidate_ids=[],
+                    reason="The declared legacy predecessor has no original admission proof.")
+        return application_coverage(references, state="partial", dispositions=portions)
 
     def legacy_admission(execution, **kwargs):
         receipt = capture(execution, **kwargs)
@@ -211,11 +251,26 @@ def test_successor_preservation_cannot_invent_missing_original_admission_support
         return receipt
 
     monkeypatch.setattr(owner, "_capture_coverage_application", legacy_admission)
+    monkeypatch.setattr(application_fixture, "coverage", partial_coverage)
+    monkeypatch.setattr(application_fixture, "RawApplicationModel", LegacySuccessorModel)
     _, _, _, _, saved = saved_revision(client, wired, monkeypatch, "corrects")
     context = current(wired, saved)
     owner._validate_execution_replay(saved, saved.brain_chat[0], prior_conversation=())
     owner._validate_execution_replay(saved, saved.brain_chat[-1], prior_conversation=())
     assert binding(saved.brain_chat[-1])["review"]["target_checks"][0]["account_preserved"]
+    successor = binding(saved.brain_chat[-1])["result_id"]
+    assert [row["id"] for row in context[2]["rows"]] == [successor]
+    current_support = owner._saved_record_support(
+        saved, context[0], disputes=context[1], details=context[2])
+    assert set(current_support["detail_review"]) == {successor}
+    assessment = saved.brain_chat[-1]["response"]["material_coverage"]["execution"][
+        "stages"]["detail_review"]["account_coverage"]
+    assert assessment["state"] == "partial" and assessment["missing_source_ids"] == ["P1S1"], (
+        assessment)
+    original = next(portion for portion in assessment["dispositions"]
+                    if portion["turn_id"] == "application-original")
+    assert original["status"] == "missing" and original["record_ids"] == []
+    assert "historical_representations" not in original
     assert read(saved, context) == {stage: {} for stage in STAGES}
 
 

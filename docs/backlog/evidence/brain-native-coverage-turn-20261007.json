@@ -1,0 +1,32 @@
+{
+  "milestone": {
+    "piece": "Public turn and recovery consume immutable original-linked coverage proof",
+    "base": "3803b12",
+    "production_file": "nm/brain/turn.py",
+    "prompt_changes": 0,
+    "invariant": "Ordinary and conditional coverage review use the same checked before-state current and historical original admissions. Coverage application preserves their owned source, target and version, including an authorised earlier-account repair that retires a current record without selecting previously archived IDs. Fresh activation must not change old saved replay contracts.",
+    "observable_pass": "Raw native coverage traverses the actual public reviewers, application, atomic saving and idempotent replay. Current and archived original accounts remain separately attributable. A locally retired original account can be covered under fresh v2 with empty inherited selectors; unsupported legacy original proof stays an explicit gap while a separately checked successor is preserved. Wrong owners, selectors, stage maps and prefix versions refuse; detached model presentation cannot mutate durable proof. One memo covers the immutable loaded snapshot; prepared replay uses its own snapshot.",
+    "verification": "13 focused raw-public producer/handoff/application/save/replay cases pass; 136 saved support/history/memo/inherited regressions, 52 public post-application/domain/source recovery cases, 38 source-purpose/isolation regressions, 32 native fixture transport cases and both native reviewer suites (29 material,31 dispute) pass. Ruff passes. Offline authored semantic decisions demonstrate mechanical wiring only; they do not establish real-model accuracy.",
+    "canonical_changes": "Fresh source-reviewed coverage explicitly activates the existing owned_coverage_application_v2 even with no selected inherited history. Original v1 minting/default helper behaviour and saved v1 replay remain unchanged. No new canonical fields, source projection, seals or rendering version. Older fixtures mint their declared legacy contract before saving; they do not rewrite historical receipts.",
+    "call_impact": "0 added routine stages and0 prompt changes. Support/history reconstruction, native activation and receipts are code-owned. Public scripted ordinary/repair review8 calls; omission recovery10 (2 conditional); changed source-purpose recovery12 (4 conditional, including existing malformed-response correction); idempotent replay0. Shared recovery ledger and reply reserve unchanged. No new live spend; combined measured USD2.938001 of USD5.",
+    "remaining": "Pinned-model browser coverage, correction, source panes and reopening still require qualification. Dispute existence/retirement, source reaffirmation, material association, useful requested delivery, legal entailment/application/force, UI diagnostics and closure remain separate open owners. Mechanical passing counts do not complete those behaviours.",
+    "baseline": "13 focused raw-public tests using isolated committed3803b12 turn module with current consumers and faithful fixture transport:11 fail/2 existing owner-prefix rejection neighbours pass. No working production files rewritten; candidate13pass."
+  },
+  "owners": [
+    "LB-195",
+    "LB-196",
+    "LB-197",
+    "LB-183"
+  ],
+  "proof_name": "native-coverage-turn-before-build-proof.json",
+  "workbook": {
+    "checkpoint": "2026-10-07 public native coverage handoff: ordinary/recovery use immutable current+historical original support and one loaded-snapshot memo; prepared replay has a separate snapshot. Fresh v2 activation retains locally retired original-account repair with empty inherited selectors; legacy unproved originals stay explicit gaps.0 prompts/new stages. 13 raw-public handoff cases pass;136 saved+52 public+38 isolation+32 fixture regressions and material29/dispute31 pass,Ruff clean. Browser qualification and semantic owners remain open. Evidence:brain-native-coverage-turn-20261007.json.",
+    "current_position": "Native coverage consumers now wired through public ordinary and recovery turns; mechanically checked persistence/replay. Pinned-model browser qualification remains before complete coverage acceptance.",
+    "evidence": [
+      "docs/backlog/evidence/brain-native-coverage-turn-20261007.json"
+    ],
+    "tested_version": "3803b12 plus single-file turn coverage handoff candidate",
+    "test_environment": "Focused scripted public and saved/recovery ownership tests, raw native reviewer output, Ruff. No new pinned-model/browser calls. Combined measured spend USD2.938001 of USD5.",
+    "remaining": "Browser verify current/history coverage, authorised earlier-account repair, saved source pane and0-call replay. Dispute identity/retirement, source reaffirmation, association, requested delivery, legal accuracy/force, UI and closure remain open; no production readiness claim."
+  }
+}

@@ -114,7 +114,7 @@ def test_later_committed_metadata_version_cannot_use_last_receipt_as_full_snapsh
     stale = replace(committed, version=last_result_version)
     with pytest.raises(IncompleteConversation):
         checked(stale, stale.brain_chat[-1], memo)
-    assert calls == [(row["turn_id"], True)]
+    assert calls == [(saved_row["turn_id"], True) for saved_row in saved.brain_chat]
     assert wired.store.load(saved.id) == committed
 
 

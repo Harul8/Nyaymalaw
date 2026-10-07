@@ -14,6 +14,7 @@ from nm.brain import material_verification as owner
 from nm.brain import record_review as record
 from nm.brain.conversation import Message, OpeningCandidate
 from nm.shared.model_port import ContextOverflow, SchemaViolation, estimate_tokens, require_schema
+from tests.brain_reader_fixture import fresh_review_reply
 from tests.test_brain_coverage_record_support import review as positive_review
 from tests.test_brain_source_support_verifiers import (
     SCOPE,
@@ -34,22 +35,9 @@ EARLIER = (Message("earlier-account", "advocate", ACCOUNT),
 
 def extent_coverage(value, references):
     """Transport exact fixture endpoints, preserving every authored judgment."""
-    result = deepcopy(value)
-
-    def extent(portion, source):
-        if (portion["start"], portion["end"]) == (0, len(references[source]["quoted"])):
-            return {"extent": "whole_source"}
-        return {"extent": "exact_subrange", "start": portion["start"], "end": portion["end"]}
-
-    for check in result["source_checks"]:
-        check["substantive_spans"] = [extent(part, check["source_id"])
-                                      for part in check["substantive_spans"]]
-    for portion in result["dispositions"]:
-        selected = extent(portion, portion["source_id"])
-        portion.pop("start")
-        portion.pop("end")
-        portion.update(selected)
-    return result
+    return fresh_review_reply(
+        {"coverage_extent_contract": record.COVERAGE_EXTENT_CONTRACT,
+         "source_treatments": references}, {"coverage": value})["coverage"]
 
 
 class ChoicesJudge(RawJudge):
@@ -62,19 +50,6 @@ class ChoicesJudge(RawJudge):
     def context_budget(self, tier):
         super().context_budget(tier)
         return self.budget
-
-    def structured(self, prompt, schema, tier, *, max_tokens):
-        result = super().structured(prompt, schema, tier, max_tokens=max_tokens)
-        call = self.calls[-1]
-        if (call["payload"].get("coverage_extent_contract") == record.COVERAGE_EXTENT_CONTRACT
-                and "coverage" in result.data):
-            data = deepcopy(result.data)
-            data["coverage"] = extent_coverage(
-                data["coverage"], call["payload"]["source_treatments"])
-            call["output"] = deepcopy(data)
-            result = replace(result, data=data)
-        return result
-
 
 def record_row(identity="saved-detail", *, words=ACCOUNT, turn="earlier-account"):
     return {"id": identity, "kind": "event", "statement": words, "quoted": words,
