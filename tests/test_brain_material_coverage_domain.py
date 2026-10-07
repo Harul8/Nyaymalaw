@@ -166,10 +166,16 @@ def test_schema_limits_material_representation_but_keeps_full_review_context():
     assert payload["coverage_record_ids"] == ["material"]
     assert payload["coverage_candidate_ids"] == ["D1"]
     choices = schema["properties"]["coverage"]["properties"]["dispositions"]["items"]
-    assert choices["properties"]["record_ids"]["items"]["enum"] == ["material"]
-    assert choices["properties"]["candidate_ids"]["items"]["enum"] == ["D1"]
-    assert schema["properties"]["verdicts"]["items"]["properties"][
-        "candidate_id"]["enum"] == ["D1", "O1"]
+    represented = [branch for branch in choices.get("anyOf", [choices])
+                   if branch["properties"]["status"]["enum"] == ["represented"]]
+    assert represented
+    assert all(branch["properties"]["record_ids"]["items"]["enum"] == ["material"]
+               for branch in represented)
+    assert all(branch["properties"]["candidate_ids"]["items"]["enum"] == ["D1"]
+               for branch in represented)
+    verdict_schema = schema["properties"]["verdicts"]["items"]
+    assert {identity for branch in verdict_schema.get("anyOf", [verdict_schema])
+            for identity in branch["properties"]["candidate_id"]["enum"]} == {"D1", "O1"}
     assert [row["id"] for row in payload["active_disputes"]] == ["issue"]
     assert [row["candidate_id"] for row in payload["candidates"]] == ["D1", "O1"]
     assert ["".join(span["text"] for span in row["source_spans"])

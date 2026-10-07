@@ -251,7 +251,7 @@ def test_requested_empty_reviews_distinguish_omission_from_already_represented_n
     assert all(r["record_role"] == "nm_interpretation" for r in sent["active_material"])
     assert sent["active_disputes"][0]["id"] == "issue"
     assert schema["properties"]["verdicts"]["maxItems"] == 0
-    assert schema["required"] == ["verdicts", "coverage"]
+    assert schema["required"] == ["source_readings", "verdicts", "coverage"]
     assert "Activity 6" in system
     assert sink["state"] == state and sink["contract"] == "independent_account_coverage_v1"
     assert sink["review_scope"] == scope

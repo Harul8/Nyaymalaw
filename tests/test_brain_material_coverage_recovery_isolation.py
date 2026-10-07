@@ -103,8 +103,8 @@ def test_opening_only_correction_schema_does_not_request_another_material_assess
     result, sink, _ = review_opening_and_detail(port, representation)
 
     initial, correction = port.calls
-    assert set(initial["schema"]["required"]) == {"verdicts", "coverage"}
-    assert correction["schema"]["required"] == ["verdicts"]
+    assert set(initial["schema"]["required"]) == {"source_readings", "verdicts", "coverage"}
+    assert correction["schema"]["required"] == ["source_readings", "verdicts"]
     assert "coverage" not in correction["schema"]["properties"]
     assert [row["candidate_id"] for row in correction["payload"]["candidates"]] == ["O1"]
     assert [row["candidate_id"] for row in correction["payload"][
