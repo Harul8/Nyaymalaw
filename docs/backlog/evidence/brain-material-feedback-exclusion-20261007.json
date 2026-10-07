@@ -1,0 +1,30 @@
+{
+  "piece": "Material feedback isolates failed source-owner dependencies",
+  "base": "b50a632",
+  "production_file": "nm/brain/material_verification.py",
+  "prompt_changes": 0,
+  "invariant": "A source-owner failure excludes only failed units with an actual typed disagreement with that owner; sharing eligible or selected original words alone cannot suppress independently recoverable internal checks.",
+  "verification": "Seven focused additions plus39 feedback and37 final-diagnostic neighbours pass83. Owned unique exclusion IDs validated; excluded rows still undergo complete final proposal/reference/portion/check validation. Actual owner-disagreeing unit excludes even with internal contradiction; same-owner internal unit survives despite selecting the excluded source. Surviving token retains complete originals and cache binding. No semantic guess, fact change, source-role override or new model call. Both prompts/default paths unchanged. Unfinished consumer preserved before changing this sole production owner; this prerequisite is not public/browser acceptance.",
+  "call_impact": "0 added routine or conditional calls in this owner; filtering and sealing are mechanical. Existing raw re-review1call. No live calls; cumulative USD3.277582/5, remaining1.722418.",
+  "reports": {
+    "material-feedback-exclusion-final.xml": [
+      {
+        "tests": 83,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "material-recovery-feedback-exclusion-baseline-b50a632.xml": [
+      {
+        "tests": 46,
+        "failures": 7,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "browser_feature_complete": false,
+  "remaining": "Turn consumer candidate preserved as outputs/brain-repair-20261006/turn-feedback-consumer-candidate.patch; not completed or committed. Activate bounded independent material recovery after source-owner failure, report denied dispatch truthfully, and qualify actual public saving/replay and the pending browser correction. Nine older scripted recovery-neighbour failures match the unchanged turn baseline but remain unresolved. Other six-activity semantic, legal/retrieval/delivery/association/pending-input/UI/closure gaps remain in Before Build; no readiness claim.",
+  "production_sha256": "535a069d83c7967d727f723b63ee8a0bad65eaced230ef8cb1d0407893d997be"
+}

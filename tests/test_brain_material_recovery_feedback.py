@@ -68,10 +68,11 @@ def seed(*, peers=False, pure_internal=False):
 
 
 def feedback(grounded, *, candidates=(CANDIDATE,), treatments=TREATMENTS,
-             earlier=EARLIER, latest=LATEST):
+             earlier=EARLIER, latest=LATEST, exclude=OMITTED):
+    kwargs = {} if exclude is OMITTED else {"exclude_source_owner_ids": exclude}
     return owner.material_review_feedback(
         grounded, candidates=candidates, opening=OPENING, earlier=earlier, latest=latest,
-        source_treatments=treatments)
+        source_treatments=treatments, **kwargs)
 
 
 def good_answer():
@@ -117,6 +118,74 @@ def test_same_role_internal_support_conflict_needs_no_source_owner_reconsiderati
     grounded, _, _ = seed(pure_internal=True)
     token = feedback(grounded)
     assert token.source_owner_ids == () and token.candidate_ids == ("D1",)
+
+
+def test_failed_source_owner_excludes_its_actual_disagreement_even_with_internal_conflict():
+    grounded, state, candidates = seed()
+    before = deepcopy((grounded, state["cache"], TREATMENTS))
+    failure = grounded.unread_proposals[0]["source_purpose_failure"]
+    assert failure["disagreement_source_ids"] == ["L1"]
+    assert failure["sources"]["L2"]["selection"]["supports_statement"] is True
+    assert failure["sources"]["L2"]["reading"]["content_role"] == "work_instruction"
+
+    assert feedback(grounded, candidates=candidates, exclude=("L1",)) is None
+    assert (grounded, state["cache"], TREATMENTS) == before
+
+
+def test_shared_selected_source_without_owner_disagreement_keeps_internal_feedback():
+    grounded, state, candidates = seed(pure_internal=True)
+    before = deepcopy((grounded, state["cache"], TREATMENTS))
+    failure = grounded.unread_proposals[0]["source_purpose_failure"]
+    selected = failure["sources"]["L1"]
+    assert failure["disagreement_source_ids"] == []
+    assert selected["reading"]["content_role"] == selected["owner_content_role"]
+    assert selected["selection"]["supports_statement"] is True
+
+    token = feedback(grounded, candidates=candidates, exclude=("L1",))
+    assert token.source_owner_ids == () and token.candidate_ids == ("D1",)
+    assert (grounded, state["cache"], TREATMENTS) == before
+
+
+def test_excluded_source_owner_unit_still_requires_intact_exact_selected_words():
+    grounded, _, _ = seed()
+    altered = deepcopy(grounded)
+    failure = altered.unread_proposals[0]["source_purpose_failure"]
+    assert failure["disagreement_source_ids"] == ["L1"]
+    failure["sources"]["L1"]["selection"]["support_spans"][0]["quoted"] = (
+        "A substituted original account.")
+
+    with pytest.raises(SchemaViolation, match="changed its exact selected words"):
+        feedback(altered, exclude=("L1",))
+
+
+@pytest.mark.parametrize("exclude", [("foreign",), ("L1", "L1"), ["L1"]],
+                         ids=["unknown", "duplicate", "not-tuple"])
+def test_source_owner_exclusions_require_unique_owned_tuple_ids(exclude):
+    grounded, state, candidates = seed()
+    before = deepcopy((grounded, state["cache"], TREATMENTS, exclude))
+
+    with pytest.raises(SchemaViolation, match="exclusion needs owned failed source IDs"):
+        feedback(grounded, candidates=candidates, exclude=exclude)
+    assert (grounded, state["cache"], TREATMENTS, exclude) == before
+
+
+def test_retained_internal_feedback_rereviews_exact_originals_and_preserves_cache_binding():
+    grounded, state, candidates = seed(pure_internal=True)
+    token = feedback(grounded, candidates=candidates, exclude=("L1",))
+    before = deepcopy(state["cache"])
+    port = RawJudge([good_answer()], transport=False)
+
+    result, _ = review(port, state=state, candidates=candidates, feedback=token)
+    assert result.details == candidates and result.unread_proposals == ()
+    assert len(port.calls) == 1
+    payload = port.calls[0]["payload"]
+    assert payload["source_treatments"] == REFERENCES
+    assert payload["earlier_conversation"] == before.context["earlier_conversation"]
+    assert payload["latest_message_spans"] == before.context["latest_message_spans"]
+    assert payload["rejected_review_context"]["unread_proposals"] == expected_input(grounded)
+    assert state["cache"].context == before.context
+    assert state["cache"].source_treatments == before.source_treatments
+    assert token == feedback(grounded, candidates=candidates, exclude=("L1",))
 
 
 @pytest.mark.parametrize("accept", [True, False])

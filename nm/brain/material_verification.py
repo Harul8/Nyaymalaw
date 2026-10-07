@@ -333,7 +333,8 @@ def _feedback_originals(candidates, opening, earlier, latest, source_treatments)
 
 
 def material_review_feedback(grounded: GroundingResult, *, candidates, opening,
-                             earlier, latest, source_treatments
+                             earlier, latest, source_treatments,
+                             exclude_source_owner_ids: tuple[str, ...] = ()
                              ) -> MaterialReviewFeedback | None:
     """Validate final unread selections once at their owner before recovery dispatch.
 
@@ -349,6 +350,11 @@ def material_review_feedback(grounded: GroundingResult, *, candidates, opening,
         return None
     binding, proposals, eligible, references, treatments = _feedback_originals(
         candidates, opening, earlier, latest, source_treatments)
+    if (type(exclude_source_owner_ids) is not tuple
+            or any(not isinstance(identity, str) or identity not in references
+                   for identity in exclude_source_owner_ids)
+            or len(set(exclude_source_owner_ids)) != len(exclude_source_owner_ids)):
+        raise SchemaViolation("Material recovery exclusion needs owned failed source IDs")
     failures, owner_ids, candidate_ids, seen = [], set(), [], set()
     for unread in grounded.unread_proposals:
         if "source_purpose_failure" not in unread:
@@ -408,7 +414,11 @@ def material_review_feedback(grounded: GroundingResult, *, candidates, opening,
                                    for field in ("reference", "reading", "selection")}
         if failure["disagreement_source_ids"] != disagreements:
             raise SchemaViolation("Material recovery feedback changed the owned role disagreement")
-        if disagreements or internal_conflict:
+        # A failed source-owner operation affects only units whose independent
+        # reading actually disagrees with that source owner. Sharing eligible
+        # or selected original words alone does not create that dependency.
+        if (disagreements or internal_conflict) and not set(disagreements).intersection(
+                exclude_source_owner_ids):
             candidate_ids.append(identity)
             owner_ids.update(disagreements)
             failures.append({"candidate_id": identity, "proposal": proposals[identity],
