@@ -1,0 +1,83 @@
+{
+  "piece": "Dispute reviewer fresh source-group activation",
+  "base": "80310ac",
+  "production_file": "nm/brain/dispute_verification.py",
+  "prompt_changes": 1,
+  "prompt": "_COVERAGE_SYSTEM only; main dispute judgment prompt unchanged",
+  "invariant": "Fresh supported dispute coverage decides original source purpose once and binds each represented portion to actually checked owned dispute support; account without an independent conflict is outside scope rather than non-account. Grouping supplies neither admission nor semantic proof.",
+  "verification": "22 raw focused and270 exact named neighbours pass. Same22 cases with isolated unchanged80310ac owner18fail/4pass. Defaults, explicitNone and private extent-only generation unchanged. Actual support map including{} activates groups. Raw source-linked current/historical/positive-candidate selections, disjoint words, ownership failures, omitted ranges, neutral outside-scope account, bounded overlap correction, strict wire/resource preflight and public atomic save/replay checked. Public opening8/review8, malformed overlap opening9 including1conditional correction, replay0. Canonical durable coveragev2 and proofs/seals unchanged; no historical upgrade. Three raw legacy shape inspections now examine native groups. Two public recovery inspections select the unique exact owned L1 disposition rather than assume it comes before a mechanically derived earlier non-account source; all original saved-peer, status, recovery and replay assertions retained.",
+  "call_impact": "0 new routine or conditional stages. Grouped coverage shares existing dispute verification; shared bounded correction unchanged. Public scripted opening8/review8; malformed output9/1conditional; replay0. Full prompt/input/strict schema plus output reserve remain measured by preflight. Estimates below do not measure actual tokenizer/API tokens, cost or latency and do not prove universal batching improvement. No paid calls; combined spend unchanged $3.202083/$5.",
+  "reports": {
+    "dispute-group-focused-final.xml": [
+      {
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "dispute-group-neighbours-final.xml": [
+      {
+        "tests": 270,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "dispute-group-owner-baseline-80310ac.xml": [
+      {
+        "tests": 22,
+        "failures": 18,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "resource_measurement": {
+    "baseline": "80310ac",
+    "comparison": "Exact stable prompts, same input/proof choices, complete strict wire schema; no candidates or record choices in this scoped coverage-only measurement.",
+    "estimator": "Production estimate_tokens, chars//4. Not a tokenizer measurement, real API usage, price or latency.",
+    "rows": [
+      {
+        "sources": 1,
+        "output_reserve": 4096,
+        "old_input_estimate": 6459,
+        "new_input_estimate": 6672,
+        "old_input_chars": 25837,
+        "new_input_chars": 26691,
+        "actual_scripted_calls": 1
+      },
+      {
+        "sources": 6,
+        "output_reserve": 4096,
+        "old_input_estimate": 11473,
+        "new_input_estimate": 9625,
+        "old_input_chars": 45892,
+        "new_input_chars": 38501,
+        "actual_scripted_calls": 1
+      },
+      {
+        "sources": 13,
+        "output_reserve": 4992,
+        "old_input_estimate": 18504,
+        "new_input_estimate": 13766,
+        "old_input_chars": 74017,
+        "new_input_chars": 55067,
+        "actual_scripted_calls": 1
+      },
+      {
+        "sources": 30,
+        "output_reserve": 11520,
+        "old_input_estimate": 35602,
+        "new_input_estimate": 23839,
+        "old_input_chars": 142408,
+        "new_input_chars": 95357,
+        "actual_scripted_calls": 1
+      }
+    ],
+    "paid_calls": 0
+  },
+  "browser_feature_complete": false,
+  "remaining": "Integrated browser acceptance of material/dispute grouping and reaffirmed unread recovery remains pending. Source purpose, conflict identity and semantic sufficiency remain independent judgments; scripted tests do not qualify the pinned model. Material association context, final typed negative dependencies, redundant historical diagnostics, pending request indexing after withheld reply, legal applicability/conditions, useful requested delivery, retrieval performance, UI and closure remain open. No production-ready claim.",
+  "production_sha256": "4ade52673e958a3518d435c35ae5ac2e0960ce0728dcb382b50ee314558340e0"
+}

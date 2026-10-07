@@ -17,6 +17,7 @@ from nm.brain.mutation_contracts import model_review_scope, scoped_record_decisi
 from nm.brain.record_review import (
     ACCOUNT_COVERAGE_CONTRACT,
     COVERAGE_EXTENT_CONTRACT,
+    COVERAGE_GROUP_CONTRACT,
     COVERAGE_SELECTION_CONTRACT,
     REVIEW_SELECTION_CONTRACT,
     SOURCE_SELECTION_CONTRACT,
@@ -284,7 +285,25 @@ neutral account outside_scope. This does not certify the material reader's work.
 - partial: some in-scope conflict or dispute repair remains missing; explain it.
 - unassessed: coverage cannot be dependably decided; identify the unresolved work.
 These are legitimate decisions; do not force an incomplete assessment to complete.
-Under coverage_selection_contract, return source_checks for EVERY
+When coverage_group_contract is supplied, return source_groups with EVERY owned
+coverage_source_id as a key. Decide content_purpose and its source-linked reason
+once per source, independently of dispute scope or proposal acceptance. An
+account group contains account_portions and non_account_portions. Each account
+portion selects its exact extent, status, record_ids, candidate_ids and reason.
+represented requires a faithful eligible dispute record or accepted proposal
+with checked support for that portion. missing, unresolved and outside_scope
+select no representation IDs. Genuine account without an independent conflict
+or authorised dispute repair is outside_scope, not non_account. Preserve every
+in-scope conflict and its necessary attribution, uncertainty and qualifiers;
+shared context and overlapping account portions are legitimate. For genuinely
+non-account content within the same source, select non_account_portions with
+their extent and reason. Do not overlap them with account portions. A wholly
+non_account or unresolved source group contains only content_purpose and reason;
+the server derives its complete-source disposition. Do not repeat source_id,
+substantive_spans or dispositions: code derives these canonical fields from
+the grouped selections without adding semantic judgments.
+
+Without the group marker, under coverage_selection_contract return source_checks for EVERY
 coverage_source_id: source_id, content_purpose account/non_account/unresolved,
 substantive_spans and reason. account selects actual
 substantive portions; non_account and unresolved select none. Keep original
@@ -296,7 +315,7 @@ missing, unresolved, non_account and outside_scope select no representation IDs.
 When coverage_extent_contract is supplied, select extent=whole_source for the
 complete exact owned source without counting characters. Use extent=exact_subrange
 with inclusive start/exclusive end only for a genuinely smaller portion, preserving
-necessary qualifiers. Use these descriptors for substantive_spans and dispositions.
+necessary qualifiers. Use the same descriptor wherever that portion is selected.
 Without that extent marker, select exact start/end under the offered schema.
 Code resolves original words and derives missing_source_ids; do not return that
 derived field under coverage_selection_contract. Without coverage_selection_contract,
@@ -325,7 +344,8 @@ _VERDICT = {
 def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
             coverage_ids=None, source_references=None,
             coverage_record_ids=(), coverage_candidate_ids=(), wire=False,
-            coverage_representation_options=None, native_coverage_extents=False) -> dict:
+            coverage_representation_options=None, native_coverage_extents=False,
+            native_coverage_groups=False) -> dict:
     item = {**_VERDICT, "properties": {
         **_VERDICT["properties"],
         **review_properties(source_ids, target_ids, peer_ids,
@@ -347,7 +367,7 @@ def _schema(ids: tuple[str, ...], source_ids=(), target_ids=(), peer_ids=(), *,
             coverage_ids, source_references=source_references,
             record_ids=coverage_record_ids, candidate_ids=coverage_candidate_ids,
             representation_options=coverage_representation_options,
-            native_extents=native_coverage_extents)
+            native_extents=native_coverage_extents, native_groups=native_coverage_groups)
         required.append("coverage")
     return {"type": "object", "additionalProperties": False,
             "required": required, "properties": properties}
@@ -471,6 +491,7 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
     if coverage_record_support is not None and source_references is None:
         raise SchemaViolation("Dispute coverage support requires exact original source references")
     native_coverage_extents = requested and coverage_record_support is not None
+    native_coverage_groups = native_coverage_extents
     if source_references is not None:
         payload["source_support_contract"] = SOURCE_SUPPORT_CONTRACT
     # Candidate recovery requires a trustworthy canonical target catalogue.
@@ -580,7 +601,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                 candidate_account_ids=account_ids, candidate_support=decisions,
                 pending_candidate_ids=pending)
             current.update(coverage_representation_options=representation_options,
-                           coverage_extent_contract=COVERAGE_EXTENT_CONTRACT)
+                           coverage_extent_contract=COVERAGE_EXTENT_CONTRACT,
+                           coverage_group_contract=COVERAGE_GROUP_CONTRACT)
         if decisions or attempt:
             current["retained_candidate_context"] = [
                 {**row, "decision": decisions[row["candidate_id"]]}
@@ -615,7 +637,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
             coverage_record_ids=coverage_record_ids,
             coverage_candidate_ids=coverage_candidate_ids, wire=True,
             coverage_representation_options=representation_options,
-            native_coverage_extents=native_coverage_extents)
+            native_coverage_extents=native_coverage_extents,
+            native_coverage_groups=native_coverage_groups)
         try:
             schema_words = json.dumps(on_the_wire(offered_schema), ensure_ascii=False,
                                       separators=(",", ":"))
@@ -677,7 +700,8 @@ def verify_disputes(model: ModelPort, *, candidates: tuple[MaterialCandidate, ..
                                             if row["verdict"] == "accept"],
                     candidate_support=decisions if source_references is not None else None,
                     record_support=coverage_record_support,
-                    native_extents=native_coverage_extents)
+                    native_extents=native_coverage_extents,
+                    native_groups=native_coverage_groups)
                 last_valid_coverage = deepcopy(coverage_decision)
                 coverage_issue = None
             except SchemaViolation as exc:

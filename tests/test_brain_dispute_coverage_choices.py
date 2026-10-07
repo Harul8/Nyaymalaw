@@ -120,7 +120,11 @@ def test_original_alias_proof_offers_separate_record_context_without_a_new_propo
         [] if domain == "historical" else [record.derived_record(row)])
     if domain == "historical":
         assert call["payload"]["historical_disputes"] == [record.derived_record(row)]
-    assert call["output"]["coverage"]["dispositions"][0]["extent"] == "whole_source"
+    assert call["payload"]["coverage_group_contract"] == record.COVERAGE_GROUP_CONTRACT
+    assert set(call["output"]["coverage"]["source_groups"]) == set(references)
+    selected, = call["output"]["coverage"]["source_groups"]["P1S1"]["account_portions"]
+    assert selected["extent"] == "whole_source"
+    assert selected["record_ids"] == [row["id"]] and selected["candidate_ids"] == []
     assert "extent" not in repr(assessed)
     assert assessed["dispositions"][0]["quoted"] == ACCOUNT
     require_schema(call["output"], on_the_wire(call["schema"]))

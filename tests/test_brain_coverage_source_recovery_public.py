@@ -337,8 +337,9 @@ def test_reverse_unchanged_source_conflict_preserves_independently_represented_p
     }, status="partial_preserved")
     assessment = answer["material_coverage"]["execution"]["stages"][
         "detail_review"]["account_coverage"]
-    assert assessment["dispositions"][0]["source_id"] == "L1"
-    assert assessment["dispositions"][0]["status"] == "represented"
+    represented, = [row for row in assessment["dispositions"] if row["source_id"] == "L1"]
+    assert represented["status"] == "represented" and represented["quoted"] == PEER
+    assert (represented["start"], represented["end"]) == (0, len(PEER))
     assert assessment["missing_source_ids"] == []
     assert "The record reading remains unfinished." in "\n".join(
         row["text"] for row in answer["elements"])
@@ -364,8 +365,9 @@ def test_unchanged_negative_source_hold_allows_unrelated_missing_account_recover
     assert recovery_read[0]["input"]["recovery_scope"]["missing_source_ids"] == ["L1"]
     assessment = answer["material_coverage"]["execution"]["stages"][
         "detail_review"]["account_coverage"]
-    assert assessment["dispositions"][0]["source_id"] == "L1"
-    assert assessment["dispositions"][0]["status"] == "represented"
+    represented, = [row for row in assessment["dispositions"] if row["source_id"] == "L1"]
+    assert represented["status"] == "represented" and represented["quoted"] == PEER
+    assert (represented["start"], represented["end"]) == (0, len(PEER))
     assert assessment["missing_source_ids"] == []
     assert "The record reading remains unfinished." in "\n".join(
         row["text"] for row in answer["elements"])
