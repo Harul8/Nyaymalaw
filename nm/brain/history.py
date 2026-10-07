@@ -8,8 +8,8 @@ from nm.brain.conversation import Conversation, IncompleteConversation, Message
 
 LEGACY_CONTEXT = "legacy_elements_v1"
 PUBLIC_CONTEXT = "public_reply_v2"
-# Activate only after all saved-evidence consumers select their owned version.
-CURRENT_CONTEXT = LEGACY_CONTEXT
+# Fresh calls use public wording/order; saved executions select their own version.
+CURRENT_CONTEXT = PUBLIC_CONTEXT
 
 
 def context_contract(turn: Mapping) -> str:
