@@ -36,6 +36,8 @@ class Message:
     # compatibility words/order never enter model-facing transcript fields.
     recorded_at: str | None = None
     context_contract: str = "legacy_elements_v1"
+    # None means identical wording; an empty NM value explicitly means that
+    # the old elements-only representation did not exist for this reply.
     legacy_text: str | None = None
     legacy_order: int | None = None
 
@@ -45,7 +47,9 @@ class Message:
         if self.role not in ("advocate", "nm"):
             raise ValueError("Unknown conversation speaker")
         if self.legacy_text is not None and (
-                not isinstance(self.legacy_text, str) or not self.legacy_text.strip()):
+                not isinstance(self.legacy_text, str)
+                or (not self.legacy_text.strip() and not (
+                    self.role == "nm" and self.legacy_text == ""))):
             raise ValueError("Historical conversation words must be readable")
         if self.legacy_order is not None and (
                 type(self.legacy_order) is not int or self.legacy_order < 0):

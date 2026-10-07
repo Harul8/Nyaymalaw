@@ -150,11 +150,17 @@ def test_history_and_recording_times_are_read_only_context_not_active_targets():
     assert payload["earlier_conversation"][0]["text"] == "Original account"
 
 
-@pytest.mark.parametrize("metadata", [dict(legacy_text=""), dict(legacy_order=-1),
+@pytest.mark.parametrize("metadata", [dict(legacy_text=12), dict(legacy_order=-1),
                                        dict(legacy_order=True)])
 def test_unreadable_reconstruction_metadata_is_rejected(metadata):
     with pytest.raises(ValueError):
         Message("prior", "nm", "Readable", **metadata)
+
+
+def test_absent_legacy_nm_wording_is_explicit_not_an_invented_transcript():
+    assert Message("prior", "nm", "Public paragraph", legacy_text="").legacy_text == ""
+    with pytest.raises(ValueError):
+        Message("prior", "advocate", "Original account", legacy_text="")
 
 
 def saved_turn(identity="prior", **changes):
