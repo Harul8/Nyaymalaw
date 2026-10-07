@@ -1,6 +1,8 @@
 """Browser readback is an authorised projection, never the raw diagnostic archive."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from nm.advise.turn_receipt_contracts import (
     TurnReceipt,
     answer_payload,
@@ -54,7 +56,52 @@ def is_released(rows: list[dict], turn_id: str) -> bool:
                and row.get("release_state") in RELEASED for row in rows)
 
 
-def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
+def _ordered(rows: list[dict], applied, contract: str) -> tuple[list[dict], list[str]]:
+    if contract == "legacy_elements_v1":
+        return sorted(rows, key=lambda row: (str(row.get("at") or ""),
+                                            str(row["turn_id"]))), []
+    if contract != "public_reply_v2":
+        raise ValueError("Unknown transcript chronology contract")
+    by_id = {row["turn_id"]: row for row in rows}
+    ordered = [by_id[identity] for identity in applied if identity in by_id]
+    sequenced = {row["turn_id"] for row in ordered}
+    remaining = [row for row in rows if row["turn_id"] not in sequenced]
+    if not remaining or len(rows) <= 1:
+        return ordered + remaining, []
+
+    def instant(row):
+        try:
+            value = datetime.fromisoformat(row.get("at", ""))
+            return value.astimezone(timezone.utc) if value.utcoffset() is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    times = {row["turn_id"]: instant(row) for row in rows}
+    uncertain = ["Conversation chronology cannot be established from the saved sequence and times"]
+    if any(value is None for value in times.values()):
+        return rows, uncertain
+    remaining.sort(key=lambda row: times[row["turn_id"]])
+    if len({times[row["turn_id"]] for row in remaining}) != len(remaining):
+        return rows, uncertain
+    slots: dict[int, list[dict]] = {}
+    for row in remaining:
+        at = times[row["turn_id"]]
+        positions = [index for index in range(len(ordered) + 1)
+                     if all(times[item["turn_id"]] < at for item in ordered[:index])
+                     and all(times[item["turn_id"]] > at for item in ordered[index:])]
+        if len(positions) != 1:
+            return rows, uncertain
+        slots.setdefault(positions[0], []).append(row)
+    result = []
+    for index in range(len(ordered) + 1):
+        result.extend(slots.get(index, []))
+        if index < len(ordered):
+            result.append(ordered[index])
+    return result, []
+
+
+def project(matter, archives: tuple[dict, ...], *,
+            chronology_contract: str = "legacy_elements_v1") -> tuple[list[dict], list[str]]:
     """Prefer atomic receipts; legacy release needs both applied and ungated evidence."""
     entries = matter.turn_receipts if isinstance(matter.turn_receipts, (tuple, list)) else ()
     claimed = {receipt.turn_id for receipt in entries if isinstance(receipt, TurnReceipt)
@@ -113,4 +160,5 @@ def project(matter, archives: tuple[dict, ...]) -> tuple[list[dict], list[str]]:
             problems.append(f"{turn_id}: release not established")
     rows.extend(_with_own_words(row, None)
                 for turn_id, row in approved.items() if turn_id not in seen)
-    return sorted(rows, key=lambda row: (str(row.get("at") or ""), str(row["turn_id"]))), problems
+    rows, chronology_problems = _ordered(rows, matter.turns_applied, chronology_contract)
+    return rows, [*problems, *chronology_problems]

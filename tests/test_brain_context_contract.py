@@ -12,6 +12,8 @@ from nm.brain.history import (
     resolve_history,
     word_views,
 )
+from nm.open_matter.transcripts_api import _ordered, project
+from tests.test_a_reopened_conversation_is_whole import _archive, _matter
 from tests.test_new_brain_conversation import Model, interpretation, item
 
 
@@ -71,4 +73,37 @@ def test_unknown_context_contract_cannot_fall_back_to_legacy():
         from_turns([row], state="ok")
     with pytest.raises(ValueError):
         resolve_history((), "future")
+
+
+def test_owned_chronology_and_legacy_reconstruction_have_distinct_orders():
+    rows = [{"turn_id": "z", "at": "2026-10-07T10:00:00+05:30"},
+            {"turn_id": "a", "at": "2026-10-07T06:00:00+00:00"}]
+    assert _ordered(rows, ("z", "a"), PUBLIC_CONTEXT) == (rows, [])
+    assert _ordered(rows, (), PUBLIC_CONTEXT) == (rows, [])
+    assert _ordered(rows, ("z", "a"), LEGACY_CONTEXT) == (rows[::-1], [])
+    # The saved sequence resolves ties, missing times and a backwards clock.
+    for at in ("", "2026-10-07T09:00:00", rows[0]["at"]):
+        changed = [dict(row, at=at) for row in rows]
+        assert _ordered(changed, ("z", "a"), PUBLIC_CONTEXT) == (changed, [])
+        assert _ordered(changed, (), PUBLIC_CONTEXT)[1]
+    assert _ordered([rows[0]], (), PUBLIC_CONTEXT) == ([rows[0]], [])
+
+
+def test_withheld_unsequenced_turn_requires_an_unambiguous_position():
+    rows = [{"turn_id": "first", "at": "2026-10-07T01:00:00Z"},
+            {"turn_id": "last", "at": "2026-10-07T03:00:00Z"},
+            {"turn_id": "withheld", "at": "2026-10-07T02:00:00Z"}]
+    assert _ordered(rows, ("first", "last"), PUBLIC_CONTEXT) == (
+        [rows[0], rows[2], rows[1]], [])
+    assert _ordered(rows, ("last", "first"), PUBLIC_CONTEXT)[1]
+    with pytest.raises(ValueError):
+        _ordered(rows, (), "unknown")
+
+
+def test_chronology_projection_keeps_receipt_authority_and_payload():
+    matter = _matter(admitted=True)
+    rows, problems = project(matter, (_archive("Conflicting archive"),),
+                             chronology_contract=PUBLIC_CONTEXT)
+    assert problems == []
+    assert rows == [matter.turn_receipts[0].projected(matter.id)]
 
