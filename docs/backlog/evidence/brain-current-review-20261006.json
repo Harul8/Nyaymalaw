@@ -2540,6 +2540,291 @@
       "remaining": "This turn consumer now has a concrete scripted public integration result, not real-model acceptance. Restart pinned acceptance server and retry pending browser correction from accepted earlier account; inspect exact saved quantity, unchanged actor/dates/purpose/recipient, lineage, request outcome, actual reply and reopened replay. Nine older67-node recovery neighbour failures remain unresolved: baseline matching only excludes observed new regression, not false rejection or semantic correctness. Source-owner changed/assignment-dependent failure still follows established dependency holds. Re-review includes all pending proposals under owned sources; filtered feedback alone is not scope authority. Other material association, pending-input, typed delivery, legal interpretation/conditions, retrieval, UI and closure gaps remain; no whole material-activity or production-readiness claim.",
       "production_sha256": "d4d9b20515b6a5d15c4d8c2b6383fdff00da16e85438e009856acd4fa64d48eb",
       "test_sha256": "e135417f2f9ff7041f4c72b8b3d69eadc7effb766635d266d4bf02d5b1b372e8"
+    },
+    {
+      "piece": "Material feedback integrated browser checkpoint; stopped by user",
+      "base": "a987ea2",
+      "production_file": null,
+      "prompt_changes": 0,
+      "invariant": "Bounded typed recovery must yield a supported owned effect; correct saved state alone does not certify factual-source classification, task identity, complete coverage or useful delivery.",
+      "verification": "Pinned-mini browser continuation from accepted earlier account, without restating quantity. Quantity3-to4 saved; exact other records, original four turns, historical replies, lineage and earlier proof retained. Reopened through My work with0newcalls. Recovery signal now dispatches. Semantic purpose/task/delivery failures explicitly remain.",
+      "checks": {
+        "quantity_corrected_and_confirmed_saved": true,
+        "original_four_turns_and_exact_historical_replies_preserved": true,
+        "other_record_rows_and_existing_correction_history_preserved": true,
+        "old_current_receipt_replaced_with_lineage_and_checked_historical_support": true,
+        "current_corrected_receipt_contains_original_earlier_quantity_assertion": true,
+        "existing_independent_support_and_disputes_unchanged": true,
+        "reopened_browser_shows_exact_saved_reply_without_additional_calls": true,
+        "typed_final_failure_reaches_conditional_owner_and_material_recovery": true,
+        "source_purpose_correct": false,
+        "existing_pending_request_closed_without_duplicate_task": false,
+        "concise_useful_nonduplicated_reply": false,
+        "whole_account_coverage_completed": false,
+        "material_activity_complete": false,
+        "production_readiness_established": false
+      },
+      "findings_and_next_atomic_plan": [
+        {
+          "gap": "Source purpose confuses instruction authority with underlying account",
+          "owner": "Existing LB-195 grounding/source-purpose boundary",
+          "general_fix": "Keep permission to repair distinct from the original factual source. Review the owning source-purpose prompt and role/support contract together; do not invent fresh facts from an instruction. Retain earlier original factual support for authorised repair.",
+          "pass": "Unfamiliar instruction-only repair completes from earlier original facts; the instruction stays work_instruction and is never rendered as factual account. Mixed instruction plus new factual assertion retains each source purpose. Independently review actual pinned-model results and saved proof.",
+          "status": "Planned; not implemented at stop"
+        },
+        {
+          "gap": "A fulfilled continuation leaves the same accepted request pending and creates a duplicate task",
+          "owner": "Existing work-state/request-outcome handoff under LB-194/LB-197",
+          "general_fix": "Associate continuation with the owned pending request and checked target/success condition; attach confirmed effect evidence to that request. Preserve distinct independent tasks and distinguish already-correct state from a fresh mutation.",
+          "pass": "Saved/reopened pending task becomes complete from its relevant confirmed effect without duplicating it; superficially similar independent tasks remain distinct. Pair with partial, declined and failed effects.",
+          "status": "Planned; inseparable owner handoffs must be split and verified before further expansion"
+        },
+        {
+          "gap": "Repeated proof text and internal unfinished-reading message reduce usefulness",
+          "owner": "Existing LB-194 trusted reply rendering and LB-196 coverage",
+          "general_fix": "Present one code-owned effect acknowledgement, keep authorisation versus factual account framing explicit, and communicate a consequential work gap only where it affects the requested outcome. Preserve mechanical gates and independent semantic review.",
+          "pass": "Actual browser reply states the supported correction once, displays no instruction as factual account, and distinguishes completed requested effect from unfinished independent work without internal bookkeeping.",
+          "status": "Planned; no free-prose escape or rendering-contract change made"
+        },
+        {
+          "gap": "Recovery adds substantial latency and still leaves semantic errors",
+          "owner": "Existing LB-183 call ledger and LB-195/LB-196 admission owners",
+          "general_fix": "Qualify general role/support and coverage changes with unfamiliar neighbouring cases; compare false admissions, false rejections, useful delivery, conditional calls, tokens and latency. Remove redundant representations or calls only when evidence and independence are preserved.",
+          "pass": "No extra routine stage; legitimate repair and no-op neighbours qualify through the shipped boundary with measured bounded recovery. Gate-fire counts alone do not establish false-positive rates.",
+          "status": "Planned; current eight-routine-stage flow and shared bound unchanged"
+        }
+      ],
+      "call_impact": "14 actual calls:8original activity calls plus6conditional/dependent calls;0provider retries. Shared limit8, reply reserve2;6conditional dispatches and omission denied. 182012input/12198output tokens; sum model latency120596ms, not full end-to-end latency. USD0.092328 this turn; combined USD3.369910/5, remaining1.630090. No added routine stage from feedback; no more paid calls after checkpoint.",
+      "metrics": {
+        "llm_calls": 14,
+        "provider_retries": 0,
+        "model_calls": [
+          {
+            "operation": "interpret_conversation",
+            "latency_ms": 3885,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 8595,
+            "tokens_out": 320,
+            "usage_recorded": true,
+            "cost_usd": 0.00395
+          },
+          {
+            "operation": "classify_account_sources",
+            "latency_ms": 4327,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 5881,
+            "tokens_out": 595,
+            "usage_recorded": true,
+            "cost_usd": 0.0033044000000000003
+          },
+          {
+            "operation": "extract_disputes",
+            "latency_ms": 1188,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 5326,
+            "tokens_out": 15,
+            "usage_recorded": true,
+            "cost_usd": 0.0021544
+          },
+          {
+            "operation": "verify_disputes",
+            "latency_ms": 7544,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 11914,
+            "tokens_out": 889,
+            "usage_recorded": true,
+            "cost_usd": 0.006188
+          },
+          {
+            "operation": "extract_legal_details",
+            "latency_ms": 4052,
+            "tier": "routine",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 6270,
+            "tokens_out": 171,
+            "usage_recorded": true,
+            "cost_usd": 0.0027816
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 12384,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 16999,
+            "tokens_out": 2035,
+            "usage_recorded": true,
+            "cost_usd": 0.0100556
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 12847,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 19180,
+            "tokens_out": 1989,
+            "usage_recorded": true,
+            "cost_usd": 0.0108544,
+            "recovery_phase": "verify_material_grounding:correction"
+          },
+          {
+            "operation": "reconsider_account_sources",
+            "latency_ms": 1634,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 2643,
+            "tokens_out": 136,
+            "usage_recorded": true,
+            "cost_usd": 0.0012748000000000002,
+            "recovery_phase": "source_reconsideration:source_owner"
+          },
+          {
+            "operation": "verify_disputes",
+            "latency_ms": 6884,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 11914,
+            "tokens_out": 926,
+            "usage_recorded": true,
+            "cost_usd": 0.0062472000000000005,
+            "recovery_phase": "source_reconsideration:dispute_review"
+          },
+          {
+            "operation": "verify_disputes",
+            "latency_ms": 36258,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 12019,
+            "tokens_out": 953,
+            "usage_recorded": true,
+            "cost_usd": 0.0063324,
+            "recovery_phase": "verify_disputes:correction"
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 12936,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 17762,
+            "tokens_out": 2066,
+            "usage_recorded": true,
+            "cost_usd": 0.010410400000000002,
+            "recovery_phase": "source_reconsideration:detail_review"
+          },
+          {
+            "operation": "verify_material_grounding",
+            "latency_ms": 9562,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 19053,
+            "tokens_out": 1430,
+            "usage_recorded": true,
+            "cost_usd": 0.0099092,
+            "recovery_phase": "verify_material_grounding:correction"
+          },
+          {
+            "operation": "continue_conversation",
+            "latency_ms": 3809,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 22396,
+            "tokens_out": 332,
+            "usage_recorded": true,
+            "cost_usd": 0.0094896
+          },
+          {
+            "operation": "verify_continuation",
+            "latency_ms": 3286,
+            "tier": "judge",
+            "model": "gpt-4.1-mini-2025-04-14",
+            "state": "ok",
+            "tokens_in": 22060,
+            "tokens_out": 341,
+            "usage_recorded": true,
+            "cost_usd": 0.0093696
+          }
+        ],
+        "recovery": {
+          "limit": 8,
+          "reserved_calls": 6,
+          "reply_reserve": 2,
+          "reply_reserved_calls": 0,
+          "dispatched_calls": 6,
+          "events": [
+            {
+              "phase": "verify_material_grounding:correction",
+              "state": "completed",
+              "scope": "initial",
+              "reservation": 1,
+              "call": 7
+            },
+            {
+              "phase": "source_reconsideration:source_owner",
+              "state": "completed",
+              "scope": "source_reconsideration:source_owner",
+              "reservation": 2,
+              "call": 8
+            },
+            {
+              "phase": "source_reconsideration:dispute_review",
+              "state": "completed",
+              "scope": "source_reconsideration:dispute_review",
+              "reservation": 3,
+              "call": 9
+            },
+            {
+              "phase": "verify_disputes:correction",
+              "state": "completed",
+              "scope": "source_reconsideration:dispute_review",
+              "reservation": 4,
+              "call": 10
+            },
+            {
+              "phase": "source_reconsideration:detail_review",
+              "state": "completed",
+              "scope": "source_reconsideration:detail_review",
+              "reservation": 5,
+              "call": 11
+            },
+            {
+              "phase": "verify_material_grounding:correction",
+              "state": "completed",
+              "scope": "source_reconsideration:detail_review",
+              "reservation": 6,
+              "call": 12
+            },
+            {
+              "phase": "omission_recovery:detail_reader",
+              "state": "budget_exhausted",
+              "scope": "omission_recovery:detail_reader"
+            }
+          ]
+        }
+      },
+      "packets": [
+        358,
+        372
+      ],
+      "matter_id": "mat_cdf32be008e5e8268d68de8fae33596c",
+      "browser_feature_complete": false,
+      "stopped_on_user_request": true,
+      "remaining": "Stopped after this checkpoint at the user's explicit request. The saved quantity correction is correct and replay/history are preserved, but this is not material-activity completion. Source owner and independent reviewers incorrectly treat L1/P7S1 requests to perform NM record work as reported matter facts; the earlier original assertion supplies four, but the new current quote and rendered attributed account point to an instruction. The same correction text/target/success condition now has an old pending task and a new completed task. The reply repeats the effect and exposes record-reading bookkeeping. Dispute account coverage remains unassessed and detail coverage partial; the spurious P7S1 account gap exhausts omission recovery. Nine prior recovery-neighbour failures and the wider six-activity legal/routing/retrieval/UI/closure queue remain unresolved. No new repair started after this browser checkpoint; no scenario-specific patch."
     }
   ],
   "additional_reviewer_input": {
@@ -3020,13 +3305,13 @@
     "sha256": "ec7ac6209bdc45b69d90f8cc6aa5ad86eab048343966022f22edffd610e4cb98"
   },
   "current_budget": {
-    "combined_measured_usd": 3.277582,
-    "remaining_usd": 1.722418,
-    "new_ledger_attempts": 358,
+    "combined_measured_usd": 3.36991,
+    "remaining_usd": 1.63009,
+    "new_ledger_attempts": 372,
     "states": [
       "measured"
     ],
-    "basis": "166 frozen prior attempts plus358 measured current attempts; cumulative USD5 unchanged"
+    "basis": "166 frozen prior attempts plus372 measured current attempts; cumulative USD5 unchanged"
   },
   "scope_generation_live_acceptance": {
     "commit": "88af4ce",
@@ -3294,5 +3579,16 @@
   "grouped_browser_evidence": {
     "path": "docs\\backlog\\evidence\\brain-grouped-browser-20261007.json.gz",
     "sha256": "f990f93f130e78d408b3a3a14be61e1c761a199cb76b7ecb399e7a0dc1aaa750"
+  },
+  "material_feedback_browser_evidence": {
+    "path": "docs\\backlog\\evidence\\brain-material-feedback-browser-20261007.json.gz",
+    "sha256": "b691ee09d310de2edd5cda01525561d702a51ee3b82fc8f5f544f1fac798e800"
+  },
+  "work_stopped": {
+    "requested_by_user": true,
+    "checkpoint": "Material feedback integrated browser checkpoint",
+    "application_commit": "a987ea2",
+    "further_production_changes_started": false,
+    "remaining_gaps_recorded": true
   }
 }
