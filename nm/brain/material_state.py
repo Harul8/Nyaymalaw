@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from nm.brain.dispute_state import belongs_to_current_matter
+from nm.brain.history import PUBLIC_CONTEXT, context_contract, word_views
 from nm.brain.material import BASES, IMPORTANCE, KINDS, PLACEMENTS, RELATIONS, SCOPES
 from nm.brain.mutation_contracts import validate_record_mutation
 from nm.shared.model_port import SchemaViolation
@@ -125,14 +126,16 @@ def material_record(matter: Matter, *, disputes: dict,
     history: list[dict] = []
     problems: list[str] = []
     seen_ids: set[str] = set()
-    prior_words = {(item.turn_id, item.role): item.text
-                   for item in prior_conversation}
+    views = word_views(prior_conversation)
+    prior_words = dict(views[PUBLIC_CONTEXT])
+    current_words = {}
     disputes_by_turn: dict[str, list[dict]] = {}
     for row in dispute_history:
         disputes_by_turn.setdefault(row["source_turn_id"], []).append(row)
     active_at_turn: set[str] = set()
     matter_opened = False
     for turn_index, turn in enumerate(matter.brain_chat):
+        prior_words = {**views[context_contract(turn)], **current_words}
         message, response = turn.get("message"), turn.get("response")
         proposals = response.get("material") if isinstance(response, dict) else None
         route = response.get("route") if isinstance(response, dict) else None
@@ -249,12 +252,13 @@ def material_record(matter: Matter, *, disputes: dict,
                     owned_ids.add(row["id"])
                 if row["relation"] != "withdraws" or row["id"] in held_revision_ids:
                     active[row["id"]] = row
-        prior_words[(turn["turn_id"], "advocate")] = message
-        prior_words[(turn["turn_id"], "nm")] = "\n".join(
+        current_words[(turn["turn_id"], "advocate")] = message
+        current_words[(turn["turn_id"], "nm")] = "\n".join(
             item.get("text", "") for item in response["elements"]
             if isinstance(item, dict) and isinstance(item.get("text"), str)
             and item["text"].strip())
 
+    prior_words.update(current_words)
     by_dispute: dict[str, list[dict]] = {item: [] for item in active_disputes}
     matter_rows: list[dict] = []
     unresolved: list[dict] = []

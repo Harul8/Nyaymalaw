@@ -17,6 +17,33 @@ from tests.test_a_reopened_conversation_is_whole import _archive, _matter
 from tests.test_new_brain_conversation import Model, interpretation, item
 
 
+def record_with_context(kind, contract, quoted):
+    from nm.work_the_file.matter_contracts import Matter
+    from tests.test_brain_board_proposals import saved_turn
+    from tests.test_brain_material import material
+    proposal = {**material(kind, "An attributed detail", "The event occurred.", references=(
+        {"turn_id": "older", "role": "nm", "quoted": quoted},)),
+        "id": "new:material:1", "state": "proposed", "source_turn_id": "new"}
+    row = saved_turn("new", "The event occurred.", [proposal])
+    if contract is not None:
+        row["response"]["material_coverage"] = {"execution": {"context_contract": contract}}
+    matter = Matter(id="mat_links", advocate_id="adv", title="Context", brain_chat=(row,))
+    earlier = (Message("older", "nm", "The public question.", legacy_text="Internal finding."),)
+    return matter, earlier
+
+
+@pytest.mark.parametrize(("contract", "quote", "valid"), [
+    (None, "Internal finding.", True), (PUBLIC_CONTEXT, "The public question.", True),
+    (None, "The public question.", False), (PUBLIC_CONTEXT, "Internal finding.", False),
+])
+def test_material_sources_use_the_creating_turns_contract(contract, quote, valid):
+    from nm.brain.material_state import material_record
+    matter, earlier = record_with_context("event", contract, quote)
+    result = material_record(matter, disputes={"state": "ok", "rows": [], "history": []},
+                             prior_conversation=earlier)
+    assert (result["state"] == "ok") is valid
+
+
 def test_compatibility_metadata_is_not_presented_as_conversation():
     prior = Message("prior", "nm", "The public question.",
                     recorded_at="2026-10-07T09:00:00+05:30",
