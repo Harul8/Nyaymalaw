@@ -13,68 +13,106 @@ from nm.shared.model_port import (
 )
 
 # Each passage contract fixes the rule that cut the original words into
-# selectable passages. A saved record is always re-checked with the rule it was
-# made with, so changing the rule needs a new contract, never an edit to an old
-# one -- including any change to the shared sentence-end definition below.
-CONTRACT = "disputes_objectives_v3"  # nm.shared.text_contracts.split_passages: sentence ends only.
+# selectable passages and the shape of a record. A saved record is always
+# re-checked with the rule it was made with, so changing either needs a new
+# contract, never an edit to an old one -- including any change to the shared
+# sentence-end definition below.
+CONTRACT = "disputes_objectives_v3"  # Sentence-end passages; titled records with an operation on saved items.
 PASSAGE_LEGACY_CONTRACT = "disputes_objectives_v2"  # Cut after every . ! ? ; and line break.
 LEGACY_CONTRACT = "disputes_objectives_v1"  # Model-copied quotes; no owned passages.
 COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
-_TASK = """Purpose: Identify only the disputes and substantive matter objectives
-communicated or revised by the latest message. Return internal proposals only.
+OPERATIONS = ("new", "adds", "corrects", "contradicts", "resolves", "withdraws")
+CLOSING_OPERATIONS = frozenset({"resolves", "withdraws"})
+_SAVED_PREFIX = {"disputes": "D", "objectives": "O"}
+_SAVED_ID = re.compile(r"[DO][1-9][0-9]*")
+_RECORD_FIELDS = ("title", "description", "operation", "target_id", "passages", "uncertainty",
+                  "clarification")
+_TASK = """Purpose: Identify the disputes and substantive matter objectives that the
+latest message reports, changes or ends, and how each relates to the saved items.
+Return internal proposals only.
 
 Look for:
-1. Locate the portions of the latest message that state a dispute or matter
-   objective, or change one already expressed. Use earlier conversation to
-   understand those portions. A request to use existing content for NM's work
-   does not assert, reaffirm or change that content. If there are no such portions,
-   return empty arrays, except for an explicit request to check the accuracy of
-   NM's saved interpretation. Do not produce a recap of historical items.
-2. A dispute is reported adverse conduct or incompatible party positions needing
-   resolution in the underlying situation. It needs no express denial or proof.
-   A matter objective is a party's desired substantive result in that situation.
-   Producing an NM output or controlling how NM works is a work instruction, not
-   that substantive result. If a work request also states a matter objective,
-   extract only that objective. A misunderstanding by NM is interpretation work,
-   not a party dispute. Do not infer a conflict from an ordinary event,
-   invent an objective for a dispute, or force the two collections to be paired.
-3. Preserve whose account, position or objective it is, including opposing or
-   quoted positions, uncertainty, conditions, negations and hypothetical scope.
-   Include each communicated resolution, correction or withdrawal as a change to
-   the relevant dispute or objective, even when nothing is still sought for it.
-   Do not leave these changes implicit in another item or represent them as
-   continued affirmative intent. Do not decide legal merit or add facts,
-   remedies or legal conclusions.
-4. Select the supplied passage IDs supporting each description. The selected
-   current words must communicate, revise or specifically request review of that
-   item; mere conversation continuity is insufficient. Include earlier words only
-   when needed to understand this contribution. Mark substantive
-   original account as support and a reference or review instruction as context.
-   NM's earlier wording is context only. A request to check the accuracy of NM's
-   saved interpretation can authorise examining earlier original account; it
-   does not substantiate that account.
-5. When repair_scope is supplied, preserve its supported_records. Return only
-   missing contributions or corrected replacements for unaccepted proposals;
-   do not repeat supported records. Re-read original words rather than adopting
-   a review formulation as evidence. For interpretation repair, describe the
+1. What the account says. Read the latest message in the complete conversation.
+   Separate the reported situation (conduct, events, positions) from requests for
+   NM work, drafts, hypotheticals, legal theories and instructions quoted as
+   content. Preserve who said what, negation, chronology, conditions and
+   uncertainty. Saved items and NM's earlier wording are NM interpretations, not
+   evidence. A request to use or summarise existing content reports nothing new.
+2. Whether a dispute is reported. A dispute is reported adverse conduct, or
+   incompatible claims, positions or rights between parties, needing a practical
+   resolution. It needs no express denial, legal label, known actor or proof. An
+   event is not a dispute because it happened, matters or is to be recorded, nor
+   because a legal consequence or a future disagreement is possible; it becomes
+   one when someone's conduct or position is reported as adverse. NM's own
+   misunderstanding is interpretation work, not a party dispute.
+   A matter objective is a change in the underlying situation that the message
+   reports a party as wanting - such as payment, return, removal, access, or
+   something done by another party - in words such as want, need, seek, demand
+   or ask for. Anything the user wants NM to do - record, note, remember, review,
+   summarise, advise or draft - is a work instruction and never an objective,
+   however it is phrased; if a work request also states an objective, extract
+   only the objective. Never infer an objective from the existence of a dispute or
+   from what a party would usually want: a dispute with no stated desired result
+   has no objective, so the two lists need not pair.
+3. How many disputes. Group by the underlying conduct or contested right that
+   needs one decision, not by sentence, speaker or source. Opposing accounts of
+   the same conduct are one dispute that describes each position. A defence, a
+   proof gap, missing or unacknowledged evidence, a supporting reason, a legal
+   theory or an alternative remedy belongs to the dispute it concerns and is not
+   a dispute of its own. Separate two disputes only when resolving one would still
+   leave the other reported conflict to decide, such as a different adverse act or
+   a different contested entitlement; shared parties, documents or evidence do not
+   merge them.
+4. How each relates to the saved items. Compare with every saved item of the same
+   kind; shared words, people or sources do not make two issues one. Choose one
+   operation:
+   new - an issue that is not among the saved items;
+   adds - a new detail, position or development of a saved item;
+   corrects - the user corrects the saved account or NM's formulation of it;
+   contradicts - the latest account conflicts with the saved one without being
+     presented as a correction;
+   resolves - the conflict is reported settled, or the objective achieved;
+   withdraws - the user no longer pursues it.
+   Every operation except new names that saved item in target_id; new has
+   target_id null. Make at most one change to a saved item, report a change only
+   when the latest message itself communicates it, and do not repeat an unchanged
+   saved item.
+5. Support. Select the passage IDs whose words support each item, as many as it
+   needs and from any message; the boundaries are navigation aids, not units of
+   meaning. Include the latest passages that report or change the item. Mark
+   original account as support, and references, review instructions and NM
+   wording as context. A request to check NM's saved interpretation authorises
+   examining the earlier original account and a supported corrects operation; it
+   does not itself substantiate that account.
+6. When repair_scope is supplied, preserve its supported_records. Return only
+   missing contributions or corrected replacements for unaccepted proposals; do
+   not repeat supported records. Re-read original words rather than adopting a
+   review formulation as evidence. For interpretation repair, describe the
    restored original dispute or objective, not the request for NM to repair it.
 
-Outcome: Return disputes and objectives as independent arrays. Each item has a
-concise attributed description, selections and uncertainty (null if no unresolved
-interpretation needs recording). Each selection contains a supplied passage_id
-and purpose=support or context. The complete original messages are shown as
-ordered selectable passages. These boundaries are navigation aids, not units of
-meaning; select several when needed to preserve context and qualifications.
-Code retains their exact words; do not copy or rewrite quotations. Use empty
-arrays when neither category is expressed. Return no general fact catalogue,
-action plan, reply draft, execution status or forced pairing of the two lists."""
+Outcome: Return disputes and objectives as independent arrays. Each item has:
+title - a few words naming the conduct or position, adding time or place only to
+  distinguish it, with no legal conclusion;
+description - one neutral, attributed statement of the whole issue as it now
+  stands, including each party's reported position;
+operation and target_id as above;
+selections - each a supplied passage_id with purpose support or context;
+uncertainty - an unresolved interpretation that needs recording, otherwise null;
+clarification - null unless the dispute cannot be told apart from another issue
+  without one answer (for example which of two transactions it concerns); then
+  one question. Never use it to gather facts, evidence, rights or legal details.
+Code keeps the exact words; do not copy quotations. Use empty arrays when nothing
+is reported. Return no fact catalogue, action plan, reply or completion claim."""
 _FIRST_PROMPT = """Message: You receive the user's opening message as ordered
-original passages with code-assigned IDs and the original speaker.
+original passages with code-assigned IDs and the original speaker. There are no
+saved items yet, so every item is new.
 
 """ + _TASK
 _FOLLOW_UP_PROMPT = """Message: You receive the complete earlier conversation,
-followed by the user's latest message. Ordered original passages have code-assigned
-IDs and speakers. Prior NM interpretations are not original evidence.
+the saved items and the user's latest message. Ordered original passages have
+code-assigned IDs and speakers. Saved items are the open disputes (D1, D2 ...)
+and objectives (O1, O2 ...) that NM recorded earlier; like prior NM wording they
+are interpretations to compare against, not original evidence.
 
 """ + _TASK
 
@@ -98,10 +136,14 @@ _SELECTION = {"type": "object", "additionalProperties": False,
     "required": ["passage_id", "purpose"], "properties": {
         "passage_id": _TEXT, "purpose": _PASSAGE["properties"]["purpose"]}}
 _SELECTED_ITEM = {"type": "object", "additionalProperties": False,
-    "required": ["description", "selections", "uncertainty"], "properties": {
-        "description": _TEXT,
+    "required": ["title", "description", "operation", "target_id", "selections",
+                 "uncertainty", "clarification"], "properties": {
+        "title": _TEXT, "description": _TEXT,
+        "operation": {"type": "string", "enum": list(OPERATIONS)},
+        "target_id": {"type": ["string", "null"]},
         "selections": {"type": "array", "minItems": 1, "items": _SELECTION},
-        "uncertainty": {"type": ["string", "null"]}}}
+        "uncertainty": {"type": ["string", "null"]},
+        "clarification": {"type": ["string", "null"]}}}
 _SELECTED_SCHEMA = {**_SCHEMA, "properties": {
     kind: {"type": "array", "items": _SELECTED_ITEM} for kind in COLLECTIONS}}
 
@@ -152,8 +194,7 @@ def _resolve_selections(item, choices):
             raise SchemaViolation(f"Unknown selected passage {selection['passage_id']}")
         passages.append({**deepcopy(choice), "passage_id": selection["passage_id"],
                          "purpose": selection["purpose"]})
-    return {"description": item["description"], "passages": passages,
-            "uncertainty": item["uncertainty"]}
+    return {**{key: item[key] for key in _RECORD_FIELDS if key != "passages"}, "passages": passages}
 
 
 def _sources(sources):
@@ -225,17 +266,72 @@ def _check_item(item, catalogue, contract=CONTRACT):
             "uncertainty": uncertainty, "source_ids": source_ids}
 
 
-def _prepare(data, sources, *, choices=None):
+def _check_record(item, catalogue, kind):
+    """A current record: owned passages plus its title, operation and named saved item."""
+    checked = _check_item({key: item[key] for key in ("description", "passages", "uncertainty")},
+                          catalogue, CONTRACT)
+    title = item["title"].strip() if isinstance(item["title"], str) else ""
+    if not title:
+        raise SchemaViolation("An item needs a short title naming the conduct or position")
+    operation, target = item["operation"], item["target_id"]
+    if operation not in OPERATIONS:
+        raise SchemaViolation(f"Unknown operation {operation!r}")
+    if (operation == "new") != (target is None):
+        raise SchemaViolation("A new item names no saved item; every change names exactly one")
+    if target is not None and (not isinstance(target, str) or not _SAVED_ID.fullmatch(target)
+                               or target[0] != _SAVED_PREFIX[kind]):
+        raise SchemaViolation(f"A {COLLECTIONS[kind]} change must name a saved {COLLECTIONS[kind]}")
+    clarification = item["clarification"]
+    if clarification is not None:
+        if not isinstance(clarification, str):
+            raise SchemaViolation("A clarification is one question or null")
+        clarification = clarification.strip() or None
+    return {"title": title, "description": checked["description"], "operation": operation,
+            "target_id": target, "passages": checked["passages"],
+            "uncertainty": checked["uncertainty"], "clarification": clarification,
+            "source_ids": checked["source_ids"]}
+
+
+def _checked_saved(saved):
+    """Open saved items as the turn owner derived them: {ID: kind}."""
+    if not isinstance(saved, (list, tuple)):
+        raise ValueError("Saved items must be a list")
+    owned = {}
+    for row in saved:
+        if (not isinstance(row, dict) or set(row) != {"id", "kind", "title", "description"}
+                or row["kind"] not in COLLECTIONS or not isinstance(row["id"], str)
+                or not _SAVED_ID.fullmatch(row["id"]) or row["id"][0] != _SAVED_PREFIX[row["kind"]]
+                or row["id"] in owned
+                or any(not isinstance(row[key], str) or not row[key].strip()
+                       for key in ("title", "description"))):
+            raise ValueError("Each saved item needs its owned ID, kind, title and description")
+        owned[row["id"]] = row["kind"]
+    return owned
+
+
+def _prepare(data, sources, *, choices=None, saved=()):
     require_schema(data, _ENVELOPE)
     catalogue = _sources(sources)
     contract = CONTRACT if choices is not None else LEGACY_CONTRACT
-    proposal, issues = {kind: [] for kind in COLLECTIONS}, []
+    open_ids = _checked_saved(saved)
+    proposal, issues, changed = {kind: [] for kind in COLLECTIONS}, [], set()
     for kind, prefix in COLLECTIONS.items():
         for index, item in enumerate(data[kind], 1):
             identity = f"{prefix}:{index}"
             try:
-                selected = _resolve_selections(item, choices) if choices is not None else item
-                checked = _check_item(selected, catalogue, contract)
+                if choices is None:
+                    checked = _check_item(item, catalogue, contract)
+                else:
+                    checked = _check_record(_resolve_selections(item, choices), catalogue, kind)
+                    target = checked["target_id"]
+                    if target is not None:
+                        if open_ids.get(target) != kind:
+                            raise SchemaViolation(
+                                f"{target} is not an open saved {COLLECTIONS[kind]}; use operation new "
+                                "for an issue that is not saved, or name the open saved item it changes")
+                        if target in changed:
+                            raise SchemaViolation(f"{target} already has a change from this message")
+                        changed.add(target)
             except SchemaViolation as exc:
                 issues.append({"unit": identity, "reason": str(exc),
                                "rejected_proposal": deepcopy(item)})
@@ -256,28 +352,39 @@ def extraction_units(prepared):
             or set(prepared["proposal"]) != set(COLLECTIONS)
             or not isinstance(prepared["issues"], list)):
         raise SchemaViolation("Unknown dispute/objective extraction contract")
-    catalogue, units = _sources(prepared["sources"]), {}
+    contract = prepared["contract"]
+    record_keys = ({"id", "state", "source_ids", *_RECORD_FIELDS} if contract == CONTRACT
+                   else {"id", "state", "description", "passages", "uncertainty", "source_ids"})
+    catalogue, units, changed = _sources(prepared["sources"]), {}, set()
     for kind, prefix in COLLECTIONS.items():
         if not isinstance(prepared["proposal"][kind], list):
             raise SchemaViolation("Extraction needs both collections")
         for item in prepared["proposal"][kind]:
             if (not isinstance(item, dict)
-                    or set(item) != {"id", "state", "description", "passages", "uncertainty", "source_ids"}
+                    or set(item) != record_keys
                     or not isinstance(item["id"], str) or not item["id"].startswith(prefix + ":")
                     or not item["id"][len(prefix) + 1:].isdigit()
                     or int(item["id"][len(prefix) + 1:]) < 1 or item["id"] in units
                     or item["state"] != "proposed" or not isinstance(item["passages"], list)):
                 raise SchemaViolation("Extraction item has an inconsistent owned identity or shape")
-            raw = {key: deepcopy(item[key]) for key in ("description", "passages", "uncertainty")}
             passage_fields = {"source_id", "quote", "purpose", "start", "end"}
-            if prepared["contract"] in _SEGMENTERS:
+            if contract in _SEGMENTERS:
                 passage_fields.add("passage_id")
-            for passage in raw["passages"]:
+            for passage in item["passages"]:
                 if not isinstance(passage, dict) or set(passage) != passage_fields:
                     raise SchemaViolation("Saved extraction passage has an unknown shape")
-            checked = {**_check_item(raw, catalogue, prepared["contract"]),
-                       "id": item["id"], "state": "proposed"}
-            if checked != item:
+            if contract == CONTRACT:
+                checked = _check_record({key: deepcopy(item[key]) for key in _RECORD_FIELDS},
+                                        catalogue, kind)
+                if checked["target_id"] is not None:
+                    if checked["target_id"] in changed:
+                        raise SchemaViolation("Two saved changes name the same item")
+                    changed.add(checked["target_id"])
+            else:
+                checked = _check_item({key: deepcopy(item[key])
+                                       for key in ("description", "passages", "uncertainty")},
+                                      catalogue, contract)
+            if {**checked, "id": item["id"], "state": "proposed"} != item:
                 raise SchemaViolation("Saved extraction differs from its exact original passage")
             units[item["id"]] = {"kind": kind, "proposal": deepcopy(item)}
     held = set()
@@ -293,13 +400,67 @@ def extraction_units(prepared):
     return units
 
 
+def open_items(turns) -> list[dict]:
+    """The disputes and objectives still open after the saved turns, with stable IDs.
+
+    `turns` is the ordered saved conversation as (units, accepted) pairs: the
+    checked extraction units of each turn and the unit IDs its independent review
+    accepted. Items are numbered D1, D2 ... and O1, O2 ... in order of first
+    acceptance, so replaying the same turns reproduces every ID. A change updates
+    the item it names; a resolution or withdrawal closes it, so older wording
+    cannot revive it. Records from earlier contracts only ever introduced items.
+    """
+    order = list(COLLECTIONS)
+    items, counts = {}, {kind: 0 for kind in COLLECTIONS}
+    for units, accepted in turns:
+        ranked = sorted(((identity, unit) for identity, unit in units.items()
+                         if unit["kind"] in COLLECTIONS and identity in accepted),
+                        key=lambda pair: (order.index(pair[1]["kind"]), int(pair[0].split(":")[1])))
+        for _, unit in ranked:
+            kind, proposal = unit["kind"], unit["proposal"]
+            operation = proposal.get("operation", "new")
+            if operation == "new":
+                counts[kind] += 1
+                identity = f"{_SAVED_PREFIX[kind]}{counts[kind]}"
+                items[identity] = {"id": identity, "kind": kind,
+                                   "title": proposal.get("title") or proposal["description"],
+                                   "description": proposal["description"], "open": True}
+                continue
+            target = items.get(proposal.get("target_id"))
+            if target is None or target["kind"] != kind or not target["open"]:
+                raise SchemaViolation("A saved change names no open item of its kind")
+            if operation in CLOSING_OPERATIONS:
+                target["open"] = False
+            else:
+                target.update(title=proposal["title"], description=proposal["description"])
+    return [{key: value for key, value in item.items() if key != "open"}
+            for item in items.values() if item["open"]]
+
+
+def check_targets(units, saved):
+    """Every change in a saved extraction names an item that was open when it was made."""
+    open_ids = _checked_saved(saved)
+    for identity, unit in units.items():
+        target = unit["proposal"].get("target_id")
+        if target is not None and open_ids.get(target) != unit["kind"]:
+            raise SchemaViolation(f"{identity} names {target}, which was not an open saved item")
+
+
+def _presented_saved(saved):
+    return [{"id": row["id"], "kind": COLLECTIONS[row["kind"]], "title": row["title"],
+             "description": row["description"]} for row in saved]
+
+
 def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
                                history: list[dict], history_complete: bool,
-                               _repair_scope=None) -> dict:
+                               saved=(), _repair_scope=None) -> dict:
     """One focused call; the turn owns correction, independent review and saving."""
     validate_label({"label": label})  # Diagnostic label never supplies extraction meaning.
     if history_complete is not True or not isinstance(history, list):
         raise ValueError("Complete conversation history is required")
+    open_ids = _checked_saved(saved)
+    if open_ids and not history:
+        raise ValueError("Saved items need the earlier conversation they came from")
     earlier = [{"id": f"history_{index}", "message": deepcopy(entry)}
                for index, entry in enumerate(history, 1)]
     current = {"id": "current", "message": {"role": "advocate", "text": message}}
@@ -310,13 +471,20 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
         raise ValueError(str(exc)) from exc
     presented, choices = _passage_input(sources)
     payload = {"earlier_conversation": presented[:-1]} if earlier else {}
+    if earlier:
+        payload["saved_items"] = _presented_saved(saved)
     payload["current_message"] = presented[-1]
     if _repair_scope is not None:
         payload["repair_scope"] = deepcopy(_repair_scope)
     schema = deepcopy(_SELECTED_SCHEMA)
     for kind in COLLECTIONS:
-        schema["properties"][kind]["items"]["properties"]["selections"]["items"]["properties"]["passage_id"] = {
-            **_TEXT, "enum": list(choices)}
+        # Each kind needs its own copy: its saved-item choices differ (D... or O...).
+        schema["properties"][kind]["items"] = deepcopy(_SELECTED_ITEM)
+        properties = schema["properties"][kind]["items"]["properties"]
+        properties["selections"]["items"]["properties"]["passage_id"] = {**_TEXT, "enum": list(choices)}
+        targets = [identity for identity, owner in open_ids.items() if owner == kind]
+        properties["target_id"] = ({"anyOf": [{"type": "string", "enum": targets}, {"type": "null"}]}
+                                   if targets else {"type": "null"})
     prompt = Prompt(system=_FOLLOW_UP_PROMPT if earlier else _FIRST_PROMPT,
                     user=json.dumps(payload, ensure_ascii=False), operation="extract_disputes_objectives")
     limit = max(2048, estimate_tokens(message) * 4)
@@ -334,13 +502,13 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
     try:
         if result.text is not None:
             raise SchemaViolation("Extraction requires structured proposals, not response prose")
-        return _prepare(result.data, sources, choices=choices)
+        return _prepare(result.data, sources, choices=choices, saved=saved)
     except SchemaViolation as exc:
         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
                               retries=result.retries) from exc
 
 
-def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps, saved=()):
     """One repair call; preserve checked peers and assign fresh owned proposal IDs.
 
     The caller owns the review, shared allowance and durable attempt lineage.
@@ -349,6 +517,7 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
     units = extraction_units(prepared)
     if prepared["contract"] != CONTRACT:
         raise SchemaViolation("Extraction repair requires the current passage-owned contract")
+    check_targets(units, saved)
     if (not isinstance(supported_unit_ids, list) or any(not isinstance(identity, str) for identity in supported_unit_ids)
             or len(set(supported_unit_ids)) != len(supported_unit_ids)
             or any(identity not in units for identity in supported_unit_ids)):
@@ -365,9 +534,13 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
             raise SchemaViolation("Extraction repair gap differs from its owned original support")
 
     def presentation(kind, unit):
-        return {"id": unit["id"], "kind": kind, "description": unit["description"],
-            "selections": [{"passage_id": span["passage_id"], "purpose": span["purpose"]}
-                           for span in unit["passages"]], "uncertainty": unit["uncertainty"]}
+        shown = {"id": unit["id"], "kind": kind, "description": unit["description"],
+                 "selections": [{"passage_id": span["passage_id"], "purpose": span["purpose"]}
+                                for span in unit["passages"]], "uncertainty": unit["uncertainty"]}
+        for key in ("title", "operation", "target_id", "contribution"):
+            if key in unit:
+                shown[key] = unit[key]
+        return shown
 
     supported = set(supported_unit_ids)
     scope = {"supported_records": [presentation(row["kind"], row["proposal"])
@@ -379,7 +552,7 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
     sources = prepared["sources"]
     repaired = extract_disputes_objectives(model, sources[-1]["message"]["text"], label="information",
         history=[deepcopy(source["message"]) for source in sources[:-1]], history_complete=True,
-        _repair_scope=scope)
+        saved=saved, _repair_scope=scope)
     if repaired["sources"] != sources:
         raise SchemaViolation("Extraction repair changed the original source binding")
     merged = deepcopy(repaired)
@@ -403,5 +576,5 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
     for issue in merged["issues"]:
         prefix, index = issue["unit"].split(":")
         issue["unit"] = f"{prefix}:{offsets[prefix] + int(index)}"
-    extraction_units(merged)
+    check_targets(extraction_units(merged), saved)
     return merged

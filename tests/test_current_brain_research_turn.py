@@ -137,7 +137,8 @@ def test_lost_save_acknowledgement_does_not_repeat_research():
 def test_two_disputes_keep_independent_original_search_when_one_plan_is_missing(fail_first):
     message = 'The seller retained my deposit. A co-owner denied access to our shared shop.'
     descriptions = ['The seller retained the deposit.', 'A co-owner denied access to the shared shop.']
-    proposal = {'disputes': [{'description': description, 'selections': [
+    proposal = {'disputes': [{'title': description.rstrip('.'), 'description': description,
+        'operation': 'new', 'target_id': None, 'clarification': None, 'selections': [
         {'passage_id': f'current:p{index}', 'purpose':'support'}], 'uncertainty':None}
         for index, description in enumerate(descriptions,1)], 'objectives':[]}
     review = {'greeting':False, 'unit_reviews': [

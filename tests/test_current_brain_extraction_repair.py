@@ -96,11 +96,14 @@ def every_mark_record(prepared, selected):
     _, choices = _passage_input(prepared["sources"], PASSAGE_LEGACY_CONTRACT)
     catalogue = {source["id"]: source["message"] for source in prepared["sources"]}
     record = {**deepcopy(prepared), "contract": PASSAGE_LEGACY_CONTRACT}
-    for rows in record["proposal"].values():
-        for row in rows:
+    for kind, rows in record["proposal"].items():
+        legacy = []
+        for row in rows:  # v2 records had no title, operation or clarification
             passage = {**choices[selected[row["id"]]], "passage_id": selected[row["id"]], "purpose": "support"}
-            row.update(_check_item({"description": row["description"], "passages": [passage],
-                                    "uncertainty": row["uncertainty"]}, catalogue, PASSAGE_LEGACY_CONTRACT))
+            legacy.append({"id": row["id"], "state": row["state"], **_check_item(
+                {"description": row["description"], "passages": [passage], "uncertainty": row["uncertainty"]},
+                catalogue, PASSAGE_LEGACY_CONTRACT)})
+        record["proposal"][kind] = legacy
     return record
 
 

@@ -44,12 +44,14 @@ def empty_review(purpose="nm_work"):
 def mixed_outputs(message):
     assert message == MIXED_MESSAGE, "This fixture's two selectors belong to its two supplied sentences"
     return [{"label": "mixed"}, {
-        "disputes": [{"description": "The advocate reports the supplier refusing to return their deposit.",
+        "disputes": [{"title": "Deposit not returned", "operation": "new", "target_id": None,
+                      "description": "The advocate reports the supplier refusing to return their deposit.",
                       "selections": [{"passage_id": "current:p1", "purpose": "support"}],
-                      "uncertainty": None}],
-        "objectives": [{"description": "The advocate wants the deposit returned.",
+                      "uncertainty": None, "clarification": None}],
+        "objectives": [{"title": "Return of the deposit", "operation": "new", "target_id": None,
+                        "description": "The advocate wants the deposit returned.",
                         "selections": [{"passage_id": "current:p2", "purpose": "support"}],
-                        "uncertainty": None}]},
+                        "uncertainty": None, "clarification": None}]},
         {"greeting": False, "unit_reviews": [
             {"unit_id": identity, "verdict": "supported"}
             for identity in ("dispute:1", "objective:1")], "readings": {

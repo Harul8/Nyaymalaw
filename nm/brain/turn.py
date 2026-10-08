@@ -14,7 +14,8 @@ from nm.brain.retrieval import SearchUnavailable, validate_search
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_RECORD, LEGACY_CONTRACT as LEGACY_EXTRACTION_RECORD,
     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_RECORD,
-    extract_disputes_objectives, extraction_units, repair_disputes_objectives,
+    check_targets, extract_disputes_objectives, extraction_units, open_items,
+    repair_disputes_objectives,
 )
 from nm.brain.release import (
     LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RENDERER,
@@ -86,6 +87,17 @@ def _request(turn):
             'turn_id': turn.turn_id, 'matter_id': turn.matter_id, 'chat_id': turn.chat_id}
 
 
+def _accepted(release):
+    """Unit IDs the independent review accepted; only these become saved items."""
+    return {row['unit_id'] for row in release['proof'].get('unit_reviews', [])
+            if row.get('verdict') == 'supported'}
+
+
+def saved_items(rows):
+    """The open saved disputes and objectives after these checked rows, with stable IDs."""
+    return open_items([(row['release']['units'], _accepted(row['release'])) for row in rows])
+
+
 def saved_rows(matter, advocate_id):
     """Validate the saved contract without rerunning or upgrading an old reply."""
     if matter.advocate_id != advocate_id:
@@ -129,6 +141,13 @@ def saved_rows(matter, advocate_id):
                 raise ValueError('saved preparation binding')
             if row['contract'] in _RECOVERY_CONTRACTS:
                 _checked_recovery(row, *_EXTRACTION_BINDINGS[row['contract']])
+            if prepared.get('contract') == EXTRACTION_RECORD:
+                # A change must name an item that was open before this turn,
+                # as derived from the earlier checked rows -- never re-guessed.
+                before = saved_items(rows)
+                check_targets(expected_units, before)
+                if (row.get('recovery') or {}).get('before'):
+                    check_targets(extraction_units(row['recovery']['before']['preparation']), before)
             if row['contract'] == CONTRACT:
                 _checked_research(row['research'], prepared, row['release'])
             elif 'research' in row:
@@ -427,11 +446,13 @@ class BrainService:
 
         try:
             history = _history(rows)
+            saved = saved_items(rows)
             label = checked(lambda: label_message(model, turn.message, history=history, history_complete=True))
 
             def extract_current():
                 prepared = extract_disputes_objectives(model, turn.message, label=label['label'],
-                                                       history=history, history_complete=True)
+                                                       history=history, history_complete=True,
+                                                       saved=saved)
                 if prepared['issues'] and not any(prepared['proposal'].values()):
                     # No accepted peer can be lost by this bounded correction.
                     # Mixed valid/held results retain their independent work.
@@ -440,7 +461,8 @@ class BrainService:
                 return prepared
 
             prepared = checked(extract_current)
-            release = checked(lambda: prepare_release(model, prepared, label['label'], passage_review=True))
+            release = checked(lambda: prepare_release(model, prepared, label['label'], passage_review=True,
+                                                      saved=saved))
             gaps = extraction_review_gaps(release)
             recovery = {'attempted': False, 'before': None,
                         'outcome': 'allowance_unavailable' if gaps else 'not_needed', 'failure': None}
@@ -449,8 +471,10 @@ class BrainService:
                 recovery.update(attempted=True, before={'preparation': deepcopy(prepared), 'release': deepcopy(release)})
                 supported = [row['unit_id'] for row in release['proof']['unit_reviews'] if row['verdict'] == 'supported']
                 try:
-                    revised = repair_disputes_objectives(model, prepared, supported_unit_ids=supported, gaps=gaps)
-                    reviewed = prepare_release(model, revised, label['label'], passage_review=True)
+                    revised = repair_disputes_objectives(model, prepared, supported_unit_ids=supported,
+                                                         gaps=gaps, saved=saved)
+                    reviewed = prepare_release(model, revised, label['label'], passage_review=True,
+                                               saved=saved)
                 except ModelError:
                     # Keep only the earlier independently checked scope. A
                     # failed repair cannot certify any new result or effect.

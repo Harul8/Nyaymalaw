@@ -14,7 +14,7 @@ from nm.brain.message_labels import validate_label
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_CONTRACT, LEGACY_CONTRACT as LEGACY_EXTRACTION_CONTRACT,
     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_CONTRACT,
-    extraction_units, _passage_input, _check_item,
+    check_targets, extraction_units, _passage_input, _check_item, _presented_saved,
 )
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
@@ -48,13 +48,20 @@ Look for:
    contribution expresses whose substantive result is wanted in that situation.
    Examine these independently. A desired result does not replace the reported
    conflict it addresses. Separate meanings requiring independent decisions.
+   Opposing accounts of the same conduct, and a defence, proof gap or missing
+   evidence, belong to the dispute they concern and are represented by it.
 2. Preserve changes to previously reported disputes or objectives: resolved
    means reported resolution or satisfaction; withdrawn means the position or
    desired result is no longer maintained; changed means revised content;
    reported means introduced or continued content. Agreement alone does not
-   establish a previous conflict. Do not invent a goal from an event.
+   establish a previous conflict. Do not invent a goal from an event. When
+   saved_items are supplied, each proposal states its operation (new, adds,
+   corrects, contradicts, resolves or withdraws) and the saved item it changes:
+   an unsupported operation or wrong saved item makes the proposal unsupported.
 3. NM work, social exchange and ordinary facts without either contribution are
-   outside this extraction. History clarifies current references, not a backlog
+   outside this extraction. Anything the user wants NM to do - record, note,
+   remember, review, summarise, advise or draft - is NM work and never an
+   objective, however it is phrased. History clarifies current references, not a backlog
    to repeat. An explicit request to correct NM's understanding permits
    interpretation_repair: describe the restored original dispute or objective,
    not the repair request. Earlier original account supplies support; the current
@@ -472,10 +479,17 @@ _RENDERERS = {"initial_brain_release_v1": _render_v1,
                  for version in _PASSAGE_REVIEWS}}
 
 
-def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_review=False) -> dict:
-    """One independent review. The caller owns correction, saving and release."""
+def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_review=False,
+                    saved=()) -> dict:
+    """One independent review. The caller owns correction, saving and release.
+
+    `saved` holds the open saved items the extraction compared against; every
+    change a proposal makes must name one of them.
+    """
     label = validate_label({"label": label})
     sources, units, issues = _inputs(prepared)
+    if "contract" in prepared:
+        check_targets(units, saved)
     focused = prepared.get("contract") in _FOCUSED_RENDERERS
     # One assignment per path: a review version can never be left unset.
     version = (PASSAGE_REVIEW_RENDERER if passage_review
@@ -485,11 +499,15 @@ def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_rev
             raise SchemaViolation("Passage review needs the current owned passage extraction contract")
         schema, presented, _ = _passage_review_schema(sources, units, EXTRACTION_CONTRACT)
         payload = {"earlier_conversation": presented[:-1], "current_message": presented[-1],
-            "proposals": {kind: [{"id": row["id"], "description": row["description"],
+            "proposals": {kind: [{"id": row["id"],
+                **{key: row[key] for key in ("title", "operation", "target_id") if key in row},
+                "description": row["description"],
                 "support_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "support"],
                 "context_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "context"],
                 "uncertainty": row["uncertainty"]} for row in rows]
                 for kind, rows in prepared["proposal"].items()}, "held_items": issues}
+        if saved:
+            payload["saved_items"] = _presented_saved(saved)
         system = _PASSAGE_REVIEW_SYSTEM
     else:
         payload = {"original_conversation": sources, "preparation": prepared["proposal"],

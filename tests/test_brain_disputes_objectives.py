@@ -40,10 +40,12 @@ def selection(passage_id="current:p1", purpose="support"):
     return {"passage_id": passage_id, "purpose": purpose}
 
 
-def item(description="Supplier's refusal to deliver", selections=None, uncertainty=None):
-    return {"description": description,
+def item(description="Supplier's refusal to deliver", selections=None, uncertainty=None, *,
+         title="Refused delivery", operation="new", target_id=None, clarification=None):
+    return {"title": title, "description": description, "operation": operation,
+            "target_id": target_id,
             "selections": [selection()] if selections is None else selections,
-            "uncertainty": uncertainty}
+            "uncertainty": uncertainty, "clarification": clarification}
 
 
 def legacy_item(description="Supplier's refusal to deliver", passages=None, uncertainty=None):
@@ -82,7 +84,9 @@ def test_first_input_makes_one_call_and_returns_only_private_extraction():
     assert set(schema["properties"]) == {"disputes", "objectives"}
     for kind in ("disputes", "objectives"):
         item_schema = schema["properties"][kind]["items"]["properties"]
-        assert set(item_schema) == {"description", "selections", "uncertainty"}
+        assert set(item_schema) == {"title", "description", "operation", "target_id",
+                                    "selections", "uncertainty", "clarification"}
+        assert item_schema["target_id"] == {"type": "null"}  # nothing is saved before the first message
         passage_schema = item_schema["selections"]["items"]["properties"]
         assert set(passage_schema) == {"passage_id", "purpose"}
         assert passage_schema["passage_id"]["enum"] == ["current:p1"]

@@ -5,7 +5,7 @@ from copy import deepcopy
 import hashlib
 import json
 
-from nm.brain.disputes_objectives import extraction_units
+from nm.brain.disputes_objectives import CLOSING_OPERATIONS, extraction_units
 from nm.brain.release import render_saved_release
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, estimate_tokens,
@@ -53,8 +53,10 @@ def research_input(prepared, release):
         raise SchemaViolation("Research input differs from the checked extraction")
     supported = {row["unit_id"] for row in release["proof"].get("unit_reviews", [])
                  if row["verdict"] == "supported"}
+    # A dispute this message resolves or withdraws needs no legal research.
     subjects = {identity: deepcopy(unit["proposal"]) for identity, unit in units.items()
-                if unit["kind"] == "disputes" and identity in supported}
+                if unit["kind"] == "disputes" and identity in supported
+                and unit["proposal"].get("operation") not in CLOSING_OPERATIONS}
     originals = deepcopy(prepared["sources"])
     return {"sources": originals, "disputes": subjects,
             "extraction_contract": prepared["contract"]}
