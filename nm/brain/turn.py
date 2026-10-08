@@ -11,18 +11,34 @@ from datetime import datetime, timezone
 from nm.brain.message_labels import label_message
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_RECORD, LEGACY_CONTRACT as LEGACY_EXTRACTION_RECORD,
-    extract_disputes_objectives, extraction_units,
+    PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_RECORD,
+    extract_disputes_objectives, extraction_units, repair_disputes_objectives,
 )
 from nm.brain.release import (
-    EXTRACTION_RENDERER, LEGACY_EXTRACTION_RENDERER, prepare_release, render_saved_release,
+    LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RENDERER,
+    PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_REVIEW_RENDERER,
+    extraction_review_gaps, prepare_release, render_saved_release,
 )
 from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
-CONTRACT = 'current_brain_turn_v3'
+CONTRACT = 'current_brain_turn_v5'
+SEGMENT_LEGACY_CONTRACT = 'current_brain_turn_v4'
+PASSAGE_LEGACY_CONTRACT = 'current_brain_turn_v3'
 EXTRACTION_LEGACY_CONTRACT = 'current_brain_turn_v2'
 LEGACY_CONTRACT = 'current_brain_turn_v1'
+# Each saved turn version is re-checked with exactly the review rendering and
+# extraction record it was produced with, and so with the passage-cutting rule
+# behind them. v5 passages end at sentences; v3/v4 passages end at every mark.
+_EXTRACTION_BINDINGS = {
+    CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
+    SEGMENT_LEGACY_CONTRACT: (PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
+    PASSAGE_LEGACY_CONTRACT: (PASSAGE_LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
+    EXTRACTION_LEGACY_CONTRACT: (LEGACY_EXTRACTION_RENDERER, LEGACY_EXTRACTION_RECORD),
+}
+# Versions whose turns carry a bounded extraction-recovery record.
+_RECOVERY_CONTRACTS = (CONTRACT, SEGMENT_LEGACY_CONTRACT)
 
 
 class BrainRefused(Exception):
@@ -76,7 +92,7 @@ def saved_rows(matter, advocate_id):
         if matter.version != len(matter.brain_chat):
             raise ValueError('saved conversation tail is missing')
         for row in matter.brain_chat:
-            if (row['contract'] not in (LEGACY_CONTRACT, EXTRACTION_LEGACY_CONTRACT, CONTRACT) or row['matter_id'] != matter.id
+            if (row['contract'] not in (LEGACY_CONTRACT, *_EXTRACTION_BINDINGS) or row['matter_id'] != matter.id
                     or row['advocate_id'] != advocate_id or row['committed'] is not True
                     or row['release_state'] != 'released'
                     or row['request_digest'] != _digest(row['request'])
@@ -87,16 +103,13 @@ def saved_rows(matter, advocate_id):
                 raise ValueError('saved conversation binding')
             release = render_saved_release(row['release'])
             prepared = row['preparation']
-            if row['contract'] in (CONTRACT, EXTRACTION_LEGACY_CONTRACT):
-                expected_renderer = (EXTRACTION_RENDERER if row['contract'] == CONTRACT
-                                     else LEGACY_EXTRACTION_RENDERER)
+            if row['contract'] in _EXTRACTION_BINDINGS:
+                expected_renderer, expected_contract = _EXTRACTION_BINDINGS[row['contract']]
                 if release['renderer_version'] != expected_renderer:
                     raise ValueError('saved extraction rendering contract')
-                expected_units = extraction_units(prepared)
-                expected_contract = (EXTRACTION_RECORD if row['contract'] == CONTRACT
-                                     else LEGACY_EXTRACTION_RECORD)
                 if prepared['contract'] != expected_contract:
                     raise ValueError('saved extraction projection contract')
+                expected_units = extraction_units(prepared)
             else:
                 if (release['renderer_version'] not in ('initial_brain_release_v1', 'initial_brain_release_v2')
                         or 'contract' in prepared):
@@ -109,6 +122,8 @@ def saved_rows(matter, advocate_id):
                     or prepared['issues'] != release['issues']
                     or expected_units != release['units']):
                 raise ValueError('saved preparation binding')
+            if row['contract'] in _RECOVERY_CONTRACTS:
+                _checked_recovery(row, *_EXTRACTION_BINDINGS[row['contract']])
             response = row['response']
             fixed = {'route': 'current_brain', 'mode': 'conversation', 'mode_statement': '',
                      'blocked': False, 'blocked_reason': None, 'material': [],
@@ -154,6 +169,45 @@ def _history(rows):
             prior['service_status'] = row['response']['service_status']
         history.append(prior)
     return history
+
+
+def _checked_recovery(row, renderer, extraction_record):
+    """Recovery lineage is durable evidence, never a substitute for final review."""
+    recovery = row.get('recovery')
+    if (not isinstance(recovery, dict) or set(recovery) != {'attempted', 'before', 'outcome', 'failure'}
+            or type(recovery['attempted']) is not bool
+            or recovery['outcome'] not in ('not_needed', 'allowance_unavailable', 'ready', 'partial', 'failed')
+            or recovery['failure'] not in (None, 'model_error')):
+        raise ValueError('saved extraction recovery contract')
+    gaps = extraction_review_gaps(row['release'])
+    if not recovery['attempted']:
+        expected = 'allowance_unavailable' if gaps else 'not_needed'
+        if recovery['before'] is not None or recovery['failure'] is not None or recovery['outcome'] != expected:
+            raise ValueError('saved unused recovery binding')
+        return
+    before = recovery['before']
+    if not isinstance(before, dict) or set(before) != {'preparation', 'release'}:
+        raise ValueError('saved recovery original attempt')
+    original = render_saved_release(before['release'])
+    original_units = extraction_units(before['preparation'])
+    if (original['renderer_version'] != renderer
+            or before['preparation']['contract'] != extraction_record
+            or original['sources'] != row['release']['sources']
+            or before['preparation']['sources'] != original['sources']
+            or original_units != original['units']
+            or before['preparation']['issues'] != original['issues']
+            or not extraction_review_gaps(original)):
+        raise ValueError('saved recovery source/need binding')
+    if recovery['failure'] is not None:
+        if (recovery['outcome'] != 'failed' or row['preparation'] != before['preparation']
+                or row['release'] != before['release']):
+            raise ValueError('failed recovery cannot claim a replacement result')
+    elif recovery['outcome'] != row['release']['state']:
+        raise ValueError('saved recovery result differs from final checked state')
+    for review in original['proof']['unit_reviews']:
+        identity = review['unit_id']
+        if review['verdict'] == 'supported' and row['release']['units'].get(identity) != original_units[identity]:
+            raise ValueError('recovery discarded an independently supported proposal')
 
 
 class _MeasuredModel:
@@ -279,7 +333,24 @@ class BrainService:
                 return prepared
 
             prepared = checked(extract_current)
-            release = checked(lambda: prepare_release(model, prepared, label['label']))
+            release = checked(lambda: prepare_release(model, prepared, label['label'], passage_review=True))
+            gaps = extraction_review_gaps(release)
+            recovery = {'attempted': False, 'before': None,
+                        'outcome': 'allowance_unavailable' if gaps else 'not_needed', 'failure': None}
+            if gaps and corrections_left:
+                corrections_left -= 1
+                recovery.update(attempted=True, before={'preparation': deepcopy(prepared), 'release': deepcopy(release)})
+                supported = [row['unit_id'] for row in release['proof']['unit_reviews'] if row['verdict'] == 'supported']
+                try:
+                    revised = repair_disputes_objectives(model, prepared, supported_unit_ids=supported, gaps=gaps)
+                    reviewed = prepare_release(model, revised, label['label'], passage_review=True)
+                except ModelError:
+                    # Keep only the earlier independently checked scope. A
+                    # failed repair cannot certify any new result or effect.
+                    recovery.update(outcome='failed', failure='model_error')
+                else:
+                    prepared, release = revised, reviewed
+                    recovery['outcome'] = release['state']
             if not release['elements']:
                 raise BrainRefused('A response could not be prepared for this message. Please retry.',
                                    code='response_unavailable')
@@ -299,6 +370,7 @@ class BrainService:
             'chat_id': chat_id, 'advocate_id': turn.advocate_id, 'message': turn.message,
             'request': request, 'request_digest': request_digest, 'at': at,
             'label': label, 'preparation': prepared, 'release': release,
+            'recovery': recovery,
             'response': response, 'response_digest': _digest(response),
             'committed': True, 'release_state': 'released'}
         proposed = replace(matter, brain_chat=(*matter.brain_chat, row), version=version + 1)

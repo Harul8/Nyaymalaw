@@ -120,10 +120,11 @@ def test_generic_receipt_does_not_allow_coordinated_internal_source_rewriting():
 
 
 def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_history():
+    from nm.shared.model_port import ProviderUnavailable
     message = MIXED_MESSAGE
     outputs = mixed_outputs(message)
     outputs[-1]["unit_reviews"][1].update(verdict="unsupported", reason="restriction")
-    brain, model, store = service(WiredModel(*outputs))
+    brain, model, store = service(WiredModel(*outputs, ProviderUnavailable("Repair unavailable")))
     first = brain.run(turn(message=message)).as_dict()
     assert first["service_status"] is None
     assert [row["text"] for row in first["elements"]] == ["Message received."]
@@ -132,10 +133,10 @@ def test_partial_internal_review_survives_save_without_exposing_it_in_reply_or_h
     assert store.value.brain_chat[0]["response"]["service_status"] == first["service_status"]
     again = brain.run(turn(message=message)).as_dict()
     assert again["service_status"] == first["service_status"] and again["replayed"] is True
-    assert len(model.calls) == 3
+    assert len(model.calls) == 4
     model.outputs.extend(greeting_outputs())
     brain.run(turn(turn_id="turn_next", message="Thank you.", chat_id=first["chat_id"], expected_version=1))
-    context = json.loads(model.calls[3][0].user)["earlier_conversation"]
+    context = json.loads(model.calls[4][0].user)["earlier_conversation"]
     assert context[-1] == {"role": "nm", "text": "Message received.", "turn_id": "turn_one"}
     assert store.value.brain_chat[0]["release"]["state"] == "partial"
 

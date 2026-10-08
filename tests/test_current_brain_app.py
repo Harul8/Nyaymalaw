@@ -32,7 +32,13 @@ MIXED_MESSAGE = "The supplier refuses to return my deposit. I want the deposit r
 def greeting_outputs():
     return [{"label": "greeting"},
             {"disputes": [], "objectives": []},
-            {"greeting": True, "unit_reviews": [], "omissions": []}]
+            {"greeting": True, "unit_reviews": [], "readings": {"current:p1": [{
+                "kind": "outside_scope", "purpose": "social", "reason": "Social acknowledgement."}]}}]
+
+
+def empty_review(purpose="nm_work"):
+    return {"greeting": False, "unit_reviews": [], "readings": {"current:p1": [{
+        "kind": "outside_scope", "purpose": purpose, "reason": "No dispute or objective is contributed."}]}}
 
 
 def mixed_outputs(message):
@@ -45,8 +51,16 @@ def mixed_outputs(message):
                         "selections": [{"passage_id": "current:p2", "purpose": "support"}],
                         "uncertainty": None}]},
         {"greeting": False, "unit_reviews": [
-            {"unit_id": identity, "verdict": "supported", "reason": "none"}
-            for identity in ("dispute:1", "objective:1")], "omissions": []}]
+            {"unit_id": identity, "verdict": "supported"}
+            for identity in ("dispute:1", "objective:1")], "readings": {
+                "current:p1": [{"kind": "dispute", "contribution": "reported",
+                    "description": "The advocate reports the supplier refusing to return their deposit.",
+                    "support_passage_ids": ["current:p1"], "context_passage_ids": [],
+                    "uncertainty": None, "represented_by": ["dispute:1"]}],
+                "current:p2": [{"kind": "objective", "contribution": "reported",
+                    "description": "The advocate wants the deposit returned.",
+                    "support_passage_ids": ["current:p2"], "context_passage_ids": [],
+                    "uncertainty": None, "represented_by": ["objective:1"]}]}}]
 
 
 class WiredModel:
@@ -188,8 +202,8 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
     held = app.held(response["chat_id"])
     proposed = held.brain_chat[0]["preparation"]["proposal"]
     assert set(proposed) == {"disputes", "objectives"}
-    selected_words = {"disputes": "The supplier refuses to return my deposit.",
-                      "objectives": " I want the deposit returned."}
+    selected_words = {"disputes": "The supplier refuses to return my deposit. ",
+                      "objectives": "I want the deposit returned."}
     for kind, collection in proposed.items():
         assert collection[0]["state"] == "proposed"
         assert collection[0]["source_ids"] == ["current"]
@@ -198,8 +212,8 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
         assert collection[0]["passages"] == [{"source_id": "current", "quote": quote,
             "passage_id": "current:p1" if kind == "disputes" else "current:p2",
             "purpose": "support", "start": start, "end": start + len(quote)}]
-    assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v2"
-    assert held.brain_chat[0]["contract"] == "current_brain_turn_v3"
+    assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v3"
+    assert held.brain_chat[0]["contract"] == "current_brain_turn_v5"
     assert held.facts == () and held.threads == ()
     assert response["board_changes"] == [] and response["material"] == []
 
@@ -211,7 +225,7 @@ def test_internal_material_stays_private_through_followup_reopen_and_idempotent_
     chat_id = first["chat_id"]
     snapshot = app.held(chat_id)
     assert snapshot.brain_chat[0]["response"]["elements"] == first["elements"]
-    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v2"
+    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v6"
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["disputes"]
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["objectives"]
     second = assert_ok(app.post("Thank you.", "turn_second", chat_id=chat_id, expected_version=1))
@@ -234,7 +248,7 @@ def test_legacy_preparation_read_replay_and_followup_preserve_the_original_trans
     from tests.test_new_brain_release import historical_v1_release, prepared as legacy_prepared
     message = "I received a draft."
     outputs = [{"label": "information"}, {"disputes": [], "objectives": []},
-               {"greeting": False, "unit_reviews": [], "omissions": []}]
+               empty_review("background")]
     app = harness(*outputs, *greeting_outputs())
     first = assert_ok(app.post(message))
     held = app.held(first["chat_id"])
@@ -244,6 +258,7 @@ def test_legacy_preparation_read_replay_and_followup_preserve_the_original_trans
     if version == "initial_brain_release_v2":
         historical["elements"][0]["text"] = "Message received."
     rows[0]["contract"] = "current_brain_turn_v1"
+    rows[0].pop("recovery")
     rows[0]["preparation"] = legacy_prepared(message, material=True)
     rows[0]["release"] = historical
     rows[0]["response"]["elements"] = deepcopy(historical["elements"])
@@ -287,6 +302,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
     assert all("passage_id" not in passage for collection in historical["proposal"].values()
                for item in collection for passage in item["passages"])
     rows[0]["contract"] = "current_brain_turn_v2"
+    rows[0].pop("recovery")
     rows[0]["preparation"] = historical
     rows[0]["release"] = {
         "renderer_version": "disputes_objectives_release_v1", "label": "mixed",
@@ -312,8 +328,8 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
         ("advocate", MIXED_MESSAGE), ("nm", "Message received.")]
     final_rows = app.held(first["chat_id"]).brain_chat
     assert final_rows[0] == persisted.brain_chat[0]
-    assert final_rows[1]["contract"] == "current_brain_turn_v3"
-    assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v2"
+    assert final_rows[1]["contract"] == "current_brain_turn_v5"
+    assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v3"
 
 
 @pytest.mark.parametrize("label,message", [
@@ -322,7 +338,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
 ])
 def test_reviewed_absence_is_valid_without_manufacturing_disputes_or_objectives(harness, label, message):
     app = harness({"label": label}, {"disputes": [], "objectives": []},
-                  {"greeting": False, "unit_reviews": [], "omissions": []})
+                  empty_review("background" if label == "information" else "nm_work"))
     response = assert_ok(app.post(message))
     assert [row["text"] for row in response["elements"]] == ["Message received."]
     row = app.held(response["chat_id"]).brain_chat[0]
@@ -347,14 +363,16 @@ def test_advisory_label_does_not_filter_dispute_or_objective_extraction(harness,
 
 
 def test_empty_extraction_with_reported_omission_is_not_admitted_as_reviewed_absence(harness):
+    from nm.shared.model_port import ProviderUnavailable
+    from tests.test_disputes_objectives_passage_review import meaning
     app = harness({"label": "information"}, {"disputes": [], "objectives": []},
                   {"greeting": False, "unit_reviews": [],
-                   "omissions": [{"source_id": "current", "kind": "disputes"}]})
+                   "readings": {"current:p1": [meaning()]}}, ProviderUnavailable("Repair failed"))
     response = app.post("The supplier refuses to return my deposit.")
     assert response.status_code == 503
     assert response.json()["detail"]["committed"] == "not_committed"
     assert not app.store.list_for("adv_wiring").matters
-    assert len(app.model.calls) == 3
+    assert len(app.model.calls) == 4
 
 
 def test_missing_login_csrf_and_foreign_owner_do_not_dispatch_models(harness):

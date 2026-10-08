@@ -106,7 +106,7 @@ def test_independent_contributions_within_one_occurrence_can_be_represented_toge
     # Add the second selected passage to the fixture: the complete compound
     # meaning legitimately depends on both current navigation partitions.
     proposal = prepared(objectives=[item("Prior aim withdrawn; new aim expressed", [selection(), selection("current:p2")])],
-                        message="I no longer want continued access; I want to collect my things.")
+                        message="I no longer want continued access. I want to collect my things.")
     reviewed = proof({"current:p1": [meaning("objective", represented=["objective:1"], contribution="withdrawn")],
         "current:p2": [meaning("objective", support=["current:p2"], represented=["objective:1"])]}, verdict("objective:1"))
     saved = release(proposal, reviewed)

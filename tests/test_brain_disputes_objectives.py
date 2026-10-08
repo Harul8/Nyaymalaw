@@ -96,7 +96,7 @@ def test_first_input_makes_one_call_and_returns_only_private_extraction():
     assert "proposed_label" not in payload
     assert "earlier_conversation" not in payload
     assert prepared == {
-        "contract": "disputes_objectives_v2", "state": "prepared_unreviewed",
+        "contract": "disputes_objectives_v3", "state": "prepared_unreviewed",
         "proposal": output(), "sources": [{"id": "current",
             "message": {"role": "advocate", "text": message}}], "issues": []}
     assert extraction_units(prepared) == {}
@@ -153,7 +153,7 @@ def test_each_collection_is_independent_and_gets_owned_proposal_ids(collection, 
 
 def test_code_resolves_exact_words_with_unicode_and_original_whitespace():
     message = "Hello.\n  She said ‘access denied’—I disagree.  Please research it."
-    quote = "  She said ‘access denied’—I disagree."
+    quote = "She said ‘access denied’—I disagree.  "
     result = extract(ExtractionModel(output(disputes=[item(selections=[selection("current:p2")])])),
                      message, "mixed")
     resolved = result["proposal"]["disputes"][0]["passages"][0]
@@ -175,33 +175,36 @@ def test_presentation_keeps_each_original_character_once_across_navigation_bound
     assert prepared["sources"][-1]["message"]["text"] == message
 
 
-@pytest.mark.parametrize("passage_id,start", [("current:p1", 0), ("current:p2", 3)])
+REPEATED = "Refused. Accepted. Refused. Done."  # passages 1 and 3 are the same words
+
+
+@pytest.mark.parametrize("passage_id,start", [("current:p1", 0), ("current:p3", 19)])
 def test_repeated_identical_words_have_distinct_owned_occurrences(passage_id, start):
     prepared = extract(ExtractionModel(output(disputes=[item(selections=[selection(passage_id)])])),
-                       "No.No.")
+                       REPEATED)
     assert prepared["issues"] == []
     saved = prepared["proposal"]["disputes"][0]["passages"][0]
-    assert saved == {"passage_id": passage_id, "source_id": "current", "quote": "No.",
-                     "purpose": "support", "start": start, "end": start + 3}
+    assert saved == {"passage_id": passage_id, "source_id": "current", "quote": "Refused. ",
+                     "purpose": "support", "start": start, "end": start + 9}
     assert extraction_units(prepared)["dispute:1"]["proposal"]["passages"] == [saved]
 
 
 def test_saved_passage_id_cannot_shift_to_an_identical_different_occurrence():
-    prepared = extract(ExtractionModel(output(disputes=[item(selections=[selection("current:p2")])])),
-                       "No.No.")
-    prepared["proposal"]["disputes"][0]["passages"][0].update(start=0, end=3)
+    prepared = extract(ExtractionModel(output(disputes=[item(selections=[selection("current:p3")])])),
+                       REPEATED)
+    prepared["proposal"]["disputes"][0]["passages"][0].update(start=0, end=9)
     with pytest.raises(SchemaViolation):
         extraction_units(prepared)
 
 
 def test_item_can_select_multiple_navigation_parts_without_inventing_a_joined_quote():
-    message = "I want payment; only after checking the account."
+    message = "I want payment. Only after checking the account."
     supplied = item("Payment subject to checking the account", [selection("current:p1"), selection("current:p2")])
     prepared = extract(ExtractionModel(output(objectives=[supplied])), message)
     stored = prepared["proposal"]["objectives"][0]
     assert prepared["issues"] == [] and stored["source_ids"] == ["current"]
     assert [part["quote"] for part in stored["passages"]] == [
-        "I want payment;", " only after checking the account."]
+        "I want payment. ", "Only after checking the account."]
     assert "".join(part["quote"] for part in stored["passages"]) == message
 
 
@@ -236,7 +239,7 @@ def test_legacy_exact_quote_snapshot_remains_readable_without_selectable_id_meta
 ])
 def test_new_snapshot_cannot_drop_owned_selection_or_silently_downgrade_to_legacy(alter):
     saved = extracted()
-    assert saved["contract"] == "disputes_objectives_v2"
+    assert saved["contract"] == "disputes_objectives_v3"
     alter(saved)
     with pytest.raises(SchemaViolation):
         extraction_units(saved)

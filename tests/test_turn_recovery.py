@@ -25,8 +25,8 @@ from tests.test_current_brain_app import (
 
 def invented_review():
     return {"greeting": True, "unit_reviews": [
-        {"unit_id": "current", "verdict": "supported",
-         "reason": "none"}], "omissions": []}
+        {"unit_id": "current", "verdict": "supported"}], "readings": {
+            "current:p1": [{"kind":"outside_scope", "purpose":"social", "reason":"Greeting."}]}}
 
 
 def invalid_provider_review():
@@ -52,15 +52,14 @@ def test_invalid_review_repairs_once_with_original_input_and_feedback(tmp_path, 
         after = json.loads(retried_prompt.user)
         feedback = after.pop("correction_feedback")
         assert after == before
-        assert before["original_conversation"] == [
-            {"id": "current", "message": {"role": "advocate", "text": message}}]
-        assert before["permitted_unit_ids"] == []
+        assert "".join(p["text"] for p in before["current_message"]["message"]["passages"]) == message
+        assert before["proposals"] == {"disputes": [], "objectives": []}
         assert feedback["rejected_output"] == invented_review()
         assert feedback["mismatch"]
         if rejection == "provider":
             assert feedback["mismatch"] == "$.unit_reviews: more than 0 items"
         else:
-            assert "Review" in feedback["mismatch"] and "unit" in feedback["mismatch"]
+            assert "unit_reviews" in feedback["mismatch"]
         assert "untrusted" in feedback["instruction"]
         assert retried_prompt.system == rejected_prompt.system
         assert calls[2][1]["properties"]["unit_reviews"]["maxItems"] == 0
@@ -87,9 +86,10 @@ def test_repair_keeps_the_complete_earlier_conversation_for_followup(tmp_path):
         assert response["metrics"]["llm_calls"] == 4
         original = json.loads(harness.model.calls[-2][0].user)
         retried = json.loads(harness.model.calls[-1][0].user)
-        assert retried["original_conversation"] == original["original_conversation"]
-        assert [(row["message"]["role"], row["message"]["text"])
-                for row in original["original_conversation"]] == [
+        assert retried["earlier_conversation"] == original["earlier_conversation"]
+        assert retried["current_message"] == original["current_message"]
+        assert [(row["message"]["role"], "".join(p["text"] for p in row["message"]["passages"]))
+                for row in [*original["earlier_conversation"], original["current_message"]]] == [
             ("advocate", "Good afternoon."), ("nm", "Hello. How can I help?"),
             ("advocate", "Thank you.")]
         assert len(harness.held(opened["chat_id"]).brain_chat) == 2
@@ -198,7 +198,8 @@ def test_held_peer_preserves_supported_extraction_without_repeating_accepted_inp
     label, prepared, review = mixed_outputs(MIXED_MESSAGE)
     prepared["objectives"][0]["selections"][0]["passage_id"] = "other_matter:p1"
     review["unit_reviews"] = review["unit_reviews"][:1]
-    harness = Harness(tmp_path, WiredModel(label, prepared, review))
+    review["readings"]["current:p2"][0]["represented_by"] = []
+    harness = Harness(tmp_path, WiredModel(label, prepared, review, ProviderUnavailable("Repair unavailable")))
     try:
         response = assert_ok(harness.post(MIXED_MESSAGE))
         saved = harness.held(response["chat_id"]).brain_chat[0]
@@ -207,9 +208,9 @@ def test_held_peer_preserves_supported_extraction_without_repeating_accepted_inp
         assert saved["preparation"]["proposal"]["objectives"] == []
         assert saved["preparation"]["issues"][0]["unit"] == "objective:1"
         assert response["service_status"] is None
-        assert response["metrics"]["llm_calls"] == 3
+        assert response["metrics"]["llm_calls"] == 4
         assert [element["text"] for element in response["elements"]] == ["Message received."]
         again = assert_ok(harness.post(MIXED_MESSAGE))
-        assert again["replayed"] is True and len(harness.model.calls) == 3
+        assert again["replayed"] is True and len(harness.model.calls) == 4
     finally:
         harness.client.close()

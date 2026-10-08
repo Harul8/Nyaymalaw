@@ -36,7 +36,7 @@ def test_new_extraction_has_one_independent_review_with_owned_passages_and_no_pu
     original = deepcopy(proposal)
     model = ReviewModel(review(unit()))
     saved = prepare_release(model, proposal, "information")
-    assert saved["renderer_version"] == "disputes_objectives_release_v2"
+    assert saved["renderer_version"] == "disputes_objectives_release_v5"
     assert saved["state"] == "ready" and saved["service_status"] is None
     assert [row["text"] for row in saved["elements"]] == ["Message received."]
     assert saved["units"]["dispute:1"]["proposal"] == proposal["proposal"]["disputes"][0]
@@ -167,12 +167,12 @@ def test_review_examines_earlier_original_support_and_nm_context_without_treatin
 
 
 def test_selected_repeated_passage_keeps_its_owned_occurrence_through_review_and_replay():
-    message = "No!No!"
-    proposal = prepared(disputes=[item("The second refusal", [selection("current:p2")])], message=message)
+    message = "Refused. Accepted. Refused. Done."  # passages 1 and 3 are the same words
+    proposal = prepared(disputes=[item("The second refusal", [selection("current:p3")])], message=message)
     saved = release(proposal)
     chosen = saved["units"]["dispute:1"]["proposal"]["passages"][0]
-    assert chosen == {"source_id": "current", "quote": "No!", "start": 3, "end": 6,
-                      "passage_id": "current:p2", "purpose": "support"}
+    assert chosen == {"source_id": "current", "quote": "Refused. ", "start": 19, "end": 28,
+                      "passage_id": "current:p3", "purpose": "support"}
     assert render_saved_release(saved) == saved
     assert chosen == proposal["proposal"]["disputes"][0]["passages"][0]
 

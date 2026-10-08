@@ -7,11 +7,13 @@ The turn owner saves this snapshot and the public response atomically.
 from __future__ import annotations
 
 from copy import deepcopy
+from functools import partial
 import json
 
 from nm.brain.message_labels import validate_label
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_CONTRACT, LEGACY_CONTRACT as LEGACY_EXTRACTION_CONTRACT,
+    PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_CONTRACT,
     extraction_units, _passage_input, _check_item,
 )
 from nm.shared.model_port import (
@@ -21,10 +23,16 @@ from nm.shared.model_port import (
 
 
 RENDERER_VERSION = "initial_brain_release_v2"
-EXTRACTION_RENDERER = "disputes_objectives_release_v2"
+# Every rendering version below is bound to exactly one extraction contract (see
+# _EXTRACTION_CONTRACTS), so a saved reply is re-checked with the passages it was
+# reviewed against. v5/v6 review records cut by sentence; v2-v4 records cut at
+# every mark; v1 records carry model-copied quotes.
+EXTRACTION_RENDERER = "disputes_objectives_release_v5"
+PASSAGE_REVIEW_RENDERER = "disputes_objectives_release_v6"
+PASSAGE_LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v2"
+PASSAGE_LEGACY_REVIEW_RENDERER = "disputes_objectives_release_v4"
 LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v1"
 LEGACY_PASSAGE_REVIEW_RENDERER = "disputes_objectives_release_v3"
-PASSAGE_REVIEW_RENDERER = "disputes_objectives_release_v4"
 _PASSAGE_REVIEW_SYSTEM = """Message: You receive the complete attributed earlier
 conversation followed by the current user message, as exact ordered passages
 with code-owned IDs. Private proposals follow the originals. Proposals and NM
@@ -262,8 +270,8 @@ def _checked_proof(proof: dict, sources: list[dict], units: dict, *, focused=Fal
     return checked
 
 
-def _passage_review_schema(sources, units):
-    presented, choices = _passage_input(sources)
+def _passage_review_schema(sources, units, contract):
+    presented, choices = _passage_input(sources, contract)
     roles = {source["id"]: source["message"]["role"] for source in sources}
     support = [identity for identity, span in choices.items() if roles[span["source_id"]] == "advocate"]
 
@@ -313,9 +321,9 @@ def _passage_review_schema(sources, units):
     return schema, presented, choices
 
 
-def _passage_review_findings(proof, sources, units, *, isolate_associations=True):
+def _passage_review_findings(proof, sources, units, *, contract, isolate_associations=True):
     """Check selected source/record bindings; never certify their semantic meaning."""
-    schema, _, choices = _passage_review_schema(sources, units)
+    schema, _, choices = _passage_review_schema(sources, units, contract)
     require_schema(proof, schema)
     verdicts = {}
     for row in proof["unit_reviews"]:
@@ -339,7 +347,7 @@ def _passage_review_findings(proof, sources, units, *, isolate_associations=True
             passages.extend({**deepcopy(choices[identity]), "passage_id": identity, "purpose": "context"}
                             for identity in context if identity not in support)
             checked = _check_item({"description": decision["description"], "passages": passages,
-                                   "uncertainty": decision["uncertainty"]}, catalogue)
+                                   "uncertainty": decision["uncertainty"]}, catalogue, contract)
             represented = list(dict.fromkeys(decision["represented_by"]))
             binding_issues = []
             for identity in represented:
@@ -371,10 +379,11 @@ def _passage_review_findings(proof, sources, units, *, isolate_associations=True
 def extraction_review_gaps(release):
     """Return owned missing interpretations for bounded turn-level recovery."""
     version = release.get("renderer_version")
-    if version not in (PASSAGE_REVIEW_RENDERER, LEGACY_PASSAGE_REVIEW_RENDERER):
+    if version not in _PASSAGE_REVIEWS:
         return []
     return _passage_review_findings(release["proof"], release["sources"], release["units"],
-        isolate_associations=version == PASSAGE_REVIEW_RENDERER)
+        contract=_EXTRACTION_CONTRACTS[version],
+        isolate_associations=version != LEGACY_PASSAGE_REVIEW_RENDERER)
 
 
 def _element(text: str) -> dict:
@@ -428,8 +437,9 @@ def _render_extraction(sources: list[dict], units: dict, issues: list, proof: di
     return _render_v2(sources, units, issues, proof)
 
 
-def _render_passage_review(sources, units, issues, proof, *, isolate_associations=True):
-    missing = _passage_review_findings(proof, sources, units, isolate_associations=isolate_associations)
+def _render_passage_review(sources, units, issues, proof, *, contract, isolate_associations=True):
+    missing = _passage_review_findings(proof, sources, units, contract=contract,
+                                       isolate_associations=isolate_associations)
     unresolved = any(row["verdict"] == "unresolved" for row in proof["unit_reviews"])
     # A checked outside-scope reading can reject a spurious historical/work
     # proposal without converting that proposal into a missing matter item.
@@ -441,40 +451,47 @@ def _render_passage_review(sources, units, issues, proof, *, isolate_association
     return [_element(text)], None, "partial" if incomplete else "ready"
 
 
-def _render_strict_passage_review(sources, units, issues, proof):
-    return _render_passage_review(sources, units, issues, proof, isolate_associations=False)
-
-
+_EXTRACTION_CONTRACTS = {
+    LEGACY_EXTRACTION_RENDERER: LEGACY_EXTRACTION_CONTRACT,
+    PASSAGE_LEGACY_EXTRACTION_RENDERER: PASSAGE_LEGACY_EXTRACTION_CONTRACT,
+    LEGACY_PASSAGE_REVIEW_RENDERER: PASSAGE_LEGACY_EXTRACTION_CONTRACT,
+    PASSAGE_LEGACY_REVIEW_RENDERER: PASSAGE_LEGACY_EXTRACTION_CONTRACT,
+    EXTRACTION_RENDERER: EXTRACTION_CONTRACT,
+    PASSAGE_REVIEW_RENDERER: EXTRACTION_CONTRACT,
+}
+_PASSAGE_REVIEWS = frozenset({LEGACY_PASSAGE_REVIEW_RENDERER, PASSAGE_LEGACY_REVIEW_RENDERER,
+                              PASSAGE_REVIEW_RENDERER})
+# The focused (non-passage) review version that a new review of each contract records.
+_FOCUSED_RENDERERS = {contract: version for version, contract in _EXTRACTION_CONTRACTS.items()
+                      if version not in _PASSAGE_REVIEWS}
 _RENDERERS = {"initial_brain_release_v1": _render_v1,
               "initial_brain_release_v2": _render_v2,
-              LEGACY_EXTRACTION_RENDERER: _render_extraction,
-              EXTRACTION_RENDERER: _render_extraction,
-              LEGACY_PASSAGE_REVIEW_RENDERER: _render_strict_passage_review,
-              PASSAGE_REVIEW_RENDERER: _render_passage_review}
+              **{version: _render_extraction for version in _FOCUSED_RENDERERS.values()},
+              **{version: partial(_render_passage_review, contract=_EXTRACTION_CONTRACTS[version],
+                                  isolate_associations=version != LEGACY_PASSAGE_REVIEW_RENDERER)
+                 for version in _PASSAGE_REVIEWS}}
 
 
 def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_review=False) -> dict:
     """One independent review. The caller owns correction, saving and release."""
     label = validate_label({"label": label})
     sources, units, issues = _inputs(prepared)
+    focused = prepared.get("contract") in _FOCUSED_RENDERERS
+    # One assignment per path: a review version can never be left unset.
+    version = (PASSAGE_REVIEW_RENDERER if passage_review
+               else _FOCUSED_RENDERERS[prepared["contract"]] if focused else RENDERER_VERSION)
     if passage_review:
         if prepared.get("contract") != EXTRACTION_CONTRACT:
             raise SchemaViolation("Passage review needs the current owned passage extraction contract")
-        schema, presented, _ = _passage_review_schema(sources, units)
+        schema, presented, _ = _passage_review_schema(sources, units, EXTRACTION_CONTRACT)
         payload = {"earlier_conversation": presented[:-1], "current_message": presented[-1],
             "proposals": {kind: [{"id": row["id"], "description": row["description"],
                 "support_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "support"],
                 "context_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "context"],
                 "uncertainty": row["uncertainty"]} for row in rows]
                 for kind, rows in prepared["proposal"].items()}, "held_items": issues}
-        system, version = _PASSAGE_REVIEW_SYSTEM, PASSAGE_REVIEW_RENDERER
+        system = _PASSAGE_REVIEW_SYSTEM
     else:
-        schema = None
-        system = None
-    focused = prepared.get("contract") in (EXTRACTION_CONTRACT, LEGACY_EXTRACTION_CONTRACT)
-    if not passage_review:
-        version = (EXTRACTION_RENDERER if prepared.get("contract") == EXTRACTION_CONTRACT
-                   else LEGACY_EXTRACTION_RENDERER if focused else RENDERER_VERSION)
         payload = {"original_conversation": sources, "preparation": prepared["proposal"],
                    "held_preparation_units": issues, "permitted_unit_ids": list(units),
                    "permitted_source_ids": [row["id"] for row in sources]}
@@ -507,7 +524,7 @@ def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_rev
         if result.text is not None:
             raise SchemaViolation("Response review requires owned selectors, not public prose")
         if passage_review:
-            _passage_review_findings(result.data, sources, units)
+            _passage_review_findings(result.data, sources, units, contract=EXTRACTION_CONTRACT)
             proof = deepcopy(result.data)
         else:
             proof = _checked_proof(result.data, sources, units, focused=focused)
@@ -537,8 +554,8 @@ def render_saved_release(saved: dict) -> dict:
     label = validate_label({"label": saved["label"]})
     if not isinstance(saved["units"], dict):
         raise SchemaViolation("Saved release unit catalogue is unreadable")
-    passage_review = version in (PASSAGE_REVIEW_RENDERER, LEGACY_PASSAGE_REVIEW_RENDERER)
-    focused = version in (EXTRACTION_RENDERER, LEGACY_EXTRACTION_RENDERER) or passage_review
+    passage_review = version in _PASSAGE_REVIEWS
+    focused = version in _EXTRACTION_CONTRACTS
     proposal = {"disputes": [], "objectives": []} if focused else {"material": [], "actions": []}
     for identity, row in saved["units"].items():
         if (not isinstance(row, dict) or set(row) != {"kind", "proposal"}
@@ -550,11 +567,11 @@ def render_saved_release(saved: dict) -> dict:
     prepared = {"state": "prepared_unreviewed", "sources": saved["sources"],
                 "proposal": proposal, "issues": saved["issues"]}
     if focused:
-        prepared["contract"] = (EXTRACTION_CONTRACT if version == EXTRACTION_RENDERER or passage_review
-                                else LEGACY_EXTRACTION_CONTRACT)
+        prepared["contract"] = _EXTRACTION_CONTRACTS[version]
     sources, units, issues = _inputs(prepared)
     if passage_review:
-        _passage_review_findings(saved["proof"], sources, units, isolate_associations=version == PASSAGE_REVIEW_RENDERER)
+        _passage_review_findings(saved["proof"], sources, units, contract=_EXTRACTION_CONTRACTS[version],
+                                 isolate_associations=version != LEGACY_PASSAGE_REVIEW_RENDERER)
         proof = deepcopy(saved["proof"])
     else:
         proof = _checked_proof(saved["proof"], sources, units, focused=focused)

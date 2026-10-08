@@ -6,13 +6,19 @@ import json
 import re
 
 from nm.brain.message_labels import validate_label
+from nm.shared.text_contracts import split_passages
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
     estimate_tokens, require_schema,
 )
 
-CONTRACT = "disputes_objectives_v2"
-LEGACY_CONTRACT = "disputes_objectives_v1"
+# Each passage contract fixes the rule that cut the original words into
+# selectable passages. A saved record is always re-checked with the rule it was
+# made with, so changing the rule needs a new contract, never an edit to an old
+# one -- including any change to the shared sentence-end definition below.
+CONTRACT = "disputes_objectives_v3"  # nm.shared.text_contracts.split_passages: sentence ends only.
+PASSAGE_LEGACY_CONTRACT = "disputes_objectives_v2"  # Cut after every . ! ? ; and line break.
+LEGACY_CONTRACT = "disputes_objectives_v1"  # Model-copied quotes; no owned passages.
 COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
 _TASK = """Purpose: Identify only the disputes and substantive matter objectives
 communicated or revised by the latest message. Return internal proposals only.
@@ -100,18 +106,30 @@ _SELECTED_SCHEMA = {**_SCHEMA, "properties": {
     kind: {"type": "array", "items": _SELECTED_ITEM} for kind in COLLECTIONS}}
 
 
-def _passage_input(sources):
+def _split_at_every_mark(text: str) -> list[str]:
+    """The disputes_objectives_v2 rule, kept only to re-check records it made."""
+    parts = []
+    for part in re.split(r"(?<=[.!?;\n])", text):
+        if part:
+            if not part.strip() and parts:
+                parts[-1] += part
+            else:
+                parts.append(part)
+    return parts
+
+
+_SEGMENTERS = {CONTRACT: split_passages, PASSAGE_LEGACY_CONTRACT: _split_at_every_mark}
+
+
+def _passage_input(sources, contract=CONTRACT):
     """Present all original words once; code, not the model, owns exact spans."""
+    split = _SEGMENTERS.get(contract)
+    if split is None:
+        raise SchemaViolation(f"Extraction contract {contract!r} has no owned passages")
     presented, choices = [], {}
     for source in sources:
         original = source["message"]
-        parts = []
-        for part in re.split(r"(?<=[.!?;\n])", original["text"]):
-            if part:
-                if not part.strip() and parts:
-                    parts[-1] += part
-                else:
-                    parts.append(part)
+        parts = split(original["text"])
         offset, passages = 0, []
         for index, part in enumerate(parts, 1):
             identity = f"{source['id']}:p{index}"
@@ -156,7 +174,7 @@ def _sources(sources):
     return catalogue
 
 
-def _check_item(item, catalogue):
+def _check_item(item, catalogue, contract=CONTRACT):
     require_schema(item, _ITEM)
     if not item["description"].strip():
         raise SchemaViolation("The extracted description is blank")
@@ -169,7 +187,7 @@ def _check_item(item, catalogue):
         if not quote.strip():
             raise SchemaViolation(f"Passage in {identity} is blank")
         if "passage_id" in passage:
-            _, owned = _passage_input([{"id": identity, "message": source}])
+            _, owned = _passage_input([{"id": identity, "message": source}], contract)
             choice = owned.get(passage["passage_id"])
             if choice is None or any(passage.get(key) != value for key, value in choice.items()):
                 raise SchemaViolation(f"Selected passage in {identity} differs from its owned identity")
@@ -210,19 +228,20 @@ def _check_item(item, catalogue):
 def _prepare(data, sources, *, choices=None):
     require_schema(data, _ENVELOPE)
     catalogue = _sources(sources)
+    contract = CONTRACT if choices is not None else LEGACY_CONTRACT
     proposal, issues = {kind: [] for kind in COLLECTIONS}, []
     for kind, prefix in COLLECTIONS.items():
         for index, item in enumerate(data[kind], 1):
             identity = f"{prefix}:{index}"
             try:
                 selected = _resolve_selections(item, choices) if choices is not None else item
-                checked = _check_item(selected, catalogue)
+                checked = _check_item(selected, catalogue, contract)
             except SchemaViolation as exc:
                 issues.append({"unit": identity, "reason": str(exc),
                                "rejected_proposal": deepcopy(item)})
             else:
                 proposal[kind].append({**checked, "id": identity, "state": "proposed"})
-    return {"contract": CONTRACT if choices is not None else LEGACY_CONTRACT,
+    return {"contract": contract,
             "state": "prepared_unreviewed", "proposal": proposal,
             "sources": deepcopy(sources), "issues": issues}
 
@@ -231,7 +250,8 @@ def extraction_units(prepared):
     """Check the owned saved projection without asking a model to re-interpret it."""
     if (not isinstance(prepared, dict)
             or set(prepared) != {"contract", "state", "proposal", "sources", "issues"}
-            or prepared["contract"] not in (CONTRACT, LEGACY_CONTRACT) or prepared["state"] != "prepared_unreviewed"
+            or prepared["contract"] not in (CONTRACT, PASSAGE_LEGACY_CONTRACT, LEGACY_CONTRACT)
+            or prepared["state"] != "prepared_unreviewed"
             or not isinstance(prepared["proposal"], dict)
             or set(prepared["proposal"]) != set(COLLECTIONS)
             or not isinstance(prepared["issues"], list)):
@@ -250,12 +270,13 @@ def extraction_units(prepared):
                 raise SchemaViolation("Extraction item has an inconsistent owned identity or shape")
             raw = {key: deepcopy(item[key]) for key in ("description", "passages", "uncertainty")}
             passage_fields = {"source_id", "quote", "purpose", "start", "end"}
-            if prepared["contract"] == CONTRACT:
+            if prepared["contract"] in _SEGMENTERS:
                 passage_fields.add("passage_id")
             for passage in raw["passages"]:
                 if not isinstance(passage, dict) or set(passage) != passage_fields:
                     raise SchemaViolation("Saved extraction passage has an unknown shape")
-            checked = {**_check_item(raw, catalogue), "id": item["id"], "state": "proposed"}
+            checked = {**_check_item(raw, catalogue, prepared["contract"]),
+                       "id": item["id"], "state": "proposed"}
             if checked != item:
                 raise SchemaViolation("Saved extraction differs from its exact original passage")
             units[item["id"]] = {"kind": kind, "proposal": deepcopy(item)}
