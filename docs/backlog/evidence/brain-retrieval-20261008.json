@@ -1,1 +1,62 @@
-{"date":"2026-10-08","feature":"dispute decomposition and internal corpus retrieval","status":"query component verified; integration pending","owner":"legal brain worksheet 3.2 and 3.3","query_checkpoint":{"production_file":"nm/brain/dispute_queries.py","prompt_operation":"decompose_disputes","purpose":"prepare source-linked search hypotheses without repeating dispute extraction","focused_tests":18,"real_model":"gpt-4.1-mini-2025-04-14","live_case":"prior saved five-message browser conversation opening","observed":"three plans, three queries each, original sources retained; plans replay successfully","limits":"query terminology is exploratory and can be broader than the reported legal relationship; no legal applicability or search sufficiency established","call_impact":"one fresh batch call; no call for no checked disputes; turn-owned conditional correction"},"remaining":["local hybrid retrieval and exact context","integration, atomic persistence and versioned replay","browser acceptance","separate source interpretation before public legal claims"]}
+{
+  "date": "2026-10-08",
+  "feature": "dispute decomposition and internal corpus retrieval",
+  "status": "query and local retrieval components verified; integration pending",
+  "owner": "legal brain worksheet 3.2 and 3.3",
+  "query_checkpoint": {
+    "production_file": "nm/brain/dispute_queries.py",
+    "prompt_operation": "decompose_disputes",
+    "purpose": "prepare source-linked search hypotheses without repeating dispute extraction",
+    "focused_tests": 18,
+    "real_model": "gpt-4.1-mini-2025-04-14",
+    "live_case": "prior saved five-message browser conversation opening",
+    "observed": "three plans, three queries each, original sources retained; plans replay successfully",
+    "limits": "query terminology is exploratory and can be broader than the reported legal relationship; no legal applicability or search sufficiency established",
+    "call_impact": "one fresh batch call; no call for no checked disputes; turn-owned conditional correction"
+  },
+  "remaining": [
+    "versioned turn integration and private atomic persistence",
+    "actual browser acceptance",
+    "semantic relevance, applicability and court treatment before any public legal claims",
+    "cross-turn active dispute reconciliation and resuming pending research"
+  ],
+  "retrieval_checkpoint": {
+    "owner": "nm/brain/retrieval.py",
+    "pass_condition": "Both corpora execute every owned query; exact stored candidates and context replay; failed independent legs preserve checked peers.",
+    "counterexamples": [
+      "missing vector file must not block lexical reads",
+      "changed SQLite WAL invalidates this corpus",
+      "changed source context cannot replay",
+      "long multilingual text retains its final qualifications"
+    ],
+    "focused_checks": 28,
+    "actual_corpus_runs": {
+      "dispute:1": {
+        "seconds": 34.03,
+        "state": "ready",
+        "candidates": 12,
+        "issues": []
+      },
+      "dispute:2": {
+        "seconds": 7.33,
+        "state": "ready",
+        "candidates": 12,
+        "issues": []
+      },
+      "dispute:4": {
+        "seconds": 8.0,
+        "state": "ready",
+        "candidates": 12,
+        "issues": []
+      }
+    },
+    "quality": "Mixed relevance. Candidate ranking includes unrelated statutory provisions and fact/argument paragraphs; ready means execution coverage, never applicability or sufficient legal research.",
+    "cost": "No OpenAI calls for local embedding, lexical/vector retrieval, fusion or reranking.",
+    "models": [
+      "BAAI/bge-large-en-v1.5",
+      "BAAI/bge-reranker-v2-m3"
+    ],
+    "context": "Exact indexed section segments for provisions; adjacent indexed segments for judgments. Full documents and court treatment are not established.",
+    "optimization": "One complete dispute inquiry per candidate, shared embedding batch, CUDA half-precision reranker; full token windows retained. Measured warm searches about 7-8 seconds after 34-second cold first search."
+  }
+}
