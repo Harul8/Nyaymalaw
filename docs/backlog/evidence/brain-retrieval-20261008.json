@@ -58,5 +58,20 @@
     ],
     "context": "Exact indexed section segments for provisions; adjacent indexed segments for judgments. Full documents and court treatment are not established.",
     "optimization": "One complete dispute inquiry per candidate, shared embedding batch, CUDA half-precision reranker; full token windows retained. Measured warm searches about 7-8 seconds after 34-second cold first search."
+  },
+  "turn_checkpoint": {
+    "owner": "nm/brain/turn.py",
+    "contract": "current_brain_turn_v6",
+    "pass_condition": "Checked disputes trigger source-owned private searches; original words and checked snapshots save atomically and replay without repeated calls.",
+    "counterexamples": [
+      "foreign query/dispute/source",
+      "partial search presented as ready",
+      "spent correction allowance reset",
+      "lost save acknowledgement repeating research"
+    ],
+    "focused_checks": 32,
+    "call_count": "3 without supported disputes; 4 with decomposition; up to 6 including extraction repair/review, with one shared correction allowance.",
+    "behaviour": "Planning outage retains original-account search; failed disputes retain checked peers; research stays outside public response. Historical v5 and earlier bindings retained.",
+    "status": "Turn-owner checks verified; API injection, application composition and browser acceptance pending."
   }
 }

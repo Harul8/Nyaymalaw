@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.brain.turn import BrainRefused, saved_rows
+from nm.brain.turn import BrainRefused, CONTRACT, saved_rows
 from nm.shared.model_port import ModelError, SchemaViolation
 from tests.test_current_brain_app import Harness, WiredModel, MIXED_MESSAGE, mixed_outputs, assert_ok
 
@@ -29,7 +29,7 @@ def test_missing_outcome_repaired_through_authenticated_api_then_reopens_and_rep
         assert [e["text"] for e in first["elements"]] == ["Message received."]
         matter = app.held(first["chat_id"])
         row = saved_rows(matter, "adv_wiring")[0]
-        assert row["contract"] == "current_brain_turn_v5"
+        assert row["contract"] == CONTRACT
         assert row["release"]["renderer_version"] == "disputes_objectives_release_v6"
         assert row["recovery"]["attempted"] and row["recovery"]["outcome"] == "ready"
         before = row["recovery"]["before"]
@@ -114,6 +114,7 @@ def test_previous_passage_turn_v3_keeps_its_old_release_and_replays_without_upgr
         rows = deepcopy(matter.brain_chat)
         row = rows[0]
         row["contract"] = "current_brain_turn_v3"
+        row.pop("research")
         row.pop("recovery")
         row["preparation"] = every_mark_record(row["preparation"],
                                                {"dispute:1": "current:p1", "objective:1": "current:p2"})

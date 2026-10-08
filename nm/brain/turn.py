@@ -9,6 +9,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
 from nm.brain.message_labels import label_message
+from nm.brain.dispute_queries import prepare_queries, research_input, validate_queries
+from nm.brain.retrieval import SearchUnavailable, validate_search
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_RECORD, LEGACY_CONTRACT as LEGACY_EXTRACTION_RECORD,
     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_RECORD,
@@ -23,7 +25,9 @@ from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViol
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
-CONTRACT = 'current_brain_turn_v5'
+CONTRACT = 'current_brain_turn_v6'
+RESEARCH_LEGACY_CONTRACT = 'current_brain_turn_v5'
+RESEARCH_CONTRACT = 'private_dispute_research_v1'
 SEGMENT_LEGACY_CONTRACT = 'current_brain_turn_v4'
 PASSAGE_LEGACY_CONTRACT = 'current_brain_turn_v3'
 EXTRACTION_LEGACY_CONTRACT = 'current_brain_turn_v2'
@@ -33,12 +37,13 @@ LEGACY_CONTRACT = 'current_brain_turn_v1'
 # behind them. v5 passages end at sentences; v3/v4 passages end at every mark.
 _EXTRACTION_BINDINGS = {
     CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
+    RESEARCH_LEGACY_CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
     SEGMENT_LEGACY_CONTRACT: (PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
     PASSAGE_LEGACY_CONTRACT: (PASSAGE_LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
     EXTRACTION_LEGACY_CONTRACT: (LEGACY_EXTRACTION_RENDERER, LEGACY_EXTRACTION_RECORD),
 }
 # Versions whose turns carry a bounded extraction-recovery record.
-_RECOVERY_CONTRACTS = (CONTRACT, SEGMENT_LEGACY_CONTRACT)
+_RECOVERY_CONTRACTS = (CONTRACT, RESEARCH_LEGACY_CONTRACT, SEGMENT_LEGACY_CONTRACT)
 
 
 class BrainRefused(Exception):
@@ -124,6 +129,10 @@ def saved_rows(matter, advocate_id):
                 raise ValueError('saved preparation binding')
             if row['contract'] in _RECOVERY_CONTRACTS:
                 _checked_recovery(row, *_EXTRACTION_BINDINGS[row['contract']])
+            if row['contract'] == CONTRACT:
+                _checked_research(row['research'], prepared, row['release'])
+            elif 'research' in row:
+                raise ValueError('historical turn cannot acquire fresh research metadata')
             response = row['response']
             fixed = {'route': 'current_brain', 'mode': 'conversation', 'mode_statement': '',
                      'blocked': False, 'blocked_reason': None, 'material': [],
@@ -151,7 +160,7 @@ def saved_rows(matter, advocate_id):
             if release['sources'] != expected_sources:
                 raise ValueError('saved original context binding')
             rows.append(deepcopy(row))
-    except (KeyError, TypeError, ValueError, ModelError) as exc:
+    except (KeyError, TypeError, ValueError, ModelError, SearchUnavailable) as exc:
         raise BrainRefused('This saved conversation could not be checked. Its records have not been changed.',
             status=409, code='history_unavailable', committed='previously_committed', retryable=False) from exc
     return rows
@@ -210,6 +219,103 @@ def _checked_recovery(row, renderer, extraction_record):
             raise ValueError('recovery discarded an independently supported proposal')
 
 
+def _search_queries(subject, plan, sources):
+    """Original words are code-owned; generated terminology remains hypotheses."""
+    speakers = {s['id']: s['message']['role'] for s in sources}
+    original = '\n'.join(dict.fromkeys(
+        f"[{p['source_id']} {speakers[p['source_id']]} {p['purpose']}] {p['quote']}"
+        for p in subject['passages']))
+    queries = [{"query_id": q['query_id'], "text": q['text'], "context": original}
+               for q in plan['queries']] if plan is not None else []
+    return [*queries, {'query_id': subject['id'] + ':original', 'text': original,
+                      'context': original}]
+
+
+def _research_state(record, scope):
+    if not scope['disputes']:
+        return 'not_needed'
+    if not record['configured']:
+        return 'not_configured'
+    if (record['planning_failure'] or record['failures']
+            or record['planning']['issues']
+            or any(s['state'] == 'partial' for s in record['searches'].values())):
+        return 'partial'
+    return 'ready'
+
+
+def _checked_research(record, prepared, release):
+    """Check private execution evidence without upgrading ranked candidates."""
+    scope = research_input(prepared, release)
+    if (not isinstance(record, dict) or set(record) != {'contract', 'input_digest',
+            'configured', 'planning', 'planning_failure', 'searches', 'failures', 'state'}
+            or record['contract'] != RESEARCH_CONTRACT
+            or record['input_digest'] != _digest(scope) or type(record['configured']) is not bool
+            or not isinstance(record['searches'], dict) or not isinstance(record['failures'], dict)):
+        raise ValueError('research has no matching checked dispute scope')
+    subjects = scope['disputes']
+    if not subjects or not record['configured']:
+        if any(record[key] for key in ('planning', 'planning_failure', 'searches', 'failures')):
+            raise ValueError('unused research cannot carry execution results')
+    else:
+        planning = record['planning']
+        failure = record['planning_failure']
+        if failure is None:
+            validate_queries(planning, prepared, release)
+        elif (planning is not None or not isinstance(failure, dict)
+                or set(failure) != {'stage', 'code'} or failure['stage'] != 'decomposition'
+                or failure['code'] not in ('model_error', 'context_overflow', 'invalid_proposal')):
+            raise ValueError('failed planning cannot claim checked queries')
+        if (set(record['searches']) & set(record['failures'])
+                or set(record['searches']) | set(record['failures']) != set(subjects)):
+            raise ValueError('every checked dispute needs its own search disposition')
+        for identity, search in record['searches'].items():
+            plan = planning['plans'].get(identity) if planning else None
+            try:
+                validate_search(search, _search_queries(subjects[identity], plan, scope['sources']))
+            except (KeyError, TypeError, ValueError, AttributeError, IndexError, SearchUnavailable) as exc:
+                raise ValueError('saved research snapshot is malformed or detached') from exc
+        for failure in record['failures'].values():
+            if (not isinstance(failure, dict) or set(failure) != {'stage', 'code'}
+                    or failure != {'stage': 'search', 'code': 'search_unavailable'}):
+                raise ValueError('search failure has no owned execution disposition')
+    if record['state'] != _research_state(record, scope):
+        raise ValueError('research status differs from its actual execution dispositions')
+    return deepcopy(record)
+
+
+def _research(model, prepared, release, searcher, checked):
+    scope = research_input(prepared, release)
+    result = {'contract': RESEARCH_CONTRACT, 'input_digest': _digest(scope),
+              'configured': searcher is not None, 'planning': None, 'planning_failure': None,
+              'searches': {}, 'failures': {}, 'state': 'not_needed'}
+    if scope['disputes'] and searcher is not None:
+        def plan_current():
+            proposal = prepare_queries(model, prepared, release)
+            if proposal['issues'] and not proposal['plans']:
+                raise SchemaViolation('No query route admitted: ' + '; '.join(
+                    issue['reason'] for issue in proposal['issues']))
+            return proposal
+        try:
+            result['planning'] = checked(plan_current)
+        except ModelError as exc:
+            code = ('context_overflow' if isinstance(exc, ContextOverflow) else
+                    'invalid_proposal' if isinstance(exc, SchemaViolation) else 'model_error')
+            result['planning_failure'] = {'stage': 'decomposition', 'code': code}
+        for identity, subject in scope['disputes'].items():
+            plan = result['planning']['plans'].get(identity) if result['planning'] else None
+            queries = _search_queries(subject, plan, scope['sources'])
+            try:
+                # Search hypotheses failing cannot erase original-account search.
+                candidate = searcher.search(queries)
+                result['searches'][identity] = validate_search(candidate, queries)
+            except Exception:
+                # This boundary is read-only. Fail only this dispute's search;
+                # identity, history, ownership and saving gates remain outside it.
+                result['failures'][identity] = {'stage': 'search', 'code': 'search_unavailable'}
+    result['state'] = _research_state(result, scope)
+    return _checked_research(result, prepared, release)
+
+
 class _MeasuredModel:
     """Request-local accounting, including rejected provider responses."""
     def __init__(self, inner):
@@ -257,8 +363,9 @@ class _MeasuredModel:
 
 
 class BrainService:
-    def __init__(self, *, store, model_factory=None, model=None, session_current):
+    def __init__(self, *, store, model_factory=None, model=None, session_current, legal_search=None):
         self.store, self.session_current = store, session_current
+        self.legal_search = legal_search
         self.model_factory = model_factory or (lambda: model)
 
     def _authorised(self):
@@ -354,6 +461,7 @@ class BrainService:
             if not release['elements']:
                 raise BrainRefused('A response could not be prepared for this message. Please retry.',
                                    code='response_unavailable')
+            research = _research(model, prepared, release, self.legal_search, checked)
         except ModelError as exc:
             raise BrainRefused('The response service could not finish this message. Please retry.') from exc
         self._authorised()
@@ -371,6 +479,7 @@ class BrainService:
             'request': request, 'request_digest': request_digest, 'at': at,
             'label': label, 'preparation': prepared, 'release': release,
             'recovery': recovery,
+            'research': research,
             'response': response, 'response_digest': _digest(response),
             'committed': True, 'release_state': 'released'}
         proposed = replace(matter, brain_chat=(*matter.brain_chat, row), version=version + 1)

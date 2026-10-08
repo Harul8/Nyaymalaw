@@ -213,7 +213,7 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
             "passage_id": "current:p1" if kind == "disputes" else "current:p2",
             "purpose": "support", "start": start, "end": start + len(quote)}]
     assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v3"
-    assert held.brain_chat[0]["contract"] == "current_brain_turn_v5"
+    assert held.brain_chat[0]["contract"] == "current_brain_turn_v6"
     assert held.facts == () and held.threads == ()
     assert response["board_changes"] == [] and response["material"] == []
 
@@ -259,6 +259,7 @@ def test_legacy_preparation_read_replay_and_followup_preserve_the_original_trans
         historical["elements"][0]["text"] = "Message received."
     rows[0]["contract"] = "current_brain_turn_v1"
     rows[0].pop("recovery")
+    rows[0].pop("research")
     rows[0]["preparation"] = legacy_prepared(message, material=True)
     rows[0]["release"] = historical
     rows[0]["response"]["elements"] = deepcopy(historical["elements"])
@@ -303,6 +304,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
                for item in collection for passage in item["passages"])
     rows[0]["contract"] = "current_brain_turn_v2"
     rows[0].pop("recovery")
+    rows[0].pop("research")
     rows[0]["preparation"] = historical
     rows[0]["release"] = {
         "renderer_version": "disputes_objectives_release_v1", "label": "mixed",
@@ -328,7 +330,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
         ("advocate", MIXED_MESSAGE), ("nm", "Message received.")]
     final_rows = app.held(first["chat_id"]).brain_chat
     assert final_rows[0] == persisted.brain_chat[0]
-    assert final_rows[1]["contract"] == "current_brain_turn_v5"
+    assert final_rows[1]["contract"] == "current_brain_turn_v6"
     assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v3"
 
 
