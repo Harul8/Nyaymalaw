@@ -1222,7 +1222,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         # provider access or spending a second time after a lost acknowledgement.
         output = BrainService(store=application().store,
             model_factory=lambda: application()._model_for(advocate_id, session_current=current),
-            session_current=current).run(payload)
+            session_current=current, legal_search=application().legal_search).run(payload)
         if not current():
             raise HTTPException(401, 'Sign in again to read the saved response.')
         return _release(output)
