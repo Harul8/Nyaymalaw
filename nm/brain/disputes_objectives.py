@@ -24,12 +24,13 @@ Look for:
    does not assert, reaffirm or change that content. If there are no such portions,
    return empty arrays, except for an explicit request to check the accuracy of
    NM's saved interpretation. Do not produce a recap of historical items.
-2. A dispute is an expressed disagreement, contested conduct, claim, refusal or
-   unresolved conflict affecting someone's position in the underlying situation.
+2. A dispute is reported adverse conduct or incompatible party positions needing
+   resolution in the underlying situation. It needs no express denial or proof.
    A matter objective is a party's desired substantive result in that situation.
    Producing an NM output or controlling how NM works is a work instruction, not
    that substantive result. If a work request also states a matter objective,
-   extract only that objective. Do not infer a conflict from an ordinary event,
+   extract only that objective. A misunderstanding by NM is interpretation work,
+   not a party dispute. Do not infer a conflict from an ordinary event,
    invent an objective for a dispute, or force the two collections to be paired.
 3. Preserve whose account, position or objective it is, including opposing or
    quoted positions, uncertainty, conditions, negations and hypothetical scope.
@@ -46,6 +47,11 @@ Look for:
    NM's earlier wording is context only. A request to check the accuracy of NM's
    saved interpretation can authorise examining earlier original account; it
    does not substantiate that account.
+5. When repair_scope is supplied, preserve its supported_records. Return only
+   missing contributions or corrected replacements for unaccepted proposals;
+   do not repeat supported records. Re-read original words rather than adopting
+   a review formulation as evidence. For interpretation repair, describe the
+   restored original dispute or objective, not the request for NM to repair it.
 
 Outcome: Return disputes and objectives as independent arrays. Each item has a
 concise attributed description, selections and uncertainty (null if no unresolved
@@ -257,6 +263,9 @@ def extraction_units(prepared):
     for issue in prepared["issues"]:
         if (not isinstance(issue, dict) or set(issue) != {"unit", "reason", "rejected_proposal"}
                 or not isinstance(issue["unit"], str) or issue["unit"] in units or issue["unit"] in held
+                or issue["unit"].partition(":")[0] not in COLLECTIONS.values()
+                or not issue["unit"].partition(":")[2].isdigit()
+                or int(issue["unit"].partition(":")[2]) < 1
                 or not isinstance(issue["reason"], str) or not issue["reason"].strip()):
             raise SchemaViolation("Extraction has an inconsistent held unit")
         held.add(issue["unit"])
@@ -264,7 +273,8 @@ def extraction_units(prepared):
 
 
 def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
-                               history: list[dict], history_complete: bool) -> dict:
+                               history: list[dict], history_complete: bool,
+                               _repair_scope=None) -> dict:
     """One focused call; the turn owns correction, independent review and saving."""
     validate_label({"label": label})  # Diagnostic label never supplies extraction meaning.
     if history_complete is not True or not isinstance(history, list):
@@ -280,6 +290,8 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
     presented, choices = _passage_input(sources)
     payload = {"earlier_conversation": presented[:-1]} if earlier else {}
     payload["current_message"] = presented[-1]
+    if _repair_scope is not None:
+        payload["repair_scope"] = deepcopy(_repair_scope)
     schema = deepcopy(_SELECTED_SCHEMA)
     for kind in COLLECTIONS:
         schema["properties"][kind]["items"]["properties"]["selections"]["items"]["properties"]["passage_id"] = {
@@ -305,3 +317,70 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
     except SchemaViolation as exc:
         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
                               retries=result.retries) from exc
+
+
+def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+    """One repair call; preserve checked peers and assign fresh owned proposal IDs.
+
+    The caller owns the review, shared allowance and durable attempt lineage.
+    This returns proposals, not proof that the repair succeeded.
+    """
+    units = extraction_units(prepared)
+    if prepared["contract"] != CONTRACT:
+        raise SchemaViolation("Extraction repair requires the current passage-owned contract")
+    if (not isinstance(supported_unit_ids, list) or any(not isinstance(identity, str) for identity in supported_unit_ids)
+            or len(set(supported_unit_ids)) != len(supported_unit_ids)
+            or any(identity not in units for identity in supported_unit_ids)):
+        raise SchemaViolation("Extraction repair needs owned supported unit identities")
+    catalogue = _sources(prepared["sources"])
+    if not isinstance(gaps, list):
+        raise SchemaViolation("Extraction repair needs checked missing contributions")
+    for gap in gaps:
+        if (not isinstance(gap, dict) or gap.get("kind") not in COLLECTIONS
+                or any(key not in gap for key in ("id", "description", "passages", "uncertainty"))):
+            raise SchemaViolation("Extraction repair gap has an unknown category")
+        checked = _check_item({key: deepcopy(gap[key]) for key in ("description", "passages", "uncertainty")}, catalogue)
+        if any(checked[key] != gap.get(key) for key in checked):
+            raise SchemaViolation("Extraction repair gap differs from its owned original support")
+
+    def presentation(kind, unit):
+        return {"id": unit["id"], "kind": kind, "description": unit["description"],
+            "selections": [{"passage_id": span["passage_id"], "purpose": span["purpose"]}
+                           for span in unit["passages"]], "uncertainty": unit["uncertainty"]}
+
+    supported = set(supported_unit_ids)
+    scope = {"supported_records": [presentation(row["kind"], row["proposal"])
+                                   for identity, row in units.items() if identity in supported],
+        "unaccepted_proposals": [presentation(row["kind"], row["proposal"])
+                                 for identity, row in units.items() if identity not in supported],
+        "missing_contributions": [presentation(gap["kind"], gap) for gap in gaps],
+        "held_proposals": deepcopy(prepared["issues"])}
+    sources = prepared["sources"]
+    repaired = extract_disputes_objectives(model, sources[-1]["message"]["text"], label="information",
+        history=[deepcopy(source["message"]) for source in sources[:-1]], history_complete=True,
+        _repair_scope=scope)
+    if repaired["sources"] != sources:
+        raise SchemaViolation("Extraction repair changed the original source binding")
+    merged = deepcopy(repaired)
+    offsets = {prefix: max([0, *[int(identity.split(":")[1]) for identity in units
+                                if identity.startswith(prefix + ":")],
+                           *[int(issue["unit"].split(":")[1]) for issue in prepared["issues"]
+                             if issue["unit"].startswith(prefix + ":")]])
+               for prefix in COLLECTIONS.values()}
+    for kind, prefix in COLLECTIONS.items():
+        peers = [deepcopy(row) for row in prepared["proposal"][kind] if row["id"] in supported]
+        additions = []
+        for row in merged["proposal"][kind]:
+            # Only exact repetition is mechanically redundant. Meaning and
+            # relationships of differently worded proposals need model review.
+            body = {key: value for key, value in row.items() if key != "id"}
+            if any(body == {key: value for key, value in peer.items() if key != "id"} for peer in peers):
+                continue
+            row["id"] = f"{prefix}:{offsets[prefix] + int(row['id'].split(':')[1])}"
+            additions.append(row)
+        merged["proposal"][kind] = [*peers, *additions]
+    for issue in merged["issues"]:
+        prefix, index = issue["unit"].split(":")
+        issue["unit"] = f"{prefix}:{offsets[prefix] + int(index)}"
+    extraction_units(merged)
+    return merged
