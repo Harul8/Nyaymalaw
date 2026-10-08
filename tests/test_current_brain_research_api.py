@@ -9,6 +9,31 @@ from tests.test_current_brain_app import Harness, WiredModel, MIXED_MESSAGE, mix
 from tests.test_current_brain_research_turn import Search, plan
 
 
+def test_owned_context_reaches_search_and_reopens_without_extra_calls(tmp_path):
+    from tests.test_brain_dispute_query_context import MESSAGE, context_outputs
+    app = Harness(tmp_path, WiredModel(*context_outputs()))
+    search = Search()
+    app.application.legal_search = search
+    try:
+        first = assert_ok(app.post(MESSAGE))
+        assert first['metrics']['llm_calls'] == 4 and 'research' not in first
+        row = saved_rows(app.held(first['chat_id']), 'adv_wiring')[0]
+        research = row['research']
+        assert research['state'] == 'ready'
+        assert research['planning']['contract'] == 'dispute_queries_v2'
+        assert research['planning']['plans']['dispute:1']['queries'][0]['passage_ids'] == ['current:p1', 'current:p2']
+        assert len(search.calls) == 2
+        assert '[current advocate context] It is a privately managed institution.' in search.calls[0][0]['context']
+        assert '[current advocate context] An intermediary completed the proposal.' in search.calls[1][0]['context']
+        reopened = assert_ok(app.client.get('/api/chats/' + first['chat_id']))
+        assert reopened['turns'][0]['elements'] == first['elements']
+        assert 'research' not in reopened['turns'][0]
+        assert assert_ok(app.post(MESSAGE)) == {**first, 'replayed': True}
+        assert len(app.model.calls) == 4 and len(search.calls) == 2
+    finally:
+        app.client.close()
+
+
 def test_authenticated_turn_searches_saves_and_reopens_without_exposing_private_work(tmp_path):
     app = Harness(tmp_path, WiredModel(*mixed_outputs(MIXED_MESSAGE), plan()))
     search = Search()

@@ -1,0 +1,393 @@
+{
+  "generated_at_commit": "da70195d2f0daff20f3518a0fc593e7c3c6e5e5f",
+  "preparation": {
+    "contract": "disputes_objectives_v3",
+    "state": "prepared_unreviewed",
+    "proposal": {
+      "disputes": [
+        {
+          "title": "Refused delivery",
+          "description": "Assessment exclusion",
+          "operation": "new",
+          "target_id": null,
+          "passages": [
+            {
+              "source_id": "current",
+              "quote": "The provider has excluded my client from the final assessment. ",
+              "start": 0,
+              "end": 63,
+              "passage_id": "current:p1",
+              "purpose": "support"
+            },
+            {
+              "source_id": "current",
+              "quote": "It is a privately managed institution. ",
+              "start": 63,
+              "end": 102,
+              "passage_id": "current:p2",
+              "purpose": "context"
+            }
+          ],
+          "uncertainty": null,
+          "clarification": null,
+          "source_ids": [
+            "current"
+          ],
+          "id": "dispute:1",
+          "state": "proposed"
+        },
+        {
+          "title": "Refused delivery",
+          "description": "Insurance reimbursement refused",
+          "operation": "new",
+          "target_id": null,
+          "passages": [
+            {
+              "source_id": "current",
+              "quote": "The insurer has refused reimbursement. ",
+              "start": 102,
+              "end": 141,
+              "passage_id": "current:p3",
+              "purpose": "support"
+            },
+            {
+              "source_id": "current",
+              "quote": "An intermediary completed the proposal.",
+              "start": 141,
+              "end": 180,
+              "passage_id": "current:p4",
+              "purpose": "context"
+            }
+          ],
+          "uncertainty": null,
+          "clarification": null,
+          "source_ids": [
+            "current"
+          ],
+          "id": "dispute:2",
+          "state": "proposed"
+        }
+      ],
+      "objectives": []
+    },
+    "sources": [
+      {
+        "id": "current",
+        "message": {
+          "role": "advocate",
+          "text": "The provider has excluded my client from the final assessment. It is a privately managed institution. The insurer has refused reimbursement. An intermediary completed the proposal."
+        }
+      }
+    ],
+    "issues": []
+  },
+  "release": {
+    "renderer_version": "disputes_objectives_release_v7",
+    "label": "information",
+    "sources": [
+      {
+        "id": "current",
+        "message": {
+          "role": "advocate",
+          "text": "The provider has excluded my client from the final assessment. It is a privately managed institution. The insurer has refused reimbursement. An intermediary completed the proposal."
+        }
+      }
+    ],
+    "units": {
+      "dispute:1": {
+        "kind": "disputes",
+        "proposal": {
+          "title": "Refused delivery",
+          "description": "Assessment exclusion",
+          "operation": "new",
+          "target_id": null,
+          "passages": [
+            {
+              "source_id": "current",
+              "quote": "The provider has excluded my client from the final assessment. ",
+              "start": 0,
+              "end": 63,
+              "passage_id": "current:p1",
+              "purpose": "support"
+            },
+            {
+              "source_id": "current",
+              "quote": "It is a privately managed institution. ",
+              "start": 63,
+              "end": 102,
+              "passage_id": "current:p2",
+              "purpose": "context"
+            }
+          ],
+          "uncertainty": null,
+          "clarification": null,
+          "source_ids": [
+            "current"
+          ],
+          "id": "dispute:1",
+          "state": "proposed"
+        }
+      },
+      "dispute:2": {
+        "kind": "disputes",
+        "proposal": {
+          "title": "Refused delivery",
+          "description": "Insurance reimbursement refused",
+          "operation": "new",
+          "target_id": null,
+          "passages": [
+            {
+              "source_id": "current",
+              "quote": "The insurer has refused reimbursement. ",
+              "start": 102,
+              "end": 141,
+              "passage_id": "current:p3",
+              "purpose": "support"
+            },
+            {
+              "source_id": "current",
+              "quote": "An intermediary completed the proposal.",
+              "start": 141,
+              "end": 180,
+              "passage_id": "current:p4",
+              "purpose": "context"
+            }
+          ],
+          "uncertainty": null,
+          "clarification": null,
+          "source_ids": [
+            "current"
+          ],
+          "id": "dispute:2",
+          "state": "proposed"
+        }
+      }
+    },
+    "issues": [],
+    "proof": {
+      "readings": {
+        "current:p1": [
+          {
+            "kind": "dispute",
+            "contribution": "reported",
+            "description": "Attributed current contribution",
+            "support_passage_ids": [
+              "current:p1"
+            ],
+            "context_passage_ids": [
+              "current:p2"
+            ],
+            "uncertainty": null,
+            "represented_by": [
+              "dispute:1"
+            ]
+          }
+        ],
+        "current:p2": [
+          {
+            "kind": "outside_scope",
+            "purpose": "background",
+            "reason": "No dispute or party objective is contributed."
+          }
+        ],
+        "current:p3": [
+          {
+            "kind": "dispute",
+            "contribution": "reported",
+            "description": "Attributed current contribution",
+            "support_passage_ids": [
+              "current:p3"
+            ],
+            "context_passage_ids": [
+              "current:p4"
+            ],
+            "uncertainty": null,
+            "represented_by": [
+              "dispute:2"
+            ]
+          }
+        ],
+        "current:p4": [
+          {
+            "kind": "outside_scope",
+            "purpose": "background",
+            "reason": "No dispute or party objective is contributed."
+          }
+        ]
+      },
+      "unit_reviews": [
+        {
+          "unit_id": "dispute:1",
+          "verdict": "supported"
+        },
+        {
+          "unit_id": "dispute:2",
+          "verdict": "supported"
+        }
+      ],
+      "greeting": false
+    },
+    "elements": [
+      {
+        "kind": "finding",
+        "text": "Message received.",
+        "thread": null,
+        "by_when": null,
+        "no_deadline_reason": null,
+        "signal": "none",
+        "collapsible": false,
+        "disclosure": false,
+        "refs": [],
+        "source": null,
+        "section": "answer"
+      }
+    ],
+    "service_status": null,
+    "state": "ready"
+  },
+  "planning": {
+    "contract": "dispute_queries_v1",
+    "input_digest": "33c7358852990ef8c4617fb5b6659a225e53c62175ca2dda3bdf3eb185267d94",
+    "proposal": {
+      "plans": [
+        {
+          "dispute_id": "dispute:1",
+          "queries": [
+            {
+              "text": " refusal of agreed delivery ",
+              "purpose": " contractual performance ",
+              "passage_ids": [
+                "current:p1"
+              ]
+            },
+            {
+              "text": "private institution procedural duties",
+              "purpose": "Contextual inquiry",
+              "passage_ids": [
+                "current:p2"
+              ]
+            }
+          ],
+          "uncertainty": null
+        },
+        {
+          "dispute_id": "dispute:2",
+          "queries": [
+            {
+              "text": " refusal of agreed delivery ",
+              "purpose": " contractual performance ",
+              "passage_ids": [
+                "current:p3"
+              ]
+            }
+          ],
+          "uncertainty": null
+        }
+      ]
+    },
+    "state": "partial",
+    "plans": {
+      "dispute:1": {
+        "dispute_id": "dispute:1",
+        "queries": [
+          {
+            "text": "refusal of agreed delivery",
+            "purpose": "contractual performance",
+            "passage_ids": [
+              "current:p1"
+            ],
+            "query_id": "dispute:1:q1"
+          }
+        ],
+        "uncertainty": null
+      },
+      "dispute:2": {
+        "dispute_id": "dispute:2",
+        "queries": [
+          {
+            "text": "refusal of agreed delivery",
+            "purpose": "contractual performance",
+            "passage_ids": [
+              "current:p3"
+            ],
+            "query_id": "dispute:2:q1"
+          }
+        ],
+        "uncertainty": null
+      }
+    },
+    "issues": [
+      {
+        "dispute_id": "dispute:1",
+        "query_id": "dispute:1:q2",
+        "reason": "property 'result.passage_ids[0]' value 'current:p2' is outside the permitted vocabulary ['current:p1', 'current:p3']"
+      }
+    ]
+  },
+  "ready_planning": {
+    "contract": "dispute_queries_v1",
+    "input_digest": "33c7358852990ef8c4617fb5b6659a225e53c62175ca2dda3bdf3eb185267d94",
+    "proposal": {
+      "plans": [
+        {
+          "dispute_id": "dispute:1",
+          "queries": [
+            {
+              "text": " refusal of agreed delivery ",
+              "purpose": " contractual performance ",
+              "passage_ids": [
+                "current:p1"
+              ]
+            }
+          ],
+          "uncertainty": null
+        },
+        {
+          "dispute_id": "dispute:2",
+          "queries": [
+            {
+              "text": " refusal of agreed delivery ",
+              "purpose": " contractual performance ",
+              "passage_ids": [
+                "current:p3"
+              ]
+            }
+          ],
+          "uncertainty": null
+        }
+      ]
+    },
+    "state": "ready",
+    "plans": {
+      "dispute:1": {
+        "dispute_id": "dispute:1",
+        "queries": [
+          {
+            "text": "refusal of agreed delivery",
+            "purpose": "contractual performance",
+            "passage_ids": [
+              "current:p1"
+            ],
+            "query_id": "dispute:1:q1"
+          }
+        ],
+        "uncertainty": null
+      },
+      "dispute:2": {
+        "dispute_id": "dispute:2",
+        "queries": [
+          {
+            "text": "refusal of agreed delivery",
+            "purpose": "contractual performance",
+            "passage_ids": [
+              "current:p3"
+            ],
+            "query_id": "dispute:2:q1"
+          }
+        ],
+        "uncertainty": null
+      }
+    },
+    "issues": []
+  }
+}

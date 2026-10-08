@@ -8799,5 +8799,387 @@
       "Keep the later legal-source interpretation, applicability and court-treatment gate pending; search candidates are not legal findings and are not supplied to a downstream response model in the current rebuilt pipeline."
     ],
     "approval_review": "Initial API execution was blocked until payload sensitivity was inspected. Exact agent-authored synthetic payload was then verified and authorised execution succeeded. No block was bypassed."
+  },
+  "decomposition_owned_context_da70195": {
+    "owner": "nm/brain/dispute_queries.py",
+    "scope": "Source catalogue only; semantic decomposition redesign remains open.",
+    "failed_invariant": "A source-checked context passage could reach search as context but was unavailable as a legal-query anchor. A shared source purpose also needed to remain per-dispute rather than last-wins global metadata.",
+    "pass_condition": "Own advocate support and context can anchor queries, NM interpretations and foreign associations cannot, valid peers survive a rejected query, roles do not depend on association order, and v1 replay retains its original support-only admission.",
+    "changes": [
+      "V2 presents original support and context selectors separately per dispute while keeping the complete exact attributed conversation.",
+      "One original identity catalogue supplies schema choices and owned reference validation. Both roles survive when the same passage supports and qualifies one dispute or different disputes.",
+      "V1 historical ready and partial plans replay with their original checks. No old rejection is silently promoted. Unknown versions and altered projections fail.",
+      "No new heuristic or semantic blocking rule, model tier, retry route or model call."
+    ],
+    "mechanical_evidence": {
+      "baseline": "New focused tests before the edit: 8 failed, 1 passed.",
+      "after": "57 focused tests passed, exit 0. One existing Starlette deprecation warning.",
+      "command": ".venv-arrive/Scripts/python.exe -m pytest tests/test_brain_dispute_queries.py tests/test_brain_dispute_query_context.py tests/test_current_brain_research_turn.py tests/test_current_brain_research_api.py -q",
+      "historical_fixture": "tests/fixtures/dispute_queries_v1_context.json",
+      "tests_are_not_semantic_proof": true
+    },
+    "browser_evidence": {
+      "boundary": "Shipped Application and /api/turn on isolated 127.0.0.3:8178, existing synthetic authenticated account and existing Chrome tab. Normal 8175 service left running. No new browser/tab; previous URL restored.",
+      "scripted": {
+        "http_status": 200,
+        "reopened_same_thread": true,
+        "page_errors": [],
+        "restored_original_url": true
+      },
+      "live": {
+        "message": "SYNTHETIC TEST MATTER. I act for an adult student in Kochi. The institute is privately managed and affiliated to a university; its funding status is unknown. It has refused to let her sit her final assessment, alleging that she shared an answer file. She denies sharing the file but acknowledges that another student used her unlocked laptop. The refusal email arrived the previous evening; she says no opportunity to explain was given. Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. She says she told the intermediary about the symptoms, but has not checked the full proposal form. Please identify the disputes and research potentially relevant provisions and judgments without treating either allegation as proved.",
+        "http_status": 200,
+        "seconds": 71.17200000002049,
+        "reopened_same_thread": true,
+        "page_errors": [],
+        "restored_original_url": true,
+        "before_budget": {
+          "charged_usd": 2.652298,
+          "attempts": 915
+        },
+        "after_budget": {
+          "charged_usd": 2.657938,
+          "attempts": 919
+        }
+      },
+      "live_metrics": {
+        "llm_calls": 4,
+        "calls": [
+          {
+            "operation": "label_message",
+            "latency_ms": 2047,
+            "tokens_in": 398,
+            "tokens_out": 5,
+            "cost_usd": 0.00016720000000000003,
+            "retries": 0
+          },
+          {
+            "operation": "extract_disputes_objectives",
+            "latency_ms": 3266,
+            "tokens_in": 1854,
+            "tokens_out": 293,
+            "cost_usd": 0.0012104000000000001,
+            "retries": 0
+          },
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 6766,
+            "tokens_in": 5492,
+            "tokens_out": 520,
+            "cost_usd": 0.0030288000000000003,
+            "retries": 0
+          },
+          {
+            "operation": "decompose_disputes",
+            "latency_ms": 5500,
+            "tokens_in": 1152,
+            "tokens_out": 482,
+            "cost_usd": 0.001232,
+            "retries": 0
+          }
+        ],
+        "cost_usd": 0.005638400000000001,
+        "tokens_in": 8896,
+        "tokens_out": 1300
+      },
+      "live_selectors": {
+        "original_conversation": [
+          {
+            "id": "current",
+            "message": {
+              "role": "advocate",
+              "text": "SYNTHETIC TEST MATTER. I act for an adult student in Kochi. The institute is privately managed and affiliated to a university; its funding status is unknown. It has refused to let her sit her final assessment, alleging that she shared an answer file. She denies sharing the file but acknowledges that another student used her unlocked laptop. The refusal email arrived the previous evening; she says no opportunity to explain was given. Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. She says she told the intermediary about the symptoms, but has not checked the full proposal form. Please identify the disputes and research potentially relevant provisions and judgments without treating either allegation as proved."
+            }
+          }
+        ],
+        "disputes": [
+          {
+            "dispute_id": "dispute:1",
+            "description": "The institute alleges the student shared an answer file and refuses to let her sit her final assessment; the student denies sharing the file but admits another student used her unlocked laptop, and claims no opportunity was given to explain before refusal.",
+            "uncertainty": "Uncertain whether the sharing of the answer file occurred or if the use of the unlocked laptop constitutes sharing the file.",
+            "support_passage_ids": [
+              "current:p4",
+              "current:p5",
+              "current:p6"
+            ],
+            "context_passage_ids": [
+              "current:p2",
+              "current:p3"
+            ]
+          },
+          {
+            "dispute_id": "dispute:2",
+            "description": "The health insurer alleges that the student failed to disclose earlier symptoms and refuses reimbursement; the student says she informed the intermediary about the symptoms but has not checked the full proposal form.",
+            "uncertainty": "Uncertain whether the disclosure to the intermediary satisfies the insurer’s requirements or if the proposal form omission is material.",
+            "support_passage_ids": [
+              "current:p7",
+              "current:p8"
+            ],
+            "context_passage_ids": []
+          }
+        ],
+        "original_passages": {
+          "current:p4": {
+            "source_id": "current",
+            "start": 158,
+            "end": 251,
+            "passage_id": "current:p4"
+          },
+          "current:p5": {
+            "source_id": "current",
+            "start": 251,
+            "end": 343,
+            "passage_id": "current:p5"
+          },
+          "current:p6": {
+            "source_id": "current",
+            "start": 343,
+            "end": 437,
+            "passage_id": "current:p6"
+          },
+          "current:p2": {
+            "source_id": "current",
+            "start": 23,
+            "end": 60,
+            "passage_id": "current:p2"
+          },
+          "current:p3": {
+            "source_id": "current",
+            "start": 60,
+            "end": 158,
+            "passage_id": "current:p3"
+          },
+          "current:p7": {
+            "source_id": "current",
+            "start": 437,
+            "end": 534,
+            "passage_id": "current:p7"
+          },
+          "current:p8": {
+            "source_id": "current",
+            "start": 534,
+            "end": 633,
+            "passage_id": "current:p8"
+          }
+        }
+      },
+      "live_plans": {
+        "contract": "dispute_queries_v2",
+        "input_digest": "a3945cbe1a44b40d001c2cb9c741da6b9bf04c8064303501681c5e313501d5d1",
+        "proposal": {
+          "plans": [
+            {
+              "dispute_id": "dispute:1",
+              "queries": [
+                {
+                  "text": "Search provisions and case law on academic misconduct involving sharing examination answers or materials, including conditions when a student's device accessed by another student may constitute sharing or breach",
+                  "purpose": "To identify relevant legal principles governing sharing of exam answers or materials, and whether allowing another student to use one's unlocked laptop can be treated as sharing an answer file",
+                  "passage_ids": [
+                    "current:p4",
+                    "current:p5",
+                    "current:p6"
+                  ]
+                },
+                {
+                  "text": "Look for rules or judgments addressing procedural fairness or natural justice in institutes refusing students exam participation based on alleged misconduct without prior opportunity to explain",
+                  "purpose": "To examine whether refusal to let the student sit final assessment without prior hearing violates procedural fairness",
+                  "passage_ids": [
+                    "current:p4",
+                    "current:p6",
+                    "current:p2",
+                    "current:p3"
+                  ]
+                },
+                {
+                  "text": "Investigate legal status and obligations of privately managed, university-affiliated institutes regarding disciplinary measures and appeal rights of students",
+                  "purpose": "To determine governing scheme of disciplinary action and student rights applicable to this type of institute",
+                  "passage_ids": [
+                    "current:p2",
+                    "current:p3"
+                  ]
+                }
+              ],
+              "uncertainty": "Uncertain whether sharing of answer file occurred or if use of unlocked laptop constitutes sharing; also uncertainty about procedural fairness in refusal to permit exam participation without explanation opportunity."
+            },
+            {
+              "dispute_id": "dispute:2",
+              "queries": [
+                {
+                  "text": "Search insurance law provisions and case law on disclosure duties in health insurance proposals, focusing on communication to intermediaries versus written proposal form disclosures",
+                  "purpose": "To clarify legal standards on whether informing intermediary suffices for disclosure of health symptoms in insurance claims",
+                  "passage_ids": [
+                    "current:p7",
+                    "current:p8"
+                  ]
+                },
+                {
+                  "text": "Look for rules or case precedents about materiality of undisclosed symptoms in health insurance proposals and effects on claim reimbursement",
+                  "purpose": "To explore conditions under which failure to disclose earlier symptoms invalidates reimbursement claims",
+                  "passage_ids": [
+                    "current:p7",
+                    "current:p8"
+                  ]
+                },
+                {
+                  "text": "Explore judgment principles on extent of insurer's investigation duties and claimant's burden in verifying proposal form accuracy and completeness",
+                  "purpose": "To understand the claimant's responsibilities in checking proposal forms versus reliance on intermediaries",
+                  "passage_ids": [
+                    "current:p7",
+                    "current:p8"
+                  ]
+                }
+              ],
+              "uncertainty": "Uncertain whether disclosure to intermediary meets insurer's requirements or omission from proposal form is material and justifies refusal of reimbursement."
+            }
+          ]
+        },
+        "state": "ready",
+        "plans": {
+          "dispute:1": {
+            "dispute_id": "dispute:1",
+            "queries": [
+              {
+                "text": "Search provisions and case law on academic misconduct involving sharing examination answers or materials, including conditions when a student's device accessed by another student may constitute sharing or breach",
+                "purpose": "To identify relevant legal principles governing sharing of exam answers or materials, and whether allowing another student to use one's unlocked laptop can be treated as sharing an answer file",
+                "passage_ids": [
+                  "current:p4",
+                  "current:p5",
+                  "current:p6"
+                ],
+                "query_id": "dispute:1:q1"
+              },
+              {
+                "text": "Look for rules or judgments addressing procedural fairness or natural justice in institutes refusing students exam participation based on alleged misconduct without prior opportunity to explain",
+                "purpose": "To examine whether refusal to let the student sit final assessment without prior hearing violates procedural fairness",
+                "passage_ids": [
+                  "current:p4",
+                  "current:p6",
+                  "current:p2",
+                  "current:p3"
+                ],
+                "query_id": "dispute:1:q2"
+              },
+              {
+                "text": "Investigate legal status and obligations of privately managed, university-affiliated institutes regarding disciplinary measures and appeal rights of students",
+                "purpose": "To determine governing scheme of disciplinary action and student rights applicable to this type of institute",
+                "passage_ids": [
+                  "current:p2",
+                  "current:p3"
+                ],
+                "query_id": "dispute:1:q3"
+              }
+            ],
+            "uncertainty": "Uncertain whether sharing of answer file occurred or if use of unlocked laptop constitutes sharing; also uncertainty about procedural fairness in refusal to permit exam participation without explanation opportunity."
+          },
+          "dispute:2": {
+            "dispute_id": "dispute:2",
+            "queries": [
+              {
+                "text": "Search insurance law provisions and case law on disclosure duties in health insurance proposals, focusing on communication to intermediaries versus written proposal form disclosures",
+                "purpose": "To clarify legal standards on whether informing intermediary suffices for disclosure of health symptoms in insurance claims",
+                "passage_ids": [
+                  "current:p7",
+                  "current:p8"
+                ],
+                "query_id": "dispute:2:q1"
+              },
+              {
+                "text": "Look for rules or case precedents about materiality of undisclosed symptoms in health insurance proposals and effects on claim reimbursement",
+                "purpose": "To explore conditions under which failure to disclose earlier symptoms invalidates reimbursement claims",
+                "passage_ids": [
+                  "current:p7",
+                  "current:p8"
+                ],
+                "query_id": "dispute:2:q2"
+              },
+              {
+                "text": "Explore judgment principles on extent of insurer's investigation duties and claimant's burden in verifying proposal form accuracy and completeness",
+                "purpose": "To understand the claimant's responsibilities in checking proposal forms versus reliance on intermediaries",
+                "passage_ids": [
+                  "current:p7",
+                  "current:p8"
+                ],
+                "query_id": "dispute:2:q3"
+              }
+            ],
+            "uncertainty": "Uncertain whether disclosure to intermediary meets insurer's requirements or omission from proposal form is material and justifies refusal of reimbursement."
+          }
+        },
+        "issues": []
+      },
+      "live_search_states": {
+        "dispute:1": {
+          "state": "ready",
+          "queries": [
+            {
+              "query_id": "dispute:1:q1",
+              "text": "Search provisions and case law on academic misconduct involving sharing examination answers or materials, including conditions when a student's device accessed by another student may constitute sharing or breach",
+              "context": "[current advocate support] It has refused to let her sit her final assessment, alleging that she shared an answer file. \n[current advocate support] She denies sharing the file but acknowledges that another student used her unlocked laptop. \n[current advocate support] The refusal email arrived the previous evening; she says no opportunity to explain was given. \n[current advocate context] I act for an adult student in Kochi. \n[current advocate context] The institute is privately managed and affiliated to a university; its funding status is unknown. "
+            },
+            {
+              "query_id": "dispute:1:q2",
+              "text": "Look for rules or judgments addressing procedural fairness or natural justice in institutes refusing students exam participation based on alleged misconduct without prior opportunity to explain",
+              "context": "[current advocate support] It has refused to let her sit her final assessment, alleging that she shared an answer file. \n[current advocate support] She denies sharing the file but acknowledges that another student used her unlocked laptop. \n[current advocate support] The refusal email arrived the previous evening; she says no opportunity to explain was given. \n[current advocate context] I act for an adult student in Kochi. \n[current advocate context] The institute is privately managed and affiliated to a university; its funding status is unknown. "
+            },
+            {
+              "query_id": "dispute:1:q3",
+              "text": "Investigate legal status and obligations of privately managed, university-affiliated institutes regarding disciplinary measures and appeal rights of students",
+              "context": "[current advocate support] It has refused to let her sit her final assessment, alleging that she shared an answer file. \n[current advocate support] She denies sharing the file but acknowledges that another student used her unlocked laptop. \n[current advocate support] The refusal email arrived the previous evening; she says no opportunity to explain was given. \n[current advocate context] I act for an adult student in Kochi. \n[current advocate context] The institute is privately managed and affiliated to a university; its funding status is unknown. "
+            },
+            {
+              "query_id": "dispute:1:original",
+              "text": "[current advocate support] It has refused to let her sit her final assessment, alleging that she shared an answer file. \n[current advocate support] She denies sharing the file but acknowledges that another student used her unlocked laptop. \n[current advocate support] The refusal email arrived the previous evening; she says no opportunity to explain was given. \n[current advocate context] I act for an adult student in Kochi. \n[current advocate context] The institute is privately managed and affiliated to a university; its funding status is unknown. ",
+              "context": "[current advocate support] It has refused to let her sit her final assessment, alleging that she shared an answer file. \n[current advocate support] She denies sharing the file but acknowledges that another student used her unlocked laptop. \n[current advocate support] The refusal email arrived the previous evening; she says no opportunity to explain was given. \n[current advocate context] I act for an adult student in Kochi. \n[current advocate context] The institute is privately managed and affiliated to a university; its funding status is unknown. "
+            }
+          ],
+          "candidate_count": 12
+        },
+        "dispute:2": {
+          "state": "ready",
+          "queries": [
+            {
+              "query_id": "dispute:2:q1",
+              "text": "Search insurance law provisions and case law on disclosure duties in health insurance proposals, focusing on communication to intermediaries versus written proposal form disclosures",
+              "context": "[current advocate support] Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. \n[current advocate support] She says she told the intermediary about the symptoms, but has not checked the full proposal form. "
+            },
+            {
+              "query_id": "dispute:2:q2",
+              "text": "Look for rules or case precedents about materiality of undisclosed symptoms in health insurance proposals and effects on claim reimbursement",
+              "context": "[current advocate support] Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. \n[current advocate support] She says she told the intermediary about the symptoms, but has not checked the full proposal form. "
+            },
+            {
+              "query_id": "dispute:2:q3",
+              "text": "Explore judgment principles on extent of insurer's investigation duties and claimant's burden in verifying proposal form accuracy and completeness",
+              "context": "[current advocate support] Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. \n[current advocate support] She says she told the intermediary about the symptoms, but has not checked the full proposal form. "
+            },
+            {
+              "query_id": "dispute:2:original",
+              "text": "[current advocate support] Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. \n[current advocate support] She says she told the intermediary about the symptoms, but has not checked the full proposal form. ",
+              "context": "[current advocate support] Separately, her health insurer has refused reimbursement, alleging undisclosed earlier symptoms. \n[current advocate support] She says she told the intermediary about the symptoms, but has not checked the full proposal form. "
+            }
+          ],
+          "candidate_count": 12
+        }
+      },
+      "visible_reply": "Message received.",
+      "internal_work_remains_internal": true,
+      "screenshots": [
+        "outputs/decomposition-context-20261008/live-sent.png",
+        "outputs/decomposition-context-20261008/live-reopened.png"
+      ],
+      "raw_evidence": "outputs/decomposition-context-20261008/live-browser.json",
+      "raw_sha256": "6ae7076ab0e270dd1643d0a201a6486740832fca19e395b52195f069a1190720",
+      "interpretation": "Context-only institutional enquiry and mixed support/context enquiry were admitted, searched, saved and reopened. Insurance enquiries retained their own original account. This confirms selector integration, not general retrieval accuracy."
+    },
+    "remaining": [
+      "Semantic decomposition still changes used her unlocked laptop into allowing its use in purpose. Separate legal questions and unresolved premises from factual paraphrases next.",
+      "Several selected Act passages were irrelevant (advocate-on-record rules and finance amendments). Retrieval and ranking usefulness remain unverified for this new matter; ready denotes executed search, not legal relevance.",
+      "No independent semantic reviewer for decomposition has been promoted. Measure detection and false rejection before adding a routine call.",
+      "The current rebuilt pipeline keeps research internal and has not performed downstream legal applicability or court-treatment verification."
+    ],
+    "call_impact": "Zero additional calls. One decomposition call for all disputes, four generative calls in this researched turn, zero repairs, replay zero. Existing turn-owned recovery remains bounded to six calls.",
+    "cost_usd": 0.00564,
+    "approved_total_cap_usd": 5,
+    "remaining_total_budget_usd": 0.464984
   }
 }
