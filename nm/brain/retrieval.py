@@ -29,7 +29,8 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
-CONTRACT = "hybrid_retrieval_v1"
+CONTRACT = "hybrid_retrieval_v2"
+LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
 log = logging.getLogger(__name__)
 
@@ -335,6 +336,36 @@ class LocalCollection:
         except (OSError, RuntimeError, ValueError) as exc:
             raise SearchUnavailable(f"{self.doc_type} reranking failed: {exc}") from exc
 
+    def rank_context(self, position: int, row: dict) -> dict:
+        """Resolve exact parents; section numbers alone do not identify a parent."""
+        _, db_path, _ = self._open()
+        segments = [{"position": position, "row": row, "content_digest": _digest(row)}]
+        seen, child = {position}, row
+        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as connection:
+            while child.get("parent_chunk_id"):
+                identity = child["parent_chunk_id"]
+                if self.doc_type != "bare_act" or not isinstance(identity, str) or not row.get("act_id"):
+                    raise SearchUnavailable("Parent source identity is invalid")
+                matches = connection.execute(
+                    "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
+                    (self.doc_type, row["act_id"], identity)).fetchall()
+                if len(matches) != 1:
+                    raise SearchUnavailable("Parent source is missing or ambiguous")
+                parent_position = matches[0][0]
+                if parent_position in seen:
+                    raise SearchUnavailable("Parent source links contain a cycle")
+                parent = self.read([parent_position]).get(parent_position)
+                if (parent is None or parent.get("chunk_id") != identity
+                        or parent.get("act_id") != row["act_id"]
+                        or parent.get("section_number") != row.get("section_number")):
+                    raise SearchUnavailable("Parent source words or ownership cannot be checked")
+                segments.append({"position": parent_position, "row": parent,
+                                 "content_digest": _digest(parent)})
+                seen.add(parent_position)
+                child = parent
+        return {"scope": "exact_parent_tree", "bounded": False, "unread_positions": [],
+                "segments": list(reversed(segments))}
+
     def context(self, position: int, row: dict) -> dict:
         """Exact indexed segments; no claim that these form a complete judgment."""
         _, db_path, _ = self._open()
@@ -504,7 +535,8 @@ class HybridSearcher:
             except Exception as exc:
                 issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": type(exc).__name__})
                 continue
-            usable, pairs = [], []
+            usable, pairs, rank_contexts, unranked = [], [], {}, []
+            rank_rows, rank_associations = {}, {}
             # Variants broaden recall; ranking examines their common dispute once.
             # Retain every formulation and the original account, including long tails.
             inquiry = "\n".join(dict.fromkeys(
@@ -514,11 +546,39 @@ class HybridSearcher:
                 row = rows.get(position)
                 try:
                     _candidate(kind, position, row, revision, None, associations[position], {})
-                    usable.append(position)
-                    title = row.get("act_name") or row.get("case_name") or ""
-                    pairs.append((inquiry, title + "\n" + row["full_text"]))
                 except SearchUnavailable as exc:
                     issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": str(exc), "position": position})
+                    continue
+                target, context = position, None
+                if kind == "provision" and row.get("parent_chunk_id"):
+                    try:
+                        context = collection.rank_context(position, row)
+                        root = context["segments"][0]
+                        target, row = root["position"], root["row"]
+                        _candidate(kind, target, row, revision, None, associations[position], context)
+                    except Exception as exc:
+                        # Keep unread ancestry explicit without discarding readable peers.
+                        rank_contexts[position] = {"scope": "selected_indexed_segment", "bounded": True,
+                            "unread_positions": [], "segments": [{"position": position, "row": rows[position]}]}
+                        unranked.append((position, None))
+                        issues.append({"kind": kind, "query_id": None, "stage": "context",
+                            "reason": str(exc) if isinstance(exc, SearchUnavailable) else type(exc).__name__,
+                            "position": position})
+                        continue
+                rank_rows[target] = row
+                rank_associations.setdefault(target, []).extend(associations[position])
+                if context is not None:
+                    prior = rank_contexts.get(target, {}).get("segments", [])
+                    segments = {s["position"]: s for s in [*prior, *context["segments"]]}
+                    rank_contexts[target] = {**context, "segments": list(segments.values())}
+            # Score and return the same source unit. A sibling's relevance must not
+            # be transferred from a parent window to an unrelated selected child.
+            for position, row in rank_rows.items():
+                usable.append(position)
+                title = row.get("act_name") or row.get("case_name") or ""
+                pairs.append((inquiry, title + "\n" + row["full_text"]))
+            rows.update(rank_rows)
+            associations.update({p: list(dict.fromkeys(ids)) for p, ids in rank_associations.items()})
             try:
                 scores = collection.rerank(pairs)
                 if len(scores) != len(pairs) or any(not math.isfinite(float(score)) for score in scores):
@@ -533,6 +593,7 @@ class HybridSearcher:
             except Exception as exc:
                 issues.append({"kind": kind, "query_id": None, "stage": "rerank", "reason": type(exc).__name__})
                 scored = [(position, None) for position in usable]
+            scored.extend(unranked)
             selected, groups = [], {}
             for position, score in scored:
                 row = rows[position]
@@ -547,7 +608,9 @@ class HybridSearcher:
                     break
             for position, score in selected:
                 try:
-                    context = collection.context(position, rows[position])
+                    context = rank_contexts.get(position)
+                    if context is None:
+                        context = collection.context(position, rows[position])
                 except Exception as exc:
                     context = {"scope": "selected_indexed_segment", "bounded": True, "unread_positions": [],
                                "segments": [{"position": position, "row": rows[position]}]}
@@ -566,7 +629,7 @@ class HybridSearcher:
 def validate_search(record, queries):
     """Replay validates the saved exact snapshot, never reads a changed corpus."""
     if (not isinstance(record, dict) or set(record) != {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-            or record["contract"] != CONTRACT or record["queries"] != queries
+            or record["contract"] not in (LEGACY_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
@@ -626,15 +689,34 @@ def validate_search(record, queries):
                     or not row.get("full_text") or segment.get("content_digest") != _digest(row)
                     or type(segment.get("position")) is not int or segment["position"] < 0):
                 raise ValueError("Context crossed source-document ownership")
-            if candidate["context"]["scope"] == "indexed_section_segments" and row.get("section_number") != candidate["source"].get("section_number"):
+            if candidate["context"]["scope"] in ("indexed_section_segments", "exact_parent_tree") and row.get("section_number") != candidate["source"].get("section_number"):
                 raise ValueError("Context crossed the selected section")
         context = candidate["context"]
         if (set(context) != {"scope", "bounded", "unread_positions", "segments"}
-                or context["scope"] not in ("indexed_section_segments", "adjacent_indexed_segments", "selected_indexed_segment")
+                or context["scope"] not in ("indexed_section_segments", "adjacent_indexed_segments", "selected_indexed_segment", "exact_parent_tree")
                 or type(context["bounded"]) is not bool or not isinstance(context["unread_positions"], list)
                 or not any(s["position"] == candidate["position"] and s["row"] == candidate["source"] for s in context["segments"])
                 or (context["bounded"] or context["unread_positions"]) and (candidate["kind"], None, "context") not in failed):
             raise ValueError("Exact selected context or its coverage is missing")
+        if context["scope"] == "exact_parent_tree":
+            segments = context["segments"]
+            by_id = {}
+            for segment in segments:
+                by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
+            root = candidate["source"]
+            if (record["contract"] != CONTRACT or candidate["kind"] != "provision" or len(segments) < 2
+                    or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
+                    or len({s["position"] for s in segments}) != len(segments)):
+                raise ValueError("Ranking context has no unique owned root")
+            for segment in segments:
+                child, seen = segment["row"], set()
+                while child["chunk_id"] != root["chunk_id"]:
+                    identity = child["chunk_id"]
+                    parents = by_id.get(child.get("parent_chunk_id"), [])
+                    if identity in seen or len(parents) != 1:
+                        raise ValueError("Ranking context has a detached or cyclic source")
+                    seen.add(identity)
+                    child = parents[0]
         identities.add(candidate["id"])
     return deepcopy(record)
 
