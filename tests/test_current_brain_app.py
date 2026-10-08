@@ -97,7 +97,7 @@ class Harness:
         for identity in ("adv_wiring", "adv_other"):
             self.directory.enrol(Enrolment(AdvocateIdentity(identity, identity), enrol(PASSWORD)))
         self.application = Application(root=ROOT, model=model, store=self.store,
-            directory=self.directory, audit_root=path / "audit", environment={
+            directory=self.directory, legal_search=None, audit_root=path / "audit", environment={
                 "NM_MATTER_KEY": KEY, "NM_MATTER_STORE": str(path),
                 "NM_MODEL_PROVIDER": "scripted", "NM_MODEL_ROUTINE": "scripted-1",
                 "NM_EMBED_MODEL": "text-embedding-3-large"})

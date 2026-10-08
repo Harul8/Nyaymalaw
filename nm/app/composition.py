@@ -22,10 +22,12 @@ from nm.shared.policed_port_adapter import PolicedPort
 from nm.shared.source_layout import browser_assets
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
+from nm.brain.retrieval import HybridSearcher
 
 ROOT = Path(__file__).resolve().parents[2]
 _CREDENTIAL_NAME = re.compile(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL', re.I)
 _SEAL = 'NM_MATTER_KEY'
+_DEFAULT_SEARCH = object()
 
 def build_model(config):
     provider = config.for_tier(Tier.ROUTINE).provider
@@ -38,7 +40,7 @@ def build_model(config):
 
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
-                 store=None, directory=None, mail=None,
+                 store=None, directory=None, mail=None, legal_search=_DEFAULT_SEARCH,
                  environment: Mapping[str, str] | None = None,
                  audit_root: Path | None = None):
         if environment is None:
@@ -71,8 +73,10 @@ class Application:
             models = tuple(dict.fromkeys(c.model for tier, c in self.config.tiers.items() if tier is not Tier.EMBED))
             self._model_adapter = self._model_adapter.with_call_budget(SessionCallBudget(
                 Path(budget_path), settings.get('NM_EVAL_MAX_USD', '25'), models=models))
-        # Not a library-readiness claim. Retrieval is outside the two rebuilt stages.
-        self.legal_search = None
+        # Configuration is not corpus readiness; models and indices load on demand.
+        # Explicit None supports isolated flows without making provider-specific choices.
+        self.legal_search = (HybridSearcher.local(root=self.root,
+            corpus_dir=settings.get('NM_CORPUS_DIR')) if legal_search is _DEFAULT_SEARCH else legal_search)
 
     def _model_for(self, advocate_id, *, session_current):
         if isinstance(self._model_adapter, OpenAIModelAdapter):
@@ -100,8 +104,9 @@ class Application:
     def health(self):
         routine = self.config.for_tier(Tier.ROUTINE)
         return {'runtime': 'ready', 'provider': routine.provider, 'model': routine.model,
-                'corpus': 'not_connected',
-                'brain': {'stages': ['message_labelling', 'disputes_objectives', 'response_review']}}
+                'corpus': 'configured_unverified' if self.legal_search is not None else 'not_connected',
+                'brain': {'stages': ['message_labelling', 'disputes_objectives', 'response_review']
+                    + (['dispute_decomposition', 'hybrid_retrieval'] if self.legal_search is not None else [])}}
 
 def _require_session(check):
     from nm.app.model_permission import ModelPermissionRefused
