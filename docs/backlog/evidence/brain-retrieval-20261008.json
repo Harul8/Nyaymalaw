@@ -1,7 +1,7 @@
 {
   "date": "2026-10-08",
   "feature": "dispute decomposition and internal corpus retrieval",
-  "status": "query and local retrieval components verified; integration pending",
+  "status": "Retrieval mechanism built and browser-observed; semantic acceptance remains partial.",
   "owner": "legal brain worksheet 3.2 and 3.3",
   "query_checkpoint": {
     "production_file": "nm/brain/dispute_queries.py",
@@ -15,10 +15,12 @@
     "call_impact": "one fresh batch call; no call for no checked disputes; turn-owned conditional correction"
   },
   "remaining": [
-    "versioned turn integration and private atomic persistence",
-    "actual browser acceptance",
-    "semantic relevance, applicability and court treatment before any public legal claims",
-    "cross-turn active dispute reconciliation and resuming pending research"
+    "Semantic retrieval quality and broader legal concept decomposition",
+    "Independent passage review wrongly treating some work requests as party objectives",
+    "Separate legal source interpretation, court treatment and temporal/territorial applicability before public legal conclusions",
+    "Cross-turn active disputes, follow-up research execution/reuse and pending research resumption",
+    "Cold startup and per-dispute local search latency",
+    "Versioned integration of preserved title/state draft"
   ],
   "retrieval_checkpoint": {
     "owner": "nm/brain/retrieval.py",
@@ -70,8 +72,132 @@
       "lost save acknowledgement repeating research"
     ],
     "focused_checks": 32,
-    "call_count": "3 without supported disputes; 4 with decomposition; up to 6 including extraction repair/review, with one shared correction allowance.",
+    "call_count": "3 logical structured calls without supported disputes; 4 with decomposition; up to 6 including extraction repair/review, with one shared correction allowance. Provider transport retries are separate; none occurred in these browser runs.",
     "behaviour": "Planning outage retains original-account search; failed disputes retain checked peers; research stays outside public response. Historical v5 and earlier bindings retained.",
-    "status": "Turn-owner checks verified; API injection, application composition and browser acceptance pending."
+    "status": "Turn handoff, authenticated API injection and application composition verified together. Two browser matters saved and reopened; semantic extraction/retrieval acceptance remains partial as documented below."
+  },
+  "browser_checkpoint": {
+    "runtime_commit": "fe9a250fb71bd81766d28790fd01a336147256f5",
+    "turns": 6,
+    "matters": 2,
+    "searched_disputes": 6,
+    "candidate_snapshots": 72,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "summaries": {
+      "lease": {
+        "case": "lease",
+        "turns": 3,
+        "chat_id": "new_d5949a1110e3a0dca8e11355ce9cebdc",
+        "reopened_same_display": true,
+        "errors": [],
+        "before": {
+          "charge": 2.500806,
+          "attempts": 833,
+          "remaining": 0.622116,
+          "combined_total": 4.377884
+        },
+        "after": {
+          "charge": 2.5091,
+          "attempts": 843,
+          "remaining": 0.613822,
+          "combined_total": 4.386178
+        },
+        "new_calls": 10,
+        "charge": 0.008294
+      },
+      "employment": {
+        "case": "employment",
+        "turns": 3,
+        "chat_id": "new_4beef3f3bbf2a60befc2fa732edd53a7",
+        "reopened_same_display": true,
+        "errors": [],
+        "before": {
+          "charge": 2.510324,
+          "attempts": 844,
+          "remaining": 0.612598,
+          "combined_total": 4.387402
+        },
+        "after": {
+          "charge": 2.520366,
+          "attempts": 856,
+          "remaining": 0.602556,
+          "combined_total": 4.397444
+        },
+        "new_calls": 12,
+        "charge": 0.010042
+      }
+    },
+    "measured": "Both openings ran four API calls and searched three disputes each. Exact saved snapshots validated and conversations reopened with identical public display. Follow-up work/social turns performed no new dispute search.",
+    "cost_usd": 0.018336,
+    "call_count": 22,
+    "generative_calls_per_turn": [
+      4,
+      3,
+      3,
+      4,
+      5,
+      3
+    ],
+    "latency_seconds": [
+      67.234,
+      3.875,
+      4.421,
+      36.328,
+      6.656,
+      3.453
+    ],
+    "source_quality": "Useful candidates appeared alongside weak matches. Some results concern different procedural or factual settings. Raw facts/arguments/ratio labels are retained as unassessed corpus metadata; no legal applicability, current force, court treatment or sufficiency is certified.",
+    "public_behaviour": "Only the existing acknowledgement/greeting is displayed. Extraction and research remain private. No legal opinion, source pane, action execution or completion claim was delivered."
+  },
+  "observed_semantic_gap": {
+    "owner": "nm/brain/release.py independent passage review",
+    "invariant": "A request for NM work using earlier account is not a fresh substantive party objective.",
+    "observed": "The withheld-wages case-law request was correctly extracted as empty, then falsely classified by the reviewer as a missing objective. Repair copied the reviewer error and it was supported on the second review.",
+    "effect": "An internal false objective was admitted. No new dispute query was triggered and no public substantive claim was released.",
+    "fix_plan": "Review latest-source purpose and separate NM deliverables from the party real-world result. Measure paired work-only, substantive-outcome and mixed messages before any general review-prompt change. Do not add a fetch-case-law keyword or dispute branch.",
+    "status": "Open; not patched or concealed by retrieval logic."
+  },
+  "query_refinement_probe": {
+    "calls": 1,
+    "cost_usd": 0.001224,
+    "production_changed": false,
+    "result": "The broader general instruction produced longer queries without clear improvement in legal concept diversity; not promoted.",
+    "remaining": "Improve general legal concept decomposition and relevance on held-out matters before claiming retrieval semantic acceptance."
+  },
+  "preserved_user_draft": {
+    "base": "5dbb00a617339494cdd819a3263bb10bb5d52d2e",
+    "stash": "86c7c6930129d73fe0a1bba422112c4bf78a9bfe",
+    "patch": "docs/backlog/evidence/brain-title-state-pending-20261008.patch",
+    "sha256": "39eb371e71696d2b15433c108cf2a7352e6a6a3b79064fac144e8cb4a122fd62",
+    "status": "Preserved and inactive, following user confirmation that editing stopped.",
+    "next": "Version the new title/operation shape separately from existing extraction v3; bind its renderer and turn version, preserve old replay, then verify source-linked additions/corrections/withdrawals and active item ownership before activation."
+  },
+  "call_accounting": {
+    "normal_with_checked_disputes": 4,
+    "without_checked_disputes": 3,
+    "conditional_maximum": 6,
+    "count_boundary": "Logical structured model calls; provider transport retries are distinct from semantic correction. The observed browser calls had zero transport retries.",
+    "replay": 0,
+    "purposes": [
+      "message label",
+      "disputes/objectives proposals",
+      "independent proposal/source-purpose review",
+      "dispute query hypotheses"
+    ],
+    "local_models": "BGE embedding and cross-encoder run locally and add no OpenAI API charge.",
+    "remaining_authorization_usd": 0.602556,
+    "cumulative_authorized_charge_usd": 4.397444,
+    "cap_usd": 5,
+    "baseline_charge_before_this_retrieval_slice": 4.376775,
+    "slice_additional_charge_usd": 0.020669
+  },
+  "focused_integrated_checks": 74,
+  "review_conversations": {
+    "store": "outputs/brain-activity1-material-20261004/synthetic-store",
+    "test_url": "http://127.0.0.2:8175/",
+    "method": "Imported only the two new synthetic browser matters through FileMatterStore.commit into the usual test store; refused nonidentical existing targets and validated exact content and saved_rows before and after import.",
+    "versions": [3, 3],
+    "model_calls": 0,
+    "historical_receipts_changed": false
   }
 }

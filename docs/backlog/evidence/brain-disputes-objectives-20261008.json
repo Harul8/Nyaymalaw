@@ -1,7 +1,12 @@
 {
   "date": "2026-10-08",
   "slice": "Independent disputes/objectives review",
-  "feature_status": "Extraction not accepted; component verified; activation pending",
+  "feature_status": "Active through current_brain_turn_v6; semantic extraction acceptance remains partial. Later browser evidence is recorded in brain-retrieval-20261008.json.",
+  "later_retrieval_observation": {
+    "evidence": "docs/backlog/evidence/brain-retrieval-20261008.json#observed_semantic_gap",
+    "invariant": "NM work requests must remain distinct from the party's substantive outcome.",
+    "status": "Open: a valid empty case-law work request was falsely rejected as an omitted party objective; conditional repair copied that error. No new dispute search or public substantive claim resulted."
+  },
   "owner": "nm/brain/release.py",
   "new_prompt": "_PASSAGE_REVIEW_SYSTEM",
   "invariant": "An omission is a source-linked substantive meaning absent from same-category checked records. Outside-scope material cannot become a missing dispute or objective merely because extraction is empty.",

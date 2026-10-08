@@ -1,0 +1,1343 @@
+diff --git a/nm/brain/dispute_queries.py b/nm/brain/dispute_queries.py
+index 12fae8d..9d41989 100644
+--- a/nm/brain/dispute_queries.py
++++ b/nm/brain/dispute_queries.py
+@@ -5,7 +5,7 @@ from copy import deepcopy
+ import hashlib
+ import json
+ 
+-from nm.brain.disputes_objectives import extraction_units
++from nm.brain.disputes_objectives import CLOSING_OPERATIONS, extraction_units
+ from nm.brain.release import render_saved_release
+ from nm.shared.model_port import (
+     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, estimate_tokens,
+@@ -53,8 +53,10 @@ def research_input(prepared, release):
+         raise SchemaViolation("Research input differs from the checked extraction")
+     supported = {row["unit_id"] for row in release["proof"].get("unit_reviews", [])
+                  if row["verdict"] == "supported"}
++    # A dispute this message resolves or withdraws needs no legal research.
+     subjects = {identity: deepcopy(unit["proposal"]) for identity, unit in units.items()
+-                if unit["kind"] == "disputes" and identity in supported}
++                if unit["kind"] == "disputes" and identity in supported
++                and unit["proposal"].get("operation") not in CLOSING_OPERATIONS}
+     originals = deepcopy(prepared["sources"])
+     return {"sources": originals, "disputes": subjects,
+             "extraction_contract": prepared["contract"]}
+diff --git a/nm/brain/disputes_objectives.py b/nm/brain/disputes_objectives.py
+index 66c7960..5fdfc89 100644
+--- a/nm/brain/disputes_objectives.py
++++ b/nm/brain/disputes_objectives.py
+@@ -13,68 +13,100 @@ from nm.shared.model_port import (
+ )
+ 
+ # Each passage contract fixes the rule that cut the original words into
+-# selectable passages. A saved record is always re-checked with the rule it was
+-# made with, so changing the rule needs a new contract, never an edit to an old
+-# one -- including any change to the shared sentence-end definition below.
+-CONTRACT = "disputes_objectives_v3"  # nm.shared.text_contracts.split_passages: sentence ends only.
++# selectable passages and the shape of a record. A saved record is always
++# re-checked with the rule it was made with, so changing either needs a new
++# contract, never an edit to an old one -- including any change to the shared
++# sentence-end definition below.
++CONTRACT = "disputes_objectives_v3"  # Sentence-end passages; titled records with an operation on saved items.
+ PASSAGE_LEGACY_CONTRACT = "disputes_objectives_v2"  # Cut after every . ! ? ; and line break.
+ LEGACY_CONTRACT = "disputes_objectives_v1"  # Model-copied quotes; no owned passages.
+ COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
+-_TASK = """Purpose: Identify only the disputes and substantive matter objectives
+-communicated or revised by the latest message. Return internal proposals only.
++OPERATIONS = ("new", "adds", "corrects", "contradicts", "resolves", "withdraws")
++CLOSING_OPERATIONS = frozenset({"resolves", "withdraws"})
++_SAVED_PREFIX = {"disputes": "D", "objectives": "O"}
++_SAVED_ID = re.compile(r"[DO][1-9][0-9]*")
++_RECORD_FIELDS = ("title", "description", "operation", "target_id", "passages", "uncertainty",
++                  "clarification")
++_TASK = """Purpose: Identify the disputes and substantive matter objectives that the
++latest message reports, changes or ends, and how each relates to the saved items.
++Return internal proposals only.
+ 
+ Look for:
+-1. Locate the portions of the latest message that state a dispute or matter
+-   objective, or change one already expressed. Use earlier conversation to
+-   understand those portions. A request to use existing content for NM's work
+-   does not assert, reaffirm or change that content. If there are no such portions,
+-   return empty arrays, except for an explicit request to check the accuracy of
+-   NM's saved interpretation. Do not produce a recap of historical items.
+-2. A dispute is reported adverse conduct or incompatible party positions needing
+-   resolution in the underlying situation. It needs no express denial or proof.
+-   A matter objective is a party's desired substantive result in that situation.
++1. What the account says. Read the latest message in the complete conversation.
++   Separate the reported situation (conduct, events, positions) from requests for
++   NM work, drafts, hypotheticals, legal theories and instructions quoted as
++   content. Preserve who said what, negation, chronology, conditions and
++   uncertainty. Saved items and NM's earlier wording are NM interpretations, not
++   evidence. A request to use or summarise existing content reports nothing new.
++2. Whether a dispute is reported. A dispute is reported adverse conduct, or
++   incompatible claims, positions or rights between parties, needing a practical
++   resolution. It needs no express denial, legal label, known actor or proof. An
++   event is not a dispute because it happened, matters or is to be recorded, nor
++   because a legal consequence or a future disagreement is possible; it becomes
++   one when someone's conduct or position is reported as adverse. NM's own
++   misunderstanding is interpretation work, not a party dispute.
++   A matter objective is a party's desired real-world result in the situation.
+    Producing an NM output or controlling how NM works is a work instruction, not
+-   that substantive result. If a work request also states a matter objective,
+-   extract only that objective. A misunderstanding by NM is interpretation work,
+-   not a party dispute. Do not infer a conflict from an ordinary event,
+-   invent an objective for a dispute, or force the two collections to be paired.
+-3. Preserve whose account, position or objective it is, including opposing or
+-   quoted positions, uncertainty, conditions, negations and hypothetical scope.
+-   Include each communicated resolution, correction or withdrawal as a change to
+-   the relevant dispute or objective, even when nothing is still sought for it.
+-   Do not leave these changes implicit in another item or represent them as
+-   continued affirmative intent. Do not decide legal merit or add facts,
+-   remedies or legal conclusions.
+-4. Select the supplied passage IDs supporting each description. The selected
+-   current words must communicate, revise or specifically request review of that
+-   item; mere conversation continuity is insufficient. Include earlier words only
+-   when needed to understand this contribution. Mark substantive
+-   original account as support and a reference or review instruction as context.
+-   NM's earlier wording is context only. A request to check the accuracy of NM's
+-   saved interpretation can authorise examining earlier original account; it
+-   does not substantiate that account.
+-5. When repair_scope is supplied, preserve its supported_records. Return only
+-   missing contributions or corrected replacements for unaccepted proposals;
+-   do not repeat supported records. Re-read original words rather than adopting
+-   a review formulation as evidence. For interpretation repair, describe the
++   an objective; if a work request also states an objective, extract only the
++   objective. Do not invent an objective for a dispute or pair the two lists.
++3. How many disputes. Group by the underlying conduct or contested right that
++   needs one decision, not by sentence, speaker or source. Opposing accounts of
++   the same conduct are one dispute that describes each position. A defence, a
++   proof gap, missing or unacknowledged evidence, a supporting reason, a legal
++   theory or an alternative remedy belongs to the dispute it concerns and is not
++   a dispute of its own. Separate two disputes only when resolving one would still
++   leave the other reported conflict to decide, such as a different adverse act or
++   a different contested entitlement; shared parties, documents or evidence do not
++   merge them.
++4. How each relates to the saved items. Compare with every saved item of the same
++   kind; shared words, people or sources do not make two issues one. Choose one
++   operation:
++   new - an issue that is not among the saved items;
++   adds - a new detail, position or development of a saved item;
++   corrects - the user corrects the saved account or NM's formulation of it;
++   contradicts - the latest account conflicts with the saved one without being
++     presented as a correction;
++   resolves - the conflict is reported settled, or the objective achieved;
++   withdraws - the user no longer pursues it.
++   Every operation except new names that saved item in target_id; new has
++   target_id null. Make at most one change to a saved item, report a change only
++   when the latest message itself communicates it, and do not repeat an unchanged
++   saved item.
++5. Support. Select the passage IDs whose words support each item, as many as it
++   needs and from any message; the boundaries are navigation aids, not units of
++   meaning. Include the latest passages that report or change the item. Mark
++   original account as support, and references, review instructions and NM
++   wording as context. A request to check NM's saved interpretation authorises
++   examining the earlier original account and a supported corrects operation; it
++   does not itself substantiate that account.
++6. When repair_scope is supplied, preserve its supported_records. Return only
++   missing contributions or corrected replacements for unaccepted proposals; do
++   not repeat supported records. Re-read original words rather than adopting a
++   review formulation as evidence. For interpretation repair, describe the
+    restored original dispute or objective, not the request for NM to repair it.
+ 
+-Outcome: Return disputes and objectives as independent arrays. Each item has a
+-concise attributed description, selections and uncertainty (null if no unresolved
+-interpretation needs recording). Each selection contains a supplied passage_id
+-and purpose=support or context. The complete original messages are shown as
+-ordered selectable passages. These boundaries are navigation aids, not units of
+-meaning; select several when needed to preserve context and qualifications.
+-Code retains their exact words; do not copy or rewrite quotations. Use empty
+-arrays when neither category is expressed. Return no general fact catalogue,
+-action plan, reply draft, execution status or forced pairing of the two lists."""
++Outcome: Return disputes and objectives as independent arrays. Each item has:
++title - a few words naming the conduct or position, adding time or place only to
++  distinguish it, with no legal conclusion;
++description - one neutral, attributed statement of the whole issue as it now
++  stands, including each party's reported position;
++operation and target_id as above;
++selections - each a supplied passage_id with purpose support or context;
++uncertainty - an unresolved interpretation that needs recording, otherwise null;
++clarification - for a dispute whose identity is unclear (what or whom it is
++  about), one question to ask the user, otherwise null.
++Code keeps the exact words; do not copy quotations. Use empty arrays when nothing
++is reported. Return no fact catalogue, action plan, reply or completion claim."""
+ _FIRST_PROMPT = """Message: You receive the user's opening message as ordered
+-original passages with code-assigned IDs and the original speaker.
++original passages with code-assigned IDs and the original speaker. There are no
++saved items yet, so every item is new.
+ 
+ """ + _TASK
+ _FOLLOW_UP_PROMPT = """Message: You receive the complete earlier conversation,
+-followed by the user's latest message. Ordered original passages have code-assigned
+-IDs and speakers. Prior NM interpretations are not original evidence.
++the saved items and the user's latest message. Ordered original passages have
++code-assigned IDs and speakers. Saved items are the open disputes (D1, D2 ...)
++and objectives (O1, O2 ...) that NM recorded earlier; like prior NM wording they
++are interpretations to compare against, not original evidence.
+ 
+ """ + _TASK
+ 
+@@ -98,10 +130,14 @@ _SELECTION = {"type": "object", "additionalProperties": False,
+     "required": ["passage_id", "purpose"], "properties": {
+         "passage_id": _TEXT, "purpose": _PASSAGE["properties"]["purpose"]}}
+ _SELECTED_ITEM = {"type": "object", "additionalProperties": False,
+-    "required": ["description", "selections", "uncertainty"], "properties": {
+-        "description": _TEXT,
++    "required": ["title", "description", "operation", "target_id", "selections",
++                 "uncertainty", "clarification"], "properties": {
++        "title": _TEXT, "description": _TEXT,
++        "operation": {"type": "string", "enum": list(OPERATIONS)},
++        "target_id": {"type": ["string", "null"]},
+         "selections": {"type": "array", "minItems": 1, "items": _SELECTION},
+-        "uncertainty": {"type": ["string", "null"]}}}
++        "uncertainty": {"type": ["string", "null"]},
++        "clarification": {"type": ["string", "null"]}}}
+ _SELECTED_SCHEMA = {**_SCHEMA, "properties": {
+     kind: {"type": "array", "items": _SELECTED_ITEM} for kind in COLLECTIONS}}
+ 
+@@ -152,8 +188,7 @@ def _resolve_selections(item, choices):
+             raise SchemaViolation(f"Unknown selected passage {selection['passage_id']}")
+         passages.append({**deepcopy(choice), "passage_id": selection["passage_id"],
+                          "purpose": selection["purpose"]})
+-    return {"description": item["description"], "passages": passages,
+-            "uncertainty": item["uncertainty"]}
++    return {**{key: item[key] for key in _RECORD_FIELDS if key != "passages"}, "passages": passages}
+ 
+ 
+ def _sources(sources):
+@@ -225,17 +260,72 @@ def _check_item(item, catalogue, contract=CONTRACT):
+             "uncertainty": uncertainty, "source_ids": source_ids}
+ 
+ 
+-def _prepare(data, sources, *, choices=None):
++def _check_record(item, catalogue, kind):
++    """A current record: owned passages plus its title, operation and named saved item."""
++    checked = _check_item({key: item[key] for key in ("description", "passages", "uncertainty")},
++                          catalogue, CONTRACT)
++    title = item["title"].strip() if isinstance(item["title"], str) else ""
++    if not title:
++        raise SchemaViolation("An item needs a short title naming the conduct or position")
++    operation, target = item["operation"], item["target_id"]
++    if operation not in OPERATIONS:
++        raise SchemaViolation(f"Unknown operation {operation!r}")
++    if (operation == "new") != (target is None):
++        raise SchemaViolation("A new item names no saved item; every change names exactly one")
++    if target is not None and (not isinstance(target, str) or not _SAVED_ID.fullmatch(target)
++                               or target[0] != _SAVED_PREFIX[kind]):
++        raise SchemaViolation(f"A {COLLECTIONS[kind]} change must name a saved {COLLECTIONS[kind]}")
++    clarification = item["clarification"]
++    if clarification is not None:
++        if not isinstance(clarification, str):
++            raise SchemaViolation("A clarification is one question or null")
++        clarification = clarification.strip() or None
++    return {"title": title, "description": checked["description"], "operation": operation,
++            "target_id": target, "passages": checked["passages"],
++            "uncertainty": checked["uncertainty"], "clarification": clarification,
++            "source_ids": checked["source_ids"]}
++
++
++def _checked_saved(saved):
++    """Open saved items as the turn owner derived them: {ID: kind}."""
++    if not isinstance(saved, (list, tuple)):
++        raise ValueError("Saved items must be a list")
++    owned = {}
++    for row in saved:
++        if (not isinstance(row, dict) or set(row) != {"id", "kind", "title", "description"}
++                or row["kind"] not in COLLECTIONS or not isinstance(row["id"], str)
++                or not _SAVED_ID.fullmatch(row["id"]) or row["id"][0] != _SAVED_PREFIX[row["kind"]]
++                or row["id"] in owned
++                or any(not isinstance(row[key], str) or not row[key].strip()
++                       for key in ("title", "description"))):
++            raise ValueError("Each saved item needs its owned ID, kind, title and description")
++        owned[row["id"]] = row["kind"]
++    return owned
++
++
++def _prepare(data, sources, *, choices=None, saved=()):
+     require_schema(data, _ENVELOPE)
+     catalogue = _sources(sources)
+     contract = CONTRACT if choices is not None else LEGACY_CONTRACT
+-    proposal, issues = {kind: [] for kind in COLLECTIONS}, []
++    open_ids = _checked_saved(saved)
++    proposal, issues, changed = {kind: [] for kind in COLLECTIONS}, [], set()
+     for kind, prefix in COLLECTIONS.items():
+         for index, item in enumerate(data[kind], 1):
+             identity = f"{prefix}:{index}"
+             try:
+-                selected = _resolve_selections(item, choices) if choices is not None else item
+-                checked = _check_item(selected, catalogue, contract)
++                if choices is None:
++                    checked = _check_item(item, catalogue, contract)
++                else:
++                    checked = _check_record(_resolve_selections(item, choices), catalogue, kind)
++                    target = checked["target_id"]
++                    if target is not None:
++                        if open_ids.get(target) != kind:
++                            raise SchemaViolation(
++                                f"{target} is not an open saved {COLLECTIONS[kind]}; use operation new "
++                                "for an issue that is not saved, or name the open saved item it changes")
++                        if target in changed:
++                            raise SchemaViolation(f"{target} already has a change from this message")
++                        changed.add(target)
+             except SchemaViolation as exc:
+                 issues.append({"unit": identity, "reason": str(exc),
+                                "rejected_proposal": deepcopy(item)})
+@@ -256,28 +346,39 @@ def extraction_units(prepared):
+             or set(prepared["proposal"]) != set(COLLECTIONS)
+             or not isinstance(prepared["issues"], list)):
+         raise SchemaViolation("Unknown dispute/objective extraction contract")
+-    catalogue, units = _sources(prepared["sources"]), {}
++    contract = prepared["contract"]
++    record_keys = ({"id", "state", "source_ids", *_RECORD_FIELDS} if contract == CONTRACT
++                   else {"id", "state", "description", "passages", "uncertainty", "source_ids"})
++    catalogue, units, changed = _sources(prepared["sources"]), {}, set()
+     for kind, prefix in COLLECTIONS.items():
+         if not isinstance(prepared["proposal"][kind], list):
+             raise SchemaViolation("Extraction needs both collections")
+         for item in prepared["proposal"][kind]:
+             if (not isinstance(item, dict)
+-                    or set(item) != {"id", "state", "description", "passages", "uncertainty", "source_ids"}
++                    or set(item) != record_keys
+                     or not isinstance(item["id"], str) or not item["id"].startswith(prefix + ":")
+                     or not item["id"][len(prefix) + 1:].isdigit()
+                     or int(item["id"][len(prefix) + 1:]) < 1 or item["id"] in units
+                     or item["state"] != "proposed" or not isinstance(item["passages"], list)):
+                 raise SchemaViolation("Extraction item has an inconsistent owned identity or shape")
+-            raw = {key: deepcopy(item[key]) for key in ("description", "passages", "uncertainty")}
+             passage_fields = {"source_id", "quote", "purpose", "start", "end"}
+-            if prepared["contract"] in _SEGMENTERS:
++            if contract in _SEGMENTERS:
+                 passage_fields.add("passage_id")
+-            for passage in raw["passages"]:
++            for passage in item["passages"]:
+                 if not isinstance(passage, dict) or set(passage) != passage_fields:
+                     raise SchemaViolation("Saved extraction passage has an unknown shape")
+-            checked = {**_check_item(raw, catalogue, prepared["contract"]),
+-                       "id": item["id"], "state": "proposed"}
+-            if checked != item:
++            if contract == CONTRACT:
++                checked = _check_record({key: deepcopy(item[key]) for key in _RECORD_FIELDS},
++                                        catalogue, kind)
++                if checked["target_id"] is not None:
++                    if checked["target_id"] in changed:
++                        raise SchemaViolation("Two saved changes name the same item")
++                    changed.add(checked["target_id"])
++            else:
++                checked = _check_item({key: deepcopy(item[key])
++                                       for key in ("description", "passages", "uncertainty")},
++                                      catalogue, contract)
++            if {**checked, "id": item["id"], "state": "proposed"} != item:
+                 raise SchemaViolation("Saved extraction differs from its exact original passage")
+             units[item["id"]] = {"kind": kind, "proposal": deepcopy(item)}
+     held = set()
+@@ -293,13 +394,67 @@ def extraction_units(prepared):
+     return units
+ 
+ 
++def open_items(turns) -> list[dict]:
++    """The disputes and objectives still open after the saved turns, with stable IDs.
++
++    `turns` is the ordered saved conversation as (units, accepted) pairs: the
++    checked extraction units of each turn and the unit IDs its independent review
++    accepted. Items are numbered D1, D2 ... and O1, O2 ... in order of first
++    acceptance, so replaying the same turns reproduces every ID. A change updates
++    the item it names; a resolution or withdrawal closes it, so older wording
++    cannot revive it. Records from earlier contracts only ever introduced items.
++    """
++    order = list(COLLECTIONS)
++    items, counts = {}, {kind: 0 for kind in COLLECTIONS}
++    for units, accepted in turns:
++        ranked = sorted(((identity, unit) for identity, unit in units.items()
++                         if unit["kind"] in COLLECTIONS and identity in accepted),
++                        key=lambda pair: (order.index(pair[1]["kind"]), int(pair[0].split(":")[1])))
++        for _, unit in ranked:
++            kind, proposal = unit["kind"], unit["proposal"]
++            operation = proposal.get("operation", "new")
++            if operation == "new":
++                counts[kind] += 1
++                identity = f"{_SAVED_PREFIX[kind]}{counts[kind]}"
++                items[identity] = {"id": identity, "kind": kind,
++                                   "title": proposal.get("title") or proposal["description"],
++                                   "description": proposal["description"], "open": True}
++                continue
++            target = items.get(proposal.get("target_id"))
++            if target is None or target["kind"] != kind or not target["open"]:
++                raise SchemaViolation("A saved change names no open item of its kind")
++            if operation in CLOSING_OPERATIONS:
++                target["open"] = False
++            else:
++                target.update(title=proposal["title"], description=proposal["description"])
++    return [{key: value for key, value in item.items() if key != "open"}
++            for item in items.values() if item["open"]]
++
++
++def check_targets(units, saved):
++    """Every change in a saved extraction names an item that was open when it was made."""
++    open_ids = _checked_saved(saved)
++    for identity, unit in units.items():
++        target = unit["proposal"].get("target_id")
++        if target is not None and open_ids.get(target) != unit["kind"]:
++            raise SchemaViolation(f"{identity} names {target}, which was not an open saved item")
++
++
++def _presented_saved(saved):
++    return [{"id": row["id"], "kind": COLLECTIONS[row["kind"]], "title": row["title"],
++             "description": row["description"]} for row in saved]
++
++
+ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
+                                history: list[dict], history_complete: bool,
+-                               _repair_scope=None) -> dict:
++                               saved=(), _repair_scope=None) -> dict:
+     """One focused call; the turn owns correction, independent review and saving."""
+     validate_label({"label": label})  # Diagnostic label never supplies extraction meaning.
+     if history_complete is not True or not isinstance(history, list):
+         raise ValueError("Complete conversation history is required")
++    open_ids = _checked_saved(saved)
++    if open_ids and not history:
++        raise ValueError("Saved items need the earlier conversation they came from")
+     earlier = [{"id": f"history_{index}", "message": deepcopy(entry)}
+                for index, entry in enumerate(history, 1)]
+     current = {"id": "current", "message": {"role": "advocate", "text": message}}
+@@ -310,13 +465,18 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
+         raise ValueError(str(exc)) from exc
+     presented, choices = _passage_input(sources)
+     payload = {"earlier_conversation": presented[:-1]} if earlier else {}
++    if earlier:
++        payload["saved_items"] = _presented_saved(saved)
+     payload["current_message"] = presented[-1]
+     if _repair_scope is not None:
+         payload["repair_scope"] = deepcopy(_repair_scope)
+     schema = deepcopy(_SELECTED_SCHEMA)
+     for kind in COLLECTIONS:
+-        schema["properties"][kind]["items"]["properties"]["selections"]["items"]["properties"]["passage_id"] = {
+-            **_TEXT, "enum": list(choices)}
++        properties = schema["properties"][kind]["items"]["properties"]
++        properties["selections"]["items"]["properties"]["passage_id"] = {**_TEXT, "enum": list(choices)}
++        targets = [identity for identity, owner in open_ids.items() if owner == kind]
++        properties["target_id"] = ({"anyOf": [{"type": "string", "enum": targets}, {"type": "null"}]}
++                                   if targets else {"type": "null"})
+     prompt = Prompt(system=_FOLLOW_UP_PROMPT if earlier else _FIRST_PROMPT,
+                     user=json.dumps(payload, ensure_ascii=False), operation="extract_disputes_objectives")
+     limit = max(2048, estimate_tokens(message) * 4)
+@@ -334,13 +494,13 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
+     try:
+         if result.text is not None:
+             raise SchemaViolation("Extraction requires structured proposals, not response prose")
+-        return _prepare(result.data, sources, choices=choices)
++        return _prepare(result.data, sources, choices=choices, saved=saved)
+     except SchemaViolation as exc:
+         raise SchemaViolation(str(exc), usage=result.usage, latency_ms=result.latency_ms,
+                               retries=result.retries) from exc
+ 
+ 
+-def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
++def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps, saved=()):
+     """One repair call; preserve checked peers and assign fresh owned proposal IDs.
+ 
+     The caller owns the review, shared allowance and durable attempt lineage.
+@@ -349,6 +509,7 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+     units = extraction_units(prepared)
+     if prepared["contract"] != CONTRACT:
+         raise SchemaViolation("Extraction repair requires the current passage-owned contract")
++    check_targets(units, saved)
+     if (not isinstance(supported_unit_ids, list) or any(not isinstance(identity, str) for identity in supported_unit_ids)
+             or len(set(supported_unit_ids)) != len(supported_unit_ids)
+             or any(identity not in units for identity in supported_unit_ids)):
+@@ -365,9 +526,13 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+             raise SchemaViolation("Extraction repair gap differs from its owned original support")
+ 
+     def presentation(kind, unit):
+-        return {"id": unit["id"], "kind": kind, "description": unit["description"],
+-            "selections": [{"passage_id": span["passage_id"], "purpose": span["purpose"]}
+-                           for span in unit["passages"]], "uncertainty": unit["uncertainty"]}
++        shown = {"id": unit["id"], "kind": kind, "description": unit["description"],
++                 "selections": [{"passage_id": span["passage_id"], "purpose": span["purpose"]}
++                                for span in unit["passages"]], "uncertainty": unit["uncertainty"]}
++        for key in ("title", "operation", "target_id", "contribution"):
++            if key in unit:
++                shown[key] = unit[key]
++        return shown
+ 
+     supported = set(supported_unit_ids)
+     scope = {"supported_records": [presentation(row["kind"], row["proposal"])
+@@ -379,7 +544,7 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+     sources = prepared["sources"]
+     repaired = extract_disputes_objectives(model, sources[-1]["message"]["text"], label="information",
+         history=[deepcopy(source["message"]) for source in sources[:-1]], history_complete=True,
+-        _repair_scope=scope)
++        saved=saved, _repair_scope=scope)
+     if repaired["sources"] != sources:
+         raise SchemaViolation("Extraction repair changed the original source binding")
+     merged = deepcopy(repaired)
+@@ -403,5 +568,5 @@ def repair_disputes_objectives(model, prepared, *, supported_unit_ids, gaps):
+     for issue in merged["issues"]:
+         prefix, index = issue["unit"].split(":")
+         issue["unit"] = f"{prefix}:{offsets[prefix] + int(index)}"
+-    extraction_units(merged)
++    check_targets(extraction_units(merged), saved)
+     return merged
+diff --git a/nm/brain/release.py b/nm/brain/release.py
+index f1ea821..d1d4337 100644
+--- a/nm/brain/release.py
++++ b/nm/brain/release.py
+@@ -14,7 +14,7 @@ from nm.brain.message_labels import validate_label
+ from nm.brain.disputes_objectives import (
+     CONTRACT as EXTRACTION_CONTRACT, LEGACY_CONTRACT as LEGACY_EXTRACTION_CONTRACT,
+     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_CONTRACT,
+-    extraction_units, _passage_input, _check_item,
++    check_targets, extraction_units, _passage_input, _check_item, _presented_saved,
+ )
+ from nm.shared.model_port import (
+     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
+@@ -48,11 +48,16 @@ Look for:
+    contribution expresses whose substantive result is wanted in that situation.
+    Examine these independently. A desired result does not replace the reported
+    conflict it addresses. Separate meanings requiring independent decisions.
++   Opposing accounts of the same conduct, and a defence, proof gap or missing
++   evidence, belong to the dispute they concern and are represented by it.
+ 2. Preserve changes to previously reported disputes or objectives: resolved
+    means reported resolution or satisfaction; withdrawn means the position or
+    desired result is no longer maintained; changed means revised content;
+    reported means introduced or continued content. Agreement alone does not
+-   establish a previous conflict. Do not invent a goal from an event.
++   establish a previous conflict. Do not invent a goal from an event. When
++   saved_items are supplied, each proposal states its operation (new, adds,
++   corrects, contradicts, resolves or withdraws) and the saved item it changes:
++   an unsupported operation or wrong saved item makes the proposal unsupported.
+ 3. NM work, social exchange and ordinary facts without either contribution are
+    outside this extraction. History clarifies current references, not a backlog
+    to repeat. An explicit request to correct NM's understanding permits
+@@ -472,10 +477,17 @@ _RENDERERS = {"initial_brain_release_v1": _render_v1,
+                  for version in _PASSAGE_REVIEWS}}
+ 
+ 
+-def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_review=False) -> dict:
+-    """One independent review. The caller owns correction, saving and release."""
++def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_review=False,
++                    saved=()) -> dict:
++    """One independent review. The caller owns correction, saving and release.
++
++    `saved` holds the open saved items the extraction compared against; every
++    change a proposal makes must name one of them.
++    """
+     label = validate_label({"label": label})
+     sources, units, issues = _inputs(prepared)
++    if "contract" in prepared:
++        check_targets(units, saved)
+     focused = prepared.get("contract") in _FOCUSED_RENDERERS
+     # One assignment per path: a review version can never be left unset.
+     version = (PASSAGE_REVIEW_RENDERER if passage_review
+@@ -485,11 +497,15 @@ def prepare_release(model: ModelPort, prepared: dict, label: str, *, passage_rev
+             raise SchemaViolation("Passage review needs the current owned passage extraction contract")
+         schema, presented, _ = _passage_review_schema(sources, units, EXTRACTION_CONTRACT)
+         payload = {"earlier_conversation": presented[:-1], "current_message": presented[-1],
+-            "proposals": {kind: [{"id": row["id"], "description": row["description"],
++            "proposals": {kind: [{"id": row["id"],
++                **{key: row[key] for key in ("title", "operation", "target_id") if key in row},
++                "description": row["description"],
+                 "support_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "support"],
+                 "context_passage_ids": [span["passage_id"] for span in row["passages"] if span["purpose"] == "context"],
+                 "uncertainty": row["uncertainty"]} for row in rows]
+                 for kind, rows in prepared["proposal"].items()}, "held_items": issues}
++        if saved:
++            payload["saved_items"] = _presented_saved(saved)
+         system = _PASSAGE_REVIEW_SYSTEM
+     else:
+         payload = {"original_conversation": sources, "preparation": prepared["proposal"],
+diff --git a/nm/brain/turn.py b/nm/brain/turn.py
+index 7337a4d..b9304e6 100644
+--- a/nm/brain/turn.py
++++ b/nm/brain/turn.py
+@@ -9,10 +9,13 @@ from dataclasses import dataclass, replace
+ from datetime import datetime, timezone
+ 
+ from nm.brain.message_labels import label_message
++from nm.brain.dispute_queries import prepare_queries, research_input, validate_queries
++from nm.brain.retrieval import validate_search
+ from nm.brain.disputes_objectives import (
+     CONTRACT as EXTRACTION_RECORD, LEGACY_CONTRACT as LEGACY_EXTRACTION_RECORD,
+     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_RECORD,
+-    extract_disputes_objectives, extraction_units, repair_disputes_objectives,
++    check_targets, extract_disputes_objectives, extraction_units, open_items,
++    repair_disputes_objectives,
+ )
+ from nm.brain.release import (
+     LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RENDERER,
+@@ -23,7 +26,9 @@ from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViol
+ from nm.shared.store_port import StaleWrite
+ from nm.work_the_file.matter_contracts import Matter
+ 
+-CONTRACT = 'current_brain_turn_v5'
++CONTRACT = 'current_brain_turn_v6'
++RESEARCH_LEGACY_CONTRACT = 'current_brain_turn_v5'
++RESEARCH_CONTRACT = 'private_dispute_research_v1'
+ SEGMENT_LEGACY_CONTRACT = 'current_brain_turn_v4'
+ PASSAGE_LEGACY_CONTRACT = 'current_brain_turn_v3'
+ EXTRACTION_LEGACY_CONTRACT = 'current_brain_turn_v2'
+@@ -33,12 +38,13 @@ LEGACY_CONTRACT = 'current_brain_turn_v1'
+ # behind them. v5 passages end at sentences; v3/v4 passages end at every mark.
+ _EXTRACTION_BINDINGS = {
+     CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
++    RESEARCH_LEGACY_CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
+     SEGMENT_LEGACY_CONTRACT: (PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
+     PASSAGE_LEGACY_CONTRACT: (PASSAGE_LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
+     EXTRACTION_LEGACY_CONTRACT: (LEGACY_EXTRACTION_RENDERER, LEGACY_EXTRACTION_RECORD),
+ }
+ # Versions whose turns carry a bounded extraction-recovery record.
+-_RECOVERY_CONTRACTS = (CONTRACT, SEGMENT_LEGACY_CONTRACT)
++_RECOVERY_CONTRACTS = (CONTRACT, RESEARCH_LEGACY_CONTRACT, SEGMENT_LEGACY_CONTRACT)
+ 
+ 
+ class BrainRefused(Exception):
+@@ -81,6 +87,17 @@ def _request(turn):
+             'turn_id': turn.turn_id, 'matter_id': turn.matter_id, 'chat_id': turn.chat_id}
+ 
+ 
++def _accepted(release):
++    """Unit IDs the independent review accepted; only these become saved items."""
++    return {row['unit_id'] for row in release['proof'].get('unit_reviews', [])
++            if row.get('verdict') == 'supported'}
++
++
++def saved_items(rows):
++    """The open saved disputes and objectives after these checked rows, with stable IDs."""
++    return open_items([(row['release']['units'], _accepted(row['release'])) for row in rows])
++
++
+ def saved_rows(matter, advocate_id):
+     """Validate the saved contract without rerunning or upgrading an old reply."""
+     if matter.advocate_id != advocate_id:
+@@ -124,6 +141,17 @@ def saved_rows(matter, advocate_id):
+                 raise ValueError('saved preparation binding')
+             if row['contract'] in _RECOVERY_CONTRACTS:
+                 _checked_recovery(row, *_EXTRACTION_BINDINGS[row['contract']])
++            if prepared.get('contract') == EXTRACTION_RECORD:
++                # A change must name an item that was open before this turn,
++                # as derived from the earlier checked rows -- never re-guessed.
++                before = saved_items(rows)
++                check_targets(expected_units, before)
++                if (row.get('recovery') or {}).get('before'):
++                    check_targets(extraction_units(row['recovery']['before']['preparation']), before)
++            if row['contract'] == CONTRACT:
++                _checked_research(row['research'], prepared, row['release'])
++            elif 'research' in row:
++                raise ValueError('historical turn cannot acquire fresh research metadata')
+             response = row['response']
+             fixed = {'route': 'current_brain', 'mode': 'conversation', 'mode_statement': '',
+                      'blocked': False, 'blocked_reason': None, 'material': [],
+@@ -210,6 +238,98 @@ def _checked_recovery(row, renderer, extraction_record):
+             raise ValueError('recovery discarded an independently supported proposal')
+ 
+ 
++def _search_queries(subject, plan):
++    """Original words are code-owned; generated terminology remains hypotheses."""
++    original = '\n'.join(dict.fromkeys(
++        f"[{p['source_id']}] {p['quote']}" for p in subject['passages']))
++    queries = [{"query_id": q['query_id'], "text": q['text'], "context": original}
++               for q in plan['queries']] if plan is not None else []
++    return [*queries, {'query_id': subject['id'] + ':original', 'text': original,
++                      'context': original}]
++
++
++def _research_state(record, scope):
++    if not scope['disputes']:
++        return 'not_needed'
++    if not record['configured']:
++        return 'not_configured'
++    if (record['planning_failure'] or record['failures']
++            or record['planning']['issues']
++            or any(s['state'] == 'partial' for s in record['searches'].values())):
++        return 'partial'
++    return 'ready'
++
++
++def _checked_research(record, prepared, release):
++    """Check private execution evidence without upgrading ranked candidates."""
++    scope = research_input(prepared, release)
++    if (not isinstance(record, dict) or set(record) != {'contract', 'input_digest',
++            'configured', 'planning', 'planning_failure', 'searches', 'failures', 'state'}
++            or record['contract'] != RESEARCH_CONTRACT
++            or record['input_digest'] != _digest(scope) or type(record['configured']) is not bool
++            or not isinstance(record['searches'], dict) or not isinstance(record['failures'], dict)):
++        raise ValueError('research has no matching checked dispute scope')
++    subjects = scope['disputes']
++    if not subjects or not record['configured']:
++        if any(record[key] for key in ('planning', 'planning_failure', 'searches', 'failures')):
++            raise ValueError('unused research cannot carry execution results')
++    else:
++        planning = record['planning']
++        failure = record['planning_failure']
++        if failure is None:
++            validate_queries(planning, prepared, release)
++        elif (planning is not None or not isinstance(failure, dict)
++                or set(failure) != {'stage', 'code'} or failure['stage'] != 'decomposition'
++                or failure['code'] not in ('model_error', 'context_overflow', 'invalid_proposal')):
++            raise ValueError('failed planning cannot claim checked queries')
++        if (set(record['searches']) & set(record['failures'])
++                or set(record['searches']) | set(record['failures']) != set(subjects)):
++            raise ValueError('every checked dispute needs its own search disposition')
++        for identity, search in record['searches'].items():
++            plan = planning['plans'].get(identity) if planning else None
++            validate_search(search, _search_queries(subjects[identity], plan))
++        for failure in record['failures'].values():
++            if (not isinstance(failure, dict) or set(failure) != {'stage', 'code'}
++                    or failure != {'stage': 'search', 'code': 'search_unavailable'}):
++                raise ValueError('search failure has no owned execution disposition')
++    if record['state'] != _research_state(record, scope):
++        raise ValueError('research status differs from its actual execution dispositions')
++    return deepcopy(record)
++
++
++def _research(model, prepared, release, searcher, checked):
++    scope = research_input(prepared, release)
++    result = {'contract': RESEARCH_CONTRACT, 'input_digest': _digest(scope),
++              'configured': searcher is not None, 'planning': None, 'planning_failure': None,
++              'searches': {}, 'failures': {}, 'state': 'not_needed'}
++    if scope['disputes'] and searcher is not None:
++        def plan_current():
++            proposal = prepare_queries(model, prepared, release)
++            if proposal['issues'] and not proposal['plans']:
++                raise SchemaViolation('No query route admitted: ' + '; '.join(
++                    issue['reason'] for issue in proposal['issues']))
++            return proposal
++        try:
++            result['planning'] = checked(plan_current)
++        except ModelError as exc:
++            code = ('context_overflow' if isinstance(exc, ContextOverflow) else
++                    'invalid_proposal' if isinstance(exc, SchemaViolation) else 'model_error')
++            result['planning_failure'] = {'stage': 'decomposition', 'code': code}
++        for identity, subject in scope['disputes'].items():
++            plan = result['planning']['plans'].get(identity) if result['planning'] else None
++            queries = _search_queries(subject, plan)
++            try:
++                # Search hypotheses failing cannot erase original-account search.
++                candidate = searcher.search(queries)
++                result['searches'][identity] = validate_search(candidate, queries)
++            except Exception:
++                # This boundary is read-only. Fail only this dispute's search;
++                # identity, history, ownership and saving gates remain outside it.
++                result['failures'][identity] = {'stage': 'search', 'code': 'search_unavailable'}
++    result['state'] = _research_state(result, scope)
++    return _checked_research(result, prepared, release)
++
++
+ class _MeasuredModel:
+     """Request-local accounting, including rejected provider responses."""
+     def __init__(self, inner):
+@@ -257,8 +377,9 @@ class _MeasuredModel:
+ 
+ 
+ class BrainService:
+-    def __init__(self, *, store, model_factory=None, model=None, session_current):
++    def __init__(self, *, store, model_factory=None, model=None, session_current, legal_search=None):
+         self.store, self.session_current = store, session_current
++        self.legal_search = legal_search
+         self.model_factory = model_factory or (lambda: model)
+ 
+     def _authorised(self):
+@@ -320,11 +441,13 @@ class BrainService:
+ 
+         try:
+             history = _history(rows)
++            saved = saved_items(rows)
+             label = checked(lambda: label_message(model, turn.message, history=history, history_complete=True))
+ 
+             def extract_current():
+                 prepared = extract_disputes_objectives(model, turn.message, label=label['label'],
+-                                                       history=history, history_complete=True)
++                                                       history=history, history_complete=True,
++                                                       saved=saved)
+                 if prepared['issues'] and not any(prepared['proposal'].values()):
+                     # No accepted peer can be lost by this bounded correction.
+                     # Mixed valid/held results retain their independent work.
+@@ -333,7 +456,8 @@ class BrainService:
+                 return prepared
+ 
+             prepared = checked(extract_current)
+-            release = checked(lambda: prepare_release(model, prepared, label['label'], passage_review=True))
++            release = checked(lambda: prepare_release(model, prepared, label['label'], passage_review=True,
++                                                      saved=saved))
+             gaps = extraction_review_gaps(release)
+             recovery = {'attempted': False, 'before': None,
+                         'outcome': 'allowance_unavailable' if gaps else 'not_needed', 'failure': None}
+@@ -342,8 +466,10 @@ class BrainService:
+                 recovery.update(attempted=True, before={'preparation': deepcopy(prepared), 'release': deepcopy(release)})
+                 supported = [row['unit_id'] for row in release['proof']['unit_reviews'] if row['verdict'] == 'supported']
+                 try:
+-                    revised = repair_disputes_objectives(model, prepared, supported_unit_ids=supported, gaps=gaps)
+-                    reviewed = prepare_release(model, revised, label['label'], passage_review=True)
++                    revised = repair_disputes_objectives(model, prepared, supported_unit_ids=supported,
++                                                         gaps=gaps, saved=saved)
++                    reviewed = prepare_release(model, revised, label['label'], passage_review=True,
++                                               saved=saved)
+                 except ModelError:
+                     # Keep only the earlier independently checked scope. A
+                     # failed repair cannot certify any new result or effect.
+@@ -354,6 +480,7 @@ class BrainService:
+             if not release['elements']:
+                 raise BrainRefused('A response could not be prepared for this message. Please retry.',
+                                    code='response_unavailable')
++            research = _research(model, prepared, release, self.legal_search, checked)
+         except ModelError as exc:
+             raise BrainRefused('The response service could not finish this message. Please retry.') from exc
+         self._authorised()
+@@ -371,6 +498,7 @@ class BrainService:
+             'request': request, 'request_digest': request_digest, 'at': at,
+             'label': label, 'preparation': prepared, 'release': release,
+             'recovery': recovery,
++            'research': research,
+             'response': response, 'response_digest': _digest(response),
+             'committed': True, 'release_state': 'released'}
+         proposed = replace(matter, brain_chat=(*matter.brain_chat, row), version=version + 1)
+diff --git a/tests/test_brain_disputes_objectives.py b/tests/test_brain_disputes_objectives.py
+index 07bc326..febecf5 100644
+--- a/tests/test_brain_disputes_objectives.py
++++ b/tests/test_brain_disputes_objectives.py
+@@ -40,10 +40,12 @@ def selection(passage_id="current:p1", purpose="support"):
+     return {"passage_id": passage_id, "purpose": purpose}
+ 
+ 
+-def item(description="Supplier's refusal to deliver", selections=None, uncertainty=None):
+-    return {"description": description,
++def item(description="Supplier's refusal to deliver", selections=None, uncertainty=None, *,
++         title="Refused delivery", operation="new", target_id=None, clarification=None):
++    return {"title": title, "description": description, "operation": operation,
++            "target_id": target_id,
+             "selections": [selection()] if selections is None else selections,
+-            "uncertainty": uncertainty}
++            "uncertainty": uncertainty, "clarification": clarification}
+ 
+ 
+ def legacy_item(description="Supplier's refusal to deliver", passages=None, uncertainty=None):
+@@ -82,7 +84,9 @@ def test_first_input_makes_one_call_and_returns_only_private_extraction():
+     assert set(schema["properties"]) == {"disputes", "objectives"}
+     for kind in ("disputes", "objectives"):
+         item_schema = schema["properties"][kind]["items"]["properties"]
+-        assert set(item_schema) == {"description", "selections", "uncertainty"}
++        assert set(item_schema) == {"title", "description", "operation", "target_id",
++                                    "selections", "uncertainty", "clarification"}
++        assert item_schema["target_id"] == {"type": "null"}  # nothing is saved before the first message
+         passage_schema = item_schema["selections"]["items"]["properties"]
+         assert set(passage_schema) == {"passage_id", "purpose"}
+         assert passage_schema["passage_id"]["enum"] == ["current:p1"]
+diff --git a/tests/test_current_brain_app.py b/tests/test_current_brain_app.py
+index 3999d41..cee094b 100644
+--- a/tests/test_current_brain_app.py
++++ b/tests/test_current_brain_app.py
+@@ -44,12 +44,14 @@ def empty_review(purpose="nm_work"):
+ def mixed_outputs(message):
+     assert message == MIXED_MESSAGE, "This fixture's two selectors belong to its two supplied sentences"
+     return [{"label": "mixed"}, {
+-        "disputes": [{"description": "The advocate reports the supplier refusing to return their deposit.",
++        "disputes": [{"title": "Deposit not returned", "operation": "new", "target_id": None,
++                      "description": "The advocate reports the supplier refusing to return their deposit.",
+                       "selections": [{"passage_id": "current:p1", "purpose": "support"}],
+-                      "uncertainty": None}],
+-        "objectives": [{"description": "The advocate wants the deposit returned.",
++                      "uncertainty": None, "clarification": None}],
++        "objectives": [{"title": "Return of the deposit", "operation": "new", "target_id": None,
++                        "description": "The advocate wants the deposit returned.",
+                         "selections": [{"passage_id": "current:p2", "purpose": "support"}],
+-                        "uncertainty": None}]},
++                        "uncertainty": None, "clarification": None}]},
+         {"greeting": False, "unit_reviews": [
+             {"unit_id": identity, "verdict": "supported"}
+             for identity in ("dispute:1", "objective:1")], "readings": {
+@@ -213,7 +215,7 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
+             "passage_id": "current:p1" if kind == "disputes" else "current:p2",
+             "purpose": "support", "start": start, "end": start + len(quote)}]
+     assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v3"
+-    assert held.brain_chat[0]["contract"] == "current_brain_turn_v5"
++    assert held.brain_chat[0]["contract"] == "current_brain_turn_v6"
+     assert held.facts == () and held.threads == ()
+     assert response["board_changes"] == [] and response["material"] == []
+ 
+@@ -259,6 +261,7 @@ def test_legacy_preparation_read_replay_and_followup_preserve_the_original_trans
+         historical["elements"][0]["text"] = "Message received."
+     rows[0]["contract"] = "current_brain_turn_v1"
+     rows[0].pop("recovery")
++    rows[0].pop("research", None)  # historical turns carry no research
+     rows[0]["preparation"] = legacy_prepared(message, material=True)
+     rows[0]["release"] = historical
+     rows[0]["response"]["elements"] = deepcopy(historical["elements"])
+@@ -303,6 +306,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
+                for item in collection for passage in item["passages"])
+     rows[0]["contract"] = "current_brain_turn_v2"
+     rows[0].pop("recovery")
++    rows[0].pop("research", None)  # historical turns carry no research
+     rows[0]["preparation"] = historical
+     rows[0]["release"] = {
+         "renderer_version": "disputes_objectives_release_v1", "label": "mixed",
+@@ -328,7 +332,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
+         ("advocate", MIXED_MESSAGE), ("nm", "Message received.")]
+     final_rows = app.held(first["chat_id"]).brain_chat
+     assert final_rows[0] == persisted.brain_chat[0]
+-    assert final_rows[1]["contract"] == "current_brain_turn_v5"
++    assert final_rows[1]["contract"] == "current_brain_turn_v6"
+     assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v3"
+ 
+ 
+diff --git a/tests/test_current_brain_extraction_repair.py b/tests/test_current_brain_extraction_repair.py
+index 4545e5a..893fa3a 100644
+--- a/tests/test_current_brain_extraction_repair.py
++++ b/tests/test_current_brain_extraction_repair.py
+@@ -29,7 +29,7 @@ def test_missing_outcome_repaired_through_authenticated_api_then_reopens_and_rep
+         assert [e["text"] for e in first["elements"]] == ["Message received."]
+         matter = app.held(first["chat_id"])
+         row = saved_rows(matter, "adv_wiring")[0]
+-        assert row["contract"] == "current_brain_turn_v5"
++        assert row["contract"] == "current_brain_turn_v6"
+         assert row["release"]["renderer_version"] == "disputes_objectives_release_v6"
+         assert row["recovery"]["attempted"] and row["recovery"]["outcome"] == "ready"
+         before = row["recovery"]["before"]
+@@ -96,11 +96,14 @@ def every_mark_record(prepared, selected):
+     _, choices = _passage_input(prepared["sources"], PASSAGE_LEGACY_CONTRACT)
+     catalogue = {source["id"]: source["message"] for source in prepared["sources"]}
+     record = {**deepcopy(prepared), "contract": PASSAGE_LEGACY_CONTRACT}
+-    for rows in record["proposal"].values():
+-        for row in rows:
++    for kind, rows in record["proposal"].items():
++        legacy = []
++        for row in rows:  # v2 records had no title, operation or clarification
+             passage = {**choices[selected[row["id"]]], "passage_id": selected[row["id"]], "purpose": "support"}
+-            row.update(_check_item({"description": row["description"], "passages": [passage],
+-                                    "uncertainty": row["uncertainty"]}, catalogue, PASSAGE_LEGACY_CONTRACT))
++            legacy.append({"id": row["id"], "state": row["state"], **_check_item(
++                {"description": row["description"], "passages": [passage], "uncertainty": row["uncertainty"]},
++                catalogue, PASSAGE_LEGACY_CONTRACT)})
++        record["proposal"][kind] = legacy
+     return record
+ 
+ 
+@@ -115,6 +118,7 @@ def test_previous_passage_turn_v3_keeps_its_old_release_and_replays_without_upgr
+         row = rows[0]
+         row["contract"] = "current_brain_turn_v3"
+         row.pop("recovery")
++        row.pop("research", None)  # historical turns carry no research
+         row["preparation"] = every_mark_record(row["preparation"],
+                                                {"dispute:1": "current:p1", "objective:1": "current:p2"})
+         assert row["preparation"]["proposal"]["objectives"][0]["passages"][0]["quote"] == (
+diff --git a/tests/test_current_brain_research_api.py b/tests/test_current_brain_research_api.py
+new file mode 100644
+index 0000000..fd200cc
+--- /dev/null
++++ b/tests/test_current_brain_research_api.py
+@@ -0,0 +1,63 @@
++"""Research reaches the authenticated shipped HTTP boundary and stays private."""
++from copy import deepcopy
++from dataclasses import replace
++import pytest
++
++from nm.brain.turn import saved_rows
++from nm.shared.model_port import ModelError
++from tests.test_current_brain_app import Harness, WiredModel, MIXED_MESSAGE, mixed_outputs, assert_ok
++from tests.test_current_brain_research_turn import Search, plan
++
++
++def test_authenticated_turn_searches_saves_and_reopens_without_exposing_private_work(tmp_path):
++    app = Harness(tmp_path, WiredModel(*mixed_outputs(MIXED_MESSAGE), plan()))
++    search = Search()
++    app.application.legal_search = search
++    try:
++        first = assert_ok(app.post(MIXED_MESSAGE))
++        assert first['metrics']['llm_calls'] == 4 and 'research' not in first
++        row = saved_rows(app.held(first['chat_id']), 'adv_wiring')[0]
++        assert row['research']['state'] == 'ready' and len(search.calls) == 1
++        reopened = assert_ok(app.client.get('/api/chats/' + first['chat_id']))
++        assert reopened['turns'][0]['elements'] == first['elements']
++        assert 'research' not in reopened['turns'][0]
++        assert assert_ok(app.post(MIXED_MESSAGE)) == {**first, 'replayed':True}
++        assert len(app.model.calls) == 4 and len(search.calls) == 1
++    finally:
++        app.client.close()
++
++
++def test_provider_failure_keeps_original_search_and_confirmed_input_through_http(tmp_path):
++    app = Harness(tmp_path, WiredModel(*mixed_outputs(MIXED_MESSAGE), ModelError('Provider unavailable')))
++    app.application.legal_search = Search()
++    try:
++        result = assert_ok(app.post(MIXED_MESSAGE))
++        row = saved_rows(app.held(result['chat_id']), 'adv_wiring')[0]
++        assert result['input_admitted'] and row['research']['state'] == 'partial'
++        assert len(row['research']['searches']['dispute:1']['queries']) == 1
++        assert assert_ok(app.client.get('/api/chats/' + result['chat_id']))['turn_count'] == 1
++    finally:
++        app.client.close()
++
++
++@pytest.mark.parametrize('damage', ['source', 'context', 'segment', 'owner', 'contract'])
++def test_malformed_durable_search_is_guarded_history_refusal_not_server_error(tmp_path, damage):
++    app = Harness(tmp_path, WiredModel(*mixed_outputs(MIXED_MESSAGE), plan()))
++    app.application.legal_search = Search()
++    try:
++        result = assert_ok(app.post(MIXED_MESSAGE))
++        matter = app.held(result['chat_id'])
++        rows = deepcopy(matter.brain_chat)
++        research = rows[0]['research']
++        candidate = research['searches']['dispute:1']['candidates'][0]
++        if damage == 'source': candidate['source']['chunk_id'] = ''
++        elif damage == 'context': candidate['context'] = []
++        elif damage == 'segment': candidate['context']['segments'] = [None]
++        elif damage == 'owner': research['searches']['dispute:other'] = research['searches'].pop('dispute:1')
++        else: research['contract'] = 'future'
++        app.store.commit(replace(matter, brain_chat=rows), expected_version=matter.version)
++        assert app.client.get('/api/chats/' + result['chat_id']).status_code == 409
++        replay = app.post(MIXED_MESSAGE)
++        assert replay.status_code == 409 and len(app.model.calls) == 4
++    finally:
++        app.client.close()
+diff --git a/tests/test_current_brain_research_composition.py b/tests/test_current_brain_research_composition.py
+new file mode 100644
+index 0000000..c48e127
+--- /dev/null
++++ b/tests/test_current_brain_research_composition.py
+@@ -0,0 +1,32 @@
++"""Corpus configuration is lazy, explicit, and independent of model provider."""
++from nm.app.composition import Application
++from nm.brain.retrieval import HybridSearcher
++from nm.arrive.store_directory import FileDirectory
++from nm.shared.store_file_store import FileMatterStore
++from tests.test_current_brain_app import KEY, ROOT, WiredModel
++
++
++def application(path, **changes):
++    return Application(root=ROOT,model=WiredModel(),store=FileMatterStore(path,key=KEY),
++        directory=FileDirectory(path,key=KEY),audit_root=path/'audit',environment={
++            'NM_MATTER_KEY':KEY,'NM_MATTER_STORE':str(path), 'NM_MODEL_PROVIDER':'scripted',
++            'NM_MODEL_ROUTINE':'scripted-1', 'NM_EMBED_MODEL':'text-embedding-3-large',
++            'NM_CORPUS_DIR':str(path/'held-corpus')},**changes)
++
++
++def test_default_composition_configures_both_corpora_without_loading_or_claiming_ready(tmp_path):
++    app=application(tmp_path)
++    assert isinstance(app.legal_search,HybridSearcher)
++    assert set(app.legal_search.collections)=={'provision','judgment'}
++    for collection in app.legal_search.collections.values():
++        assert collection._loaded is None and collection.models._loaded is None
++        assert collection.corpus_dir==tmp_path/'held-corpus'
++    assert app.health()['corpus']=='configured_unverified'
++    assert app.health()['brain']['stages'][-2:]==['dispute_decomposition','hybrid_retrieval']
++
++
++def test_explicit_injection_and_none_preserve_their_owned_configuration(tmp_path):
++    injected=object()
++    assert application(tmp_path/'injected',legal_search=injected).legal_search is injected
++    app=application(tmp_path/'isolated',legal_search=None)
++    assert app.legal_search is None and app.health()['corpus']=='not_connected'
+diff --git a/tests/test_current_brain_research_turn.py b/tests/test_current_brain_research_turn.py
+new file mode 100644
+index 0000000..9f2eb66
+--- /dev/null
++++ b/tests/test_current_brain_research_turn.py
+@@ -0,0 +1,129 @@
++"""Private research handoff, execution coverage, persistence and replay."""
++from copy import deepcopy
++from dataclasses import replace
++
++import pytest
++
++from nm.brain.retrieval import HybridSearcher
++from nm.brain.turn import BrainRefused, BrainService, CONTRACT, saved_rows
++from nm.shared.model_port import ModelError, SchemaViolation
++from tests.test_current_brain_app import MIXED_MESSAGE, WiredModel, mixed_outputs, greeting_outputs
++from tests.test_current_brain_turn import MemoryStore, turn
++from tests.test_current_brain_retrieval import Collection
++
++
++def plan():
++    return {'plans': [{'dispute_id':'dispute:1', 'queries': [
++        {'text':'return of money retained under an agreement', 'purpose':'Seek the obligations and exceptions.',
++         'passage_ids':['current:p1']}], 'uncertainty':None}]}
++
++
++class Search:
++    def __init__(self, fail=False):
++        self.calls, self.fail = [], fail
++        self.inner = HybridSearcher({'provision':Collection(), 'judgment':Collection('judgment')})
++
++    def search(self, queries):
++        self.calls.append(deepcopy(queries))
++        if self.fail: raise OSError('Local retrieval unavailable')
++        return self.inner.search(queries)
++
++
++def run(*extra, store=None, search=None, outputs=None):
++    model = WiredModel(*(outputs or mixed_outputs(MIXED_MESSAGE)), *extra)
++    search = search or Search()
++    store = store or MemoryStore()
++    service = BrainService(store=store, model=model, legal_search=search, session_current=lambda:True)
++    result = service.run(turn(message=MIXED_MESSAGE)).as_dict()
++    return service, result, model, store, search
++
++
++def test_research_is_source_bound_saved_private_and_replayed_without_calls():
++    brain, result, model, store, search = run(plan())
++    row = saved_rows(store.value, 'adv_owner')[0]
++    assert row['contract'] == CONTRACT and row['research']['state'] == 'ready'
++    assert result['metrics']['llm_calls'] == 4
++    assert model.calls[-1][0].operation == 'decompose_disputes'
++    assert len(search.calls) == 1 and len(search.calls[0]) == 2
++    assert search.calls[0][-1]['query_id'] == 'dispute:1:original'
++    assert 'supplier refuses to return my deposit' in search.calls[0][-1]['text']
++    assert 'research' not in result and result['elements'][0]['text'] == 'Message received.'
++    assert all(c['legal_status'] == 'candidate_unassessed' for c in row['research']['searches']['dispute:1']['candidates'])
++    again = brain.run(turn(message=MIXED_MESSAGE)).as_dict()
++    assert again == {**result, 'replayed':True} and len(model.calls) == 4 and len(search.calls) == 1
++
++
++def test_planning_outage_preserves_original_account_search_and_explicit_gap():
++    _, result, model, store, search = run(ModelError('Unavailable'))
++    research = store.value.brain_chat[0]['research']
++    assert research['state'] == 'partial' and research['planning'] is None
++    assert research['planning_failure'] == {'stage':'decomposition', 'code':'model_error'}
++    assert len(search.calls[0]) == 1 and research['searches']['dispute:1']['state'] == 'ready'
++    assert result['committed'] == 'committed' and len(model.calls) == 4
++
++
++def test_bad_route_preserves_other_route_and_original_search_without_extra_call():
++    proposal = plan()
++    proposal['plans'][0]['queries'].append({'text':'foreign', 'purpose':'bad owner', 'passage_ids':['other:p1']})
++    _, _, model, store, search = run(proposal)
++    research = store.value.brain_chat[0]['research']
++    assert research['state'] == 'partial' and len(search.calls[0]) == 2 and len(model.calls) == 4
++    assert research['planning']['issues'][0]['query_id'] == 'dispute:1:q2'
++
++
++def test_search_failure_does_not_lose_checked_input_or_claim_research_complete():
++    _, result, _, store, _ = run(plan(), search=Search(fail=True))
++    research = saved_rows(store.value,'adv_owner')[0]['research']
++    assert research['state'] == 'partial' and research['searches'] == {}
++    assert research['failures'] == {'dispute:1': {'stage':'search', 'code':'search_unavailable'}}
++    assert result['input_admitted'] is True and result['service_status'] is None
++
++
++def test_decomposition_uses_shared_correction_allowance():
++    _, result, model, store, _ = run(SchemaViolation('bad plan'), plan())
++    assert result['metrics']['llm_calls'] == 5 and len(model.calls) == 5
++    assert store.value.brain_chat[0]['research']['state'] == 'ready'
++    assert 'correction_feedback' in model.calls[-1][0].user
++
++
++def test_spent_extraction_allowance_cannot_reset_for_decomposition():
++    from tests.test_current_brain_extraction_repair import missing_outputs
++    _, result, model, store, search = run(SchemaViolation('bad plan'), outputs=missing_outputs())
++    assert result['metrics']['llm_calls'] == 6 and len(model.calls) == 6
++    assert store.value.brain_chat[0]['research']['state'] == 'partial'
++    assert len(search.calls[0]) == 1
++
++
++@pytest.mark.parametrize('damage', ['scope','owner','source','contract','empty_ready','downgrade'])
++def test_reopen_rejects_detached_research_and_unknown_or_downgraded_contract(damage):
++    _, _, _, store, _ = run(plan())
++    rows = deepcopy(store.value.brain_chat)
++    research = rows[0]['research']
++    if damage == 'scope': research['input_digest'] = 'different'
++    elif damage == 'owner': research['searches']['dispute:other'] = research['searches'].pop('dispute:1')
++    elif damage == 'source': research['searches']['dispute:1']['candidates'][0]['text'] = 'invented'
++    elif damage == 'contract': research['contract'] = 'future'
++    elif damage == 'empty_ready': research['searches'] = {}
++    else: rows[0]['contract'] = 'current_brain_turn_v5'
++    with pytest.raises(BrainRefused): saved_rows(replace(store.value,brain_chat=rows), 'adv_owner')
++
++
++def test_no_dispute_uses_no_planning_or_search_and_keeps_v5_replay_unchanged():
++    search, model, store = Search(), WiredModel(*greeting_outputs()), MemoryStore()
++    brain = BrainService(store=store, model=model, legal_search=search, session_current=lambda:True)
++    result = brain.run(turn()).as_dict()
++    row = deepcopy(store.value.brain_chat[0])
++    assert row['research']['state'] == 'not_needed' and len(model.calls) == 3 and search.calls == []
++    row['contract'] = 'current_brain_turn_v5'
++    del row['research']
++    store.value = replace(store.value,brain_chat=(row,))
++    assert saved_rows(store.value,'adv_owner')[0] == row
++    assert brain.run(turn()).as_dict() == {**result,'replayed':True}
++    assert len(model.calls) == 3
++
++
++def test_lost_save_acknowledgement_does_not_repeat_research():
++    brain, result, model, store, search = run(plan(), store=MemoryStore(lost_ack=True))
++    assert result['replayed'] is True and store.commits == 1
++    brain.run(turn(message=MIXED_MESSAGE))
++    assert len(model.calls) == 4 and len(search.calls) == 1
+diff --git a/tests/test_dispute_identity.py b/tests/test_dispute_identity.py
+new file mode 100644
+index 0000000..25bd9ac
+--- /dev/null
++++ b/tests/test_dispute_identity.py
+@@ -0,0 +1,174 @@
++"""Disputes and objectives keep one identity as the account develops.
++
++Rule (legal brain 2.4.1, 2.4.4, 2.4.5): every extracted item is either new or
++names exactly one OPEN saved item of its own kind that the latest message
++changes (adds, corrects, contradicts, resolves, withdraws). Saved items are
++numbered D1, D2 ... and O1, O2 ... in order of first independent acceptance, so
++replay reproduces every ID; a resolution or withdrawal closes an item and older
++wording cannot revive it; reopening a conversation re-checks every saved change
++against the items open when it was made. Scripted model outputs here prove the
++mechanics, not the model's judgment -- that is measured live.
++"""
++from copy import deepcopy
++from dataclasses import replace
++import json
++
++import pytest
++
++from nm.brain.dispute_queries import research_input
++from nm.brain.disputes_objectives import extraction_units, open_items
++from nm.brain.turn import BrainRefused, saved_items, saved_rows
++from nm.shared.model_port import SchemaViolation
++from tests.test_brain_disputes_objectives import ExtractionModel, extract, item, output, selection
++from tests.test_current_brain_app import MIXED_MESSAGE, assert_ok, mixed_outputs
++
++HISTORY = [{"role": "advocate", "text": "The supplier refuses delivery. I want the goods delivered."},
++           {"role": "nm", "text": "Message received."}]
++SAVED = [{"id": "D1", "kind": "disputes", "title": "Refused delivery",
++          "description": "The supplier refuses delivery."},
++         {"id": "O1", "kind": "objectives", "title": "Delivery of the goods",
++          "description": "The user wants the goods delivered."}]
++LATEST = "The supplier has now delivered the goods."
++
++
++def follow_up(response):
++    return extract(ExtractionModel(response), LATEST, "information", HISTORY, saved=SAVED)
++
++
++def test_follow_up_shows_saved_items_and_limits_each_change_to_open_items_of_its_kind():
++    model = ExtractionModel(output())
++    extract(model, LATEST, "information", HISTORY, saved=SAVED)
++    prompt, schema, _, _ = model.calls[0]
++    payload = json.loads(prompt.user)
++    assert payload["saved_items"] == [
++        {"id": "D1", "kind": "dispute", "title": "Refused delivery", "description": "The supplier refuses delivery."},
++        {"id": "O1", "kind": "objective", "title": "Delivery of the goods",
++         "description": "The user wants the goods delivered."}]
++    targets = {kind: schema["properties"][kind]["items"]["properties"]["target_id"] for kind in ("disputes", "objectives")}
++    assert targets["disputes"]["anyOf"][0]["enum"] == ["D1"]
++    assert targets["objectives"]["anyOf"][0]["enum"] == ["O1"]
++
++
++@pytest.mark.parametrize("wrong", [
++    item(operation="adds", target_id=None),          # a change that names nothing
++    item(operation="new", target_id="D1"),           # a new item that claims a saved one
++    item(operation="resolves", target_id="D9"),      # an item that is not open
++    item(operation="adds", target_id="O1"),          # an item of the other kind
++])
++def test_a_change_names_exactly_one_open_saved_item_of_its_kind_or_is_held_alone(wrong):
++    result = follow_up(output(disputes=[wrong, item(operation="resolves", target_id="D1",
++                                                    title="Goods delivered")]))
++    assert [row["id"] for row in result["proposal"]["disputes"]] == ["dispute:2"]
++    assert result["proposal"]["disputes"][0]["target_id"] == "D1"
++    assert result["issues"][0]["unit"] == "dispute:1"
++
++
++def test_one_message_makes_at_most_one_change_to_a_saved_item():
++    result = follow_up(output(disputes=[item(operation="adds", target_id="D1"),
++                                        item(operation="corrects", target_id="D1")]))
++    assert [row["id"] for row in result["proposal"]["disputes"]] == ["dispute:1"]
++    assert "already has a change" in result["issues"][0]["reason"]
++
++
++def test_saved_change_cannot_be_rewritten_into_another_shape():
++    saved = follow_up(output(disputes=[item(operation="resolves", target_id="D1", title="Goods delivered",
++                                            clarification="  ")]))
++    record = saved["proposal"]["disputes"][0]
++    assert record["clarification"] is None and record["title"] == "Goods delivered"
++    assert extraction_units(saved)
++    for damage in ({"operation": "new"}, {"target_id": "O1"}, {"target_id": None}, {"title": " "},
++                   {"operation": "settles"}):
++        changed = deepcopy(saved)
++        changed["proposal"]["disputes"][0].update(damage)
++        with pytest.raises(SchemaViolation):
++            extraction_units(changed)
++
++
++def record(identity, operation="new", target=None, title="Title", description="Description"):
++    kind = "disputes" if identity.startswith("dispute") else "objectives"
++    return identity, {"kind": kind, "proposal": {"id": identity, "title": title, "description": description,
++                                                 "operation": operation, "target_id": target}}
++
++
++def turn(*records, accepted=None):
++    units = dict(records)
++    return units, set(units) if accepted is None else set(accepted)
++
++
++def test_ids_follow_first_acceptance_changes_update_and_closed_items_stay_closed():
++    first = turn(record("dispute:1", title="Refused delivery"), record("dispute:2", title="Never accepted"),
++                 record("objective:1", title="Delivery"), accepted=["dispute:1", "objective:1"])
++    second = turn(record("dispute:1", "adds", "D1", title="Refused delivery and kept tools"),
++                  record("dispute:2", title="Unpaid invoice"))
++    third = turn(record("dispute:1", "withdraws", "D1"))
++    assert [(row["id"], row["title"]) for row in open_items([first])] == [("D1", "Refused delivery"), ("O1", "Delivery")]
++    assert [(row["id"], row["title"]) for row in open_items([first, second])] == [
++        ("D1", "Refused delivery and kept tools"), ("O1", "Delivery"), ("D2", "Unpaid invoice")]
++    assert [row["id"] for row in open_items([first, second, third])] == ["O1", "D2"]
++    assert open_items([first, second, third]) == open_items([first, second, third])  # replay is exact
++    with pytest.raises(SchemaViolation):
++        open_items([first, second, third, turn(record("dispute:1", "adds", "D1"))])  # D1 is closed
++    legacy = {"dispute:1": {"kind": "disputes", "proposal": {"id": "dispute:1", "description": "Old record"}}}
++    assert open_items([(legacy, {"dispute:1"})])[0] == {
++        "id": "D1", "kind": "disputes", "title": "Old record", "description": "Old record"}
++
++
++RESOLVED = "The supplier has now returned the deposit."
++
++
++def resolving_outputs():
++    def change(kind, target, title):
++        return {"title": title, "description": f"The advocate reports the supplier returned the deposit ({kind}).",
++                "operation": "resolves", "target_id": target, "uncertainty": None, "clarification": None,
++                "selections": [{"passage_id": "current:p1", "purpose": "support"}]}
++
++    def reading(kind, unit):
++        return {"kind": kind, "contribution": "resolved", "description": "The deposit was returned.",
++                "support_passage_ids": ["current:p1"], "context_passage_ids": [], "uncertainty": None,
++                "represented_by": [unit]}
++
++    return [{"label": "information"},
++            {"disputes": [change("dispute", "D1", "Deposit returned")],
++             "objectives": [change("objective", "O1", "Deposit returned")]},
++            {"greeting": False, "readings": {"current:p1": [reading("dispute", "dispute:1"),
++                                                            reading("objective", "objective:1")]},
++             "unit_reviews": [{"unit_id": "dispute:1", "verdict": "supported"},
++                              {"unit_id": "objective:1", "verdict": "supported"}]}]
++
++
++def test_a_saved_dispute_is_resolved_by_name_closes_and_replays_its_check(harness):
++    app = harness(*mixed_outputs(MIXED_MESSAGE), *resolving_outputs())
++    chat_id = assert_ok(app.post(MIXED_MESSAGE))["chat_id"]
++    assert [row["id"] for row in saved_items(saved_rows(app.held(chat_id), "adv_wiring"))] == ["D1", "O1"]
++    assert_ok(app.post(RESOLVED, "turn_second", chat_id=chat_id, expected_version=1))
++    extraction = json.loads(app.model.calls[4][0].user)
++    assert [row["id"] for row in extraction["saved_items"]] == ["D1", "O1"]
++    review = json.loads(app.model.calls[5][0].user)
++    assert [row["id"] for row in review["saved_items"]] == ["D1", "O1"]
++    assert review["proposals"]["disputes"][0]["operation"] == "resolves"
++    held = app.held(chat_id)
++    rows = saved_rows(held, "adv_wiring")
++    assert saved_items(rows) == []  # both closed; older wording cannot revive them
++    assert research_input(rows[1]["preparation"], rows[1]["release"])["disputes"] == {}  # nothing to research
++    assert_ok(app.client.get("/api/chats/" + chat_id))
++    tampered = deepcopy(held.brain_chat)
++    for record_ in (tampered[1]["preparation"]["proposal"]["disputes"][0],
++                    tampered[1]["release"]["units"]["dispute:1"]["proposal"]):
++        record_["target_id"] = "D2"  # an item that was never open
++    with pytest.raises(BrainRefused):
++        saved_rows(replace(held, brain_chat=tampered), "adv_wiring")
++
++
++@pytest.fixture
++def harness(tmp_path):
++    from tests.test_current_brain_app import Harness, WiredModel
++    built = []
++
++    def build(*outputs):
++        result = Harness(tmp_path / str(len(built)), WiredModel(*outputs))
++        built.append(result)
++        return result
++
++    yield build
++    for result in built:
++        result.client.close()
