@@ -1,0 +1,1086 @@
+{
+  "date": "2026-10-08",
+  "slice": "Independent disputes/objectives review",
+  "feature_status": "Extraction not accepted; component verified; activation pending",
+  "owner": "nm/brain/release.py",
+  "new_prompt": "_PASSAGE_REVIEW_SYSTEM",
+  "invariant": "An omission is a source-linked substantive meaning absent from same-category checked records. Outside-scope material cannot become a missing dispute or objective merely because extraction is empty.",
+  "pass_condition": "Find original reported conflicts omitted beneath objectives; accept work-only/social/neutral/diversion empty extraction; bind every positive unit and represented meaning to owned original support; preserve legacy replay.",
+  "counterexamples": [
+    "Model acknowledged reported conduct in prose while structured arrays were empty.",
+    "Work-only empty extraction falsely rejected.",
+    "Withdrawal linked to an unrelated objective because their source IDs were both current.",
+    "Supported units with no in-scope reading."
+  ],
+  "changes": [
+    "One required reading entry per owned current passage, each with tagged coherent decisions.",
+    "Original meaning is described before matching proposed units.",
+    "Support choices exclude NM wording; code validates exact original sources and support overlap.",
+    "Supported units require reverse in-scope representation.",
+    "Verdict-specific fields avoid redundant reason=none.",
+    "v3 review proof is opt-in until turn routing binds its version."
+  ],
+  "reference_use": {
+    "borrowed_code": false,
+    "archive_principles": [
+      "Adverse conduct does not require express denial or proof.",
+      "Independent conflicts and objectives do not substitute for one another.",
+      "Reviewed outside-scope material is valid absence."
+    ],
+    "paths": [
+      "nm/Archives/brain/disputes.py",
+      "nm/Archives/brain/dispute_verification.py",
+      "C:/Users/rahul/Agentified NM/nm/core/objectives.py"
+    ]
+  },
+  "validation": {
+    "offline_checks": 109,
+    "files": [
+      "tests/test_disputes_objectives_passage_review.py",
+      "tests/test_disputes_objectives_release.py",
+      "tests/test_new_brain_release.py"
+    ],
+    "real_model": "gpt-4.1-mini-2025-04-14",
+    "production_component_cases": [
+      {
+        "case": "empty_work",
+        "expect": "No omissions. Work instruction alone is outside extraction scope.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Request for summarisation and bullet points without expressing dispute or objective"
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Instruction not to send the summary, a procedural direction not a dispute or objective"
+              }
+            ]
+          },
+          "unit_reviews": [],
+          "greeting": false
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 1656,
+            "tokens_in": 2079,
+            "tokens_out": 86,
+            "cost_usd": 0.0009692,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "missing_conflicts",
+        "expect": "Identify retention and denied access as missing disputes with exact current support; objectives do not fill dispute coverage.",
+        "first_rejection": {
+          "mismatch": "Reading current:p1 is linked to dispute:1 without any shared original support. Context alone cannot represent the contribution. Select a representing unit with checked support, or return represented_by=[].",
+          "output": {
+            "readings": {
+              "current:p1": [
+                {
+                  "kind": "dispute",
+                  "contribution": "reported",
+                  "description": "Client disputes that former accountant refuses to return original business ledgers after engagement ended.",
+                  "support_passage_ids": [
+                    "current:p1"
+                  ],
+                  "context_passage_ids": [
+                    "current:p1"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "dispute:1"
+                  ]
+                }
+              ],
+              "current:p2": [
+                {
+                  "kind": "dispute",
+                  "contribution": "reported",
+                  "description": "Accountant claims unpaid fees, which client disputes.",
+                  "support_passage_ids": [
+                    "current:p2"
+                  ],
+                  "context_passage_ids": [
+                    "current:p1",
+                    "current:p2"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "dispute:1"
+                  ]
+                }
+              ],
+              "current:p3": [
+                {
+                  "kind": "objective",
+                  "contribution": "reported",
+                  "description": "Client wants the ledgers returned.",
+                  "support_passage_ids": [
+                    "current:p3"
+                  ],
+                  "context_passage_ids": [
+                    "current:p1",
+                    "current:p3"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "objective:1"
+                  ]
+                },
+                {
+                  "kind": "objective",
+                  "contribution": "reported",
+                  "description": "Client wants the disputed fees resolved.",
+                  "support_passage_ids": [
+                    "current:p3"
+                  ],
+                  "context_passage_ids": [
+                    "current:p2",
+                    "current:p3"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "objective:2"
+                  ]
+                }
+              ],
+              "current:p4": [
+                {
+                  "kind": "dispute",
+                  "contribution": "reported",
+                  "description": "Co-owner changed the lock and denied client access to their shared office.",
+                  "support_passage_ids": [
+                    "current:p4"
+                  ],
+                  "context_passage_ids": [
+                    "current:p4"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "dispute:1"
+                  ]
+                }
+              ],
+              "current:p5": [
+                {
+                  "kind": "objective",
+                  "contribution": "reported",
+                  "description": "Client wants access to the jointly used office restored.",
+                  "support_passage_ids": [
+                    "current:p5"
+                  ],
+                  "context_passage_ids": [
+                    "current:p4",
+                    "current:p5"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "objective:3"
+                  ]
+                }
+              ],
+              "current:p6": [
+                {
+                  "kind": "outside_scope",
+                  "purpose": "nm_work",
+                  "reason": "Request to summarise content."
+                }
+              ],
+              "current:p7": [
+                {
+                  "kind": "outside_scope",
+                  "purpose": "nm_work",
+                  "reason": "Instruction not to contact any party."
+                }
+              ]
+            },
+            "unit_reviews": [
+              {
+                "unit_id": "dispute:1",
+                "verdict": "supported"
+              },
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported"
+              },
+              {
+                "unit_id": "objective:2",
+                "verdict": "supported"
+              },
+              {
+                "unit_id": "objective:3",
+                "verdict": "supported"
+              }
+            ],
+            "greeting": false
+          }
+        },
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Client disputes that former accountant refuses to return original business ledgers after engagement ended.",
+                "support_passage_ids": [
+                  "current:p1"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": []
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Accountant claims unpaid fees, which client disputes.",
+                "support_passage_ids": [
+                  "current:p2"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "dispute:1"
+                ]
+              }
+            ],
+            "current:p3": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client wants the ledgers returned.",
+                "support_passage_ids": [
+                  "current:p3"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:1"
+                ]
+              },
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client wants the disputed fees resolved.",
+                "support_passage_ids": [
+                  "current:p3"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:2"
+                ]
+              }
+            ],
+            "current:p4": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Co-owner changed the lock and denied client access to their shared office.",
+                "support_passage_ids": [
+                  "current:p4"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": []
+              }
+            ],
+            "current:p5": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client wants access to the jointly used office restored.",
+                "support_passage_ids": [
+                  "current:p5"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:3"
+                ]
+              }
+            ],
+            "current:p6": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Request to summarise content."
+              }
+            ],
+            "current:p7": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Instruction not to contact any party."
+              }
+            ]
+          },
+          "unit_reviews": [
+            {
+              "unit_id": "dispute:1",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:1",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:2",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:3",
+              "verdict": "supported"
+            }
+          ],
+          "greeting": false
+        },
+        "state": "partial",
+        "gaps": [
+          {
+            "id": "current:p1:1",
+            "kind": "disputes",
+            "contribution": "reported",
+            "description": "Client disputes that former accountant refuses to return original business ledgers after engagement ended.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": "My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                "start": 0,
+                "end": 112,
+                "passage_id": "current:p1",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ]
+          },
+          {
+            "id": "current:p4:1",
+            "kind": "disputes",
+            "contribution": "reported",
+            "description": "Co-owner changed the lock and denied client access to their shared office.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+                "start": 218,
+                "end": 310,
+                "passage_id": "current:p4",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ]
+          }
+        ],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 4156,
+            "tokens_in": 4112,
+            "tokens_out": 502,
+            "cost_usd": 0.002448,
+            "retries": 0
+          },
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 3953,
+            "tokens_in": 4790,
+            "tokens_out": 452,
+            "cost_usd": 0.0026392,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "complete",
+        "expect": "All supported; no omissions.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Former accountant refuses return of original ledgers.",
+                "support_passage_ids": [
+                  "current:p1"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "dispute:1"
+                ]
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Client disputes accountant claimed fees.",
+                "support_passage_ids": [
+                  "current:p2"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "dispute:2"
+                ]
+              }
+            ],
+            "current:p3": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client seeks return of ledgers.",
+                "support_passage_ids": [
+                  "current:p3"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:1"
+                ]
+              },
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client seeks resolution of fee dispute.",
+                "support_passage_ids": [
+                  "current:p3"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:2"
+                ]
+              }
+            ],
+            "current:p4": [
+              {
+                "kind": "dispute",
+                "contribution": "reported",
+                "description": "Co-owner changed lock and denied office access.",
+                "support_passage_ids": [
+                  "current:p4"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "dispute:3"
+                ]
+              }
+            ],
+            "current:p5": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client seeks restored office access.",
+                "support_passage_ids": [
+                  "current:p5"
+                ],
+                "context_passage_ids": [],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:3"
+                ]
+              }
+            ],
+            "current:p6": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Request to summarise the situation."
+              }
+            ],
+            "current:p7": [
+              {
+                "kind": "outside_scope",
+                "purpose": "nm_work",
+                "reason": "Instruction not to contact either person."
+              }
+            ]
+          },
+          "unit_reviews": [
+            {
+              "unit_id": "dispute:1",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "dispute:2",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "dispute:3",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:1",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:2",
+              "verdict": "supported"
+            },
+            {
+              "unit_id": "objective:3",
+              "verdict": "supported"
+            }
+          ],
+          "greeting": false
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 3844,
+            "tokens_in": 4296,
+            "tokens_out": 468,
+            "cost_usd": 0.0024672,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "neutral",
+        "expect": "No omissions.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "outside_scope",
+                "purpose": "background",
+                "reason": "This is a factual statement reporting a past event, not a dispute or objective."
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "outside_scope",
+                "purpose": "background",
+                "reason": "This is a factual statement reporting a past event, not a dispute or objective."
+              }
+            ]
+          },
+          "unit_reviews": [],
+          "greeting": false
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 1375,
+            "tokens_in": 1471,
+            "tokens_out": 88,
+            "cost_usd": 0.0007292,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "diversion",
+        "expect": "No dispute/objective omissions from the diversion.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "outside_scope",
+                "purpose": "other",
+                "reason": "The question about the capital of France is a general knowledge inquiry unrelated to the earlier legal dispute or objectives concerning the accountant and co-owner."
+              }
+            ]
+          },
+          "unit_reviews": [],
+          "greeting": false
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 1125,
+            "tokens_in": 1546,
+            "tokens_out": 65,
+            "cost_usd": 0.0007224000000000001,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "closing",
+        "expect": "No omissions; social acknowledgement.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "outside_scope",
+                "purpose": "social",
+                "reason": "Thanking and concluding are social exchange, not dispute or objective"
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "outside_scope",
+                "purpose": "social",
+                "reason": "Closing statement without dispute or objective content"
+              }
+            ]
+          },
+          "unit_reviews": [],
+          "greeting": true
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 1281,
+            "tokens_in": 2073,
+            "tokens_out": 73,
+            "cost_usd": 0.000946,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "objective_without_conflict",
+        "expect": "Supported objective, no dispute or omission.",
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Co-owners seek a written future maintenance arrangement.",
+                "support_passage_ids": [
+                  "current:p1"
+                ],
+                "context_passage_ids": [
+                  "current:p1"
+                ],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:1"
+                ]
+              }
+            ]
+          },
+          "unit_reviews": [
+            {
+              "unit_id": "objective:1",
+              "verdict": "supported"
+            }
+          ],
+          "greeting": false
+        },
+        "state": "ready",
+        "gaps": [],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 1531,
+            "tokens_in": 1195,
+            "tokens_out": 88,
+            "cost_usd": 0.0006188,
+            "retries": 0
+          }
+        ]
+      },
+      {
+        "case": "missed_withdrawal",
+        "expect": "Report the unrepresented resolution of retention and withdrawal of return objective using current support, not historical inventory.",
+        "first_rejection": {
+          "mismatch": "Reading current:p2 is linked to objective:1 without any shared original support. Context alone cannot represent the contribution. Select a representing unit with checked support, or return represented_by=[].",
+          "output": {
+            "readings": {
+              "current:p1": [
+                {
+                  "kind": "dispute",
+                  "contribution": "resolved",
+                  "description": "The dispute over the return of original business ledgers between the client and the former accountant is resolved, as the accountant has returned all ledgers.",
+                  "support_passage_ids": [
+                    "current:p1"
+                  ],
+                  "context_passage_ids": [
+                    "history_1:p1",
+                    "history_1:p3"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": []
+                }
+              ],
+              "current:p2": [
+                {
+                  "kind": "objective",
+                  "contribution": "changed",
+                  "description": "Client no longer seeks the return of the business ledgers.",
+                  "support_passage_ids": [
+                    "current:p2"
+                  ],
+                  "context_passage_ids": [
+                    "current:p1",
+                    "history_1:p1",
+                    "history_1:p3"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "objective:1"
+                  ]
+                }
+              ],
+              "current:p3": [
+                {
+                  "kind": "objective",
+                  "contribution": "reported",
+                  "description": "Client seeks only a supervised visit to collect equipment.",
+                  "support_passage_ids": [
+                    "current:p3"
+                  ],
+                  "context_passage_ids": [
+                    "history_1:p3"
+                  ],
+                  "uncertainty": null,
+                  "represented_by": [
+                    "objective:1"
+                  ]
+                }
+              ]
+            },
+            "unit_reviews": [
+              {
+                "unit_id": "objective:1",
+                "verdict": "supported"
+              }
+            ],
+            "greeting": false
+          }
+        },
+        "proof": {
+          "readings": {
+            "current:p1": [
+              {
+                "kind": "dispute",
+                "contribution": "resolved",
+                "description": "The dispute over the return of original business ledgers between the client and the former accountant is resolved, as the accountant has returned all ledgers.",
+                "support_passage_ids": [
+                  "current:p1"
+                ],
+                "context_passage_ids": [
+                  "history_1:p1",
+                  "history_1:p3"
+                ],
+                "uncertainty": null,
+                "represented_by": []
+              }
+            ],
+            "current:p2": [
+              {
+                "kind": "objective",
+                "contribution": "changed",
+                "description": "Client no longer seeks the return of the business ledgers.",
+                "support_passage_ids": [
+                  "current:p2"
+                ],
+                "context_passage_ids": [
+                  "current:p1",
+                  "history_1:p1",
+                  "history_1:p3"
+                ],
+                "uncertainty": null,
+                "represented_by": []
+              }
+            ],
+            "current:p3": [
+              {
+                "kind": "objective",
+                "contribution": "reported",
+                "description": "Client seeks only a supervised visit to collect equipment.",
+                "support_passage_ids": [
+                  "current:p3"
+                ],
+                "context_passage_ids": [
+                  "history_1:p3"
+                ],
+                "uncertainty": null,
+                "represented_by": [
+                  "objective:1"
+                ]
+              }
+            ]
+          },
+          "unit_reviews": [
+            {
+              "unit_id": "objective:1",
+              "verdict": "supported"
+            }
+          ],
+          "greeting": false
+        },
+        "state": "partial",
+        "gaps": [
+          {
+            "id": "current:p1:1",
+            "kind": "disputes",
+            "contribution": "resolved",
+            "description": "The dispute over the return of original business ledgers between the client and the former accountant is resolved, as the accountant has returned all ledgers.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": "The accountant returned all ledgers.",
+                "start": 0,
+                "end": 36,
+                "passage_id": "current:p1",
+                "purpose": "support"
+              },
+              {
+                "source_id": "history_1",
+                "quote": "My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                "start": 0,
+                "end": 112,
+                "passage_id": "history_1:p1",
+                "purpose": "context"
+              },
+              {
+                "source_id": "history_1",
+                "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                "start": 155,
+                "end": 218,
+                "passage_id": "history_1:p3",
+                "purpose": "context"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current",
+              "history_1"
+            ]
+          },
+          {
+            "id": "current:p2:1",
+            "kind": "objectives",
+            "contribution": "changed",
+            "description": "Client no longer seeks the return of the business ledgers.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " The client no longer seeks their return;",
+                "start": 36,
+                "end": 77,
+                "passage_id": "current:p2",
+                "purpose": "support"
+              },
+              {
+                "source_id": "current",
+                "quote": "The accountant returned all ledgers.",
+                "start": 0,
+                "end": 36,
+                "passage_id": "current:p1",
+                "purpose": "context"
+              },
+              {
+                "source_id": "history_1",
+                "quote": "My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+                "start": 0,
+                "end": 112,
+                "passage_id": "history_1:p1",
+                "purpose": "context"
+              },
+              {
+                "source_id": "history_1",
+                "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                "start": 155,
+                "end": 218,
+                "passage_id": "history_1:p3",
+                "purpose": "context"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current",
+              "history_1"
+            ]
+          }
+        ],
+        "model_calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 2203,
+            "tokens_in": 2725,
+            "tokens_out": 250,
+            "cost_usd": 0.00149,
+            "retries": 0
+          },
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 2391,
+            "tokens_in": 3098,
+            "tokens_out": 246,
+            "cost_usd": 0.0016328000000000002,
+            "retries": 0
+          }
+        ]
+      }
+    ],
+    "browser_acceptance": "Pending activation and sustained shipped-boundary test"
+  },
+  "call_impact": {
+    "routine_added": 0,
+    "current_normal_calls": 3,
+    "current_maximum_calls": 4,
+    "component_review_calls": 10
+  },
+  "remaining": [
+    "Activate v3 proof through explicit turn-version binding; preserve all earlier versions.",
+    "Repair actual omissions internally within turn-owned allowance and re-review corrected proposals.",
+    "Browser test initial conflicts, opponent account, work-only turn, withdrawal and closing with saved/reopened records.",
+    "Semantic paraphrase and contribution-type accuracy remain imperfect. A review reading used \"disputes that\" for reported refusal; exact sources alone do not certify its interpretation.",
+    "Ambiguous original meaning needs an explicit unresolved disposition; do not infer it from reason keywords.",
+    "Extraction generation prototypes remain rejected: some invented work goals, prior disputes, or lost withdrawals."
+  ],
+  "rejected_experiments": [
+    {
+      "file": "outputs/brain-extraction-20261008/baseline.jsonl",
+      "sha256": "129fd317aae316e2a228d8cce4f4bf182b5b0824abbb9ecc3395e864c2fa024b",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/candidate.jsonl",
+      "sha256": "65ccbbac4700a5ff01717df45a9b3d0bda2758dc69d52225d3b359300984aab5",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/flat-extraction.jsonl",
+      "sha256": "bdcfaccb2995e6b0193f0cb40e242ec09e745169181f3eca28e8a849132746bc",
+      "cases": 2,
+      "errors": [
+        {
+          "case": "unfamiliar_mixed",
+          "error": "Unread or unknown current passage",
+          "type": "AssertionError"
+        }
+      ]
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/flat-keyed-extraction.jsonl",
+      "sha256": "3d0ab76f901265231e2989fa912964c6c37b3bf520a5a81ed041c646c537df62",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/flat-keyed-review.jsonl",
+      "sha256": "795a5248551fc37ec42d3931f3d290995abdbafd1e7bb25dff1e7bdb7dd2edc2",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/partwise-harness-error.jsonl",
+      "sha256": "d1371dc1b77355e01e4a4cf9c9689cb95fcc14ba442f09443e6b693d45f80249",
+      "cases": 1,
+      "errors": [
+        {
+          "case": "opening",
+          "error": null,
+          "type": "NameError"
+        }
+      ]
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/partwise-work_only.jsonl",
+      "sha256": "17fe55ead7343c2384088000e3fe944d225f551f061802e3ff43d6d329ab396f",
+      "cases": 1,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/partwise.jsonl",
+      "sha256": "52378f4f50321a53f028ddbb10b56ae231b89a3c46068ec7a60e860769356793",
+      "cases": 3,
+      "errors": [
+        {
+          "case": "work_only",
+          "error": null,
+          "type": "AssertionError"
+        }
+      ]
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/partwise2.jsonl",
+      "sha256": "a24ecd185c7d39739bcfd5f38867dc8512425b16253c6d079dc6367ac557170b",
+      "cases": 8,
+      "errors": [
+        {
+          "case": "authorised_repair",
+          "error": "Reading item does not select its current passage",
+          "type": "AssertionError"
+        }
+      ]
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/partwise3.jsonl",
+      "sha256": "499e8d0ee68ef744203e3b0f454707a22dbbd86d328c621e48e5b53dcf31f97e",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/review-baseline.jsonl",
+      "sha256": "49ff0cda7c2b2f85d4fd0adf3040f6a1ebca8dae09dec7c5526a643f8340efb5",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/review-candidate.jsonl",
+      "sha256": "42a9aae269b19a428803d73563df57fd93290158d0f77d3d8226bc9fcd21e27a",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/review-coverage.jsonl",
+      "sha256": "3dc40415d1f787d960e8063c443a7de03e92d4561222d19c1831e41472a9bb8c",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/review-coverage2.jsonl",
+      "sha256": "3de5362fd323db326da421d055156e6eb11ec3c9839208d448e75330bdf8da35",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/review-production.jsonl",
+      "sha256": "2ca5acb527c2f5d2255a13a1a7bf7f3d2b2893657c510a6c22c74c20918add73",
+      "cases": 8,
+      "errors": []
+    },
+    {
+      "file": "outputs/brain-extraction-20261008/split.jsonl",
+      "sha256": "1028b0593406a4402ad8af961dc1c1f50e87eeda5885c5156dc380008965a8c3",
+      "cases": 8,
+      "errors": []
+    }
+  ],
+  "budget": {
+    "charged_current_ledger_usd": 2.463956,
+    "earlier_ledger_charge_usd": 1.877078,
+    "combined_charged_usd": 4.341034,
+    "authorized_usd": 5,
+    "remaining_usd": 0.658966,
+    "provider_attempts": 804
+  }
+}
