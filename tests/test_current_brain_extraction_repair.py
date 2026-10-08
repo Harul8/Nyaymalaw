@@ -6,7 +6,9 @@ import pytest
 
 from nm.brain.turn import BrainRefused, CONTRACT, saved_rows
 from nm.shared.model_port import ModelError, SchemaViolation
-from tests.test_current_brain_app import Harness, WiredModel, MIXED_MESSAGE, mixed_outputs, assert_ok
+from tests.test_current_brain_app import (
+    DEPOSIT_AIM_QUESTION, Harness, WiredModel, MIXED_MESSAGE, mixed_outputs, assert_ok,
+)
 
 
 def missing_outputs():
@@ -26,11 +28,11 @@ def test_missing_outcome_repaired_through_authenticated_api_then_reopens_and_rep
         assert first["metrics"]["llm_calls"] == 5
         assert [c[0].operation for c in model.calls] == ["label_message", "extract_disputes_objectives",
             "review_prepared_response", "extract_disputes_objectives", "review_prepared_response"]
-        assert [e["text"] for e in first["elements"]] == ["Message received."]
+        assert [e["text"] for e in first["elements"]] == ["Message received.", DEPOSIT_AIM_QUESTION]
         matter = app.held(first["chat_id"])
         row = saved_rows(matter, "adv_wiring")[0]
         assert row["contract"] == CONTRACT
-        assert row["release"]["renderer_version"] == "disputes_objectives_release_v6"
+        assert row["release"]["renderer_version"] == "disputes_objectives_release_v7"
         assert row["recovery"]["attempted"] and row["recovery"]["outcome"] == "ready"
         before = row["recovery"]["before"]
         assert before["release"]["state"] == "partial"
@@ -127,11 +129,15 @@ def test_previous_passage_turn_v3_keeps_its_old_release_and_replays_without_upgr
             "unit_reviews":[{"unit_id":identity,"verdict":"supported","reason":"none"}
                 for identity in ("dispute:1","objective:1")]}), row["preparation"], "mixed")
         assert row["release"]["renderer_version"] == "disputes_objectives_release_v2"
+        from nm.brain.turn import _digest
+        row["response"]["elements"] = deepcopy(row["release"]["elements"])  # v3 replies never asked
+        row["response_digest"] = _digest(row["response"])
         historical = replace(matter, brain_chat=rows)
         app.store.commit(historical, expected_version=matter.version)
         assert saved_rows(app.held(first["chat_id"]), "adv_wiring")[0] == row
         replayed = assert_ok(app.post(MIXED_MESSAGE))
-        assert replayed == {**first, "replayed":True} and len(app.model.calls) == 3
+        assert replayed == {**first, "elements": row["release"]["elements"], "replayed": True}
+        assert len(app.model.calls) == 3
     finally:
         app.client.close()
 

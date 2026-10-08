@@ -21,8 +21,11 @@ CONTRACT = "disputes_objectives_v3"  # Sentence-end passages; titled records wit
 PASSAGE_LEGACY_CONTRACT = "disputes_objectives_v2"  # Cut after every . ! ? ; and line break.
 LEGACY_CONTRACT = "disputes_objectives_v1"  # Model-copied quotes; no owned passages.
 COLLECTIONS = {"disputes": "dispute", "objectives": "objective"}
-OPERATIONS = ("new", "adds", "corrects", "contradicts", "resolves", "withdraws")
+OPERATIONS = ("new", "adds", "corrects", "contradicts", "confirms", "resolves", "withdraws")
 CLOSING_OPERATIONS = frozenset({"resolves", "withdraws"})
+# Operations that put NM's own wording on an item. An objective worded this way
+# awaits the user's confirmation before anything may treat it as settled.
+WORDING_OPERATIONS = frozenset({"new", "adds", "corrects", "contradicts"})
 _SAVED_PREFIX = {"disputes": "D", "objectives": "O"}
 _SAVED_ID = re.compile(r"[DO][1-9][0-9]*")
 _RECORD_FIELDS = ("title", "description", "operation", "target_id", "passages", "uncertainty",
@@ -71,6 +74,11 @@ Look for:
    corrects - the user corrects the saved account or NM's formulation of it;
    contradicts - the latest account conflicts with the saved one without being
      presented as a correction;
+   confirms - the user affirms NM's saved wording of an objective that awaits
+     confirmation (confirmed false), for example by answering yes to NM's
+     question; repeat its saved title and description exactly. A different aim
+     is corrects; saying it is not an aim is withdraws. Disputes are never
+     confirmed;
    resolves - the conflict is reported settled, or the objective achieved;
    withdraws - the user no longer pursues it.
    Every operation except new names that saved item in target_id; new has
@@ -112,7 +120,8 @@ _FOLLOW_UP_PROMPT = """Message: You receive the complete earlier conversation,
 the saved items and the user's latest message. Ordered original passages have
 code-assigned IDs and speakers. Saved items are the open disputes (D1, D2 ...)
 and objectives (O1, O2 ...) that NM recorded earlier; like prior NM wording they
-are interpretations to compare against, not original evidence.
+are interpretations to compare against, not original evidence. Each saved
+objective shows whether the user has confirmed NM's wording of it.
 
 """ + _TASK
 
@@ -278,6 +287,8 @@ def _check_record(item, catalogue, kind):
         raise SchemaViolation(f"Unknown operation {operation!r}")
     if (operation == "new") != (target is None):
         raise SchemaViolation("A new item names no saved item; every change names exactly one")
+    if operation == "confirms" and kind != "objectives":
+        raise SchemaViolation("Only an objective is confirmed; a dispute is never put to the user to confirm")
     if target is not None and (not isinstance(target, str) or not _SAVED_ID.fullmatch(target)
                                or target[0] != _SAVED_PREFIX[kind]):
         raise SchemaViolation(f"A {COLLECTIONS[kind]} change must name a saved {COLLECTIONS[kind]}")
@@ -293,19 +304,26 @@ def _check_record(item, catalogue, kind):
 
 
 def _checked_saved(saved):
-    """Open saved items as the turn owner derived them: {ID: kind}."""
+    """Open saved items as the turn owner derived them: {ID: item}.
+
+    A saved objective records whether the user has confirmed NM's wording of it
+    (True or False); a dispute is never put to the user to confirm (None).
+    """
     if not isinstance(saved, (list, tuple)):
         raise ValueError("Saved items must be a list")
     owned = {}
     for row in saved:
-        if (not isinstance(row, dict) or set(row) != {"id", "kind", "title", "description"}
+        if (not isinstance(row, dict) or set(row) != {"id", "kind", "title", "description", "confirmed"}
                 or row["kind"] not in COLLECTIONS or not isinstance(row["id"], str)
                 or not _SAVED_ID.fullmatch(row["id"]) or row["id"][0] != _SAVED_PREFIX[row["kind"]]
                 or row["id"] in owned
                 or any(not isinstance(row[key], str) or not row[key].strip()
-                       for key in ("title", "description"))):
-            raise ValueError("Each saved item needs its owned ID, kind, title and description")
-        owned[row["id"]] = row["kind"]
+                       for key in ("title", "description"))
+                or (row["confirmed"] is not None if row["kind"] == "disputes"
+                    else type(row["confirmed"]) is not bool)):
+            raise ValueError("Each saved item needs its owned ID, kind, title, description and "
+                             "confirmation state")
+        owned[row["id"]] = row
     return owned
 
 
@@ -313,7 +331,7 @@ def _prepare(data, sources, *, choices=None, saved=()):
     require_schema(data, _ENVELOPE)
     catalogue = _sources(sources)
     contract = CONTRACT if choices is not None else LEGACY_CONTRACT
-    open_ids = _checked_saved(saved)
+    owned = _checked_saved(saved)
     proposal, issues, changed = {kind: [] for kind in COLLECTIONS}, [], set()
     for kind, prefix in COLLECTIONS.items():
         for index, item in enumerate(data[kind], 1):
@@ -325,10 +343,16 @@ def _prepare(data, sources, *, choices=None, saved=()):
                     checked = _check_record(_resolve_selections(item, choices), catalogue, kind)
                     target = checked["target_id"]
                     if target is not None:
-                        if open_ids.get(target) != kind:
+                        row = owned.get(target)
+                        if row is None or row["kind"] != kind:
                             raise SchemaViolation(
                                 f"{target} is not an open saved {COLLECTIONS[kind]}; use operation new "
                                 "for an issue that is not saved, or name the open saved item it changes")
+                        if checked["operation"] == "confirms":
+                            if row["confirmed"]:
+                                raise SchemaViolation(f"{target} is already confirmed")
+                            # A confirmation attaches to the saved wording, never to new wording.
+                            checked = {**checked, "title": row["title"], "description": row["description"]}
                         if target in changed:
                             raise SchemaViolation(f"{target} already has a change from this message")
                         changed.add(target)
@@ -408,7 +432,9 @@ def open_items(turns) -> list[dict]:
     accepted. Items are numbered D1, D2 ... and O1, O2 ... in order of first
     acceptance, so replaying the same turns reproduces every ID. A change updates
     the item it names; a resolution or withdrawal closes it, so older wording
-    cannot revive it. Records from earlier contracts only ever introduced items.
+    cannot revive it. An objective NM words (new, adds, corrects, contradicts)
+    awaits the user's confirmation until a confirmation repeats that exact
+    wording. Records from earlier contracts only ever introduced items.
     """
     order = list(COLLECTIONS)
     items, counts = {}, {kind: 0 for kind in COLLECTIONS}
@@ -424,31 +450,49 @@ def open_items(turns) -> list[dict]:
                 identity = f"{_SAVED_PREFIX[kind]}{counts[kind]}"
                 items[identity] = {"id": identity, "kind": kind,
                                    "title": proposal.get("title") or proposal["description"],
-                                   "description": proposal["description"], "open": True}
+                                   "description": proposal["description"],
+                                   "confirmed": False if kind == "objectives" else None, "open": True}
                 continue
             target = items.get(proposal.get("target_id"))
             if target is None or target["kind"] != kind or not target["open"]:
                 raise SchemaViolation("A saved change names no open item of its kind")
             if operation in CLOSING_OPERATIONS:
                 target["open"] = False
+            elif operation == "confirms":
+                if target["confirmed"] is not False or (proposal["title"], proposal["description"]) != (
+                        target["title"], target["description"]):
+                    raise SchemaViolation("A saved confirmation names wording that was not awaiting it")
+                target["confirmed"] = True
             else:
                 target.update(title=proposal["title"], description=proposal["description"])
+                if kind == "objectives":
+                    target["confirmed"] = False  # NM's new wording needs the user's confirmation
     return [{key: value for key, value in item.items() if key != "open"}
             for item in items.values() if item["open"]]
 
 
 def check_targets(units, saved):
-    """Every change in a saved extraction names an item that was open when it was made."""
-    open_ids = _checked_saved(saved)
+    """Every change in a saved extraction names an item that was open when it was made,
+    and every confirmation repeats wording that was awaiting confirmation."""
+    owned = _checked_saved(saved)
     for identity, unit in units.items():
-        target = unit["proposal"].get("target_id")
-        if target is not None and open_ids.get(target) != unit["kind"]:
+        proposal = unit["proposal"]
+        target = proposal.get("target_id")
+        if target is None:
+            continue
+        row = owned.get(target)
+        if row is None or row["kind"] != unit["kind"]:
             raise SchemaViolation(f"{identity} names {target}, which was not an open saved item")
+        if proposal.get("operation") == "confirms" and (row["confirmed"] or (
+                proposal["title"], proposal["description"]) != (row["title"], row["description"])):
+            raise SchemaViolation(f"{identity} confirms wording that was not awaiting confirmation")
 
 
 def _presented_saved(saved):
     return [{"id": row["id"], "kind": COLLECTIONS[row["kind"]], "title": row["title"],
-             "description": row["description"]} for row in saved]
+             "description": row["description"],
+             **({"confirmed": row["confirmed"]} if row["kind"] == "objectives" else {})}
+            for row in saved]
 
 
 def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
@@ -482,7 +526,7 @@ def extract_disputes_objectives(model: ModelPort, message: str, *, label: str,
         schema["properties"][kind]["items"] = deepcopy(_SELECTED_ITEM)
         properties = schema["properties"][kind]["items"]["properties"]
         properties["selections"]["items"]["properties"]["passage_id"] = {**_TEXT, "enum": list(choices)}
-        targets = [identity for identity, owner in open_ids.items() if owner == kind]
+        targets = [identity for identity, row in open_ids.items() if row["kind"] == kind]
         properties["target_id"] = ({"anyOf": [{"type": "string", "enum": targets}, {"type": "null"}]}
                                    if targets else {"type": "null"})
     prompt = Prompt(system=_FOLLOW_UP_PROMPT if earlier else _FIRST_PROMPT,

@@ -13,6 +13,7 @@ from nm.shared.model_port import (
     Usage,
 )
 from tests.test_current_brain_app import (
+    DEPOSIT_AIM_QUESTION,
     OPERATIONS,
     Harness,
     WiredModel,
@@ -172,7 +173,8 @@ def test_all_held_extraction_uses_one_owned_correction_before_review_and_save(tm
         assert saved["preparation"]["proposal"]["disputes"]
         assert saved["preparation"]["proposal"]["objectives"]
         assert "other_matter:p1" not in json.dumps(saved)
-        assert [element["text"] for element in response["elements"]] == ["Message received."]
+        assert [element["text"] for element in response["elements"]] == [
+            "Message received.", DEPOSIT_AIM_QUESTION]
     finally:
         harness.client.close()
 

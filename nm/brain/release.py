@@ -14,7 +14,8 @@ from nm.brain.message_labels import validate_label
 from nm.brain.disputes_objectives import (
     CONTRACT as EXTRACTION_CONTRACT, LEGACY_CONTRACT as LEGACY_EXTRACTION_CONTRACT,
     PASSAGE_LEGACY_CONTRACT as PASSAGE_LEGACY_EXTRACTION_CONTRACT,
-    check_targets, extraction_units, _passage_input, _check_item, _presented_saved,
+    WORDING_OPERATIONS, check_targets, extraction_units, _passage_input, _check_item,
+    _presented_saved,
 )
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelPort, Prompt, SchemaViolation, Tier,
@@ -25,10 +26,12 @@ from nm.shared.model_port import (
 RENDERER_VERSION = "initial_brain_release_v2"
 # Every rendering version below is bound to exactly one extraction contract (see
 # _EXTRACTION_CONTRACTS), so a saved reply is re-checked with the passages it was
-# reviewed against. v5/v6 review records cut by sentence; v2-v4 records cut at
-# every mark; v1 records carry model-copied quotes.
+# reviewed against. v5-v7 review records cut by sentence; v2-v4 records cut at
+# every mark; v1 records carry model-copied quotes. v7 also asks the user to
+# confirm each objective NM worded; v6 replies keep their original rendering.
 EXTRACTION_RENDERER = "disputes_objectives_release_v5"
-PASSAGE_REVIEW_RENDERER = "disputes_objectives_release_v6"
+PASSAGE_REVIEW_RENDERER = "disputes_objectives_release_v7"
+UNCONFIRMED_REVIEW_RENDERER = "disputes_objectives_release_v6"
 PASSAGE_LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v2"
 PASSAGE_LEGACY_REVIEW_RENDERER = "disputes_objectives_release_v4"
 LEGACY_EXTRACTION_RENDERER = "disputes_objectives_release_v1"
@@ -56,8 +59,10 @@ Look for:
    reported means introduced or continued content. Agreement alone does not
    establish a previous conflict. Do not invent a goal from an event. When
    saved_items are supplied, each proposal states its operation (new, adds,
-   corrects, contradicts, resolves or withdraws) and the saved item it changes:
-   an unsupported operation or wrong saved item makes the proposal unsupported.
+   corrects, contradicts, confirms, resolves or withdraws) and the saved item it
+   changes: an unsupported operation or wrong saved item makes the proposal
+   unsupported. Confirms is supported only when the current words affirm NM's
+   wording of that saved objective, such as yes to NM's question about it.
 3. NM work, social exchange and ordinary facts without either contribution are
    outside this extraction. Anything the user wants NM to do - record, note,
    remember, review, summarise, advise or draft - is NM work and never an
@@ -444,7 +449,25 @@ def _render_extraction(sources: list[dict], units: dict, issues: list, proof: di
     return _render_v2(sources, units, issues, proof)
 
 
-def _render_passage_review(sources, units, issues, proof, *, contract, isolate_associations=True):
+def _confirmation_question(units, proof):
+    """Ask the user to confirm each objective NM worded and the review accepted.
+
+    The question is code-owned around NM's short title and states that it is
+    NM's understanding; disputes are never put to the user to confirm.
+    """
+    accepted = {row["unit_id"] for row in proof["unit_reviews"] if row["verdict"] == "supported"}
+    titles = [unit["proposal"]["title"] for identity, unit in units.items()
+              if identity in accepted and unit["kind"] == "objectives"
+              and unit["proposal"].get("operation") in WORDING_OPERATIONS]
+    if not titles:
+        return None
+    if len(titles) == 1:
+        return f"I've noted this aim: “{titles[0]}”. Is that right?"
+    return "I've noted these aims: " + "; ".join(f"“{title}”" for title in titles) + ". Are they right?"
+
+
+def _render_passage_review(sources, units, issues, proof, *, contract, isolate_associations=True,
+                           confirm=False):
     missing = _passage_review_findings(proof, sources, units, contract=contract,
                                        isolate_associations=isolate_associations)
     unresolved = any(row["verdict"] == "unresolved" for row in proof["unit_reviews"])
@@ -455,7 +478,11 @@ def _render_passage_review(sources, units, issues, proof, *, contract, isolate_a
     if incomplete and not supported and not proof["greeting"]:
         return [], "A response could not be prepared for this message.", "withheld"
     text = "Hello. How can I help?" if proof["greeting"] else "Message received."
-    return [_element(text)], None, "partial" if incomplete else "ready"
+    elements = [_element(text)]
+    question = _confirmation_question(units, proof) if confirm else None
+    if question:
+        elements.append(_element(question))
+    return elements, None, "partial" if incomplete else "ready"
 
 
 _EXTRACTION_CONTRACTS = {
@@ -464,10 +491,11 @@ _EXTRACTION_CONTRACTS = {
     LEGACY_PASSAGE_REVIEW_RENDERER: PASSAGE_LEGACY_EXTRACTION_CONTRACT,
     PASSAGE_LEGACY_REVIEW_RENDERER: PASSAGE_LEGACY_EXTRACTION_CONTRACT,
     EXTRACTION_RENDERER: EXTRACTION_CONTRACT,
+    UNCONFIRMED_REVIEW_RENDERER: EXTRACTION_CONTRACT,
     PASSAGE_REVIEW_RENDERER: EXTRACTION_CONTRACT,
 }
 _PASSAGE_REVIEWS = frozenset({LEGACY_PASSAGE_REVIEW_RENDERER, PASSAGE_LEGACY_REVIEW_RENDERER,
-                              PASSAGE_REVIEW_RENDERER})
+                              UNCONFIRMED_REVIEW_RENDERER, PASSAGE_REVIEW_RENDERER})
 # The focused (non-passage) review version that a new review of each contract records.
 _FOCUSED_RENDERERS = {contract: version for version, contract in _EXTRACTION_CONTRACTS.items()
                       if version not in _PASSAGE_REVIEWS}
@@ -475,7 +503,8 @@ _RENDERERS = {"initial_brain_release_v1": _render_v1,
               "initial_brain_release_v2": _render_v2,
               **{version: _render_extraction for version in _FOCUSED_RENDERERS.values()},
               **{version: partial(_render_passage_review, contract=_EXTRACTION_CONTRACTS[version],
-                                  isolate_associations=version != LEGACY_PASSAGE_REVIEW_RENDERER)
+                                  isolate_associations=version != LEGACY_PASSAGE_REVIEW_RENDERER,
+                                  confirm=version == PASSAGE_REVIEW_RENDERER)
                  for version in _PASSAGE_REVIEWS}}
 
 

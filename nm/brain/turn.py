@@ -19,14 +19,15 @@ from nm.brain.disputes_objectives import (
 )
 from nm.brain.release import (
     LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RENDERER,
-    PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_REVIEW_RENDERER,
+    PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_REVIEW_RENDERER, UNCONFIRMED_REVIEW_RENDERER,
     extraction_review_gaps, prepare_release, render_saved_release,
 )
 from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
-CONTRACT = 'current_brain_turn_v6'
+CONTRACT = 'current_brain_turn_v7'
+UNCONFIRMED_LEGACY_CONTRACT = 'current_brain_turn_v6'
 RESEARCH_LEGACY_CONTRACT = 'current_brain_turn_v5'
 RESEARCH_CONTRACT = 'private_dispute_research_v1'
 SEGMENT_LEGACY_CONTRACT = 'current_brain_turn_v4'
@@ -35,16 +36,21 @@ EXTRACTION_LEGACY_CONTRACT = 'current_brain_turn_v2'
 LEGACY_CONTRACT = 'current_brain_turn_v1'
 # Each saved turn version is re-checked with exactly the review rendering and
 # extraction record it was produced with, and so with the passage-cutting rule
-# behind them. v5 passages end at sentences; v3/v4 passages end at every mark.
+# behind them. v5-v7 passages end at sentences; v3/v4 passages end at every mark.
+# v7 replies ask the user to confirm each objective NM worded; v5/v6 never asked.
 _EXTRACTION_BINDINGS = {
     CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
-    RESEARCH_LEGACY_CONTRACT: (PASSAGE_REVIEW_RENDERER, EXTRACTION_RECORD),
+    UNCONFIRMED_LEGACY_CONTRACT: (UNCONFIRMED_REVIEW_RENDERER, EXTRACTION_RECORD),
+    RESEARCH_LEGACY_CONTRACT: (UNCONFIRMED_REVIEW_RENDERER, EXTRACTION_RECORD),
     SEGMENT_LEGACY_CONTRACT: (PASSAGE_LEGACY_REVIEW_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
     PASSAGE_LEGACY_CONTRACT: (PASSAGE_LEGACY_EXTRACTION_RENDERER, PASSAGE_LEGACY_EXTRACTION_RECORD),
     EXTRACTION_LEGACY_CONTRACT: (LEGACY_EXTRACTION_RENDERER, LEGACY_EXTRACTION_RECORD),
 }
 # Versions whose turns carry a bounded extraction-recovery record.
-_RECOVERY_CONTRACTS = (CONTRACT, RESEARCH_LEGACY_CONTRACT, SEGMENT_LEGACY_CONTRACT)
+_RECOVERY_CONTRACTS = (CONTRACT, UNCONFIRMED_LEGACY_CONTRACT, RESEARCH_LEGACY_CONTRACT,
+                       SEGMENT_LEGACY_CONTRACT)
+# Versions whose turns carry the private dispute-research record.
+_RESEARCH_CONTRACTS = (CONTRACT, UNCONFIRMED_LEGACY_CONTRACT)
 
 
 class BrainRefused(Exception):
@@ -148,7 +154,7 @@ def saved_rows(matter, advocate_id):
                 check_targets(expected_units, before)
                 if (row.get('recovery') or {}).get('before'):
                     check_targets(extraction_units(row['recovery']['before']['preparation']), before)
-            if row['contract'] == CONTRACT:
+            if row['contract'] in _RESEARCH_CONTRACTS:
                 _checked_research(row['research'], prepared, row['release'])
             elif 'research' in row:
                 raise ValueError('historical turn cannot acquire fresh research metadata')

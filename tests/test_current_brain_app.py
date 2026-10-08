@@ -27,6 +27,8 @@ PASSWORD = "Synthetic-Brain-Password-42!"
 ORIGIN = "http://testserver"
 OPERATIONS = ["label_message", "extract_disputes_objectives", "review_prepared_response"]
 MIXED_MESSAGE = "The supplier refuses to return my deposit. I want the deposit returned."
+# The code-owned question a v7 reply adds for the objective in mixed_outputs.
+DEPOSIT_AIM_QUESTION = "I've noted this aim: “Return of the deposit”. Is that right?"
 
 
 def greeting_outputs():
@@ -198,7 +200,7 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
     app = harness(*mixed_outputs(message))
     response = assert_ok(app.post(message))
     text = "\n".join(row["text"] for row in response["elements"])
-    assert text == "Message received."
+    assert text == "Message received.\n" + DEPOSIT_AIM_QUESTION
     assert "UNREVIEWED" not in text and "I filed" not in text
     assert "does not carry out" not in text
     held = app.held(response["chat_id"])
@@ -215,7 +217,7 @@ def test_disputes_and_objectives_remain_private_without_losing_saved_proposals(h
             "passage_id": "current:p1" if kind == "disputes" else "current:p2",
             "purpose": "support", "start": start, "end": start + len(quote)}]
     assert held.brain_chat[0]["preparation"]["contract"] == "disputes_objectives_v3"
-    assert held.brain_chat[0]["contract"] == "current_brain_turn_v6"
+    assert held.brain_chat[0]["contract"] == "current_brain_turn_v7"
     assert held.facts == () and held.threads == ()
     assert response["board_changes"] == [] and response["material"] == []
 
@@ -227,13 +229,13 @@ def test_internal_material_stays_private_through_followup_reopen_and_idempotent_
     chat_id = first["chat_id"]
     snapshot = app.held(chat_id)
     assert snapshot.brain_chat[0]["response"]["elements"] == first["elements"]
-    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v6"
+    assert snapshot.brain_chat[0]["release"]["renderer_version"] == "disputes_objectives_release_v7"
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["disputes"]
     assert snapshot.brain_chat[0]["preparation"]["proposal"]["objectives"]
     second = assert_ok(app.post("Thank you.", "turn_second", chat_id=chat_id, expected_version=1))
     history = json.loads(app.model.calls[3][0].user)["earlier_conversation"]
     assert [(row["role"], row["text"]) for row in history] == [
-        ("advocate", message), ("nm", "Message received.")]
+        ("advocate", message), ("nm", "Message received.\n\n" + DEPOSIT_AIM_QUESTION)]
     assert app.held(chat_id).brain_chat[0] == snapshot.brain_chat[0]
     reopened = assert_ok(app.client.get("/api/chats/" + chat_id))
     assert [row["elements"] for row in reopened["turns"]] == [first["elements"], second["elements"]]
@@ -316,15 +318,16 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
         "proof": {"greeting": False, "unit_reviews": [
             {"unit_id": identity, "verdict": "supported", "reason": "none"}
             for identity in ("dispute:1", "objective:1")], "omissions": []},
-        "elements": deepcopy(first["elements"]), "service_status": None, "state": "ready",
+        "elements": deepcopy(first["elements"][:1]), "service_status": None, "state": "ready",
     }
+    rows[0]["response"]["elements"] = deepcopy(first["elements"][:1])  # v2 replies never asked to confirm
     rows[0]["response_digest"] = _digest(rows[0]["response"])
     app.store.commit(replace(held, brain_chat=rows), expected_version=held.version)
     persisted = app.held(first["chat_id"])
     reopened = assert_ok(app.client.get("/api/chats/" + first["chat_id"]))
-    assert reopened["turns"][0]["elements"] == first["elements"]
+    assert reopened["turns"][0]["elements"] == first["elements"][:1]
     replay = assert_ok(app.post(MIXED_MESSAGE))
-    assert replay == {**first, "replayed": True}
+    assert replay == {**first, "elements": first["elements"][:1], "replayed": True}
     assert len(app.model.calls) == 3 and app.held(first["chat_id"]) == persisted
     assert_ok(app.post("Thank you.", "turn_second", chat_id=first["chat_id"], expected_version=1))
     history = json.loads(app.model.calls[3][0].user)["earlier_conversation"]
@@ -332,7 +335,7 @@ def test_legacy_focused_quotes_reopen_replay_and_followup_without_upgrading_save
         ("advocate", MIXED_MESSAGE), ("nm", "Message received.")]
     final_rows = app.held(first["chat_id"]).brain_chat
     assert final_rows[0] == persisted.brain_chat[0]
-    assert final_rows[1]["contract"] == "current_brain_turn_v6"
+    assert final_rows[1]["contract"] == "current_brain_turn_v7"
     assert final_rows[1]["preparation"]["contract"] == "disputes_objectives_v3"
 
 

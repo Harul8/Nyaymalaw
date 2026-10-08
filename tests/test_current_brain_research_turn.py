@@ -119,6 +119,7 @@ def test_no_dispute_uses_no_planning_or_search_and_keeps_v5_replay_unchanged():
     row = deepcopy(store.value.brain_chat[0])
     assert row['research']['state'] == 'not_needed' and len(model.calls) == 3 and search.calls == []
     row['contract'] = 'current_brain_turn_v5'
+    row['release']['renderer_version'] = 'disputes_objectives_release_v6'  # v5 replies never asked
     del row['research']
     store.value = replace(store.value,brain_chat=(row,))
     assert saved_rows(store.value,'adv_owner')[0] == row
