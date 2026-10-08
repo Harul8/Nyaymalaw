@@ -1082,5 +1082,507 @@
     "authorized_usd": 5,
     "remaining_usd": 0.658966,
     "provider_attempts": 804
+  },
+  "association_isolation": {
+    "owner": "nm/brain/release.py",
+    "renderer_version": "disputes_objectives_release_v4",
+    "invariant": "A bad support association rejects only that reading association; it cannot certify coverage or discard independent checked peers.",
+    "counterexample": {
+      "case": "missing_conflicts",
+      "expect": "Identify retention and denied access as missing disputes with exact current support; objectives do not fill dispute coverage.",
+      "error_type": "SchemaViolation",
+      "error": "Reading current:p1 is linked to dispute:1 without any shared original support. Context alone cannot represent the contribution. Select a representing unit with checked support, or return represented_by=[].",
+      "last_output": {
+        "readings": {
+          "current:p1": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Client's former accountant refuses to return original business ledgers after engagement ended",
+              "support_passage_ids": [
+                "current:p1"
+              ],
+              "context_passage_ids": [
+                "current:p2",
+                "current:p3"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "dispute:1"
+              ]
+            }
+          ],
+          "current:p2": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Client disputes former accountant's claim of unpaid fees",
+              "support_passage_ids": [
+                "current:p2"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p3"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "dispute:1"
+              ]
+            }
+          ],
+          "current:p3": [
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants the business ledgers returned",
+              "support_passage_ids": [
+                "current:p3"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p2"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:1"
+              ]
+            },
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants the disputed fees resolved",
+              "support_passage_ids": [
+                "current:p3"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p2"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:2"
+              ]
+            }
+          ],
+          "current:p4": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Co-owner changed office lock and denied client access to jointly used office",
+              "support_passage_ids": [
+                "current:p4"
+              ],
+              "context_passage_ids": [
+                "current:p5"
+              ],
+              "uncertainty": null,
+              "represented_by": []
+            }
+          ],
+          "current:p5": [
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants access to jointly used office restored",
+              "support_passage_ids": [
+                "current:p5"
+              ],
+              "context_passage_ids": [
+                "current:p4"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:3"
+              ]
+            }
+          ],
+          "current:p6": [
+            {
+              "kind": "outside_scope",
+              "purpose": "nm_work",
+              "reason": "Instruction to summarise without new dispute or objective content"
+            }
+          ],
+          "current:p7": [
+            {
+              "kind": "outside_scope",
+              "purpose": "nm_work",
+              "reason": "Instruction not to contact either person"
+            }
+          ]
+        },
+        "unit_reviews": [
+          {
+            "unit_id": "dispute:1",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:1",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:2",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:3",
+            "verdict": "supported"
+          }
+        ],
+        "greeting": false
+      },
+      "metrics": {
+        "llm_calls": 1,
+        "calls": [
+          {
+            "operation": "review_prepared_response",
+            "latency_ms": 5797,
+            "tokens_in": 4112,
+            "tokens_out": 498,
+            "cost_usd": 0.0024416000000000004,
+            "retries": 0
+          }
+        ],
+        "cost_usd": 0.0024416000000000004,
+        "tokens_in": 4112,
+        "tokens_out": 498
+      }
+    },
+    "checked_replay": {
+      "renderer_version": "disputes_objectives_release_v4",
+      "label": "information",
+      "sources": [
+        {
+          "id": "current",
+          "message": {
+            "role": "advocate",
+            "text": "My client says her former accountant refuses to return her original business ledgers after the engagement ended. He claims unpaid fees, which she disputes. She wants the ledgers returned and the disputed fees resolved. Separately, a co-owner changed the lock and denied her access to their jointly used office; she wants access restored. Please summarise this; do not contact either person."
+          }
+        }
+      ],
+      "units": {
+        "dispute:1": {
+          "kind": "disputes",
+          "proposal": {
+            "description": "Client disputes accountant claimed fees.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " He claims unpaid fees, which she disputes.",
+                "start": 112,
+                "end": 155,
+                "passage_id": "current:p2",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ],
+            "id": "dispute:1",
+            "state": "proposed"
+          }
+        },
+        "objective:1": {
+          "kind": "objectives",
+          "proposal": {
+            "description": "Client seeks return of ledgers.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                "start": 155,
+                "end": 218,
+                "passage_id": "current:p3",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ],
+            "id": "objective:1",
+            "state": "proposed"
+          }
+        },
+        "objective:2": {
+          "kind": "objectives",
+          "proposal": {
+            "description": "Client seeks resolution of fee dispute.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " She wants the ledgers returned and the disputed fees resolved.",
+                "start": 155,
+                "end": 218,
+                "passage_id": "current:p3",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ],
+            "id": "objective:2",
+            "state": "proposed"
+          }
+        },
+        "objective:3": {
+          "kind": "objectives",
+          "proposal": {
+            "description": "Client seeks restored office access.",
+            "passages": [
+              {
+                "source_id": "current",
+                "quote": " she wants access restored.",
+                "start": 310,
+                "end": 337,
+                "passage_id": "current:p5",
+                "purpose": "support"
+              }
+            ],
+            "uncertainty": null,
+            "source_ids": [
+              "current"
+            ],
+            "id": "objective:3",
+            "state": "proposed"
+          }
+        }
+      },
+      "issues": [],
+      "proof": {
+        "readings": {
+          "current:p1": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Client's former accountant refuses to return original business ledgers after engagement ended",
+              "support_passage_ids": [
+                "current:p1"
+              ],
+              "context_passage_ids": [
+                "current:p2",
+                "current:p3"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "dispute:1"
+              ]
+            }
+          ],
+          "current:p2": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Client disputes former accountant's claim of unpaid fees",
+              "support_passage_ids": [
+                "current:p2"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p3"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "dispute:1"
+              ]
+            }
+          ],
+          "current:p3": [
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants the business ledgers returned",
+              "support_passage_ids": [
+                "current:p3"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p2"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:1"
+              ]
+            },
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants the disputed fees resolved",
+              "support_passage_ids": [
+                "current:p3"
+              ],
+              "context_passage_ids": [
+                "current:p1",
+                "current:p2"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:2"
+              ]
+            }
+          ],
+          "current:p4": [
+            {
+              "kind": "dispute",
+              "contribution": "reported",
+              "description": "Co-owner changed office lock and denied client access to jointly used office",
+              "support_passage_ids": [
+                "current:p4"
+              ],
+              "context_passage_ids": [
+                "current:p5"
+              ],
+              "uncertainty": null,
+              "represented_by": []
+            }
+          ],
+          "current:p5": [
+            {
+              "kind": "objective",
+              "contribution": "reported",
+              "description": "Client wants access to jointly used office restored",
+              "support_passage_ids": [
+                "current:p5"
+              ],
+              "context_passage_ids": [
+                "current:p4"
+              ],
+              "uncertainty": null,
+              "represented_by": [
+                "objective:3"
+              ]
+            }
+          ],
+          "current:p6": [
+            {
+              "kind": "outside_scope",
+              "purpose": "nm_work",
+              "reason": "Instruction to summarise without new dispute or objective content"
+            }
+          ],
+          "current:p7": [
+            {
+              "kind": "outside_scope",
+              "purpose": "nm_work",
+              "reason": "Instruction not to contact either person"
+            }
+          ]
+        },
+        "unit_reviews": [
+          {
+            "unit_id": "dispute:1",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:1",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:2",
+            "verdict": "supported"
+          },
+          {
+            "unit_id": "objective:3",
+            "verdict": "supported"
+          }
+        ],
+        "greeting": false
+      },
+      "elements": [
+        {
+          "kind": "finding",
+          "text": "Message received.",
+          "thread": null,
+          "by_when": null,
+          "no_deadline_reason": null,
+          "signal": "none",
+          "collapsible": false,
+          "disclosure": false,
+          "refs": [],
+          "source": null,
+          "section": "answer"
+        }
+      ],
+      "service_status": null,
+      "state": "partial"
+    },
+    "pending_gaps": [
+      {
+        "id": "current:p1:1",
+        "kind": "disputes",
+        "contribution": "reported",
+        "description": "Client's former accountant refuses to return original business ledgers after engagement ended",
+        "passages": [
+          {
+            "source_id": "current",
+            "quote": "My client says her former accountant refuses to return her original business ledgers after the engagement ended.",
+            "start": 0,
+            "end": 112,
+            "passage_id": "current:p1",
+            "purpose": "support"
+          },
+          {
+            "source_id": "current",
+            "quote": " He claims unpaid fees, which she disputes.",
+            "start": 112,
+            "end": 155,
+            "passage_id": "current:p2",
+            "purpose": "context"
+          },
+          {
+            "source_id": "current",
+            "quote": " She wants the ledgers returned and the disputed fees resolved.",
+            "start": 155,
+            "end": 218,
+            "passage_id": "current:p3",
+            "purpose": "context"
+          }
+        ],
+        "uncertainty": null,
+        "source_ids": [
+          "current"
+        ],
+        "rejected_associations": [
+          {
+            "unit_id": "dispute:1",
+            "reason": "The selected record shares no original support with this reading; context alone cannot represent it."
+          }
+        ]
+      },
+      {
+        "id": "current:p4:1",
+        "kind": "disputes",
+        "contribution": "reported",
+        "description": "Co-owner changed office lock and denied client access to jointly used office",
+        "passages": [
+          {
+            "source_id": "current",
+            "quote": " Separately, a co-owner changed the lock and denied her access to their jointly used office;",
+            "start": 218,
+            "end": 310,
+            "passage_id": "current:p4",
+            "purpose": "support"
+          },
+          {
+            "source_id": "current",
+            "quote": " she wants access restored.",
+            "start": 310,
+            "end": 337,
+            "passage_id": "current:p5",
+            "purpose": "context"
+          }
+        ],
+        "uncertainty": null,
+        "source_ids": [
+          "current"
+        ]
+      }
+    ],
+    "offline_checks": 110,
+    "normal_call_impact": 0,
+    "previous_v3_proof": "Strict original association behavior retained for historical replay.",
+    "acceptance": "Component verified by replay of an actual rejected provider response; application activation and extraction acceptance pending."
   }
 }

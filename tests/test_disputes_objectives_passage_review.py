@@ -5,7 +5,7 @@ import json
 import pytest
 
 from nm.brain.release import (
-    PASSAGE_REVIEW_RENDERER, extraction_review_gaps, prepare_release, render_saved_release,
+    PASSAGE_REVIEW_RENDERER, LEGACY_PASSAGE_REVIEW_RENDERER, extraction_review_gaps, prepare_release, render_saved_release,
 )
 from nm.shared.model_port import SchemaViolation
 from tests.test_disputes_objectives_release import prepared, historical_focused_v1_release
@@ -91,8 +91,11 @@ def test_wrong_current_occurrence_is_rejected_even_with_supported_verdict():
                         message="The previous objective is withdrawn. I now want a different outcome.")
     reviewed = proof({"current:p1": [meaning("objective", represented=["objective:1"], contribution="withdrawn")],
         "current:p2": [meaning("objective", support=["current:p2"], represented=["objective:1"])]}, verdict("objective:1"))
-    with pytest.raises(SchemaViolation, match="Reading current:p1 is linked to objective:1"):
-        release(proposal, reviewed)
+    rejected = release(proposal, reviewed)
+    rejected_gap = extraction_review_gaps(rejected)[0]
+    assert rejected["state"] == "partial"
+    assert rejected_gap["rejected_associations"][0]["unit_id"] == "objective:1"
+    assert rejected["proof"]["readings"]["current:p1"][0]["represented_by"] == ["objective:1"]
     reviewed["readings"]["current:p1"][0]["represented_by"] = []
     saved = release(proposal, reviewed)
     assert extraction_review_gaps(saved)[0]["contribution"] == "withdrawn"
@@ -131,8 +134,18 @@ def test_context_only_overlap_does_not_represent_a_different_contribution():
                         message="The old goal is withdrawn. I now seek a different result.")
     reviewed = proof({"current:p1": [meaning("objective", represented=["objective:1"], contribution="withdrawn")],
         "current:p2": [meaning("objective", support=["current:p2"], represented=["objective:1"])]}, verdict("objective:1"))
-    with pytest.raises(SchemaViolation, match="without any shared original support"):
-        release(proposal, reviewed)
+    saved = release(proposal, reviewed)
+    assert extraction_review_gaps(saved)[0]["rejected_associations"]
+    assert saved["state"] == "partial" and render_saved_release(saved) == saved
+    saved["renderer_version"] = LEGACY_PASSAGE_REVIEW_RENDERER
+    with pytest.raises(SchemaViolation):
+        render_saved_release(saved)
+
+
+def test_previous_strict_passage_review_replays_valid_proof_without_upgrade():
+    saved = release(prepared(), proof())
+    saved["renderer_version"] = LEGACY_PASSAGE_REVIEW_RENDERER
+    assert render_saved_release(saved) == saved
 
 
 def test_repaired_objective_uses_original_support_and_derives_current_context_from_owned_parent():
