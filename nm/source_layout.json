@@ -139,6 +139,8 @@
     "nm.shared.store_uploads": "adapters",
     "nm.shared.text_contracts": "domain",
     "nm.shared.traceability_contracts": "domain",
+    "nm.shared.turn_attempt_port": "ports",
+    "nm.shared.turn_attempt_store": "adapters",
     "nm.shared.transactional_port": "ports",
     "nm.shared.worker": "core",
     "nm.work_the_file": "domain",
@@ -181,13 +183,13 @@
     "nm.work_the_file.write_tools": "core"
   },
   "expected_roles": {
-    "adapters": 27,
+    "adapters": 28,
     "bootstrap": 5,
     "core": 58,
     "domain": 69,
     "edge": 8,
     "infrastructure": 1,
-    "ports": 10
+    "ports": 11
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",

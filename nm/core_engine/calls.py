@@ -23,11 +23,15 @@ class TurnCalls:
     This owner bounds semantic/shape correction across activities and records
     their receipts. No nested stage receives a fresh allowance.
     """
-    def __init__(self, model):
+    def __init__(self, model, *, correction_used=False, reserve_correction=None):
+        if type(correction_used) is not bool or (reserve_correction is not None
+                                               and not callable(reserve_correction)):
+            raise ValueError("Correction ownership must come from a checked attempt")
         self.inner = model
         self.calls = []
         self.correction = None
-        self.correction_used = False
+        self.correction_used = correction_used
+        self.reserve_correction = reserve_correction
         self.last_output = None
         self.terminal = False
 
@@ -82,6 +86,10 @@ class TurnCalls:
             raise CorrectionUnavailable("The shared draft correction has already been used")
         if not isinstance(operation, str) or not operation or not mismatch:
             raise ValueError("Correction requires an owning operation and precise mismatch")
+        if self.reserve_correction is not None:
+            # A lost acknowledgement conservatively spends the durable allowance.
+            # Never dispatch a corrective call before that ownership is confirmed.
+            self.reserve_correction()
         self.correction_used = True
         self.correction = {"operation": operation,
             "purpose": "Correct the rejected draft using the complete original input and declared output contract.",

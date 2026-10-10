@@ -111,3 +111,22 @@ def test_unknown_previous_draft_does_not_leak_into_next_feedback():
     model.structured = fail
     with pytest.raises(ModelError): call(ledger, "different")
     assert ledger.last_output is None
+
+
+def test_durable_allowance_is_reserved_before_dispatch_and_cannot_reset():
+    events = []
+    ledger = TurnCalls(Model({"units": [unit()]}), reserve_correction=lambda: events.append("reserved"))
+    ledger.correct("write", lambda: events.append("dispatched"), mismatch="source mismatch")
+    assert events == ["reserved", "dispatched"]
+    resumed = TurnCalls(ledger.inner, correction_used=True)
+    with pytest.raises(CorrectionUnavailable):
+        resumed.correct("write", lambda: events.append("extra"), mismatch="source mismatch")
+    assert events == ["reserved", "dispatched"]
+
+
+def test_unconfirmed_durable_reservation_never_dispatches_repair():
+    def unavailable(): raise OSError("Synthetic acknowledgement lost")
+    ledger = TurnCalls(Model({"units": [unit()]}), reserve_correction=unavailable)
+    with pytest.raises(OSError):
+        ledger.correct("write", lambda: call(ledger), mismatch="source mismatch")
+    assert ledger.calls == []

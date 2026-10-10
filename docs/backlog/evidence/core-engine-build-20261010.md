@@ -309,3 +309,24 @@ dependencies and exact reviewer output; changed draft, evidence or findings fail
 validation. Already-supported summaries needing no write are legitimate. Separate
 mini review adds one routine call, not a different model or a new local retry budget.
 Real detection and false rejection rates remain unmeasured.
+
+## SEQ.1/4 — durable correction and terminal ownership prerequisite
+
+Integration review reproduced a general lifecycle defect: an HTTP retry with the
+same request ID could create a fresh in-memory ledger after terminal withholding.
+A disabled retry button does not enforce TURN/NONE. The new TurnAttemptPort and
+local transactional sidecar bind an opaque request owner to its exact request/context
+digest, claim token, correction-used flag and terminal state. No original words,
+names or rejected drafts are stored there. Confirmed saved responses take precedence
+over sidecar completion so a lost save acknowledgement does not repeat an effect.
+
+The shared call owner reserves a correction durably before corrective dispatch and
+accepts a previously spent allowance when resuming. Terminal, concurrent, changed,
+unconfirmed or unreadable ownership cannot become a fresh attempt. A process crash
+with no confirmed response remains explicitly unconfirmed; automatic crash recovery
+is not implemented by an unsafe timeout reset.
+
+Evidence: 26 adapter checks and 10 shared-call checks pass, including concurrent
+claim/consumption, restart, exact idempotence and lost acknowledgement. The port,
+adapter, call hook and turn composition are an inseparable integration dependency;
+each has focused checks before the served test. Zero new model calls.
