@@ -14,7 +14,9 @@ from nm.shared.model_port import (
 
 LEGACY_CONTRACT = "core_research_v2"
 PREVIOUS_CONTRACT = "core_research_v3"
-CONTRACT = "core_research_v4"
+WINDOWED_CONTRACT = "core_research_v4"
+CONTRACT = "core_research_v5"
+CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, CONTRACT)
 MAX_OUTPUT = 6500
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current records and saved work, and an earlier interpretation proposal.
@@ -133,13 +135,14 @@ def _select(reference, catalogue, offsets):
 
 
 def accept(proposal, context, *, contract=CONTRACT):
-    if contract not in {LEGACY_CONTRACT, PREVIOUS_CONTRACT, CONTRACT}:
+    if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
-    schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA, CONTRACT: SCHEMA}[contract]
+    schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
+              WINDOWED_CONTRACT: SCHEMA, CONTRACT: SCHEMA}[contract]
     work_schema = schema["properties"]["work"]["items"]
     data = canonical_schema_data(proposal, schema)
     require_schema(data, _object({"work": {"type": "array", "items": {}}}))
-    if contract == CONTRACT:
+    if contract in {WINDOWED_CONTRACT, CONTRACT}:
         catalogue, offsets, _ = _source_windows(context)
     else:
         catalogue, offsets = source_catalogue(context), {}
@@ -196,14 +199,19 @@ def plan(model, context, interpretation):
 
 def search_queries(work, *, contract=CONTRACT):
     """Versioned exact-query construction; no semantic rewriting or ranking bonus."""
-    if contract in {PREVIOUS_CONTRACT, CONTRACT}:
+    if contract in {PREVIOUS_CONTRACT, WINDOWED_CONTRACT, CONTRACT}:
         if not work["enquiries"]:
             return []
         # The stored selections retain source/speaker/offsets. The search text
         # contains their words once, followed by distinct discovery concepts.
+        # From v5 the advocate's words stand alone: code-authored passage labels
+        # became search terms that ranked advocates' own regulation highly.
         passages = work["search_account"]
-        account = (passages[0]["text"] if len(passages) == 1 else "\n\n".join(
-            f"Advocate passage {index}:\n{source['text']}" for index, source in enumerate(passages, 1)))
+        if contract == CONTRACT or len(passages) == 1:
+            account = "\n\n".join(source["text"] for source in passages)
+        else:
+            account = "\n\n".join(f"Advocate passage {index}:\n{source['text']}"
+                                  for index, source in enumerate(passages, 1))
         queries = ([{"query_id": work["id"] + ":original", "text": account, "context": account}]
                    if account else [])
         return queries + [{"query_id": enquiry["query_id"], "text": enquiry["text"],
@@ -242,7 +250,7 @@ def retrieve(plan, searcher, context):
 
 def validate(record, plan, context):
     contract = record.get("contract") if isinstance(record, dict) else None
-    if contract not in {LEGACY_CONTRACT, PREVIOUS_CONTRACT, CONTRACT}:
+    if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if accept(plan["proposal"], context, contract=contract) != plan:
         raise ValueError("Saved research plan differs from its original sources")

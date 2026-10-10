@@ -1708,3 +1708,59 @@ the failing real search re-prepared with the real tokenizer now has zero
 no-room units. Not run: the full suite, live search, model calls or browser checks.
 The intermittent DC01 reranking failure reported earlier had 92 prepared windows
 and no no-room unit, so this repair does not explain it; it remains unresolved.
+
+### SEQ.3 local ranking experiment and research query construction v5
+
+Local only, no model calls. A harness rebuilt every search stage from production
+functions and first proved fidelity: on all 22 frozen post-repair searches (13
+comparison cases, 34 provision and 14 judgment historical anchor expectations) the
+production-equivalent arm reproduced `HybridSearcher.search` selections and scores
+exactly (44/44 kind-level checks). Arms crossed account-query labels (current
+"Advocate passage N:" labels versus the advocate's words joined by blank lines),
+ranking (current single joined inquiry; best score per account/enquiry; rank
+fusion per account/enquiry; account-prefixed enquiries) and pool depth (current
+80/60 versus 200/120). "Polluting" counts sources titled with advocate or Bar
+Council wording; none of the 13 matters concerns advocates' regulation.
+
+| Arm | Provision anchors in pool / selected (of 34) | Gained / lost vs current | Polluting units in pools (provision / judgment) | Rerank pairs |
+|---|---|---|---|---|
+| current (labels, joined inquiry) | 15 / 10 | - | 117 / 24 | 5,754 |
+| unlabelled, joined inquiry | 15 / 10 | 0 / 0 | 41 / 4 | 5,742 |
+| unlabelled, rank fusion per query | 15 / 11 | 2 / 1 | 41 / 4 | 16,160 |
+| unlabelled, best score per query | 15 / 9 | 3 / 4 | 41 / 4 | 16,160 |
+| unlabelled, deeper pool, rank fusion | 18 / 12 | 3 / 1 | 75 / 10 | 31,461 |
+
+No arm selected any of the 14 judgment anchors (8 reach the pool; median best rank
+42). On the genuine browser matter (cache-v1 turn 1), removing labels removed the
+Advocates Act s.58 and both Advocate-General judgment passages from the second
+investigation's selections. Decision: adopt unlabelled account queries; do not
+promote per-query ranking (net +1 anchor within noise at 2.8 times the rerank
+work, while first-answer latency is already open) or the deeper pool.
+
+The dominant loss is discovery, not ranking: 19 of 34 provision anchors are never
+read. A depth-1000 diagnostic shows most are unreachable by any planned query
+(for example Specific Relief Act s.6 for the possession matter, CrPC s.482/BNSS
+s.528 for the trespass matter, Guardians and Wards Act ss.17/25 for custody):
+the enquiries do not ask for those concepts. Qualified decomposition (the
+measured planning-prompt candidate) is the next relevance lever.
+
+Two corpus findings were measured and deferred to owner decision. Identical held
+words under different instrument identities (for example the A.P. and Telangana
+copies of the Advocates' Fee Rules r.10) occupy about 7% of provision slots;
+collapsing them could hide which instrument governs, so a design must keep the
+alternative identities visible. Separately, 21,947 (Act, chunk ID) identities
+repeat across 76,913 of 414,710 provision rows in 1,030 documents (only 587 with
+identical words), so those passages cannot be connected to their parent sections;
+unique identities need a separately authorised re-ingestion.
+
+Research v5 (`nm/core_engine/research.py` only, prompt unchanged): fresh plans
+join the selected advocate passages with blank lines and no generated labels.
+Saved v2, v3 and v4 records keep their exact query serialisation and replay;
+items without enquiries remain unsearched exactly as before (searching the
+original account alone belongs with the measured prompt candidate). Checks: 2 new
+and 1 updated focused tests (fresh v5 unlabelled replay with a relabelled record
+refused; the served v4 browser research record replays with its labelled
+queries); all 424 tests in the 21 files that import the research, turn,
+source-catalogue or retrieval modules pass; undefined-name check clean. Not run:
+full suite, live search on the served instance, model calls or browser checks.
+Evidence: `outputs/core-engine-build-20261010/seq3-ranking-experiment/`.

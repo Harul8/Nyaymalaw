@@ -226,9 +226,43 @@ def test_original_queries_preserve_order_boundaries_and_repeated_words_across_tu
     account = admitted["work"][0]["search_account"]
     assert [s["turn_id"] for s in account] == ["t1", "t2"]
     query = search_queries(admitted["work"][0])[0]
-    assert query["text"].count(earlier["text"]) == 2
-    assert "Advocate passage 1:" in query["text"] and "Advocate passage 2:" in query["text"]
-    assert query["text"] == query["context"]
+    assert query["text"] == earlier["text"] + "\n\n" + ctx["latest"]["text"]
+    assert "Advocate passage" not in query["text"] and query["text"] == query["context"]
+    from nm.core_engine.research import WINDOWED_CONTRACT
+    previous = search_queries(admitted["work"][0], contract=WINDOWED_CONTRACT)[0]
+    assert "Advocate passage 1:" in previous["text"] and "Advocate passage 2:" in previous["text"]
+
+
+def test_fresh_records_carry_the_unlabelled_contract_and_replay_through_it():
+    from nm.core_engine.research import CONTRACT
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+               "record_role": "original_account", "text": "The owner kept the deposit."}
+    ctx = context("Find the applicable law.", [earlier])
+    item = work(None)
+    item["search_account"].append({"source_id": "t1:advocate", "quote": None})
+    admitted = accept({"work": [item]}, ctx)
+    record = retrieve(admitted, HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}), ctx)
+    assert record["contract"] == CONTRACT == "core_research_v5"
+    assert validate(record, admitted, ctx) == record
+    searched = next(iter(record["searches"].values()))["queries"]
+    assert all("Advocate passage" not in q["text"] + q["context"] for q in searched)
+    relabelled = deepcopy(record)
+    relabelled["contract"] = "core_research_v4"
+    with pytest.raises(ValueError):
+        validate(relabelled, admitted, ctx)
+
+
+def test_served_v4_research_record_replays_with_its_labelled_queries():
+    from pathlib import Path
+    from nm.core_engine.research import WINDOWED_CONTRACT
+    root = (Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+            / "browser-gpt6-cache-v1-diagnostics/0842eaae89c44f4093705de0664dd9eb")
+    saved = json.loads((root / "008-research-retrieve-input.json").read_text(encoding="utf-8"))["value"]
+    record = json.loads((root / "009-research-retrieve-output.json").read_text(encoding="utf-8"))["value"]["result"]
+    assert record["contract"] == WINDOWED_CONTRACT
+    assert validate(record, record["plan"], saved["context"]) == record
+    labelled = [q for s in record["searches"].values() for q in s["queries"] if "Advocate passage 1:" in q["text"]]
+    assert labelled, "the served v4 serialisation is preserved, not rebuilt"
 
 
 @pytest.mark.parametrize("role,speaker", [("nm_interpretation", "nm"), ("service", "service")])
