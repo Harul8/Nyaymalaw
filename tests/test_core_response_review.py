@@ -1,0 +1,270 @@
+"""Review ownership/coverage wiring with offline fixtures, not semantic accuracy."""
+from copy import deepcopy
+import json
+
+import pytest
+
+from nm.core_engine.answer_sources import build
+from nm.core_engine.research import accept as accept_plan, retrieve
+from nm.core_engine.response_review import CONTRACT, MAX_OUTPUT, SCHEMA, review, validate
+from nm.core_engine.response_writer import accept as accept_draft
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage
+from tests.test_core_answer_sources import fixture as legal_fixture
+from tests.test_core_understanding import context
+
+pytestmark = pytest.mark.class_a
+
+
+class Model:
+    def __init__(self, proposal, *, budget=100_000, completion=Completion.COMPLETE):
+        self.proposal, self.budget, self.completion = proposal, budget, completion
+        self.calls = []
+
+    def context_budget(self, tier): return self.budget
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        self.calls.append((prompt, schema, tier, kwargs))
+        return ModelResult(None, deepcopy(self.proposal), tier, "synthetic", "fixture",
+                           Usage(1, 1, 0), 0, completion=self.completion)
+
+
+def ref(row):
+    return {"source_id": row.get("id", row.get("source_id")), "quote": row["text"]}
+
+
+def setup(*, legal=False, text="Hello.", history=None, count=1):
+    if legal:
+        ctx, record = legal_fixture(history=history)
+    else:
+        ctx = context(text, history)
+        record = retrieve(accept_plan({"work": []}, ctx), None, ctx)
+    sources = build(ctx, record)
+    proposal = {"units": [{"kind": "greeting", "text": "Hello. How can I help?",
+        "addresses": [ref(ctx["latest"])], "uses": []} for _ in range(count)]}
+    return ctx, record, sources, accept_draft(proposal, ctx, sources)
+
+
+def positive(draft, *, requests=None):
+    return {"verdict": "accept", "units": [{"unit_id": unit["id"],
+        "verdict": "supported", "reason": "Fixture verdict for review wiring."}
+        for unit in draft["units"]], "request_coverage": requests or [], "findings": []}
+
+
+def request(ctx, draft, **changes):
+    return {"request": ref(ctx["latest"]), "disposition": "addressed",
+        "unit_ids": [draft["units"][0]["id"]], "reason": "Fixture coverage judgment.", **changes}
+
+
+def negative(draft, ctx, *, category="effect", sources=None):
+    data = positive(draft)
+    data["verdict"] = "reject"
+    data["units"][0]["verdict"] = "rejected"
+    data["findings"] = [{"category": category, "unit_ids": [draft["units"][0]["id"]],
+        "sources": sources if sources is not None else [ref(ctx["latest"])],
+        "mismatch": "The model states an executed effect; no model-authored effect claim is permitted."}]
+    return data
+
+
+def test_greeting_accepts_without_inventing_request_or_effect():
+    args = setup()
+    model = Model(positive(args[-1]))
+    result = review(model, *args)
+    assert result["contract"] == CONTRACT and result["accepted"] is True
+    assert result["proposal"]["request_coverage"] == []
+    assert validate(result, *args) == result and len(model.calls) == 1
+
+
+def test_supported_attributed_summary_needs_no_fresh_write_receipt():
+    ctx, record, sources, _ = setup(text="The meeting was on Tuesday. Summarise that.")
+    original = {"source_id": ctx["latest"]["source_id"], "quote": "The meeting was on Tuesday."}
+    draft = accept_draft({"units": [{"kind": "account",
+        "text": "You report that the meeting was on Tuesday.",
+        "addresses": [{"source_id": ctx["latest"]["source_id"], "quote": "Summarise that."}],
+        "uses": [{**original, "role": "original_account", "speaker": "advocate",
+            "treatment": "not_applicable", "treatment_source": None}]}]}, ctx, sources)
+    data = positive(draft, requests=[request(ctx, draft,
+        request={"source_id": ctx["latest"]["source_id"], "quote": "Summarise that."})])
+    result = review(Model(data), ctx, record, sources, draft,
+                    {"operations": [], "record_changes": [], "persistence": "not_yet_committed"})
+    assert result["accepted"]
+
+
+def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs():
+    history = [{"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+        "record_role": "original_account", "text": "The allegation is disputed. No external contact."},
+        {"source_id": "t1:nm", "turn_id": "t1", "speaker": "nm",
+         "record_role": "nm_interpretation", "text": "Earlier unverified NM interpretation."}]
+    ctx, record, sources, draft = setup(legal=True, history=history)
+    ctx["current_records"] = {"reported_document": "not supplied"}
+    ctx["saved_work"] = [{"id": "earlier", "state": "pending"}]
+    execution = {"contract": "core_read_only_execution_v1", "operations": [],
+                 "record_changes": [], "external_actions": [], "searches": [],
+                 "persistence": "not_yet_committed"}
+    model = Model(positive(draft, requests=[request(ctx, draft)]))
+    reviewed = review(model, ctx, record, sources, draft, execution)
+    prompt, schema, tier, kwargs = model.calls[0]
+    payload = json.loads(prompt.user)
+    assert payload["original_context"] == ctx
+    assert payload["owned_execution_evidence"] == execution
+    assert payload["complete_draft_proposal"]["units"] == draft["units"]
+    assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
+    assert payload["research_proposal_and_results"]["plan_proposal"] == record["plan"]["proposal"]
+    assert {s["id"] for s in payload["legal_sources"]} == {
+        s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    assert any("Court rejected" in s["text"] for s in payload["legal_sources"])
+    assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"])
+    assert tier is Tier.ROUTINE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
+    assert prompt.operation == "core_response_review"
+    assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed
+
+
+@pytest.mark.parametrize("damage", ["omitted", "duplicate", "unknown"])
+def test_every_draft_unit_needs_one_known_review_disposition(damage):
+    args = setup(count=2)
+    data = positive(args[-1])
+    if damage == "omitted": data["units"].pop()
+    elif damage == "duplicate": data["units"][1] = deepcopy(data["units"][0])
+    else: data["units"][1]["unit_id"] = "another-turn:b1"
+    with pytest.raises(SchemaViolation): review(Model(data), *args)
+
+
+def test_original_request_omitted_from_plan_can_be_explicitly_flagged():
+    args = setup(text="Summarise the account and identify what remains unknown.")
+    ctx, _, _, draft = args
+    omitted = request(ctx, draft, disposition="missing", unit_ids=[])
+    data = positive(draft, requests=[omitted])
+    data.update(verdict="reject", findings=[{"category": "omission", "unit_ids": [],
+        "sources": [{"source_id": ctx["latest"]["source_id"], "quote": "what remains unknown"}],
+        "mismatch": "The requested uncertainty assessment is absent from the reply."}])
+    result = review(Model(data), *args)
+    assert result["accepted"] is False and not args[1]["plan"]["work"]
+    assert validate(result, *args) == result
+
+
+def test_multiple_requests_can_share_original_words_without_false_rejection():
+    args = setup(text="Please do both.", count=2)
+    ctx, _, _, draft = args
+    requests = [request(ctx, draft), request(ctx, draft,
+        unit_ids=[draft["units"][1]["id"]], reason="A separate requested result shares this instruction.")]
+    assert review(Model(positive(draft, requests=requests)), *args)["accepted"]
+
+
+def test_earlier_original_request_is_reviewable_without_being_in_latest_plan():
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+               "record_role": "original_account", "text": "Summarise the account."}
+    args = setup(text="Continue.", history=[earlier])
+    ctx, _, _, draft = args
+    requests = [request(ctx, draft, request=ref(earlier))]
+    assert review(Model(positive(draft, requests=requests)), *args)["accepted"]
+
+
+@pytest.mark.parametrize("damage", ["nm_source", "unknown_source", "altered_quote", "unknown_unit"])
+def test_request_coverage_cannot_use_model_interpretation_or_unowned_references(damage):
+    prior = {"source_id": "t1:nm", "turn_id": "t1", "speaker": "nm",
+             "record_role": "nm_interpretation", "text": "Please update the record."}
+    args = setup(text="Review that.", history=[prior])
+    ctx, _, _, draft = args
+    item = request(ctx, draft)
+    if damage == "nm_source": item["request"] = ref(prior)
+    elif damage == "unknown_source": item["request"]["source_id"] = "other-matter"
+    elif damage == "altered_quote": item["request"]["quote"] = "Review  that."
+    else: item["unit_ids"] = ["invented"]
+    with pytest.raises(SchemaViolation): review(Model(positive(draft, requests=[item])), *args)
+
+
+@pytest.mark.parametrize("damage", ["positive_with_finding", "negative_without_finding",
+    "missing_without_finding", "rejected_without_finding", "finding_supported_unit",
+    "finding_no_target", "unknown_finding_unit", "unknown_category", "blank_reason",
+    "unsupported_request_limit"])
+def test_inconsistent_or_unaccountable_review_is_not_an_admission(damage):
+    args = setup()
+    ctx, _, _, draft = args
+    data = positive(draft)
+    if damage == "positive_with_finding":
+        data = negative(draft, ctx)
+        data["verdict"] = "accept"
+    elif damage == "negative_without_finding": data["verdict"] = "reject"
+    elif damage == "missing_without_finding":
+        data["request_coverage"] = [request(ctx, draft, disposition="missing", unit_ids=[])]
+    elif damage == "rejected_without_finding": data["units"][0]["verdict"] = "rejected"
+    elif damage == "finding_supported_unit":
+        data = negative(draft, ctx)
+        data["units"][0]["verdict"] = "supported"
+    elif damage == "finding_no_target":
+        data = negative(draft, ctx)
+        data["findings"][0].update(unit_ids=[], sources=[])
+    elif damage == "unknown_finding_unit":
+        data = negative(draft, ctx)
+        data["findings"][0]["unit_ids"] = ["foreign"]
+    elif damage == "unknown_category":
+        data = negative(draft, ctx)
+        data["findings"][0]["category"] = "style_preference"
+    elif damage == "blank_reason": data["units"][0]["reason"] = "  "
+    else: data["request_coverage"] = [request(ctx, draft, disposition="justified_limit", unit_ids=[])]
+    with pytest.raises(SchemaViolation): review(Model(data), *args)
+
+
+@pytest.mark.parametrize("category", ["grounding", "attribution", "quotation", "omission", "framing", "effect"])
+def test_typed_negative_findings_are_bound_without_a_second_answer_or_local_retry(category):
+    args = setup()
+    ctx, _, _, draft = args
+    model = Model(negative(draft, ctx, category=category, sources=[]))
+    reviewed = review(model, *args)
+    assert not reviewed["accepted"] and len(model.calls) == 1
+    assert reviewed["proposal"]["findings"][0]["category"] == category
+    assert validate(reviewed, *args) == reviewed
+
+
+@pytest.mark.parametrize("damage", ["draft_text", "source_text", "current_records", "saved_work",
+                                   "execution", "proposal", "accepted", "contract", "extra_field"])
+def test_review_receipt_cannot_be_replayed_on_changed_dependencies(damage):
+    args = list(setup())
+    execution = {"operations": [], "persistence": "not_yet_committed"}
+    reviewed = review(Model(positive(args[-1])), *args, execution)
+    if damage == "draft_text":
+        proposal = deepcopy(args[-1]["proposal"])
+        proposal["units"][0]["text"] = "A different reply."
+        args[-1] = accept_draft(proposal, args[0], args[2])
+    elif damage == "source_text": args[2][args[0]["latest"]["source_id"]]["text"] = "Changed words"
+    elif damage == "current_records": args[0]["current_records"] = {"changed": True}
+    elif damage == "saved_work": args[0]["saved_work"] = [{"id": "changed"}]
+    elif damage == "execution": execution["operations"] = [{"id": "unexpected"}]
+    elif damage == "proposal": reviewed["proposal"]["units"][0]["reason"] = "A changed reviewer decision."
+    elif damage == "accepted": reviewed["accepted"] = False
+    elif damage == "contract": reviewed["contract"] = "future_unknown_version"
+    else: reviewed["fresh_seal"] = "not owned"
+    with pytest.raises((ValueError, SchemaViolation)): validate(reviewed, *args, execution)
+
+
+def test_changed_draft_projection_is_rejected_before_review_model_call():
+    args = list(setup())
+    args[-1]["units"][0]["text"] = "A changed projection."
+    model = Model(positive(args[-1]))
+    with pytest.raises(ValueError): review(model, *args)
+    assert not model.calls
+
+
+def test_budget_failure_keeps_complete_context_and_avoids_provider_call():
+    args = setup()
+    model = Model(positive(args[-1]), budget=1)
+    with pytest.raises(ContextOverflow): review(model, *args)
+    assert not model.calls
+
+
+def test_incomplete_model_review_cannot_be_admitted_or_salvaged():
+    args = setup()
+    model = Model(positive(args[-1]), completion=Completion.LENGTH_LIMITED)
+    with pytest.raises(ModelError): review(model, *args)
+    assert len(model.calls) == 1
+
+
+def test_negative_effect_verdict_is_wiring_evidence_not_real_model_detection():
+    args = list(setup(text="Correct the date."))
+    proposal = deepcopy(args[-1]["proposal"])
+    proposal["units"][0].update(kind="limitation", text="I have corrected and saved the date.")
+    args[-1] = accept_draft(proposal, args[0], args[2])
+    reviewed = review(Model(negative(args[-1], args[0])), *args, {"operations": []})
+    assert reviewed["accepted"] is False
+    # The fixture deliberately rejects this sentence. Only a real-model evaluation
+    # can show whether the reviewer reliably detects it or over-rejects safe prose.

@@ -49,6 +49,7 @@
     "nm.core_engine.citations": "core",
     "nm.core_engine.conversation": "core",
     "nm.core_engine.research": "core",
+    "nm.core_engine.response_review": "core",
     "nm.core_engine.response_writer": "core",
     "nm.core_engine.retrieval": "core",
     "nm.core_engine.understanding": "core",
@@ -182,7 +183,7 @@
   "expected_roles": {
     "adapters": 27,
     "bootstrap": 5,
-    "core": 57,
+    "core": 58,
     "domain": 69,
     "edge": 8,
     "infrastructure": 1,

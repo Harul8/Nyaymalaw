@@ -295,3 +295,17 @@ court-treatment support, harmless empty speaker metadata, changed replay depende
 overflow and incomplete provider output. These scripted checks prove ownership and
 wiring, not that the model correctly labels law or notices every request. One routine
 mini call; no internal retry. Draft repair belongs to the shared turn ledger.
+
+## SEQ.4 — independent whole-context review prerequisite
+
+Start READY: response_review.py independently checks all original requested work,
+all retrieved and adjacent source material, the entire draft and separate execution
+evidence. A positive judgment cannot supply execution proof or bypass exact-reference
+checks. It must account for every draft unit and identify omitted original requests;
+code checks declared coverage consistency, not the semantic completeness of that list.
+
+Evidence: 42 offline reviewer checks pass. The receipt binds complete original
+dependencies and exact reviewer output; changed draft, evidence or findings fail
+validation. Already-supported summaries needing no write are legitimate. Separate
+mini review adds one routine call, not a different model or a new local retry budget.
+Real detection and false rejection rates remain unmeasured.
